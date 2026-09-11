@@ -1,0 +1,1758 @@
+#!/usr/bin/env python3
+r"""map_core.py — the parts of every decision-map backend that must not diverge.
+
+Extracted from `local_map_ops.py` when the GitHub backend landed (ADR 0062).
+Nothing here touches a filesystem or a network: it is the marker invariant, the
+region merge, the input validation and the failure vocabulary — the pieces where
+two backends disagreeing is a correctness bug rather than a difference of
+storage.
+
+Why extract rather than copy. The marker invariant below cost five review
+rounds to get right, and every one of those rounds fixed a defect that passed
+the tests of the round before it. A second copy of that logic is a second copy
+of every one of those bugs waiting to be reintroduced by a well-meaning edit to
+one file. The contract says "every backend must …" in a dozen places; this
+module is where "every backend" is a single object rather than a promise.
+
+THE MARKER INVARIANT — the one rule the whole design rests on:
+
+    Every decision-map marker in a generated document was written by the tool,
+    because every user-supplied string is escaped on the way in.
+
+Enforced, not asserted. `scrub()` escapes the marker prefix in every
+user-supplied string before it reaches storage, and every write goes through
+`assert_regions()`, which refuses to write a document that does not hold
+exactly zero or one well-formed marker region. That is what lets `resolve()`
+find the block it owns by searching for its own markers: the search can no
+longer match user text, because user text can no longer contain a marker.
+
+Escaping is ORDER-SENSITIVE: any transformation that runs after the escape can
+put a marker back together. `one_line()` therefore flattens line breaks BEFORE
+escaping, never after, and flattens using the reader's own `str.splitlines()`
+so the writer and the parser cannot disagree about what a line break is.
+
+`local_map_ops` imports these under its own historical `_name` spellings so its
+suite keeps testing the same symbols; `github_map_ops` uses the names as
+written here.
+"""
+import re
+
+AFK_TYPES = {"research"}
+VALID_TICKET_TYPES = {"research", "prototype", "grilling", "task"}
+
+# Ticket keys AND a map's own target.slug become path segments on the local
+# backend (<root>/<slug>/... , tickets/<key>.md) and marker payloads on a
+# tracker -- restrict both to a safe slug so neither can escape the intended
+# root (e.g. "../../pwned", "C:/Windows/Temp/pwned") nor break an HTML comment.
+# Anchored with \Z, not $: in Python, `$` also matches just before a trailing
+# newline, so "okname\n" would otherwise pass here and only fail later.
+SAFE_SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*\Z")
+
+# ---------------------------------------------------------------------------
+# Generated-region markers, and the invariant that makes them trustworthy.
+#
+# Four review rounds established that finding a region by pattern-matching the
+# document is the wrong half of the problem to work on:
+#   round 1  append-only            -> duplicate blocks stacked
+#   round 2  "## Resolution.*\Z"    -> deleted a user comment
+#   round 2b lookahead to "\n## "   -> a --body-file's own "## Rationale"
+#                                      orphaned the tail (unbounded growth)
+#   round 3  these markers          -> same mechanism, longer needle: a marker
+#                                      pasted into question/gist/link/body/
+#                                      comment reproduced BOTH harms
+# The needle was never the problem. What was missing is the write side:
+# scrub() escapes the marker prefix in every user-supplied string, so a marker
+# in a document is proof the tool put it there. assert_regions() then checks
+# that promise on every single write. Widening or re-anchoring the search
+# pattern is NOT a fix -- it is round 5.
+MARKER_PREFIX = "<!-- decision-map:"
+# "&lt;" is Markdown/HTML's own escape for a literal "<", so the scrubbed text
+# still RENDERS as the marker the user typed -- it just stops being an HTML
+# comment, and stops matching. Escaping, not mangling. Idempotent: the escaped
+# form no longer contains MARKER_PREFIX, so re-scrubbing is a no-op and
+# repeated read/modify/write cycles cannot cascade.
+MARKER_ESCAPED_PREFIX = "&lt;!-- decision-map:"
+
+RESOLUTION_START = "<!-- decision-map:resolution:start -->"
+RESOLUTION_END = "<!-- decision-map:resolution:end -->"
+DECISIONS_START = "<!-- decision-map:decisions:start -->"
+DECISIONS_END = "<!-- decision-map:decisions:end -->"
+FOG_START = "<!-- decision-map:fog:start -->"
+FOG_END = "<!-- decision-map:fog:end -->"
+SCOPE_START = "<!-- decision-map:scope:start -->"
+SCOPE_END = "<!-- decision-map:scope:end -->"
+
+# The ordering dimension (ADR 0094-0099). A milestone is a named, ordered,
+# shippable increment: the group of decision tickets that must all close before
+# building that increment can begin. Membership and order live HERE, on the map,
+# in one region -- not as a field on each ticket -- because "what ships first" is
+# a map-level statement and declaring or regrouping N tickets would otherwise be
+# N writes (ADR 0096).
+MILESTONES_START = "<!-- decision-map:milestones:start -->"
+MILESTONES_END = "<!-- decision-map:milestones:end -->"
+# Notes is a LIST, not a paragraph (ADR 0101). Measured on a live map, its
+# content was a ~450-word single line whose actual shape was a sequence of dated
+# amendments -- a list forced to impersonate a paragraph.
+NOTES_START = "<!-- decision-map:notes:start -->"
+NOTES_END = "<!-- decision-map:notes:end -->"
+
+# Single-line markers -- a value carrier, not a paired region. `assert_regions`
+# counts them separately for that reason: they have no end marker to pair with.
+KEY_MARKER = "<!-- decision-map:key:%s -->"
+KEY_MARKER_RE = re.compile(r"<!-- decision-map:key:([^\s>]*) -->")
+GIST_START = "<!-- decision-map:gist:start -->"
+GIST_END = "<!-- decision-map:gist:end -->"
+GRAPH_START = "<!-- decision-map:graph:start -->"
+GRAPH_END = "<!-- decision-map:graph:end -->"
+# The Map pointer (ADR 0173): the one file a GitHub-backed map leaves in the
+# repo, so `docs/decision-map/` lists every map whichever backend holds it. It
+# is recognised by this frontmatter `type`, never by its path -- a pointer and
+# a local map.md share a filename on purpose.
+POINTER_TYPE = "decision-map-pointer"
+
+MAP_REGIONS = ((DECISIONS_START, DECISIONS_END),
+               (NOTES_START, NOTES_END),
+               (MILESTONES_START, MILESTONES_END),
+               (FOG_START, FOG_END),
+               (SCOPE_START, SCOPE_END))
+TICKET_REGIONS = ((RESOLUTION_START, RESOLUTION_END),
+                  (GRAPH_START, GRAPH_END))
+# A tracker records the resolution as a native comment, so the resolution
+# markers are local-only; the gist region is the tracker's machine-readable
+# home for the same one-liner the local backend keeps in frontmatter. The
+# graph region is DECLARED here but never written by a tracker backend
+# (ADR 0171): assert_regions rejects any marker outside a declared region, so
+# dropping the pair would make every ticket charted by an older version
+# unwritable at its next resolve. Declared-not-written keeps them writable;
+# `chart` is the one subcommand that strips the region (ADR 0172).
+TRACKER_TICKET_REGIONS = ((GIST_START, GIST_END),
+                          (GRAPH_START, GRAPH_END))
+
+# The placeholder the tool writes into an empty list region. It is tool-owned,
+# not user content, so the merge drops it as soon as a real line arrives.
+EMPTY_LIST_LINE = "- (none)"
+
+# Never recommend --force without saying what it costs. A reviewer followed the
+# old advice -- "re-chart with --force to rewrite it" -- and watched it erase a
+# resolution, its frontmatter and its index entry. Any text that steers a user
+# toward --force must carry this.
+#
+# The map-body half is named too, and is the half nothing else warns about: the
+# decisions index self-heals (the next resolve re-projects it), but the four
+# list regions do not. Measured: a map holding one milestone, force-charted from
+# an input that omits `milestones`, comes back "- (none)" with divergence []
+# and detail null. Removing a milestone is a deliberate hand edit by design
+# (ADR 0098) -- --force is the one path that does it wholesale and in silence.
+FORCE_COST = ("--force fully rewrites every item named in the input and "
+              "DISCARDS their recorded resolutions, claims and blocking edges, "
+              "and regenerates the map body, so every milestone, note, fog and "
+              "out-of-scope line the input does not repeat is lost with them")
+
+# The longest gist that still reads as ONE line in the map's decisions index,
+# which is what the index renders it as. Over this, resolve() warns and writes
+# anyway (ADR 0066): failing the call would discard a resolved decision to
+# enforce a formatting rule.
+GIST_MAX = 200
+
+# One wording, printed by both backends. A user who moves a map from local
+# to GitHub must not get a different explanation of the same problem.
+GIST_TOO_LONG = (
+    "warning: this gist is {n} characters. The map's 'Decisions so far' "
+    "index renders it as ONE line, so anything past ~{max} makes the index "
+    "unreadable. Recording it anyway -- consider re-resolving with a "
+    "one-sentence gist and moving the detail into --body-file or --link.")
+
+# A ticket type whose whole job is to produce a durable design artifact. The
+# grilling arc (work-map Step 3) loads sp-grill-with-doc, whose Step 4 requires
+# an ADR for every decision and a CONTEXT.md term the moment one resolves. That
+# instruction was complete and was still skipped in silence: on one real map, 8
+# closed grilling tickets produced 1 ADR and 0 glossary terms, while a sibling
+# feature run through grill-then-plan directly produced 14 ADRs and edited the
+# glossary in nearly every commit. Nothing checked, so nothing complained.
+# The fallback every reader already applies to a ticket whose type is missing:
+# _ticket_json defaults to it, and the GitHub backend's _type_of falls back to it
+# (with its own warning). Named here so resolve and lint cannot drift from them.
+DEFAULT_TICKET_TYPE = "grilling"
+TYPES_EXPECTING_A_DOC = (DEFAULT_TICKET_TYPE,)
+
+# One wording, printed by both backends -- see GIST_TOO_LONG for why.
+# A warning and not a refusal, for GIST_TOO_LONG's reason (ADR 0066): failing
+# the call would discard a decision the user already made in order to enforce a
+# bookkeeping rule. The decision is the thing worth keeping; the missing link is
+# recoverable by re-resolving, and resolve() is idempotent by design.
+MISSING_DOC_LINK = (
+    "warning: this is a '{type}' ticket and it closed with no --link. The"
+    " grilling arc is supposed to leave an ADR behind (and a CONTEXT.md term"
+    " when one resolved), and the ticket is where that artifact is reachable"
+    " from. Recorded anyway -- if you wrote one, re-resolve with --link <path>;"
+    " if you did not, write it now while the reasoning is still in your head."
+    " A closed ticket with no artifact loses the WHY, and the code cannot"
+    " reconstruct it later.")
+
+# How far a map's gists may collectively run past GIST_MAX before the corpus
+# itself is worth a finding (ADR 0068). Expressed in whole gists rather than a
+# round number so it tracks GIST_MAX: five gists' worth of overage is noise on
+# a map, and a map past that is re-reading the overage every single session.
+GIST_BUDGET_SLACK = GIST_MAX * 5
+
+
+class ChartValidationError(ValueError):
+    """map_input.json failed validation. Raised before anything is written."""
+
+
+class UnsafeIdentifierError(ValueError):
+    """A value used as a path segment or a marker payload (a map slug, a ticket
+    id) is not a safe slug. Raised BEFORE the path or marker is built.
+
+    chart() has slug-validated the keys it creates since round 1, but the
+    identifiers the other subcommands accept at runtime were unchecked, so
+    `claim --ticket ../../../VICTIM` rewrote an arbitrary .md file outside
+    --root at exit code 0."""
+
+
+class InvalidEdgeError(ValueError):
+    """A blocking edge is unusable: it names its own ticket. Raised before
+    anything is written. A self-edge permanently quarantines the ticket --
+    frontier() reports it blocked by something that can never close, so it is
+    never takeable and never resolvable."""
+
+
+class CliUsageError(ValueError):
+    """A subcommand was invoked without an argument it needs. Raised before any
+    work, and reported as a one-line message rather than a traceback."""
+
+
+class MapElsewhereError(CliUsageError):
+    """The slug names a Map pointer (ADR 0173): the map lives on another
+    backend, and the local script must refuse rather than read the pointer as
+    an empty map -- the absence-read-as-a-fact shape ADR 0061 forbids."""
+
+
+class MarkerIntegrityError(Exception):
+    """A document about to be written does not hold exactly zero or one
+    well-formed generated region. Raised INSTEAD of writing, so the tool
+    refuses rather than corrupts. Every string written is scrubbed, so reaching
+    this means either a bug (a new user-input path that forgot scrub) or a
+    hand-edited document with stray markers."""
+
+
+class JoinIntegrityError(Exception):
+    """The key -> item join could not be built unambiguously from what the
+    tracker returned: a labelled child with no key marker, two key markers in
+    one body, or two children resolving to the same key.
+
+    Every one of these is a LOUD failure rather than a skip, and the reason is
+    the worst failure this design can produce: ignoring an unresolvable child
+    hides it from the join, so `chart` labels it `create`, and a map whose
+    markers were stripped by a bulk edit is silently re-created in full and
+    presented to the user as a page of ordinary, approvable `create` lines."""
+
+
+def norm_eol(s):
+    """Normalise line endings to \\n. Run this on EVERY read of stored text.
+
+    A tracker does not normalise line endings and does not promise which form
+    it returns -- it echoes back however the text was submitted. Verified live
+    on GitHub: `cli/cli#14021` comes back CRLF and `cli/cli#14031` LF, same
+    repo, both with HTML comments intact. Without this, a human's web-UI edit
+    flips a whole region to CRLF and the next `chart` sees every line as
+    changed -- breaking the byte-identical no-op guarantee and emitting
+    divergences for text nobody touched.
+
+    `None` becomes "": a tracker returns a null body for an item created with
+    no description (verified on two live GitHub issues), and every read must
+    treat that as "no markers found" rather than letting a regex throw.
+    """
+    if s is None:
+        return ""
+    return s.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def scrub(value):
+    """Escape every decision-map marker in a user-supplied string.
+
+    The write-side half of the marker invariant, and the reason the region
+    search is safe: after this, no user-supplied byte in any generated document
+    can be read back as a marker. Apply it to EVERY string that originates
+    outside the tool -- question, title, destination, notes, fog/out-of-scope
+    lines, comment bodies, gist, link, resolution body, assignee, blocked-by.
+    `None` becomes "".
+    """
+    s = "" if value is None else str(value)
+    return s.replace(MARKER_PREFIX, MARKER_ESCAPED_PREFIX)
+
+
+def one_line(v):
+    """Flatten to a single line, THEN escape. Both halves are load-bearing.
+
+    1. Flatten FIRST, escape SECOND. Escaping first is a hole:
+       "<!--\\ndecision-map:resolution:start -->" contains no marker for
+       scrub() to find, and flattening it afterwards RECONSTITUTES a live
+       marker that no escape ever saw. Unpaired that raised
+       MarkerIntegrityError mid-chart with the map already written; paired it
+       sailed through assert_regions and wrote live markers into a generated
+       document -- falsifying the invariant the whole design rests on.
+    2. Flatten with the READER's own splitter. The local frontmatter parser
+       splits on str.splitlines(), so " ".join(s.splitlines()) covers exactly
+       what the reader recognises, by construction, and the two cannot drift
+       apart. A hand-listed CRLF/LF/CR set missed eight separators splitlines()
+       honours -- U+000B, U+000C, U+001C, U+001D, U+001E, U+0085, U+2028,
+       U+2029 -- any of which let `claim --user "me<sep>status: closed"` forge a
+       real frontmatter key, silently closing the ticket.
+    """
+    s = "" if v is None else str(v)
+    return scrub(" ".join(s.splitlines()))
+
+
+def assert_regions(text, regions, what, single_markers=()):
+    """Refuse to write `text` unless every declared region is well formed and
+    no decision-map marker appears outside them.
+
+    The backstop for scrub(): if a future change adds a user-input path and
+    forgets to scrub it, this fails loudly at the write instead of silently
+    losing user content on some later resolve() -- which is exactly how the
+    same defect survived three fix rounds.
+
+    The final stray-prefix check is the part that generalises: it is what makes
+    "a marker in this document was written by the tool" checkable without
+    enumerating every marker that could ever exist. Dropping it survived the
+    round-5 suite, so it has its own regression test.
+
+    `single_markers` are unpaired one-line carriers (the key marker), counted
+    once each rather than as a start/end pair. A tracker item legitimately
+    holds exactly one key marker, and without declaring it here the stray-
+    prefix check would reject every tracker write.
+    """
+    problem = None
+    accounted = 0
+    for start, end in regions:
+        n_start, n_end = text.count(start), text.count(end)
+        accounted += n_start + n_end
+        if n_start > 1 or n_end > 1:
+            problem = f"{n_start} start / {n_end} end markers (expected at most one of each)"
+        elif n_start != n_end:
+            problem = f"unpaired markers ({n_start} start, {n_end} end)"
+        elif n_start and text.index(start) > text.index(end):
+            problem = "end marker precedes start marker"
+        if problem:
+            problem = f"region {start!r}: {problem}"
+            break
+    for marker in single_markers:
+        n = text.count(marker)
+        accounted += n
+        if n > 1 and not problem:
+            problem = f"marker {marker!r}: present {n} times (expected at most one)"
+    if not problem and text.count(MARKER_PREFIX) != accounted:
+        problem = (f"{text.count(MARKER_PREFIX)} decision-map marker(s) present but only "
+                   f"{accounted} belong to a declared region")
+    if problem:
+        raise MarkerIntegrityError(
+            f"refusing to write {what}: {problem}. Every string the tool writes is "
+            "escaped, so this indicates hand-edited markers in the document (remove "
+            "them) or an unscrubbed input path (a bug in the backend).")
+
+
+def mode(ticket_type):
+    return "AFK" if ticket_type in AFK_TYPES else "HITL"
+
+
+def safe_segment(value, kind):
+    """Return `value` if it is safe to use as a path segment / marker payload.
+
+    THE enforcing line for the path half of every backend, so a traversal
+    payload is rejected before any path is constructed. It uses the SAME
+    SAFE_SLUG_RE that chart() applies to the keys it creates, so it can never
+    reject an identifier the tool could legitimately have produced.
+    """
+    if not isinstance(value, str) or not SAFE_SLUG_RE.match(value):
+        raise UnsafeIdentifierError(
+            f"invalid {kind} {value!r}: must be a safe slug (letters, digits, "
+            "'-', '_'; no path separators, drive letters, '..', or line breaks)")
+    return value
+
+
+# ---------------------------------------------------------------------------
+# region text handling
+# ---------------------------------------------------------------------------
+def region_re(start, end):
+    return re.compile(
+        re.escape(start) + r".*?" + re.escape(end) + r"\n?", re.DOTALL)
+
+
+def region_body(text, start, end):
+    """The text strictly between one marker pair, or None if absent.
+
+    Literal `str.find` on the exact markers -- no pattern at all, so there is
+    nothing to anchor wrongly. Returns None rather than guessing when the
+    region is missing.
+    """
+    i = text.find(start)
+    if i < 0:
+        return None
+    j = text.find(end, i + len(start))
+    if j < 0:
+        return None
+    return text[i + len(start):j]
+
+
+def replace_region(text, start, end, new_body):
+    """Swap the content between one marker pair, leaving the rest byte-identical."""
+    i = text.find(start)
+    if i < 0:
+        return text
+    j = text.find(end, i + len(start))
+    if j < 0:
+        return text
+    return text[:i + len(start)] + new_body + text[j:]
+
+
+def region_text(start, end, lines):
+    return start + "\n" + "".join(ln + "\n" for ln in lines) + end
+
+
+def merge_region_lines(body, items):
+    """Union the existing one-line items with `items`, existing order first.
+
+    Never removes and never reorders what is already there (ADR 0057) -- new
+    lines are appended. The tool-owned "- (none)" placeholder is dropped as
+    soon as a real line exists, and restored if the result is empty.
+    """
+    existing = [ln for ln in (body or "").splitlines()
+                if ln.strip() and ln.strip() != EMPTY_LIST_LINE]
+    seen = set(existing)
+    for x in items:
+        line = f"- {one_line(x)}"
+        if line not in seen:
+            existing.append(line)
+            seen.add(line)
+    return existing or [EMPTY_LIST_LINE]
+
+
+def count_added_lines(body, merged_lines):
+    """How many lines the merge actually ADDS to one list region.
+
+    Not `len(merged) - len(existing)`: the tool-owned "- (none)" placeholder is
+    dropped when the first real line arrives and restored when the list empties,
+    so the arithmetic is off by one in either direction. Count the merged lines
+    that were not already there instead.
+    """
+    existing = {ln for ln in (body or "").splitlines()
+                if ln.strip() and ln.strip() != EMPTY_LIST_LINE}
+    return sum(1 for ln in merged_lines
+               if ln != EMPTY_LIST_LINE and ln not in existing)
+
+
+# The milestone line grammar. Anchored at BOTH ends, with the member list last
+# and forbidden from containing brackets, so the trailing group is unambiguously
+# the members even when a human's label contains brackets of its own. Order is
+# LINE ORDER, never a rendered number: a numbered list would have to be
+# renumbered on every insert, which is a rewrite of lines the additive
+# guarantee promises never to touch.
+#
+# The member group matches a comma-separated list of SAFE SLUGS, not "anything
+# without brackets". That is load-bearing, not tidiness: milestone_line writes
+# members unescaped, and merge_milestones re-renders the region from what
+# parse_milestones read back OUT of the document -- a round trip through content
+# a human may have edited. A decision-map marker contains no brackets, so under
+# a "no brackets" member group a hand-typed marker would parse cleanly, be
+# handed back to milestone_line unescaped, and only be caught downstream by
+# assert_regions -- a MarkerIntegrityError (exit 2, one stderr line) instead of
+# the precise, actionable divergence a hand-edited region is supposed to get.
+# Restricting the group sends that line to `bad`, so ONE mechanism covers every
+# hand-broken line. Whitespace around the commas is tolerated because a human
+# writes "[a,b]"; parse_milestones strips each member anyway.
+_SLUG_BODY = r"[A-Za-z0-9][A-Za-z0-9_-]*"
+_MILESTONE_LINE_RE = re.compile(
+    r"^- `(?P<slug>" + _SLUG_BODY + r")`"
+    r"(?: (?P<label>.*?))? "
+    r"\[(?P<members>\s*(?:" + _SLUG_BODY +
+    r"(?:\s*,\s*" + _SLUG_BODY + r")*\s*)?)\]$")
+
+
+def milestone_line(slug, label, members):
+    """One milestone as its stored line.
+
+    `slug` and every member are safe slugs -- guaranteed on the way IN by
+    validate_chart_input, and on the way BACK IN by the reader's own member
+    pattern (see the grammar comment above) -- so they need no escaping. The
+    LABEL is free user text and goes through one_line: flatten first, escape
+    second, exactly as every other user string does. A newline there would
+    inject a second line into the region; a marker there would forge a region.
+
+    The slug pattern above deliberately ACCEPTS "--", matching SAFE_SLUG_RE
+    rather than validate_key: the "--" rule belongs at mint time, and a reader
+    that refused such a slug would turn a hand-written milestone into an
+    unparsable line instead of a readable one whose slug `lint` can name. Do not
+    "fix" this by tightening THAT -- it is the same split SAFE_SLUG_RE already
+    documents for ticket keys.
+
+    The label is STRIPPED, and that is a round-trip requirement rather than
+    tidiness: parse_milestones strips what it reads back, so a label written
+    with padding ("demo it ") parses as "demo it" and the very next render of
+    the same milestone produces different bytes -- an identical re-chart
+    rewriting a stored line, and reporting a label divergence that says "left
+    unchanged" while the bytes changed. A label that is nothing BUT padding
+    renders as no label at all, for the same reason: " " would render as a
+    second space the parser reads as an empty label and drops.
+    """
+    lab = one_line(label).strip() if label else ""
+    return f"- `{slug}`{' ' + lab if lab else ''} [{', '.join(members)}]"
+
+
+def milestone_lines_for(milestones):
+    """The rendered lines for a milestone list, placeholder when it is empty."""
+    lines = [milestone_line(m["slug"], m.get("label"), m.get("members") or [])
+             for m in milestones]
+    return lines or [EMPTY_LIST_LINE]
+
+
+def parse_milestones(map_text):
+    """-> ([{slug, label, members}, ...], [unparsable raw line, ...])
+
+    A line the grammar cannot read is REPORTED, never skipped. Skipping it would
+    hide its members, so the map would advertise a smaller milestone than it has
+    and the reader would believe it -- the same absence-read-as-a-fact shape
+    ADR 0061 exists to prevent. `lint` turns the second list into findings.
+
+    An absent region parses as empty rather than raising: a map charted before
+    milestones existed is legal, and every read path must survive it.
+    """
+    body = region_body(norm_eol(map_text or ""), MILESTONES_START, MILESTONES_END)
+    if body is None:
+        return [], []
+    out, bad = [], []
+    for raw in body.splitlines():
+        line = raw.strip()
+        if not line or line == EMPTY_LIST_LINE:
+            continue
+        m = _MILESTONE_LINE_RE.match(line)
+        if m is None:
+            bad.append(line)
+            continue
+        out.append({
+            "slug": m.group("slug"),
+            "label": (m.group("label") or "").strip() or None,
+            "members": [x.strip() for x in m.group("members").split(",")
+                        if x.strip()],
+        })
+    return out, bad
+
+
+def membership_of(milestones):
+    """-> {ticket key: milestone slug}, first occurrence winning.
+
+    A ticket belongs to at most ONE milestone -- the first that needs it
+    (ADR 0097): a decision closed once serves every later milestone
+    automatically, so nothing is re-done per increment. A key listed twice is a
+    lint error, but this projection still has to be deterministic, so first
+    occurrence wins rather than last. Shared with the decisions index, which
+    groups by the same rule and must not re-derive it.
+    """
+    by_key = {}
+    for m in milestones:
+        for key in m.get("members") or []:
+            by_key.setdefault(key, m["slug"])
+    return by_key
+
+
+def milestone_index(map_text):
+    """-> (milestones, {ticket key: milestone slug}, unparsable lines)"""
+    milestones, bad = parse_milestones(map_text)
+    return milestones, membership_of(milestones), bad
+
+
+def milestone_progress(milestones, status_by_key):
+    """-> [{slug, label, closed, total, complete}], in map order.
+
+    `total` counts declared members, including one whose ticket is missing --
+    that member can never be closed, so the milestone reads as incomplete and
+    `lint`'s milestone-unknown-ticket names it. Counting only the members that
+    resolve would let a deleted ticket silently complete a milestone.
+
+    An EMPTY milestone is never complete: it has shipped nothing, and calling it
+    done would send the reader on to the next group.
+
+    Members are counted DISTINCT. A key repeated inside one milestone is a lint
+    error (`milestone-duplicate-member`), but while the line stands it must not
+    make `<closed>/<total>` -- a number the user reads and acts on -- report one
+    ticket as two. Nothing is rewritten to achieve it: additive never edits a
+    stored line, so the repeat stays on the map until a hand edit removes it.
+    """
+    out = []
+    for m in milestones:
+        distinct = list(dict.fromkeys(m.get("members") or []))
+        closed = sum(1 for k in distinct if status_by_key.get(k) == "closed")
+        out.append({"slug": m["slug"], "label": m.get("label"),
+                    "closed": closed, "total": len(distinct),
+                    "complete": bool(distinct) and closed == len(distinct)})
+    return out
+
+
+def notes_lines(value):
+    """The map's notes as a list of lines, whatever shape the input used.
+
+    A bare string stays legal as a one-bullet list (ADR 0101), so every existing
+    map_input.json keeps working unchanged.
+    """
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [value]
+    return list(value)
+
+
+# The one `added` noun that does not name a line the merge appends: a member
+# union edits the milestone line it joins. Named so map_merge_detail and
+# merge_milestones cannot drift apart about which one it is.
+MEMBER_NOUN = "milestone member"
+
+
+def map_merge_detail(added):
+    """The one-line `detail` for a map-body merge: what it will add.
+
+    The contract requires every `merge` entry to name what it adds, because
+    that string is what the ADR-0039 gate shows the user before the write. A
+    map-body merge that reported `detail: null` rendered as a bare `merge
+    .../map.md` -- an unnamed write, approved blind.
+
+    `added` is [(noun, count), ...] for the regions that gained lines. The
+    fallback covers the one way a merge can change bytes without adding a line:
+    a hand-edited region whose blank lines or stale placeholder the merge
+    normalises away. Saying "adds 0 lines" there would be a lie.
+
+    MEMBER_NOUN gets its own phrasing for the same reason: unioning a ticket
+    into a milestone that already exists EDITS that milestone's stored line
+    rather than adding one, and "adds 1 milestone member line" describes a
+    write that does not happen.
+    """
+    parts = []
+    for noun, n in added:
+        if noun == MEMBER_NOUN:
+            parts.append(f"{n} ticket" + ("s" if n != 1 else "") + " to "
+                         + ("an existing milestone" if n == 1
+                            else "existing milestones"))
+        else:
+            parts.append(f"{n} {noun} line" + ("s" if n != 1 else ""))
+    if not parts:
+        return "normalises the map body's list regions (no new lines)"
+    return "adds " + ", ".join(parts)
+
+
+def render_map_body(m, prologue):
+    """The generated part of a map document: the one prose slot and the five
+    regions, in the order every backend renders them.
+
+    `prologue` is the backend's own top matter -- the local backend's H1 plus
+    overview diagram, or just the diagram on a tracker where the item's native
+    title already carries the name. Everything below it is shared, because the
+    regions are what the additive merge and the decisions projection reach into,
+    and the two backends disagreeing about their order or spelling would make a
+    map unreadable by the other backend.
+
+    Section order is reading order: where we are going, the standing
+    constraints, the plan for what ships first (ADR 0096's one milestones
+    region), then the history that plan groups. Milestones sits ABOVE
+    "Decisions so far" because it is what a reader opening the map needs in
+    order to read the index below it -- the index groups by exactly these
+    slugs.
+
+    one_line, not scrub, on the DESTINATION: it is a single-line slot in the
+    rendered document -- one paragraph under one heading, kept to one breath by
+    ADR 0101 -- so it gets the same flatten-then-escape treatment every other
+    user string gets. scrub alone neutralises the marker but leaves line breaks,
+    and both harms were silent: a two-line title was truncated by the reader with
+    no error and no divergence entry, and a newline-bearing destination injected
+    a second "## Notes" heading AHEAD of the real one. Notes is no longer such a
+    slot -- it is a list region now (ADR 0101), so its lines get the same
+    flatten-then-escape through merge_region_lines that fog and out-of-scope do.
+    """
+    notes = region_text(NOTES_START, NOTES_END,
+                        merge_region_lines("", notes_lines(m.get("notes"))))
+    miles = region_text(MILESTONES_START, MILESTONES_END,
+                        milestone_lines_for(m.get("milestones") or []))
+    fog = region_text(FOG_START, FOG_END,
+                      merge_region_lines("", m.get("notYetSpecified") or []))
+    oos = region_text(SCOPE_START, SCOPE_END,
+                      merge_region_lines("", m.get("outOfScope") or []))
+    return (
+        prologue +
+        f"## Destination\n{one_line(m['destination'])}\n\n"
+        f"## Notes\n\n{notes}\n\n"
+        f"## Milestones\n\n{miles}\n\n"
+        f"## Decisions so far\n\n{DECISIONS_START}\n{DECISIONS_END}\n\n"
+        f"## Not yet specified\n\n{fog}\n\n"
+        f"## Out of scope\n\n{oos}\n")
+
+
+SCALAR_MAP_FIELDS = ("title", "destination", "notes")
+
+
+def scalar_divergences(m, stored_text, fields=SCALAR_MAP_FIELDS):
+    """Report -- never apply -- an input scalar that differs from what is stored.
+
+    Scalars are never rewritten on the additive path. The only way to change
+    them through the tool is --force, which rewrites the WHOLE map and discards
+    every recorded resolution, claim and edge, so the message leads with the
+    hand-edit instead.
+
+    The check is containment of the flattened value in the flattened document:
+    it drives a REPORT only, never a write, so it deliberately avoids splitting
+    the document into sections to compare field-by-field.
+
+    `fields` exists because the three scalars do not all live in the same place
+    on every backend. The local backend keeps `title` in the map document (its
+    H1), so all three are checked against one text. A tracker keeps the title in
+    the item's own **title field** and only `destination` / `notes` in the body,
+    so it must check the title against the title. Checking all three against the
+    body there reported a `title` divergence on EVERY re-chart -- a divergence
+    for text nobody had touched, which is precisely the noise these messages
+    exist to avoid, and it would have trained users to ignore them.
+
+    A non-STRING value is skipped, because a containment check on it is
+    meaningless: `notes` may be a list (ADR 0101), and on a legacy map with no
+    notes region -- the one case where `scalar_fields_for` still keeps `notes`
+    in the set -- this compared `one_line(["a", "b"])`, i.e. the literal
+    "['a', 'b']", which can never appear in a body. So it reported "differs"
+    unconditionally, next to the accurate "predates the notes region" line the
+    merge already emits.
+    """
+    flat = " ".join(norm_eol(stored_text).splitlines())
+    div = []
+    for field in fields:
+        value = m.get(field)
+        if not isinstance(value, str):
+            continue
+        if value and one_line(value) not in flat:
+            div.append(f"map {field!r} in the input differs from the map as stored; "
+                       f"left unchanged. To apply it you must re-chart, but "
+                       f"{FORCE_COST} -- editing the map by hand is usually "
+                       "the right move instead")
+    return div
+
+
+def scalar_fields_for(stored_text, fields=SCALAR_MAP_FIELDS):
+    """The scalar fields still worth a containment check on this document.
+
+    `notes` drops out once the map carries a notes region: there the value is a
+    LIST merged like fog, and a containment check on the flattened body would
+    report a divergence for text the merge had just applied -- noise, in exactly
+    the channel whose whole value is that users read it.
+
+    On a LEGACY map -- no notes region -- `notes` stays in the set, because a
+    STRING notes there still behaves as the scalar it always was. A list-valued
+    notes against such a map is handled one level down, by `scalar_divergences`
+    skipping a non-string value: the merge already reports that map as
+    predating the region, and a second "differs" line for the same input would
+    be noise.
+    """
+    if region_body(norm_eol(stored_text or ""), NOTES_START, NOTES_END) is None:
+        return tuple(fields)
+    return tuple(f for f in fields if f != "notes")
+
+
+def merge_milestones(text, wanted):
+    """Union `wanted` into the stored milestones region.
+
+    -> (new_text, added, divergences). `added` is [(noun, count), ...] for
+    map_merge_detail, using two nouns because they are different acts to
+    approve: a new GROUP appears in the plan as "1 milestone line", a group
+    gaining a ticket as "1 ticket to an existing milestone" -- the second
+    phrased that way because it edits a stored line rather than adding one.
+
+    Additive, with three things deliberately NOT applied and reported instead
+    (ADR 0098) -- each would have to remove or reorder a stored line:
+
+    - a differing label;
+    - a member the map already places in a DIFFERENT milestone (the move would
+      have to remove it from the first one; exclusivity is ADR 0097);
+    - a different relative order of milestones that both already exist.
+
+    A map predating the region is reported, never repaired: inserting the
+    markers means guessing where a pre-marker list ended.
+
+    An UNPARSABLE line in the region stops the merge dead, leaving the document
+    byte-identical. The merge re-renders the region from the parsed list, and a
+    line the grammar cannot read is not in that list -- so rewriting would
+    delete it. Additive never removes (ADR 0098), and the line a human broke is
+    the line they were in the middle of editing. Preserving it in place instead
+    would need ordering rules for a state `lint` already reports as an error to
+    fix by hand; the honest answer to "the region is corrupt" is to touch
+    nothing and say so.
+    """
+    if not wanted:
+        return text, [], []
+    body = region_body(text, MILESTONES_START, MILESTONES_END)
+    if body is None:
+        return text, [], [
+            f"this map predates the milestones region, so its {len(wanted)} "
+            "milestone(s) were not merged. Add the milestones markers to the "
+            "map body by hand to enable merging; re-charting would also fix "
+            f"it, but {FORCE_COST}"]
+    stored, bad = parse_milestones(text)
+    div = []
+    if bad:
+        div.append(
+            f"the milestones region holds {len(bad)} line(s) this tool cannot "
+            f"read (first: {bad[0]!r}), so nothing was merged into it and the "
+            "region is unchanged -- rewriting it would delete those lines. Fix "
+            "them by hand, then re-chart; `lint` names every one of them")
+        return text, [], div
+    # FIRST-wins on both, matching membership_of -- which every projection
+    # (map.json, frontier.json, the decisions index) already uses. A duplicated
+    # slug or member is a lint error, but while it stands the four sites must
+    # still agree about which entry owns what: resolving it last-wins here made
+    # a new member land in the SECOND row while every projection attributed it
+    # to the first.
+    by_slug = {}
+    for m in stored:
+        by_slug.setdefault(m["slug"], m)
+    owner = {}
+    for m in stored:
+        for k in m["members"]:
+            owner.setdefault(k, m["slug"])
+    new_groups, new_members = 0, 0
+
+    # Deduped, because `shared` holds each slug once: comparing a stored_order
+    # that carries a duplicated slug TWICE against a `shared` that carries it
+    # once emitted a reorder divergence for an input that reordered nothing.
+    stored_order = []
+    for m in stored:
+        if m["slug"] not in stored_order:
+            stored_order.append(m["slug"])
+    shared = [s["slug"] for s in wanted if s["slug"] in by_slug]
+    if [s for s in stored_order if s in shared] != shared:
+        div.append(
+            "the input lists existing milestones in a different order "
+            f"({', '.join(shared)}); the stored order stands. Reorder the "
+            "milestones region by hand to change it")
+
+    for want in wanted:
+        slug = want["slug"]
+        label = want.get("label")
+        members = want.get("members") or []
+        got = by_slug.get(slug)
+        if got is None:
+            keep = []
+            for key in members:
+                if key in owner and owner[key] != slug:
+                    div.append(
+                        f"ticket {key!r} is already in milestone "
+                        f"{owner[key]!r}, so it was not added to {slug!r}: a "
+                        "ticket belongs to at most one milestone. Move it by "
+                        "hand if that is what you meant")
+                    continue
+                if key not in keep:
+                    keep.append(key)
+                    owner[key] = slug
+            entry = {"slug": slug, "label": label, "members": keep}
+            stored.append(entry)
+            by_slug[slug] = entry
+            new_groups += 1
+            continue
+        # Stripped on BOTH sides: milestone_line strips before writing and
+        # parse_milestones strips what it reads, so " demo it " and "demo it"
+        # are the same stored label and must not report a divergence.
+        if label and one_line(label).strip() != (got["label"] or "").strip():
+            div.append(
+                f"milestone {slug!r}'s label in the input differs from the map "
+                "as stored; left unchanged. Edit the milestones region by hand "
+                "to change it")
+        for key in members:
+            if key in got["members"]:
+                continue
+            if key in owner and owner[key] != slug:
+                div.append(
+                    f"ticket {key!r} is already in milestone {owner[key]!r}, so "
+                    f"it was not added to {slug!r}: a ticket belongs to at most "
+                    "one milestone. Move it by hand if that is what you meant")
+                continue
+            got["members"].append(key)
+            owner[key] = slug
+            new_members += 1
+
+    merged = region_text(MILESTONES_START, MILESTONES_END,
+                         milestone_lines_for(stored))
+    text = replace_region(text, MILESTONES_START, MILESTONES_END,
+                          merged[len(MILESTONES_START):-len(MILESTONES_END)])
+    added = []
+    if new_groups:
+        added.append(("milestone", new_groups))
+    if new_members:
+        added.append((MEMBER_NOUN, new_members))
+    return text, added, div
+
+
+def merge_map_lists(text, m):
+    """Union the input's notes / fog / out-of-scope lines and its milestones
+    into a stored map document.
+
+    -> (new_text, added, divergences). `added` is [(noun, count), ...] for
+    map_merge_detail. A document predating a region cannot be merged into, and
+    that is reported rather than repaired: inserting the markers would mean
+    guessing where the pre-marker list ended, which is the pattern that cost
+    rounds 1-3.
+    """
+    div, added = [], []
+    regions = [(FOG_START, FOG_END, m.get("notYetSpecified") or [],
+                "notYetSpecified", "fog"),
+               (SCOPE_START, SCOPE_END, m.get("outOfScope") or [],
+                "outOfScope", "out-of-scope")]
+    # Notes joins the merge only when the map HAS the region, or when the input
+    # declares a list. A string notes on a map whose Notes is still a paragraph
+    # keeps the scalar behaviour it has always had (ADR 0101) -- otherwise every
+    # existing map would start reporting a divergence for a field that works.
+    if (isinstance(m.get("notes"), list)
+            or region_body(text, NOTES_START, NOTES_END) is not None):
+        regions.insert(0, (NOTES_START, NOTES_END, notes_lines(m.get("notes")),
+                           "notes", "notes"))
+    for start, end, items, label, noun in regions:
+        body = region_body(text, start, end)
+        if body is None:
+            if items:
+                div.append(
+                    f"this map predates the {label} region, so its "
+                    f"{len(items)} line(s) were not merged. Add the "
+                    f"{label} markers to the map body by hand to enable "
+                    f"merging; re-charting would also fix it, but {FORCE_COST}")
+            continue
+        merged_lines = merge_region_lines(body, items)
+        merged = region_text(start, end, merged_lines)
+        text = replace_region(text, start, end, merged[len(start):-len(end)])
+        gained = count_added_lines(body, merged_lines)
+        if gained:
+            added.append((noun, gained))
+    text, ms_added, ms_div = merge_milestones(text, m.get("milestones") or [])
+    added += ms_added
+    div += ms_div
+    return text, added, div
+
+
+def decisions_region(entries, milestones=None):
+    """The "Decisions so far" index, regenerated in full inside its own region.
+
+    The index is a projection of the tickets, not accumulated state, so it is
+    rebuilt wholesale. There is no per-line pattern to match and nothing
+    outside the region is read or touched -- which is what stops a
+    user-authored, index-shaped line elsewhere in the map body from being
+    substituted away, and stops a multi-line gist from splitting one entry into
+    an orphanable pair.
+
+    `entries` is [(key, title, link, gist), ...] -- the key is carried so this
+    can group by milestone. **Ordered by ticket key (ascending)** within each
+    group, not by when each decision was resolved, so the index is a
+    deterministic function of state; the caller sorts, this only formats.
+
+    `milestones` is the map's parsed milestone list. Given one, the index is
+    GROUPED to match the frontier the reader sees in the same session (ADR
+    0103): one `#### ` heading per milestone in MAP order -- not key order,
+    because the whole point of a milestone list is that its order is chosen --
+    then an "(unassigned)" tail. Membership comes from `membership_of` -- the
+    same first-occurrence-wins mapping `milestone_index` builds -- rather than
+    a second inline pass over `milestones`, so the two do not drift apart. A
+    milestone with no closed decision yet is omitted rather than rendered
+    empty, and with no milestones at all the output is the flat list this
+    function has always produced, so an unmilestoned map is unchanged.
+    """
+    lines = []
+
+    def render(group):
+        for _key, title, link, gist in group:
+            lines.append(f"- [{title}]({link}) — {gist}".rstrip() + "\n")
+
+    if not milestones:
+        render(entries)
+    else:
+        by_key = membership_of(milestones)
+        # Tracked by KEY rather than by removing tuples from a shrinking list:
+        # the key is the identity these entries are joined on everywhere else,
+        # and a duplicated slug (a lint error, but legal input to this) renders
+        # its group once under the first entry either way.
+        taken = set()
+        for m in milestones:
+            group = [e for e in entries
+                     if e[0] not in taken and by_key.get(e[0]) == m["slug"]]
+            if not group:
+                continue
+            taken.update(e[0] for e in group)
+            heading = f"#### {m['slug']}"
+            if m.get("label"):
+                # one_line even though this label was read back OUT of the map:
+                # every user string written into a document goes through it, and
+                # this is the one document -> document text path. Safe today only
+                # because the write side escaped it and assert_regions refuses a
+                # hand-forged marker -- defence in depth on the invariant, not a
+                # second opinion about it. Idempotent, so a label that was
+                # already escaped is unchanged.
+                heading += f" — {one_line(m['label'])}"
+            lines.append(heading + "\n\n")
+            render(group)
+            lines.append("\n")
+        remaining = [e for e in entries if e[0] not in taken]
+        if remaining:
+            lines.append("#### (unassigned)\n\n")
+            render(remaining)
+    # An empty index (no closed tickets, or a milestone list with none of them
+    # closed yet) must render as START\nEND\n, byte-identical to the pre-
+    # milestone format -- a bare "".join(lines) here would leave a blank line
+    # between the markers and turn every milestone-free-but-empty map into a
+    # spurious diff against the byte-identical no-op guarantee.
+    body = "".join(lines).rstrip("\n")
+    return (f"{DECISIONS_START}\n{body}\n{DECISIONS_END}\n" if body
+            else f"{DECISIONS_START}\n{DECISIONS_END}\n")
+
+
+def position_diagram_region(key, parents, children):
+    """A ticket's position: its blockers, itself, and what it unblocks.
+
+    Three levels and no more (ADR 0063) -- a map may legally hold 100 tickets
+    and a whole-map graph is unreadable long before that. Structure only, never
+    status or assignee (ADR 0064): a stale "open" on a blocker that has since
+    closed tells the reader they cannot pick the ticket up when they can, which
+    is the absence-read-as-a-fact shape ADR 0061 exists to prevent.
+
+    Node ids are positional (P0, C0, ...), NOT derived from the key: Mermaid
+    ids cannot contain "-", and mapping "-" to "_" would collide "a-b" with
+    "a_b", both of which are legal keys.
+
+    Sorted, and de-duplicated, because the bytes this returns are compared for
+    equality by the byte-identical no-op guarantee. An unsorted render would
+    make an identical re-chart report a spurious change.
+    """
+    ps, cs = sorted(set(parents)), sorted(set(children))
+    lines = ["```mermaid", "graph TD", f'    ME["{key} (this ticket)"]']
+    lines += [f'    P{i}["{p}"] --> ME' for i, p in enumerate(ps)]
+    lines += [f'    ME --> C{i}["{c}"]' for i, c in enumerate(cs)]
+    lines.append("```")
+    return GRAPH_START + "\n" + "\n".join(lines) + "\n" + GRAPH_END + "\n"
+
+
+def set_graph_region(body, region):
+    """Replace the graph region, or insert one into a ticket that predates it.
+
+    Insertion goes BELOW the "## Question" section, because the card's identity
+    is its question and the position diagram is context read second (ADR 0102):
+    before the next "## " heading if there is one, so the diagram lands inside
+    the Question section rather than after a resolution block, and otherwise at
+    the end. A ticket with no Question heading at all gets the region appended --
+    never guess at the boundary of content the tool did not write, the same
+    conservative rule _reindex_decisions applies to a legacy map.md.
+
+    `region` already carries its own trailing newline
+    (position_diagram_region's contract), and the block matched by `block_re`
+    extends through that same optional trailing newline (region_re's `\\n?`), so
+    the substitution is used as-is.
+    """
+    block_re = region_re(GRAPH_START, GRAPH_END)
+    if block_re.search(body):
+        return block_re.sub(lambda _m: region, body, count=1)
+    heading = "## Question"
+    i = body.find(heading)
+    if i < 0:
+        return body.rstrip("\n") + "\n\n" + region
+    nxt = body.find("\n## ", i + len(heading))
+    if nxt < 0:
+        return body.rstrip("\n") + "\n\n" + region
+    return body[:nxt + 1] + region + "\n" + body[nxt + 1:]
+
+
+def strip_graph_region(body):
+    """`body` with its position-diagram region removed (ADR 0172).
+
+    The GitHub backend no longer writes the region (ADR 0171); this is how a
+    `chart` re-run takes back the ones an earlier version wrote. The region
+    sat on a line of its own, so the blank line it leaves is collapsed to at
+    most one -- and a body that never had the region comes back byte-identical,
+    which is what restores the no-op guarantee from the second run onward.
+    Nothing outside the markers is touched.
+    """
+    m = region_re(GRAPH_START, GRAPH_END).search(body)
+    if not m:
+        return body
+    head = body[:m.start()].rstrip("\n")
+    tail = body[m.end():].lstrip("\n")
+    if not head:
+        return tail
+    if not tail:
+        return head + "\n"
+    return head + "\n\n" + tail
+
+
+def render_pointer(title, repo, issue, url):
+    """The whole Map pointer file (ADR 0173). Deterministic: the same inputs
+    give the same bytes, so `chart` can compare and report `skip (exists)`.
+
+    Every value passes through `one_line` -- the title is user text, and a
+    marker smuggled into it must not survive into a generated file."""
+    repo, url, title = one_line(repo), one_line(url), one_line(title)
+    n = int(issue)
+    return (
+        "---\n"
+        f"type: {POINTER_TYPE}\n"
+        "backend: github\n"
+        f"repo: {repo}\n"
+        f"issue: {n}\n"
+        f"url: {url}\n"
+        "---\n"
+        f"# {title}\n\n"
+        f"This decision map lives on GitHub Issues, not in this folder: the map is "
+        f"{repo}#{n} and every ticket is one of its sub-issues. Nothing here is a "
+        "copy of it. Work it with the decision-map plugin's GitHub backend "
+        f"(`github_map_ops.py`) and `--repo {repo} --map {n}`; the local backend "
+        "refuses this file on purpose.\n")
+
+
+_POINTER_FM_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
+
+
+def pointer_of(text):
+    """-> the pointer's frontmatter as a dict of strings, or None.
+
+    None for anything that is not a Map pointer: a local map.md (no
+    frontmatter), a ticket (frontmatter without the pointer type), or no text.
+    A file that CLAIMS the type but names no target is refused rather than
+    treated as a local map -- half a pointer is still not a map."""
+    m = _POINTER_FM_RE.match(norm_eol(text or ""))
+    if not m:
+        return None
+    fm = {}
+    for line in m.group(1).splitlines():
+        if ":" in line:
+            k, v = line.split(":", 1)
+            fm[k.strip()] = v.strip()
+    if fm.get("type") != POINTER_TYPE:
+        return None
+    for k in ("backend", "repo", "issue"):
+        if not fm.get(k):
+            # A half-pointer IS a map that lives elsewhere, just a damaged
+            # pointer to it -- not a bare usage error, so its remedy differs.
+            raise MapElsewhereError(
+                f"map.md says it is a {POINTER_TYPE} but carries no {k!r}; "
+                "restore the pointer from git, or delete it and re-chart")
+    return fm
+
+
+def force_orphaned_blockers(actions, blockers_of, rewired):
+    """The tickets whose position diagram `--force` would otherwise leave
+    asserting an edge that no longer exists -> {blocker key: [lost child, ...]}.
+
+    `--force` resets an OVERWRITE'd ticket's own blocking edges, and that is
+    documented and intended. What is NOT intended is the other end: the edge
+    was drawn at BOTH ends (ADR 0064), so every blocker the ticket named keeps
+    a `ME --> C<n>["<child>"]` line for an edge the same run just deleted -- a
+    picture of a dead edge, which is the "staleness read as a fact" harm ADR
+    0064 exists to prevent. Neither the `pending` nor the `blocker_gains` pass
+    sees these tickets: both are driven by the edges an input ADDS, and this is
+    an edge it REMOVES.
+
+    Shared rather than written twice because both backends must agree on which
+    neighbours a `--force` disturbs -- and therefore on which extra lines its
+    dry-run plan shows the user before they approve it (ADR 0039).
+
+    - `actions` is {key: plan action} for every key named in this input.
+    - `blockers_of(key)` returns the blockers an OVERWRITE'd key holds RIGHT
+      NOW, already narrowed by the caller to the ones that backend can actually
+      patch (a file that exists / a ticket still in the snapshot). It is called
+      only for OVERWRITE'd keys.
+    - `rewired` is {blocked key: container of blocker keys} for the edges this
+      same input wires. An edge that is removed and immediately put back is not
+      a loss, and announcing it would make an idempotent `--force` re-run report
+      a change it does not make.
+
+    A blocker that is itself create/OVERWRITE is skipped: its own plan line
+    already rewrites it whole, and the run's own graph pass re-renders it.
+    Sorted throughout, because the result feeds both a plan the user reads and
+    the bytes of a diagram (see `position_diagram_region` on determinism).
+    """
+    lost = {}
+    for key, action in actions.items():
+        if action != "OVERWRITE":
+            continue
+        for blocker in blockers_of(key):
+            if blocker in (rewired.get(key) or ()):
+                continue
+            if actions.get(blocker) in ("create", "OVERWRITE"):
+                continue
+            lost.setdefault(blocker, set()).add(key)
+    return {k: sorted(v) for k, v in sorted(lost.items())}
+
+
+def force_orphan_detail(lost):
+    """The one-line plan `detail` for a blocker that loses children to --force.
+
+    Non-null by construction: the contract forbids an undescribed `merge`, and
+    a bare `merge <path>` is an unnamed write the ADR-0039 gate asks the user to
+    approve blind."""
+    return "no longer renders as a child in the graph: " + ", ".join(sorted(lost))
+
+
+def rewired_edges(tickets):
+    """{blocked key: {blocker key, ...}} for every edge an input wires.
+
+    The `blocks` direction inverted once, in one place, so both backends feed
+    `force_orphaned_blockers` the same shape."""
+    out = {}
+    for t in tickets:
+        for blocked in t.get("blocks") or []:
+            out.setdefault(blocked, set()).add(t["key"])
+    return out
+
+
+# ---------------------------------------------------------------------------
+# input validation
+# ---------------------------------------------------------------------------
+REQUIRED_MAP_FIELDS = ("title", "destination")
+REQUIRED_TICKET_FIELDS = ("key", "title", "type", "question")
+
+
+def require(where, container, field, kind, required):
+    """Presence + TYPE check for one field, returning its value (or None when an
+    optional field is absent/null).
+
+    Presence-only validation was round 4's finding: `title: [1, 2]` reproduced
+    the partial-write harm through a wrong type instead of a missing key, and
+    `title: null` / a dict / an int were written silently. `null` counts as
+    absent for an optional field and as invalid for a required one.
+    """
+    if field not in container or (container[field] is None and not required):
+        if required:
+            raise ChartValidationError(f"{where} is missing required field {field!r}")
+        return None
+    value = container[field]
+    if kind is str:
+        if not isinstance(value, str):
+            raise ChartValidationError(
+                f"{where}: field {field!r} must be a string, "
+                f"got {type(value).__name__} ({value!r})")
+    else:  # list of str
+        if not isinstance(value, list) or not all(isinstance(x, str) for x in value):
+            raise ChartValidationError(
+                f"{where}: field {field!r} must be a list of strings, got {value!r}")
+    return value
+
+
+def validate_key(key, what):
+    """A key must be a safe slug AND must not contain '--'.
+
+    The key is a CROSS-BACKEND identity: a tracker carries it in an HTML comment
+    (<!-- decision-map:key:<key> -->), and the HTML spec forbids "--" inside
+    comment text -- sanitizers and rich-text editors rewrite or truncate such a
+    comment, which silently breaks the key->item join and re-creates every
+    ticket. Rejected here, at the one place keys are minted, rather than in
+    SAFE_SLUG_RE: tightening that would make the local backend silently skip an
+    existing "a--b.md" and would reject --ticket for a file that legitimately
+    exists.
+
+    Applied to the MAP's own slug too, not only to ticket keys. On a tracker the
+    map slug is itself a key marker, so a slug the local backend accepts and a
+    tracker cannot carry would make a map unmigratable -- a backend-specific key
+    rule is the same defect as no key rule.
+    """
+    if not SAFE_SLUG_RE.match(key):
+        raise ChartValidationError(
+            f"invalid {what} {key!r}: must be a safe slug "
+            "(letters, digits, '-', '_'; no path separators, drive letters, or '..')")
+    if "--" in key:
+        raise ChartValidationError(
+            f"invalid {what} {key!r}: must not contain '--'. The key is carried "
+            "in an HTML comment on ADO and GitHub, where '--' is not allowed "
+            "inside comment text; use a single hyphen")
+
+
+def _validate_milestones(where_map, m):
+    """Validate map.milestones before anything is written.
+
+    Exclusivity is checked HERE as well as in lint: an input placing one ticket
+    in two milestones has no defensible interpretation, and applying either
+    reading would store a map the user did not describe. A member naming a
+    ticket that does not exist is NOT an error here -- a milestone may legally
+    be declared ahead of the tickets that will fill it, and lint reports the
+    ones that never arrive.
+    """
+    milestones = m.get("milestones")
+    if milestones is None:
+        return
+    if not isinstance(milestones, list):
+        raise ChartValidationError(
+            f"{where_map}: field 'milestones' must be a list, got "
+            f"{type(milestones).__name__} ({milestones!r})")
+    slugs, owner = set(), {}
+    for i, ms in enumerate(milestones):
+        if not isinstance(ms, dict):
+            raise ChartValidationError(
+                f"{where_map}: milestones[{i}] must be an object, got "
+                f"{type(ms).__name__} ({ms!r})")
+        where = f"{where_map}: milestones[{i}]"
+        slug = require(where, ms, "slug", str, True)
+        validate_key(slug, "milestone slug")
+        if slug in slugs:
+            raise ChartValidationError(
+                f"{where_map}: milestone slug {slug!r} appears twice; "
+                "slugs are unique within a map")
+        slugs.add(slug)
+        require(where, ms, "label", str, False)
+        for key in require(where, ms, "members", list, False) or []:
+            validate_key(key, "milestone member")
+            if key in owner and owner[key] != slug:
+                raise ChartValidationError(
+                    f"{where_map}: ticket {key!r} is listed in both milestone "
+                    f"{owner[key]!r} and {slug!r}; a ticket belongs to at most "
+                    "one milestone -- the first that needs it")
+            owner[key] = slug
+
+
+def validate_chart_input(inp, ticket_exists=None):
+    """Validate `inp` before chart() writes anything (dry-run or real).
+
+    `ticket_exists`, when given, is a callable key -> bool that lets the
+    `blocks` check accept a target that already exists in the map rather than
+    requiring it to be re-listed in tickets[] (ADR 0058). It is a pre-write
+    check, so nothing is written before it passes.
+
+    - the top-level containers must be the right shape (a missing/mistyped
+      "target"/"map"/"tickets" used to raise a bare KeyError/AttributeError
+      rather than the ChartValidationError promised here)
+    - "map" must have every field chart() reads unconditionally, each a string
+    - every ticket must likewise, each a string -- a missing "title"/"question"
+      used to raise a bare KeyError mid-write, after the map and earlier tickets
+      were already stored
+    - optional fields, when present and not null, must be their declared type --
+      and `notes` declares TWO, `str` or `list[str]` (ADR 0101), so it is
+      checked here rather than through `require`, which checks one
+    - target.slug, every ticket key, and every milestone slug and member key
+      must pass validate_key
+    - every ticket type must be one of the four valid types
+    - every `blocks` target must exist EITHER in this same `inp` OR already in
+      the map (ADR 0058)
+    """
+    if not isinstance(inp, dict):
+        raise ChartValidationError(
+            f"map_input.json must be a JSON object, got {type(inp).__name__}")
+    for name in ("target", "map"):
+        if name not in inp:
+            raise ChartValidationError(f'map_input.json is missing required key "{name}"')
+        if not isinstance(inp[name], dict):
+            raise ChartValidationError(
+                f'map_input.json\'s "{name}" must be an object, '
+                f"got {type(inp[name]).__name__}")
+    if "tickets" not in inp:
+        raise ChartValidationError('map_input.json is missing required key "tickets"')
+    if not isinstance(inp["tickets"], list):
+        raise ChartValidationError(
+            f'map_input.json\'s "tickets" must be a list, '
+            f"got {type(inp['tickets']).__name__}")
+
+    slug = require('map_input.json\'s "target"', inp["target"], "slug", str, True)
+    validate_key(slug, "map slug")
+
+    m = inp["map"]
+    where_map = 'map_input.json\'s "map"'
+    for field in REQUIRED_MAP_FIELDS:
+        require(where_map, m, field, str, True)
+    # notes is str OR list[str] (ADR 0101): the region stores a list, and a bare
+    # string stays legal as a one-bullet list so existing inputs keep working.
+    # `require` checks one declared type, so this pair of shapes is checked here.
+    notes = m.get("notes")
+    if notes is not None and not (
+            isinstance(notes, str)
+            or (isinstance(notes, list) and all(isinstance(x, str) for x in notes))):
+        raise ChartValidationError(
+            f"{where_map}: field 'notes' must be a string or a list of strings, "
+            f"got {notes!r}")
+    for field in ("notYetSpecified", "outOfScope"):
+        require(where_map, m, field, list, False)
+    _validate_milestones(where_map, m)
+
+    keys = set()
+    for i, t in enumerate(inp["tickets"]):
+        if not isinstance(t, dict):
+            raise ChartValidationError(
+                f"tickets[{i}] must be an object, got {type(t).__name__}")
+        where = f"ticket {t.get('key', f'#{i}')!r}"
+        for field in REQUIRED_TICKET_FIELDS:
+            require(where, t, field, str, True)
+        key = t["key"]
+        validate_key(key, "ticket key")
+        if key in keys:
+            raise ChartValidationError(
+                f"ticket key {key!r} appears twice in map_input.json's tickets[]; "
+                "keys are unique within a map")
+        if t["type"] not in VALID_TICKET_TYPES:
+            raise ChartValidationError(
+                f"ticket {key!r}: invalid type {t['type']!r}; "
+                f"must be one of {sorted(VALID_TICKET_TYPES)}")
+        require(where, t, "blocks", list, False)
+        keys.add(key)
+    for t in inp["tickets"]:
+        for blocked in t.get("blocks") or []:
+            if blocked == t["key"]:
+                raise ChartValidationError(
+                    f"ticket {t['key']!r} blocks itself: the edge would leave "
+                    "it waiting on a ticket that can never close, so it would "
+                    "never appear on the frontier")
+            if blocked in keys:
+                continue
+            if (ticket_exists is not None and isinstance(blocked, str)
+                    and SAFE_SLUG_RE.match(blocked) and ticket_exists(blocked)):
+                continue
+            raise ChartValidationError(
+                f"ticket {t['key']!r} blocks unknown ticket {blocked!r} "
+                "(not in this map_input's tickets[], and no such ticket "
+                "exists in the map)")
+
+
+# ---------------------------------------------------------------------------
+# the key -> item join, for any backend that stores the key in a body
+# ---------------------------------------------------------------------------
+def key_of_body(body, what, labelled):
+    """The single key a stored body carries, or None when it carries none.
+
+    The rules are the contract's "Rules for a map a human has edited", and each
+    one is a loud failure rather than a workaround:
+
+    - **two key markers is an error.** Do not take the first, the last, or the
+      one that matches the input.
+    - **a labelled child with no key marker is an error**, not a skip. Ignoring
+      it hides the ticket from the join, so `chart` labels it `create`, and a
+      map whose markers were stripped is silently re-created in full and
+      presented as a page of ordinary, approvable `create` lines.
+    - a child with neither the label nor a marker is simply not a decision-map
+      ticket: it returns None and the caller ignores it, so an unrelated
+      hand-created child cannot collide with the join.
+    - a body that is absent is not an empty body -- norm_eol turns None into ""
+      so the search finds no marker rather than throwing.
+
+    **The key marker is authoritative; the label is decorative.** A child
+    carrying a key marker IS a decision-map ticket whether or not it still has
+    the label. Keying membership on the label instead means one bulk label edit
+    hides every ticket from the join.
+    """
+    found = KEY_MARKER_RE.findall(norm_eol(body))
+    if len(found) > 1:
+        raise JoinIntegrityError(
+            f"{what} carries {len(found)} decision-map key markers ({', '.join(found)}); "
+            "exactly one is required. Remove the extras by hand -- guessing which "
+            "one is real would silently re-create or mis-target tickets")
+    if not found:
+        if labelled:
+            raise JoinIntegrityError(
+                f"{what} carries the decision-map label but no "
+                "<!-- decision-map:key:... --> marker, so it cannot be joined to a "
+                "ticket key. Restore the marker or remove the label. Carrying on "
+                "would re-create the ticket and present that as an ordinary "
+                "'create' line for approval")
+        return None
+    key = found[0]
+    if not SAFE_SLUG_RE.match(key):
+        raise JoinIntegrityError(
+            f"{what} carries the key marker {key!r}, which is not a safe slug. "
+            "The marker is tool-owned; correct it by hand")
+    return key
+
+
+# --- lint -------------------------------------------------------------------
+#
+# Every other subcommand validates the ONE call being made and then writes.
+# lint validates the map AS IT STANDS and writes nothing, which is what makes
+# it the check an agent can run unattended: it returns a pass/fail an agent
+# reads in the conversation, instead of "looks done" being the only signal.
+#
+# Each rule exists because a flow skill states the invariant in prose and
+# nothing enforces it. Prose is advisory; this is the deterministic half.
+# Rules live here rather than in either backend so that a map lints the same
+# on both (ADR 0062), the way every other shared rule already does.
+
+# The one rule that needs the resolution BODY rather than just the gist.
+# A backend that cannot see the body declares this unchecked instead of
+# pretending; walking every ticket's comments to check it would cost one
+# API call per ticket on the command whose whole value is being cheap
+# enough to run after every session.
+RULES_NEEDING_RESOLUTION_BODY = ("resolution-without-diagram",
+                                 "closed-without-artifact")
+
+LINT_ERROR = "error"
+LINT_WARNING = "warning"
+
+# argparse's default for `claim --user`. An OPEN ticket still holding it names
+# nobody, which is the state work-map calls out: "the files cannot tell you
+# who holds it".
+ANONYMOUS_ASSIGNEE = "me"
+
+# The fog rule is the only heuristic one here, and a check that cries wolf is
+# worse than no check -- a warning nobody trusts trains the reader to skip the
+# errors next to it. These thresholds are deliberately strict: a fog line must
+# share at least three significant words with a ticket title AND those words
+# must be most of the shorter side before it is called a match.
+_FOG_MIN_SHARED = 3
+_FOG_MIN_RATIO = 0.7
+_FOG_STOPWORDS = frozenset("""
+a an and are as at be but by can do does for from has have how in into is it
+its need not of on or should so than that the their them then there these
+this to via we what when where which who why will with you your
+""".split())
+
+
+def _finding(rule, severity, ticket, message):
+    return {"rule": rule, "severity": severity, "ticket": ticket,
+            "message": message}
+
+
+# What counts as naming a durable artifact: the `Detail:` line `resolve --link`
+# writes, or any docs/adr/ path anywhere in the body (a ticket whose resolution
+# prose cites its ADR inline has recorded it just as reachably). Deliberately
+# generous -- this rule exists to find the tickets with NOTHING, and a false
+# positive on a ticket that did the work is the failure that gets a check muted.
+def _names_an_artifact(record):
+    low = (record or "").lower()
+    return "detail:" in low or "docs/adr/" in low
+
+
+def _significant_tokens(s):
+    return {t for t in re.findall(r"[a-z0-9]+", (s or "").lower())
+            if len(t) > 2 and t not in _FOG_STOPWORDS}
+
+
+def blocker_cycles(edges):
+    """Every strongly connected component of size > 1 in the blocked_by graph.
+
+    Reported per COMPONENT, not per member: a three-ticket cycle is one
+    problem with three names, and three findings would read as three separate
+    problems to fix. Tarjan rather than path enumeration because the latter is
+    exponential on a dense map and the cap is 100 tickets.
+
+    Self-loops are left out -- `self-blocked` names them better, and a ticket
+    appearing in a "cycle" with itself reads as noise next to it.
+    """
+    index, low, onstack, stack, counter, out = {}, {}, {}, [], [0], []
+
+    def connect(v):
+        index[v] = low[v] = counter[0]
+        counter[0] += 1
+        stack.append(v)
+        onstack[v] = True
+        for w in edges.get(v, ()):
+            if w not in index:
+                connect(w)
+                low[v] = min(low[v], low[w])
+            elif onstack.get(w):
+                low[v] = min(low[v], index[w])
+        if low[v] == index[v]:
+            comp = []
+            while True:
+                w = stack.pop()
+                onstack[w] = False
+                comp.append(w)
+                if w == v:
+                    break
+            if len(comp) > 1:
+                out.append(sorted(comp))
+
+    for v in sorted(edges):
+        if v not in index:
+            connect(v)
+    return sorted(out)
+
+
+def lint_findings(map_text, tickets, resolution_bodies=True):
+    """Every problem with one map, errors first, warnings after.
+
+    `tickets` is the read shape plus one field: each dict carries `key`,
+    `name`, `status`, `assignee`, `blockedBy`, `gist` and `resolution` -- the
+    text of the ticket's resolution region, or None when it has none. Both
+    backends assemble exactly that and call this, so "clean" means the same
+    thing on a folder of markdown and on a tracker.
+
+    `resolution_bodies` is False on a backend that cannot cheaply see a
+    resolution's body. Rules needing it are then skipped rather than
+    guessed at -- and the caller reports them under `notChecked`, because
+    a check silently not run reads as a check that passed.
+
+    Returns a list; the caller decides what an empty list is worth.
+    """
+    keys = {t["key"] for t in tickets}
+    errors, warnings, edges = [], [], {}
+    gist_chars, gist_over, gist_excess = 0, 0, 0
+
+    for t in tickets:
+        key = t["key"]
+        blockers = t.get("blockedBy") or []
+        for b in blockers:
+            if b == key:
+                errors.append(_finding(
+                    "self-blocked", LINT_ERROR, key,
+                    f"{key!r} lists itself under blocked_by, so it can never "
+                    "reach the frontier"))
+            elif b not in keys:
+                errors.append(_finding(
+                    "dangling-blocker", LINT_ERROR, key,
+                    f"{key!r} is blocked by {b!r}, which is not a ticket on "
+                    "this map; frontier counts a missing blocker as unsatisfied, "
+                    "so the ticket stays blocked forever"))
+        edges[key] = [b for b in blockers if b in keys and b != key]
+
+    for comp in blocker_cycles(edges):
+        errors.append(_finding(
+            "blocker-cycle", LINT_ERROR, comp[0],
+            "blocking cycle: " + " -> ".join(comp + [comp[0]]) +
+            " -- every ticket in it stays blocked forever, and the map reads "
+            "as stalled rather than broken"))
+
+    for t in tickets:
+        key = t["key"]
+        status = t.get("status") or "open"
+        resolution = t.get("resolution") or ""
+        if status != "open":
+            # A tracker keeps the resolution BODY in a native comment the
+            # snapshot does not hold, so there the machine-readable record is
+            # the gist region instead. Same rule, same name, the half of the
+            # record that backend actually stores.
+            what = "resolution block" if resolution_bodies else "gist"
+            record = resolution if resolution_bodies else one_line(t.get("gist") or "")
+            if not record.strip():
+                errors.append(_finding(
+                    "closed-without-resolution", LINT_ERROR, key,
+                    f"{key!r} is closed but carries no {what}, so the map "
+                    "indexes a decision whose answer was never recorded"))
+            elif resolution_bodies and "```mermaid" not in record:
+                warnings.append(_finding(
+                    "resolution-without-diagram", LINT_WARNING, key,
+                    f"{key!r} resolves without a mermaid diagram of the answer; "
+                    "a reader opening it sees prose before they see what was "
+                    "decided (ADR 0065)"))
+            # The artifact, not the answer. `resolve` warns at close time when a
+            # grilling ticket has no --link (MISSING_DOC_LINK), but a warning only
+            # helps the session that saw it: the tickets that matter are the ones
+            # ALREADY closed, where the frontier reads clean and the reasoning is
+            # simply gone. Measured on one real map before this rule existed: 8
+            # closed grilling tickets, 1 ADR, 0 CONTEXT.md terms (ADR 0091).
+            # A warning and not an error, for the reason ADR 0066 settled and
+            # ADR 0068 restated: one map's accumulated debt must not block a
+            # session that never touched it.
+            if (resolution_bodies
+                    and (t.get("type") or DEFAULT_TICKET_TYPE) in TYPES_EXPECTING_A_DOC
+                    and record.strip()
+                    and not _names_an_artifact(record)):
+                warnings.append(_finding(
+                    "closed-without-artifact", LINT_WARNING, key,
+                    f"{key!r} is a closed {t.get('type') or DEFAULT_TICKET_TYPE!r} "
+                    "ticket whose resolution names no durable artifact (no Detail: "
+                    "line and no docs/adr/ path). The grilling arc is supposed to "
+                    "leave an ADR behind; without one the decision survives as a "
+                    "one-line gist and the WHY is unrecoverable from the code"))
+        gist = one_line(t.get("gist") or "")
+        gist_chars += len(gist)
+        if len(gist) > GIST_MAX:
+            gist_over += 1
+            gist_excess += len(gist) - GIST_MAX
+            warnings.append(_finding(
+                "gist-too-long", LINT_WARNING, key,
+                f"{key!r} carries a {len(gist)}-character gist (limit "
+                f"{GIST_MAX}); resolve warns and records it anyway, so the map "
+                "index is unreadable until it is shortened by hand"))
+        if status == "open" and (t.get("assignee") or "") == ANONYMOUS_ASSIGNEE:
+            warnings.append(_finding(
+                "anonymous-claim", LINT_WARNING, key,
+                f"{key!r} is claimed by the anonymous default "
+                f"{ANONYMOUS_ASSIGNEE!r}, so the map cannot say which session "
+                "holds it and no other session can tell whether it is live"))
+
+    # The corpus, not the ticket. `read` returns EVERY stored gist, so an
+    # over-long one is not a local blemish -- it is re-read in full by every
+    # session that opens the map, and N separate `gist-too-long` warnings read
+    # as N formatting nits rather than as the recurring cost they actually are.
+    # Raising `gist-too-long` to an error would instead let one map's
+    # accumulated debt block sessions that never touched it, and ADR 0066
+    # already settled that a formatting rule must not cost a recorded
+    # decision. So: name the total, block nothing (ADR 0068).
+    if gist_excess > GIST_BUDGET_SLACK:
+        warnings.append(_finding(
+            "gist-budget", LINT_WARNING, None,
+            f"{gist_over} gists exceed the {GIST_MAX}-character limit; this "
+            f"map's gists total {gist_chars} characters, {gist_excess} of "
+            f"them over budget. `read` carries every one into every session, "
+            f"so shortening those {gist_over} is the single edit that makes "
+            "each future session on this map cheaper"))
+
+    # The milestones region (ADRs 0097, 0098). Every rule here is an ERROR: each
+    # one makes the region describe a plan the map does not have, and the
+    # session surface reads that region to decide what to work on next -- a
+    # wrong group or a phantom member misroutes the next session rather than
+    # merely looking untidy. Moves and reorders are hand edits by design, so a
+    # hand-broken region is the expected failure mode, not an exotic one.
+    milestones, _by_key, unparsable = milestone_index(map_text or "")
+    for line in unparsable:
+        errors.append(_finding(
+            "milestone-line-unparsable", LINT_ERROR, None,
+            f"the milestones line {line!r} is not in the form "
+            "'- `slug` optional label [key, key]', so its members are invisible "
+            "to every command; the map advertises a smaller milestone than it "
+            "has"))
+    seen_slugs, owner = set(), {}
+    for m in milestones:
+        slug = m["slug"]
+        if slug in seen_slugs:
+            errors.append(_finding(
+                "milestone-duplicate-slug", LINT_ERROR, None,
+                f"milestone {slug!r} is declared more than once; frontier.json's "
+                "milestones list ends up with one row per declaration, all "
+                f"slugged {slug!r} (each counting only its own members), and "
+                "the decisions index renders every member under the FIRST "
+                "entry's heading -- so what actually goes missing is the label "
+                "of every entry after the first, not any member"))
+        seen_slugs.add(slug)
+        # Within ONE line as well as across lines. A key repeated inside a
+        # single milestone is invisible to the cross-milestone check below
+        # (owner[key] == slug), and unnamed it silently makes progress count one
+        # ticket twice -- or, when the key is unknown, emits the SAME
+        # milestone-unknown-ticket finding twice. Reported once and then
+        # skipped, so the rest of this loop sees each member exactly once.
+        seen_members = set()
+        for key in m["members"]:
+            if key in seen_members:
+                errors.append(_finding(
+                    "milestone-duplicate-member", LINT_ERROR, key,
+                    f"{key!r} is listed more than once in milestone {slug!r}; "
+                    "progress counts distinct members, so the repeat never "
+                    "inflates <closed>/<total> -- but map.json's members list "
+                    "still carries it, so remove it by hand to stop the line "
+                    "claiming more tickets than it has"))
+                continue
+            seen_members.add(key)
+            if key in owner and owner[key] != slug:
+                errors.append(_finding(
+                    "milestone-duplicate-member", LINT_ERROR, key,
+                    f"{key!r} is a member of both {owner[key]!r} and {slug!r}; "
+                    "a ticket belongs to at most one milestone -- the first "
+                    "that needs it -- so remove it from one of them by hand"))
+            owner.setdefault(key, slug)
+            if key not in keys:
+                errors.append(_finding(
+                    "milestone-unknown-ticket", LINT_ERROR, key,
+                    f"milestone {slug!r} lists {key!r}, which is not a ticket "
+                    "on this map; it can never close, so the milestone can "
+                    "never complete and its progress reads short for ever"))
+
+    by_tokens = [(t["key"], _significant_tokens(t.get("name") or t["key"]))
+                 for t in tickets]
+    fog = region_body(norm_eol(map_text or ""), FOG_START, FOG_END) or ""
+    for raw in fog.splitlines():
+        line = raw.strip()
+        if not line or line == EMPTY_LIST_LINE:
+            continue
+        ftoks = _significant_tokens(line)
+        if not ftoks:
+            continue
+        for key, ttoks in by_tokens:
+            shared = ftoks & ttoks
+            if not ttoks or len(shared) < _FOG_MIN_SHARED:
+                continue
+            if len(shared) / min(len(ftoks), len(ttoks)) < _FOG_MIN_RATIO:
+                continue
+            warnings.append(_finding(
+                "fog-line-graduated", LINT_WARNING, key,
+                f"the fog line {line.lstrip('- ')!r} reads as ticket {key!r}, "
+                "which already exists; an additive chart never deletes, so the "
+                "line has to go by hand or the map keeps advertising fog it "
+                "has already answered"))
+            break
+
+    return errors + warnings

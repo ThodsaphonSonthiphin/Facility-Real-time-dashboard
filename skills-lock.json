@@ -1,0 +1,341 @@
+{
+  "version": 1,
+  "skills": {
+    "ado-auth": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/ado-auth/SKILL.md",
+      "computedHash": "a19f2afe07254c99e9538488fd05aeb2f20d3b20c3004a3f8aee2120f482530c"
+    },
+    "ado-create-work-items": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/ado-create-work-items/SKILL.md",
+      "computedHash": "a5a68cbedfb2770a73a6e802f313bd2b508f7bea77fec3acbdd6c65f35da78c1"
+    },
+    "ado-writeback-tracking": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/ado-writeback-tracking/SKILL.md",
+      "computedHash": "71ce6590eefd58e3d4dbf8cf263f922256cbb5455493d3205f0fbb1010e18b53"
+    },
+    "asking-to-understand": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/asking-to-understand/SKILL.md",
+      "computedHash": "aa0b296a07beaa1cfaddea2ae484aedbe9b43b8d89ec5e6e68811589ebb4d69f"
+    },
+    "career-growth": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/career-growth/SKILL.md",
+      "computedHash": "9908226e7f2e9d9d915e17a8b9047e6533532eecbc7140d5302b3fa29e9b611c"
+    },
+    "chart-map": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/chart-map/SKILL.md",
+      "computedHash": "c5cd695b54a12634c41f22f7fa2311f6f5eb45d823264ecb3905bec0dc2da5ac"
+    },
+    "classify-github-issues": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/classify-github-issues/SKILL.md",
+      "computedHash": "45d980885df1d0af606ea0c6eb59462cb069deeab197596cca519afeb9226109"
+    },
+    "classify-work-items": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/classify-work-items/SKILL.md",
+      "computedHash": "4440bf155613fbcc7422f43725d1828ddc4c516c49af0fb183c2666d856b7268"
+    },
+    "copy-audit": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/copy-audit/SKILL.md",
+      "computedHash": "bcf0bc322fa1bb9d2738c744eefce2ec4918e1c65deeb3d907a17ee6aed43c8c"
+    },
+    "crm-archaeology": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/crm-archaeology/SKILL.md",
+      "computedHash": "2c9bdbb421e9668300c92435381de58122f074d34edb26dc551d6850c5a92e8f"
+    },
+    "daily": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/daily/SKILL.md",
+      "computedHash": "311cbd1f9a00134c879ad1d22aa676b4229fcbde0562db961b880e138fc15d7d"
+    },
+    "debug-mantra": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/debug-mantra/SKILL.md",
+      "computedHash": "c837cce4c2059f824958f307620ee94023c4cbf8def9f01f25c539b5f43258f9"
+    },
+    "document-what-shipped": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/document-what-shipped/SKILL.md",
+      "computedHash": "49d142ffc54e391918ce1824bc17ecb697ae1e09b37379c06dcf620dd3246dda"
+    },
+    "drive-to-legacy": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/drive-to-legacy/SKILL.md",
+      "computedHash": "77e61f0a1f4d93a6952613309b31b6846ef0f02ac77abc19e237780ecae645dd"
+    },
+    "dual-verifier": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/dual-verifier/SKILL.md",
+      "computedHash": "254338004c3affdfde05170b54085004b608bff4ac5375c180f7f41331e9a927"
+    },
+    "extract-findings": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/extract-findings/SKILL.md",
+      "computedHash": "484996d930b1b142fd626ab6bf602e6b534d08d75fc39f9c2572dbc31835c053"
+    },
+    "feynman-explain": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/feynman-explain/SKILL.md",
+      "computedHash": "db2874108adaf19dcd9832a0d618be5fae8c0aa51b7bfee12841485eac68c12d"
+    },
+    "findings-to-ado-backlog": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/findings-to-ado-backlog/SKILL.md",
+      "computedHash": "6cfe5babb07de7b23c8284ff2ae48d2e13459b196eee2212ce896dba246c5405"
+    },
+    "findings-to-github-issues": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/findings-to-github-issues/SKILL.md",
+      "computedHash": "65125d3c8c3eadc9c1711cc4a3f8ccc4a50627fa5916079c084c1f64971233a6"
+    },
+    "fit-gap-analysis": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/fit-gap-analysis/SKILL.md",
+      "computedHash": "88588c20c6c7f8d8d2bf6cc1c46ae6c7f60b061417e311b993013255525cb3bb"
+    },
+    "generating-test-cases": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/generating-test-cases/SKILL.md",
+      "computedHash": "3a14bb009da01cf526912e5324478c3f51ced58ea48bd44758c7e81dca2d3f44"
+    },
+    "github-auth": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/github-auth/SKILL.md",
+      "computedHash": "7d7ac7bee7e9a7f4aca61e33e67983b7970a581c01b75723e9d08e3525887de3"
+    },
+    "github-create-issues": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/github-create-issues/SKILL.md",
+      "computedHash": "dd855acc92c28bafbcda3540b039a866f54428b385ddea929fe9c23e1b36be46"
+    },
+    "github-extract-findings": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/github-extract-findings/SKILL.md",
+      "computedHash": "f9c16659d98f33ed88d009e22dbc0554968418880497f63abb00188289d85eb2"
+    },
+    "github-my-work": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/github-my-work/SKILL.md",
+      "computedHash": "9348ac042e4b2b5ce961e4d8a139b2cf19d956e82cdf562ece80495395be4d46"
+    },
+    "github-triage-findings": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/github-triage-findings/SKILL.md",
+      "computedHash": "b2935047d00b1e13241ca00cf26ef74d11b97ff3ea3c55dca27a64d954ed2eed"
+    },
+    "github-writeback-tracking": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/github-writeback-tracking/SKILL.md",
+      "computedHash": "f30181bc8d037c31486e701d7c306cd926cf4f042c78f7b043d9d34c11fea6e3"
+    },
+    "grill-then-plan": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/grill-then-plan/SKILL.md",
+      "computedHash": "371db85856a03197b65410bf1449853919a78462e68d94566e95c7cf7b92f0fd"
+    },
+    "guide-and-verify": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/guide-and-verify/SKILL.md",
+      "computedHash": "55600813e84efe8e198b8f30e3f409e046f62225f75630e77145b0da64881d37"
+    },
+    "invoice-generator": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/invoice-generator/SKILL.md",
+      "computedHash": "922fc3391203d3a2ec0ba6baf5a53742505db4f856b48d88fc89ad64ef50261d"
+    },
+    "management-talk": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/management-talk/SKILL.md",
+      "computedHash": "bd4375c646c712af1bba5eb8d2193b22cd54eb4fec9d2c2e2d1253debc9a62ef"
+    },
+    "my-work": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/my-work/SKILL.md",
+      "computedHash": "89be924821b705c6cbfa281ff033647ac27ac85a1e66d5985b5cdb6b0c752fa3"
+    },
+    "naming-audit": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/naming-audit/SKILL.md",
+      "computedHash": "ac7e186d694b366ae3a1df8139d8a4f549e6ae745dff19329795289d8ba28b36"
+    },
+    "post-mortem": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/post-mortem/SKILL.md",
+      "computedHash": "ac163dcfff6d37cd9bb5d8faad804d6188173d7af13d69ecd98a790cef9aa9fc"
+    },
+    "practice-english-writing": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "plugins/dev-workflows/skills/practice-english-writing/SKILL.md",
+      "computedHash": "953dfaf759acf67125625f1da2a2d9a943c8596b0ee5fa30bd886f6f4d0e5b71"
+    },
+    "problem-description": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/problem-description/SKILL.md",
+      "computedHash": "b56bcc05b713d49c559a7f87f60a262c9d555302bc99f247029b333aea9c8371"
+    },
+    "react-structure": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/react-structure/SKILL.md",
+      "computedHash": "076c351d65a2ed8a491e3c87e9f9bca2f372865308b836cd953c6f20e355cce1"
+    },
+    "read-picture": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/read-picture/SKILL.md",
+      "computedHash": "7d6ac14fd363a705348d3c236d3eec3a8873ab15223294f3683890c61741ae59"
+    },
+    "reflect": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/reflect/SKILL.md",
+      "computedHash": "a5f00f2e8dd5748e8a9e053cb8e2724ceecd6ea7670ca57d01182bffcb493c5c"
+    },
+    "review-pr": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/review-pr/SKILL.md",
+      "computedHash": "b3c50d4dd4c51362841f18196bb55a9cc973998f7a78198a4542f919f8ba83a7"
+    },
+    "sa-doc": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/sa-doc/SKILL.md",
+      "computedHash": "f165e8015a16cf3b863f306be89d600771e79c8bc7fbfd47dbf5bd704ba92fe9"
+    },
+    "scrutinize": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/scrutinize/SKILL.md",
+      "computedHash": "c831108365685f7dcbbf3a0df5000c8bfbfcacfc2327b7c9748b8d43cca893fa"
+    },
+    "scrutinize-dispatch": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/scrutinize-dispatch/SKILL.md",
+      "computedHash": "a9bc27c69d2cacea63a82215be735d23161856e2de492dd431d827dce2bcd2e5"
+    },
+    "sp-brainstorming": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/sp-brainstorming/SKILL.md",
+      "computedHash": "acc2f2b8f91632c73b3a42550440371dba8e747a235b42dda8951a07234bfd1f"
+    },
+    "sp-executing-plans": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/sp-executing-plans/SKILL.md",
+      "computedHash": "5b15808a29352627d0d96d6750442f55e3a1092c7a0f52728701ab07316ccb18"
+    },
+    "sp-grill-with-doc": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/sp-grill-with-doc/SKILL.md",
+      "computedHash": "953c42d8c905bf0e6d555903291d76e3e356601223e73d0c338e4c03d57daf5f"
+    },
+    "sp-receiving-code-review": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/sp-receiving-code-review/SKILL.md",
+      "computedHash": "af2ddb33ea62512fd48e858147243236aeb20affe901772f030f0d110e14771f"
+    },
+    "sp-requesting-code-review": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/sp-requesting-code-review/SKILL.md",
+      "computedHash": "070583fee10627fd51c893516394483a7aa0993f7da93ef4ff00cfbaf477792c"
+    },
+    "sp-subagent-driven-development": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/sp-subagent-driven-development/SKILL.md",
+      "computedHash": "7cea597b4b7960ad10497e022fe018a71d9fd29ee5c5a48b822f33311a3ac95b"
+    },
+    "sp-writing-plans": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/sp-writing-plans/SKILL.md",
+      "computedHash": "4c1bc55abfebc02ad34e86faec0377c7f85d7e51ebef2e4cadefab31cc8c7c1a"
+    },
+    "study-design-verify": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/study-design-verify/SKILL.md",
+      "computedHash": "0ae9f11aefb1a29416d62379cf184931ea57c3b25847fdd431ec28244161caad"
+    },
+    "ticket-trace": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/ticket-trace/SKILL.md",
+      "computedHash": "43367e0ddb011d93bb7c5924098f24ba9d698ed6aeaf723521118fcf57f9f54e"
+    },
+    "triage-findings": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/triage-findings/SKILL.md",
+      "computedHash": "0a8d1d06e804efd7d04d23ba29edd72a58165fd764ddf7bd427db5680aa7b646"
+    },
+    "verify-then-advise": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/verify-then-advise/SKILL.md",
+      "computedHash": "eee32e01244206372c6a974f48e2e78b08911d344beef37dd1cb77c68719012a"
+    },
+    "wait-what": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/wait-what/SKILL.md",
+      "computedHash": "05d5bfe4b284b800b2a457b7dd4cb69582a600137c124d27cbfb740b01d071ec"
+    },
+    "work-map": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/work-map/SKILL.md",
+      "computedHash": "16630d09c0990ed0b6524b8a346d95714c409b244c125a559ccd8ff0c0efd444"
+    }
+  }
+}
