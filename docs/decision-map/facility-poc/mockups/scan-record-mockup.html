@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup การสแกน QR: ตัวเลือกการบันทึกข้อมูล (scan-record)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --panel-dark: #1e293b;
+      --card-dark: #334155;
+      --border-dark: #475569;
+      --accent-blue: #38bdf8;
+      --accent-indigo: #6366f1;
+      --success-green: #10b981;
+      --warning-amber: #f59e0b;
+      --danger-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sarabun', 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 10% 20%, #0f172a 0%, #020617 90%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      text-align: center;
+      max-width: 900px;
+      margin-bottom: 24px;
+    }
+
+    .badge-ticket {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--accent-blue);
+      padding: 4px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* Option Tabs */
+    .tab-container {
+      display: flex;
+      gap: 8px;
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      padding: 6px;
+      border-radius: 16px;
+      border: 1px solid var(--border-dark);
+      margin-bottom: 28px;
+      max-width: 960px;
+      width: 100%;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(99, 102, 241, 0.25) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.15);
+    }
+
+    .tab-btn .tag {
+      font-size: 11px;
+      opacity: 0.8;
+      font-weight: 400;
+    }
+
+    /* Main Showcase Area */
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 32px;
+      max-width: 1100px;
+      width: 100%;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .showcase-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Mobile Device Frame */
+    .phone-wrapper {
+      background: #000;
+      border-radius: 44px;
+      padding: 12px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+    }
+
+    .phone-screen {
+      background: #0f172a;
+      border-radius: 34px;
+      overflow: hidden;
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+
+    .phone-notch {
+      width: 130px;
+      height: 22px;
+      background: #000;
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+      margin: 0 auto;
+      z-index: 10;
+    }
+
+    .phone-header {
+      padding: 14px 18px;
+      background: rgba(30, 41, 59, 0.8);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .app-brand {
+      font-weight: 700;
+      font-size: 14px;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .phone-content {
+      padding: 18px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .location-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .location-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .location-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Option A Styles */
+    .stamp-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff;
+      border: none;
+      padding: 18px;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .stamp-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.45);
+    }
+
+    /* Option B Styles */
+    .status-picker {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .status-opt {
+      flex: 1;
+      padding: 12px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border-dark);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .status-opt.selected-normal {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .status-opt.selected-issue {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+    }
+
+    .issue-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .chip {
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 11px;
+      cursor: pointer;
+      color: #cbd5e1;
+      transition: all 0.15s ease;
+    }
+
+    .chip.active {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: #f59e0b;
+      color: #fef08a;
+    }
+
+    .note-input {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 10px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      resize: none;
+      margin-bottom: 14px;
+    }
+
+    .note-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    /* Option C Styles */
+    .checklist-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(30, 41, 59, 0.5);
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .check-row input[type="checkbox"] {
+      accent-color: #10b981;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Success Overlay */
+    .success-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 50;
+    }
+
+    .success-overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .success-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.2);
+      border: 2px solid #10b981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 14px;
+    }
+
+    /* Right Side: Real-time Dashboard Preview & Specs */
+    .info-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .dashboard-preview {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-dark);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .dash-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+
+    .dash-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pulse-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.7; }
+    }
+
+    .live-feed-card {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 12px;
+      border-left: 4px solid #10b981;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .live-feed-card.issue {
+      border-left-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    .live-feed-card.danger {
+      border-left-color: #ef4444;
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    .feed-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .feed-loc {
+      font-weight: 700;
+      font-size: 14px;
+      color: #fff;
+    }
+
+    .feed-detail {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .feed-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    .feed-badge.issue {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    /* Comparison Table / Architecture Impact */
+    .spec-card {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid var(--border-dark);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .spec-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .json-preview {
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #38bdf8;
+      overflow-x: auto;
+      line-height: 1.4;
+    }
+
+    .tradeoff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .tradeoff-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .tradeoff-box h4 {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .tradeoff-box p {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .recommended-badge {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge-ticket">Decision Ticket: scan-record (#2)</div>
+    <h1>เปรียบเทียบหน้าจอ Mockup การสแกน QR บนมือถือ</h1>
+    <p class="subtitle">คลิกสลับแท็บด้านล่างเพื่อทดลองเล่นหน้าจอจริงของทั้ง 3 แนวทาง และสังเกตผลกระทบที่จะสะท้อนไปยัง Real-time Dashboard</p>
+  </header>
+
+  <!-- Option Selection Tabs -->
+  <div class="tab-container">
+    <button class="tab-btn" id="tabA" onclick="switchOption('A')">
+      <span>แนวทาง A: Stamp Check-in</span>
+      <span class="tag">กด 1 ครั้งเสร็จ • บันทึกแค่เวลา+จุด</span>
+    </button>
+    <button class="tab-btn active" id="tabB" onclick="switchOption('B')">
+      <div><span>แนวทาง B: Status & Note</span> <span class="recommended-badge">แนะนำ</span></div>
+      <span class="tag">1-tap ปกติ หรือสลับแจ้งปัญหาเตือน Dashboard</span>
+    </button>
+    <button class="tab-btn" id="tabC" onclick="switchOption('C')">
+      <span>แนวทาง C: Area Checklist</span>
+      <span class="tag">ติ๊กรายการตรวจตามประเภทจุด</span>
+    </button>
+  </div>
+
+  <div class="showcase-grid">
+
+    <!-- Mobile Screen Simulator -->
+    <div class="phone-wrapper">
+      <div class="phone-screen">
+        <div class="phone-notch"></div>
+        
+        <div class="phone-header">
+          <div class="app-brand">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+            FacilityScan
+          </div>
+          <div style="font-size: 11px; color: #94a3b8;">แม่บ้าน สมศรี (STAFF-01)</div>
+        </div>
+
+        <div class="phone-content" id="phoneContent">
+          <!-- Dynamic Content by Javascript -->
+        </div>
+
+        <!-- Success Dialog -->
+        <div class="success-overlay" id="successOverlay">
+          <div class="success-icon">✓</div>
+          <h3 style="font-size: 18px; margin-bottom: 6px;" id="successMsg">บันทึกข้อมูลสำเร็จ!</h3>
+          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;" id="successDetail">ส่งข้อมูลเข้าสู่ระบบและ Real-time Dashboard เรียบร้อยแล้ว</p>
+          <button onclick="resetPhone()" style="padding: 8px 18px; background: #334155; border: none; color: #fff; border-radius: 8px; font-size: 13px; cursor: pointer;">ทดลองสแกนอีกครั้ง</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right Side: Real-time Dashboard Preview & Data Contract -->
+    <div class="info-panel">
+      
+      <!-- Dashboard Live Feed Preview -->
+      <div class="dashboard-preview">
+        <div class="dash-header">
+          <div class="dash-title">
+            <span class="pulse-indicator"></span>
+            Facility Real-time Dashboard (มุมมองผู้ดูแล)
+          </div>
+          <span style="font-size: 11px; color: #38bdf8; font-weight: 600;">LIVE STREAM</span>
+        </div>
+
+        <div id="liveFeedContainer" style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="live-feed-card" id="dashCard">
+            <div class="feed-main">
+              <div class="feed-loc">📍 แคนทีน - โซนโต๊ะรับประทานอาหาร A</div>
+              <div class="feed-detail" id="dashDetail">ผู้ดูแลกำลังรอข้อมูลการสแกนล่าสุด...</div>
+            </div>
+            <div class="feed-badge" id="dashBadge">รอสแกน</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Payload Preview -->
+      <div class="spec-card">
+        <div class="spec-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Schema MySQL / JSON Payload ที่ส่งจากมือถือ:
+        </div>
+        <pre class="json-preview" id="payloadCode"></pre>
+      </div>
+
+      <!-- Comparison Trade-off Grid -->
+      <div class="tradeoff-grid">
+        <div class="tradeoff-box">
+          <h4>Option A (Stamp)</h4>
+          <p>• ใช้เวลากรอก: ~2 วินาที<br>• แจ้งปัญหาไม่ได้<br>• ความง่ายในการทำ: สูงมาก</p>
+        </div>
+        <div class="tradeoff-box" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.05);">
+          <h4>Option B (Status) ⭐</h4>
+          <p>• ใช้เวลากรอก: ~3 วินาที (1-tap)<br>• แจ้งเตือนสี/ปัญหาได้ทันที<br>• เหมาะสมสูงสุดกับ POC 8 สัปดาห์</p>
+        </div>
+        <div class="tradeoff-box">
+          <h4>Option C (Checklist)</h4>
+          <p>• ใช้เวลากรอก: ~15-20 วินาที<br>• ต้องทำระบบ Template เพิ่ม<br>• แม่บ้านอาจกดส่งๆ เมื่อรีบ</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    let currentOption = 'B';
+    let selectedStatusB = 'normal';
+    let activeChips = [];
+
+    function switchOption(opt) {
+      currentOption = opt;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('tab' + opt).classList.add('active');
+      renderPhone();
+      updateDashboardReset();
+    }
+
+    function renderPhone() {
+      const content = document.getElementById('phoneContent');
+      
+      let html = `
+        <div class="location-card">
+          <div class="location-title">
+            <span>📍</span> แคนทีน - โซนโต๊ะรับประทานอาหาร A
+          </div>
+          <div class="location-meta">
+            <span>รหัสจุด: LOC-CT-01</span>
+            <span>รอบ: 14:00 - 15:00 น.</span>
+          </div>
+        </div>
+      `;
+
+      if (currentOption === 'A') {
+        html += `
+          <div style="text-align: center; margin: 40px 0 20px;">
+            <div style="font-size: 48px; margin-bottom: 8px;">⏱️</div>
+            <h4 style="color: #fff; font-size: 16px;">สแกนเช็กอินเข้าจุด</h4>
+            <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">กดยืนยันเพื่อบันทึกเวลาทำความสะอาด ณ จุดนี้</p>
+          </div>
+          <button class="stamp-btn" onclick="submitOptionA()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            ยืนยันเข้าทำความสะอาด
+          </button>
+        `;
+        updatePayloadPreview({
+          "location_id": "LOC-CT-01",
+          "scanner_id": "STAFF-01",
+          "scanned_at": "2026-10-05T14:15:22Z"
+        });
+      } 
+      else if (currentOption === 'B') {
+        html += `
+          <div style="margin-bottom: 10px;">
+            <label style="font-size: 12px; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 6px;">สถานะการทำความสะอาด:</label>
+            <div class="status-picker">
+              <div class="status-opt ${selectedStatusB === 'normal' ? 'selected-normal' : ''}" onclick="setStatusB('normal')">
+                ✅ เรียบร้อย / ปกติ
+              </div>
+              <div class="status-opt ${selectedStatusB === 'issue' ? 'selected-issue' : ''}" onclick="setStatusB('issue')">
+                ⚠️ พบปัญหา / แจ้งเตือน
+              </div>
+            </div>
+          </div>
+        `;
+
+        if (selectedStatusB === 'issue') {
+          html += `
+            <div style="margin-bottom: 12px;">
+              <label style="font-size: 11px; color: #fbbf24; font-weight: 600; display: block; margin-bottom: 6px;">เลือกประเภทปัญหาด่วน:</label>
+              <div class="issue-chips">
+                <span class="chip ${activeChips.includes('ขยะล้น') ? 'active' : ''}" onclick="toggleChip('ขยะล้น')">🗑️ ขยะล้น</span>
+                <span class="chip ${activeChips.includes('โต๊ะชำรุด') ? 'active' : ''}" onclick="toggleChip('โต๊ะชำรุด')">🪑 โต๊ะชำรุด</span>
+                <span class="chip ${activeChips.includes('น้ำรั่ว/พื้นเปียก') ? 'active' : ''}" onclick="toggleChip('น้ำรั่ว/พื้นเปียก')">💧 พื้นเปียก/ลื่น</span>
+                <span class="chip ${activeChips.includes('อุปกรณ์ไม่พอ') ? 'active' : ''}" onclick="toggleChip('อุปกรณ์ไม่พอ')">🧻 กระดาษหมด</span>
+              </div>
+              <textarea class="note-input" id="issueNote" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม (ถ้ามี)..."></textarea>
+            </div>
+          `;
+        } else {
+          html += `
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 14px; text-align: center; margin: 16px 0;">
+              <div style="color: #34d399; font-weight: 600; font-size: 13px;">พร้อมบันทึกเป็น "ปกติ" ทันที</div>
+              <div style="color: #94a3b8; font-size: 11px; margin-top: 2px;">กดปุ่มด้านล่างเพียง 1 คลิกเพื่อส่งข้อมูล</div>
+            </div>
+          `;
+        }
+
+        html += `
+          <button class="stamp-btn" style="${selectedStatusB === 'issue' ? 'background: linear-gradient(135deg, #f59e0b, #d97706);' : ''}" onclick="submitOptionB()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            ${selectedStatusB === 'issue' ? 'บันทึกพร้อมแจ้งเตือนปัญหา' : 'ยืนยันทำความสะอาดเรียบร้อย'}
+          </button>
+        `;
+        
+        updatePayloadPreview({
+          "location_id": "LOC-CT-01",
+          "scanner_id": "STAFF-01",
+          "scanned_at": "2026-10-05T14:15:22Z",
+          "status": selectedStatusB === 'normal' ? "NORMAL" : "ISSUE",
+          "issue_tags": selectedStatusB === 'issue' ? activeChips : [],
+          "notes": selectedStatusB === 'issue' ? "โต๊ะแถวหน้าชำรุด" : null
+        });
+      }
+      else if (currentOption === 'C') {
+        html += `
+          <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px;">
+              <span style="color: #94a3b8; font-weight: 600;">Checklist แคนทีน:</span>
+              <span style="color: #38bdf8;" id="checkCount">3 รายการ</span>
+            </div>
+            <div class="checklist-container">
+              <label class="check-row"><input type="checkbox" id="c1" checked onchange="updateCheckCount()"> เช็ดทำความสะอาดโต๊ะ-เก้าอี้</label>
+              <label class="check-row"><input type="checkbox" id="c2" checked onchange="updateCheckCount()"> เก็บขยะและเปลี่ยนถุงดำ</label>
+              <label class="check-row"><input type="checkbox" id="c3" checked onchange="updateCheckCount()"> กวาดและถูพื้นบริเวณทางเดิน</label>
+            </div>
+          </div>
+          <button class="stamp-btn" onclick="submitOptionC()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            ส่งผลการตรวจ Checklist
+          </button>
+        `;
+        updatePayloadPreview({
+          "location_id": "LOC-CT-01",
+          "scanner_id": "STAFF-01",
+          "scanned_at": "2026-10-05T14:15:22Z",
+          "checklist_items": [
+            { "task": "clean_tables", "done": true },
+            { "task": "empty_bins", "done": true },
+            { "task": "mop_floor", "done": true }
+          ]
+        });
+      }
+
+      content.innerHTML = html;
+    }
+
+    function setStatusB(status) {
+      selectedStatusB = status;
+      if (status === 'normal') {
+        activeChips = [];
+      } else if (activeChips.length === 0) {
+        activeChips = ['โต๊ะชำรุด'];
+      }
+      renderPhone();
+    }
+
+    function toggleChip(chip) {
+      if (activeChips.includes(chip)) {
+        activeChips = activeChips.filter(c => c !== chip);
+      } else {
+        activeChips.push(chip);
+      }
+      renderPhone();
+    }
+
+    function updateCheckCount() {
+      const c1 = document.getElementById('c1')?.checked;
+      const c2 = document.getElementById('c2')?.checked;
+      const c3 = document.getElementById('c3')?.checked;
+      const total = [c1, c2, c3].filter(Boolean).length;
+      document.getElementById('checkCount').innerText = `${total}/3 รายการ`;
+    }
+
+    function updatePayloadPreview(obj) {
+      document.getElementById('payloadCode').innerText = JSON.stringify(obj, null, 2);
+    }
+
+    function updateDashboardReset() {
+      const card = document.getElementById('dashCard');
+      const badge = document.getElementById('dashBadge');
+      const detail = document.getElementById('dashDetail');
+      card.className = 'live-feed-card';
+      badge.className = 'feed-badge';
+      badge.innerText = 'รอสแกน';
+      detail.innerText = 'ผู้ดูแลกำลังรอข้อมูลการสแกนล่าสุด...';
+    }
+
+    function submitOptionA() {
+      showSuccess("บันทึกการเช็กอินเรียบร้อย", "เวลา 14:15:22 • บันทึกเวลาและรหัสจุดสำเร็จ");
+      const card = document.getElementById('dashCard');
+      const badge = document.getElementById('dashBadge');
+      const detail = document.getElementById('dashDetail');
+
+      card.className = 'live-feed-card';
+      badge.className = 'feed-badge';
+      badge.innerText = 'Check-in แล้ว';
+      detail.innerText = 'บันทึกเวลาเมื่อ 14:15:22 น. โดย แม่บ้าน สมศรี (STAFF-01)';
+    }
+
+    function submitOptionB() {
+      const card = document.getElementById('dashCard');
+      const badge = document.getElementById('dashBadge');
+      const detail = document.getElementById('dashDetail');
+
+      if (selectedStatusB === 'normal') {
+        showSuccess("บันทึกสถานะเรียบร้อย", "ส่งสถานะ: ปกติ (NORMAL) เข้าสู่ระบบ");
+        card.className = 'live-feed-card';
+        badge.className = 'feed-badge';
+        badge.innerText = 'ปกติ (NORMAL)';
+        detail.innerText = 'ทำความสะอาดเรียบร้อย 14:15 น. โดย แม่บ้าน สมศรี • สถานะพร้อมใช้งาน';
+      } else {
+        showSuccess("แจ้งปัญหาเรียบร้อย", `แจ้งเตือน: ${activeChips.join(', ')}`);
+        card.className = 'live-feed-card issue';
+        badge.className = 'feed-badge issue';
+        badge.innerText = '⚠️ พบปัญหา (ISSUE)';
+        detail.innerText = `แจ้งเตือนด่วน: ${activeChips.join(', ')} • โดย สมศรี (14:15 น.)`;
+      }
+    }
+
+    function submitOptionC() {
+      const c1 = document.getElementById('c1')?.checked;
+      const c2 = document.getElementById('c2')?.checked;
+      const c3 = document.getElementById('c3')?.checked;
+      const doneCount = [c1, c2, c3].filter(Boolean).length;
+
+      showSuccess("ส่งผล Checklist สำเร็จ", `ตรวจครบ ${doneCount}/3 รายการ`);
+      const card = document.getElementById('dashCard');
+      const badge = document.getElementById('dashBadge');
+      const detail = document.getElementById('dashDetail');
+
+      card.className = 'live-feed-card';
+      badge.className = 'feed-badge';
+      badge.innerText = `Checklist ${doneCount}/3`;
+      detail.innerText = `แม่บ้าน สมศรี ส่งรายงาน Checklist 3 รายการเมื่อ 14:15 น.`;
+    }
+
+    function showSuccess(title, subtitle) {
+      document.getElementById('successMsg').innerText = title;
+      document.getElementById('successDetail').innerText = subtitle;
+      document.getElementById('successOverlay').classList.add('show');
+    }
+
+    function resetPhone() {
+      document.getElementById('successOverlay').classList.remove('show');
+    }
+
+    // Init
+    renderPhone();
+  </script>
+</body>
+</html>
