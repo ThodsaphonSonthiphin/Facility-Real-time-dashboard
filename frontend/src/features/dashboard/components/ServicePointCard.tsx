@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MapPin, Clock, User, AlertTriangle, QrCode, X } from 'lucide-react';
 import type { ServicePointStatus, PointStatus } from '../../../types';
 
@@ -152,8 +153,8 @@ export const ServicePointCard: React.FC<ServicePointCardProps> = ({
         )}
       </div>
 
-      {/* Real Phone QR Code Modal */}
-      {showQrModal && (
+      {/* Real Phone QR Code Modal (Rendered via Portal into document.body) */}
+      {showQrModal && createPortal(
         <div style={styles.modalOverlay} onClick={() => setShowQrModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
@@ -188,7 +189,8 @@ export const ServicePointCard: React.FC<ServicePointCardProps> = ({
               </span>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -384,19 +386,22 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
+    zIndex: 99999,
     backdropFilter: 'blur(6px)',
-    padding: '20px'
+    padding: '16px'
   },
   modalContent: {
     width: '100%',
     maxWidth: '380px',
+    maxHeight: '92vh',
+    overflowY: 'auto',
     background: '#1e293b',
     border: '1px solid rgba(255, 255, 255, 0.15)',
     borderRadius: '20px',
-    padding: '24px',
+    padding: '20px 18px',
     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-    textAlign: 'center'
+    textAlign: 'center',
+    boxSizing: 'border-box'
   },
   modalHeader: {
     display: 'flex',
