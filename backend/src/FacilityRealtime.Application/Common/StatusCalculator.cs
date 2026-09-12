@@ -19,31 +19,53 @@ public static class StatusCalculator
             return PointStatus.Issue;
         }
 
+        // Priority 2: If recently cleaned within its interval, it is Normal (Clean)
+        if (latestScan != null && latestScan.Status == ScanStatus.Normal)
+        {
+            var elapsed = currentTimeUtc - latestScan.ScannedAt;
+            if (elapsed <= TimeSpan.FromMinutes(point.CleaningIntervalMinutes))
+            {
+                return PointStatus.Normal;
+            }
+        }
+
+        // Priority 3 & 4: When cleaning interval has expired (or point hasn't been cleaned)
+        // Convert to Thailand Time (Asia/Bangkok, UTC+7) per ADR 0005
+        var thaiTime = ToThaiTime(currentTimeUtc);
+        var currentLocalTime = TimeOnly.FromDateTime(thaiTime);
         var start = workStart ?? new TimeOnly(8, 0);
         var end = workEnd ?? new TimeOnly(17, 0);
-        var currentLocalTime = TimeOnly.FromDateTime(currentTimeUtc);
 
-        // Priority 2: Off Hours
-        if (currentLocalTime < start || currentLocalTime >= end)
+        bool isWorkingHours = currentLocalTime >= start && currentLocalTime < end;
+
+        // Outside working hours without recent cleaning -> Off Hours (Gray)
+        if (!isWorkingHours)
         {
             return PointStatus.OffHours;
         }
 
-        // Priority 3 & 4: Working hours overdue vs normal
-        DateTime todayStart = currentTimeUtc.Date.Add(start.ToTimeSpan());
-        DateTime baseTime = todayStart;
+        // During working hours with expired cleaning -> Overdue (Orange)
+        return PointStatus.Overdue;
+    }
 
-        if (latestScan != null && latestScan.ScannedAt > todayStart)
+    public static DateTime ToThaiTime(DateTime utcTime)
+    {
+        try
         {
-            baseTime = latestScan.ScannedAt;
+            var tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Bangkok");
+            return TimeZoneInfo.ConvertTimeFromUtc(utcTime, tz);
         }
-
-        var elapsed = currentTimeUtc - baseTime;
-        if (elapsed > TimeSpan.FromMinutes(point.CleaningIntervalMinutes))
+        catch
         {
-            return PointStatus.Overdue;
+            try
+            {
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                return TimeZoneInfo.ConvertTimeFromUtc(utcTime, tz);
+            }
+            catch
+            {
+                return utcTime.AddHours(7);
+            }
         }
-
-        return PointStatus.Normal;
     }
 }

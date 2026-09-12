@@ -28,46 +28,28 @@ public class StatusCalculatorTests
     }
 
     [Fact]
-    public void CalculateStatus_WhenOutsideWorkingHours_ReturnsOffHours_IfNoIssue()
+    public void CalculateStatus_WhenCleanedWithinInterval_ReturnsNormal_EvenDuringOffHours()
     {
         var point = new ServicePoint { Id = 1, Name = "Point A", CleaningIntervalMinutes = 60, IsActive = true };
+        // Cleaned 10 minutes ago at night (e.g. 02:00 AM)
         var lastScan = new ScanRecord 
         { 
             ServicePointId = 1, 
             Status = ScanStatus.Normal, 
-            ScannedAt = new DateTime(2026, 9, 13, 16, 30, 0, DateTimeKind.Utc) 
+            ScannedAt = DateTime.UtcNow.AddMinutes(-10) 
         };
         
-        // Current time is 19:00 (After 17:00 WorkEnd)
-        var eveningTime = new DateTime(2026, 9, 13, 19, 0, 0, DateTimeKind.Utc);
-        var status = StatusCalculator.CalculateStatus(lastScan, point, eveningTime, WorkStart, WorkEnd);
+        var status = StatusCalculator.CalculateStatus(lastScan, point, DateTime.UtcNow, WorkStart, WorkEnd);
         
-        Assert.Equal(PointStatus.OffHours, status);
+        Assert.Equal(PointStatus.Normal, status);
     }
 
     [Fact]
-    public void CalculateStatus_WhenElapsedExceedsInterval_ReturnsOverdue()
+    public void CalculateStatus_WhenElapsedExceedsInterval_DuringOffHours_ReturnsOffHours()
     {
         var point = new ServicePoint { Id = 1, Name = "Point A", CleaningIntervalMinutes = 60, IsActive = true };
-        // Cleaned at 09:00, current time is 10:30 (90 minutes > 60 interval)
-        var lastScan = new ScanRecord 
-        { 
-            ServicePointId = 1, 
-            Status = ScanStatus.Normal, 
-            ScannedAt = new DateTime(2026, 9, 13, 9, 0, 0, DateTimeKind.Utc) 
-        };
-        
-        var currentTime = new DateTime(2026, 9, 13, 10, 30, 0, DateTimeKind.Utc);
-        var status = StatusCalculator.CalculateStatus(lastScan, point, currentTime, WorkStart, WorkEnd);
-        
-        Assert.Equal(PointStatus.Overdue, status);
-    }
-
-    [Fact]
-    public void CalculateStatus_WhenCleanedWithinInterval_ReturnsNormal()
-    {
-        var point = new ServicePoint { Id = 1, Name = "Point A", CleaningIntervalMinutes = 60, IsActive = true };
-        // Cleaned at 09:30, current time is 10:00 (30 minutes <= 60 interval)
+        // 19:00 Thai time is 12:00 UTC
+        // Last cleaned at 16:30 Thai time (09:30 UTC), elapsed = 150 mins > 60 interval
         var lastScan = new ScanRecord 
         { 
             ServicePointId = 1, 
@@ -75,9 +57,28 @@ public class StatusCalculatorTests
             ScannedAt = new DateTime(2026, 9, 13, 9, 30, 0, DateTimeKind.Utc) 
         };
         
-        var currentTime = new DateTime(2026, 9, 13, 10, 0, 0, DateTimeKind.Utc);
-        var status = StatusCalculator.CalculateStatus(lastScan, point, currentTime, WorkStart, WorkEnd);
+        var eveningUtc = new DateTime(2026, 9, 13, 12, 0, 0, DateTimeKind.Utc); // 19:00 Thai time
+        var status = StatusCalculator.CalculateStatus(lastScan, point, eveningUtc, WorkStart, WorkEnd);
         
-        Assert.Equal(PointStatus.Normal, status);
+        Assert.Equal(PointStatus.OffHours, status);
+    }
+
+    [Fact]
+    public void CalculateStatus_WhenElapsedExceedsInterval_DuringWorkingHours_ReturnsOverdue()
+    {
+        var point = new ServicePoint { Id = 1, Name = "Point A", CleaningIntervalMinutes = 60, IsActive = true };
+        // 09:00 Thai time is 02:00 UTC
+        var lastScan = new ScanRecord 
+        { 
+            ServicePointId = 1, 
+            Status = ScanStatus.Normal, 
+            ScannedAt = new DateTime(2026, 9, 13, 2, 0, 0, DateTimeKind.Utc) 
+        };
+        
+        // 10:30 Thai time is 03:30 UTC (90 minutes > 60 interval)
+        var currentUtc = new DateTime(2026, 9, 13, 3, 30, 0, DateTimeKind.Utc);
+        var status = StatusCalculator.CalculateStatus(lastScan, point, currentUtc, WorkStart, WorkEnd);
+        
+        Assert.Equal(PointStatus.Overdue, status);
     }
 }
