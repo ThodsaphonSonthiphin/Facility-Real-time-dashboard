@@ -25,7 +25,19 @@ export function useScanRecord(qrToken: string, userId: number | undefined) {
 
     getServicePointByTokenApi(qrToken)
       .then((data) => {
-        if (isMounted) setPoint(data);
+        if (isMounted) {
+          setPoint(data);
+          // If point currently has an active issue, pre-populate its tags and notes
+          if (data.currentStatus === 'Issue' || data.lastScanStatus === 'Issue') {
+            if (data.lastIssueTags && data.lastIssueTags.length > 0) {
+              setSelectedTags(data.lastIssueTags);
+            }
+            if (data.lastNotes) {
+              setNotes(data.lastNotes);
+            }
+            setStatus('Issue');
+          }
+        }
       })
       .catch((err) => {
         if (isMounted) setPointError(err.message || 'ไม่พบจุดบริการนี้');
@@ -97,6 +109,7 @@ export function useScanRecord(qrToken: string, userId: number | undefined) {
     submitError,
     submitResult,
     submitScan,
-    resetForm
+    resetForm,
+    existingIssueTags: (point?.currentStatus === 'Issue' || point?.lastScanStatus === 'Issue') ? (point?.lastIssueTags || []) : []
   };
 }

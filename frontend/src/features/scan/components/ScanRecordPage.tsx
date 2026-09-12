@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MapPin, 
   Clock, 
@@ -40,10 +40,18 @@ export const ScanRecordPage: React.FC<ScanRecordPageProps> = ({
     submitError,
     submitResult,
     submitScan,
-    resetForm
+    resetForm,
+    existingIssueTags
   } = useScanRecord(qrToken, currentUser.id);
 
   const [showIssueForm, setShowIssueForm] = useState(false);
+
+  // Auto-expand issue form if point currently has active issues
+  useEffect(() => {
+    if (point && (point.currentStatus === 'Issue' || point.lastScanStatus === 'Issue')) {
+      setShowIssueForm(true);
+    }
+  }, [point]);
 
   // Fast 1-Tap Normal Submission
   const handleFastNormalSubmit = async () => {
@@ -197,7 +205,22 @@ export const ScanRecordPage: React.FC<ScanRecordPageProps> = ({
           </div>
         )}
 
-        {/* Fast 1-Tap Action: Normal */}
+        {/* Active Issue Warning Banner */}
+        {point.currentStatus === 'Issue' && (
+          <div style={styles.activeIssueBanner}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <AlertTriangle size={16} color="#ef4444" />
+              <span style={styles.activeIssueBannerTitle}>
+                จุดนี้มีรายงานปัญหาค้างอยู่ ({existingIssueTags.length} รายการ)
+              </span>
+            </div>
+            <p style={styles.activeIssueBannerText}>
+              ระบบได้เลือกปัญหาเดิมไว้ให้แล้ว (ป้ายสีส้ม) คุณสามารถแตะเพิ่มปัญหาใหม่ หรือกดปุ่มเขียวด้านล่างหากแก้ไขปัญหาทั้งหมดเสร็จแล้ว
+            </p>
+          </div>
+        )}
+
+        {/* Fast 1-Tap Action: Normal (or Resolve All) */}
         {!showIssueForm ? (
           <div style={styles.actionContainer}>
             <button
@@ -213,8 +236,14 @@ export const ScanRecordPage: React.FC<ScanRecordPageProps> = ({
               <div style={styles.btnInnerContent}>
                 <CheckCircle2 size={26} color="#ffffff" />
                 <div style={styles.btnTextGroup}>
-                  <span style={styles.btnMainText}>✓ ทำความสะอาดเรียบร้อย</span>
-                  <span style={styles.btnSubText}>แตะปุ่มนี้เพื่อบันทึกสถานะปกติทันที (1-Tap)</span>
+                  <span style={styles.btnMainText}>
+                    {point.currentStatus === 'Issue' ? '✓ แก้ไขปัญหาและทำความสะอาดแล้ว' : '✓ ทำความสะอาดเรียบร้อย'}
+                  </span>
+                  <span style={styles.btnSubText}>
+                    {point.currentStatus === 'Issue'
+                      ? 'แตะเพื่อปิดปัญหาทั้งหมดและปรับสถานะกลับเป็นปกติ'
+                      : 'แตะปุ่มนี้เพื่อบันทึกสถานะปกติทันที (1-Tap)'}
+                  </span>
                 </div>
               </div>
             </button>
@@ -226,7 +255,11 @@ export const ScanRecordPage: React.FC<ScanRecordPageProps> = ({
               style={styles.toggleIssueBtn}
             >
               <AlertTriangle size={18} color="#f87171" />
-              <span>พบปัญหา / อุปกรณ์ชำรุด (แตะเพื่อระบุปัญหา)</span>
+              <span>
+                {point.currentStatus === 'Issue'
+                  ? `อัปเดต / เพิ่มปัญหาที่พบ (${selectedTags.length} รายการ)`
+                  : 'พบปัญหา / อุปกรณ์ชำรุด (แตะเพื่อระบุปัญหา)'}
+              </span>
               <ChevronDown size={18} />
             </button>
           </div>
@@ -236,7 +269,9 @@ export const ScanRecordPage: React.FC<ScanRecordPageProps> = ({
             <div style={styles.issueHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertTriangle size={18} color="#ef4444" />
-                <span style={styles.issueFormTitle}>รายงานปัญหาที่จุดบริการ</span>
+                <span style={styles.issueFormTitle}>
+                  {point.currentStatus === 'Issue' ? 'อัปเดตปัญหาที่พบ' : 'รายงานปัญหาที่จุดบริการ'}
+                </span>
               </div>
               <button
                 type="button"
@@ -250,6 +285,7 @@ export const ScanRecordPage: React.FC<ScanRecordPageProps> = ({
 
             <IssueTagSelector
               selectedTags={selectedTags}
+              existingTags={existingIssueTags}
               onToggleTag={toggleTag}
             />
 
@@ -641,5 +677,23 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#fca5a5',
     fontSize: '13px',
     marginBottom: '14px'
+  },
+  activeIssueBanner: {
+    background: 'rgba(239, 68, 68, 0.12)',
+    border: '1px solid rgba(239, 68, 68, 0.35)',
+    borderRadius: '14px',
+    padding: '12px 14px',
+    marginBottom: '16px'
+  },
+  activeIssueBannerTitle: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#f87171'
+  },
+  activeIssueBannerText: {
+    fontSize: '12px',
+    color: '#fca5a5',
+    lineHeight: 1.5,
+    margin: 0
   }
 };
