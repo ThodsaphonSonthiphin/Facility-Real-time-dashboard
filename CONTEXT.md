@@ -39,3 +39,7 @@ _Avoid_: Shift, Opening Time, Business Hours
 **Persistent Session**:
 สถานะการเข้าสู่ระบบที่บันทึกไว้ในเบราว์เซอร์ของมือถือผู้สแกน ทำให้สามารถสแกนจุดบริการต่างๆ ได้ต่อเนื่องโดยไม่ต้องกรอกรหัสผ่านซ้ำจนกว่าจะกด Logout
 _Avoid_: Cookie, Remember Token, Keep-Alive
+
+**QR Token**:
+ค่ารหัสเฉพาะ (UUID) ประจำจุดบริการที่ฝังอยู่ใน QR Code เพื่อใช้เปิดหน้าเว็บสแกน สามารถกดสร้างใหม่ได้เมื่อป้ายชำรุด โดยไม่ต้องเปลี่ยนรหัสจุดเดิม
+_Avoid_: Secret Key, QR String, Barcode Value
