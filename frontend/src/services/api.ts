@@ -1,4 +1,4 @@
-import { ServicePointStatus, UserSession, CreateScanRequest, CreateScanResponse } from '../types';
+import type { ServicePointStatus, UserSession, CreateScanRequest, CreateScanResponse } from '../types';
 
 const BASE_URL = '/api';
 

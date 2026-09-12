@@ -7,13 +7,12 @@ import {
   UserCheck, 
   LogOut, 
   AlertCircle, 
-  Sparkles,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
 import { useScanRecord } from '../hooks/useScanRecord';
 import { IssueTagSelector } from './IssueTagSelector';
-import { UserSession } from '../../../types';
+import type { UserSession } from '../../../types';
 
 interface ScanRecordPageProps {
   qrToken: string;
@@ -32,7 +31,6 @@ export const ScanRecordPage: React.FC<ScanRecordPageProps> = ({
     point,
     isLoadingPoint,
     pointError,
-    status,
     setStatus,
     selectedTags,
     toggleTag,

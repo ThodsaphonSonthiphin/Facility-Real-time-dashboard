@@ -1,5 +1,5 @@
 import * as signalR from '@microsoft/signalr';
-import { ServicePointStatus } from '../types';
+import type { ServicePointStatus } from '../types';
 
 export function createScanHubConnection(onScanRecorded: (point: ServicePointStatus) => void): signalR.HubConnection {
   const connection = new signalR.HubConnectionBuilder()

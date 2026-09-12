@@ -1,122 +1,159 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { useAuth } from './features/auth/hooks/useAuth';
+import { LoginPage } from './features/auth/components/LoginPage';
+import { ScanRecordPage } from './features/scan/components/ScanRecordPage';
+import { DashboardView } from './features/dashboard/components/DashboardView';
+import { LayoutDashboard, Smartphone } from 'lucide-react';
 
-function App() {
-  const [count, setCount] = useState(0)
+export function App() {
+  const { currentUser, logout, isAuthenticated } = useAuth();
+
+  // Simple, fast path routing
+  const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
+  const [selectedScanToken, setSelectedScanToken] = useState<string>('token-restroom-m1');
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path: string) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+  };
+
+  // Determine current route
+  const isScanRoute = currentPath.startsWith('/scan');
+  const tokenFromUrl = isScanRoute ? currentPath.split('/scan/')[1] || selectedScanToken : selectedScanToken;
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Dev Mode Navigation Switcher at Top */}
+      <div style={styles.navBar}>
+        <div style={styles.navLeft}>
+          <span style={styles.navBrand}>🏢 Facility Real-time</span>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+        <div style={styles.navCenter}>
+          <button
+            onClick={() => navigateTo('/dashboard')}
+            style={{
+              ...styles.navTab,
+              background: !isScanRoute ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+              color: !isScanRoute ? '#38bdf8' : '#94a3b8'
+            }}
+          >
+            <LayoutDashboard size={16} />
+            <span>จอ Dashboard</span>
+          </button>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <button
+            onClick={() => navigateTo(`/scan/${tokenFromUrl}`)}
+            style={{
+              ...styles.navTab,
+              background: isScanRoute ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+              color: isScanRoute ? '#38bdf8' : '#94a3b8'
+            }}
+          >
+            <Smartphone size={16} />
+            <span>หน้าสแกนบนมือถือ</span>
+          </button>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+        <div style={styles.navRight}>
+          {isAuthenticated ? (
+            <span style={styles.userIndicator}>👤 {currentUser?.fullName}</span>
+          ) : (
+            <button onClick={() => navigateTo('/login')} style={styles.loginBtn}>
+              เข้าสู่ระบบ
+            </button>
+          )}
         </div>
-      </section>
+      </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {/* Main Page Routing */}
+      <div style={{ flex: 1 }}>
+        {isScanRoute ? (
+          !isAuthenticated ? (
+            <LoginPage onSuccess={() => navigateTo(`/scan/${tokenFromUrl}`)} />
+          ) : (
+            <ScanRecordPage
+              qrToken={tokenFromUrl}
+              currentUser={currentUser!}
+              onLogout={logout}
+              onOpenDashboard={() => navigateTo('/dashboard')}
+            />
+          )
+        ) : currentPath === '/login' && !isAuthenticated ? (
+          <LoginPage onSuccess={() => navigateTo('/dashboard')} />
+        ) : (
+          <DashboardView
+            onOpenMobileScanner={(token) => {
+              setSelectedScanToken(token);
+              navigateTo(`/scan/${token}`);
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
 }
 
-export default App
+const styles: Record<string, React.CSSProperties> = {
+  navBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '8px 24px',
+    background: '#090d16',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+    fontSize: '13px',
+    zIndex: 100
+  },
+  navLeft: {
+    display: 'flex',
+    alignItems: 'center'
+  },
+  navBrand: {
+    fontWeight: 700,
+    color: '#f8fafc',
+    fontSize: '13px'
+  },
+  navCenter: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  },
+  navTab: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 14px',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: 600,
+    transition: 'all 0.15s'
+  },
+  navRight: {
+    display: 'flex',
+    alignItems: 'center'
+  },
+  userIndicator: {
+    color: '#94a3b8',
+    fontSize: '12px'
+  },
+  loginBtn: {
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '6px',
+    padding: '4px 10px',
+    color: '#f8fafc',
+    cursor: 'pointer',
+    fontSize: '12px'
+  }
+};
+
+export default App;

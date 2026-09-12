@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { UserSession } from '../../../types';
+import type { UserSession } from '../../../types';
 import { loginApi } from '../../../services/api';
 
 const STORAGE_KEY = 'facility_scanner_user';

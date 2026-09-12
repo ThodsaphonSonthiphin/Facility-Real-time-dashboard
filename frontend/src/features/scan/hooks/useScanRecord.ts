@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ServicePointStatus, ScanStatus, CreateScanResponse } from '../../../types';
+import type { ServicePointStatus, ScanStatus, CreateScanResponse } from '../../../types';
 import { getServicePointByTokenApi, createScanRecordApi } from '../../../services/api';
 
 export function useScanRecord(qrToken: string, userId: number | undefined) {
