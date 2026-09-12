@@ -45,12 +45,13 @@ export function useScanRecord(qrToken: string, userId: number | undefined) {
     );
   }, []);
 
-  const submitScan = useCallback(async (): Promise<boolean> => {
+  const submitScan = useCallback(async (overrideStatus?: ScanStatus): Promise<boolean> => {
     if (!userId || !qrToken) {
       setSubmitError('ไม่พบข้อมูลผู้ใช้หรือรหัส QR');
       return false;
     }
 
+    const targetStatus = overrideStatus || status;
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -58,9 +59,9 @@ export function useScanRecord(qrToken: string, userId: number | undefined) {
       const res = await createScanRecordApi({
         qrToken,
         userId,
-        status,
-        issueTags: status === 'Issue' ? selectedTags : undefined,
-        notes: status === 'Issue' && notes.trim() ? notes.trim() : undefined
+        status: targetStatus,
+        issueTags: targetStatus === 'Issue' && selectedTags.length > 0 ? selectedTags : undefined,
+        notes: targetStatus === 'Issue' && notes.trim() ? notes.trim() : undefined
       });
 
       setSubmitResult(res);

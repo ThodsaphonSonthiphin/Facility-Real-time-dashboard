@@ -48,13 +48,13 @@ export const ScanRecordPage: React.FC<ScanRecordPageProps> = ({
   // Fast 1-Tap Normal Submission
   const handleFastNormalSubmit = async () => {
     setStatus('Normal');
-    await submitScan();
+    await submitScan('Normal');
   };
 
   const handleIssueSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('Issue');
-    await submitScan();
+    await submitScan('Issue');
   };
 
   if (isLoadingPoint) {
