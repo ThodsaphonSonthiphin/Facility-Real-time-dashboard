@@ -62,13 +62,14 @@ export const KpiSummaryBar: React.FC<KpiSummaryBarProps> = ({
   ];
 
   return (
-    <div style={styles.container}>
+    <div className="kpi-bar-container">
       {items.map((item) => {
         const isActive = activeFilter === item.key;
         return (
           <button
             key={item.key}
             type="button"
+            className="kpi-card"
             onClick={() => onSelectFilter(item.key)}
             style={{
               ...styles.kpiCard,
@@ -81,7 +82,7 @@ export const KpiSummaryBar: React.FC<KpiSummaryBarProps> = ({
               <span style={styles.label}>{item.label}</span>
               <span style={{ ...styles.dot, backgroundColor: item.color }} />
             </div>
-            <div style={{ ...styles.count, color: item.color }}>{item.count}</div>
+            <div className="kpi-count" style={{ ...styles.count, color: item.color }}>{item.count}</div>
           </button>
         );
       })}

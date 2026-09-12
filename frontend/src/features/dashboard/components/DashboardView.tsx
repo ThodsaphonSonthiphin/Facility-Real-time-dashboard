@@ -27,24 +27,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenMobileScanne
   return (
     <div style={styles.page}>
       {/* Top Navigation Bar */}
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <div style={styles.brandIcon}>
+      <header className="dashboard-header">
+        <div className="dashboard-header-left">
+          <div className="dashboard-brand-icon" style={styles.brandIcon}>
             <Building2 size={24} color="#38bdf8" />
           </div>
           <div>
-            <h1 style={styles.headerTitle}>Facility Real-time Dashboard</h1>
-            <p style={styles.headerSubtitle}>ระบบติดตามงานทำความสะอาดและสุขอนามัยแบบเรียลไทม์</p>
+            <h1 className="dashboard-header-title">Facility Real-time Dashboard</h1>
+            <p className="dashboard-header-subtitle">ระบบติดตามงานทำความสะอาดและสุขอนามัยแบบเรียลไทม์</p>
           </div>
         </div>
 
-        <div style={styles.headerRight}>
+        <div className="dashboard-header-right">
           {/* SignalR Live Indicator */}
-          <div style={{
-            ...styles.liveBadge,
-            borderColor: isSignalRConnected ? 'rgba(34, 197, 94, 0.3)' : 'rgba(249, 115, 22, 0.3)',
-            background: isSignalRConnected ? 'rgba(34, 197, 94, 0.1)' : 'rgba(249, 115, 22, 0.1)'
-          }}>
+          <div
+            className="dashboard-live-badge"
+            style={{
+              ...styles.liveBadge,
+              borderColor: isSignalRConnected ? 'rgba(34, 197, 94, 0.3)' : 'rgba(249, 115, 22, 0.3)',
+              background: isSignalRConnected ? 'rgba(34, 197, 94, 0.1)' : 'rgba(249, 115, 22, 0.1)'
+            }}
+          >
             <span
               style={{
                 ...styles.liveDot,
@@ -52,7 +55,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenMobileScanne
                 boxShadow: isSignalRConnected ? '0 0 8px #22c55e' : 'none'
               }}
             />
-            <span style={{ color: isSignalRConnected ? '#4ade80' : '#fb923c', fontSize: '13px', fontWeight: 600 }}>
+            <span
+              className="dashboard-live-text"
+              style={{ color: isSignalRConnected ? '#4ade80' : '#fb923c', fontSize: '13px', fontWeight: 600 }}
+            >
               {isSignalRConnected ? 'SignalR Live' : 'Connecting...'}
             </span>
           </div>
@@ -68,7 +74,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenMobileScanne
       </header>
 
       {/* Main Container */}
-      <main style={styles.content}>
+      <main className="dashboard-content">
         {/* KPI Summary Bar */}
         <KpiSummaryBar
           kpis={kpis}
@@ -77,8 +83,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenMobileScanne
         />
 
         {/* Toolbar: Search and Filter Info */}
-        <div style={styles.toolbar}>
-          <div style={styles.searchWrapper}>
+        <div className="dashboard-toolbar">
+          <div className="dashboard-search-wrapper" style={styles.searchWrapper}>
             <Search size={18} style={styles.searchIcon} />
             <input
               type="text"
@@ -124,7 +130,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenMobileScanne
             </p>
           </div>
         ) : (
-          <div style={styles.cardsGrid}>
+          <div className="dashboard-cards-grid">
             {points.map((point) => (
               <ServicePointCard
                 key={point.id}

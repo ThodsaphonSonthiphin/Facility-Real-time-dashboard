@@ -33,13 +33,14 @@ function AppContent() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Dev Mode Navigation Switcher at Top */}
-      <div style={styles.navBar}>
-        <div style={styles.navLeft}>
-          <span style={styles.navBrand}>🏢 Facility Real-time</span>
+      <div className="dev-navbar" style={styles.navBar}>
+        <div className="dev-navbar-left" style={styles.navLeft}>
+          <span className="dev-navbar-brand-text" style={styles.navBrand}>🏢 Facility Real-time</span>
         </div>
-        <div style={styles.navCenter}>
+        <div className="dev-navbar-center" style={styles.navCenter}>
           <button
             onClick={() => navigateTo('/dashboard')}
+            className="dev-navbar-tab"
             style={{
               ...styles.navTab,
               background: !isScanRoute ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
@@ -52,6 +53,7 @@ function AppContent() {
 
           <button
             onClick={() => navigateTo(`/scan/${tokenFromUrl}`)}
+            className="dev-navbar-tab"
             style={{
               ...styles.navTab,
               background: isScanRoute ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
@@ -62,12 +64,12 @@ function AppContent() {
             <span>หน้าสแกนบนมือถือ</span>
           </button>
         </div>
-        <div style={styles.navRight}>
+        <div className="dev-navbar-right" style={styles.navRight}>
           {isAuthenticated ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={styles.userIndicator}>👤 {currentUser?.fullName}</span>
               <button onClick={logout} style={styles.logoutBtn}>
-                ออกจากระบบ
+                ออก
               </button>
             </div>
           ) : (
