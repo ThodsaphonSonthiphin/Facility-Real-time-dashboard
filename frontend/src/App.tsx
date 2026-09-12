@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { ScanRecordPage } from './features/scan/components/ScanRecordPage';
 import { DashboardView } from './features/dashboard/components/DashboardView';
 import { LayoutDashboard, Smartphone } from 'lucide-react';
 
-export function App() {
+function AppContent() {
   const { currentUser, logout, isAuthenticated } = useAuth();
 
   // Simple, fast path routing
@@ -63,7 +64,12 @@ export function App() {
         </div>
         <div style={styles.navRight}>
           {isAuthenticated ? (
-            <span style={styles.userIndicator}>👤 {currentUser?.fullName}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={styles.userIndicator}>👤 {currentUser?.fullName}</span>
+              <button onClick={logout} style={styles.logoutBtn}>
+                ออกจากระบบ
+              </button>
+            </div>
           ) : (
             <button onClick={() => navigateTo('/login')} style={styles.loginBtn}>
               เข้าสู่ระบบ
@@ -97,6 +103,14 @@ export function App() {
         )}
       </div>
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
@@ -142,8 +156,9 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center'
   },
   userIndicator: {
-    color: '#94a3b8',
-    fontSize: '12px'
+    color: '#cbd5e1',
+    fontSize: '12px',
+    fontWeight: 600
   },
   loginBtn: {
     background: 'rgba(255, 255, 255, 0.08)',
@@ -153,6 +168,15 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#f8fafc',
     cursor: 'pointer',
     fontSize: '12px'
+  },
+  logoutBtn: {
+    background: 'rgba(239, 68, 68, 0.15)',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
+    borderRadius: '6px',
+    padding: '4px 8px',
+    color: '#fca5a5',
+    cursor: 'pointer',
+    fontSize: '11px'
   }
 };
 
