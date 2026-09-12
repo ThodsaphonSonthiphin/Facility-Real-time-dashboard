@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin, Clock, User, AlertTriangle, QrCode } from 'lucide-react';
+import React, { useState } from 'react';
+import { MapPin, Clock, User, AlertTriangle, QrCode, X } from 'lucide-react';
 import type { ServicePointStatus, PointStatus } from '../../../types';
 
 interface ServicePointCardProps {
@@ -13,6 +13,8 @@ export const ServicePointCard: React.FC<ServicePointCardProps> = ({
   isHighlighted,
   onOpenScanner
 }) => {
+  const [showQrModal, setShowQrModal] = useState(false);
+  const scanUrl = `http://10.249.194.205:5173/scan/${point.qrToken}`;
   const getStatusBadge = (status: PointStatus) => {
     switch (status) {
       case 'Normal':
@@ -126,17 +128,67 @@ export const ServicePointCard: React.FC<ServicePointCardProps> = ({
         )}
       </div>
 
-      {/* Direct Test Link to Scan this Point */}
-      {onOpenScanner && (
+      {/* Actions: Direct Test Link & Real Phone QR Code Modal */}
+      <div style={styles.actionButtonsRow}>
         <button
           type="button"
-          onClick={() => onOpenScanner(point.qrToken)}
-          style={styles.scanLinkBtn}
-          title="จำลองสแกนจุดนี้บนมือถือ"
+          onClick={() => setShowQrModal(true)}
+          style={styles.qrCodeBtn}
+          title="สแกนด้วยกล้องมือถือจริง"
         >
           <QrCode size={14} />
-          <span>ทดสอบสแกน QR จุดนี้</span>
+          <span>QR สำหรับมือถือ</span>
         </button>
+
+        {onOpenScanner && (
+          <button
+            type="button"
+            onClick={() => onOpenScanner(point.qrToken)}
+            style={styles.scanLinkBtn}
+            title="จำลองสแกนบนเบราว์เซอร์นี้"
+          >
+            <span>ทดสอบสแกนบนคอม</span>
+          </button>
+        )}
+      </div>
+
+      {/* Real Phone QR Code Modal */}
+      {showQrModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowQrModal(false)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h4 style={styles.modalTitle}>สแกนบันทึกงานด้วยมือถือ</h4>
+              <button onClick={() => setShowQrModal(false)} style={styles.closeBtn}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={styles.modalSubtitle}>
+              ใช้แอปกล้องในมือถือ หรือ LINE สแกน QR Code นี้ (ต้องต่อ WiFi เดียวกันกับ Mac)
+            </p>
+
+            <div style={styles.qrImageWrapper}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(scanUrl)}`}
+                alt={`QR Code for ${point.name}`}
+                style={styles.qrImage}
+              />
+            </div>
+
+            <div style={styles.urlBox}>
+              <span style={styles.urlLabel}>URL สำหรับเปิดตรง:</span>
+              <a href={scanUrl} target="_blank" rel="noreferrer" style={styles.urlLink}>
+                {scanUrl}
+              </a>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                🔑 บัญชีแม่บ้าน: <strong>somchai</strong> / <strong>password123</strong>
+              </span>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -285,7 +337,29 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '4px 8px',
     borderRadius: '8px'
   },
+  actionButtonsRow: {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '6px'
+  },
+  qrCodeBtn: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    background: 'rgba(56, 189, 248, 0.12)',
+    border: '1px solid rgba(56, 189, 248, 0.3)',
+    borderRadius: '10px',
+    padding: '9px 12px',
+    color: '#38bdf8',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  },
   scanLinkBtn: {
+    flex: 1,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -293,12 +367,96 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'rgba(255, 255, 255, 0.05)',
     border: '1px solid rgba(255, 255, 255, 0.08)',
     borderRadius: '10px',
-    padding: '8px 12px',
-    color: '#38bdf8',
+    padding: '9px 12px',
+    color: '#94a3b8',
     fontSize: '12px',
-    fontWeight: 600,
+    fontWeight: 500,
     cursor: 'pointer',
-    marginTop: '6px',
     transition: 'background 0.2s'
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.75)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    backdropFilter: 'blur(6px)',
+    padding: '20px'
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: '380px',
+    background: '#1e293b',
+    border: '1px solid rgba(255, 255, 255, 0.15)',
+    borderRadius: '20px',
+    padding: '24px',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+    textAlign: 'center'
+  },
+  modalHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '8px'
+  },
+  modalTitle: {
+    fontSize: '17px',
+    fontWeight: 700,
+    color: '#f8fafc'
+  },
+  closeBtn: {
+    background: 'transparent',
+    border: 'none',
+    color: '#94a3b8',
+    cursor: 'pointer',
+    padding: '4px'
+  },
+  modalSubtitle: {
+    fontSize: '13px',
+    color: '#94a3b8',
+    lineHeight: 1.4,
+    marginBottom: '16px'
+  },
+  qrImageWrapper: {
+    padding: '12px',
+    background: '#ffffff',
+    borderRadius: '14px',
+    display: 'inline-block',
+    marginBottom: '16px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+  },
+  qrImage: {
+    width: '180px',
+    height: '180px',
+    display: 'block'
+  },
+  urlBox: {
+    background: 'rgba(15, 23, 42, 0.6)',
+    padding: '10px 12px',
+    borderRadius: '10px',
+    textAlign: 'left',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    marginBottom: '14px'
+  },
+  urlLabel: {
+    fontSize: '11px',
+    color: '#64748b'
+  },
+  urlLink: {
+    fontSize: '12px',
+    color: '#38bdf8',
+    wordBreak: 'break-all',
+    textDecoration: 'none'
+  },
+  modalFooter: {
+    paddingTop: '12px',
+    borderTop: '1px solid rgba(255, 255, 255, 0.08)'
   }
 };
