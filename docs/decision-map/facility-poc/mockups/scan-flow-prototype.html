@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prototype: Flow การสแกนบนมือถือ (Ticket #9 scan-flow)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --card-dark: #131c2e;
+      --border-dark: #27354f;
+      --accent-cyan: #38bdf8;
+      --accent-indigo: #6366f1;
+      --success-green: #10b981;
+      --warning-amber: #f59e0b;
+      --danger-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 80%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      text-align: center;
+      max-width: 860px;
+      margin-bottom: 24px;
+    }
+
+    .badge-ticket {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--accent-cyan);
+      padding: 4px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    p.sub {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* Comparison Tabs */
+    .flow-tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .flow-tab-btn {
+      flex: 1;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--border-dark);
+      padding: 16px;
+      border-radius: 16px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.25s ease;
+      text-align: left;
+      position: relative;
+    }
+
+    .flow-tab-btn:hover {
+      background: rgba(30, 41, 59, 0.9);
+      color: #fff;
+    }
+
+    .flow-tab-btn.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(99, 102, 241, 0.2) 100%);
+      border-color: var(--accent-cyan);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(56, 189, 248, 0.15);
+    }
+
+    .tab-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .tab-meta {
+      font-size: 12px;
+      opacity: 0.8;
+      line-height: 1.4;
+    }
+
+    .recommended-pill {
+      background: #10b981;
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    /* Interactive Showcase Container */
+    .showcase-area {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 32px;
+      max-width: 1040px;
+      width: 100%;
+      align-items: start;
+    }
+
+    @media (max-width: 840px) {
+      .showcase-area { grid-template-columns: 1fr; }
+    }
+
+    /* Mobile Frame */
+    .phone-mock {
+      background: #000;
+      border-radius: 46px;
+      padding: 12px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 255, 255, 0.1);
+      position: relative;
+    }
+
+    .phone-screen {
+      background: #0f172a;
+      border-radius: 36px;
+      overflow: hidden;
+      min-height: 620px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .phone-notch {
+      width: 120px;
+      height: 22px;
+      background: #000;
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+      margin: 0 auto;
+      z-index: 20;
+    }
+
+    .step-screen-content {
+      padding: 18px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Tap Counter Pill */
+    .tap-counter-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    /* Camera viewfinder simulator */
+    .viewfinder {
+      background: #000;
+      border-radius: 18px;
+      height: 240px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .qr-target-box {
+      width: 140px;
+      height: 140px;
+      border: 2px dashed #38bdf8;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      animation: pulseBox 2s infinite;
+    }
+
+    @keyframes pulseBox {
+      0%, 100% { border-color: #38bdf8; }
+      50% { border-color: #10b981; }
+    }
+
+    .camera-banner-popup {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      cursor: pointer;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45);
+    }
+
+    /* Comparison Details Card */
+    .detail-card {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 20px;
+      padding: 24px;
+    }
+
+    .detail-heading {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .step-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-body h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .step-body p {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .tradeoff-banner {
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .tradeoff-banner.green {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #a7f3d0;
+    }
+
+    .tradeoff-banner.amber {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fde68a;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge-ticket">Prototype Ticket: scan-flow (#9)</div>
+    <h1>เปรียบเทียบ Flow การสแกนบนมือถือ & จำนวนแตะ</h1>
+    <p class="sub">คลิกสลับแท็บเพื่อทดลองสัมผัสประสบการณ์จริงของแต่ละ Flow และดูผลกระทบด้านความง่ายในการติดตั้งบน Mac / มือถือ</p>
+  </header>
+
+  <!-- Flow Selector Tabs -->
+  <div class="flow-tabs">
+    <div class="flow-tab-btn active" id="tabFlow1" onclick="selectFlow('flow1')">
+      <div class="tab-title">
+        <span>Flow 1: กล้องมือถือเปิดเว็บตรงๆ (Native Camera)</span>
+        <span class="recommended-pill">แนะนำ</span>
+      </div>
+      <div class="tab-meta">
+        • แตะรวม: <strong>เพียง 2 ครั้ง</strong> (แตะเปิดลิงก์ + แตะยืนยัน)<br>
+        • <strong>รันบน HTTP ธรรมดาได้ 100%</strong> ไม่ต้องลง Certificate บนมือถือส่วนตัวแม่บ้าน
+      </div>
+    </div>
+
+    <div class="flow-tab-btn" id="tabFlow2" onclick="selectFlow('flow2')">
+      <div class="tab-title">
+        <span>Flow 2: เปิดเว็บก่อนแล้วเปิดกล้องในเว็บ (In-Web Camera)</span>
+      </div>
+      <div class="tab-meta">
+        • แตะรวม: <strong>4 ขั้นตอน</strong> (เปิดเว็บ > กดปุ่มเปิดกล้อง > สแกน > ยืนยัน)<br>
+        • <strong>ต้องติดตั้ง HTTPS (mkcert)</strong> บน Mac และนำ Root CA ไปติดตั้งบนมือถือแม่บ้านทุกเครื่อง
+      </div>
+    </div>
+  </div>
+
+  <div class="showcase-area">
+
+    <!-- Interactive Mobile Frame -->
+    <div class="phone-mock">
+      <div class="phone-screen">
+        <div class="phone-notch"></div>
+        
+        <!-- Screen Content Rendered by JS -->
+        <div class="step-screen-content" id="interactiveScreen"></div>
+      </div>
+    </div>
+
+    <!-- Right Side: Detailed Walkthrough & Architecture Impact -->
+    <div class="detail-card">
+      <div class="detail-heading" id="flowTitle">
+        Flow 1: Native Phone Camera (สแกนผ่านแอปกล้องมือถือ)
+      </div>
+
+      <div class="tap-counter-badge" id="tapCountBadge">
+        👆 รวมเพียง 2 แตะ (แตะเปิดเว็บ + แตะบันทึก)
+      </div>
+
+      <div class="step-list" id="flowStepList"></div>
+
+      <div class="tradeoff-banner" id="flowTradeoff"></div>
+    </div>
+
+  </div>
+
+  <script>
+    let activeFlow = 'flow1';
+    let currentStep = 1; // 1: Camera/App, 2: Web Form, 3: Success
+
+    function selectFlow(flow) {
+      activeFlow = flow;
+      currentStep = 1;
+      document.querySelectorAll('.flow-tab-btn').forEach(btn => btn.classList.remove('active'));
+      if (flow === 'flow1') {
+        document.getElementById('tabFlow1').classList.add('active');
+      } else {
+        document.getElementById('tabFlow2').classList.add('active');
+      }
+      render();
+    }
+
+    function goToStep(step) {
+      currentStep = step;
+      render();
+    }
+
+    function render() {
+      const screen = document.getElementById('interactiveScreen');
+      const title = document.getElementById('flowTitle');
+      const tapBadge = document.getElementById('tapCountBadge');
+      const stepList = document.getElementById('flowStepList');
+      const tradeoff = document.getElementById('flowTradeoff');
+
+      if (activeFlow === 'flow1') {
+        title.innerHTML = 'Flow 1: สแกนด้วยแอปกล้องมือถือทั่วไป (Native Camera)';
+        tapBadge.innerHTML = '👆 รวมเพียง 2 แตะ (แตะเปิดลิงก์ + แตะยืนยัน)';
+        
+        stepList.innerHTML = `
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <h4>แม่บ้านยกมือถือเปิดแอปกล้องหรือ LINE</h4>
+              <p>ส่องไปที่ป้าย QR จุดบริการ กล้องจะตรวจจับ URL อัตโนมัติและแสดงแบนเนอร์ให้แตะ <strong>[แตะครั้งที่ 1]</strong></p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <h4>เบราว์เซอร์เปิดหน้าเว็บตรงไปยังจุดบริการนั้น</h4>
+              <p>ระบบตรวจสอบ Persistent Session (ADR 0002) ทันที แสดงชื่อแม่บ้าน + ชื่อจุด "แคนทีน โซน A" พร้อมค่าเริ่มต้น "ปกติ (NORMAL)"</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <h4>กดปุ่ม "ยืนยันทำความสะอาดเรียบร้อย"</h4>
+              <p>ส่งข้อมูล Scan Record ไปยัง MySQL และ Real-time Dashboard ทันที <strong>[แตะครั้งที่ 2 - เสร็จสิ้น]</strong></p>
+            </div>
+          </div>
+        `;
+
+        tradeoff.className = 'tradeoff-banner green';
+        tradeoff.innerHTML = `
+          <strong>จุดเด่นด้านเทคนิคและความเข้ากันได้ (ADR 0003 Compatible):</strong><br>
+          • มือถือสามารถเข้าถึง Mac M1 ผ่าน WiFi วงเดียวกันด้วย <strong>HTTP</strong> ได้โดยตรง 100%<br>
+          • <strong>ไม่ต้องทำ HTTPS หรือติดตั้ง Root CA Certificate</strong> ลงบนมือถือส่วนตัวของแม่บ้านเลย<br>
+          • ทำงานได้กับมือถือทุกรุ่น ทั้ง iOS, Android, กล้องหลัก, หรือแอปสแกน LINE
+        `;
+
+        // Render phone screen for flow1
+        if (currentStep === 1) {
+          screen.innerHTML = `
+            <div>
+              <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">ขั้นตอนที่ 1: ส่องกล้องที่ป้าย QR</div>
+              <div class="viewfinder">
+                <div class="qr-target-box">
+                  <span style="font-size: 32px;">📷</span>
+                  <span style="font-size: 11px; color: #38bdf8; margin-top: 4px;">ส่องป้าย QR แคนทีน</span>
+                </div>
+                <div class="camera-banner-popup" onclick="goToStep(2)">
+                  <div style="font-size: 12px; color: #fff;">
+                    <strong>🌐 เปิด FacilityScan</strong><br>
+                    <span style="font-size: 10px; color: #94a3b8;">192.168.1.50:5173/scan?token=a8f9</span>
+                  </div>
+                  <span style="font-size: 11px; color: #38bdf8; font-weight: 700;">แตะเปิด 👆</span>
+                </div>
+              </div>
+              <div style="text-align: center; color: #94a3b8; font-size: 12px;">
+                👆 <strong>แตะที่แบนเนอร์ด้านบน</strong> เพื่อจำลองการเปิดเว็บจากกล้อง
+              </div>
+            </div>
+          `;
+        } else if (currentStep === 2) {
+          screen.innerHTML = `
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; margin-bottom: 12px;">
+                <span>👤 แม่บ้าน สมศรี (STAFF-01)</span>
+                <span style="color: #10b981;">● ล็อกอินอยู่</span>
+              </div>
+              <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid var(--border-dark); border-radius: 14px; padding: 14px; margin-bottom: 14px;">
+                <div style="font-size: 16px; font-weight: 700; color: #fff;">📍 แคนทีน - โซนโต๊ะ A</div>
+                <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">รหัสจุด: LOC-CT-01 • รอบ 60 นาที</div>
+              </div>
+
+              <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 14px; font-weight: 700; color: #34d399;">สถานะ: ปกติ / เรียบร้อย (NORMAL)</div>
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">กดยืนยันด้านล่างเพื่อบันทึกทันที</div>
+              </div>
+            </div>
+
+            <div>
+              <button class="primary-btn" onclick="goToStep(3)">
+                ✓ ยืนยันทำความสะอาดเรียบร้อย (แตะที่ 2)
+              </button>
+              <div style="text-align: center; margin-top: 10px;">
+                <button onclick="goToStep(1)" style="background: none; border: none; color: #64748b; font-size: 11px; cursor: pointer;">← ย้อนกลับไปสแกนใหม่</button>
+              </div>
+            </div>
+          `;
+        } else if (currentStep === 3) {
+          screen.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
+              <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #10b981; margin-bottom: 16px;">✓</div>
+              <h3 style="color: #fff; font-size: 18px; margin-bottom: 6px;">บันทึกสำเร็จ!</h3>
+              <p style="font-size: 12px; color: #94a3b8; margin-bottom: 24px; max-width: 240px;">
+                เวลา 15:30 น. • ส่งข้อมูลเข้าสู่ Real-time Dashboard เรียบร้อย
+              </p>
+              <button onclick="goToStep(1)" style="padding: 10px 20px; background: #1e293b; border: 1px solid var(--border-dark); color: #fff; border-radius: 10px; font-size: 13px; cursor: pointer;">
+                ทดลองสแกนใหม่อีกรอบ
+              </button>
+            </div>
+          `;
+        }
+
+      } else {
+        // Flow 2: In-Web Camera
+        title.innerHTML = 'Flow 2: เปิดเว็บก่อนแล้วเปิดกล้องในเว็บ (In-App Web Scanner)';
+        tapBadge.innerHTML = '👆 รวม 4 ขั้นตอน (เปิดเว็บ > เปิดกล้อง > สแกน > ยืนยัน)';
+        
+        stepList.innerHTML = `
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <h4>แม่บ้านเปิดเว็บ FacilityScan บนมือถือ</h4>
+              <p>ต้องพิมพ์ URL หรือเปิดจาก Bookmark หน้าแรกของแอป</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <h4>กดปุ่ม "เปิดกล้องเพื่อสแกน QR"</h4>
+              <p>เบราว์เซอร์จะขออนุญาตสิทธิ์กล้อง (Camera Permission) <strong>[แตะครั้งที่ 1]</strong></p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <h4>ส่องกล้องผ่านหน้าเว็บ</h4>
+              <p>JavaScript อ่าน QR Code แล้วเปลี่ยนหน้าไปยังฟอร์มบันทึกจุด</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <h4>กดปุ่ม "ยืนยันทำความสะอาด"</h4>
+              <p>ส่งข้อมูลบันทึกลงระบบ <strong>[แตะครั้งที่ 2]</strong></p>
+            </div>
+          </div>
+        `;
+
+        tradeoff.className = 'tradeoff-banner amber';
+        tradeoff.innerHTML = `
+          <strong>ข้อจำกัดและภาระทางเทคนิคที่เพิ่มขึ้นสูงมาก:</strong><br>
+          • เบราว์เซอร์มือถือ (iOS Safari / Chrome) <strong>บังคับว่าต้องเป็น HTTPS (Secure Context)</strong> เท่านั้นจึงจะเปิดกล้องในเว็บได้<br>
+          • หากต่อ WiFi ผ่าน IP บนวงแลน จะต้องสร้างใบรับรอง <code>mkcert</code> บน Mac แล้วนำไฟล์ Root Certificate ไปติดตั้งและกดยืนยัน Trust บนมือถือส่วนตัวของแม่บ้านทุกเครื่อง!<br>
+          • เพิ่มความเสี่ยงแม่บ้านกดปฏิเสธสิทธิ์กล้องแล้วใช้ต่อไม่ได้
+        `;
+
+        if (currentStep === 1) {
+          screen.innerHTML = `
+            <div>
+              <div style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px;">หน้าหลักแม่บ้าน</div>
+              <div style="font-size: 11px; color: #94a3b8; margin-bottom: 24px;">แม่บ้าน สมศรี (STAFF-01)</div>
+
+              <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid var(--border-dark); border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 44px; margin-bottom: 12px;">📷</div>
+                <div style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;">พร้อมทำความสะอาดจุดถัดไป</div>
+                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;">กดปุ่มเพื่อเปิดกล้องสแกน QR ประจำจุด</div>
+                
+                <button class="primary-btn" onclick="goToStep(2)">
+                  📷 เปิดกล้องสแกนในเว็บ (แตะที่ 1)
+                </button>
+              </div>
+
+              <div style="font-size: 11px; color: #f59e0b; text-align: center; background: rgba(245, 158, 11, 0.1); padding: 8px; border-radius: 8px;">
+                ⚠️ ต้องติดตั้ง HTTPS Certificate บนมือถือจึงจะเปิดกล้องนี้ได้
+              </div>
+            </div>
+          `;
+        } else if (currentStep === 2) {
+          screen.innerHTML = `
+            <div>
+              <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">กำลังสแกนผ่านกล้องในเว็บ (In-App Scanner)...</div>
+              <div class="viewfinder">
+                <div class="qr-target-box" onclick="goToStep(3)" style="cursor: pointer;">
+                  <span style="font-size: 28px;">🔍</span>
+                  <span style="font-size: 11px; color: #38bdf8; margin-top: 4px;">ส่องป้ายแล้วแตะที่นี่</span>
+                </div>
+              </div>
+              <div style="text-align: center; color: #94a3b8; font-size: 11px;">
+                (จำลองการตรวจพบ QR ในหน้าเว็บ)
+              </div>
+            </div>
+          `;
+        } else if (currentStep === 3) {
+          screen.innerHTML = `
+            <div>
+              <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid var(--border-dark); border-radius: 14px; padding: 14px; margin-bottom: 14px;">
+                <div style="font-size: 16px; font-weight: 700; color: #fff;">📍 แคนทีน - โซนโต๊ะ A</div>
+                <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">ตรวจพบรหัส: LOC-CT-01</div>
+              </div>
+
+              <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 14px; font-weight: 700; color: #34d399;">สถานะ: ปกติ (NORMAL)</div>
+              </div>
+            </div>
+
+            <div>
+              <button class="primary-btn" onclick="goToStep(1)">
+                ✓ ยืนยันทำความสะอาด (แตะที่ 2)
+              </button>
+            </div>
+          `;
+        }
+      }
+    }
+
+    // Initialize
+    render();
+  </script>
+</body>
+</html>
