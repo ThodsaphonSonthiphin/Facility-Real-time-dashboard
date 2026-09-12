@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { ServicePointStatus, PointStatus } from '../../../types';
+import type { ServicePointStatus, PointStatus, ScanStatus } from '../../../types';
 import { getServicePointsApi } from '../../../services/api';
 import { createScanHubConnection } from '../../../services/signalr';
 
@@ -32,7 +32,24 @@ export function useDashboard() {
 
   // Setup SignalR connection
   useEffect(() => {
-    const hubConnection = createScanHubConnection((updatedPoint: ServicePointStatus) => {
+    let isDisposed = false;
+
+    const hubConnection = createScanHubConnection((rawPoint: ServicePointStatus) => {
+      const normalizedStatus = normalizePointStatus(rawPoint.currentStatus);
+      const rawScanStatus = rawPoint.lastScanStatus as unknown;
+      const normalizedScanStatus: ScanStatus | null = 
+        rawScanStatus === 1 || rawScanStatus === 'Normal' 
+          ? 'Normal' 
+          : rawScanStatus === 2 || rawScanStatus === 'Issue' 
+            ? 'Issue' 
+            : null;
+
+      const updatedPoint: ServicePointStatus = {
+        ...rawPoint,
+        currentStatus: normalizedStatus,
+        lastScanStatus: normalizedScanStatus
+      };
+
       setPoints((prevPoints) => {
         const index = prevPoints.findIndex((p) => p.id === updatedPoint.id);
         if (index >= 0) {
@@ -51,31 +68,53 @@ export function useDashboard() {
       }, 2000);
     });
 
-    hubConnection
-      .start()
-      .then(() => {
-        setIsSignalRConnected(true);
-        console.log('Connected to SignalR ScanHub');
-      })
-      .catch((err) => {
-        console.error('SignalR connection failed:', err);
-        setIsSignalRConnected(false);
-      });
+    const startConnection = async () => {
+      if (isDisposed) return;
+      try {
+        await hubConnection.start();
+        if (!isDisposed) {
+          setIsSignalRConnected(true);
+          console.log('Connected to SignalR ScanHub');
+        }
+      } catch (err) {
+        if (!isDisposed) {
+          console.warn('SignalR start failed, retrying in 3s...', err);
+          setIsSignalRConnected(false);
+          setTimeout(startConnection, 3000);
+        }
+      }
+    };
+
+    startConnection();
 
     hubConnection.onreconnected(() => {
-      setIsSignalRConnected(true);
-      fetchPoints(); // Refresh snapshot on reconnect
+      if (!isDisposed) {
+        setIsSignalRConnected(true);
+        fetchPoints();
+      }
     });
 
     hubConnection.onreconnecting(() => {
-      setIsSignalRConnected(false);
+      if (!isDisposed) setIsSignalRConnected(false);
     });
 
     hubConnection.onclose(() => {
-      setIsSignalRConnected(false);
+      if (!isDisposed) {
+        setIsSignalRConnected(false);
+        setTimeout(startConnection, 3000);
+      }
     });
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !isDisposed) {
+        fetchPoints();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      isDisposed = true;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       hubConnection.stop();
     };
   }, [fetchPoints]);
@@ -154,4 +193,12 @@ export function useDashboard() {
     isSignalRConnected,
     refresh: fetchPoints
   };
+}
+
+function normalizePointStatus(status: unknown): PointStatus {
+  if (status === 1 || status === 'Normal') return 'Normal';
+  if (status === 2 || status === 'Overdue') return 'Overdue';
+  if (status === 3 || status === 'Issue') return 'Issue';
+  if (status === 4 || status === 'OffHours') return 'OffHours';
+  return (status as PointStatus) || 'Normal';
 }

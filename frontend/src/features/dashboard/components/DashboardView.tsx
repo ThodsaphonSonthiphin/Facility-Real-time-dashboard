@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RefreshCw, Building2 } from 'lucide-react';
+import { Search, RefreshCw, Building2, X } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { KpiSummaryBar } from './KpiSummaryBar';
 import { ServicePointCard } from './ServicePointCard';
@@ -93,16 +93,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenMobileScanne
               placeholder="ค้นหาชื่อจุดบริการ, ชั้น, โซน หรือชื่อผู้สแกน..."
               style={styles.searchInput}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={styles.clearSearchInputBtn}
+                title="ล้างคำค้นหา"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
-          {selectedStatusFilter !== 'All' && (
+          {(selectedStatusFilter !== 'All' || searchQuery.trim() !== '') && (
             <div style={styles.activeFilterNotice}>
-              <span>กำลังกรอง: <strong>{selectedStatusFilter}</strong> ({points.length} จุด)</span>
+              <span>
+                กำลังกรอง:
+                {selectedStatusFilter !== 'All' && <span> สถานะ <strong>{selectedStatusFilter}</strong></span>}
+                {selectedStatusFilter !== 'All' && searchQuery.trim() !== '' && <span> +</span>}
+                {searchQuery.trim() !== '' && <span> คำค้น <strong>"{searchQuery}"</strong></span>}
+                {' '}(พบ {points.length} จุด)
+              </span>
               <button
-                onClick={() => setSelectedStatusFilter('All')}
+                onClick={() => {
+                  setSelectedStatusFilter('All');
+                  setSearchQuery('');
+                }}
                 style={styles.clearFilterBtn}
               >
-                ล้างตัวกรอง
+                ล้างตัวกรองทั้งหมด
               </button>
             </div>
           )}
@@ -248,7 +267,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   searchInput: {
     width: '100%',
-    padding: '12px 14px 12px 42px',
+    padding: '12px 38px 12px 42px',
     background: 'rgba(30, 41, 59, 0.6)',
     border: '1px solid rgba(255, 255, 255, 0.08)',
     borderRadius: '12px',
@@ -256,6 +275,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '14px',
     outline: 'none',
     transition: 'border-color 0.2s'
+  },
+  clearSearchInputBtn: {
+    position: 'absolute',
+    right: '12px',
+    background: 'transparent',
+    border: 'none',
+    color: '#94a3b8',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '4px'
   },
   activeFilterNotice: {
     display: 'flex',
