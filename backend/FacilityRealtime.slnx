@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FacilityRealtime.Api/FacilityRealtime.Api.csproj" />
+    <Project Path="src/FacilityRealtime.Application/FacilityRealtime.Application.csproj" />
+    <Project Path="src/FacilityRealtime.Domain/FacilityRealtime.Domain.csproj" />
+    <Project Path="src/FacilityRealtime.Infrastructure/FacilityRealtime.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FacilityRealtime.UnitTests/FacilityRealtime.UnitTests.csproj" />
+  </Folder>
+</Solution>
