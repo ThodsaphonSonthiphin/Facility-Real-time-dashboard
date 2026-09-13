@@ -38,3 +38,18 @@ export interface CreateScanResponse {
   newPointStatus: PointStatus;
   scannedAt: string;
 }
+
+/** The account in a login or refresh response (ADR facility-0011). */
+export interface AuthUser {
+  id: number;
+  username: string;
+  fullName: string;
+  role: string;
+}
+
+/** Body of POST /api/auth/login and /api/auth/refresh. The refresh token is never here: it is an HttpOnly cookie. */
+export interface AuthResponse {
+  accessToken: string;
+  expiresAt: string;
+  user: AuthUser;
+}
