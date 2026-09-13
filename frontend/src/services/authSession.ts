@@ -92,8 +92,9 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
     return fetch(input, { ...init, headers, credentials: 'same-origin' });
   };
 
-  const first = await send(await getValidAccessToken());
-  if (first.status !== 401) {
+  const token = await getValidAccessToken();
+  const first = await send(token);
+  if (first.status !== 401 || token === null) {
     return first;
   }
   const refreshed = await refreshSession();

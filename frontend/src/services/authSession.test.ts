@@ -114,6 +114,7 @@ describe('authSession', () => {
     const apiCall = fetchMock.mock.calls.find(([url]) => url === '/api/service-points');
     expect(response.status).toBe(401);
     expect(authHeader(apiCall?.[1])).toBeNull();
+    expect(callsTo('/api/auth/refresh')).toBe(1);
   });
 
   it('forgets the session on logout even when the request fails', async () => {
