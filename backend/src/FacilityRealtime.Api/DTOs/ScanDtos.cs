@@ -4,10 +4,6 @@ using FacilityRealtime.Domain.Enums;
 
 namespace FacilityRealtime.Api.DTOs;
 
-public record LoginRequest(string Username, string Password);
-
-public record LoginResponse(int Id, string Username, string FullName, string Role, string Token);
-
 public record ServicePointStatusDto(
     int Id,
     string Name,

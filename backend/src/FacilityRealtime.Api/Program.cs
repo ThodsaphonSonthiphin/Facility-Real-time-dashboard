@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
+using FacilityRealtime.Api.Endpoints;
 using FacilityRealtime.Api.Hubs;
 using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Application.Common;
@@ -30,6 +32,7 @@ builder.Services.AddSingleton(workingHours);
 // 1. Clock and Database Context. The "Testing" environment (API tests) registers its own SQLite context.
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher());
+builder.Services.AddFacilityAuth(builder.Configuration);
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
@@ -70,6 +73,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 var app = builder.Build();
 
 app.UseCors("AllowAll");
+app.UseAuthentication();
+app.UseAuthorization();
 
 // 5. Apply migrations and seed on startup (tests create their own schema)
 if (!app.Environment.IsEnvironment("Testing"))
@@ -88,18 +93,8 @@ app.MapHub<ScanHub>("/hubs/scan");
 // Healthcheck
 app.MapGet("/", () => Results.Ok(new { status = "healthy", service = "Facility Real-time Dashboard API" }));
 
-// Auth: Login
-app.MapPost("/api/auth/login", async (LoginRequest req, AppDbContext db, IPasswordHasher hasher) =>
-{
-    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == req.Username);
-    if (user == null || !hasher.Verify(req.Password, user.PasswordHash))
-    {
-        return Results.Unauthorized();
-    }
-
-    var token = Guid.NewGuid().ToString("N");
-    return Results.Ok(new LoginResponse(user.Id, user.Username, user.FullName, user.Role, token));
-});
+// Auth: login, refresh, logout (ADR facility-0011..0016)
+app.MapAuthEndpoints();
 
 // Service Points: List for Dashboard
 app.MapGet("/api/service-points", async (AppDbContext db, WorkingHours workingHours) =>
