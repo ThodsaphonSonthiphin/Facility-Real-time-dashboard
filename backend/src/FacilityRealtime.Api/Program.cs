@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
@@ -135,7 +136,7 @@ app.MapGet("/api/service-points", async (AppDbContext db, WorkingHours workingHo
     }
 
     return Results.Ok(result);
-});
+}).RequireAuthorization(); // ADR facility-0018: any logged-in account
 
 // Service Points: Lookup by QR Token for Mobile Scanner
 app.MapGet("/api/service-points/by-token/{token}", async (string token, AppDbContext db, WorkingHours workingHours) =>
@@ -175,25 +176,32 @@ app.MapGet("/api/service-points/by-token/{token}", async (string token, AppDbCon
     );
 
     return Results.Ok(dto);
-});
+}).RequireAuthorization(); // ADR facility-0018: the scan page is only reachable logged in
 
 // Scan Records: Submit Scan & Broadcast Real-Time Update
 app.MapPost("/api/scan-records", async (
-    CreateScanRecordRequest req, 
-    AppDbContext db, 
+    CreateScanRecordRequest req,
+    ClaimsPrincipal principal,
+    AppDbContext db,
     IHubContext<ScanHub> hubContext,
     WorkingHours workingHours) =>
 {
+    // ADR facility-0017: the scanner is whoever the access token belongs to, never a field in the body
+    if (!int.TryParse(principal.FindFirstValue(AuthClaims.UserId), out var userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    var user = await db.Users.FindAsync(userId);
+    if (user == null)
+    {
+        return Results.Unauthorized();
+    }
+
     var point = await db.ServicePoints.FirstOrDefaultAsync(p => p.QrToken == req.QrToken && p.IsActive);
     if (point == null)
     {
         return Results.NotFound(new { message = $"Invalid QR token '{req.QrToken}'." });
-    }
-
-    var user = await db.Users.FindAsync(req.UserId);
-    if (user == null)
-    {
-        return Results.BadRequest(new { message = $"User ID '{req.UserId}' not found." });
     }
 
     var nowUtc = DateTime.UtcNow;
@@ -238,7 +246,7 @@ app.MapPost("/api/scan-records", async (
         newStatus,
         scanRecord.ScannedAt
     ));
-});
+}).RequireAuthorization(); // ADR facility-0017: cleaner and admin accounts may both scan
 
 app.Run();
 

@@ -19,9 +19,9 @@ public record ServicePointStatusDto(
     int MinutesSinceLastScan
 );
 
+/// <summary>ADR facility-0017: no UserId. The scanner is the account in the access token.</summary>
 public record CreateScanRecordRequest(
     string QrToken,
-    int UserId,
     ScanStatus Status,
     List<string>? IssueTags,
     string? Notes
