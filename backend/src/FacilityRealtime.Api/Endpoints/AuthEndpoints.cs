@@ -23,6 +23,8 @@ public static class AuthEndpoints
     {
         var auth = app.MapGroup("/api/auth");
         auth.MapPost("/login", LoginAsync);
+        auth.MapPost("/refresh", RefreshAsync);
+        auth.MapPost("/logout", LogoutAsync);
         return app;
     }
 
@@ -48,6 +50,85 @@ public static class AuthEndpoints
 
         WriteRefreshCookie(http, refresh.Token, refresh.ExpiresAt, jwt.Value);
         return Results.Ok(ToResponse(user, issuer.Issue(user)));
+    }
+
+    private static async Task<IResult> RefreshAsync(
+        HttpContext http,
+        AppDbContext db,
+        IAccessTokenIssuer issuer,
+        TimeProvider clock,
+        IOptions<JwtSettings> jwt)
+    {
+        var presented = http.Request.Cookies[RefreshCookieName];
+        if (string.IsNullOrEmpty(presented))
+        {
+            return Unauthorized(http, jwt.Value);
+        }
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        var hash = RefreshTokenRules.Hash(presented);
+        var stored = await db.RefreshTokens.Include(t => t.User).FirstOrDefaultAsync(t => t.TokenHash == hash);
+        if (stored?.User is null)
+        {
+            return Unauthorized(http, jwt.Value);
+        }
+
+        switch (RefreshTokenRules.Decide(stored, now))
+        {
+            case RefreshDecision.Reject:
+                return Unauthorized(http, jwt.Value);
+
+            case RefreshDecision.ReuseDetected:
+                // ADR facility-0015: two parties hold this token and the server cannot tell which is the owner
+                await db.RevokeSessionAsync(stored.SessionId, now);
+                return Unauthorized(http, jwt.Value);
+        }
+
+        // ADR facility-0012: the account is re-read on every refresh, so deactivation and role changes land within 5 minutes
+        if (!stored.User.IsActive)
+        {
+            await db.RevokeUserSessionsAsync(stored.UserId, now);
+            return Unauthorized(http, jwt.Value);
+        }
+
+        // Rotate (facility-0014). Within the grace window the first rotation time is kept, so the window never extends itself.
+        stored.RotatedAt ??= now;
+        var next = AddRefreshToken(db, stored.UserId, stored.SessionId, now);
+        await db.SaveChangesAsync();
+
+        WriteRefreshCookie(http, next.Token, next.ExpiresAt, jwt.Value);
+        return Results.Ok(ToResponse(stored.User, issuer.Issue(stored.User)));
+    }
+
+    private static async Task<IResult> LogoutAsync(
+        HttpContext http,
+        AppDbContext db,
+        TimeProvider clock,
+        IOptions<JwtSettings> jwt)
+    {
+        var presented = http.Request.Cookies[RefreshCookieName];
+        if (!string.IsNullOrEmpty(presented))
+        {
+            var hash = RefreshTokenRules.Hash(presented);
+            var sessionId = await db.RefreshTokens
+                .Where(t => t.TokenHash == hash)
+                .Select(t => (Guid?)t.SessionId)
+                .FirstOrDefaultAsync();
+
+            if (sessionId is not null)
+            {
+                await db.RevokeSessionAsync(sessionId.Value, clock.GetUtcNow().UtcDateTime);
+            }
+        }
+
+        http.Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions(jwt.Value));
+        return Results.NoContent();
+    }
+
+    private static IResult Unauthorized(HttpContext http, JwtSettings settings)
+    {
+        http.Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions(settings));
+        return Results.Unauthorized();
     }
 
     private static (string Token, DateTime ExpiresAt) AddRefreshToken(AppDbContext db, int userId, Guid sessionId, DateTime nowUtc)
