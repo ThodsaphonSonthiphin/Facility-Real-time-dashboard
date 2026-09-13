@@ -1,3 +1,5 @@
+using FacilityRealtime.Application.Auth;
+using FacilityRealtime.Infrastructure.Auth;
 using FacilityRealtime.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -32,6 +34,8 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
             _connection.Open();
             services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
             services.AddSingleton<TimeProvider>(Clock);
+            // 600,000 iterations per login would make the API suite slow; the format is identical
+            services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher(iterations: 1_000));
         });
     }
 
@@ -41,7 +45,7 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
         using var scope = host.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.EnsureCreated();
-        DbInitializer.SeedAsync(db).GetAwaiter().GetResult();
+        DbInitializer.SeedAsync(db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>()).GetAwaiter().GetResult();
         return host;
     }
 

@@ -1,8 +1,7 @@
 using System;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
+using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +9,7 @@ namespace FacilityRealtime.Infrastructure.Persistence;
 
 public static class DbInitializer
 {
-    public static async Task SeedAsync(AppDbContext context)
+    public static async Task SeedAsync(AppDbContext context, IPasswordHasher hasher)
     {
         // 1. Seed Users if empty
         if (!await context.Users.AnyAsync())
@@ -18,7 +17,7 @@ public static class DbInitializer
             var cleaner = new User
             {
                 Username = "somchai",
-                PasswordHash = HashPassword("password123"),
+                PasswordHash = hasher.Hash("password123"),
                 FullName = "สมชาย ใจดี",
                 Role = "cleaner",
                 CreatedAt = DateTime.UtcNow
@@ -27,7 +26,7 @@ public static class DbInitializer
             var admin = new User
             {
                 Username = "admin",
-                PasswordHash = HashPassword("admin1234"),
+                PasswordHash = hasher.Hash("admin1234"),
                 FullName = "ผู้ดูแลระบบ",
                 Role = "admin",
                 CreatedAt = DateTime.UtcNow
@@ -74,11 +73,5 @@ public static class DbInitializer
             await context.ServicePoints.AddRangeAsync(points);
             await context.SaveChangesAsync();
         }
-    }
-
-    public static string HashPassword(string password)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-        return Convert.ToHexStringLower(bytes);
     }
 }

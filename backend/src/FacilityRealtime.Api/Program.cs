@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using FacilityRealtime.Api.DTOs;
 using FacilityRealtime.Api.Hubs;
+using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Application.Common;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
+using FacilityRealtime.Infrastructure.Auth;
 using FacilityRealtime.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -27,6 +29,7 @@ builder.Services.AddSingleton(workingHours);
 
 // 1. Clock and Database Context. The "Testing" environment (API tests) registers its own SQLite context.
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher());
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
@@ -74,7 +77,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
-    await DbInitializer.SeedAsync(db);
+    await DbInitializer.SeedAsync(db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>());
 }
 
 // 6. SignalR Hub Mapping
@@ -86,11 +89,10 @@ app.MapHub<ScanHub>("/hubs/scan");
 app.MapGet("/", () => Results.Ok(new { status = "healthy", service = "Facility Real-time Dashboard API" }));
 
 // Auth: Login
-app.MapPost("/api/auth/login", async (LoginRequest req, AppDbContext db) =>
+app.MapPost("/api/auth/login", async (LoginRequest req, AppDbContext db, IPasswordHasher hasher) =>
 {
-    var hash = DbInitializer.HashPassword(req.Password);
-    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == req.Username && u.PasswordHash == hash);
-    if (user == null)
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == req.Username);
+    if (user == null || !hasher.Verify(req.Password, user.PasswordHash))
     {
         return Results.Unauthorized();
     }

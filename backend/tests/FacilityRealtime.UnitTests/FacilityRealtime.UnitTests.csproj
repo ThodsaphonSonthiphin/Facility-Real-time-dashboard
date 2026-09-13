@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\FacilityRealtime.Application\FacilityRealtime.Application.csproj" />
     <ProjectReference Include="..\..\src\FacilityRealtime.Domain\FacilityRealtime.Domain.csproj" />
+    <ProjectReference Include="..\..\src\FacilityRealtime.Infrastructure\FacilityRealtime.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
