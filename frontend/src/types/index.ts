@@ -16,29 +16,6 @@ export interface ServicePointStatus {
   minutesSinceLastScan: number;
 }
 
-export interface UserSession {
-  id: number;
-  username: string;
-  fullName: string;
-  role: string;
-  token: string;
-}
-
-export interface CreateScanRequest {
-  qrToken: string;
-  userId: number;
-  status: ScanStatus;
-  issueTags?: string[];
-  notes?: string;
-}
-
-export interface CreateScanResponse {
-  scanRecordId: number;
-  servicePointId: number;
-  newPointStatus: PointStatus;
-  scannedAt: string;
-}
-
 /** The account in a login or refresh response (ADR facility-0011). */
 export interface AuthUser {
   id: number;
@@ -52,4 +29,19 @@ export interface AuthResponse {
   accessToken: string;
   expiresAt: string;
   user: AuthUser;
+}
+
+/** ADR facility-0017: no userId. The server takes the scanner from the access token. */
+export interface CreateScanRequest {
+  qrToken: string;
+  status: ScanStatus;
+  issueTags?: string[];
+  notes?: string;
+}
+
+export interface CreateScanResponse {
+  scanRecordId: number;
+  servicePointId: number;
+  newPointStatus: PointStatus;
+  scannedAt: string;
 }

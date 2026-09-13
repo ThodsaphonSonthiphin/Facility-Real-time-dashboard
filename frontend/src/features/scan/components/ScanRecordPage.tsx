@@ -12,11 +12,11 @@ import {
 } from 'lucide-react';
 import { useScanRecord } from '../hooks/useScanRecord';
 import { IssueTagSelector } from './IssueTagSelector';
-import type { UserSession } from '../../../types';
+import type { AuthUser } from '../../../types';
 
 interface ScanRecordPageProps {
   qrToken: string;
-  currentUser: UserSession;
+  currentUser: AuthUser;
   onLogout: () => void;
   onOpenDashboard?: () => void;
 }
@@ -42,7 +42,7 @@ export const ScanRecordPage: React.FC<ScanRecordPageProps> = ({
     submitScan,
     resetForm,
     existingIssueTags
-  } = useScanRecord(qrToken, currentUser.id);
+  } = useScanRecord(qrToken);
 
   const [showIssueForm, setShowIssueForm] = useState(false);
 

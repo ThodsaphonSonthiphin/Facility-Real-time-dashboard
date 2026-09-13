@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { ServicePointStatus, ScanStatus, CreateScanResponse } from '../../../types';
 import { getServicePointByTokenApi, createScanRecordApi } from '../../../services/api';
 
-export function useScanRecord(qrToken: string, userId: number | undefined) {
+export function useScanRecord(qrToken: string) {
   const [point, setPoint] = useState<ServicePointStatus | null>(null);
   const [isLoadingPoint, setIsLoadingPoint] = useState<boolean>(true);
   const [pointError, setPointError] = useState<string | null>(null);
@@ -58,8 +58,8 @@ export function useScanRecord(qrToken: string, userId: number | undefined) {
   }, []);
 
   const submitScan = useCallback(async (overrideStatus?: ScanStatus): Promise<boolean> => {
-    if (!userId || !qrToken) {
-      setSubmitError('ไม่พบข้อมูลผู้ใช้หรือรหัส QR');
+    if (!qrToken) {
+      setSubmitError('ไม่พบรหัส QR');
       return false;
     }
 
@@ -70,7 +70,6 @@ export function useScanRecord(qrToken: string, userId: number | undefined) {
     try {
       const res = await createScanRecordApi({
         qrToken,
-        userId,
         status: targetStatus,
         issueTags: targetStatus === 'Issue' && selectedTags.length > 0 ? selectedTags : undefined,
         notes: targetStatus === 'Issue' && notes.trim() ? notes.trim() : undefined
@@ -85,7 +84,7 @@ export function useScanRecord(qrToken: string, userId: number | undefined) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [qrToken, userId, status, selectedTags, notes]);
+  }, [qrToken, status, selectedTags, notes]);
 
   const resetForm = useCallback(() => {
     setStatus('Normal');

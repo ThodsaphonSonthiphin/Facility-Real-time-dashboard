@@ -7,7 +7,7 @@ import { DashboardView } from './features/dashboard/components/DashboardView';
 import { LayoutDashboard, Smartphone } from 'lucide-react';
 
 function AppContent() {
-  const { currentUser, logout, isAuthenticated } = useAuth();
+  const { currentUser, logout, isAuthenticated, isLoading } = useAuth();
 
   // Simple, fast path routing
   const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
@@ -82,19 +82,21 @@ function AppContent() {
 
       {/* Main Page Routing */}
       <div style={{ flex: 1 }}>
-        {isScanRoute ? (
-          !isAuthenticated ? (
-            <LoginPage onSuccess={() => navigateTo(`/scan/${tokenFromUrl}`)} />
-          ) : (
-            <ScanRecordPage
-              qrToken={tokenFromUrl}
-              currentUser={currentUser!}
-              onLogout={logout}
-              onOpenDashboard={() => navigateTo('/dashboard')}
-            />
-          )
-        ) : currentPath === '/login' && !isAuthenticated ? (
-          <LoginPage onSuccess={() => navigateTo('/dashboard')} />
+        {isLoading ? (
+          // ADR facility-0013: wait for the page-load refresh before deciding to show the login page
+          <div style={styles.sessionCheck}>กำลังตรวจสอบการเข้าสู่ระบบ...</div>
+        ) : !isAuthenticated ? (
+          // ADR facility-0017 and facility-0018: scanning and the dashboard both need a login; return to the same page after it
+          <LoginPage
+            onSuccess={() => navigateTo(isScanRoute ? `/scan/${tokenFromUrl}` : '/dashboard')}
+          />
+        ) : isScanRoute ? (
+          <ScanRecordPage
+            qrToken={tokenFromUrl}
+            currentUser={currentUser!}
+            onLogout={logout}
+            onOpenDashboard={() => navigateTo('/dashboard')}
+          />
         ) : (
           <DashboardView
             onOpenMobileScanner={(token) => {
@@ -179,6 +181,14 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#fca5a5',
     cursor: 'pointer',
     fontSize: '11px'
+  },
+  sessionCheck: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '60vh',
+    color: '#94a3b8',
+    fontSize: '14px'
   }
 };
 

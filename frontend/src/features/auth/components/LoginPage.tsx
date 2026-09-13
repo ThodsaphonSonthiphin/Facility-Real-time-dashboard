@@ -7,7 +7,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
-  const { login, error, isLoading } = useAuth();
+  const { login, error, isSubmitting } = useAuth();
   const [username, setUsername] = useState('somchai');
   const [password, setPassword] = useState('password123');
 
@@ -75,15 +75,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           <button
             id="login-submit-btn"
             type="submit"
-            disabled={isLoading}
+            disabled={isSubmitting}
             style={{
               ...styles.submitButton,
-              opacity: isLoading ? 0.7 : 1,
-              cursor: isLoading ? 'not-allowed' : 'pointer'
+              opacity: isSubmitting ? 0.7 : 1,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer'
             }}
           >
             <LogIn size={18} />
-            <span>{isLoading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</span>
+            <span>{isSubmitting ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</span>
           </button>
         </form>
 
