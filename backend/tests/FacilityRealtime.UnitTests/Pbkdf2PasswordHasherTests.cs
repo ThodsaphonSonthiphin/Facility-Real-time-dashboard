@@ -66,4 +66,12 @@ public class Pbkdf2PasswordHasherTests
     {
         Assert.Equal(600_000, Pbkdf2PasswordHasher.DefaultIterations);
     }
+
+    [Fact]
+    public void Verify_rejects_a_stored_hash_with_an_empty_hash_segment()
+    {
+        var storedWithEmptyHash = "pbkdf2-sha256$1000$" + Convert.ToBase64String(new byte[16]) + "$";
+
+        Assert.False(_hasher.Verify("password123", storedWithEmptyHash));
+    }
 }
