@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prototype: หน้าจัดการจุดบริการ (Ticket #16 points-admin-page)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    /* Tokens copied from frontend/src/styles/index.css — the app is dark-only, so this mock is too */
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --bg-card-elevated: #243247;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(255, 255, 255, 0.15);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --color-normal: #22c55e;
+      --color-normal-bg: rgba(34, 197, 94, 0.12);
+      --color-overdue: #f97316;
+      --color-overdue-bg: rgba(249, 115, 22, 0.12);
+      --color-issue: #ef4444;
+      --color-issue-bg: rgba(239, 68, 68, 0.15);
+      --color-offhours: #64748b;
+      --color-offhours-bg: rgba(100, 116, 139, 0.15);
+      --color-brand: #38bdf8;
+      --color-brand-bg: rgba(56, 189, 248, 0.15);
+      --color-brand-glow: rgba(56, 189, 248, 0.25);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+      --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      --font-family: 'Plus Jakarta Sans', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-block: 16px 48px;
+      padding-inline: clamp(16px, 3vw, 32px);
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+    /* Simulation bar — the convention every prototype on this map uses */
+    .sim-bar {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px dashed var(--color-brand);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      margin-bottom: 20px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .sim-bar strong { color: var(--color-brand); font-weight: 700; }
+    .sim-bar .sim-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sim-bar button {
+      background: transparent; border: 1px solid var(--border-highlight); color: var(--text-secondary);
+      border-radius: var(--radius-full); padding: 4px 12px; font-size: 12px;
+    }
+    .sim-bar button:hover { border-color: var(--color-brand); color: var(--color-brand); }
+
+    /* Admin header: same brand as the dev navbar, with the two admin tabs from #16 and #17 */
+    .admin-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+      padding-bottom: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--border-subtle);
+    }
+    .brand { font-weight: 800; font-size: 18px; letter-spacing: -0.3px; display: flex; align-items: center; gap: 10px; }
+    .brand .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-brand); background: var(--color-brand-bg); padding: 2px 8px; border-radius: var(--radius-full); }
+    .tabs { display: flex; gap: 4px; }
+    .tab {
+      background: transparent; border: none; color: var(--text-secondary); padding: 8px 14px; border-radius: var(--radius-sm); font-weight: 600; font-size: 14px;
+    }
+    .tab[aria-selected="true"] { background: var(--color-brand-bg); color: var(--color-brand); }
+    .tab:hover { color: var(--text-primary); }
+    .user-chip { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+    .user-chip .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-card-elevated); display: grid; place-items: center; font-weight: 700; color: var(--color-brand); font-size: 12px; }
+
+    /* Toolbar */
+    .page-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .page-title h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; text-wrap: balance; }
+    .page-title .count { color: var(--text-muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+    .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .search { flex: 1 1 220px; max-width: 360px; position: relative; }
+    .search input {
+      width: 100%; background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--text-primary);
+      border-radius: var(--radius-sm); padding: 9px 12px 9px 34px; font: inherit; font-size: 14px;
+    }
+    .search::before { content: '⌕'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 16px; }
+    .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none; }
+    .check input { accent-color: var(--color-brand); width: 16px; height: 16px; }
+    .spacer { flex: 1; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; border-radius: var(--radius-sm); padding: 9px 14px; font-size: 14px; font-weight: 600;
+      border: 1px solid var(--border-highlight); background: var(--bg-card-elevated); color: var(--text-primary); white-space: nowrap;
+      transition: background .15s, border-color .15s;
+    }
+    .btn:hover { border-color: var(--color-brand); }
+    .btn-primary { background: var(--color-brand); border-color: var(--color-brand); color: #082f49; }
+    .btn-primary:hover { background: #7dd3fc; }
+    .btn-warning { background: var(--color-overdue); border-color: var(--color-overdue); color: #431407; }
+    .btn-warning:hover { background: #fb923c; }
+    .btn-ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+    .btn-ghost:hover { background: var(--bg-card); color: var(--text-primary); border-color: transparent; }
+    .btn-sm { padding: 6px 10px; font-size: 13px; }
+
+    /* Table of points — an admin scans rows, so the table beats cards here */
+    .table-wrap { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow-x: auto; box-shadow: var(--shadow-card); }
+    table { width: 100%; border-collapse: collapse; min-width: 880px; }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
+    th { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; background: rgba(15, 23, 42, 0.5); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+    tr.inactive td { opacity: 0.45; }
+    tr.inactive td.actions { opacity: 1; }
+    tr.flash { animation: rowflash 1.2s ease-out; }
+    @keyframes rowflash { 0% { background: var(--color-brand-bg); } 100% { background: transparent; } }
+    .pt-name { font-weight: 600; }
+    .pt-loc { font-size: 12px; color: var(--text-secondary); }
+    .num { font-variant-numeric: tabular-nums; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600; }
+    .badge-on { background: var(--color-normal-bg); color: var(--color-normal); }
+    .badge-off { background: var(--color-offhours-bg); color: var(--text-secondary); }
+    .token { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-secondary); }
+    .token small { display: block; font-family: var(--font-family); color: var(--text-muted); font-size: 11px; }
+    td.actions { white-space: nowrap; }
+    td.actions .btn { margin-right: 4px; }
+    .hint { margin-top: 12px; font-size: 13px; color: var(--text-muted); max-width: 70ch; }
+    .hint b { color: var(--text-secondary); font-weight: 600; }
+
+    /* Pagination bar — same component as the Dashboard (#14, ADR 0008 amendment): info · pages · page size */
+    .pager {
+      margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap;
+      background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 16px;
+    }
+    .pager-info { font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+    .pager-info strong { color: var(--text-primary); font-weight: 600; }
+    .pager-pages { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .page-btn {
+      min-width: 36px; height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--border-subtle);
+      background: var(--bg-secondary); color: var(--text-primary); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--color-brand); }
+    .page-btn.active { background: var(--color-brand); border-color: var(--color-brand); color: #082f49; }
+    .page-btn:disabled { opacity: 0.4; cursor: default; }
+    .page-gap { color: var(--text-muted); padding: 0 4px; }
+    .pager-size { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+    .pager-size select { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 6px 10px; font: inherit; font-size: 13px; }
+
+    /* Drawer (add / edit) — slides from the right on desktop, full width on a phone */
+    .scrim { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.6); backdrop-filter: blur(2px); z-index: 40; }
+    .drawer {
+      position: fixed; top: 0; right: 0; height: 100vh; width: min(440px, 100vw); background: var(--bg-secondary);
+      border-left: 1px solid var(--border-highlight); z-index: 50; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;
+      box-shadow: -20px 0 40px rgba(0,0,0,0.4); animation: slidein .2s ease-out;
+    }
+    @keyframes slidein { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .drawer h2 { font-size: 18px; font-weight: 700; }
+    .drawer .sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+    .field input {
+      background: var(--bg-primary); border: 1px solid var(--border-highlight); color: var(--text-primary);
+      border-radius: var(--radius-sm); padding: 10px 12px; font: inherit; font-size: 15px;
+    }
+    .field .help { font-size: 12px; color: var(--text-muted); }
+    .field .err { font-size: 12px; color: var(--color-issue); display: none; }
+    .field.invalid input { border-color: var(--color-issue); }
+    .field.invalid .err { display: block; }
+    .interval-row { display: flex; align-items: center; gap: 8px; }
+    .interval-row input { width: 110px; text-align: right; }
+    .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+    .presets button { background: var(--bg-card-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-full); padding: 3px 10px; font-size: 12px; }
+    .presets button:hover { color: var(--color-brand); border-color: var(--color-brand); }
+    .readonly-box { background: var(--bg-primary); border: 1px dashed var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--text-secondary); }
+    .drawer .footer { margin-top: auto; display: flex; gap: 8px; justify-content: flex-end; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
+
+    /* Modal (regenerate confirmation) */
+    .modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgba(2, 6, 23, 0.7); }
+    .modal .box { background: var(--bg-secondary); border: 1px solid var(--border-highlight); border-radius: var(--radius-lg); width: min(480px, 100%); padding: 24px; box-shadow: var(--shadow-card); }
+    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; text-wrap: balance; }
+    .modal .warn { display: flex; gap: 10px; align-items: flex-start; background: var(--color-overdue-bg); border: 1px solid rgba(249,115,22,0.35); border-radius: var(--radius-sm); padding: 12px; margin: 14px 0; font-size: 14px; }
+    .modal .warn .ico { font-size: 18px; line-height: 1; }
+    .modal ul { padding-left: 18px; font-size: 14px; color: var(--text-secondary); display: grid; gap: 4px; }
+    .modal .footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+    /* Print sheet — white paper, always; on screen it is a preview overlay */
+    .print-sheet { position: fixed; inset: 0; z-index: 70; background: #cbd5e1; overflow-y: auto; padding: 24px; }
+    .print-sheet .screen-only { display: flex; gap: 8px; justify-content: space-between; align-items: center; flex-wrap: wrap; max-width: 794px; margin: 0 auto 14px; color: #0f172a; }
+    .print-sheet .screen-only .btn { background: #0f172a; color: #f8fafc; border-color: #0f172a; }
+    .print-sheet .screen-only .btn-ghost { background: transparent; color: #334155; }
+    .paper { background: #ffffff; color: #0f172a; max-width: 794px; margin: 0 auto; padding: 28px; min-height: 600px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); }
+    .paper-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 18px; font-size: 12px; color: #475569; }
+    .paper-head b { color: #0f172a; font-size: 14px; }
+    .labels { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .label-card { border: 1.5px solid #0f172a; border-radius: 10px; padding: 16px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; break-inside: avoid; page-break-inside: avoid; }
+    .label-card .lname { font-size: 20px; font-weight: 800; line-height: 1.2; letter-spacing: -0.2px; }
+    .label-card .lloc { font-size: 13px; color: #475569; margin-top: 4px; }
+    .label-card .lcta { font-size: 13px; font-weight: 600; margin-top: 12px; }
+    .label-card .lmeta { font-size: 11px; color: #64748b; margin-top: 8px; font-variant-numeric: tabular-nums; }
+    .label-card .lurl { font-family: ui-monospace, Menlo, monospace; font-size: 9px; color: #94a3b8; margin-top: 4px; word-break: break-all; }
+    .qr { width: 132px; height: 132px; display: grid; place-items: center; }
+    .qr img, .qr canvas { width: 132px !important; height: 132px !important; }
+    .qr-fallback { width: 132px; height: 132px; border: 1px dashed #94a3b8; display: grid; place-items: center; font-size: 10px; color: #94a3b8; text-align: center; padding: 6px; }
+    @media print {
+      body { padding: 0; background: #fff; }
+      body > *:not(.print-sheet) { display: none !important; }
+      .print-sheet { position: static; background: #fff; padding: 0; }
+      .print-sheet .screen-only { display: none; }
+      .paper { box-shadow: none; max-width: none; padding: 0; }
+    }
+
+    /* Toast */
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 80; background: var(--bg-card-elevated); border: 1px solid var(--border-highlight); border-radius: var(--radius-full); padding: 10px 16px; font-size: 14px; display: flex; gap: 12px; align-items: center; box-shadow: var(--shadow-card); max-width: calc(100vw - 32px); }
+    .toast button { background: transparent; border: none; color: var(--color-brand); font-weight: 700; }
+
+    [hidden] { display: none !important; }
+    @media (max-width: 640px) {
+      .admin-header { gap: 10px; }
+      .pager { justify-content: center; }
+      .pager-info { width: 100%; text-align: center; }
+      .toolbar .btn span.txt { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sim-bar">
+    <div><strong>Prototype #16 points-admin-page</strong> · ทุกปุ่มทำงานจริงในหน้านี้ (ข้อมูลจำลอง: โรงอาหาร + งานแม่บ้าน) · ข้อความสีเทาใต้ตารางคือสิ่งที่ mock เสนอให้ตัดสิน</div>
+    <div class="sim-actions">
+      <button type="button" data-sim="add">เปิดฟอร์มเพิ่มจุด</button>
+      <button type="button" data-sim="regen">ยืนยันออก QR ใหม่</button>
+      <button type="button" data-sim="printall">หน้าพิมพ์ป้ายทั้งหมด</button>
+    </div>
+  </div>
+
+  <header class="admin-header">
+    <div class="brand">🏢 Facility Real-time <span class="eyebrow">Admin</span></div>
+    <nav class="tabs" aria-label="เมนู Admin">
+      <button class="tab" type="button">Dashboard</button>
+      <button class="tab" type="button" aria-selected="true">จุดบริการ</button>
+      <button class="tab" type="button" title="ตัดสินใน #17 — หน้าแยก ไม่อยู่ใน mock นี้">บัญชีผู้ใช้</button>
+    </nav>
+    <div class="user-chip"><span class="avatar">AD</span> admin · Admin Account</div>
+  </header>
+
+  <main>
+    <div class="page-title">
+      <h1>จุดบริการ</h1>
+      <span class="count" id="countLine"></span>
+    </div>
+    <div class="toolbar">
+      <div class="search"><input id="q" type="search" placeholder="ค้นหาชื่อจุดหรือตำแหน่ง" aria-label="ค้นหา"></div>
+      <label class="check"><input id="hideInactive" type="checkbox"> ซ่อนจุดที่ปิดใช้งาน</label>
+      <div class="spacer"></div>
+      <button class="btn" type="button" id="printAllBtn">🖨 <span class="txt">พิมพ์ป้ายทั้งหมด</span></button>
+      <button class="btn btn-primary" type="button" id="addBtn">＋ <span class="txt">เพิ่มจุดบริการ</span></button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>จุดบริการ</th>
+            <th>รอบ</th>
+            <th>สแกนล่าสุด</th>
+            <th>QR Token</th>
+            <th>สถานะ</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <div class="pager" id="pager">
+      <div class="pager-info" id="pagerInfo"></div>
+      <div class="pager-pages" id="pagerPages"></div>
+      <label class="pager-size" for="pageSize">ต่อหน้า
+        <select id="pageSize">
+          <option value="12" selected>12</option>
+          <option value="24">24</option>
+          <option value="48">48</option>
+        </select>
+      </label>
+    </div>
+
+    <p class="hint"><b>สิ่งที่ mock เสนอ:</b> จุดที่ปิดใช้งานยังอยู่ในตาราง (จางลง) และหายจาก Dashboard ทันที ประวัติสแกนไม่ถูกลบ · ออก QR ใหม่ต้องยืนยันหนึ่งครั้งพร้อมบอกผลที่ตามมา แล้วเสนอพิมพ์ป้ายใหม่ทันที · พิมพ์ได้ทั้ง "ป้ายเดียว" จากแถว และ "ทั้งหมดที่เปิดใช้งาน" จากปุ่มบน เป็นกระดาษ A4 ใบละ 6 ป้าย · <b>แบ่งหน้า:</b> แถบเดียวกับ Dashboard (12/24/48) เรียงตามชื่อจุด ค้นหา/ซ่อนจุดปิด/เปลี่ยนจำนวนต่อหน้า กลับไปหน้า 1 เพิ่มหรือเปลี่ยนชื่อจุดแล้วพาไปหน้าที่แถวนั้นอยู่และกระพริบ ปิด/เปิดใช้งานและออก QR ใหม่อยู่หน้าเดิม (แถวไม่ย้าย) · "พิมพ์ป้ายทั้งหมด" พิมพ์ทุกจุดที่เปิดใช้งาน ไม่ใช่แค่หน้าที่เห็น</p>
+  </main>
+
+  <!-- Drawer: add / edit -->
+  <div id="drawerScrim" class="scrim" hidden></div>
+  <aside id="drawer" class="drawer" hidden aria-label="ฟอร์มจุดบริการ">
+    <div>
+      <h2 id="drawerTitle">เพิ่มจุดบริการ</h2>
+      <div class="sub" id="drawerSub">QR Token จะถูกสุ่มให้อัตโนมัติเมื่อบันทึก</div>
+    </div>
+    <div class="field" id="fName">
+      <label for="inName">ชื่อจุด</label>
+      <input id="inName" type="text" placeholder="เช่น ห้องน้ำชาย ชั้น 2" autocomplete="off">
+      <span class="help">ชื่อนี้ขึ้นบนการ์ด Dashboard และบนป้าย QR</span>
+      <span class="err">กรอกชื่อจุด</span>
+    </div>
+    <div class="field" id="fLoc">
+      <label for="inLoc">ตำแหน่ง</label>
+      <input id="inLoc" type="text" placeholder="เช่น อาคาร A ชั้น 2" autocomplete="off">
+    </div>
+    <div class="field" id="fInt">
+      <label for="inInt">รอบทำความสะอาด (นาที)</label>
+      <div class="interval-row"><input id="inInt" type="number" min="1" step="1" value="60"> <span class="help">นาที</span></div>
+      <div class="presets">
+        <button type="button" data-preset="30">30</button>
+        <button type="button" data-preset="45">45</button>
+        <button type="button" data-preset="60">60</button>
+        <button type="button" data-preset="90">90</button>
+        <button type="button" data-preset="120">120</button>
+      </div>
+      <span class="help">เลยรอบทันทีที่เกินเวลาครบรอบ ไม่มีเวลาผ่อนผัน (ADR 0005) รอบแรกของวันนับจากเวลาเปิด</span>
+      <span class="err">ต้องเป็นจำนวนเต็มมากกว่า 0</span>
+    </div>
+    <div class="readonly-box" id="tokenBox" hidden></div>
+    <div class="footer">
+      <button class="btn btn-ghost" type="button" id="cancelBtn">ยกเลิก</button>
+      <button class="btn btn-primary" type="button" id="saveBtn">บันทึก</button>
+    </div>
+  </aside>
+
+  <!-- Modal: regenerate QR confirmation -->
+  <div id="regenModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="regenTitle">
+    <div class="box">
+      <h2 id="regenTitle">ออก QR ใหม่ให้ “—” ?</h2>
+      <div class="warn"><span class="ico">⚠️</span><div><b>ป้ายที่ติดอยู่ที่จุดนี้จะสแกนไม่ได้ทันที</b> ต้องพิมพ์ป้ายใหม่ไปติดแทนก่อนแม่บ้านรอบถัดไป</div></div>
+      <ul>
+        <li>ประวัติสแกนและสถานะบน Dashboard ไม่เปลี่ยน (ADR 0006)</li>
+        <li>QR Token ปัจจุบัน <span class="token" id="regenOld"></span> จะถูกแทนด้วยค่าสุ่มใหม่</li>
+      </ul>
+      <div class="footer">
+        <button class="btn btn-ghost" type="button" id="regenCancel">ยกเลิก</button>
+        <button class="btn btn-warning" type="button" id="regenConfirm">ออก QR ใหม่</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Print sheet -->
+  <section id="printSheet" class="print-sheet" hidden aria-label="หน้าพิมพ์ป้าย">
+    <div class="screen-only">
+      <div id="printTitle" style="font-weight:700"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" type="button" id="printClose">ปิด</button>
+        <button class="btn" type="button" id="printNow">🖨 พิมพ์</button>
+      </div>
+    </div>
+    <div class="paper">
+      <div class="paper-head"><b>ป้าย QR จุดบริการ</b><span id="paperMeta"></span></div>
+      <div class="labels" id="labels"></div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button></div>
+
+  <script>
+    // ---- mock data (canteen + housekeeping, per the map's notes) ----
+    const BASE_URL = 'http://192.168.1.20:5173'; // PublicBaseUrl จาก config (ADR facility-0003)
+    const uuid = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==='x'?r:(r&3|8)).toString(16); });
+    const SEED = [
+      ['ห้องน้ำชาย ชั้น 1', 'อาคาร A ชั้น 1', 60, true, 'วันนี้ 10:12 · สมชาย', '11 ก.ย. 2026'],
+      ['ห้องน้ำหญิง ชั้น 1', 'อาคาร A ชั้น 1', 60, true, 'วันนี้ 10:15 · สมชาย', '11 ก.ย. 2026'],
+      ['ห้องน้ำชาย ชั้น 2', 'อาคาร A ชั้น 2', 60, true, 'วันนี้ 09:40 · มาลี', '11 ก.ย. 2026'],
+      ['ห้องน้ำหญิง ชั้น 2', 'อาคาร A ชั้น 2', 60, true, 'วันนี้ 09:44 · มาลี', '11 ก.ย. 2026'],
+      ['ห้องน้ำชาย ชั้น 3', 'อาคาร A ชั้น 3', 60, false, '9 ก.ย. 14:20 · สมชาย', '11 ก.ย. 2026'],
+      ['ห้องน้ำหญิง ชั้น 3', 'อาคาร A ชั้น 3', 60, true, 'วันนี้ 08:55 · มาลี', '11 ก.ย. 2026'],
+      ['ห้องน้ำชาย อาคาร B ชั้น 1', 'อาคาร B ชั้น 1', 90, true, 'วันนี้ 09:05 · สมชาย', '12 ก.ย. 2026'],
+      ['ห้องน้ำหญิง อาคาร B ชั้น 1', 'อาคาร B ชั้น 1', 90, true, 'วันนี้ 09:08 · สมชาย', '12 ก.ย. 2026'],
+      ['ห้องน้ำชาย อาคาร B ชั้น 2', 'อาคาร B ชั้น 2', 90, true, 'เมื่อวาน 16:30 · มาลี', '12 ก.ย. 2026'],
+      ['ห้องน้ำหญิง อาคาร B ชั้น 2', 'อาคาร B ชั้น 2', 90, true, 'เมื่อวาน 16:34 · มาลี', '12 ก.ย. 2026'],
+      ['โรงอาหาร โซนล้างจาน', 'โรงอาหารกลาง', 30, true, 'วันนี้ 09:48 · มาลี', '11 ก.ย. 2026'],
+      ['โรงอาหาร โต๊ะนั่ง โซน A', 'โรงอาหารกลาง', 45, true, 'วันนี้ 09:50 · มาลี', '11 ก.ย. 2026'],
+      ['โรงอาหาร โต๊ะนั่ง โซน B', 'โรงอาหารกลาง', 45, true, 'วันนี้ 09:52 · มาลี', '11 ก.ย. 2026'],
+      ['โรงอาหาร โต๊ะนั่ง โซน C', 'โรงอาหารกลาง', 45, false, '10 ก.ย. 12:10 · มาลี', '11 ก.ย. 2026'],
+      ['จุดทิ้งขยะหลังครัว', 'โรงอาหารกลาง', 90, true, 'ยังไม่เคยสแกน', '13 ก.ย. 2026'],
+      ['ห้องเก็บภาชนะ', 'โรงอาหารกลาง', 120, true, 'วันนี้ 08:20 · สมชาย', '11 ก.ย. 2026'],
+      ['อ่างล้างมือหน้าโรงอาหาร', 'โรงอาหารกลาง', 30, true, 'วันนี้ 10:02 · สมชาย', '11 ก.ย. 2026'],
+      ['ห้องประชุมใหญ่', 'อาคาร B ชั้น 2', 120, true, 'เมื่อวาน 16:02 · สมชาย', '12 ก.ย. 2026'],
+      ['ห้องประชุมเล็ก 1', 'อาคาร B ชั้น 2', 120, true, 'วันนี้ 08:40 · สมชาย', '12 ก.ย. 2026'],
+      ['ห้องพักพนักงาน', 'อาคาร B ชั้น 1', 90, true, 'วันนี้ 09:15 · มาลี', '12 ก.ย. 2026'],
+      ['ห้องพยาบาล', 'อาคาร B ชั้น 1', 60, true, 'วันนี้ 09:30 · มาลี', '12 ก.ย. 2026'],
+      ['ล็อบบี้อาคาร A', 'อาคาร A ชั้น 1', 60, true, 'วันนี้ 10:20 · สมชาย', '11 ก.ย. 2026'],
+      ['ทางเดินชั้น 2 อาคาร A', 'อาคาร A ชั้น 2', 120, true, 'วันนี้ 08:10 · มาลี', '11 ก.ย. 2026'],
+      ['ลิฟต์โดยสาร อาคาร A', 'อาคาร A', 120, true, 'วันนี้ 08:15 · มาลี', '11 ก.ย. 2026'],
+      ['ห้องน้ำ ลานจอดรถ', 'ลานจอดรถด้านหน้า', 90, false, '8 ก.ย. 11:45 · สมชาย', '11 ก.ย. 2026'],
+      ['ห้องละหมาด', 'อาคาร B ชั้น 1', 120, true, 'วันนี้ 08:30 · สมชาย', '12 ก.ย. 2026'],
+    ];
+    let points = SEED.map(([name, location, interval, active, lastScan, issuedAt], i) => ({ id: i + 1, name, location, interval, active, lastScan, issuedAt, token: uuid() }));
+    let nextId = points.length + 1;
+    let currentPage = 1;
+    let pageSize = 12;
+
+    const $ = s => document.querySelector(s);
+    const rows = $('#rows');
+    const short = t => t.slice(0, 8);
+    const scanUrl = p => `${BASE_URL}/scan/${p.token}`;
+    const today = () => new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    // Sorted by name only, so deactivating or regenerating never moves a row to another page
+    function visible() {
+      const q = $('#q').value.trim().toLowerCase();
+      const hide = $('#hideInactive').checked;
+      return points
+        .filter(p => (!hide || p.active) && (!q || p.name.toLowerCase().includes(q) || p.location.toLowerCase().includes(q)))
+        .sort((a, b) => a.name.localeCompare(b.name, 'th'));
+    }
+    function goToPageOf(p) {
+      const idx = visible().findIndex(x => x.id === p.id);
+      if (idx >= 0) currentPage = Math.floor(idx / pageSize) + 1;
+    }
+    function pageList(total) {
+      const pages = [...new Set([1, total, currentPage - 1, currentPage, currentPage + 1])].filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+      const out = [];
+      pages.forEach((n, i) => { if (i && n - pages[i - 1] > 1) out.push('…'); out.push(n); });
+      return out;
+    }
+    function renderPager(count, totalPages, start, shown) {
+      $('#pagerInfo').innerHTML = count
+        ? `แสดง <strong>${start + 1}–${start + shown}</strong> จาก <strong>${count}</strong> จุด`
+        : 'ไม่พบจุดที่ตรงกับการค้นหา';
+      $('#pagerPages').innerHTML =
+        `<button type="button" class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>‹ ก่อนหน้า</button>` +
+        pageList(totalPages).map(item => item === '…'
+          ? '<span class="page-gap">…</span>'
+          : `<button type="button" class="page-btn ${item === currentPage ? 'active' : ''}" data-page="${item}" aria-label="หน้า ${item}" ${item === currentPage ? 'aria-current="page"' : ''}>${item}</button>`).join('') +
+        `<button type="button" class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>ถัดไป ›</button>`;
+    }
+    function render(flashId) {
+      const list = visible();
+      const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage - 1) * pageSize;
+      const pageItems = list.slice(start, start + pageSize);
+      renderPager(list.length, totalPages, start, pageItems.length);
+      rows.innerHTML = pageItems.map(p => `
+        <tr class="${p.active ? '' : 'inactive'} ${p.id === flashId ? 'flash' : ''}" data-id="${p.id}">
+          <td><div class="pt-name">${p.name}</div><div class="pt-loc">${p.location}</div></td>
+          <td class="num">${p.interval} นาที</td>
+          <td style="font-size:13px;color:var(--text-secondary)">${p.lastScan}</td>
+          <td><span class="token">${short(p.token)}…<small>ออกเมื่อ ${p.issuedAt}</small></span></td>
+          <td>${p.active ? '<span class="badge badge-on">● เปิดใช้งาน</span>' : '<span class="badge badge-off">○ ปิดใช้งาน</span>'}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-ghost" data-act="edit">แก้ไข</button>
+            <button class="btn btn-sm btn-ghost" data-act="print" ${p.active ? '' : 'disabled title="เปิดใช้งานก่อนจึงพิมพ์ป้ายได้"'}>พิมพ์ป้าย</button>
+            <button class="btn btn-sm btn-ghost" data-act="regen" ${p.active ? '' : 'disabled'}>ออก QR ใหม่</button>
+            <button class="btn btn-sm btn-ghost" data-act="toggle">${p.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</button>
+          </td>
+        </tr>`).join('');
+      const act = points.filter(p => p.active).length;
+      $('#countLine').textContent = `${act} จุดเปิดใช้งาน · ${points.length - act} ปิดใช้งาน`;
+    }
+
+    // ---- drawer ----
+    let editing = null;
+    function openDrawer(p) {
+      editing = p || null;
+      $('#drawerTitle').textContent = p ? `แก้ไข ${p.name}` : 'เพิ่มจุดบริการ';
+      $('#drawerSub').textContent = p ? 'ชื่อและรอบมีผลกับ Dashboard ทันทีที่บันทึก' : 'QR Token จะถูกสุ่มให้อัตโนมัติเมื่อบันทึก';
+      $('#inName').value = p ? p.name : '';
+      $('#inLoc').value = p ? p.location : '';
+      $('#inInt').value = p ? p.interval : 60;
+      const tb = $('#tokenBox');
+      tb.hidden = !p;
+      if (p) tb.innerHTML = `QR Token: <span class="token">${p.token}</span><br>ออกเมื่อ ${p.issuedAt} — ถ้าป้ายหาย ให้กด “ออก QR ใหม่” ที่ตาราง ไม่แก้ที่นี่`;
+      ['#fName', '#fInt'].forEach(s => $(s).classList.remove('invalid'));
+      $('#drawer').hidden = false; $('#drawerScrim').hidden = false;
+      setTimeout(() => $('#inName').focus(), 50);
+    }
+    function closeDrawer() { $('#drawer').hidden = true; $('#drawerScrim').hidden = true; }
+    $('#addBtn').onclick = () => openDrawer(null);
+    $('#cancelBtn').onclick = closeDrawer;
+    $('#drawerScrim').onclick = closeDrawer;
+    document.querySelectorAll('.presets button').forEach(b => b.onclick = () => { $('#inInt').value = b.dataset.preset; });
+    $('#saveBtn').onclick = () => {
+      const name = $('#inName').value.trim();
+      const loc = $('#inLoc').value.trim();
+      const it = Number($('#inInt').value);
+      let ok = true;
+      $('#fName').classList.toggle('invalid', !name); ok = ok && !!name;
+      const intOk = Number.isInteger(it) && it > 0;
+      $('#fInt').classList.toggle('invalid', !intOk); ok = ok && intOk;
+      if (!ok) return;
+      if (editing) { Object.assign(editing, { name, location: loc, interval: it }); goToPageOf(editing); render(editing.id); toast(`บันทึก ${name} แล้ว`); }
+      else { const p = { id: nextId++, name, location: loc, interval: it, active: true, lastScan: 'ยังไม่เคยสแกน', issuedAt: today(), token: uuid() }; points.push(p); goToPageOf(p); render(p.id); toast(`เพิ่ม ${name} แล้ว — พิมพ์ป้ายไปติดได้เลย`, 'พิมพ์ป้าย', () => openPrint([p])); }
+      closeDrawer();
+    };
+
+    // ---- regenerate ----
+    let regenTarget = null;
+    function openRegen(p) {
+      regenTarget = p;
+      $('#regenTitle').textContent = `ออก QR ใหม่ให้ “${p.name}” ?`;
+      $('#regenOld').textContent = short(p.token) + '…';
+      $('#regenModal').hidden = false;
+      $('#regenCancel').focus();
+    }
+    $('#regenCancel').onclick = () => { $('#regenModal').hidden = true; };
+    $('#regenModal').addEventListener('click', e => { if (e.target === $('#regenModal')) $('#regenModal').hidden = true; });
+    $('#regenConfirm').onclick = () => {
+      const p = regenTarget; p.token = uuid(); p.issuedAt = today();
+      $('#regenModal').hidden = true; render(p.id);
+      toast(`ออก QR ใหม่ให้ ${p.name} แล้ว — ป้ายเก่าใช้ไม่ได้แล้ว`, 'พิมพ์ป้ายใหม่', () => openPrint([p]));
+    };
+
+    // ---- toggle active ----
+    function toggle(p) {
+      p.active = !p.active; render(p.id);
+      toast(p.active ? `เปิดใช้งาน ${p.name} แล้ว — กลับขึ้น Dashboard` : `ปิดใช้งาน ${p.name} แล้ว — หายจาก Dashboard ประวัติสแกนยังอยู่`, 'เลิกทำ', () => { p.active = !p.active; render(p.id); hideToast(); });
+    }
+
+    // ---- print ----
+    function openPrint(list) {
+      const sheet = $('#printSheet'), labels = $('#labels');
+      $('#printTitle').textContent = list.length === 1 ? `ป้ายของ ${list[0].name}` : `ป้ายทั้งหมดที่เปิดใช้งาน (${list.length} จุด)`;
+      $('#paperMeta').textContent = `พิมพ์ ${today()} · ${list.length} ป้าย · A4 แนวตั้ง 6 ป้ายต่อหน้า`;
+      labels.innerHTML = list.map(p => `
+        <div class="label-card">
+          <div>
+            <div class="lname">${p.name}</div>
+            <div class="lloc">${p.location}</div>
+            <div class="lcta">สแกนด้วยกล้องมือถือ เพื่อบันทึกการทำความสะอาด</div>
+            <div class="lmeta">รอบทุก ${p.interval} นาที · QR ออกเมื่อ ${p.issuedAt} · ${short(p.token)}</div>
+            <div class="lurl">${scanUrl(p)}</div>
+          </div>
+          <div class="qr" data-url="${scanUrl(p)}"></div>
+        </div>`).join('');
+      labels.querySelectorAll('.qr').forEach(el => {
+        if (window.QRCode) { new QRCode(el, { text: el.dataset.url, width: 132, height: 132, colorDark: '#0f172a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M }); }
+        else { el.innerHTML = `<div class="qr-fallback">QR (ต้องมีอินเทอร์เน็ตเพื่อโหลดตัวสร้าง QR)<br>${short(el.dataset.url.split('/').pop())}</div>`; }
+      });
+      sheet.hidden = false; window.scrollTo(0, 0);
+    }
+    $('#printAllBtn').onclick = () => openPrint(points.filter(p => p.active));
+    $('#printClose').onclick = () => { $('#printSheet').hidden = true; };
+    $('#printNow').onclick = () => window.print();
+
+    // ---- row actions ----
+    rows.addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]'); if (!b || b.disabled) return;
+      const p = points.find(x => x.id === Number(b.closest('tr').dataset.id));
+      ({ edit: () => openDrawer(p), print: () => openPrint([p]), regen: () => openRegen(p), toggle: () => toggle(p) })[b.dataset.act]();
+    });
+    $('#q').addEventListener('input', () => { currentPage = 1; render(); });
+    $('#hideInactive').addEventListener('change', () => { currentPage = 1; render(); });
+    $('#pageSize').addEventListener('change', e => { pageSize = Number(e.target.value); currentPage = 1; render(); });
+    $('#pagerPages').addEventListener('click', e => {
+      const b = e.target.closest('button[data-page]'); if (!b || b.disabled) return;
+      currentPage = Number(b.dataset.page); render();
+      document.querySelector('.table-wrap').scrollIntoView({ block: 'nearest' });
+    });
+
+    // ---- toast ----
+    let toastTimer;
+    function toast(msg, actLabel, actFn) {
+      $('#toastMsg').textContent = msg;
+      const a = $('#toastAct'); a.hidden = !actLabel; a.textContent = actLabel || ''; a.onclick = actFn || null;
+      $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 6000);
+    }
+    function hideToast() { $('#toast').hidden = true; }
+
+    // ---- sim bar ----
+    document.querySelectorAll('[data-sim]').forEach(b => b.onclick = () => ({
+      add: () => openDrawer(null),
+      regen: () => openRegen(points[0]),
+      printall: () => openPrint(points.filter(p => p.active)),
+    })[b.dataset.sim]());
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); $('#regenModal').hidden = true; $('#printSheet').hidden = true; } });
+
+    render();
+  </script>
+</body>
+</html>
