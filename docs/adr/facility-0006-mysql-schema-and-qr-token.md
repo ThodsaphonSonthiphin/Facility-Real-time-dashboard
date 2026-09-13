@@ -68,3 +68,7 @@ erDiagram
 ## Consequences
 - ไม่มีตาราง Checklists หรือ Point Types (สอดคล้องกับ ADR 0001 และ ADR 0005)
 - ป้าย QR Code ปลอดภัยจากการคาดเดารหัสจุด และสามารถออกป้ายทดแทนป้ายเดิมที่ชำรุดได้ง่าย
+
+## Amendment 2026-09-13 — ตาราง refresh_tokens (#15 admin-access)
+
+3 ตารางหลักข้างบนยังใช้ทั้งหมด facility-0014 เพิ่มตารางที่ 4 `refresh_tokens` เก็บ hash ของ refresh token เพื่อหมุนใบใหม่และยกเลิกตอน Logout หรือปิดบัญชี และบน master 000167d entity `User` ยังไม่มี `is_active` ตามที่ตารางข้างบนระบุ
