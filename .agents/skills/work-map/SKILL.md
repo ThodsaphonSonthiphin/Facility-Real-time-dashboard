@@ -39,7 +39,8 @@ WORK A DECISION MAP — one decision, then stop
   │   read the map, then list the frontier
   │   BY NAME — never a wall of bare ids
   │
-  │   nothing open, no fog? ■ the map is done
+  │   nothing open, no fog, no empty
+  │   milestone? ■ the map is done
   ▼
   ③ CLAIM — one ticket, immediately
   │   the pick IS the approval; claim first,
@@ -209,7 +210,9 @@ Present it as prose, in this order:
   extra call is needed. After every milestone, list any ticket whose
   `milestone` is `null` as a final **unassigned** tail — takeable, blocked and
   claimed the same way, with no progress count, because there is no milestone
-  for it to count against. `read` is what carries milestone *membership*
+  for it to count against. An **empty** milestone — `total: 0` in
+  `milestones[]` — is one line, `<slug> — 0/0, no tickets named yet`, with
+  nothing under it (ADR 0212). `read` is what carries milestone *membership*
   (`map.json`'s `milestones[].members`); `frontier` is what carries
   *progress* and each ticket's own `milestone` field. The three buckets
   themselves stay key-ascending exactly as before (ADR 0062) — the grouping
@@ -250,8 +253,9 @@ which is the one case where you stop and ask first (below). Otherwise
 recommend by the **two-level rule** (ADR 0099): first find the **earliest
 incomplete milestone that has something takeable** — walk `frontier.json`'s
 `milestones` list in order, skipping any milestone that is `complete` or
-whose frontier tickets are none, and take the first one that has at least
-one — then, inside it, apply the existing heuristic and recommend whichever
+whose frontier tickets are none (an empty milestone, `total: 0`, has none, so
+it is skipped like any other — ADR 0212), and take the first one that has at
+least one — then, inside it, apply the existing heuristic and recommend whichever
 of its frontier tickets unblocks the most. Recommend an **unassigned**
 ticket (`milestone: null`) only once every milestone is either `complete` or
 blocked — i.e. the walk above found nothing takeable anywhere. Say the
@@ -507,7 +511,9 @@ Now ask what the answer changed:
   line under "Out of scope".
 - Did it reveal a new blocking relationship?
 - Did it sharpen the **milestone** plan — a group that should now exist, or a
-  ticket that clearly belongs in one that already does?
+  ticket that clearly belongs in one that already does? A ticket that answers
+  an **empty** milestone's question is listed in that milestone's `members` in
+  the same input (ADR 0212).
 
 Graduating fog is an **additive `chart`** — one operation serves both acts, so
 there is no separate subcommand (ADR 0057). Build a `map_input.json` in your
@@ -750,9 +756,9 @@ Then suggest `/decision-map:work` for the next session, and stop.
 
 ### When the frontier came back empty
 
-Three different situations, and they need different answers:
+Four different situations, and they need different answers:
 
-- **Nothing open and no fog left** — the map is done. Say the way is clear, and
+- **Nothing open, no fog left, and no empty milestone** — the map is done. Say the way is clear, and
   hand off to `sp-writing-plans` (or whatever the destination line
   named). decision-map plans; it does not build.
 - **Nothing open but fog remains** — this session's work is **graduation, and
@@ -764,6 +770,17 @@ Three different situations, and they need different answers:
   graduates one fog line into a real ticket has done exactly one session's work.
   If nothing sharpens, say so and stop: fog that will not state itself is
   waiting on a decision that has not been made yet.
+- **Nothing open, no fog, but a milestone has no tickets** — `frontier.json`
+  lists it with `total: 0`. That is fog at increment level, and it holds the
+  map open exactly as fog does (ADR 0212). Take the first such milestone in
+  map order and ask **one** HITL question: does this increment still need a
+  decision? **Yes** — this session's work is graduation, the same as the fog
+  case above: state that first decision as a question and run Step 5's gate
+  with the new ticket listed in that milestone's `members`; then stop. **No**
+  — the user removes the milestone line by hand (removal is a hand edit,
+  ADR 0098), optionally adding a `notes` line saying why, and runs `lint`; if
+  another empty milestone remains, ask about that one next, because no
+  ticket was resolved. The map is done only when no milestone is empty.
 - **Everything left is blocked or claimed** — another session is holding the
   unblocked work, or a blocker is still open under someone else's claim.
   Nothing to pick up; say who holds what and stop. If a `claimed` ticket looks

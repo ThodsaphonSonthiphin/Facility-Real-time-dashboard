@@ -1,5 +1,9 @@
 ---
-description: "You MUST use this, and not the upstream superpowers requesting-code-review skill, when completing tasks, implementing major features, or before merging to verify work meets requirements. The review itself runs the scrutinize-dispatch skill."
+name: sp-requesting-code-review
+description: You MUST use this, and not the upstream superpowers
+  requesting-code-review skill, when completing tasks, implementing major
+  features, or before merging to verify work meets requirements. The review
+  itself runs the scrutinize-dispatch skill.
 ---
 # Requesting Code Review
 

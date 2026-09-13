@@ -1,5 +1,23 @@
 ---
-description: "Evidence-grounded advisory pipeline for \"how should this work?\" questions about any real system — codebase, database, CRM/ERP, SaaS, API, data pipeline, infra. Three-stage multi-agent method; STUDY the business and the live system with parallel readers returning structured citable findings (read-only, evidence saved to disk), DESIGN with independent designers given deliberately different value systems, VERIFY with an adversarial reviewer that attacks every design against the live schema, code, and usage data before anything is recommended. Use whenever the user asks for advice or a recommendation that must be grounded in how their system actually works — \"how should X convert/map/migrate/sync to Y\", \"study my business and advise\", \"what's the right way to integrate/restructure/redesign this\", \"should we copy or link this data\", \"is this conversion/mapping correct, and if not what should it be\", reviewing a planned schema or integration change, or any \"give me advice\" about a system mechanism. Trigger even when the user never says \"advice\" but wants a defensible recommendation about an existing system. Do NOT use for quick opinion questions with no system to study, single-file refactors, status updates, or pure greenfield design with no existing system as ground truth (use brainstorming instead)."
+name: study-design-verify
+description: Evidence-grounded advisory pipeline for "how should this work?"
+  questions about any real system — codebase, database, CRM/ERP, SaaS, API, data
+  pipeline, infra. Three-stage multi-agent method; STUDY the business and the
+  live system with parallel readers returning structured citable findings
+  (read-only, evidence saved to disk), DESIGN with independent designers given
+  deliberately different value systems, VERIFY with an adversarial reviewer that
+  attacks every design against the live schema, code, and usage data before
+  anything is recommended. Use whenever the user asks for advice or a
+  recommendation that must be grounded in how their system actually works — "how
+  should X convert/map/migrate/sync to Y", "study my business and advise",
+  "what's the right way to integrate/restructure/redesign this", "should we copy
+  or link this data", "is this conversion/mapping correct, and if not what
+  should it be", reviewing a planned schema or integration change, or any "give
+  me advice" about a system mechanism. Trigger even when the user never says
+  "advice" but wants a defensible recommendation about an existing system. Do
+  NOT use for quick opinion questions with no system to study, single-file
+  refactors, status updates, or pure greenfield design with no existing system
+  as ground truth (use brainstorming instead).
 ---
 # Study → Design → Verify
 

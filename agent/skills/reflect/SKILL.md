@@ -1,5 +1,14 @@
 ---
-description: "Session retrospective that turns THIS session's problems into durable, correctly-routed improvements. Trigger on /reflect, \"what did we learn\", \"retro\", \"retrospective\", \"improve our workflow\", \"how do we not repeat this\", or after a painful debugging round. It captures the DELTA (what went wrong, what was slow, what got corrected) and routes each lesson to where it will fire again: an owned skill, a project CLAUDE.md, a cross-project GOTCHAS.md file, or memory. NOT a what-was-done summary (that is invoice-generator) and NOT a single bug's root-cause record (that is post-mortem)."
+name: reflect
+description: "Session retrospective that turns THIS session's problems into
+  durable, correctly-routed improvements. Trigger on /reflect, \"what did we
+  learn\", \"retro\", \"retrospective\", \"improve our workflow\", \"how do we
+  not repeat this\", or after a painful debugging round. It captures the DELTA
+  (what went wrong, what was slow, what got corrected) and routes each lesson to
+  where it will fire again: an owned skill, a project CLAUDE.md, a cross-project
+  GOTCHAS.md file, or memory. NOT a what-was-done summary (that is
+  invoice-generator) and NOT a single bug's root-cause record (that is
+  post-mortem)."
 ---
 # reflect — turn this session's problems into durable improvements
 

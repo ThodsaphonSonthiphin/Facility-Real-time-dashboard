@@ -1,5 +1,15 @@
 ---
-description: "Authenticate to GitHub and fix auth problems — the shared primitive every other github-* skill relies on. Use this BEFORE any create/query when GitHub auth is uncertain, and whenever a GitHub API call misbehaves: a call returns 401 or 403, \"gh not logged in\" / token missing, results come back empty or from the wrong repo. Covers the two supported methods (gh CLI via `gh auth token`, or GH_TOKEN env var), a one-line PowerShell verify snippet against the repo API, and a 401/403/wrong-repo troubleshooting table. Invoke when someone says \"I'm getting a 401 from GitHub\", \"github-create-issues says no token\", \"gh auth failing\", or \"check my GitHub login before we run\"."
+name: github-auth
+description: "Authenticate to GitHub and fix auth problems — the shared
+  primitive every other github-* skill relies on. Use this BEFORE any
+  create/query when GitHub auth is uncertain, and whenever a GitHub API call
+  misbehaves: a call returns 401 or 403, \"gh not logged in\" / token missing,
+  results come back empty or from the wrong repo. Covers the two supported
+  methods (gh CLI via `gh auth token`, or GH_TOKEN env var), a one-line
+  PowerShell verify snippet against the repo API, and a 401/403/wrong-repo
+  troubleshooting table. Invoke when someone says \"I'm getting a 401 from
+  GitHub\", \"github-create-issues says no token\", \"gh auth failing\", or
+  \"check my GitHub login before we run\"."
 ---
 # github-auth
 

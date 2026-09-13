@@ -59,7 +59,9 @@ subcommand, not the cheapest.**
 A slug passed to `--map` costs one extra listing call to resolve; an issue number
 costs none. `resolve` re-projects the decisions index over every ticket, but the
 snapshot it already holds supplies each ticket's status and gist, so the
-projection adds no reads.
+projection adds no reads. `chart --real` re-projects the same index inside the
+map create-or-patch it already makes (ADR 0211), so the table above does not
+change.
 
 The binding rate limit is the **secondary** one — 80 content-creating requests
 per minute — not the 5,000/hour primary. A backend must pace writes against it:
@@ -171,7 +173,7 @@ enforced it. Prose is advisory; this is the deterministic half.
 | `anonymous-claim` | warning | an **open** ticket is held by the literal `--user` default `me`, which names nobody. Structurally impossible on a tracker, where the caller is resolved for real. |
 | `fog-line-graduated` | warning | a line under "Not yet specified" reads as a ticket that already exists. An additive `chart` never deletes, so graduating fog leaves the old line behind and the map keeps advertising a question it has answered. |
 | `milestone-line-unparsable` | error | a line inside the milestones region does not match the grammar above. Skipping it would hide its members, so the map would advertise a smaller milestone than it has. `ticket: null` — the broken thing is the line, not any one ticket. |
-| `milestone-duplicate-slug` | error | a milestone slug is declared more than once. Nothing is unreachable — `membership_of` maps every member of every entry to the shared slug — but `frontier.json`'s milestones list ends up with one row per declaration, all sharing that slug and each counting only its own members, and the decisions index renders every member under the FIRST entry's heading, so what actually goes missing is the *label* of every entry after the first. `ticket: null` — the map holds the duplicate, not a ticket. |
+| `milestone-duplicate-slug` | error | a milestone slug is declared more than once. Nothing is unreachable — `membership_of` maps every member of every entry to the shared slug — but `frontier.json`'s milestones list ends up with one row per declaration, all sharing that slug and each counting only its own members, and the decisions index renders the FIRST declaration only — its own count and its own members under its heading; a closed ticket listed only by a later duplicate falls to the `(unassigned)` tail (ADR 0213) — so what goes missing is the *label* of every entry after the first. `ticket: null` — the map holds the duplicate, not a ticket. |
 | `milestone-duplicate-member` | error | a ticket key is listed twice — either as a member of two different milestones (membership is exclusive, ADR 0097) or twice on the same milestone line. The finding names the ticket, and a repeat inside one line fires once per *extra* occurrence — a key listed three times yields two findings. Progress counts **distinct** members, so a repeat never inflates `<closed>/<total>`, but `map.json`'s `milestones[].members` still carries it; and additive `chart` will never rewrite the line, so the fix is a hand edit. |
 | `milestone-unknown-ticket` | error | a milestone lists a ticket key that is not on this map. That member can never close, so the milestone can never complete and its progress reads short forever; the finding names the ticket. |
 
@@ -240,8 +242,13 @@ never overwrites* — **not** "never touches". On a map that already exists,
 **What additive does not guarantee:** that an existing ticket file is
 byte-identical afterwards (it may gain one `blockedBy` entry and a
 re-rendered `graph` region — its own, if it is the blocked ticket, or the
-blocker's, since an edge is written at both ends), and that a value in the
-input takes effect (a divergent scalar is reported, not applied).
+blocker's, since an edge is written at both ends); that the map document's
+**decisions region** is byte-identical afterwards (whenever the map body is
+written at all — `create`, `merge` with a body, or `OVERWRITE` — the
+"Decisions so far" index is re-projected in that same write, ADR 0211; a map
+labelled `skip (exists)` is never touched, so a stale index never turns an
+identical re-chart into a write); and that a value in the input takes effect
+(a divergent scalar is reported, not applied).
 It does guarantee that nothing recorded is ever removed, reordered or
 overwritten, and that re-running identical input is a **no-op** — the same
 bytes out, which also makes a partially-failed chart resumable.
@@ -285,16 +292,17 @@ re-chart": that would destroy items the input does not mention, which neither
 the plan nor this contract permits. Every destructive act must appear in the
 dry-run plan as an `OVERWRITE` line before it happens.
 
-One consequence worth knowing: the "Decisions so far" index is a projection
-refreshed by `resolve`, and `--force` rewrites the map body without
-re-projecting it, so **the index comes out empty** — not narrowed to the
-surviving decisions. Every rewritten ticket is reset to `open` so could not
-appear anyway, and a ticket that is still closed (because the input named it
-only in a `blocks` list, or did not name it at all) keeps its own closed state
-but drops out of the index too. It is **self-healing**: the next `resolve`
-re-projects the index from every closed ticket and all of those entries come
-back. A backend must therefore not implement a partial refresh here — the
-index is either fully re-projected or left for the next `resolve` to rebuild.
+One consequence worth knowing: the "Decisions so far" index is a projection,
+and `--force` rewrites the map body **with the index fully re-projected in
+that same write** (ADR 0211) — narrowed to the surviving decisions. Every
+rewritten ticket is reset to `open`, so it drops out; a ticket that is still
+closed (because the input named it only in a `blocks` list, or did not name it
+at all) keeps its closed state and **stays listed**, under its milestone's
+heading with the count that survives. (Before ADR 0211 the index came out
+empty and self-healed on the next `resolve`; that is no longer the behaviour.)
+A backend must still not implement a partial refresh here — the index is
+either fully re-projected or left for the next `resolve` to rebuild, and on
+every write of the map body it is the former.
 
 **The other four map regions do NOT self-heal, and that is the cost nothing
 else on this page names.** `--force` regenerates the map body from the input,
@@ -492,6 +500,18 @@ partition of its tickets. A closed ticket may still appear as a member: it is
 the history of what the increment needed. A key listed under two milestones
 is a lint **error** (`milestone-duplicate-member`), never resolved by picking
 one.
+
+**An empty milestone is a placeholder, and it holds the map open** (ADR 0210,
+ADR 0212). `chart-map` writes one — `"members": []` — for an increment the
+user named whose decisions are all still fog, so the map lists the whole plan
+in order from day one. It is legal; `frontier` reports it `{closed: 0,
+total: 0, complete: false}`; the decisions index renders it as `0/0 closed —
+no tickets yet`; and `work-map` treats it as fog: when nothing is open and no
+fog remains but a milestone has `total: 0`, the session asks whether that
+increment still needs a decision (yes → one ticket is charted into it; no →
+the line is removed by hand, ADR 0098). No lint rule names it — `frontier`
+already carries the fact, and a warning that fired on every freshly charted
+map would be noise.
 
 **What the additive merge applies, and what it only reports** (ADR 0098).
 `map_input.json` gains an optional, ordered `map.milestones` list, merged
@@ -1317,6 +1337,8 @@ explicitly empty `--user` still releases the claim.
 ## Decisions so far
 
 <!-- decision-map:decisions:start -->
+#### <milestone slug> — <label> (<closed>/<total> closed)
+
 - [<ticket title>](tickets/<slug>.md) — <one-line gist>
 <!-- decision-map:decisions:end -->
 
@@ -1459,13 +1481,18 @@ The rules, which any reader or writer of the local format must honour:
   resolved**, so the index is a deterministic function of the ticket files
   and re-running the projection never reorders it. The local backend records
   no resolution timestamp, so resolution order is not recoverable from the
-  files. **When the map carries milestones, the index is grouped to match**
-  (ADR 0103, `decisions_region` in `map_core.py`): one `#### <slug>` heading
-  per milestone, in map order — not key order, because the milestone list's
-  order is chosen — followed by an `#### (unassigned)` tail for any closed
-  ticket not in a milestone; a milestone with no closed member yet is omitted
-  rather than rendered empty. On a map with no milestones the index is the
-  flat list this always produced, unchanged.
+  files. **When the map carries milestones, the index is the map's status
+  board** (ADR 0103, ADR 0211; `decisions_region` in `map_core.py`): one
+  `#### <slug>[ — <label>] (<closed>/<total> closed)` heading per **declared**
+  milestone, in map order — not key order, because the milestone list's order
+  is chosen — its closed entries key-ascending beneath, a `_nothing closed
+  yet_` line when it has members but none closed, and `(0/0 closed — no
+  tickets yet)` in the heading (no body) for an empty milestone; then an
+  `#### (unassigned)` tail for any closed ticket not in a milestone. The
+  counts are `milestone_progress`'s — distinct members, closed ones included —
+  so the file and `frontier.json` agree. It is re-projected by `resolve` and by
+  any `chart` that writes the map body. On a map with no milestones the index
+  is the flat list this always produced, unchanged.
 - **Only the tool writes markers.** Every user-supplied string — a ticket
   `question`, a `comment` body, `gist`, `link`, `--body-file` content, titles,
   `notes`, milestone labels, fog and out-of-scope lines — is escaped on the way in, so the

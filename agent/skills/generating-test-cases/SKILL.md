@@ -1,5 +1,14 @@
 ---
-description: "Use when you need to produce a test-case suite for a feature, change, PR, or fixed bug — manual or automated — for delivery to Excel/xlsx, Markdown, CSV, or a tracker. Triggers on \"write test cases\", \"create a test plan\", \"QA cases\", \"turn this spec/diff/bug into tests\", or after a feature is built / a bug is fixed and before filing or sign-off. Every case is grounded in real evidence (docs, code, git, or the LIVE system); the skill refuses to invent values. Do NOT use to verify one already-finished task (that is dual-verifier), or to file findings as work items (that is the backlog plugins — this hands off to them)."
+name: generating-test-cases
+description: Use when you need to produce a test-case suite for a feature,
+  change, PR, or fixed bug — manual or automated — for delivery to Excel/xlsx,
+  Markdown, CSV, or a tracker. Triggers on "write test cases", "create a test
+  plan", "QA cases", "turn this spec/diff/bug into tests", or after a feature is
+  built / a bug is fixed and before filing or sign-off. Every case is grounded
+  in real evidence (docs, code, git, or the LIVE system); the skill refuses to
+  invent values. Do NOT use to verify one already-finished task (that is
+  dual-verifier), or to file findings as work items (that is the backlog plugins
+  — this hands off to them).
 ---
 <!-- generated: third-party requirements -->
 > **Requires:** `pip install openpyxl` — this skill's scripts import `openpyxl`.

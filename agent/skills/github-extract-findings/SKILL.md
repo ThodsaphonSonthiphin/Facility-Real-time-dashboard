@@ -1,5 +1,16 @@
 ---
-description: "Normalize ANY input into findings.json — the first step toward turning review notes into a GitHub Issues backlog. Use whenever someone hands you a list of issues, discrepancies, gaps, review notes, or audit results they want to act on: an Excel/CSV/TSV audit sheet, a Word/PDF/Markdown spec, or chat/text pasted into the conversation. Trigger even when the user does NOT say \"extract\" — e.g. \"here's a naming audit\", \"these are the problems we found\", \"turn this spreadsheet into GitHub issues\", \"I reviewed the code and noted these gaps\", \"make a backlog from this doc\". If the goal is eventually GitHub Issues, this runs first. Hands off to github-triage-findings (then classify-github-issues, github-create-issues). Driven end-to-end by the findings-to-github-issues orchestrator."
+name: github-extract-findings
+description: "Normalize ANY input into findings.json — the first step toward
+  turning review notes into a GitHub Issues backlog. Use whenever someone hands
+  you a list of issues, discrepancies, gaps, review notes, or audit results they
+  want to act on: an Excel/CSV/TSV audit sheet, a Word/PDF/Markdown spec, or
+  chat/text pasted into the conversation. Trigger even when the user does NOT
+  say \"extract\" — e.g. \"here's a naming audit\", \"these are the problems we
+  found\", \"turn this spreadsheet into GitHub issues\", \"I reviewed the code
+  and noted these gaps\", \"make a backlog from this doc\". If the goal is
+  eventually GitHub Issues, this runs first. Hands off to github-triage-findings
+  (then classify-github-issues, github-create-issues). Driven end-to-end by the
+  findings-to-github-issues orchestrator."
 ---
 <!-- generated: third-party requirements -->
 > **Requires:** `pip install openpyxl` — this skill's scripts import `openpyxl`.

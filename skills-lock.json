@@ -35,7 +35,7 @@
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
       "sourceType": "github",
       "skillPath": "skills/chart-map/SKILL.md",
-      "computedHash": "c5cd695b54a12634c41f22f7fa2311f6f5eb45d823264ecb3905bec0dc2da5ac"
+      "computedHash": "b9b203806826b7ff0ad88e7f21a3ac5f92639d54446fa09389eccc631dbdb696"
     },
     "classify-github-issues": {
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
@@ -208,8 +208,8 @@
     "practice-english-writing": {
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
       "sourceType": "github",
-      "skillPath": "plugins/dev-workflows/skills/practice-english-writing/SKILL.md",
-      "computedHash": "953dfaf759acf67125625f1da2a2d9a943c8596b0ee5fa30bd886f6f4d0e5b71"
+      "skillPath": "skills/practice-english-writing/SKILL.md",
+      "computedHash": "6deba7d33d327a6cc1285ed39e3e5d5580b09ffc4cab4c4b6bfa63ff7cd7252d"
     },
     "problem-description": {
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
@@ -335,7 +335,7 @@
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
       "sourceType": "github",
       "skillPath": "skills/work-map/SKILL.md",
-      "computedHash": "16630d09c0990ed0b6524b8a346d95714c409b244c125a559ccd8ff0c0efd444"
+      "computedHash": "2e98e49d86f4b8120408f421ae1e45193f80f3cc4c3d224c75804ab281cab1f4"
     }
   }
 }

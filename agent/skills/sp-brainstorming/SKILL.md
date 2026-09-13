@@ -1,5 +1,10 @@
 ---
-description: "You MUST use this, and not the upstream superpowers brainstorming skill, before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation. The spec review is a quick inline self-check, and the next step is the sp-writing-plans skill."
+name: sp-brainstorming
+description: You MUST use this, and not the upstream superpowers brainstorming
+  skill, before any creative work - creating features, building components,
+  adding functionality, or modifying behavior. Explores user intent,
+  requirements and design before implementation. The spec review is a quick
+  inline self-check, and the next step is the sp-writing-plans skill.
 ---
 # Brainstorming Ideas Into Designs
 

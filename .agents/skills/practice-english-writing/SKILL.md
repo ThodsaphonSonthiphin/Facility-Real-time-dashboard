@@ -1,6 +1,7 @@
 ---
 name: practice-english-writing
 description: Fix and teach the user's written English, on demand. Turns Thai or broken English into natural everyday English, shows the smallest correction with every change labelled by error class and explained in Thai, then the natural version. Use when the user invokes /practice-english-writing, or asks to check / fix / correct their English, "แก้อังกฤษให้หน่อย", "ประโยคนี้ถูกไหม", "เขียนอังกฤษยังไงดี", "is my English right", "make this sound natural", "help me write this in English" — or hands over a message, commit message, PR description or chat reply they are about to send. Also carries a PRACTICE mode - use when the user asks to practise, drill or be quizzed on their own past mistakes ("ฝึกอังกฤษหน่อย", "practice my English", "drill me", "quiz me on my mistakes") - and a progress view, for "ดีขึ้นไหม", "am I getting better", "what have I stopped getting wrong". Writing only; for English the user is trying to UNDERSTAND, use feynman-explain instead.
+argument-hint: "[practice] <the message, commit message or text to fix — Thai, English, or both>"
 ---
 
 # Practice English Writing
@@ -11,7 +12,7 @@ what they wrote and what a fluent writer would write is the lesson.
 
 Design decisions are ADRs 0175–0196 at the marketplace repo root. This file is the
 procedure; the ADRs are the reasoning. The nine error classes and their Thai explanations
-are canonical in `${CLAUDE_PLUGIN_ROOT}/references/english-error-explanations.md` and are
+are canonical in `references/english-error-explanations.md` and are
 never restated here or anywhere else.
 
 ## Never do these
@@ -93,7 +94,7 @@ Both forms are fixed formats, and both keep the lesson first and the answer last
 ## Step 5 — Explain, unless it is time to stop
 
 Take each class's two-line Thai explanation from
-`${CLAUDE_PLUGIN_ROOT}/references/english-error-explanations.md`. Never write your own; if
+`references/english-error-explanations.md`. Never write your own; if
 a class has no entry there, the class does not exist yet — use `other` and add a free-text
 note.
 
@@ -178,7 +179,7 @@ differ in collapse state, that difference decides and the ranking is not consult
 
 If a class in full form has no usable sample — the first run, or the user deleted theirs —
 take its **documented error** from
-`${CLAUDE_PLUGIN_ROOT}/references/english-error-explanations.md`, and **say plainly that it
+`references/english-error-explanations.md`, and **say plainly that it
 is not their own sentence**. `capitalisation` has no documented seed on purpose; it simply
 does not appear until they make one.
 

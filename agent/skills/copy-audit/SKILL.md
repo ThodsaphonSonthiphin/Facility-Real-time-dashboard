@@ -1,5 +1,11 @@
 ---
-description: "Find every copy of a plugin or skill on this machine and prove which ones are stale. Use when the user asks to update every place / everywhere on this PC, check the plugin cache, confirm an edit actually went live, verify a skill is deployed, find drifted or vendored copies, or asks why a skill still behaves like the old version. Also use before shipping a plugin change that other repos vendor. It reports and never writes."
+name: copy-audit
+description: Find every copy of a plugin or skill on this machine and prove
+  which ones are stale. Use when the user asks to update every place /
+  everywhere on this PC, check the plugin cache, confirm an edit actually went
+  live, verify a skill is deployed, find drifted or vendored copies, or asks why
+  a skill still behaves like the old version. Also use before shipping a plugin
+  change that other repos vendor. It reports and never writes.
 ---
 # Copy Audit
 

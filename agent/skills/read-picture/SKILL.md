@@ -1,5 +1,12 @@
 ---
-description: "Answer one named question about one or more picture files, and record the answer so no run and no other skill re-reads the same image to reach the same sentence. Use when another skill or the user hands over screenshots, ticket attachments or exported images together with a specific question about them - the exact words on a control, or what an annotated picture requires. Not for generating or editing images, and not a full transcription: it answers the question it was given and records nothing else."
+name: read-picture
+description: "Answer one named question about one or more picture files, and
+  record the answer so no run and no other skill re-reads the same image to
+  reach the same sentence. Use when another skill or the user hands over
+  screenshots, ticket attachments or exported images together with a specific
+  question about them - the exact words on a control, or what an annotated
+  picture requires. Not for generating or editing images, and not a full
+  transcription: it answers the question it was given and records nothing else."
 ---
 # Read a picture
 

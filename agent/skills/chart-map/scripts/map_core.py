@@ -138,8 +138,8 @@ EMPTY_LIST_LINE = "- (none)"
 # toward --force must carry this.
 #
 # The map-body half is named too, and is the half nothing else warns about: the
-# decisions index self-heals (the next resolve re-projects it), but the four
-# list regions do not. Measured: a map holding one milestone, force-charted from
+# decisions index is re-projected inside the same run (ADR 0211), but the four
+# list regions are not. Measured: a map holding one milestone, force-charted from
 # an input that omits `milestones`, comes back "- (none)" with divergence []
 # and detail null. Removing a milestone is a deliberate hand edit by design
 # (ADR 0098) -- --force is the one path that does it wholesale and in silence.
@@ -937,20 +937,33 @@ def decisions_region(entries, milestones=None):
     substituted away, and stops a multi-line gist from splitting one entry into
     an orphanable pair.
 
-    `entries` is [(key, title, link, gist), ...] -- the key is carried so this
-    can group by milestone. **Ordered by ticket key (ascending)** within each
-    group, not by when each decision was resolved, so the index is a
-    deterministic function of state; the caller sorts, this only formats.
+    `entries` is [(key, title, link, gist), ...] -- the CLOSED tickets and
+    only those; the key is carried so this can group by milestone. **Ordered
+    by ticket key (ascending)** within each group, not by when each decision
+    was resolved, so the index is a deterministic function of state; the
+    caller sorts, this only formats.
 
     `milestones` is the map's parsed milestone list. Given one, the index is
-    GROUPED to match the frontier the reader sees in the same session (ADR
-    0103): one `#### ` heading per milestone in MAP order -- not key order,
-    because the whole point of a milestone list is that its order is chosen --
-    then an "(unassigned)" tail. Membership comes from `membership_of` -- the
-    same first-occurrence-wins mapping `milestone_index` builds -- rather than
-    a second inline pass over `milestones`, so the two do not drift apart. A
-    milestone with no closed decision yet is omitted rather than rendered
-    empty, and with no milestones at all the output is the flat list this
+    the map's STATUS BOARD (ADR 0103, ADR 0211): one `#### ` heading per
+    DECLARED milestone in MAP order -- not key order, because the whole point
+    of a milestone list is that its order is chosen -- each carrying
+    `(<closed>/<total> closed)`, then an "(unassigned)" tail. A milestone with
+    nothing closed yet is rendered, not omitted: its heading is the
+    information ("this increment exists, 0/N done"), with a
+    `_nothing closed yet_` line under it (only when the count itself says
+    nothing closed -- a member a hand edit listed under two milestones renders
+    under the first, and the second heading keeps its count with no body);
+    an EMPTY milestone (no members)
+    says `(0/0 closed — no tickets yet)` in the heading and has no body. The
+    counts come from `milestone_progress`, the same function `frontier`
+    reports through, with every entry here counted as closed -- so the file
+    and frontier.json cannot disagree, including on a repeated member.
+    Membership comes from `membership_of` -- the same first-occurrence-wins
+    mapping `milestone_index` builds -- and a duplicated slug (a lint error)
+    renders ONCE, under its first declaration, with that declaration's row and
+    only that declaration's members beneath it -- a closed ticket listed only by
+    a later duplicate falls to the "(unassigned)" tail, so the heading and its
+    list agree. With no milestones at all the output is the flat list this
     function has always produced, so an unmilestoned map is unchanged.
     """
     lines = []
@@ -963,18 +976,22 @@ def decisions_region(entries, milestones=None):
         render(entries)
     else:
         by_key = membership_of(milestones)
+        rows = milestone_progress(
+            milestones, {key: "closed" for key, _t, _l, _g in entries})
         # Tracked by KEY rather than by removing tuples from a shrinking list:
-        # the key is the identity these entries are joined on everywhere else,
-        # and a duplicated slug (a lint error, but legal input to this) renders
-        # its group once under the first entry either way.
-        taken = set()
-        for m in milestones:
-            group = [e for e in entries
-                     if e[0] not in taken and by_key.get(e[0]) == m["slug"]]
-            if not group:
+        # the key is the identity these entries are joined on everywhere else.
+        taken, seen = set(), set()
+        for m, row in zip(milestones, rows):
+            slug = m["slug"]
+            if slug in seen:
                 continue
+            seen.add(slug)
+            own = set(m.get("members") or [])
+            group = [e for e in entries
+                     if e[0] not in taken and e[0] in own
+                     and by_key.get(e[0]) == slug]
             taken.update(e[0] for e in group)
-            heading = f"#### {m['slug']}"
+            heading = f"#### {slug}"
             if m.get("label"):
                 # one_line even though this label was read back OUT of the map:
                 # every user string written into a document goes through it, and
@@ -984,18 +1001,26 @@ def decisions_region(entries, milestones=None):
                 # second opinion about it. Idempotent, so a label that was
                 # already escaped is unchanged.
                 heading += f" — {one_line(m['label'])}"
+            if row["total"] == 0:
+                heading += " (0/0 closed — no tickets yet)"
+            else:
+                heading += f" ({row['closed']}/{row['total']} closed)"
             lines.append(heading + "\n\n")
-            render(group)
-            lines.append("\n")
+            if group:
+                render(group)
+                lines.append("\n")
+            elif row["total"] and not row["closed"]:
+                lines.append("_nothing closed yet_\n\n")
         remaining = [e for e in entries if e[0] not in taken]
         if remaining:
             lines.append("#### (unassigned)\n\n")
             render(remaining)
-    # An empty index (no closed tickets, or a milestone list with none of them
-    # closed yet) must render as START\nEND\n, byte-identical to the pre-
-    # milestone format -- a bare "".join(lines) here would leave a blank line
-    # between the markers and turn every milestone-free-but-empty map into a
-    # spurious diff against the byte-identical no-op guarantee.
+    # An empty index -- no closed tickets on an UNMILESTONED map -- must render
+    # as START\nEND\n, byte-identical to the pre-milestone format: a bare
+    # "".join(lines) here would leave a blank line between the markers and turn
+    # every empty map into a spurious diff against the byte-identical no-op
+    # guarantee. A milestoned map is never empty here: its headings are the
+    # information (ADR 0211).
     body = "".join(lines).rstrip("\n")
     return (f"{DECISIONS_START}\n{body}\n{DECISIONS_END}\n" if body
             else f"{DECISIONS_START}\n{DECISIONS_END}\n")
@@ -1695,9 +1720,11 @@ def lint_findings(map_text, tickets, resolution_bodies=True):
                 f"milestone {slug!r} is declared more than once; frontier.json's "
                 "milestones list ends up with one row per declaration, all "
                 f"slugged {slug!r} (each counting only its own members), and "
-                "the decisions index renders every member under the FIRST "
-                "entry's heading -- so what actually goes missing is the label "
-                "of every entry after the first, not any member"))
+                "the decisions index renders the FIRST declaration only -- its "
+                "own count and members under its heading; a closed ticket listed "
+                "only by a later duplicate falls to the (unassigned) tail "
+                "(ADR 0213) -- so what goes missing is the label of every entry "
+                "after the first"))
         seen_slugs.add(slug)
         # Within ONE line as well as across lines. A key repeated inside a
         # single milestone is invisible to the cross-milestone check below

@@ -1,5 +1,17 @@
 ---
-description: "End-to-end orchestrator that turns findings from ANY input (audit spreadsheet, code/security review, QA report, meeting notes, a pasted list of issues) into an Azure DevOps backlog of linked work items. Drives the six sibling ado-backlog skills in order with safety gates. Trigger whenever the user says \"turn this audit/spreadsheet/review/list of issues into ADO work items\", \"create a backlog from these findings\", \"file these as ADO tickets/bugs/stories\", \"import this xlsx/csv into Azure DevOps\", \"make work items from this report\", or hands you a source document and asks for it to land in ADO. This is the headline, one-shot entry point (/ado-backlog:run wraps it). Prefer this over running the sub-skills piecemeal when the user wants the whole pipeline. Not for editing existing items individually — use ado-create-work-items."
+name: findings-to-ado-backlog
+description: End-to-end orchestrator that turns findings from ANY input (audit
+  spreadsheet, code/security review, QA report, meeting notes, a pasted list of
+  issues) into an Azure DevOps backlog of linked work items. Drives the six
+  sibling ado-backlog skills in order with safety gates. Trigger whenever the
+  user says "turn this audit/spreadsheet/review/list of issues into ADO work
+  items", "create a backlog from these findings", "file these as ADO
+  tickets/bugs/stories", "import this xlsx/csv into Azure DevOps", "make work
+  items from this report", or hands you a source document and asks for it to
+  land in ADO. This is the headline, one-shot entry point (/ado-backlog:run
+  wraps it). Prefer this over running the sub-skills piecemeal when the user
+  wants the whole pipeline. Not for editing existing items individually — use
+  ado-create-work-items.
 ---
 <!-- generated: third-party requirements -->
 > **Requires:** `pip install openpyxl` — this skill's scripts import `openpyxl`.

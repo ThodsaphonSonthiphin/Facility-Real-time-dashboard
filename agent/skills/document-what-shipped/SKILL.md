@@ -1,5 +1,12 @@
 ---
-description: "Write and publish ONE documentation page about something that already ships - a user manual, a process and flow page, a release note, a runbook, or a rules page - with every fact measured on the running system, to any destination: an Azure DevOps wiki, a GitHub wiki, a repo docs folder, or a plain markdown folder. Slash-only. Not for a single bug write-up (post-mortem), not a full SA and D document (sa-doc), not a status message (management-talk)."
+name: document-what-shipped
+description: "Write and publish ONE documentation page about something that
+  already ships - a user manual, a process and flow page, a release note, a
+  runbook, or a rules page - with every fact measured on the running system, to
+  any destination: an Azure DevOps wiki, a GitHub wiki, a repo docs folder, or a
+  plain markdown folder. Slash-only. Not for a single bug write-up
+  (post-mortem), not a full SA and D document (sa-doc), not a status message
+  (management-talk)."
 ---
 # Document what shipped
 

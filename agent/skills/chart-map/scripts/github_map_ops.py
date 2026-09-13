@@ -1130,6 +1130,10 @@ def chart(ops, inp, real, force=False, root="docs/decision-map"):
 
     map_action = actions["<map>"]
     if map_action == "create":
+        # ADR 0211: the index rides in the body this run creates -- every
+        # declared milestone at 0/N, parsed from the rendered body -- never in
+        # a second write to the map.
+        map_body = _project_decisions(map_body, [], milestone_index(map_body)[0])
         _assert_map_body(map_body, "the map issue body")
         created = ops.create_issue(inp["map"]["title"], map_body, {MAP_LABEL})
         map_number = created["number"]
@@ -1140,6 +1144,19 @@ def chart(ops, inp, real, force=False, root="docs/decision-map"):
         payload = {}
         if map_action in ("merge", "OVERWRITE"):
             if map_body is not None:
+                # ADR 0211: the body is being written anyway, so the index it
+                # carries is re-projected inside this same PATCH: milestones as
+                # MERGED (parsed from the body about to be written, not from the
+                # raw input and not from the snapshot, which predates the merge),
+                # and every ticket the run leaves closed -- an OVERWRITE'd ticket
+                # is reopened below, so it is dropped here. A relabel-only merge
+                # has no body and is left alone: nothing writes the body, so
+                # nothing re-projects it.
+                reopened = {k for k, a in actions.items()
+                            if a == "OVERWRITE" and k in snap_tickets}
+                map_body = _project_decisions(
+                    map_body, _decisions_entries(snap, reopened=reopened),
+                    milestone_index(map_body)[0])
                 _assert_map_body(map_body, f"the map issue body (#{map_number})")
                 payload["body"] = map_body
             if map_action == "OVERWRITE":
@@ -1477,23 +1494,19 @@ def resolve(ops, ref, ticket, gist, link, body):
     return out
 
 
-def _reindex_decisions(ops, snap, just_closed, just_gist):
-    """Rebuild the map body's "Decisions so far" index from the snapshot.
+def _decisions_entries(snap, just_closed=None, just_gist=None, reopened=()):
+    """The closed tickets of `snap`, as the index's (key, title, link, gist) rows.
 
-    A projection, not accumulated state, so it is regenerated wholesale inside
-    its own region and ordered by ticket key. The snapshot predates the close
-    that triggered this, so the ticket being resolved is folded in explicitly --
-    cheaper and more consistent than re-reading the whole map to observe a
-    change this process just made.
-
-    The milestones that group it come from `snap.milestones`, not a fresh
-    parse: `resolve` never edits the milestones region, so the snapshot's copy
-    cannot be stale for this purpose, and re-parsing the same body the
-    snapshot already read would be the duplication `Snapshot.__init__` exists
-    to avoid.
+    `just_closed` folds in the ticket this process closed after the snapshot
+    was taken (`resolve`) -- cheaper and more consistent than re-reading the
+    whole map to observe a change this process just made. `reopened` drops the
+    tickets this process is about to reset to open (a --force chart), so the
+    projection describes the state the run LEAVES, not the one it found.
     """
     entries = []
     for key in snap.keys:
+        if key in reopened:
+            continue
         t = snap.tickets[key]
         if key == just_closed:
             closed, gist = True, just_gist
@@ -1508,16 +1521,41 @@ def _reindex_decisions(ops, snap, just_closed, just_gist):
         # be a real one.) The url also survives being copied out of the tracker.
         entries.append((key, one_line(t.get("title") or key),
                         t.get("url") or f"#{t['number']}", gist))
-    body = norm_eol(snap.map.get("body"))
-    region = decisions_region(entries, snap.milestones)
+    return entries
+
+
+def _project_decisions(body, entries, milestones):
+    """`body` with its "Decisions so far" region regenerated from `entries`,
+    grouped by `milestones` (ADR 0103, ADR 0211). Pure: no read, no write.
+
+    A body charted before the region existed gets a fresh region inserted
+    under the heading rather than a guess at where its old loose list ended --
+    the same conservative choice as the local backend's legacy path.
+    """
+    region = decisions_region(entries, milestones)
     if _DECISIONS_BLOCK_RE.search(body):
-        body = _DECISIONS_BLOCK_RE.sub(lambda _m: region, body, count=1)
-    else:
-        heading = "## Decisions so far\n"
-        if heading in body:
-            body = body.replace(heading, heading + "\n" + region, 1)
-        else:
-            body = body.rstrip("\n") + f"\n\n## Decisions so far\n\n{region}"
+        return _DECISIONS_BLOCK_RE.sub(lambda _m: region, body, count=1)
+    heading = "## Decisions so far\n"
+    if heading in body:
+        return body.replace(heading, heading + "\n" + region, 1)
+    return body.rstrip("\n") + f"\n\n## Decisions so far\n\n{region}"
+
+
+def _reindex_decisions(ops, snap, just_closed, just_gist):
+    """Rebuild the map body's "Decisions so far" index from the snapshot.
+
+    A projection, not accumulated state, so it is regenerated wholesale inside
+    its own region and ordered by ticket key. The milestones that group it
+    come from `snap.milestones`, not a fresh parse: `resolve` never edits the
+    milestones region, so the snapshot's copy cannot be stale for this purpose,
+    and re-parsing the same body the snapshot already read would be the
+    duplication `Snapshot.__init__` exists to avoid. (`chart` is the other
+    caller of the projection, and it DOES re-parse -- from the merged body it
+    is about to write, whose milestones the snapshot predates. ADR 0211.)
+    """
+    body = _project_decisions(norm_eol(snap.map.get("body")),
+                              _decisions_entries(snap, just_closed, just_gist),
+                              snap.milestones)
     _assert_map_body(body, f"the map issue body (#{snap.map['number']})")
     ops.patch_issue(snap.map["number"], {"body": body})
 

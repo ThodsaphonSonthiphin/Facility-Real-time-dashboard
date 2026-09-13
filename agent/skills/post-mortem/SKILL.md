@@ -1,5 +1,12 @@
 ---
-description: "Write the canonical engineering record of a fixed bug — root cause, mechanism, fix, validation, and how it slipped through. Engineer-audience, code identifiers welcome. Use after a debug session lands a fix, before closing the ticket. Trigger on /post-mortem, when the user says \"write the post-mortem / postmortem / RCA / root cause analysis\", \"document this fix\", \"write up the root cause\", \"close out this bug with a writeup\", or hands you a fixed-and-validated bug and asks for the writeup."
+name: post-mortem
+description: Write the canonical engineering record of a fixed bug — root cause,
+  mechanism, fix, validation, and how it slipped through. Engineer-audience,
+  code identifiers welcome. Use after a debug session lands a fix, before
+  closing the ticket. Trigger on /post-mortem, when the user says "write the
+  post-mortem / postmortem / RCA / root cause analysis", "document this fix",
+  "write up the root cause", "close out this bug with a writeup", or hands you a
+  fixed-and-validated bug and asks for the writeup.
 ---
 # Post-mortem
 

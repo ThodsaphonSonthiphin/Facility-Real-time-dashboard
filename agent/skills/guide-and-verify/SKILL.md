@@ -1,5 +1,16 @@
 ---
-description: "Guide a person through a change they must make by hand in a UI you do not control - an admin console, a portal, a settings page, a dashboard - and prove it landed by measuring the system before and after. Use this whenever the agent cannot or must not make the change itself and a human has to click: the user says walk me through it, teach me step by step, how do I do this in the portal, I will do it by hand, you cannot write to this system, or asks for a runbook, handover checklist or click-by-click guide for any console (CRM, cloud portal, DNS, SaaS admin, CI settings, database GUI, router, payment dashboard). Also use it when handing hand-work back at the end of a task the agent could only partly automate. Do not use it for changes the agent can just make itself in code or via an API it is allowed to call."
+name: guide-and-verify
+description: "Guide a person through a change they must make by hand in a UI you
+  do not control - an admin console, a portal, a settings page, a dashboard -
+  and prove it landed by measuring the system before and after. Use this
+  whenever the agent cannot or must not make the change itself and a human has
+  to click: the user says walk me through it, teach me step by step, how do I do
+  this in the portal, I will do it by hand, you cannot write to this system, or
+  asks for a runbook, handover checklist or click-by-click guide for any console
+  (CRM, cloud portal, DNS, SaaS admin, CI settings, database GUI, router,
+  payment dashboard). Also use it when handing hand-work back at the end of a
+  task the agent could only partly automate. Do not use it for changes the agent
+  can just make itself in code or via an API it is allowed to call."
 ---
 # Guide and verify
 

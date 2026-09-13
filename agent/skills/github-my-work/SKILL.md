@@ -1,5 +1,10 @@
 ---
-description: "Show open GitHub Issues assigned to you in the target repo, grouped by priority label (P0 first), with clickable issue links. Use whenever the user asks \"what's on my plate\", \"my GitHub issues\", \"what should I work on next\", \"show my open issues\", or starts the day wanting their remaining work. Read-only — it lists, it never changes anything."
+name: github-my-work
+description: Show open GitHub Issues assigned to you in the target repo, grouped
+  by priority label (P0 first), with clickable issue links. Use whenever the
+  user asks "what's on my plate", "my GitHub issues", "what should I work on
+  next", "show my open issues", or starts the day wanting their remaining work.
+  Read-only — it lists, it never changes anything.
 ---
 # github-my-work
 

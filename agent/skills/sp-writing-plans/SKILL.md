@@ -1,5 +1,9 @@
 ---
-description: "You MUST use this, and not the upstream superpowers writing-plans skill, when you have a spec or requirements for a multi-step task, before touching code. The plan review is a checklist you run yourself, and execution hands off to sp-subagent-driven-development or sp-executing-plans."
+name: sp-writing-plans
+description: You MUST use this, and not the upstream superpowers writing-plans
+  skill, when you have a spec or requirements for a multi-step task, before
+  touching code. The plan review is a checklist you run yourself, and execution
+  hands off to sp-subagent-driven-development or sp-executing-plans.
 ---
 # Writing Plans
 

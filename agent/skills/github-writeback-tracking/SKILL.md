@@ -1,5 +1,12 @@
 ---
-description: "Add traceability columns to a spreadsheet source and write created GitHub issue numbers/URLs back into it, matched row-by-row by key. Use this right after creating issues — when you have a github_backlog_result.json and the original source was a spreadsheet (xlsx/csv). Triggers on \"write the issue links back\", \"track which row got which issue\", \"update the spreadsheet with the GitHub IDs\", \"fill in the issue column\", \"close the loop on the audit sheet\"."
+name: github-writeback-tracking
+description: Add traceability columns to a spreadsheet source and write created
+  GitHub issue numbers/URLs back into it, matched row-by-row by key. Use this
+  right after creating issues — when you have a github_backlog_result.json and
+  the original source was a spreadsheet (xlsx/csv). Triggers on "write the issue
+  links back", "track which row got which issue", "update the spreadsheet with
+  the GitHub IDs", "fill in the issue column", "close the loop on the audit
+  sheet".
 ---
 <!-- generated: third-party requirements -->
 > **Requires:** `pip install openpyxl` — this skill's scripts import `openpyxl`.

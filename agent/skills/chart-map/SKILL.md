@@ -1,5 +1,16 @@
 ---
-description: "Chart a Decision map for an effort too big for one agent session — name the destination, grill breadth-first to separate real decision tickets from fog, create the map and its tickets behind a dry-run gate, fire the research subagents, then STOP. Use when the user has a loose, foggy, multi-session idea — \"this is huge, where do we even start\", \"plan this migration\", \"chart this\", \"make a decision map\", \"map out this initiative\", \"too big for one session\" — and the route to the goal is not visible yet. Do NOT use for a well-scoped single-session design (that is grill-then-plan / sp-grill-with-doc), and do NOT use to continue a map that already exists (that is work-map). If the opening grill surfaces no fog, this skill stops and says a map is not needed."
+name: chart-map
+description: Chart a Decision map for an effort too big for one agent session —
+  name the destination, grill breadth-first to separate real decision tickets
+  from fog, create the map and its tickets behind a dry-run gate, fire the
+  research subagents, then STOP. Use when the user has a loose, foggy,
+  multi-session idea — "this is huge, where do we even start", "plan this
+  migration", "chart this", "make a decision map", "map out this initiative",
+  "too big for one session" — and the route to the goal is not visible yet. Do
+  NOT use for a well-scoped single-session design (that is grill-then-plan /
+  sp-grill-with-doc), and do NOT use to continue a map that already exists (that
+  is work-map). If the opening grill surfaces no fog, this skill stops and says
+  a map is not needed.
 ---
 # chart-map
 
@@ -154,22 +165,35 @@ now?** Not answer it. State it.
 Do not pre-slice fog into ticket-sized pieces. Fog that is left as fog graduates
 into real tickets later, once an earlier decision has sharpened it.
 
-### Ask what ships first (ADR 0100)
+### Ask what ships first, then what ships next (ADR 0100, ADR 0210)
 
 Once every ticket on this pass is named, ask one more question — in the
 user's own terms, not the tool's: **"what do you want to be able to demo
-first?"**, not "how do you want to group these tickets?". One question, and
-it is skippable — say plainly that skipping it costs nothing, because the
-grouping can be declared later from `work-map` once the map exists to group.
-Keep it short: at most two options, and lead with your own recommendation
-before asking — the framing every HITL question in these two skills should
-use, and the one the HITL guard above already requires (a recommendation is
-offered, never accepted on the human's behalf).
+first?"**, not "how do you want to group these tickets?". It is skippable —
+say plainly that skipping it costs nothing, because the grouping can be
+declared later from `work-map` once the map exists to group. Keep it short:
+at most two options, and lead with your own recommendation before asking —
+the framing every HITL question in these two skills should use, and the one
+the HITL guard above already requires (a recommendation is offered, never
+accepted on the human's behalf).
 
-The answer becomes the map's first **milestone** in Step 3's input — which
-ticket keys ship in that first increment. Everything else stays unassigned
-until a later session groups it; that is a legal, unfinished state, not a gap
-to fill now.
+Then keep going — **"and after that?"** — one question at a time, in the same
+shape, until the user says that is all or skips (ADR 0210). Each answer is one
+more entry, in order, of the `milestones` list Step 3 writes: a slug, an
+optional label in the user's own words, and the tickets named on this pass
+that belong to it. A ticket goes in the **first** increment that needs it and
+is never re-listed in a later one (ADR 0097).
+
+**An increment with no named ticket is still recorded**, as a milestone with
+`"members": []`. That is a placeholder — fog at increment level — and it is
+what lets the map say, from day one, which increments exist and which remain.
+Tell the user two things about it: it shows on the map as `0/0 closed — no
+tickets yet`, and `work-map` will ask about it before the map can be called
+done — either its first decision gets named then, or the user removes the
+line by hand (ADR 0212). Do not invent a ticket now just to fill it.
+
+Stopping early loses nothing: a declined question leaves the list as it
+stands, and `work-map` can still grow it later (ADR 0098).
 
 Type every ticket — the type picks its resolver and its mode (ADR 0038):
 
@@ -200,7 +224,11 @@ working files, never a store — the map itself is the source of truth.
     "outOfScope": ["<ruled-out line>"],
     "milestones": [
       { "slug": "mvp", "label": "demo the search page",
-        "members": ["provider-choice"] }
+        "members": ["provider-choice"] },
+      { "slug": "tenant-ramp", "label": "per-tenant rollout",
+        "members": ["cutover-order"] },
+      { "slug": "billing-sunset", "label": "retire the old provider",
+        "members": [] }
     ]
   },
   "tickets": [
@@ -220,6 +248,10 @@ working files, never a store — the map itself is the source of truth.
   tickets' key order. A milestone `slug` follows the same rule as a ticket
   `key` (no `--`). A ticket belongs to **at most one** milestone, and a
   ticket in none is legal: it means "not yet scheduled", not an error.
+  A milestone with **no** members is legal too — the placeholder the loop
+  above writes for an increment whose decisions are still fog (ADR 0210); the
+  map lists it at `0/0`, and `work-map` keeps the map open until it gains a
+  ticket or is removed by hand (ADR 0212).
 - A later `chart` on the same map only **appends** a milestone that is
   entirely new and **unions** a new member into one that already exists. A
   member the map already places in a *different* milestone, a different

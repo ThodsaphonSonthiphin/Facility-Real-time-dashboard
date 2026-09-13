@@ -1,5 +1,6 @@
 ---
-description: "Use when the user asks to review a pull request — \"review PR"
+name: review-pr
+description: Use when the user asks to review a pull request — "review PR
 ---
 # review-pr
 

@@ -1,5 +1,18 @@
 ---
-description: "Study a live Dynamics 365 / Dataverse environment end-to-end and produce one ARCHITECTURE.md — pull every customization to disk (solutions, entities, forms, JS and React web resources, PCF controls, classic workflows, plugins, cloud flows, classic RibbonDiffXml AND modern commands, security roles, embedded Power BI), map every business entity (standard AND custom), then trace the business processes layer by layer. Use whenever the user wants to learn, study, understand, reverse-engineer, audit, or document an existing Dynamics 365 / CRM / Dataverse org or model-driven app — \"how does this CRM work\", \"document my D365 org\", \"learn the business logic of this environment\", \"what does this solution actually do\", onboarding to a customer's CRM, or scoping a migration/rebuild. Read-only by design — it never writes to the org. NOT for building or changing CRM components (use the dataverse plugin skills) or for studying a plain source-code repo (use drive-to-legacy)."
+name: crm-archaeology
+description: Study a live Dynamics 365 / Dataverse environment end-to-end and
+  produce one ARCHITECTURE.md — pull every customization to disk (solutions,
+  entities, forms, JS and React web resources, PCF controls, classic workflows,
+  plugins, cloud flows, classic RibbonDiffXml AND modern commands, security
+  roles, embedded Power BI), map every business entity (standard AND custom),
+  then trace the business processes layer by layer. Use whenever the user wants
+  to learn, study, understand, reverse-engineer, audit, or document an existing
+  Dynamics 365 / CRM / Dataverse org or model-driven app — "how does this CRM
+  work", "document my D365 org", "learn the business logic of this environment",
+  "what does this solution actually do", onboarding to a customer's CRM, or
+  scoping a migration/rebuild. Read-only by design — it never writes to the org.
+  NOT for building or changing CRM components (use the dataverse plugin skills)
+  or for studying a plain source-code repo (use drive-to-legacy).
 ---
 # CRM Archaeology — study a live Dynamics 365 org, end to end
 

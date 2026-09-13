@@ -1,5 +1,12 @@
 ---
-description: "Like sp-grill-with-doc (domain-aware grilling, glossary sharpening, inline CONTEXT.md/ADR capture) BUT continues into the superpowers planning pipeline by handing off to sp-writing-plans at the end. Use ONLY when the user wants both the grilling AND a written implementation plan produced afterward; if they want grilling/docs alone, use sp-grill-with-doc instead. The superpowers plugin is needed two hops downstream, by sp-writing-plans' own execution skills, not by this Skill."
+name: grill-then-plan
+description: Like sp-grill-with-doc (domain-aware grilling, glossary sharpening,
+  inline CONTEXT.md/ADR capture) BUT continues into the superpowers planning
+  pipeline by handing off to sp-writing-plans at the end. Use ONLY when the user
+  wants both the grilling AND a written implementation plan produced afterward;
+  if they want grilling/docs alone, use sp-grill-with-doc instead. The
+  superpowers plugin is needed two hops downstream, by sp-writing-plans' own
+  execution skills, not by this Skill.
 ---
 <what-to-do>
 

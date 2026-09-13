@@ -1,5 +1,17 @@
 ---
-description: "Map triaged findings to the correct Azure DevOps work item types for the TARGET project's process, and emit backlog_input.json ready for creation. Use this AFTER triage and BEFORE creating items — when the user asks \"what type should these be\", \"make these into work items / tickets\", \"turn these findings into a backlog\", \"classify these for ADO\", or \"build the backlog input\". The type you choose MUST exist on the target board: a Basic-process project has no Bug or User Story, so picking those silently fails at creation time. This skill discovers the project's process first, applies industry typing rules (defect vs new capability vs grouping parent), maps severity to Priority, builds the per-type fields (titles, tags, repro/description as escaped HTML), carries each finding's `key` through, and hands off to ado-create-work-items."
+name: classify-work-items
+description: "Map triaged findings to the correct Azure DevOps work item types
+  for the TARGET project's process, and emit backlog_input.json ready for
+  creation. Use this AFTER triage and BEFORE creating items — when the user asks
+  \"what type should these be\", \"make these into work items / tickets\",
+  \"turn these findings into a backlog\", \"classify these for ADO\", or \"build
+  the backlog input\". The type you choose MUST exist on the target board: a
+  Basic-process project has no Bug or User Story, so picking those silently
+  fails at creation time. This skill discovers the project's process first,
+  applies industry typing rules (defect vs new capability vs grouping parent),
+  maps severity to Priority, builds the per-type fields (titles, tags,
+  repro/description as escaped HTML), carries each finding's `key` through, and
+  hands off to ado-create-work-items."
 ---
 # classify-work-items
 

@@ -1,5 +1,10 @@
 ---
-description: "The review engine for a DISPATCHED reviewer subagent - the scoped counterpart to scrutinize. Use only when a reviewer prompt (code-reviewer.md, task-reviewer-prompt.md) dispatched you to review a task diff and a controller will parse your report. Emits Critical/Important/Minor and a spec-compliance verdict. For a human-facing review in a live session, use scrutinize instead."
+name: scrutinize-dispatch
+description: The review engine for a DISPATCHED reviewer subagent - the scoped
+  counterpart to scrutinize. Use only when a reviewer prompt (code-reviewer.md,
+  task-reviewer-prompt.md) dispatched you to review a task diff and a controller
+  will parse your report. Emits Critical/Important/Minor and a spec-compliance
+  verdict. For a human-facing review in a live session, use scrutinize instead.
 ---
 # Scrutinize (dispatch)
 

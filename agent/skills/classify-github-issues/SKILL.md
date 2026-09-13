@@ -1,5 +1,13 @@
 ---
-description: "Map triaged findings to GitHub Issues with the correct labels, milestone, and body, and emit github_backlog_input.json ready for creation. Use this AFTER triage and BEFORE creating issues — when the user asks \"what labels should these get\", \"turn these findings into GitHub issues\", \"classify these for GitHub\", or \"build the github backlog input\". Maps severity to priority labels (P0-P3), kind to type labels (bug/enhancement/task), and hours to size labels (size:XS-XL). Creates a milestone for the batch. Hands off to github-create-issues."
+name: classify-github-issues
+description: Map triaged findings to GitHub Issues with the correct labels,
+  milestone, and body, and emit github_backlog_input.json ready for creation.
+  Use this AFTER triage and BEFORE creating issues — when the user asks "what
+  labels should these get", "turn these findings into GitHub issues", "classify
+  these for GitHub", or "build the github backlog input". Maps severity to
+  priority labels (P0-P3), kind to type labels (bug/enhancement/task), and hours
+  to size labels (size:XS-XL). Creates a milestone for the batch. Hands off to
+  github-create-issues.
 ---
 # classify-github-issues
 

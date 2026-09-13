@@ -1,5 +1,10 @@
 ---
-description: "You MUST use this, and not the upstream superpowers subagent-driven-development skill, when executing implementation plans with independent tasks in the current session. Dispatched task and whole-branch reviews run the scrutinize-dispatch skill; the re-review is deliberately unrouted."
+name: sp-subagent-driven-development
+description: You MUST use this, and not the upstream superpowers
+  subagent-driven-development skill, when executing implementation plans with
+  independent tasks in the current session. Dispatched task and whole-branch
+  reviews run the scrutinize-dispatch skill; the re-review is deliberately
+  unrouted.
 ---
 # Subagent-Driven Development
 

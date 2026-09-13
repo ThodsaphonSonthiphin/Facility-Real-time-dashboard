@@ -1,5 +1,15 @@
 ---
-description: "Decide WHICH findings become Azure DevOps work items and in what order/batches, working from a findings.json produced by extract-findings. Use this AFTER findings are extracted and BEFORE creating ADO items — especially when there are more findings than you want to file at once. Triggers on \"start with the critical ones\", \"which should we file first\", \"don't dump everything into ADO\", \"let's do this in batches/waves\", \"only the confirmed ones for now\", \"hold the needs-review items\", \"scope down the backlog\", \"prioritize these findings\", or any request to pick a subset of findings to turn into tickets. Produces a scoped, ordered subset (a filtered findings file or a selected/batch flag) and hands it to classify-work-items."
+name: triage-findings
+description: Decide WHICH findings become Azure DevOps work items and in what
+  order/batches, working from a findings.json produced by extract-findings. Use
+  this AFTER findings are extracted and BEFORE creating ADO items — especially
+  when there are more findings than you want to file at once. Triggers on "start
+  with the critical ones", "which should we file first", "don't dump everything
+  into ADO", "let's do this in batches/waves", "only the confirmed ones for
+  now", "hold the needs-review items", "scope down the backlog", "prioritize
+  these findings", or any request to pick a subset of findings to turn into
+  tickets. Produces a scoped, ordered subset (a filtered findings file or a
+  selected/batch flag) and hands it to classify-work-items.
 ---
 # Triage findings
 

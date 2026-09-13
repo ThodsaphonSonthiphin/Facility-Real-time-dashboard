@@ -1,5 +1,14 @@
 ---
-description: "Create GitHub Issues from a github_backlog_input.json (the output of classify-github-issues) via the bundled create_github_issues.py script. Always shows a visual dry-run table first and only creates real issues after the user explicitly approves. Use this whenever there is a github_backlog_input.json or any file of items to file in GitHub, or when the user says \"create these GitHub issues\", \"file the backlog\", \"push these to GitHub\", or \"create the issues\". This is the step that actually writes to the repo, so prefer it over hand-rolling API calls. After creating, it writes github_backlog_result.json for github-writeback-tracking."
+name: github-create-issues
+description: Create GitHub Issues from a github_backlog_input.json (the output
+  of classify-github-issues) via the bundled create_github_issues.py script.
+  Always shows a visual dry-run table first and only creates real issues after
+  the user explicitly approves. Use this whenever there is a
+  github_backlog_input.json or any file of items to file in GitHub, or when the
+  user says "create these GitHub issues", "file the backlog", "push these to
+  GitHub", or "create the issues". This is the step that actually writes to the
+  repo, so prefer it over hand-rolling API calls. After creating, it writes
+  github_backlog_result.json for github-writeback-tracking.
 ---
 <!-- generated: third-party requirements -->
 > **Requires:** `pip install requests` — this skill's scripts import `requests`.

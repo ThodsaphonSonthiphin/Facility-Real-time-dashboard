@@ -1,5 +1,15 @@
 ---
-description: "End-to-end orchestrator that turns findings from ANY input (audit spreadsheet, code/security review, QA report, meeting notes, a pasted list of issues) into a GitHub Issues backlog with a milestone, labels, and a tracking issue. Drives the sibling github-backlog skills in order with safety gates. Trigger whenever the user says \"turn this audit/spreadsheet/review/list of issues into GitHub issues\", \"create a backlog from these findings\", \"file these as GitHub issues\", \"import this xlsx/csv into GitHub\", \"make issues from this report\", or hands you a source document and asks for it to land in GitHub. This is the headline, one-shot entry point (/github-backlog:run wraps it). Not for editing existing issues individually."
+name: findings-to-github-issues
+description: End-to-end orchestrator that turns findings from ANY input (audit
+  spreadsheet, code/security review, QA report, meeting notes, a pasted list of
+  issues) into a GitHub Issues backlog with a milestone, labels, and a tracking
+  issue. Drives the sibling github-backlog skills in order with safety gates.
+  Trigger whenever the user says "turn this audit/spreadsheet/review/list of
+  issues into GitHub issues", "create a backlog from these findings", "file
+  these as GitHub issues", "import this xlsx/csv into GitHub", "make issues from
+  this report", or hands you a source document and asks for it to land in
+  GitHub. This is the headline, one-shot entry point (/github-backlog:run wraps
+  it). Not for editing existing issues individually.
 ---
 <!-- generated: third-party requirements -->
 > **Requires:** `pip install requests` — this skill's scripts import `requests`.

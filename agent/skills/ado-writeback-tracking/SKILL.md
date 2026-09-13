@@ -1,5 +1,15 @@
 ---
-description: "Add traceability columns to a spreadsheet source and write created Azure DevOps ticket IDs/URLs back into it, matched row-by-row by key. Use this right after creating work items — when you have a backlog_result.json and the original source was a spreadsheet (xlsx/csv). Triggers on \"write the ticket links back\", \"track which row got which ticket\", \"update the spreadsheet with the ADO IDs\", \"fill in the ticket column\", \"close the loop on the audit sheet\", or any request to record created-item IDs back onto the source rows. Runs the bundled tracking.py (add-columns + writeback). For doc/pasted-text input there are no rows to write to — in that case just report the created links instead."
+name: ado-writeback-tracking
+description: Add traceability columns to a spreadsheet source and write created
+  Azure DevOps ticket IDs/URLs back into it, matched row-by-row by key. Use this
+  right after creating work items — when you have a backlog_result.json and the
+  original source was a spreadsheet (xlsx/csv). Triggers on "write the ticket
+  links back", "track which row got which ticket", "update the spreadsheet with
+  the ADO IDs", "fill in the ticket column", "close the loop on the audit
+  sheet", or any request to record created-item IDs back onto the source rows.
+  Runs the bundled tracking.py (add-columns + writeback). For doc/pasted-text
+  input there are no rows to write to — in that case just report the created
+  links instead.
 ---
 <!-- generated: third-party requirements -->
 > **Requires:** `pip install openpyxl` — this skill's scripts import `openpyxl`.

@@ -1,5 +1,12 @@
 ---
-description: "Show the Azure DevOps work items assigned to you as a clean, grouped table — open work first, sorted by state then priority, with the ticket number as a clickable link. Use whenever the user asks \"what's on my plate\", \"my work items / my tasks\", \"what should I work on next\", \"show my backlog\", \"read my task hub\", \"daily standup prep\", or starts the day wanting their remaining work. This is step 2 of the daily-work flow (read the task hub). Read-only — it lists, it never changes anything."
+name: my-work
+description: Show the Azure DevOps work items assigned to you as a clean,
+  grouped table — open work first, sorted by state then priority, with the
+  ticket number as a clickable link. Use whenever the user asks "what's on my
+  plate", "my work items / my tasks", "what should I work on next", "show my
+  backlog", "read my task hub", "daily standup prep", or starts the day wanting
+  their remaining work. This is step 2 of the daily-work flow (read the task
+  hub). Read-only — it lists, it never changes anything.
 ---
 # my-work
 

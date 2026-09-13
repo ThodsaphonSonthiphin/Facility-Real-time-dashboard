@@ -1,5 +1,16 @@
 ---
-description: "Create Azure DevOps work items from a backlog_input.json (the output of classify-work-items) via the bundled create-backlog.cs script. Always does a dry-run validation first and only creates real items after the user explicitly approves. Use this whenever there is a backlog_input.json or any file of items to file in ADO, or when the user says \"create these work items\", \"file the backlog\", \"push these to Azure DevOps\", \"create the tickets/bugs/stories\", \"make the work items\", or asks to turn a classified list of findings into a real ADO backlog. This is the step that actually writes to the org, so prefer it over hand-rolling REST/MCP calls when a backlog_input.json exists. After creating, it writes backlog_result.json for ado-writeback-tracking."
+name: ado-create-work-items
+description: Create Azure DevOps work items from a backlog_input.json (the
+  output of classify-work-items) via the bundled create-backlog.cs script.
+  Always does a dry-run validation first and only creates real items after the
+  user explicitly approves. Use this whenever there is a backlog_input.json or
+  any file of items to file in ADO, or when the user says "create these work
+  items", "file the backlog", "push these to Azure DevOps", "create the
+  tickets/bugs/stories", "make the work items", or asks to turn a classified
+  list of findings into a real ADO backlog. This is the step that actually
+  writes to the org, so prefer it over hand-rolling REST/MCP calls when a
+  backlog_input.json exists. After creating, it writes backlog_result.json for
+  ado-writeback-tracking.
 ---
 # ado-create-work-items
 
