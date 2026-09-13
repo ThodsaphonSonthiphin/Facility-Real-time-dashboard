@@ -17,6 +17,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 0. Working Hours: one system-wide value from config (ADR 0005 / 0019), injected into every status calculation
+var workingHours = builder.Configuration.GetSection(WorkingHours.SectionName).Get<WorkingHours>() ?? new WorkingHours();
+if (workingHours.Start >= workingHours.End)
+{
+    throw new InvalidOperationException($"WorkingHours: Start ({workingHours.Start}) must be before End ({workingHours.End}).");
+}
+builder.Services.AddSingleton(workingHours);
+
 // 1. Database Context
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Server=localhost;Port=3306;Database=facility_dashboard;Uid=root;Pwd=;CharSet=utf8mb4;";
@@ -85,7 +93,7 @@ app.MapPost("/api/auth/login", async (LoginRequest req, AppDbContext db) =>
 });
 
 // Service Points: List for Dashboard
-app.MapGet("/api/service-points", async (AppDbContext db) =>
+app.MapGet("/api/service-points", async (AppDbContext db, WorkingHours workingHours) =>
 {
     var points = await db.ServicePoints.Where(p => p.IsActive).ToListAsync();
     var nowUtc = DateTime.UtcNow;
@@ -100,7 +108,7 @@ app.MapGet("/api/service-points", async (AppDbContext db) =>
             .OrderByDescending(r => r.ScannedAt)
             .FirstOrDefaultAsync();
 
-        var status = StatusCalculator.CalculateStatus(latestScan, point, nowUtc);
+        var status = StatusCalculator.CalculateStatus(latestScan, point, nowUtc, workingHours);
         var minutesSince = latestScan != null ? (int)(nowUtc - latestScan.ScannedAt).TotalMinutes : 999;
         var tags = !string.IsNullOrEmpty(latestScan?.IssueTags) 
             ? latestScan.IssueTags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() 
@@ -126,7 +134,7 @@ app.MapGet("/api/service-points", async (AppDbContext db) =>
 });
 
 // Service Points: Lookup by QR Token for Mobile Scanner
-app.MapGet("/api/service-points/by-token/{token}", async (string token, AppDbContext db) =>
+app.MapGet("/api/service-points/by-token/{token}", async (string token, AppDbContext db, WorkingHours workingHours) =>
 {
     var point = await db.ServicePoints.FirstOrDefaultAsync(p => p.QrToken == token && p.IsActive);
     if (point == null)
@@ -141,7 +149,7 @@ app.MapGet("/api/service-points/by-token/{token}", async (string token, AppDbCon
         .OrderByDescending(r => r.ScannedAt)
         .FirstOrDefaultAsync();
 
-    var status = StatusCalculator.CalculateStatus(latestScan, point, nowUtc);
+    var status = StatusCalculator.CalculateStatus(latestScan, point, nowUtc, workingHours);
     var minutesSince = latestScan != null ? (int)(nowUtc - latestScan.ScannedAt).TotalMinutes : 999;
     var tags = !string.IsNullOrEmpty(latestScan?.IssueTags) 
         ? latestScan.IssueTags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() 
@@ -169,7 +177,8 @@ app.MapGet("/api/service-points/by-token/{token}", async (string token, AppDbCon
 app.MapPost("/api/scan-records", async (
     CreateScanRecordRequest req, 
     AppDbContext db, 
-    IHubContext<ScanHub> hubContext) =>
+    IHubContext<ScanHub> hubContext,
+    WorkingHours workingHours) =>
 {
     var point = await db.ServicePoints.FirstOrDefaultAsync(p => p.QrToken == req.QrToken && p.IsActive);
     if (point == null)
@@ -198,7 +207,7 @@ app.MapPost("/api/scan-records", async (
     await db.SaveChangesAsync();
 
     // Calculate new point status
-    var newStatus = StatusCalculator.CalculateStatus(scanRecord, point, nowUtc);
+    var newStatus = StatusCalculator.CalculateStatus(scanRecord, point, nowUtc, workingHours);
 
     // Build updated DTO for broadcast
     var updatedDto = new ServicePointStatusDto(

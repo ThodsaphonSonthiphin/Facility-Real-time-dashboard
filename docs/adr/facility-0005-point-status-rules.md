@@ -14,6 +14,7 @@ flowchart TD
 - UI mockup ที่ใช้ตัดสินเรื่องรอบ: https://claude.ai/code/artifact/28c3a564-39ee-451f-b812-d6dbe988b21b
 - วันที่: 2026-09-11
 - เกี่ยวข้อง: facility-0001 (Scan Record), #7 (คำนวณเลยรอบจากเวลาสแกนล่าสุด)
+- แก้ไขเพิ่มเติม 2026-09-13: โค้ดบน master (a7f87c2) เบี่ยงจากข้อ 1 (ลำดับ Off Hours/Normal), ข้อ 2 (cycle_start) และข้อ 5 (Working Hours ยัง hardcode) — ตัดสินใน [#19](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/19) ให้แก้โค้ดตาม ADR นี้ ดู facility-0019
 
 ## Context & Decision
 
