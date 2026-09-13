@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Prototype: หน้า Real-time Dashboard (Ticket #10 dashboard-prototype)</title>
+  <title>Prototype: หน้า Real-time Dashboard (Ticket #10 dashboard-prototype, #14 dashboard-pagination)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,8 @@
       --border-color: #22314e;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      
+      --accent: #38bdf8;
+
       /* Status Colors from ADR 0005 */
       --status-issue: #ef4444;       /* 🔴 Issue */
       --status-issue-bg: rgba(239, 68, 68, 0.12);
@@ -46,6 +47,8 @@
       margin-bottom: 24px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
     .brand-area {
@@ -96,12 +99,13 @@
       gap: 20px;
       font-size: 13px;
       color: var(--text-muted);
+      flex-wrap: wrap;
     }
 
     /* Simulation Controller Header */
     .sim-bar {
       background: rgba(30, 41, 59, 0.5);
-      border: 1px dashed #38bdf8;
+      border: 1px dashed var(--accent);
       border-radius: 12px;
       padding: 12px 18px;
       margin-bottom: 24px;
@@ -114,7 +118,7 @@
 
     .sim-label {
       font-size: 13px;
-      color: #38bdf8;
+      color: var(--accent);
       font-weight: 700;
       display: flex;
       align-items: center;
@@ -124,6 +128,7 @@
     .sim-buttons {
       display: flex;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     .sim-btn {
@@ -136,6 +141,7 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
+      font-family: inherit;
     }
 
     .sim-btn:hover {
@@ -164,7 +170,7 @@
     }
 
     .kpi-card:hover, .kpi-card.active {
-      border-color: #38bdf8;
+      border-color: var(--accent);
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(0,0,0,0.3);
     }
@@ -204,10 +210,12 @@
       color: #fff;
       font-size: 13px;
       width: 280px;
+      max-width: 100%;
       outline: none;
+      font-family: inherit;
     }
 
-    .search-input:focus { border-color: #38bdf8; }
+    .search-input:focus { border-color: var(--accent); }
 
     .view-toggle {
       display: flex;
@@ -227,6 +235,7 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      font-family: inherit;
     }
 
     .toggle-btn.active {
@@ -259,6 +268,15 @@
       box-shadow: 0 12px 30px rgba(0,0,0,0.4);
     }
 
+    .point-card.just-updated {
+      animation: flash 2s ease-out;
+    }
+
+    @keyframes flash {
+      0% { box-shadow: 0 0 0 4px var(--accent); }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+
     /* Card Status Border & Accents */
     .point-card.status-issue {
       border-color: var(--status-issue);
@@ -285,6 +303,7 @@
       justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 12px;
+      gap: 8px;
     }
 
     .point-name {
@@ -306,6 +325,7 @@
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.3px;
+      white-space: nowrap;
     }
 
     .status-badge.issue {
@@ -369,6 +389,8 @@
       align-items: center;
       font-size: 12px;
       color: var(--text-muted);
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .timer-info strong {
@@ -380,7 +402,7 @@
       background: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 16px;
-      overflow: hidden;
+      overflow-x: auto;
       display: none;
     }
 
@@ -397,6 +419,7 @@
       font-weight: 600;
       color: var(--text-muted);
       border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
     }
 
     td {
@@ -406,6 +429,157 @@
 
     tr:hover td {
       background: rgba(255, 255, 255, 0.02);
+    }
+
+    tr.just-updated td {
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    /* Pagination Bar (Ticket #14) */
+    .pager {
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 20px;
+      flex-wrap: wrap;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 10px 16px;
+    }
+
+    .pager-info {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .pager-info strong { color: #fff; }
+
+    .pager-pages {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .page-btn {
+      position: relative;
+      min-width: 36px;
+      height: 36px;
+      padding: 0 12px;
+      border-radius: 9px;
+      border: 1px solid var(--border-color);
+      background: #1e293b;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .page-btn:hover:not(:disabled) { border-color: var(--accent); }
+
+    .page-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0b1120;
+    }
+
+    .page-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    /* จุดสีบนเลขหน้า = หน้านั้นมีจุด Issue / Overdue อยู่ */
+    .page-dot {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-dark);
+    }
+
+    .page-dot.issue { background: var(--status-issue); }
+    .page-dot.overdue { background: var(--status-overdue); }
+
+    .page-gap {
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+
+    .pager-size {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pager-size select {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    /* Toast: การ์ดย้ายไปหน้าอื่นเพราะสถานะเปลี่ยนแบบ real-time */
+    .toast-stack {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 50;
+      max-width: calc(100vw - 32px);
+    }
+
+    .toast {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--accent);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+      animation: slide-in 0.25s ease-out;
+    }
+
+    .toast.issue { border-left-color: var(--status-issue); }
+    .toast.overdue { border-left-color: var(--status-overdue); }
+    .toast.normal { border-left-color: var(--status-normal); }
+
+    .toast-btn {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+
+    @keyframes slide-in {
+      from { transform: translateY(12px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 16px; }
+      .pager { justify-content: center; }
+      .pager-info { width: 100%; text-align: center; }
     }
   </style>
 </head>
@@ -442,18 +616,21 @@
       <button class="sim-btn" onclick="simulateOverdue('LOC-TR-01')">
         🟠 จำลองเวลาเลยรอบ (ห้องน้ำ 1)
       </button>
+      <button class="sim-btn" onclick="simulateScan('LOC-TR-12', 'ISSUE', 'ชำรุด')">
+        🔴 จำลองจุดหน้าสุดท้ายพบปัญหา (ห้องน้ำหญิง อาคาร 3)
+      </button>
       <button class="sim-btn" onclick="resetAll()">
         ↺ รีเซ็ตค่าเริ่มต้น
       </button>
     </div>
   </div>
 
-  <!-- KPI Summary Status Cards (Clickable Filters) -->
+  <!-- KPI Summary Status Cards (Clickable Filters) — นับจากทุกจุด ไม่ใช่เฉพาะหน้าที่เปิดอยู่ -->
   <div class="kpi-row">
     <div class="kpi-card active" onclick="setFilter('ALL')" id="kpiAll">
       <div class="kpi-info">
         <h4>จุดบริการทั้งหมด</h4>
-        <div class="kpi-num" id="countAll">6</div>
+        <div class="kpi-num" id="countAll">0</div>
       </div>
       <span style="font-size: 24px;">📍</span>
     </div>
@@ -461,7 +638,7 @@
     <div class="kpi-card issue" onclick="setFilter('ISSUE')" id="kpiIssue">
       <div class="kpi-info">
         <h4>พบปัญหา (Issue)</h4>
-        <div class="kpi-num" id="countIssue">1</div>
+        <div class="kpi-num" id="countIssue">0</div>
       </div>
       <span style="font-size: 24px;">🔴</span>
     </div>
@@ -469,7 +646,7 @@
     <div class="kpi-card overdue" onclick="setFilter('OVERDUE')" id="kpiOverdue">
       <div class="kpi-info">
         <h4>เลยรอบ (Overdue)</h4>
-        <div class="kpi-num" id="countOverdue">1</div>
+        <div class="kpi-num" id="countOverdue">0</div>
       </div>
       <span style="font-size: 24px;">🟠</span>
     </div>
@@ -477,7 +654,7 @@
     <div class="kpi-card normal" onclick="setFilter('NORMAL')" id="kpiNormal">
       <div class="kpi-info">
         <h4>ปกติ (Normal)</h4>
-        <div class="kpi-num" id="countNormal">4</div>
+        <div class="kpi-num" id="countNormal">0</div>
       </div>
       <span style="font-size: 24px;">🟢</span>
     </div>
@@ -485,9 +662,9 @@
 
   <!-- Controls Bar -->
   <div class="controls-bar">
-    <input type="text" class="search-input" placeholder="🔍 ค้นหาชื่อจุด หรือรหัส..." id="searchInput" oninput="render()">
-    
-    <div style="display: flex; align-items: center; gap: 12px;">
+    <input type="text" class="search-input" placeholder="🔍 ค้นหาชื่อจุด หรือรหัส..." id="searchInput" oninput="onSearch()">
+
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
       <span style="font-size: 13px; color: var(--text-muted);">รูปแบบการจัดวาง:</span>
       <div class="view-toggle">
         <button class="toggle-btn active" id="btnCards" onclick="switchView('CARDS')">
@@ -522,12 +699,34 @@
     </table>
   </div>
 
+  <!-- Pagination Bar (Ticket #14 dashboard-pagination) — ใช้ร่วมกันทั้ง Cards และ Table -->
+  <div class="pager" id="pager">
+    <div class="pager-info" id="pagerInfo"></div>
+    <div class="pager-pages" id="pagerPages"></div>
+    <label class="pager-size">
+      ต่อหน้า
+      <select id="pageSizeSelect" onchange="setPageSize(this.value)">
+        <option value="12" selected>12</option>
+        <option value="24">24</option>
+        <option value="48">48</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="toast-stack" id="toastStack"></div>
+
   <script>
     // Initial Service Points Mock Data aligned with ADR 0005 & 0006
     let currentFilter = 'ALL';
     let currentView = 'CARDS';
+    let currentPage = 1;
+    let pageSize = 12;
+    let lastUpdatedCode = null;
 
-    let points = [
+    const STATUS_ORDER = { 'ISSUE': 1, 'OVERDUE': 2, 'NORMAL': 3, 'OFFHOURS': 4 };
+    const STATUS_TEXT = { 'ISSUE': '🔴 มีปัญหา', 'OVERDUE': '🟠 เลยรอบ', 'NORMAL': '🟢 ปกติ', 'OFFHOURS': '⚪ นอกเวลา' };
+
+    const basePoints = [
       {
         id: 1,
         code: 'LOC-CT-01',
@@ -602,14 +801,76 @@
       }
     ];
 
+    // จุดจำลองเพิ่มเติม ให้มีหลายหน้าพอเห็น pagination (รวม 26 จุด = 3 หน้าที่ 12 ต่อหน้า)
+    const extraPoints = [
+      ['LOC-TR-03', 'ห้องน้ำชาย - อาคาร 1 ชั้น 2'],
+      ['LOC-TR-04', 'ห้องน้ำหญิง - อาคาร 1 ชั้น 2'],
+      ['LOC-TR-05', 'ห้องน้ำชาย - อาคาร 2 ชั้น 1'],
+      ['LOC-TR-06', 'ห้องน้ำหญิง - อาคาร 2 ชั้น 1'],
+      ['LOC-TR-07', 'ห้องน้ำชาย - อาคาร 2 ชั้น 2', 'OVERDUE'],
+      ['LOC-TR-08', 'ห้องน้ำหญิง - อาคาร 2 ชั้น 2'],
+      ['LOC-TR-09', 'ห้องน้ำชาย - อาคาร 3 ชั้น 1'],
+      ['LOC-TR-10', 'ห้องน้ำหญิง - อาคาร 3 ชั้น 1'],
+      ['LOC-TR-11', 'ห้องน้ำชาย - อาคาร 3 ชั้น 2'],
+      ['LOC-TR-12', 'ห้องน้ำหญิง - อาคาร 3 ชั้น 2'],
+      ['LOC-CT-04', 'แคนทีน - โซนร้านค้า 6-10'],
+      ['LOC-CT-05', 'แคนทีน - จุดเติมน้ำดื่ม'],
+      ['LOC-CT-06', 'แคนทีน - โซนโต๊ะ B'],
+      ['LOC-CT-07', 'แคนทีน - อ่างล้างมือ'],
+      ['LOC-CL-02', 'ห้องพักพนักงาน ชั้น 2'],
+      ['LOC-CL-03', 'ทางเดิน อาคาร 1 ชั้น 1'],
+      ['LOC-CL-04', 'ทางเดิน อาคาร 2 ชั้น 1'],
+      ['LOC-CL-05', 'ห้องประชุมใหญ่'],
+      ['LOC-CL-06', 'ลานจอดรถจักรยานยนต์'],
+      ['LOC-WS-01', 'จุดแยกขยะ โซน B']
+    ];
+
+    const scanners = ['แม่บ้าน สมศรี', 'แม่บ้าน อำภา', 'จนท. วิชัย', 'จนท. สมปอง'];
+
+    function buildPoints() {
+      const extras = extraPoints.map(([code, name, status = 'NORMAL'], i) => ({
+        id: 7 + i,
+        code,
+        name,
+        interval: 60,
+        status,
+        lastScanned: status === 'OVERDUE' ? '13:50 น.' : `15:${String(i * 2 + 1).padStart(2, '0')} น.`,
+        scanner: scanners[i % scanners.length],
+        dueAt: status === 'OVERDUE' ? '14:50 น. (เลย 45 นาที)' : `16:${String(i * 2 + 1).padStart(2, '0')} น.`,
+        issueTag: null,
+        note: null
+      }));
+      return [...basePoints.map(p => ({ ...p })), ...extras];
+    }
+
+    let points = buildPoints();
+
     function setFilter(f) {
       currentFilter = f;
+      currentPage = 1; // เปลี่ยน filter → กลับไปหน้า 1
       document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
       if (f === 'ALL') document.getElementById('kpiAll').classList.add('active');
       if (f === 'ISSUE') document.getElementById('kpiIssue').classList.add('active');
       if (f === 'OVERDUE') document.getElementById('kpiOverdue').classList.add('active');
       if (f === 'NORMAL') document.getElementById('kpiNormal').classList.add('active');
       render();
+    }
+
+    function onSearch() {
+      currentPage = 1; // พิมพ์ค้นหา → กลับไปหน้า 1
+      render();
+    }
+
+    function setPageSize(size) {
+      pageSize = Number(size);
+      currentPage = 1;
+      render();
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      render();
+      window.scrollTo({ top: document.getElementById('cardsContainer').offsetTop - 16, behavior: 'smooth' });
     }
 
     function switchView(v) {
@@ -628,7 +889,8 @@
       render();
     }
 
-    function render() {
+    // กรอง + เรียงทั้งรายการก่อน แล้วค่อยตัดเป็นหน้า → Issue อยู่หน้า 1 เสมอ
+    function getFilteredSorted() {
       const search = document.getElementById('searchInput').value.toLowerCase();
       const filtered = points.filter(p => {
         const matchesFilter = currentFilter === 'ALL' || p.status === currentFilter;
@@ -638,13 +900,30 @@
 
       // Priority Sort per ADR 0005: ISSUE (แดง) > OVERDUE (ส้ม) > NORMAL (เขียว)
       filtered.sort((a, b) => {
-        const order = { 'ISSUE': 1, 'OVERDUE': 2, 'NORMAL': 3, 'OFFHOURS': 4 };
-        return order[a.status] - order[b.status];
+        const diff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
+        return diff !== 0 ? diff : a.name.localeCompare(b.name, 'th');
       });
+      return filtered;
+    }
+
+    function pageOf(list, code) {
+      const index = list.findIndex(p => p.code === code);
+      return index < 0 ? null : Math.floor(index / pageSize) + 1;
+    }
+
+    function render() {
+      const filtered = getFilteredSorted();
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const start = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(start, start + pageSize);
 
       // Render Cards
       const container = document.getElementById('cardsContainer');
-      container.innerHTML = filtered.map(p => {
+      container.innerHTML = pageItems.length === 0
+        ? `<div style="grid-column: 1 / -1; padding: 60px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 18px;">ไม่พบจุดบริการที่ตรงกับเงื่อนไข</div>`
+        : pageItems.map(p => {
         let badgeClass = 'normal';
         let badgeText = 'ปกติ (Normal)';
         let cardClass = 'status-normal';
@@ -660,7 +939,7 @@
         }
 
         return `
-          <div class="point-card ${cardClass}">
+          <div class="point-card ${cardClass} ${p.code === lastUpdatedCode ? 'just-updated' : ''}">
             <div>
               <div class="card-top">
                 <div>
@@ -688,8 +967,8 @@
 
       // Render Table
       const tableBody = document.getElementById('tableBody');
-      tableBody.innerHTML = filtered.map(p => `
-        <tr>
+      tableBody.innerHTML = pageItems.map(p => `
+        <tr class="${p.code === lastUpdatedCode ? 'just-updated' : ''}">
           <td><span class="status-badge ${p.status.toLowerCase()}">${p.status}</span></td>
           <td><strong>${p.code}</strong></td>
           <td>${p.name}</td>
@@ -701,40 +980,123 @@
         </tr>
       `).join('');
 
-      // Update KPI
+      renderPager(filtered, totalPages, start, pageItems.length);
+
+      // Update KPI (นับทุกจุด ไม่ขึ้นกับหน้าที่เปิด)
       document.getElementById('countAll').innerText = points.length;
       document.getElementById('countIssue').innerText = points.filter(p => p.status === 'ISSUE').length;
       document.getElementById('countOverdue').innerText = points.filter(p => p.status === 'OVERDUE').length;
       document.getElementById('countNormal').innerText = points.filter(p => p.status === 'NORMAL').length;
     }
 
+    // เลขหน้าแบบย่อ: 1 … 4 5 6 … 10
+    function pageList(totalPages) {
+      const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+      const sorted = [...pages].filter(n => n >= 1 && n <= totalPages).sort((a, b) => a - b);
+      const out = [];
+      sorted.forEach((n, i) => {
+        if (i > 0 && n - sorted[i - 1] > 1) out.push('gap');
+        out.push(n);
+      });
+      return out;
+    }
+
+    function renderPager(filtered, totalPages, start, shown) {
+      const info = document.getElementById('pagerInfo');
+      info.innerHTML = filtered.length === 0
+        ? 'ไม่พบจุดบริการ'
+        : `แสดง <strong>${start + 1}–${start + shown}</strong> จาก <strong>${filtered.length}</strong> จุด`;
+
+      // หน้าไหนมีจุด Issue / Overdue → ติดจุดสีบนเลขหน้า
+      const worstOnPage = page => {
+        const slice = filtered.slice((page - 1) * pageSize, page * pageSize);
+        if (slice.some(p => p.status === 'ISSUE')) return 'issue';
+        if (slice.some(p => p.status === 'OVERDUE')) return 'overdue';
+        return null;
+      };
+
+      const buttons = pageList(totalPages).map(item => {
+        if (item === 'gap') return `<span class="page-gap">…</span>`;
+        const dot = worstOnPage(item);
+        return `
+          <button class="page-btn ${item === currentPage ? 'active' : ''}" onclick="goToPage(${item})" aria-label="หน้า ${item}">
+            ${item}${dot && item !== currentPage ? `<span class="page-dot ${dot}"></span>` : ''}
+          </button>`;
+      }).join('');
+
+      document.getElementById('pagerPages').innerHTML = `
+        <button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹ ก่อนหน้า</button>
+        ${buttons}
+        <button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>ถัดไป ›</button>
+      `;
+    }
+
+    // Real-time: อยู่หน้าเดิมเสมอ ถ้าการ์ดย้ายไปหน้าอื่นให้ขึ้น toast พร้อมปุ่ม "ไปดู"
+    function applyLiveUpdate(code, mutate) {
+      const p = points.find(x => x.code === code);
+      if (!p) return;
+
+      mutate(p);
+      lastUpdatedCode = code;
+
+      const newPage = pageOf(getFilteredSorted(), code);
+      render();
+
+      if (newPage === null) {
+        showToast(p, 'ไม่อยู่ในตัวกรองปัจจุบัน', null);
+      } else if (newPage !== currentPage) {
+        showToast(p, `ย้ายไปอยู่หน้า ${newPage}`, newPage);
+      }
+
+      setTimeout(() => {
+        if (lastUpdatedCode === code) {
+          lastUpdatedCode = null;
+          render();
+        }
+      }, 2000);
+    }
+
+    function showToast(p, message, page) {
+      const stack = document.getElementById('toastStack');
+      const toast = document.createElement('div');
+      toast.className = `toast ${p.status.toLowerCase()}`;
+      toast.innerHTML = `
+        <div><strong>${p.name}</strong> → ${STATUS_TEXT[p.status]}<br><span style="color: var(--text-muted);">${message}</span></div>
+        ${page ? `<button class="toast-btn">ไปหน้า ${page}</button>` : ''}
+      `;
+      if (page) {
+        toast.querySelector('.toast-btn').onclick = () => {
+          toast.remove();
+          lastUpdatedCode = p.code;
+          goToPage(page);
+        };
+      }
+      stack.appendChild(toast);
+      setTimeout(() => toast.remove(), 6000);
+    }
+
     // Simulation Handlers
     function simulateScan(code, status, tag = null) {
-      const p = points.find(x => x.code === code);
-      if (p) {
+      applyLiveUpdate(code, p => {
         p.status = status;
         p.lastScanned = 'เมื่อสักครู่ (Live)';
         p.issueTag = tag;
-        p.note = tag ? 'ขยะล้นเกินถัง แม่บ้านแจ้งผ่านมือถือ' : null;
+        p.note = tag ? `${tag} — แม่บ้านแจ้งผ่านมือถือ` : null;
         p.dueAt = 'ในอีก ' + p.interval + ' นาที';
-        render();
-      }
+      });
     }
 
     function simulateOverdue(code) {
-      const p = points.find(x => x.code === code);
-      if (p) {
+      applyLiveUpdate(code, p => {
         p.status = 'OVERDUE';
         p.dueAt = 'เลยกำหนดแล้ว 15 นาที';
-        render();
-      }
+      });
     }
 
     function resetAll() {
-      points[1].status = 'ISSUE';
-      points[1].issueTag = 'ขยะล้น';
-      points[2].status = 'OVERDUE';
-      points[0].status = 'NORMAL';
+      points = buildPoints();
+      lastUpdatedCode = null;
+      currentPage = 1;
       render();
     }
 
