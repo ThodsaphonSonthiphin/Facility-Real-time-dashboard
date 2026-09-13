@@ -6,6 +6,7 @@
     <Project Path="src/FacilityRealtime.Infrastructure/FacilityRealtime.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/FacilityRealtime.ApiTests/FacilityRealtime.ApiTests.csproj" />
     <Project Path="tests/FacilityRealtime.UnitTests/FacilityRealtime.UnitTests.csproj" />
   </Folder>
 </Solution>

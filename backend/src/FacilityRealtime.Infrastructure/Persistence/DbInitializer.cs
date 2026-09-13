@@ -12,8 +12,6 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(AppDbContext context)
     {
-        await context.Database.EnsureCreatedAsync();
-
         // 1. Seed Users if empty
         if (!await context.Users.AnyAsync())
         {

@@ -25,12 +25,17 @@ if (workingHours.Start >= workingHours.End)
 }
 builder.Services.AddSingleton(workingHours);
 
-// 1. Database Context
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Server=localhost;Port=3306;Database=facility_dashboard;Uid=root;Pwd=;CharSet=utf8mb4;";
+// 1. Clock and Database Context. The "Testing" environment (API tests) registers its own SQLite context.
+builder.Services.AddSingleton(TimeProvider.System);
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySQL(connectionString));
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Server=localhost;Port=3306;Database=facility_dashboard;Uid=root;Pwd=;CharSet=utf8mb4;";
+
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseMySQL(connectionString));
+}
 
 // 2. SignalR with string enum serialization
 builder.Services.AddSignalR()
@@ -63,10 +68,12 @@ var app = builder.Build();
 
 app.UseCors("AllowAll");
 
-// 5. Seed initial data on startup
-using (var scope = app.Services.CreateScope())
+// 5. Apply migrations and seed on startup (tests create their own schema)
+if (!app.Environment.IsEnvironment("Testing"))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
     await DbInitializer.SeedAsync(db);
 }
 
@@ -237,3 +244,6 @@ app.MapPost("/api/scan-records", async (
 });
 
 app.Run();
+
+// Lets WebApplicationFactory<Program> in the API tests reach the entry point
+public partial class Program;
