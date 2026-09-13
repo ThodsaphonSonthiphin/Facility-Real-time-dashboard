@@ -24,6 +24,10 @@ _Avoid_: User Profile, Member, Employee Profile
 บัญชีผู้ใช้งานระดับผู้ดูแลระบบ มีสิทธิ์จัดการ Service Point, ออก QR Token ใหม่ และจัดการบัญชีผู้ใช้ ซึ่ง Cleaner Account ทำไม่ได้
 _Avoid_: Superuser, Root, Manager
 
+**Deactivated Account**:
+บัญชี (Cleaner หรือ Admin) ที่ Admin ปิดใช้งาน login ไม่ได้และ Session ที่ค้างอยู่หลุดภายในไม่กี่นาที แต่ประวัติ Scan Record และชื่อยังคงอยู่ เพราะระบบไม่ลบบัญชี Admin เปิดใช้งานกลับได้
+_Avoid_: Deleted User, Banned, Archived
+
 **Point Status**:
 สถานะของ Service Point ที่แสดงบนการ์ดใน Dashboard คำนวณสดจาก Scan Record ล่าสุด, Cleaning Interval และ Working Hours มี 4 ค่า ตามลำดับความสำคัญ: Issue (แดง), Off Hours (เทา), Overdue (ส้ม), Normal (เขียว) เป็นคนละอย่างกับ Cleaning Status ซึ่งเป็นค่าของการสแกนแต่ละครั้ง
 _Avoid_: Card Color, Point State, Alert Level
