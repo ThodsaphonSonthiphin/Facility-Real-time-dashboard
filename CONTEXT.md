@@ -16,6 +16,22 @@ _Avoid_: Checkpoint, Station, Location ID
 ป้ายกระดาษที่พิมพ์และติดไว้ที่ Service Point มี QR Code ของ QR Token ปัจจุบันของจุดนั้น เมื่อ Admin ออก QR Token ใหม่ ป้ายเดิมสแกนไม่ได้ทันทีและต้องพิมพ์ป้ายใหม่ไปติดแทน
 _Avoid_: Sticker, QR Image, Label
 
+**NFC Sign**:
+ป้าย NFC ที่ติดไว้ที่ Service Point คู่กับ QR Sign ทุกครั้งที่แตะมือถือจะได้ Tap Link ใหม่ เป็นทางหลักในการบันทึก Scan Record ส่วนป้าย NFC ที่ให้ลิงก์เดิมทุกครั้งไม่นับเป็น NFC Sign
+_Avoid_: NFC Sticker, Tag, Chip
+
+**Tap Link**:
+ลิงก์ที่ NFC Sign สร้างขึ้นในการแตะหนึ่งครั้ง ใช้บันทึก Scan Record ได้ครั้งเดียว ถ้าใช้ซ้ำ (เช่น จาก bookmark) ระบบปฏิเสธ
+_Avoid_: NFC URL, Scan Link, One-time Token
+
+**QR Fallback**:
+สิทธิ์ของ Cleaner Account ที่ Admin เปิดให้บันทึก Scan Record ด้วย QR Sign ได้ตามปกติ สำหรับคนที่มือถือไม่มี NFC
+_Avoid_: QR Mode, QR Permission, Legacy Scan
+
+**Flagged Scan Record**:
+Scan Record ที่ระบบรับไว้แต่ติดธงว่าอาจไม่ได้สแกนที่ Service Point จริง เช่น สแกนด้วย QR Sign โดยไม่มี QR Fallback หรือเวลาสแกนผิดปกติ ต่างจาก Tap Link ที่ใช้ซ้ำ ซึ่งถูกปฏิเสธและไม่เกิด Scan Record เลย
+_Avoid_: Fake Scan, Rejected Scan, Suspicious Scan
+
 **Deactivated Service Point**:
 Service Point ที่ Admin ปิดใช้งาน หายจาก Dashboard และ QR Sign ของจุดนั้นสแกนไม่ได้ แต่ประวัติ Scan Record ยังอยู่ เพราะระบบไม่ลบจุด Admin เปิดใช้งานกลับได้
 _Avoid_: Deleted Point, Archived Point, Hidden Point
