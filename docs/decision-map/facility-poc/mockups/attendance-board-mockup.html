@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup: หน้าจอรายชื่อแม่บ้าน 170 คน (Attendance Board — Ticket #39)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --card-dark: #131c2e;
+      --card-inner: #1a2642;
+      --border-dark: #27354f;
+      --accent-cyan: #38bdf8;
+      --accent-blue: #3b82f6;
+      --accent-indigo: #6366f1;
+      --success-green: #10b981;
+      --warning-amber: #f59e0b;
+      --danger-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 75%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      text-align: center;
+      max-width: 1080px;
+      margin-bottom: 20px;
+    }
+
+    .badge-ticket {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: var(--accent-cyan);
+      padding: 4px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 25px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    p.sub {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* Layout Selection Switcher (Sticky at top) */
+    .layout-switcher {
+      display: flex;
+      gap: 12px;
+      background: #111827;
+      border: 1px solid var(--border-dark);
+      padding: 8px;
+      border-radius: 14px;
+      margin-bottom: 24px;
+      max-width: 1080px;
+      width: 100%;
+    }
+
+    .switcher-btn {
+      flex: 1;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 12px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: left;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .switcher-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    .switcher-btn.active {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: var(--accent-cyan);
+      color: #fff;
+    }
+
+    .switcher-btn strong {
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .switcher-btn small {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+
+    .switcher-btn.active strong { color: var(--accent-cyan); }
+    .switcher-btn.active small { color: #cbd5e1; }
+
+    /* Mockup Display Container */
+    .mockup-frame {
+      background: #0f172a;
+      border: 1px solid var(--border-dark);
+      border-radius: 18px;
+      max-width: 1120px;
+      width: 100%;
+      overflow: hidden;
+      box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.6);
+      margin-bottom: 30px;
+    }
+
+    /* Fake App Top Nav */
+    .app-navbar {
+      background: #1e293b;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      color: #f8fafc;
+      font-size: 15px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 8px;
+    }
+
+    .nav-tab-item {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-tab-item.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: var(--accent-cyan);
+    }
+
+    /* Content Area */
+    .app-content {
+      padding: 24px;
+      min-height: 520px;
+    }
+
+    /* Dashboard Sub-Tabs (For Layout 1) */
+    .dash-subtabs {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-dark);
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+    }
+
+    .subtab-btn {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--border-dark);
+      padding: 9px 18px;
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .subtab-btn.active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: #fff;
+    }
+
+    /* Filter & Summary Section */
+    .filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      background: #131c2e;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--border-dark);
+    }
+
+    .building-select {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* Area Group Cards (User's specific requirement!) */
+    .area-coverage-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .area-card {
+      background: #131d33;
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .area-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .area-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #f8fafc;
+    }
+
+    .progress-bar-bg {
+      background: #1e293b;
+      height: 8px;
+      border-radius: 99px;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+
+    /* Table Styles */
+    .attendance-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: #131d33;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-dark);
+    }
+
+    .attendance-table th, .attendance-table td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .attendance-table th {
+      background: #1a2642;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tag-present { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .tag-absent { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .service-cards-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .mini-point-card {
+      background: #1a2642;
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 12px;
+      border-left: 4px solid #10b981;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge-ticket">🎫 Ticket #39 • Interactive Layout Showcase</div>
+    <h1>เปรียบเทียบหน้าจอ Attendance Board ทั้ง 3 ตัวเลือก</h1>
+    <p class="sub">
+      รองรับบริบทจริง: <strong>โรงงาน 6 ตึก 70 จุดบริการ</strong> และแสดงว่าแต่ละจุดมีแม่บ้านรับผิดชอบกี่คน เข้างานแล้วกี่คน (เช่น จุดที่ 1 รับผิดชอบ 10 คน เข้างาน 7 คน)
+    </p>
+  </header>
+
+  <!-- 3 Layout Options Switcher -->
+  <div class="layout-switcher">
+    <button class="switcher-btn active" id="btn-opt1" onclick="switchLayout(1)">
+      <strong>📁 แบบที่ 1: แท็บสลับบนหน้า Dashboard (แนะนำ)</strong>
+      <small>อยู่ใน Dashboard เดิม มีแท็บ 'จุดบริการ' และแท็บ 'การเข้างานแม่บ้าน' สลับไปมาง่าย</small>
+    </button>
+    <button class="switcher-btn" id="btn-opt2" onclick="switchLayout(2)">
+      <strong>🌐 แบบที่ 2: หน้าแยกเดี่ยว (/attendance) บน Navbar</strong>
+      <small>เพิ่มปุ่มเมนูใหม่บน Navbar ด้านบนสุด แยกเป็นหน้าเอกเทศ มี URL ของตัวเองชัดเจน</small>
+    </button>
+    <button class="switcher-btn" id="btn-opt3" onclick="switchLayout(3)">
+      <strong>📑 แบบที่ 3: รวมในหน้าเดียวกัน (Split View)</strong>
+      <small>ครึ่งบนแสดงการ์ดจุดบริการ ครึ่งล่างเลื่อนลงมาเจอตารางเข้างานแม่บ้านพร้อมกัน</small>
+    </button>
+  </div>
+
+  <!-- Main Mockup Frame -->
+  <div class="mockup-frame">
+
+    <!-- Top Fake Navbar -->
+    <div class="app-navbar">
+      <div class="nav-brand">
+        <span>🏢 Facility Real-time Dashboard</span>
+        <span style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+          WD Factory • 6 ตึก 70 จุด
+        </span>
+      </div>
+      <div class="nav-links" id="nav-container">
+        <!-- Rendered by JS based on layout -->
+      </div>
+    </div>
+
+    <!-- App Body Content -->
+    <div class="app-content" id="app-content-area">
+      <!-- Dynamic Layout Content Rendered by JS -->
+    </div>
+
+  </div>
+
+  <script>
+    // Shared Data for Factory Model (6 Buildings, Areas with cleaners assigned)
+    const areasData = [
+      { id: 'LOC-B1-F1', name: 'ห้องน้ำชาย ตึก 1 ชั้น 1', building: 'ตึก 1 (Main Office)', assigned: 10, present: 7, absent: 3, percent: 70, statusColor: '#f59e0b' },
+      { id: 'LOC-B1-F2', name: 'ห้องน้ำหญิง ตึก 1 ชั้น 2', building: 'ตึก 1 (Main Office)', assigned: 8, present: 8, absent: 0, percent: 100, statusColor: '#10b981' },
+      { id: 'LOC-B2-CR', name: 'คลีนรูม โซน A ตึก 2', building: 'ตึก 2 (Cleanroom)', assigned: 12, present: 11, absent: 1, percent: 92, statusColor: '#10b981' },
+      { id: 'LOC-B4-CT', name: 'แคนทีนกลาง ตึก 4', building: 'ตึก 4 (Canteen & Hall)', assigned: 15, present: 12, absent: 3, percent: 80, statusColor: '#38bdf8' }
+    ];
+
+    const cleanersData = [
+      { id: 'EMP-01', name: 'สมชาย ใจดี', building: 'ตึก 1', area: 'ห้องน้ำชาย ตึก 1 ชั้น 1', status: 'PRESENT', time: '06:55 น.', lastAction: 'สแกนห้องน้ำชาย 07:10 น.' },
+      { id: 'EMP-02', name: 'สมหญิง มีสุข', building: 'ตึก 1', area: 'ห้องน้ำชาย ตึก 1 ชั้น 1', status: 'PRESENT', time: '06:48 น.', lastAction: 'สแกนห้องน้ำชาย 07:05 น.' },
+      { id: 'EMP-03', name: 'มานะ ขยันงาน', building: 'ตึก 1', area: 'ห้องน้ำชาย ตึก 1 ชั้น 1', status: 'ABSENT', time: '-', lastAction: 'ยังไม่มีสแกน' },
+      { id: 'EMP-04', name: 'วิชัย มั่นคง', building: 'ตึก 2', area: 'คลีนรูม โซน A ตึก 2', status: 'PRESENT', time: '06:58 น.', lastAction: 'สแกนคลีนรูม 07:15 น.' },
+      { id: 'EMP-05', name: 'กานดา สดใส', building: 'ตึก 4', area: 'แคนทีนกลาง ตึก 4', status: 'PRESENT', time: '06:40 น.', lastAction: 'สแกนแคนทีน 07:00 น.' }
+    ];
+
+    function renderAttendanceView(isSubTab = false) {
+      return `
+        <!-- Filter & Header Summary -->
+        <div class="filter-bar">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <label style="font-size: 13px; color: #94a3b8; font-weight: 600;">เลือกตึก:</label>
+            <select class="building-select">
+              <option>ทุกตึก (ตึก 1 ถึง ตึก 6 • 70 พื้นที่)</option>
+              <option>ตึก 1 (Main Office)</option>
+              <option>ตึก 2 (Cleanroom)</option>
+              <option>ตึก 3 (Warehouse)</option>
+              <option>ตึก 4 (Canteen & Hall)</option>
+              <option>ตึก 5 (Packaging)</option>
+              <option>ตึก 6 (Facility & Utilities)</option>
+            </select>
+            <span style="font-size: 12px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; padding: 4px 10px; border-radius: 6px;">
+              ☀️ กะปัจจุบัน: กลางวัน (07:00 – 19:00)
+            </span>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <div class="stat-pill" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+              เข้างานแล้ว: <strong>142 / 170 คน</strong>
+            </div>
+            <div class="stat-pill" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
+              ยังไม่เข้างาน: <strong>28 คน</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Area Coverage Summary Cards (WD specific requirement: จุดที่ 1 มีแม่บ้าน 10 คน เข้า 7 คน) -->
+        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 15px; font-weight: 700; color: #38bdf8;">
+            📍 อัตรากำลังแม่บ้านแยกตามจุดบริการ (Area Capacity & Attendance):
+          </h3>
+          <span style="font-size: 12px; color: #94a3b8;">แสดง 4 จุดตัวอย่างจาก 70 จุด</span>
+        </div>
+
+        <div class="area-coverage-grid">
+          ${areasData.map(a => `
+            <div class="area-card">
+              <div class="area-card-header">
+                <span class="area-title">${a.name}</span>
+                <span style="font-size: 11px; background: #1e293b; color: #94a3b8; padding: 2px 6px; border-radius: 4px;">${a.building}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0;">
+                <span style="color: #cbd5e1;">แม่บ้านประจำจุด: <strong>${a.assigned} คน</strong></span>
+                <span style="color: ${a.statusColor}; font-weight: 700;">เข้างานแล้ว: ${a.present} คน (ขาด ${a.absent} คน)</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${a.percent}%; background: ${a.statusColor};"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Cleaners Roster Table -->
+        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 15px; font-weight: 700; color: #f8fafc;">
+            👥 รายชื่อแม่บ้านตามจุดรับผิดชอบ (170 คน):
+          </h3>
+          <input type="text" placeholder="🔍 ค้นหาชื่อแม่บ้าน หรือ ตึก..." style="background: #1e293b; border: 1px solid #334155; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; width: 220px;">
+        </div>
+
+        <table class="attendance-table">
+          <thead>
+            <tr>
+              <th>รหัส/ชื่อแม่บ้าน</th>
+              <th>ตึกที่ประจำ</th>
+              <th>จุดบริการที่รับผิดชอบ</th>
+              <th>สถานะเข้างาน</th>
+              <th>เวลาที่สแกนเข้ากะ</th>
+              <th>งานทำความสะอาดล่าสุด</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cleanersData.map(c => `
+              <tr>
+                <td><strong>${c.name}</strong> <span style="font-size: 11px; color: #94a3b8;">(${c.id})</span></td>
+                <td><span style="background: #1e293b; padding: 2px 6px; border-radius: 4px;">${c.building}</span></td>
+                <td><span style="color: #38bdf8;">${c.area}</span></td>
+                <td>
+                  ${c.status === 'PRESENT' 
+                    ? `<span class="tag-status tag-present">✓ เข้างานแล้ว</span>` 
+                    : `<span class="tag-status tag-absent">✕ ยังไม่เข้างาน</span>`}
+                </td>
+                <td style="font-weight: 600;">${c.time}</td>
+                <td style="color: #94a3b8;">${c.lastAction}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderServicePointsPreview() {
+      return `
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 16px; color: #38bdf8;">🏢 สถานะความสะอาดตามจุดบริการ (70 จุด):</h3>
+          <span style="font-size: 12px; color: #94a3b8;">การ์ดสถานะ Normal, Overdue, Issue ตามรอบเวลา</span>
+        </div>
+        <div class="service-cards-preview">
+          <div class="mini-point-card" style="border-left-color: #10b981;">
+            <div style="font-weight: 700; font-size: 14px;">ห้องน้ำชาย ชั้น 1 (ตึก 1)</div>
+            <div style="font-size: 12px; color: #34d399; margin: 4px 0;">● ปกติ (NORMAL)</div>
+            <div style="font-size: 11px; color: #94a3b8;">สแกนล่าสุด: 07:10 น. โดย สมชาย ใจดี</div>
+          </div>
+          <div class="mini-point-card" style="border-left-color: #f59e0b;">
+            <div style="font-weight: 700; font-size: 14px;">ห้องน้ำหญิง ชั้น 2 (ตึก 1)</div>
+            <div style="font-size: 12px; color: #fbbf24; margin: 4px 0;">● ใกล้ครบรอบ (15 นาที)</div>
+            <div style="font-size: 11px; color: #94a3b8;">สแกนล่าสุด: 06:15 น. โดย สมหญิง มีสุข</div>
+          </div>
+          <div class="mini-point-card" style="border-left-color: #ef4444;">
+            <div style="font-weight: 700; font-size: 14px;">แคนทีนกลาง (ตึก 4)</div>
+            <div style="font-size: 12px; color: #f87171; margin: 4px 0;">● พบปัญหา (ISSUE): ขยะล้น</div>
+            <div style="font-size: 11px; color: #94a3b8;">สแกนล่าสุด: 07:00 น. โดย กานดา สดใส</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function switchLayout(option) {
+      document.querySelectorAll('.switcher-btn').forEach((b, i) => {
+        b.classList.toggle('active', i === (option - 1));
+      });
+
+      const nav = document.getElementById('nav-container');
+      const content = document.getElementById('app-content-area');
+
+      if (option === 1) {
+        // Option 1: Tab switcher inside Dashboard
+        nav.innerHTML = `
+          <button class="nav-tab-item active">📊 จอ Dashboard</button>
+          <button class="nav-tab-item">📍 จัดการจุดบริการ</button>
+          <button class="nav-tab-item">👥 จัดการบัญชีผู้ใช้</button>
+        `;
+        content.innerHTML = `
+          <div class="dash-subtabs">
+            <button class="subtab-btn" onclick="toggleSubtab(1)">🏢 สถานะจุดบริการ (70 จุด)</button>
+            <button class="subtab-btn active" onclick="toggleSubtab(2)">👥 การเข้างานแม่บ้าน (170 คน)</button>
+          </div>
+          <div id="subtab-content">
+            ${renderAttendanceView(true)}
+          </div>
+        `;
+      } else if (option === 2) {
+        // Option 2: Separate Page on Navbar (/attendance)
+        nav.innerHTML = `
+          <button class="nav-tab-item">📊 จอ Dashboard</button>
+          <button class="nav-tab-item active" style="background: rgba(99, 102, 241, 0.2); border-color: #6366f1; color: #a5b4fc;">
+            👥 การเข้างานแม่บ้าน (/attendance)
+          </button>
+          <button class="nav-tab-item">📍 จัดการจุดบริการ</button>
+          <button class="nav-tab-item">👥 จัดการบัญชีผู้ใช้</button>
+        `;
+        content.innerHTML = `
+          <div style="margin-bottom: 20px;">
+            <h2 style="font-size: 20px; font-weight: 700; color: #fff;">👥 ระบบติดตามการเข้างานแม่บ้าน (Attendance Board)</h2>
+            <p style="font-size: 13px; color: #94a3b8;">หน้าเฉพาะสำหรับหัวหน้า Admin ตรวจสอบความพร้อมของแม่บ้าน 170 คนทั่วทั้ง 6 ตึก</p>
+          </div>
+          ${renderAttendanceView()}
+        `;
+      } else if (option === 3) {
+        // Option 3: Split View on same page
+        nav.innerHTML = `
+          <button class="nav-tab-item active">📊 จอ Dashboard</button>
+          <button class="nav-tab-item">📍 จัดการจุดบริการ</button>
+          <button class="nav-tab-item">👥 จัดการบัญชีผู้ใช้</button>
+        `;
+        content.innerHTML = `
+          <div style="margin-bottom: 24px;">
+            ${renderServicePointsPreview()}
+          </div>
+          <hr style="border: 0; border-top: 1px solid var(--border-dark); margin: 24px 0;">
+          <div>
+            ${renderAttendanceView()}
+          </div>
+        `;
+      }
+    }
+
+    function toggleSubtab(sub) {
+      const subContent = document.getElementById('subtab-content');
+      document.querySelectorAll('.subtab-btn').forEach((b, i) => {
+        b.classList.toggle('active', i === (sub - 1));
+      });
+      if (sub === 1) {
+        subContent.innerHTML = renderServicePointsPreview();
+      } else {
+        subContent.innerHTML = renderAttendanceView(true);
+      }
+    }
+
+    // Default to Option 1
+    switchLayout(1);
+  </script>
+</body>
+</html>

@@ -75,3 +75,25 @@ _Avoid_: Cookie, Remember Token, Keep-Alive
 **QR Token**:
 ค่ารหัสเฉพาะ (UUID) ประจำจุดบริการที่ฝังอยู่ใน QR Code เพื่อใช้เปิดหน้าเว็บสแกน สามารถกดสร้างใหม่ได้เมื่อป้ายชำรุด โดยไม่ต้องเปลี่ยนรหัสจุดเดิม
 _Avoid_: Secret Key, QR String, Barcode Value
+
+**Shift Check-In**:
+การบันทึกเวลาเข้างานของ Cleaner Account ในแต่ละกะการทำงาน (Day: 07:00–19:00, Night: 19:00–07:00) สแกนที่ Check-In Sign ก่อนเริ่มงาน เป็นเงื่อนไขจำเป็นก่อนสแกน Service Point ได้ สแกนซ้ำในกะเดียวยึดเวลาแรก (First-in wins)
+_Avoid_: Time Attendance, Clock In, Scan Record
+
+**Check-In Sign**:
+ป้าย QR/NFC เฉพาะสำหรับสแกนเข้างาน ติดตั้งไว้ที่ทางเข้าโรงงาน ป้อม รปภ. หรือห้องพักแม่บ้าน แยกจาก QR Sign ของ Service Point
+_Avoid_: Gate QR, Station Sign, Attendance QR
+
+**Attendance Status**:
+สถานะการเข้างานของ Cleaner Account ในกะปัจจุบัน มี 2 ค่าหลักคือ เข้างานแล้ว (Present) และ ยังไม่เข้างาน (Absent / Not Checked In) แสดงบน Dashboard ของหัวหน้า
+_Avoid_: Worker Status, Shift State, Member Attendance
+
+**Attendance Board**:
+หน้าจอแสดงรายงานและรายชื่อการเข้างานของ Cleaner Account ทั้ง 170 คนแบบเรียลไทม์ เป็นแท็บย่อยบน Dashboard ให้ Admin Account ตรวจสอบอัตรากำลังและคนขาดในแต่ละกะ
+_Avoid_: Check-In Page, Attendance View, Staff Table
+
+**Area Capacity**:
+จำนวน Cleaner Account ที่ได้รับมอบหมายประจำ ณ จุดบริการหนึ่งจุด พร้อมสถานะว่าเข้างานแล้วกี่คนและขาดกี่คน (เช่น จุดที่ 1 ประจำ 10 คน เข้างาน 7 คน)
+_Avoid_: Staffing Level, Headcount Quota, Worker Ratio
+
+
