@@ -13,23 +13,11 @@ _Avoid_: Check-in, Stamp, Log
 _Avoid_: Checkpoint, Station, Location ID
 
 **QR Sign**:
-ป้ายกระดาษที่พิมพ์และติดไว้ที่ Service Point มี QR Code ของ QR Token ปัจจุบันของจุดนั้น เมื่อ Admin ออก QR Token ใหม่ ป้ายเดิมสแกนไม่ได้ทันทีและต้องพิมพ์ป้ายใหม่ไปติดแทน
+ป้ายกระดาษที่พิมพ์และติดไว้ที่ Service Point มี QR Code ของ QR Token ปัจจุบันของจุดนั้น และมีพิกัดกับรัศมีของตัวเองไว้เทียบกับพิกัดมือถือตอนสแกน เมื่อ Admin ออก QR Token ใหม่ ป้ายเดิมสแกนไม่ได้ทันทีและต้องพิมพ์ป้ายใหม่ไปติดแทน
 _Avoid_: Sticker, QR Image, Label
 
-**NFC Sign**:
-ป้าย NFC ที่ติดไว้ที่ Service Point คู่กับ QR Sign ทุกครั้งที่แตะมือถือจะได้ Tap Link ใหม่ เป็นทางหลักในการบันทึก Scan Record ส่วนป้าย NFC ที่ให้ลิงก์เดิมทุกครั้งไม่นับเป็น NFC Sign
-_Avoid_: NFC Sticker, Tag, Chip
-
-**Tap Link**:
-ลิงก์ที่ NFC Sign สร้างขึ้นในการแตะหนึ่งครั้ง ใช้บันทึก Scan Record ได้ครั้งเดียว ถ้าใช้ซ้ำ (เช่น จาก bookmark) ระบบปฏิเสธ
-_Avoid_: NFC URL, Scan Link, One-time Token
-
-**QR Fallback**:
-สิทธิ์ของ Cleaner Account ที่ Admin เปิดให้บันทึก Scan Record ด้วย QR Sign ได้ตามปกติ สำหรับคนที่มือถือไม่มี NFC
-_Avoid_: QR Mode, QR Permission, Legacy Scan
-
 **Flagged Scan Record**:
-Scan Record ที่ระบบรับไว้แต่ติดธงว่าอาจไม่ได้สแกนที่ Service Point จริง เช่น สแกนด้วย QR Sign โดยไม่มี QR Fallback หรือเวลาสแกนผิดปกติ ต่างจาก Tap Link ที่ใช้ซ้ำ ซึ่งถูกปฏิเสธและไม่เกิด Scan Record เลย
+Scan Record ที่ระบบรับไว้แต่ติดธงว่าอาจไม่ได้สแกนที่ Service Point จริง เช่น พิกัดมือถืออยู่นอกรัศมีของ QR Sign หรือคลาดเคลื่อนเกินรัศมี หรือเวลาสแกนผิดปกติ
 _Avoid_: Fake Scan, Rejected Scan, Suspicious Scan
 
 **Deactivated Service Point**:
@@ -81,7 +69,7 @@ _Avoid_: Secret Key, QR String, Barcode Value
 _Avoid_: Time Attendance, Clock In, Scan Record
 
 **Check-In Sign**:
-ป้าย QR/NFC เฉพาะสำหรับสแกนเข้างาน ติดตั้งไว้ที่ทางเข้าโรงงาน ป้อม รปภ. หรือห้องพักแม่บ้าน แยกจาก QR Sign ของ Service Point
+ป้ายเฉพาะสำหรับสแกนเข้างาน ติดหน้าประตูทางเข้าของแต่ละตึก ตึกละป้าย แม่บ้านสแกนที่ป้ายของตึกที่ตนรับผิดชอบ แยกจาก QR Sign ของ Service Point
 _Avoid_: Gate QR, Station Sign, Attendance QR
 
 **Attendance Status**:
@@ -96,4 +84,42 @@ _Avoid_: Check-In Page, Attendance View, Staff Table
 จำนวน Cleaner Account ที่ได้รับมอบหมายประจำ ณ จุดบริการหนึ่งจุด พร้อมสถานะว่าเข้างานแล้วกี่คนและขาดกี่คน (เช่น จุดที่ 1 ประจำ 10 คน เข้างาน 7 คน)
 _Avoid_: Staffing Level, Headcount Quota, Worker Ratio
 
+**GPS Geofencing**:
+การเทียบพิกัดมือถือตอนสแกน Check-In Sign กับพิกัดของป้ายนั้น ถ้าอยู่นอกรัศมีจะได้ Geofence Flag ไม่ใช่การปฏิเสธ
+_Avoid_: Location Spoofing, Area Lock, GPS Tracking
 
+**Geofence Flag**:
+ธงบนการลงเวลาที่ระบบรับไว้แล้ว แต่พิกัดอยู่นอกรัศมีหรือคลาดเคลื่อนเกินรัศมีของ Check-In Sign หรือเป็นป้ายของตึกที่ไม่ใช่ตึกที่ตนรับผิดชอบ (ถ้าปิด Location จะลงเวลาไม่ได้เลย จึงไม่เกิดธง) แสดงบน Dashboard ให้หัวหน้าเรียกคุย
+_Avoid_: GPS Error, Location Violation, Rejected Check-In
+
+**Supervisor Account**:
+บัญชีผู้ใช้งานระดับหัวหน้างาน มีสิทธิ์สแกนตรวจรับพื้นที่ ประเมินผลความสะอาด (สะอาด หรือ ต้องแก้ไข) และระบุข้อบกพร่อง ซึ่งแยกจากสิทธิ์ของ Cleaner Account และ Admin Account
+_Avoid_: Inspector, Auditor, Team Lead
+
+**Inspection Record**:
+รายการบันทึกการตรวจพื้นที่โดย Supervisor ณ จุดบริการ ประกอบด้วย เวลาที่ตรวจ, ผู้ตรวจ, ผลการประเมิน (Cleaned/Passed หรือ Rework), และข้อความระบุข้อบกพร่อง
+_Avoid_: Audit Log, Evaluation Record, Check Result
+
+**Inspection Status**:
+สถานะผลการตรวจรับงานของจุดบริการ มีค่า: Pending Inspection (รอตรวจ), Passed (สะอาด/ผ่าน), และ Rework (ต้องแก้ไข)
+_Avoid_: Review State, Grade, Score
+
+**Assigned Zone**:
+พื้นที่เป้าหมาย (ระดับ Building หรือ Floor) ที่ Cleaner Account ได้รับมอบหมายให้ปฏิบัติงานประจำ
+_Avoid_: Work Area, Target Station, Duty Location
+
+**Wrong-Zone Flag**:
+ธงแจ้งเตือนบน Scan Record เมื่อ Cleaner Account สแกน ณ จุดบริการที่อยู่นอกพื้นที่รับผิดชอบของตน โดยระบบยอมรับการบันทึกเพื่อความยืดหยุ่นหน้างาน แต่ขึ้นเตือนบน Dashboard ให้หัวหน้างานรับทราบ
+_Avoid_: Unauthorized Scan, Cross-Building Error, Invalid Location
+
+**Attendance Event**:
+รายการลงเวลาเข้า-ออกของ Cleaner Account ในรอบวัน มี 4 จังหวะ: เข้างาน (Shift-In), ออกพักเบรก (Break-Out), กลับจากเบรก (Break-In), และ เลิกงาน (Shift-Out) รวมเฉลี่ยประมาณ 4 ครั้ง/คน/วัน (รวม ~680 เรคคอร์ด/วัน สำหรับแม่บ้าน 170 คน)
+_Avoid_: Punch Clock, Time Card, Clock Event
+
+**Point Schedule Type**:
+รูปแบบรอบเวลาการดูแลของ Service Point แบ่งเป็น 2 แบบ: Interval-based (นับถอยหลังตาม Cleaning Interval เหมาะกับห้องน้ำ/แคนทีน) และ Shift-based (ทำ 1 ครั้งต่อกะ รีเซ็ตสถานะอัตโนมัติเมื่อตัดกะ 07:00 และ 19:00 เหมาะกับทางเดิน/ออฟฟิศ)
+_Avoid_: Reset Mode, Schedule Mode, Frequency Type
+
+**Pilot Scope**:
+ขอบเขตการนำร่องในเฟสแรก ประกอบด้วย อาคาร A (2 ชั้น), จุดบริการตัวแทน 10–12 จุด (ผสมห้องน้ำและทางเดิน), แม่บ้านกลุ่มนำร่อง 10–15 คน และหัวหน้างาน 1–2 คน เพื่อพิสูจน์ Paper Flow และระบบจริง ก่อนขยายเต็มรูปแบบ 6 อาคาร (170 คน)
+_Avoid_: Test Phase, Trial Run, MVP Boundary
