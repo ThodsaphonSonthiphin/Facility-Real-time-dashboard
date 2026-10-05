@@ -16,6 +16,22 @@ _Avoid_: Checkpoint, Station, Location ID
 ป้ายกระดาษที่พิมพ์และติดไว้ที่ Service Point มี QR Code ของ QR Token ปัจจุบันของจุดนั้น เมื่อ Admin ออก QR Token ใหม่ ป้ายเดิมสแกนไม่ได้ทันทีและต้องพิมพ์ป้ายใหม่ไปติดแทน
 _Avoid_: Sticker, QR Image, Label
 
+**NFC Sign**:
+ป้าย NFC ที่ติดไว้ที่ Service Point คู่กับ QR Sign ทุกครั้งที่แตะมือถือจะได้ Tap Link ใหม่ เป็นทางหลักในการบันทึก Scan Record ส่วนป้าย NFC ที่ให้ลิงก์เดิมทุกครั้งไม่นับเป็น NFC Sign
+_Avoid_: NFC Sticker, Tag, Chip
+
+**Tap Link**:
+ลิงก์ที่ NFC Sign สร้างขึ้นในการแตะหนึ่งครั้ง ใช้บันทึก Scan Record ได้ครั้งเดียว ถ้าใช้ซ้ำ (เช่น จาก bookmark) ระบบปฏิเสธ
+_Avoid_: NFC URL, Scan Link, One-time Token
+
+**QR Fallback**:
+สิทธิ์ของ Cleaner Account ที่ Admin เปิดให้บันทึก Scan Record ด้วย QR Sign ได้ตามปกติ สำหรับคนที่มือถือไม่มี NFC
+_Avoid_: QR Mode, QR Permission, Legacy Scan
+
+**Flagged Scan Record**:
+Scan Record ที่ระบบรับไว้แต่ติดธงว่าอาจไม่ได้สแกนที่ Service Point จริง เช่น สแกนด้วย QR Sign โดยไม่มี QR Fallback หรือเวลาสแกนผิดปกติ ต่างจาก Tap Link ที่ใช้ซ้ำ ซึ่งถูกปฏิเสธและไม่เกิด Scan Record เลย
+_Avoid_: Fake Scan, Rejected Scan, Suspicious Scan
+
 **Deactivated Service Point**:
 Service Point ที่ Admin ปิดใช้งาน หายจาก Dashboard และ QR Sign ของจุดนั้นสแกนไม่ได้ แต่ประวัติ Scan Record ยังอยู่ เพราะระบบไม่ลบจุด Admin เปิดใช้งานกลับได้
 _Avoid_: Deleted Point, Archived Point, Hidden Point
@@ -59,3 +75,25 @@ _Avoid_: Cookie, Remember Token, Keep-Alive
 **QR Token**:
 ค่ารหัสเฉพาะ (UUID) ประจำจุดบริการที่ฝังอยู่ใน QR Code เพื่อใช้เปิดหน้าเว็บสแกน สามารถกดสร้างใหม่ได้เมื่อป้ายชำรุด โดยไม่ต้องเปลี่ยนรหัสจุดเดิม
 _Avoid_: Secret Key, QR String, Barcode Value
+
+**Shift Check-In**:
+การบันทึกเวลาเข้างานของ Cleaner Account ในแต่ละกะการทำงาน (Day: 07:00–19:00, Night: 19:00–07:00) สแกนที่ Check-In Sign ก่อนเริ่มงาน เป็นเงื่อนไขจำเป็นก่อนสแกน Service Point ได้ สแกนซ้ำในกะเดียวยึดเวลาแรก (First-in wins)
+_Avoid_: Time Attendance, Clock In, Scan Record
+
+**Check-In Sign**:
+ป้าย QR/NFC เฉพาะสำหรับสแกนเข้างาน ติดตั้งไว้ที่ทางเข้าโรงงาน ป้อม รปภ. หรือห้องพักแม่บ้าน แยกจาก QR Sign ของ Service Point
+_Avoid_: Gate QR, Station Sign, Attendance QR
+
+**Attendance Status**:
+สถานะการเข้างานของ Cleaner Account ในกะปัจจุบัน มี 2 ค่าหลักคือ เข้างานแล้ว (Present) และ ยังไม่เข้างาน (Absent / Not Checked In) แสดงบน Dashboard ของหัวหน้า
+_Avoid_: Worker Status, Shift State, Member Attendance
+
+**Attendance Board**:
+หน้าจอแสดงรายงานและรายชื่อการเข้างานของ Cleaner Account ทั้ง 170 คนแบบเรียลไทม์ เป็นแท็บย่อยบน Dashboard ให้ Admin Account ตรวจสอบอัตรากำลังและคนขาดในแต่ละกะ
+_Avoid_: Check-In Page, Attendance View, Staff Table
+
+**Area Capacity**:
+จำนวน Cleaner Account ที่ได้รับมอบหมายประจำ ณ จุดบริการหนึ่งจุด พร้อมสถานะว่าเข้างานแล้วกี่คนและขาดกี่คน (เช่น จุดที่ 1 ประจำ 10 คน เข้างาน 7 คน)
+_Avoid_: Staffing Level, Headcount Quota, Worker Ratio
+
+

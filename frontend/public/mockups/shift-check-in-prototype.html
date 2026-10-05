@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup: ระบบเข้างานแม่บ้าน 2 กะ (Shift Check-In — Ticket #38 & #39)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b1120;
+      --card-dark: #131d33;
+      --card-inner: #1a2642;
+      --border-dark: #233354;
+      --accent-cyan: #38bdf8;
+      --accent-blue: #3b82f6;
+      --accent-indigo: #6366f1;
+      --success-green: #10b981;
+      --warning-amber: #f59e0b;
+      --danger-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #172554 0%, #0b1120 70%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      text-align: center;
+      max-width: 900px;
+      margin-bottom: 24px;
+    }
+
+    .badge-ticket {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: var(--accent-cyan);
+      padding: 5px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    p.sub {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* Shift Indicator Bar */
+    .shift-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 12px 20px;
+      margin-bottom: 24px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .shift-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .shift-chip.day { background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; }
+    .shift-chip.night { background: rgba(99, 102, 241, 0.15); border: 1px solid #6366f1; color: #a5b4fc; }
+
+    /* Interactive Showcase Container */
+    .showcase-area {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 28px;
+      max-width: 1080px;
+      width: 100%;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .showcase-area { grid-template-columns: 1fr; }
+    }
+
+    /* Mobile Device Frame */
+    .phone-wrapper {
+      background: #000;
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 3px #334155;
+      position: sticky;
+      top: 20px;
+    }
+
+    .phone-screen {
+      background: #0f172a;
+      border-radius: 30px;
+      overflow: hidden;
+      min-height: 560px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .phone-header {
+      background: #1e293b;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+    }
+
+    .phone-body {
+      padding: 18px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    /* Scenario Control Panel (Right Side) */
+    .controls-panel {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .scenario-btn {
+      width: 100%;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border-dark);
+      padding: 16px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 15px;
+      text-align: left;
+      cursor: pointer;
+      margin-bottom: 14px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .scenario-btn:hover {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: var(--accent-cyan);
+    }
+
+    .scenario-btn.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 4px 16px rgba(56, 189, 248, 0.2);
+    }
+
+    .btn-badge {
+      background: #334155;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .active .btn-badge {
+      background: var(--accent-cyan);
+      color: #0b1120;
+    }
+
+    .scenario-detail {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* Screen State Cards inside Mobile */
+    .status-card {
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .icon-circle {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 16px auto;
+    }
+
+    /* Attendance Dashboard Preview Table */
+    .dash-preview {
+      margin-top: 24px;
+      background: #0f172a;
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .dash-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .dash-table th, .dash-table td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .dash-table th { color: var(--text-muted); font-weight: 600; }
+
+    .tag-present { background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .tag-absent { background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    
+    .db-box {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 16px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge-ticket">🎫 Ticket #38 & #39 • Interactive Prototype</div>
+    <h1>ระบบเข้างานแม่บ้าน 2 กะ (Shift Check-In & Attendance)</h1>
+    <p class="sub">
+      จำลองสิ่งที่เกิดขึ้นบนมือถือแม่บ้านเมื่อสแกนเข้างาน, เมื่อสแกนซ้ำ, และเมื่อลืมสแกนเข้างาน
+    </p>
+  </header>
+
+  <!-- Shift Rules Banner -->
+  <div class="shift-banner">
+    <span style="font-weight: 600; color: #94a3b8;">กฎการแบ่งกะโรงงาน:</span>
+    <div class="shift-chip day">
+      <span>☀️ กะกลางวัน (Day Shift):</span>
+      <strong>07:00 – 19:00</strong>
+    </div>
+    <div class="shift-chip night">
+      <span>🌙 กะกลางคืน (Night Shift):</span>
+      <strong>19:00 – 07:00</strong>
+    </div>
+  </div>
+
+  <div class="showcase-area">
+
+    <!-- LEFT: Mobile Screen Simulation -->
+    <div class="phone-wrapper">
+      <div class="phone-screen">
+        <div class="phone-header">
+          <span style="font-size: 13px; font-weight: 700; color: #38bdf8;">🏢 สแกนเข้างานโรงงาน</span>
+          <span style="font-size: 11px; background: #334155; padding: 2px 6px; border-radius: 4px;" id="phone-clock">06:55 น.</span>
+        </div>
+
+        <div class="phone-body" id="phone-display">
+          <!-- Dynamic Content Loaded by JS -->
+        </div>
+
+        <div style="padding: 12px; background: #1e293b; border-top: 1px solid #334155; font-size: 11px; color: #94a3b8; text-align: center;">
+          เข้าสู่ระบบในชื่อ: <strong>สมชาย ใจดี (cleaner)</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Scenario Controls & Explanations -->
+    <div class="controls-panel">
+      <h3 style="margin-bottom: 16px; font-size: 18px; color: #f8fafc;">
+        👇 คลิกเลือกสถานการณ์เพื่อดูผลลัพธ์บนจอมือถือ:
+      </h3>
+
+      <!-- Scenario 1: Normal Check-In -->
+      <button class="scenario-btn active" onclick="setScenario(1)">
+        <span class="btn-badge">สถานการณ์ 1</span>
+        <div>
+          <strong>มาถึงโรงงานแล้วสแกนป้ายเข้างาน (ปกติ)</strong>
+          <div class="scenario-detail">
+            แม่บ้านเดินผ่านป้อม รปภ. เวลา 06:55 น. สแกนป้าย "Check-In Sign" เพื่อบันทึกเข้ากะกลางวัน
+          </div>
+        </div>
+      </button>
+
+      <!-- Scenario 2: Duplicate Scan (The Question!) -->
+      <button class="scenario-btn" onclick="setScenario(2)">
+        <span class="btn-badge" style="background: #f59e0b; color: #000;">สถานการณ์ 2 (ที่ถาม)</span>
+        <div>
+          <strong>เผลอสแกนเข้างานซ้ำอีกรอบ (Duplicate Scan)</strong>
+          <div class="scenario-detail">
+            แม่บ้านสแกนไปแล้วตอน 06:55 น. ต่อมาเวลา 07:20 น. เดินผ่านป้ายแล้วกดสแกนซ้ำอีกรอบ -> <strong>ระบบยึดเวลาแรก (06:55) เสมอ</strong> ไม่เปลี่ยนเป็น 07:20 เพื่อป้องกันการถูกนับเป็นสาย!
+          </div>
+        </div>
+      </button>
+
+      <!-- Scenario 3: Forgot Check-In & Scans Toilet (Option A chosen by user!) -->
+      <button class="scenario-btn" onclick="setScenario(3)">
+        <span class="btn-badge" style="background: #ef4444; color: #fff;">สถานการณ์ 3 (ทางเลือก A)</span>
+        <div>
+          <strong>ลืมสแกนเข้างาน แล้วเดินไปสแกนห้องน้ำเลย</strong>
+          <div class="scenario-detail">
+            ตามที่คุณเลือก (ทางเลือก A: Strict): ระบบจะบล็อก ไม่ให้บันทึกงานทำความสะอาด และแจ้งเตือนให้ไปสแกนเข้างานก่อน
+          </div>
+        </div>
+      </button>
+
+      <!-- Scenario 4: Night Shift Check-In -->
+      <button class="scenario-btn" onclick="setScenario(4)">
+        <span class="btn-badge" style="background: #6366f1; color: #fff;">สถานการณ์ 4</span>
+        <div>
+          <strong>สแกนเข้ากะกลางคืน (19:00 - 07:00)</strong>
+          <div class="scenario-detail">
+            แม่บ้านกะดึกมาถึงเวลา 18:52 น. สแกนเข้ากะกลางคืน ระบบตัดรอบแยกอิสระจากกะกลางวัน
+          </div>
+        </div>
+      </button>
+
+      <!-- Attendance Board Preview (Ticket #39) -->
+      <div class="dash-preview">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong style="color: #38bdf8; font-size: 14px;">🖥️ สิ่งที่หัวหน้าเห็นบน Dashboard (Ticket #39)</strong>
+          <span style="font-size: 11px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 6px; border-radius: 4px;">กะกลางวัน (07:00 - 19:00)</span>
+        </div>
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th>ชื่อแม่บ้าน</th>
+              <th>สถานะเข้างาน</th>
+              <th>เวลาที่สแกน</th>
+              <th>จุดที่กำลังทำ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>สมชาย ใจดี</td>
+              <td><span class="tag-present">เข้างานแล้ว</span></td>
+              <td>06:55 น.</td>
+              <td>ห้องน้ำชาย ชั้น 1</td>
+            </tr>
+            <tr>
+              <td>สมหญิง มีสุข</td>
+              <td><span class="tag-present">เข้างานแล้ว</span></td>
+              <td>06:48 น.</td>
+              <td>แคนทีน โซน A</td>
+            </tr>
+            <tr>
+              <td>มานะ ขยันงาน</td>
+              <td><span class="tag-absent">ยังไม่เข้างาน</span></td>
+              <td>-</td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- DB Explanation Box -->
+      <div class="db-box">
+        <strong style="color: #38bdf8;">💾 การจัดเก็บในฐานข้อมูล (แยกตาราง shift_check_ins):</strong><br>
+        <code>shift_check_ins (id, user_id, shift_type='DAY', checked_in_at='2026-10-02 06:55:00', sign_id)</code><br>
+        <em>ประโยชน์: ข้อมูลเข้างานของ 170 คน ไม่ปนกับ scan_records ของการทำความสะอาดจุดบริการ ทำให้ Dashboard โหลดเร็วและคิดรอบกะถูกต้อง</em>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function setScenario(num) {
+      document.querySelectorAll('.scenario-btn').forEach((b, i) => {
+        b.classList.toggle('active', i === (num - 1));
+      });
+
+      const display = document.getElementById('phone-display');
+      const clock = document.getElementById('phone-clock');
+
+      if (num === 1) {
+        clock.innerText = '06:55 น.';
+        display.innerHTML = `
+          <div class="status-card" style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981;">
+            <div class="icon-circle" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">✓</div>
+            <h2 style="font-size: 20px; color: #10b981; margin-bottom: 6px;">เข้างานสำเร็จ!</h2>
+            <div style="font-size: 14px; color: #f8fafc; font-weight: 600; margin-bottom: 4px;">กะกลางวัน (07:00 – 19:00)</div>
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 16px;">บันทึกเวลา: 06:55 น. (ป้อม รปภ. ประตู 1)</div>
+            <div style="background: #1e293b; border-radius: 8px; padding: 10px; font-size: 12px; color: #38bdf8; margin-bottom: 16px;">
+              ✨ ปลดล็อกสิทธิ์สแกนทำความสะอาดตามจุดบริการแล้ว
+            </div>
+            <button style="width: 100%; background: #3b82f6; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+              เริ่มงานทำความสะอาด
+            </button>
+          </div>
+        `;
+      } else if (num === 2) {
+        clock.innerText = '07:20 น.';
+        display.innerHTML = `
+          <div class="status-card" style="background: rgba(56, 189, 248, 0.1); border: 1px solid #38bdf8;">
+            <div class="icon-circle" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">ℹ️</div>
+            <h2 style="font-size: 18px; color: #38bdf8; margin-bottom: 6px;">คุณได้เข้างานไปแล้ว</h2>
+            <div style="font-size: 13px; color: #f8fafc; margin-bottom: 8px;">
+              ระบบได้บันทึกเวลาเข้ากะกลางวันไว้แล้วเมื่อ:
+            </div>
+            <div style="background: #0f172a; border: 1px dashed #38bdf8; border-radius: 8px; padding: 12px; font-size: 16px; font-weight: 700; color: #34d399; margin-bottom: 12px;">
+              ⏰ 06:55 น. (ครั้งแรก)
+            </div>
+            <div style="font-size: 12px; color: #94a3b8; line-height: 1.4; margin-bottom: 16px;">
+              *(การสแกนซ้ำตอน 07:20 น. จะไม่มีผลทับเวลาเดิม เพื่อให้คุณไม่ถูกหักเวลาหรือนับเป็นสาย)*
+            </div>
+            <button style="width: 100%; background: #334155; color: #fff; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+              ไปที่หน้าสแกนจุดบริการ
+            </button>
+          </div>
+        `;
+      } else if (num === 3) {
+        clock.innerText = '07:15 น.';
+        display.innerHTML = `
+          <div class="status-card" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444;">
+            <div class="icon-circle" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">⛔</div>
+            <h2 style="font-size: 18px; color: #ef4444; margin-bottom: 6px;">ยังไม่ได้สแกนเข้างาน</h2>
+            <div style="font-size: 13px; color: #fca5a5; font-weight: 600; margin-bottom: 12px;">
+              จุดบริการ: ห้องน้ำชาย ชั้น 1
+            </div>
+            <div style="background: #1e293b; border-radius: 8px; padding: 12px; font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px;">
+              ตามระเบียบโรงงาน (ทางเลือก A):<br>
+              <strong>กรุณาสแกนป้ายเข้างานที่ทางเข้าก่อน</strong> เพื่อยืนยันการเริ่มกะ จึงจะสามารถบันทึกงานทำความสะอาดได้
+            </div>
+            <button style="width: 100%; background: #ef4444; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+              กลับไปหน้าสแกนเข้างาน
+            </button>
+          </div>
+        `;
+      } else if (num === 4) {
+        clock.innerText = '18:52 น.';
+        display.innerHTML = `
+          <div class="status-card" style="background: rgba(99, 102, 241, 0.1); border: 1px solid #6366f1;">
+            <div class="icon-circle" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">🌙</div>
+            <h2 style="font-size: 20px; color: #818cf8; margin-bottom: 6px;">เข้างานกะกลางคืนสำเร็จ!</h2>
+            <div style="font-size: 14px; color: #f8fafc; font-weight: 600; margin-bottom: 4px;">กะกลางคืน (19:00 – 07:00)</div>
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 16px;">บันทึกเวลา: 18:52 น. (ก่อนเวลากะ 8 นาที)</div>
+            <div style="background: #1e293b; border-radius: 8px; padding: 10px; font-size: 12px; color: #a5b4fc; margin-bottom: 16px;">
+              ✨ ระบบเริ่มรอบตรวจงานกะกลางคืนอัตโนมัติ
+            </div>
+            <button style="width: 100%; background: #6366f1; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+              เริ่มงานทำความสะอาดกะดึก
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    // Default to scenario 1
+    setScenario(1);
+  </script>
+</body>
+</html>
