@@ -1515,6 +1515,36 @@ its need not of on or should so than that the their them then there these
 this to via we what when where which who why will with you your
 """.split())
 
+# The frontier-sweep record (ADR 0224): one Notes bullet per sweep run,
+# opening with this word. An exact prefix, deliberately unlike the fog rule's
+# word-overlap heuristic -- a rule that can be satisfied by the wrong sentence
+# is as bad as one that cries wolf.
+SWEEP_PREFIX = "sweep"
+
+
+def has_sweep_record(map_text):
+    """True when the Notes region carries a frontier-sweep bullet.
+
+    A bullet counts when its text after the leading dash opens with `sweep`
+    followed by a space or a colon, case-insensitively -- which admits the
+    chart-written form (`sweep 2026-09-14: none — …`) and the hand-written
+    form ADR 0225 names (`sweep <date>: reviewed, accepted as-is`), and
+    rejects a bullet that merely mentions the word. A map with no notes
+    region at all (a paragraph Notes from before ADR 0101) has nowhere to
+    carry the record, so it has none.
+    """
+    body = region_body(norm_eol(map_text or ""), NOTES_START, NOTES_END)
+    if body is None:
+        return False
+    for raw in body.splitlines():
+        line = raw.strip()
+        if not line.startswith("-"):
+            continue
+        text = line[1:].strip().lower()
+        if text.startswith(SWEEP_PREFIX + " ") or text.startswith(SWEEP_PREFIX + ":"):
+            return True
+    return False
+
 
 def _finding(rule, severity, ticket, message):
     return {"rule": rule, "severity": severity, "ticket": ticket,
@@ -1781,5 +1811,20 @@ def lint_findings(map_text, tickets, resolution_bodies=True):
                 "line has to go by hand or the map keeps advertising fog it "
                 "has already answered"))
             break
+
+    # The whole map, not a ticket (ADRs 0223, 0225): a map charted before the
+    # frontier sweep existed cannot show the difference between "swept and
+    # empty" and "never asked", and one that finished that way is the map
+    # most worth flagging, not least -- so no status clause. A fresh chart
+    # writes the record before --real, so only pre-sweep maps (or a hand edit
+    # that deleted the bullet) ever fire this.
+    if not has_sweep_record(map_text):
+        warnings.append(_finding(
+            "map-never-swept", LINT_WARNING, None,
+            "this map carries no frontier-sweep record (no Notes bullet opening "
+            "with 'sweep'); it was charted before the sweep existed, or the "
+            "record was deleted. Re-run /decision-map:chart <slug> to sweep it, "
+            "or if you have reviewed it by hand add a Notes bullet "
+            "'sweep <date>: reviewed, accepted as-is' (ADRs 0223, 0225)"))
 
     return errors + warnings

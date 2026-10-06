@@ -105,11 +105,13 @@ Where are you in your day?
 
 (Next time: /daily start · work · file · report · wrap)
 💾 Save state anytime: /daily save "<note>"
+🚀 Hand off anytime:   /dev-workflows:handoff [cloud] "<what next>"
 ```
 
-The `Next time` line teaches the station shortcuts; the 💾 line teaches the save
-accelerator — both graduate users from the menu. Save is a footer, not a sixth
-option: the circle stays five stations (ADR 0004).
+The `Next time` line teaches the station shortcuts; the 💾 and 🚀 lines teach the
+two accelerators — save keeps your resume-point here, handoff sends the work away
+(ADR 0229) — all three graduate users from the menu. Save and Handoff are footers,
+not a sixth or seventh option: the circle stays five stations (ADR 0004).
 
 ## Stations
 

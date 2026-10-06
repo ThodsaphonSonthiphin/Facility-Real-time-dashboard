@@ -15,7 +15,10 @@ export const ServicePointCard: React.FC<ServicePointCardProps> = ({
   onOpenScanner
 }) => {
   const [showQrModal, setShowQrModal] = useState(false);
-  const scanUrl = `http://10.249.194.205:5173/scan/${point.qrToken}`;
+  const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? '10.151.43.205'
+    : window.location.hostname;
+  const scanUrl = `${window.location.protocol}//${host}:${window.location.port || '5173'}/scan/${point.qrToken}`;
   const getStatusBadge = (status: PointStatus) => {
     switch (status) {
       case 'Normal':

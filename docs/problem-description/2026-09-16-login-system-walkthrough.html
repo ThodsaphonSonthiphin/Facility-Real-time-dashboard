@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8">
+<title>สถาปัตยกรรมระบบ Login & Persistent Session — Walkthrough</title>
+<style>
+  :root {
+    --bg:#0a0e14; --panel:#1a2330; --surface:#0f1722; --surface-2:#0f1419;
+    --border:#2a3441; --border-dim:#3d4a5f; --surface-active:#233040;
+    --text:#e0e6ed; --text-dim:#b8c4cf; --muted:#6b7785; --muted-2:#8a96a3;
+    --accent:#5fb4ff; --accent-bright:#7ed4ff;
+    --amber:#ffd479; --warn:#ffaa00; --warn-text:#ffaa44;
+    --magic:#b070ff; --magic-text:#d4a4ff; --magic-bg:#2a1a3a;
+    --success:#4ade80; --success-text:#a3e8b9;
+    --error:#ff5757; --error-text:#ff8888; --conflict:#ff3030;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px;
+    background: var(--bg); color: var(--text);
+    font-family: 'Segoe UI', 'Sukhumvit Set', 'Tahoma', sans-serif;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  h1 { color: var(--accent); font-size: 22px; margin: 0 0 4px; }
+  h2 { color: var(--text-dim); font-size: 13px; font-weight: 400; margin: 0 0 18px; }
+  code { background: var(--panel); padding: 1px 5px; border-radius: 3px;
+         font-family: 'Consolas', monospace; color: var(--amber); font-size: 0.9em; }
+
+  /* progress dots */
+  .step-progress { display: flex; gap: 4px; justify-content: center;
+                   margin: 12px 0 14px; flex-wrap: wrap; }
+  .step-dot { width: 22px; height: 22px; border-radius: 50%;
+              background: var(--panel); color: var(--muted);
+              display: flex; align-items: center; justify-content: center;
+              font-size: 10px; font-weight: 700; transition: all 0.3s; }
+  .step-dot.done    { background: #1a3a5f; color: var(--accent); }
+  .step-dot.current { background: var(--accent); color: var(--bg); transform: scale(1.2); }
+
+  /* narration — the canonical NESTED shape (badge+title+body inside #narration) */
+  .narration {
+    background: var(--panel); padding: 12px 18px; border-radius: 6px;
+    border-left: 3px solid var(--accent); margin-bottom: 16px;
+    font-size: 14.5px; line-height: 1.65; min-height: 60px;
+  }
+  .narration.warn    { border-color: var(--warn);    background: #2a2018; }
+  .narration.error   { border-color: var(--error);   background: #2a1818; }
+  .narration.success { border-color: var(--success); background: #182a1f; }
+  .narration.magic   { border-color: var(--magic);   background: #1f1830; }
+  .narration .step-badge { background: var(--accent); color: var(--bg);
+                           padding: 3px 10px; border-radius: 12px; font-size: 12px;
+                           font-weight: 700; display: inline-block; margin-right: 8px; }
+  .narration .step-title { color: var(--accent); font-weight: 700; font-size: 16px;
+                           display: block; margin: 8px 0 6px; }
+  .narration.warn    .step-title { color: var(--amber); }
+  .narration.error   .step-title { color: var(--error-text); }
+  .narration.success .step-title { color: var(--success-text); }
+  .narration.magic   .step-title { color: var(--magic-text); }
+
+  /* shared hidden panel (replaces the old .extra-panel/.toggleable/.key-question) */
+  .wt-panel { background: var(--panel); border-radius: 6px; padding: 14px 18px;
+              margin-bottom: 16px; font-size: 14px; line-height: 1.6; }
+  .wt-panel .wt-panel-title { font-weight: 700; margin-bottom: 6px; }
+  .wt-panel.question { background: #1f1830; border: 2px solid var(--magic); }
+  .wt-panel.question .wt-panel-title { color: var(--magic-text); }
+  .wt-panel.race     { background: #2a1818; border: 2px solid var(--error); }
+  .wt-panel.race .wt-panel-title { color: var(--error-text); }
+  .wt-panel.summary  { background: #182a1f; border: 2px solid var(--success); }
+  .wt-panel.summary .wt-panel-title { color: var(--success-text); }
+
+  /* controls */
+  .controls { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+  button { background: var(--accent); color: var(--bg); border: none;
+           padding: 10px 22px; border-radius: 6px; font-size: 14px; font-weight: 700;
+           cursor: pointer; transition: background 0.2s, transform 0.1s; }
+  button:hover:not(:disabled)  { background: var(--accent-bright); }
+  button:active:not(:disabled) { transform: scale(0.97); }
+  button.tertiary { background: var(--border); color: var(--text); }
+  button.tertiary:hover:not(:disabled) { background: var(--border-dim); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .hidden { display: none !important; }
+  
+.diagram-wrapper { background: var(--surface-2); border: 1px solid var(--panel);
+                   border-radius: 8px; padding: 16px; margin-bottom: 16px; overflow-x: auto; }
+svg.diagram { width: 100%; min-width: 980px; height: auto; display: block; }
+.comp rect { fill: var(--panel); stroke: var(--border); stroke-width: 2; transition: all 0.4s; }
+.comp .comp-title { font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: 700; fill: var(--text-dim); transition: fill 0.4s; }
+.comp .comp-sub { font-family: 'Consolas', monospace; font-size: 11px; fill: var(--muted); transition: fill 0.4s; }
+.comp .comp-val { font-family: 'Consolas', monospace; font-size: 11.5px; fill: var(--amber); transition: fill 0.4s; }
+.comp.active rect { fill: #1a3a5f; stroke: var(--accent); stroke-width: 3; filter: drop-shadow(0 0 8px #5fb4ff88); }
+.comp.active .comp-title { fill: var(--accent-bright); }
+.comp.active .comp-sub { fill: var(--text-dim); }
+.comp.firing rect { fill: #2a2818; stroke: var(--amber); stroke-width: 3; filter: drop-shadow(0 0 8px #ffd47988); animation: pulse-fire 1.2s ease-in-out infinite; }
+.comp.firing .comp-title { fill: var(--amber); }
+@keyframes pulse-fire { 0%, 100% { filter: drop-shadow(0 0 8px #ffd47988); } 50% { filter: drop-shadow(0 0 16px #ffd479dd); } }
+.comp.locked rect { fill: var(--magic-bg); stroke: var(--magic); stroke-width: 3; filter: drop-shadow(0 0 10px #b070ff88); }
+.comp.locked .comp-title { fill: var(--magic-text); }
+.comp.locked .comp-val { fill: var(--magic-text); }
+.comp.blocked rect { fill: #2a1f10; stroke: var(--warn); stroke-width: 2; animation: blink-block 1s ease-in-out infinite alternate; }
+.comp.blocked .comp-title { fill: var(--warn-text); }
+@keyframes blink-block { from { opacity: 0.55; } to { opacity: 0.9; } }
+.comp.done rect { fill: #18301f; stroke: var(--success); stroke-width: 2; }
+.comp.done .comp-title { fill: var(--success-text); }
+.comp.done .comp-val { fill: var(--success-text); }
+.comp.error rect { fill: #2a1818; stroke: var(--error); stroke-width: 3; filter: drop-shadow(0 0 10px #ff575788); }
+.comp.error .comp-title { fill: var(--error-text); }
+.comp.dimmed { opacity: 0.35; }
+
+.arrow { fill: none; stroke: var(--border-dim); stroke-width: 2; transition: stroke 0.3s, stroke-width 0.3s; }
+.arrow.active { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 8 4; animation: flow 1.8s linear infinite; }
+.arrow.magic { stroke: var(--magic); stroke-width: 3.5; filter: drop-shadow(0 0 4px var(--magic)); }
+.arrow.done { stroke: var(--success); stroke-width: 2.5; }
+.arrow.error { stroke: var(--error); stroke-width: 3; }
+.arrow.dimmed { opacity: 0.2; }
+@keyframes flow { to { stroke-dashoffset: -24; } }
+
+.flow-label { fill: var(--amber); font-family: 'Consolas', monospace; font-size: 11px; font-weight: 700; pointer-events: none; }
+.flow-label-bg { fill: #2a2818; stroke: var(--amber); stroke-width: 1.5; }
+.flow-label-group { opacity: 0; transition: opacity 0.3s; }
+.flow-label-group.show { opacity: 1; }
+.flow-label-group.magic .flow-label { fill: var(--magic-text); }
+.flow-label-group.magic .flow-label-bg { fill: #1f1830; stroke: var(--magic); }
+.flow-label-group.error .flow-label { fill: var(--error-text); }
+.flow-label-group.error .flow-label-bg { fill: #2a1818; stroke: var(--error); }
+
+/* Custom panel & code box styles using existing semantic tokens */
+.code-block { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-top: 10px; font-family: 'Consolas', monospace; font-size: 12.5px; color: var(--text-dim); overflow-x: auto; line-height: 1.5; }
+.code-block .hl-kw { color: var(--accent); font-weight: 700; }
+.code-block .hl-fn { color: var(--amber); }
+.code-block .hl-str { color: var(--success-text); }
+.code-block .hl-com { color: var(--muted); font-style: italic; }
+.code-block .hl-sec { color: var(--magic-text); }
+.code-block .hl-err { color: var(--error-text); }
+
+.tradeoff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+.tradeoff-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; font-size: 13.5px; }
+.tradeoff-card.pro { border-left: 4px solid var(--success); }
+.tradeoff-card.con { border-left: 4px solid var(--warn); }
+.tradeoff-card h4 { margin: 0 0 6px; font-size: 14px; }
+.tradeoff-card.pro h4 { color: var(--success-text); }
+.tradeoff-card.con h4 { color: var(--amber); }
+  /* Colors are engine :root tokens (var(--token)), so a palette change in the engine
+     propagates here too; the standalone demo's :root above supplies them when opened raw. */
+  .term { border-bottom: 1px dotted var(--accent); color: var(--accent); cursor: help; }
+  .term:hover { color: var(--accent-bright); }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 340px; max-width: 86vw;
+    background: var(--panel); border-left: 2px solid var(--accent);
+    box-shadow: -8px 0 24px #00000088;
+    padding: 18px 20px; overflow-y: auto; z-index: 50;
+  }
+  .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .drawer-term { color: var(--accent-bright); font-size: 17px; font-weight: 700; line-height: 1.3; }
+  .drawer-source { font-size: 10px; color: var(--muted); text-transform: uppercase;
+                   letter-spacing: 0.5px; margin: 2px 0 12px; }
+  .drawer-def { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 16px; }
+  .drawer-seealso-title { font-size: 11px; color: var(--muted-2); text-transform: uppercase;
+                          letter-spacing: 0.5px; margin-bottom: 8px; }
+  .seealso-chip {
+    display: inline-block; background: var(--panel); border: 1px solid var(--border);
+    color: var(--accent); border-radius: 14px; padding: 4px 12px;
+    margin: 0 6px 6px 0; font-size: 13px; cursor: pointer;
+  }
+  .seealso-chip:hover { background: var(--surface-active); border-color: var(--accent); }
+  .drawer-btns { display: flex; gap: 8px; margin-top: 18px; }
+  
+</style></head>
+<body>
+<div class="container">
+  <h1>สถาปัตยกรรมระบบ Login & Persistent Session — Walkthrough</h1>
+  <h2>กด <strong>ถัดไป →</strong> เพื่อดูทีละ step</h2>
+
+  <div class="step-progress" id="stepProgress"></div>
+
+  <div class="narration" id="narration">
+    <span class="step-badge" id="stepBadge">Step 0 / 0</span>
+    <span class="step-title" id="sceneTitle">เริ่มต้น</span>
+    <div id="narrationBody"></div>
+  </div>
+
+  <!-- ===== MODE CONTENT — assembly inserts the chosen mode pack's §HTML here ===== -->
+<div class="diagram-wrapper">
+  <svg class="diagram" viewBox="0 0 1120 600" xmlns="http://www.w3.org/2000/svg">
+    <!-- Zone Containers -->
+    <g class="zone-client">
+      <rect x="20" y="20" width="340" height="560" rx="12" fill="#0f1722" stroke="#2a3441" stroke-width="1.5"/>
+      <text x="190" y="44" fill="#5fb4ff" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" text-anchor="middle">📱 CLIENT (Browser & React App)</text>
+    </g>
+
+    <g class="zone-backend">
+      <rect x="385" y="20" width="370" height="560" rx="12" fill="#0f1722" stroke="#2a3441" stroke-width="1.5"/>
+      <text x="570" y="44" fill="#5fb4ff" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" text-anchor="middle">⚙️ BACKEND (.NET 8 & AuthEndpoints)</text>
+    </g>
+
+    <g class="zone-database">
+      <rect x="780" y="20" width="320" height="560" rx="12" fill="#0f1722" stroke="#2a3441" stroke-width="1.5"/>
+      <text x="940" y="44" fill="#5fb4ff" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" text-anchor="middle">🗄️ DATABASE (AppDbContext / SQLite)</text>
+    </g>
+
+    <!-- Client Zone: Mock Form -->
+    <rect x="35" y="58" width="310" height="225" rx="10" fill="#141e2d" stroke="#2a3441" stroke-width="1"/>
+    <text x="190" y="78" fill="#e0e6ed" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" text-anchor="middle">🏢 เข้าสู่ระบบผู้ปฏิบัติงาน (LoginPage)</text>
+
+    <g class="comp" id="compMockError">
+      <rect x="48" y="88" width="284" height="26" rx="6"/>
+      <text class="comp-title" x="190" y="105" text-anchor="middle" id="mockErrorText">⚠️ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</text>
+    </g>
+
+    <g class="comp" id="compMockUser">
+      <rect x="48" y="120" width="284" height="40" rx="8"/>
+      <text class="comp-sub" x="60" y="135">ชื่อผู้ใช้ (Username)</text>
+      <text class="comp-val" x="60" y="151" id="mockUserVal">👤 somchai</text>
+    </g>
+
+    <g class="comp" id="compMockPass">
+      <rect x="48" y="166" width="284" height="40" rx="8"/>
+      <text class="comp-sub" x="60" y="181">รหัสผ่าน (Password)</text>
+      <text class="comp-val" x="60" y="197" id="mockPassVal">🔒 •••••••• (password123)</text>
+    </g>
+
+    <g class="comp" id="compMockBtn">
+      <rect x="48" y="212" width="284" height="38" rx="8"/>
+      <text class="comp-title" x="190" y="235" text-anchor="middle" id="mockBtnText">เข้าสู่ระบบ (Submit)</text>
+    </g>
+    <text x="190" y="270" fill="#6b7785" font-family="'Segoe UI', sans-serif" font-size="10.5" text-anchor="middle">💡 จำสถานะบนมือถืออัตโนมัติ (Persistent Session)</text>
+
+    <!-- Client Zone: Storage Layers -->
+    <g class="comp" id="compMemory">
+      <rect x="35" y="300" width="310" height="75" rx="8"/>
+      <text class="comp-title" x="50" y="322">🧠 In-Memory Session (authSession.ts)</text>
+      <text class="comp-sub" x="50" y="342">Access Token: JWT (อายุสั้น 5 นาที)</text>
+      <text class="comp-val" x="50" y="362" id="memVal">session: null (ยังไม่ล็อกอิน)</text>
+    </g>
+
+    <g class="comp" id="compCookie">
+      <rect x="35" y="390" width="310" height="80" rx="8"/>
+      <text class="comp-title" x="50" y="412">🍪 HttpOnly Cookie (Browser Storage)</text>
+      <text class="comp-sub" x="50" y="432">Path=/api/auth, SameSite=Strict (JS มองไม่เห็น)</text>
+      <text class="comp-val" x="50" y="452" id="cookieVal">facility_refresh: none</text>
+    </g>
+
+    <g class="comp" id="compLocal">
+      <rect x="35" y="485" width="310" height="75" rx="8"/>
+      <text class="comp-title" x="50" y="507">📦 localStorage (Rejected - ADR facility-0013)</text>
+      <text class="comp-sub" x="50" y="527">ลบข้อมูลทิ้งเมื่อเปิดหน้าเว็บ (ป้องกัน XSS)</text>
+      <text class="comp-val" x="50" y="547" id="localVal">❌ ห้ามเก็บ token เด็ดขาด</text>
+    </g>
+
+    <!-- Backend Zone Components -->
+    <g class="comp" id="compEndpoint">
+      <rect x="405" y="60" width="330" height="95" rx="8"/>
+      <text class="comp-title" x="570" y="88" text-anchor="middle">🚪 AuthEndpoints.cs</text>
+      <text class="comp-sub" x="570" y="110" text-anchor="middle">/api/auth/login, /refresh, /logout</text>
+      <text class="comp-val" x="570" y="135" text-anchor="middle" id="endpointState">status: idle</text>
+    </g>
+
+    <g class="comp" id="compHasher">
+      <rect x="405" y="185" width="330" height="95" rx="8"/>
+      <text class="comp-title" x="570" y="213" text-anchor="middle">🔐 PBKDF2 Password Hasher</text>
+      <text class="comp-sub" x="570" y="235" text-anchor="middle">100,000 iters + DummyPasswordHash</text>
+      <text class="comp-val" x="570" y="260" text-anchor="middle" id="hasherState">status: idle</text>
+    </g>
+
+    <g class="comp" id="compIssuer">
+      <rect x="405" y="310" width="330" height="100" rx="8"/>
+      <text class="comp-title" x="570" y="338" text-anchor="middle">🎫 Token Issuer & Rules</text>
+      <text class="comp-sub" x="570" y="360" text-anchor="middle">JWT Access (5m) & Refresh Token (30d)</text>
+      <text class="comp-val" x="570" y="388" text-anchor="middle" id="issuerState">status: idle</text>
+    </g>
+
+    <g class="comp" id="compReuse">
+      <rect x="405" y="440" width="330" height="100" rx="8"/>
+      <text class="comp-title" x="570" y="468" text-anchor="middle">🛡️ Reuse Detector (ADR facility-0015)</text>
+      <text class="comp-sub" x="570" y="490" text-anchor="middle">30s Grace Window | RevokeSessionAsync</text>
+      <text class="comp-val" x="570" y="518" text-anchor="middle" id="reuseState">status: monitoring</text>
+    </g>
+
+    <!-- Database Zone Components -->
+    <g class="comp" id="compDbUsers">
+      <rect x="800" y="60" width="280" height="160" rx="8"/>
+      <text class="comp-title" x="940" y="92" text-anchor="middle">👥 users Table</text>
+      <text class="comp-sub" x="940" y="118" text-anchor="middle">Username, PasswordHash, Role, IsActive</text>
+      <text class="comp-val" x="940" y="155" text-anchor="middle" id="dbUserState">somchai | cleaner | active</text>
+    </g>
+
+    <g class="comp" id="compDbTokens">
+      <rect x="800" y="250" width="280" height="290" rx="8"/>
+      <text class="comp-title" x="940" y="282" text-anchor="middle">🔑 refresh_tokens Table</text>
+      <text class="comp-sub" x="940" y="308" text-anchor="middle">UserId, SessionId, TokenHash, RotatedAt</text>
+      <text class="comp-val" x="940" y="350" text-anchor="middle" id="dbTokenState">tokens: 0 records</text>
+    </g>
+
+    <!-- Arrows connecting nodes -->
+    <path class="arrow" id="arrFormToApi" d="M 332 231 L 405 107" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrApiToHasher" d="M 550 155 L 550 185" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrHasherToApi" d="M 590 185 L 590 155" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrApiToDb" d="M 735 95 L 800 95" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrDbToApi" d="M 800 135 L 735 135" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrApiToIssuer" d="M 570 155 L 570 310" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrIssuerToDb" d="M 735 360 L 800 360" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrApiToMem" d="M 405 125 L 345 320" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrApiToCookie" d="M 405 140 L 345 410" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrCookieToApi" d="M 345 440 L 405 470" marker-end="url(#arrowhead)"/>
+    <path class="arrow" id="arrReuseToDb" d="M 735 480 L 800 480" marker-end="url(#arrowhead)"/>
+
+    <!-- Flow Labels -->
+    <g class="flow-label-group" id="lblLoginReq">
+      <rect class="flow-label-bg" x="320" y="150" width="165" height="22" rx="5"/>
+      <text class="flow-label" x="402" y="165" text-anchor="middle">POST /login {somchai, pass}</text>
+    </g>
+
+    <g class="flow-label-group" id="lblVerifyPass">
+      <rect class="flow-label-bg" x="480" y="160" width="180" height="22" rx="5"/>
+      <text class="flow-label" x="570" y="175" text-anchor="middle">Verify PBKDF2 (100k iters)</text>
+    </g>
+
+    <g class="flow-label-group" id="lblDbUserQuery">
+      <rect class="flow-label-bg" x="725" y="78" width="160" height="22" rx="5"/>
+      <text class="flow-label" x="805" y="93" text-anchor="middle">SELECT User 'somchai'</text>
+    </g>
+
+    <g class="flow-label-group" id="lblDbUserFound">
+      <rect class="flow-label-bg" x="725" y="135" width="160" height="22" rx="5"/>
+      <text class="flow-label" x="805" y="150" text-anchor="middle">User found & active</text>
+    </g>
+
+    <g class="flow-label-group" id="lblHashMatch">
+      <rect class="flow-label-bg" x="495" y="160" width="150" height="22" rx="5"/>
+      <text class="flow-label" x="570" y="175" text-anchor="middle">✓ Password Matched</text>
+    </g>
+
+    <g class="flow-label-group" id="lblIssueTokens">
+      <rect class="flow-label-bg" x="495" y="275" width="150" height="22" rx="5"/>
+      <text class="flow-label" x="570" y="290" text-anchor="middle">Issue JWT 5m + Refresh</text>
+    </g>
+
+    <g class="flow-label-group" id="lblSaveToken">
+      <rect class="flow-label-bg" x="725" y="340" width="160" height="22" rx="5"/>
+      <text class="flow-label" x="805" y="355" text-anchor="middle">INSERT RefreshToken</text>
+    </g>
+
+    <g class="flow-label-group" id="lblSetMem">
+      <rect class="flow-label-bg" x="325" y="260" width="160" height="22" rx="5"/>
+      <text class="flow-label" x="405" y="275" text-anchor="middle">JSON Body: { accessToken }</text>
+    </g>
+
+    <g class="flow-label-group" id="lblSetCookie">
+      <rect class="flow-label-bg" x="315" y="375" width="185" height="22" rx="5"/>
+      <text class="flow-label" x="407" y="390" text-anchor="middle">Set-Cookie: facility_refresh</text>
+    </g>
+
+    <g class="flow-label-group" id="lblRefreshReq">
+      <rect class="flow-label-bg" x="325" y="445" width="165" height="22" rx="5"/>
+      <text class="flow-label" x="407" y="460" text-anchor="middle">POST /refresh (Cookie)</text>
+    </g>
+
+    <g class="flow-label-group" id="lblRotateToken">
+      <rect class="flow-label-bg" x="720" y="365" width="170" height="22" rx="5"/>
+      <text class="flow-label" x="805" y="380" text-anchor="middle">Rotate: Token-A → Token-B</text>
+    </g>
+
+    <g class="flow-label-group" id="lblReuseAlert">
+      <rect class="flow-label-bg" x="720" y="465" width="170" height="22" rx="5"/>
+      <text class="flow-label" x="805" y="480" text-anchor="middle">🚨 Revoke Session S1!</text>
+    </g>
+  </svg>
+</div>
+
+<!-- Extra Panels (hidden by default, toggled via show/hide in scenes) -->
+<div class="wt-panel hidden" id="panelIntro">
+  <div class="wt-panel-title">💡 ยินดีต้อนรับสู่ Interactive Walkthrough: ระบบ Login & Persistent Session</div>
+  ระบบนี้ออกแบบตามสถาปัตยกรรมความปลอดภัยระดับสูง เพื่อตอบสนองการใช้งานจริงของพนักงานทำความสะอาดบนมือถือ (สแกน QR Code) ควบคู่กับหน้าจอ Dashboard ของผู้บริหาร โดยยึดหลักเกณฑ์สำคัญตาม <strong>ADR facility-0010 ถึง facility-0018</strong>
+</div>
+
+<div class="wt-panel hidden" id="panelCodeLogin">
+  <div class="wt-panel-title">📄 โค้ดส่วน Frontend: LoginPage.tsx และ authSession.ts</div>
+  เมื่อผู้ใช้กด Submit ในฟอร์ม <code>LoginPage.tsx</code> ฟังก์ชัน <code>handleSubmit</code> จะทำงาน:
+  <div class="code-block">
+<span class="hl-com">// frontend/src/features/auth/components/LoginPage.tsx</span>
+<span class="hl-kw">const</span> handleSubmit = <span class="hl-kw">async</span> (e) =&gt; {
+  e.preventDefault();
+  <span class="hl-kw">const</span> ok = <span class="hl-kw">await</span> login(username, password); <span class="hl-com">// เรียก useAuth() -&gt; AuthContext</span>
+  <span class="hl-kw">if</span> (ok &amp;&amp; onSuccess) onSuccess();
+};
+
+<span class="hl-com">// frontend/src/services/authSession.ts</span>
+<span class="hl-kw">export async function</span> <span class="hl-fn">login</span>(username: string, password: string): Promise&lt;AuthUser&gt; {
+  <span class="hl-kw">const</span> res = <span class="hl-kw">await</span> fetch(<span class="hl-str">'/api/auth/login'</span>, {
+    method: <span class="hl-str">'POST'</span>,
+    headers: { <span class="hl-str">'Content-Type'</span>: <span class="hl-str">'application/json'</span> },
+    credentials: <span class="hl-str">'same-origin'</span>, <span class="hl-com">// สำคัญมาก: เพื่อให้เบราว์เซอร์รับ Set-Cookie</span>
+    body: JSON.stringify({ username, password }),
+  });
+  ...
+}</div>
+</div>
+
+<div class="wt-panel hidden" id="panelCodeBackendLogin">
+  <div class="wt-panel-title">📄 โค้ดส่วน Backend: AuthEndpoints.cs (LoginAsync & PBKDF2)</div>
+  สังเกตเทคนิคการป้องกัน <strong>Timing Attack</strong> ด้วย <code>DummyPasswordHash</code>:
+  <div class="code-block">
+<span class="hl-com">// backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs</span>
+<span class="hl-kw">private static async Task</span>&lt;IResult&gt; <span class="hl-fn">LoginAsync</span>(...)
+{
+    <span class="hl-kw">var</span> user = <span class="hl-kw">await</span> db.Users.FirstOrDefaultAsync(u =&gt; u.Username == request.Username);
+    <span class="hl-com">// ป้องกัน Timing Attack: ถ้า user ไม่มีจริง ให้ verify กับ Dummy Hash เสมอ</span>
+    <span class="hl-kw">var</span> passwordMatches = hasher.Verify(request.Password, user?.PasswordHash ?? DummyPasswordHash);
+    <span class="hl-kw">if</span> (user is null || !user.IsActive || !passwordMatches)
+    {
+        <span class="hl-kw">return</span> Results.Unauthorized();
+    }
+    ...
+}</div>
+</div>
+
+<div class="wt-panel hidden" id="panelCodeSessionStorage">
+  <div class="wt-panel-title">🔒 ทำไมถึงแยกเก็บ Access Token ใน Memory และ Refresh Token ใน HttpOnly Cookie?</div>
+  ตามข้อตกลงสถาปัตยกรรม <strong>ADR facility-0013</strong>:
+  <div class="code-block">
+<span class="hl-sec">[Browser Client]</span>
+  ├── <span class="hl-str">In-Memory (JavaScript variable)</span>: เก็บ Access Token (JWT อายุ 5 นาที)
+  │     └── ถ้ามีช่องโหว่ XSS สคริปต์ที่แอบรันอาจขโมยได้แค่ Token อายุ 5 นาที
+  └── <span class="hl-fn">HttpOnly Cookie (facility_refresh)</span>: เก็บ Refresh Token (อายุ 30 วัน)
+        └── JavaScript <span class="hl-err">ไม่สามารถอ่านค่าได้เด็ดขาด (document.cookie จะมองไม่เห็น)</span>
+        └── ตั้งค่า <span class="hl-kw">Path=/api/auth</span> ทำให้ส่งไปเฉพาะ route auth เท่านั้น ไม่รั่วไป API อื่น</div>
+</div>
+
+<div class="wt-panel hidden" id="panelCodeRefresh">
+  <div class="wt-panel-title">📄 โค้ดส่วน Frontend: การขอ Access Token ใหม่อัตโนมัติ (authSession.ts)</div>
+  จัดการปัญหาการแข่งกัน Refresh พร้อมกัน (Concurrent Refresh) ด้วย <code>inflightRefresh</code>:
+  <div class="code-block">
+<span class="hl-com">// frontend/src/services/authSession.ts</span>
+<span class="hl-kw">let</span> inflightRefresh: Promise&lt;AuthResponse | null&gt; | null = null;
+
+<span class="hl-kw">export function</span> <span class="hl-fn">refreshSession</span>(): Promise&lt;AuthResponse | null&gt; {
+  <span class="hl-com">// ADR facility-0015: มีได้แค่ 1 refresh request ในเวลาเดียวกัน</span>
+  <span class="hl-kw">if</span> (!inflightRefresh) {
+    inflightRefresh = runRefresh().finally(() =&gt; {
+      inflightRefresh = null;
+    });
+  }
+  <span class="hl-kw">return</span> inflightRefresh;
+}</div>
+</div>
+
+<div class="wt-panel hidden" id="panelCodeRotation">
+  <div class="wt-panel-title">📄 โค้ดส่วน Backend: Token Rotation & Sliding Window 30 วัน</div>
+  เมื่อ Refresh สำเร็จ Token เดิมจะถูกบันทึก <code>RotatedAt = now</code> และออกใบใหม่ทันที:
+  <div class="code-block">
+<span class="hl-com">// backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs</span>
+stored.RotatedAt ??= now; <span class="hl-com">// บันทึกเวลาที่ถูกหมุน</span>
+<span class="hl-kw">var</span> next = AddRefreshToken(db, stored.UserId, stored.SessionId, now);
+<span class="hl-kw">await</span> db.SaveChangesAsync();
+
+WriteRefreshCookie(http, next.Token, next.ExpiresAt, jwt.Value);
+<span class="hl-kw">return</span> Results.Ok(ToResponse(stored.User, issuer.Issue(stored.User)));</div>
+</div>
+
+<div class="wt-panel question hidden" id="panelKeyQuestion">
+  <div class="wt-panel-title">❓ คำถามสำคัญ (Key Question) สำหรับผู้อ่าน</div>
+  <p><strong>สมมติเหตุการณ์:</strong> โทรศัพท์ของผู้ใช้เพิ่งนำ Token-A มารีเฟรชได้รับ Token-B ไปเรียบร้อย (Token-A จึงมีสถานะว่าถูกหมุนแล้ว)</p>
+  <p>แต่ 2 นาทีต่อมา มี Hacker ที่ดักจับ Token-A ไปได้จากเครือข่าย พยายามส่ง Token-A มาขอ Access Token บ้าง...</p>
+  <p>👉 <strong>เซิร์ฟเวอร์ควรตอบสนองอย่างไร?</strong> แค่ปฏิเสธคำขอของ Hacker (401) แล้วปล่อยให้ผู้ใช้จริงใช้งานต่อ? หรือมีมาตรการที่รัดกุมกว่านั้น?</p>
+</div>
+
+<div class="wt-panel race hidden" id="panelCodeReuse">
+  <div class="wt-panel-title">🚨 ตรวจพบ Token Reuse: Revoke ทันทีทั้ง Session (ADR facility-0015 / RFC 9700)</div>
+  เซิร์ฟเวอร์ไม่สามารถรู้ได้ว่าใครคือเจ้าของจริง และใครคือ Hacker จึงต้องปกป้องข้อมูลด้วยการ <strong>ยกเลิกทุก Token ใน Session นั้น</strong>:
+  <div class="code-block">
+<span class="hl-com">// backend/src/FacilityRealtime.Application/Auth/RefreshTokenRules.cs</span>
+<span class="hl-kw">public static</span> RefreshDecision <span class="hl-fn">Decide</span>(RefreshToken token, DateTime nowUtc)
+{
+    <span class="hl-kw">if</span> (token.RotatedAt is not null)
+    {
+        <span class="hl-com">// ภายใน 30 วินาที: ถือเป็น concurrent refresh จากอีกแท็บ (อนุญาต)</span>
+        <span class="hl-kw">return</span> nowUtc - token.RotatedAt.Value &lt;= ReuseGrace
+            ? RefreshDecision.RotateWithinGrace
+            : RefreshDecision.ReuseDetected; <span class="hl-err">// เกิน 30 วินาที: ตรวจพบการขโมย!</span>
+    }
+    ...
+}</div>
+</div>
+
+<div class="wt-panel hidden" id="panelCodeLogout">
+  <div class="wt-panel-title">📄 โค้ดส่วน Logout: การเพิกถอน Session อย่างสมบูรณ์</div>
+  เมื่อผู้ใช้กด "ออก" ในแอป:
+  <div class="code-block">
+<span class="hl-com">// backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs</span>
+<span class="hl-kw">private static async Task</span>&lt;IResult&gt; <span class="hl-fn">LogoutAsync</span>(...)
+{
+    <span class="hl-com">// ดึง SessionId จาก Token ที่ส่งมา แล้วสั่ง RevokeSession ใน Database</span>
+    <span class="hl-kw">if</span> (sessionId is not null)
+    {
+        <span class="hl-kw">await</span> db.RevokeSessionAsync(sessionId.Value, clock.GetUtcNow().UtcDateTime);
+    }
+    <span class="hl-com">// สั่งเบราว์เซอร์ให้ลบ Cookie ทิ้ง</span>
+    http.Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions(jwt.Value));
+    <span class="hl-kw">return</span> Results.NoContent();
+}</div>
+</div>
+
+<div class="wt-panel summary hidden" id="panelSummary">
+  <div class="wt-panel-title">🎯 สรุปจุดเด่นด้านสถาปัตยกรรม & ข้อแลกเปลี่ยน (Trade-offs)</div>
+  <div class="tradeoff-grid">
+    <div class="tradeoff-card pro">
+      <h4>✅ ข้อดีด้านความปลอดภัย (Security Strengths)</h4>
+      <ul>
+        <li><strong>No LocalStorage XSS:</strong> Access Token อยู่ใน Memory เท่านั้น เมื่อปิดแท็บจะหายไป</li>
+        <li><strong>HttpOnly Cookie:</strong> Refresh Token ถูกซ่อนจาก JavaScript 100%</li>
+        <li><strong>Sliding 30 Days:</strong> ผู้ใช้หน้างาน (พนักงานทำความสะอาด) ไม่ต้องล็อกอินใหม่ทุกวัน</li>
+        <li><strong>Automatic Reuse Revocation:</strong> ตรวจจับการขโมย Token และตัดวงจรทันที</li>
+      </ul>
+    </div>
+    <div class="tradeoff-card con">
+      <h4>⚖️ ข้อแลกเปลี่ยนที่ต้องแลก (Architectural Trade-offs)</h4>
+      <ul>
+        <li><strong>Stateful on Server:</strong> เซิร์ฟเวอร์ต้องเก็บตาราง <code>refresh_tokens</code> ไม่ใช่ Stateless JWT ล้วน</li>
+        <li><strong>Reload Network Call:</strong> เมื่อผู้ใช้ Refresh หน้าจอ เบราว์เซอร์ต้องยิง <code>/api/auth/refresh</code> 1 ครั้งเสมอเพื่อขอ Access Token ใหม่</li>
+        <li><strong>Same-Origin Dependency:</strong> Cookie ส่งได้เฉพาะโดเมนเดียวกัน (Path=/api/auth) หากแยก API ข้ามโดเมนต้องตั้งค่า CORS/Credentials อย่างรัดกุม</li>
+      </ul>
+    </div>
+  </div>
+</div>
+  
+
+  <div class="controls">
+    <button id="prevBtn" class="tertiary" disabled>← ย้อนกลับ</button>
+    <button id="nextBtn">ถัดไป →</button>
+    <button id="resetBtn" class="tertiary">↻ เริ่มใหม่</button>
+  </div>
+
+    <aside id="termDrawer" class="drawer hidden" aria-label="term definition">
+    <div class="drawer-head">
+      <span class="drawer-term" id="drawerTerm"></span>
+      <button class="tertiary" id="drawerClose" title="ปิด">✕</button>
+    </div>
+    <div class="drawer-source" id="drawerSource"></div>
+    <div class="drawer-def" id="drawerDef"></div>
+    <div class="drawer-seealso-title hidden" id="drawerSeeAlsoTitle">ดูเพิ่ม</div>
+    <div id="drawerSeeAlso"></div>
+    <div class="drawer-btns">
+      <button class="tertiary hidden" id="drawerBack">← ย้อน</button>
+    </div>
+  </aside>
+  
+</div>
+
+<!-- The engine owns the fixed 5 markerheads; SVG modes select from them (ADR 0022). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="arrowhead"        markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#3d4a5f"/></marker>
+  <marker id="arrowhead-active" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#5fb4ff"/></marker>
+  <marker id="arrowhead-magic"  markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#b070ff"/></marker>
+  <marker id="arrowhead-done"   markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#4ade80"/></marker>
+  <marker id="arrowhead-error"  markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#ff5757"/></marker>
+</defs></svg>
+<script>
+let currentStep = 0;
+let TOTAL = 0;                 // the authored bootstrap sets TOTAL = scenes.length - 1
+let MODE = null;              // the authored bootstrap sets MODE = '<mode name>'
+const RENDER_HOOKS = [];      // cross-cutting per-render actions; capabilities self-register (e.g. drawer pushes closeDrawer)
+const modeRenderers = {};     // modes self-register: modeRenderers['<name>'] = { registry, clear, <setters> }
+
+function show(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
+function hide(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
+
+// canonical 3-arg narration (nested shape). setSceneTitle kept for scenes that set only the title.
+function setNarration(cls, title, bodyHTML) {
+  const n = document.getElementById('narration');
+  n.className = 'narration' + (cls ? ' ' + cls : '');
+  document.getElementById('sceneTitle').textContent = title;
+  document.getElementById('narrationBody').innerHTML = bodyHTML || '';
+}
+function setSceneTitle(text) { document.getElementById('sceneTitle').textContent = text; }
+
+function buildProgressDots() {
+  const p = document.getElementById('stepProgress');
+  p.innerHTML = '';
+  for (let i = 0; i <= TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'step-dot'; d.textContent = i; d.id = 'dot' + i;
+    p.appendChild(d);
+  }
+}
+
+function render(step) {
+  RENDER_HOOKS.forEach(h => h());                 // runs FIRST (drawer closes here), before any paint
+  const R = modeRenderers[MODE];
+  if (R && R.clear) R.clear(R.registry);          // engine calls the mode's reset generically
+  if (typeof scenes !== 'undefined' && scenes[step]) scenes[step]();
+  for (let i = 0; i <= TOTAL; i++) {
+    const d = document.getElementById('dot' + i);
+    if (!d) continue;
+    d.classList.remove('done', 'current');
+    if (i < step)  d.classList.add('done');
+    if (i === step) d.classList.add('current');
+  }
+  document.getElementById('stepBadge').textContent = 'Step ' + step + ' / ' + TOTAL;
+  document.getElementById('prevBtn').disabled = step === 0;
+  document.getElementById('nextBtn').disabled = step === TOTAL;
+}
+
+document.getElementById('prevBtn').onclick  = () => { if (currentStep > 0)     { currentStep--; render(currentStep); } };
+document.getElementById('nextBtn').onclick  = () => { if (currentStep < TOTAL) { currentStep++; render(currentStep); } };
+document.getElementById('resetBtn').onclick = () => { currentStep = 0; render(0); };
+
+/* GLOSSARY is provided by the generated walkthrough's authored bootstrap (inlined from
+   CONTEXT.md at authoring time): an object keyed by slug -> {term, short, seeAlso, source}
+   where source is 'CONTEXT.md' | 'authored'. The §JS below only READS it; the standalone
+   demo declares a demo GLOSSARY in its DEMO-ONLY block at the bottom of this file. */
+
+let drawerStack = [];   // GLOSSARY keys visited this open, for ← back
+
+function renderTerm(key) {
+  const entry = GLOSSARY[key];
+  if (!entry) return;
+  document.getElementById('drawerTerm').textContent = entry.term;
+  document.getElementById('drawerSource').textContent =
+    entry.source === 'CONTEXT.md' ? 'จาก CONTEXT.md' : 'อธิบายเพิ่มเติม';
+  document.getElementById('drawerDef').textContent = entry.short;
+  const wrap = document.getElementById('drawerSeeAlso');
+  wrap.innerHTML = '';
+  const related = (entry.seeAlso || []).filter(k => GLOSSARY[k]);
+  if (related.length) {
+    document.getElementById('drawerSeeAlsoTitle').classList.remove('hidden');
+    related.forEach(k => {
+      const chip = document.createElement('span');
+      chip.className = 'seealso-chip';
+      chip.textContent = GLOSSARY[k].term;
+      chip.dataset.hop = k;
+      wrap.appendChild(chip);
+    });
+  } else {
+    document.getElementById('drawerSeeAlsoTitle').classList.add('hidden');
+  }
+  document.getElementById('drawerBack').classList.toggle('hidden', drawerStack.length <= 1);
+}
+
+function openTerm(key) {
+  if (!GLOSSARY[key]) return;
+  drawerStack.push(key);
+  renderTerm(key);
+  document.getElementById('termDrawer').classList.remove('hidden');
+}
+
+function hopTerm(key) {
+  if (!GLOSSARY[key]) return;
+  drawerStack.push(key);
+  renderTerm(key);
+}
+
+function backTerm() {
+  if (drawerStack.length <= 1) return;
+  drawerStack.pop();
+  renderTerm(drawerStack[drawerStack.length - 1]);
+}
+
+function closeDrawer() {
+  drawerStack = [];
+  document.getElementById('termDrawer').classList.add('hidden');
+}
+
+document.addEventListener('click', (e) => {
+  const termEl = e.target.closest('[data-term]');
+  if (termEl) { openTerm(termEl.dataset.term); return; }
+  const hopEl = e.target.closest('[data-hop]');
+  if (hopEl) { hopTerm(hopEl.dataset.hop); return; }
+});
+document.getElementById('drawerClose').onclick = closeDrawer;
+document.getElementById('drawerBack').onclick  = backTerm;
+
+// Self-register with the walkthrough engine so stepping closes the drawer
+// (Phase 2 RENDER_HOOKS model). Guarded so this file still runs standalone.
+if (typeof RENDER_HOOKS !== 'undefined' && RENDER_HOOKS.indexOf(closeDrawer) === -1) RENDER_HOOKS.push(closeDrawer);
+
+modeRenderers['diagram'] = {
+  registry: {
+    COMPONENTS: [
+      'compMockError', 'compMockUser', 'compMockPass', 'compMockBtn',
+      'compMemory', 'compCookie', 'compLocal',
+      'compEndpoint', 'compHasher', 'compIssuer', 'compReuse',
+      'compDbUsers', 'compDbTokens'
+    ],
+    ARROWS: [
+      'arrFormToApi', 'arrApiToHasher', 'arrHasherToApi', 'arrApiToDb', 'arrDbToApi',
+      'arrApiToIssuer', 'arrIssuerToDb', 'arrApiToMem', 'arrApiToCookie',
+      'arrCookieToApi', 'arrReuseToDb'
+    ],
+    LABELS: [
+      'lblLoginReq', 'lblVerifyPass', 'lblDbUserQuery', 'lblDbUserFound',
+      'lblHashMatch', 'lblIssueTokens', 'lblSaveToken', 'lblSetMem',
+      'lblSetCookie', 'lblRefreshReq', 'lblRotateToken', 'lblReuseAlert'
+    ],
+    LIVE: {
+      mockUserVal: '👤 somchai',
+      mockPassVal: '🔒 •••••••• (password123)',
+      mockBtnText: 'เข้าสู่ระบบ (Submit)',
+      mockErrorText: '⚠️ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+      memVal: 'session: null (ยังไม่ล็อกอิน)',
+      cookieVal: 'facility_refresh: none',
+      localVal: '❌ ห้ามเก็บ token เด็ดขาด',
+      endpointState: 'status: idle',
+      hasherState: 'status: idle',
+      issuerState: 'status: idle',
+      reuseState: 'status: monitoring',
+      dbUserState: 'somchai | cleaner | active',
+      dbTokenState: 'tokens: 0 records'
+    }
+  },
+  clear(reg) {
+    reg.COMPONENTS.forEach(id => this.setComp(id, ''));
+    reg.ARROWS.forEach(id => this.setArrow(id, ''));
+    reg.LABELS.forEach(id => this.setLabel(id, false));
+    Object.keys(reg.LIVE).forEach(id => this.setText(id, reg.LIVE[id]));
+    document.querySelectorAll('.wt-panel').forEach(p => p.classList.add('hidden'));
+  },
+  setComp(id, state) {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('class', 'comp' + (state ? ' ' + state : ''));
+  },
+  setArrow(id, state) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.setAttribute('class', 'arrow' + (state ? ' ' + state : ''));
+    const m = {
+      '': 'url(#arrowhead)',
+      dimmed: 'url(#arrowhead)',
+      active: 'url(#arrowhead-active)',
+      magic: 'url(#arrowhead-magic)',
+      done: 'url(#arrowhead-done)',
+      error: 'url(#arrowhead-error)'
+    };
+    el.setAttribute('marker-end', m[state] || 'url(#arrowhead)');
+  },
+  setLabel(id, show, variant) {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('class', 'flow-label-group' + (variant ? ' ' + variant : '') + (show ? ' show' : ''));
+  },
+  setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  },
+  assertRegistryComplete() {
+    const got = { comp: '.comp', arrow: '.arrow', flow: '.flow-label-group' };
+    const lists = { comp: this.registry.COMPONENTS, arrow: this.registry.ARROWS, flow: this.registry.LABELS };
+    const miss = [];
+    Object.keys(got).forEach(k => [].forEach.call(document.querySelectorAll(got[k]), e => {
+      if (e.id && !lists[k].includes(e.id)) miss.push(e.id);
+    }));
+    [].concat(this.registry.COMPONENTS, this.registry.ARROWS, this.registry.LABELS, Object.keys(this.registry.LIVE))
+      .forEach(id => { if (!document.getElementById(id)) miss.push(id); });
+    if (miss.length) throw new Error('diagram registry/DOM mismatch: ' + miss.join(', '));
+    return true;
+  }
+};
+
+MODE = 'diagram';
+const { setComp, setArrow, setLabel, setText } = modeRenderers[MODE];
+
+const GLOSSARY = {
+  'persistent-session': {
+    term: 'Persistent Session',
+    short: 'สถานะการเข้าสู่ระบบที่ค้างไว้ในเบราว์เซอร์ของผู้ใช้ (เช่น มือถือผู้สแกน) ทำให้ใช้งานต่อเนื่องได้โดยไม่ต้องกรอกรหัสผ่านซ้ำ จนกว่าจะกด Logout, ไม่ได้ใช้งานนาน 30 วัน หรือบัญชีถูกปิด',
+    seeAlso: ['access-token', 'refresh-token'],
+    source: 'CONTEXT.md'
+  },
+  'cleaner-account': {
+    term: 'Cleaner Account',
+    short: 'บัญชีผู้ใช้งานระดับพนักงานทำความสะอาดที่สร้างขึ้นล่วงหน้าโดยผู้ดูแลระบบ (Admin) ประกอบด้วย Username, Password Hash, Display Name และสิทธิ์การใช้งาน',
+    seeAlso: ['admin-account', 'deactivated-account'],
+    source: 'CONTEXT.md'
+  },
+  'admin-account': {
+    term: 'Admin Account',
+    short: 'บัญชีผู้ใช้งานระดับผู้ดูแลระบบ มีสิทธิ์จัดการ Service Point, ออก QR Token ใหม่ และจัดการบัญชีผู้ใช้ ซึ่ง Cleaner Account ทำไม่ได้',
+    seeAlso: ['cleaner-account', 'deactivated-account'],
+    source: 'CONTEXT.md'
+  },
+  'deactivated-account': {
+    term: 'Deactivated Account',
+    short: 'บัญชี (Cleaner หรือ Admin) ที่ Admin ปิดใช้งาน login ไม่ได้และ Session ที่ค้างอยู่หลุดภายในไม่กี่นาที แต่ประวัติ Scan Record และชื่อยังคงอยู่ เพราะระบบไม่ลบบัญชี Admin เปิดใช้งานกลับได้',
+    seeAlso: ['persistent-session'],
+    source: 'CONTEXT.md'
+  },
+  'access-token': {
+    term: 'Access Token (JWT)',
+    short: 'JSON Web Token อายุสั้น (5 นาที) เก็บใน Memory ของหน้าเว็บเท่านั้น ใช้แนบใน Authorization Header สำหรับเรียก API และเชื่อมต่อ SignalR',
+    seeAlso: ['refresh-token', 'httponly-cookie'],
+    source: 'authored'
+  },
+  'refresh-token': {
+    term: 'Refresh Token',
+    short: 'Token สุ่ม 256 บิต (Base64Url) เก็บใน HttpOnly Cookie มีอายุ 30 วัน ใช้สำหรับขอ Access Token ใบใหม่เมื่อใบเดิมหมดอายุ',
+    seeAlso: ['token-rotation', 'reuse-detection', 'httponly-cookie'],
+    source: 'authored'
+  },
+  'httponly-cookie': {
+    term: 'HttpOnly Cookie',
+    short: 'คุกกี้ที่ JavaScript บนหน้าเว็บไม่สามารถเข้าถึงหรือขโมยอ่านได้ผ่าน document.cookie ช่วยป้องกันภัยคุกคามจากการโจมตีประเภท XSS',
+    seeAlso: ['refresh-token', 'access-token'],
+    source: 'authored'
+  },
+  'token-rotation': {
+    term: 'Token Rotation',
+    short: 'เทคนิคที่ทุกครั้งที่มีการใช้ Refresh Token ขอ Access Token ใหม่ เซิร์ฟเวอร์จะยกเลิก Refresh Token เดิมและออกใบใหม่ให้เสมอ (1 Token ใช้ได้ 1 ครั้ง)',
+    seeAlso: ['reuse-detection', 'refresh-token'],
+    source: 'authored'
+  },
+  'reuse-detection': {
+    term: 'Reuse Detection',
+    short: 'กลไกตรวจจับเมื่อมีการนำ Refresh Token ที่ถูกหมุนไปแล้วกลับมาใช้ซ้ำเกิน Grace Window (30 วิ) ระบบจะยกเลิกทุก Token ใน Session ทันทีเพื่อป้องกันการขโมย',
+    seeAlso: ['token-rotation', 'refresh-token'],
+    source: 'authored'
+  }
+};
+
+const scenes = [
+  // Scene 0: Overview
+  () => {
+    setNarration(
+      '',
+      'เริ่มต้น — สถาปัตยกรรมระบบ Login & Persistent Session',
+      'ระบบแบ่งออกเป็น 3 ฝั่งหลัก: <strong>1) Client (Browser & React App)</strong> มี Mock หน้าจอ Login และ Storage 3 ชั้น, <strong>2) Backend (ASP.NET Core)</strong> มี AuthEndpoints, PBKDF2 Hasher, Token Issuer, และ Reuse Detector, <strong>3) Database</strong> มีตาราง users และ refresh_tokens. กด <strong>ถัดไป →</strong> เพื่อดูการทำงานทีละสเต็ป'
+    );
+    show('panelIntro');
+  },
+
+  // Scene 1: User submits form
+  () => {
+    setNarration(
+      'warn',
+      'Step 1 — ผู้ใช้กรอกฟอร์ม Somchai และกดปุ่มเข้าสู่ระบบ',
+      'พนักงานทำความสะอาด (<span class="term" data-term="cleaner-account">Cleaner Account</span>) กรอกชื่อ <code>somchai</code> และรหัสผ่าน <code>password123</code> แล้วกดปุ่ม Submit ฟอร์มจะเข้าสู่สถานะ <code>isSubmitting: true</code> ป้องกันการกดซ้ำ และเรียก <code>login()</code> ใน <code>AuthContext.tsx</code>'
+    );
+    setComp('compMockUser', 'active');
+    setComp('compMockPass', 'active');
+    setComp('compMockBtn', 'firing');
+    setText('mockBtnText', 'กำลังตรวจสอบ...');
+    show('panelCodeLogin');
+  },
+
+  // Scene 2: Client sends POST /api/auth/login
+  () => {
+    setNarration(
+      '',
+      'Step 2 — Client ส่งคำขอ HTTP POST /api/auth/login',
+      '<code>authSession.ts</code> ยิง Fetch API ด้วย <code>credentials: "same-origin"</code> นำส่ง JSON Payload <code>{ username, password }</code> ตรงไปยัง Backend เพื่อร้องขอการพิสูจน์ตัวตน'
+    );
+    setComp('compMockBtn', 'active');
+    setArrow('arrFormToApi', 'active');
+    setLabel('lblLoginReq', true);
+    setComp('compEndpoint', 'active');
+    setText('endpointState', 'POST /login (somchai)');
+    show('panelCodeLogin');
+  },
+
+  // Scene 3: Backend DB query & PBKDF2 verification
+  () => {
+    setNarration(
+      'warn',
+      'Step 3 — Backend ค้นหา User และ Verify Hash ด้วย PBKDF2 (100k รอบ)',
+      'Backend ค้นหาผู้ใช้ใน DB หากผู้ใช้ไม่มีอยู่จริงหรือเป็น <span class="term" data-term="deactivated-account">Deactivated Account</span> ระบบจะตรวจสอบรหัสผ่านกับ <code>DummyPasswordHash</code> เสมอ เพื่อให้ใช้เวลาประมวลผลเท่ากัน ป้องกันการแฮกด้วย <strong>Timing Attack</strong>'
+    );
+    setComp('compEndpoint', 'active');
+    setArrow('arrApiToDb', 'active');
+    setLabel('lblDbUserQuery', true);
+    setComp('compDbUsers', 'active');
+    setText('dbUserState', 'SELECT user somchai');
+    setArrow('arrDbToApi', 'done');
+    setLabel('lblDbUserFound', true);
+    setArrow('arrApiToHasher', 'active');
+    setLabel('lblVerifyPass', true);
+    setComp('compHasher', 'firing');
+    setText('hasherState', 'PBKDF2 100,000 iters');
+    show('panelCodeBackendLogin');
+  },
+
+  // Scene 4: Password matches -> Issue Tokens & Save to DB
+  () => {
+    setNarration(
+      'success',
+      'Step 4 — รหัสผ่านถูกต้อง! Backend สร้าง Access Token และ Refresh Token',
+      'เมื่อรหัสผ่านตรงกัน Backend จะออก <span class="term" data-term="access-token">Access Token</span> เป็น JWT อายุ 5 นาที และสุ่ม <span class="term" data-term="refresh-token">Refresh Token</span> ขนาด 256 บิต บันทึกค่า SHA-256 Hash ลงตาราง <code>refresh_tokens</code> โดยตั้ง <code>ExpiresAt = now + 30 วัน</code> เพื่อรองรับ <span class="term" data-term="persistent-session">Persistent Session</span>'
+    );
+    setComp('compHasher', 'done');
+    setText('hasherState', '✓ Hash Matched');
+    setArrow('arrHasherToApi', 'done');
+    setLabel('lblHashMatch', true);
+    setComp('compEndpoint', 'active');
+    setArrow('arrApiToIssuer', 'active');
+    setLabel('lblIssueTokens', true);
+    setComp('compIssuer', 'firing');
+    setText('issuerState', 'JWT 5m + Token-A');
+    setArrow('arrIssuerToDb', 'active');
+    setLabel('lblSaveToken', true);
+    setComp('compDbTokens', 'done');
+    setText('dbTokenState', 'Session S1: Token-A Hash');
+  },
+
+  // Scene 5: Response 200 OK + Set-Cookie + In-Memory Store
+  () => {
+    setNarration(
+      'magic',
+      'Step 5 — ตอบกลับ 200 OK: คืน JWT ใน Body และฝัง Refresh Token ใน HttpOnly Cookie',
+      'หัวใจของ <strong>ADR facility-0013</strong>: Refresh Token ถูกส่งกลับผ่าน <span class="term" data-term="httponly-cookie">HttpOnly Cookie</span> (JavaScript เข้าถึงไม่ได้ ป้องกัน XSS) ขณะที่ Access Token ส่งกลับใน JSON Body เพื่อเก็บใน In-Memory ของ <code>authSession.ts</code> เท่านั้น (ไม่แตะ localStorage)'
+    );
+    setComp('compEndpoint', 'done');
+    setText('endpointState', '200 OK (JWT + Cookie)');
+    setArrow('arrApiToCookie', 'magic');
+    setLabel('lblSetCookie', true, 'magic');
+    setComp('compCookie', 'locked');
+    setText('cookieVal', 'facility_refresh: Token-A (30d)');
+    setArrow('arrApiToMem', 'active');
+    setLabel('lblSetMem', true);
+    setComp('compMemory', 'done');
+    setText('memVal', 'JWT (somchai, expires: 5m)');
+    setComp('compMockBtn', 'done');
+    setText('mockBtnText', '✓ เข้าสู่ระบบสำเร็จ');
+    setComp('compLocal', 'blocked');
+    setText('localVal', '❌ localStorage ปลอดภัย (ว่างเปล่า)');
+    show('panelCodeSessionStorage');
+  },
+
+  // Scene 6: Normal authenticated API calls
+  () => {
+    setNarration(
+      '',
+      'Step 6 — การทำงานปกติ: แนบ Access Token ผ่าน Authorization: Bearer Header',
+      'เมื่อพนักงานเปิดหน้าสแกน QR หรือดู Dashboard แอปจะเรียก <code>apiFetch()</code> ใน <code>authSession.ts</code> ซึ่งจะดึง Access Token จาก Memory แนบไปใน Header <code>Authorization: Bearer &lt;token&gt;</code> โดยเบราว์เซอร์จะไม่ส่ง Cookie ไปด้วยเพราะ Path จำกัดไว้เฉพาะ <code>/api/auth</code>'
+    );
+    setComp('compMemory', 'active');
+    setText('memVal', 'JWT: แนบ Authorization Header');
+    setComp('compCookie', 'locked');
+    setComp('compEndpoint', 'active');
+    setText('endpointState', 'GET /api/service-points (Bearer)');
+  },
+
+  // Scene 7: Inflight refresh trigger
+  () => {
+    setNarration(
+      'warn',
+      'Step 7 — การต่ออายุอัตโนมัติ: ก่อน Access Token หมดอายุ 30 วินาที หรือเมื่อ Reload หน้า',
+      'เมื่อผู้ใช้รีโหลดเบราว์เซอร์ (Memory หาย) หรือ Access Token มีอายุเหลือน้อยกว่า 30 วินาที <code>getValidAccessToken()</code> จะยิง <code>POST /api/auth/refresh</code> โดยเบราว์เซอร์จะแนบคุกกี้ <code>facility_refresh</code> ให้อัตโนมัติ หากมีหลายคำขอยิงชนกัน จะแชร์ Promise <code>inflightRefresh</code> เดียวกัน'
+    );
+    setComp('compMemory', 'active');
+    setText('memVal', 'JWT ใกล้หมดอายุ (&lt; 30s)');
+    setArrow('arrCookieToApi', 'active');
+    setLabel('lblRefreshReq', true);
+    setComp('compEndpoint', 'active');
+    setText('endpointState', 'POST /refresh (Cookie Token-A)');
+    show('panelCodeRefresh');
+  },
+
+  // Scene 8: Token Rotation
+  () => {
+    setNarration(
+      'success',
+      'Step 8 — Token Rotation: หมุน Refresh Token เก่าเป็น Token ใหม่ทุกครั้งที่ Refresh',
+      'Backend ตรวจสอบ Token-A ใน DB พบว่ายังไม่เคยถูกหมุน จึงทำ <span class="term" data-term="token-rotation">Token Rotation</span>: มาร์ก <code>RotatedAt = now</code> ให้ Token-A และออก Token-B ใบใหม่พร้อม Access Token ใหม่ให้ทันที โดยขยายเวลาออกไปอีก 30 วัน (Sliding Window)'
+    );
+    setComp('compEndpoint', 'active');
+    setArrow('arrApiToIssuer', 'active');
+    setLabel('lblRotateToken', true);
+    setComp('compIssuer', 'firing');
+    setText('issuerState', 'Rotate: Token-A -&gt; Token-B');
+    setArrow('arrIssuerToDb', 'active');
+    setComp('compDbTokens', 'done');
+    setText('dbTokenState', 'Token-A (Rotated) | Token-B (active)');
+    setArrow('arrApiToCookie', 'magic');
+    setComp('compCookie', 'locked');
+    setText('cookieVal', 'facility_refresh: Token-B');
+    setArrow('arrApiToMem', 'active');
+    setComp('compMemory', 'done');
+    setText('memVal', 'JWT ใหม่ (อายุ 5 นาที)');
+    show('panelCodeRotation');
+  },
+
+  // Scene 9: Key Question
+  () => {
+    setNarration(
+      'magic',
+      'Step 9 — 💡 คำถามสำคัญ: ถ้ามีคนร้ายแอบขโมย Token-A ไปใช้ซ้อน จะเกิดอะไรขึ้น?',
+      'สมมติว่า Token-A ถูกเบราว์เซอร์หมุนเป็น Token-B ไปเรียบร้อยแล้ว แต่อีก 2 นาทีถัดมา มีผู้ไม่หวังดีที่เคยดักจับ Token-A ได้ นำ Token-A ใบเดิมส่งมาที่ <code>/api/auth/refresh</code> อีกครั้ง... ระบบควรทำอย่างไร? กด <strong>ถัดไป →</strong> เพื่อดูผลลัพธ์'
+    );
+    setComp('compCookie', 'locked');
+    setComp('compDbTokens', 'done');
+    setComp('compReuse', 'active');
+    setText('reuseState', 'รอตรวจสอบ Token...');
+    show('panelKeyQuestion');
+  },
+
+  // Scene 10: Reuse Detection & Revocation
+  () => {
+    setNarration(
+      'error',
+      'Step 10 — ตรวจพบ Reuse เกิน 30 วินาที → ตัดวงจร สั่ง Revoke ทุก Token ใน Session ทันที!',
+      'ตามมาตรฐาน <strong>RFC 9700 และ ADR facility-0015</strong>: เมื่อมีคนส่ง Token ที่เคยหมุนไปแล้วเกิน 30 วินาที (<span class="term" data-term="reuse-detection">Reuse Detection</span>) เซิร์ฟเวอร์จะฟันธงว่าเกิดการขโมย Token! ระบบจะสั่งลบและ <strong>Revoke ทุก Token ใน Session S1 ทันที</strong> บังคับให้ทั้งคนร้ายและผู้ใช้จริงหลุดจากระบบ'
+    );
+    setComp('compCookie', 'error');
+    setText('cookieVal', 'Token-A Replayed! (ขโมย)');
+    setArrow('arrCookieToApi', 'error');
+    setComp('compEndpoint', 'error');
+    setText('endpointState', '401 Unauthorized (Reuse)');
+    setComp('compReuse', 'error');
+    setText('reuseState', '🚨 Reuse Detected &gt; 30s');
+    setArrow('arrReuseToDb', 'error');
+    setLabel('lblReuseAlert', true, 'error');
+    setComp('compDbTokens', 'error');
+    setText('dbTokenState', 'Session S1: ALL REVOKED!');
+    setComp('compMemory', 'error');
+    setText('memVal', 'session = null (หลุดจากระบบ)');
+    show('panelCodeReuse');
+  },
+
+  // Scene 11: Logout Flow
+  () => {
+    setNarration(
+      'warn',
+      'Step 11 — การออกจากระบบ (Logout): เพิกถอน Session ใน DB และสั่งเบราว์เซอร์ลบ Cookie',
+      'เมื่อผู้ใช้กดปุ่ม "ออก" ในแอป Frontend จะเรียก <code>POST /api/auth/logout</code> เซิร์ฟเวอร์จะสั่ง <code>RevokeSessionAsync</code> ในฐานข้อมูล และส่งคำสั่ง <code>Set-Cookie: facility_refresh=; Max-Age=0</code> ให้เบราว์เซอร์ทำลายคุกกี้ทิ้ง พร้อมล้างหน่วยความจำใน <code>authSession.ts</code>'
+    );
+    setComp('compMockBtn', 'active');
+    setText('mockBtnText', 'ออกจากระบบ');
+    setArrow('arrFormToApi', 'active');
+    setComp('compEndpoint', 'active');
+    setText('endpointState', 'POST /logout (204 No Content)');
+    setComp('compDbTokens', 'done');
+    setText('dbTokenState', 'Session S1: RevokedAt = now');
+    setComp('compCookie', 'dimmed');
+    setText('cookieVal', 'cookie deleted (expired)');
+    setComp('compMemory', 'dimmed');
+    setText('memVal', 'session = null');
+    show('panelCodeLogout');
+  },
+
+  // Scene 12: Summary & Trade-offs
+  () => {
+    setNarration(
+      'success',
+      'Step 12 — สรุปความปลอดภัยและข้อแลกเปลี่ยน (Architectural Trade-offs)',
+      'ระบบออกแบบให้มีความปลอดภัยสูงสุดตามมาตรฐานระดับอุตสาหกรรม โดยมี Access Token สั้น 5 นาที, Persistent Session 30 วันผ่าน HttpOnly Cookie, Token Rotation และ Automatic Reuse Revocation เพื่อปกป้องทั้งสิทธิ์ของพนักงานและข้อมูลการทำความสะอาดในโรงงาน'
+    );
+    setComp('compMemory', 'done');
+    setComp('compCookie', 'locked');
+    setComp('compLocal', 'blocked');
+    setComp('compEndpoint', 'done');
+    setComp('compHasher', 'done');
+    setComp('compIssuer', 'done');
+    setComp('compReuse', 'done');
+    setComp('compDbUsers', 'done');
+    setComp('compDbTokens', 'done');
+    show('panelSummary');
+  }
+];
+
+TOTAL = scenes.length - 1;
+modeRenderers[MODE].assertRegistryComplete();
+buildProgressDots();
+render(0);
+
+</script>
+</body></html>

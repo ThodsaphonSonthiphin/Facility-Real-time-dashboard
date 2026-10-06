@@ -3,15 +3,19 @@ name: chart-map
 description: >-
   Chart a Decision map for an effort too big for one agent session — name the
   destination, grill breadth-first to separate real decision tickets from fog,
-  create the map and its tickets behind a dry-run gate, fire the research
-  subagents, then STOP. Use when the user has a loose, foggy, multi-session
-  idea — "this is huge, where do we even start", "plan this migration", "chart
-  this", "make a decision map", "map out this initiative", "too big for one
-  session" — and the route to the goal is not visible yet. Do NOT use for a
-  well-scoped single-session design (that is grill-then-plan / sp-grill-with-doc),
-  and do NOT use to continue a map that already exists (that is work-map). If
-  the opening grill surfaces no fog, this skill stops and says a map is not
-  needed.
+  then SWEEP the ten software-engineering areas the human did not raise
+  (security, identity, data, deploy, operations, …), create the map and its
+  tickets behind a dry-run gate, fire the research subagents, then STOP. Use
+  when the user has a loose, foggy, multi-session idea — "this is huge, where
+  do we even start", "plan this migration", "chart this", "make a decision
+  map", "map out this initiative", "too big for one session" — and the route
+  to the goal is not visible yet. Also use it on a map that ALREADY exists when
+  the user says "sweep the map", "did we cover security / rollback / deploy",
+  or lint reports `map-never-swept`: on an existing map it runs only the
+  frontier sweep and adds additively. Do NOT use for a well-scoped
+  single-session design (that is grill-then-plan / sp-grill-with-doc), and do
+  NOT use to continue a map's decisions (that is work-map). If the grill AND
+  the sweep surface no fog, this skill stops and says a map is not needed.
 argument-hint: "<loose idea — e.g. 'migrate billing to the new provider'>"
 effort: high
 ---
@@ -35,6 +39,7 @@ CHART A DECISION MAP — one session, then stop
   │   local docs/decision-map/<slug>/
   │   or GitHub issues + sub-issues
   │   name it BEFORE any charting
+  │   `read` the slug: exists? → skip to ③b
   ▼
   ② DESTINATION  (HITL — the human answers)
   │   what does arriving look like?
@@ -45,9 +50,15 @@ CHART A DECISION MAP — one session, then stop
   │   can you STATE the question now?
   │     yes → ticket · no → fog
   │     past the destination → out of scope
+  ▼
+  ③b SWEEP — the ten areas the human
+  │   did not raise (references/frontier-sweep.md)
+  │   ONE batched question → dig only where
+  │   the user points · the rest = none
+  │   record: one `sweep <date>:` notes line
   │
-  │   no fog anywhere? ■ STOP — no map
-  │      needed; hand to grill-then-plan
+  │   no fog anywhere, even now? ■ STOP —
+  │      no map needed; hand to grill-then-plan
   ▼
   ④ GATE — dry run first, always
   │   create · skip (exists) · merge
@@ -108,6 +119,23 @@ contract disagree, the contract wins.
 
 The map is repo docs, so it is committed through **assisted git** — offer the
 commit, never make it automatically.
+
+### Does the map already exist? — the re-chart entry (ADR 0223)
+
+Before any grilling, probe the slug:
+
+```
+python "<ops>" read --map <slug>
+```
+
+Exit `2` (one line on stderr, empty stdout) — no map: continue to Step 1. Exit
+`0` — the map exists: say so in one line and quote its destination back, then
+**skip Step 1 and Step 2 entirely** and go to Step 2b. The destination and the
+frontier the human already grilled are not re-asked; a re-chart's only job is the
+frontier sweep, which the map may have been charted without (that is what a
+`map-never-swept` lint finding means). Everything the sweep adds goes through
+the Step 3 gate additively (ADR 0057): expect `skip (exists)` on every existing
+ticket, `create` on any new one, and one `merge` line for the map body.
 
 ## Step 1 — Name the destination
 
@@ -208,9 +236,46 @@ Type every ticket — the type picks its resolver and its mode (ADR 0038):
 | `grilling` | HITL | a live grilling exchange — the default |
 | `task` | either | doing the thing that unblocks a decision |
 
-**If this step surfaces no fog at all, stop.** The way is already clear and the
-whole journey fits one session, so a map would be overhead. Say that plainly and
-point the user at `grill-then-plan` instead.
+## Step 2b — Sweep the areas the human did not raise (ADR 0222)
+
+The frontier is only as wide as what the human happened to mention. Before the
+gate, run one coverage pass over the ten areas in `references/frontier-sweep.md`
+(scope, functional, performance, reliability, security, identity, data, deploy,
+operations, dependencies). It is a check, not a questionnaire — the human's own
+concerns were heard first, in Step 2.
+
+1. **Classify each area as touched or untouched.** Touched means at least one
+   ticket, fog line or out-of-scope line named this session clearly belongs to
+   it. On a re-chart (Step 0), classify from the map as `read` returned it —
+   its tickets, fog and scope regions — instead. This is your judgement, like
+   the ticket / fog / scope verdict itself; it is not asked.
+2. **Ask ONE batched HITL question** naming only the untouched areas, each with
+   its one-line gloss from the reference file, in the user's terms, and lead
+   with your recommendation: *"These N areas have not come up — which of them
+   matter for this map? My guess: security and deploy, because …"*. The user
+   may pick some, none, or say they are all fine.
+3. **Dig one area at a time, only into the picked ones**, with that area's probe
+   questions. Each picked area ends as a ticket, a fog line or an out-of-scope
+   line by Step 2's own test — can you *state* the question now? A picked area
+   may yield more than one ticket.
+4. **Every unpicked area is `none`.** Do not ask about it further.
+5. **Write the record** as one entry in `map.notes` for Step 3's input:
+
+   ```
+   sweep <YYYY-MM-DD>: none — <slug>, <slug>; ticket — <key>, <key>; fog — <slug>; out of scope — <slug>
+   ```
+
+   Every one of the ten slugs appears exactly once under the verdict it got;
+   omit a verdict that has no areas; under `ticket` write the ticket **keys**,
+   not the slug, so a reader can jump to them. One line, no line break — the
+   tool flattens one anyway (ADR 0101). It renders as an ordinary Notes bullet
+   and is what `lint`'s `map-never-swept` looks for (ADRs 0224, 0225).
+
+**Only now: if the grill and the sweep together surfaced no fog at all, stop.**
+The way is already clear and the whole journey fits one session, so a map would
+be overhead. Say that plainly and point the user at `grill-then-plan` instead.
+On a re-chart this stop does not apply — the map exists; go to Step 3 even if the
+sweep added nothing but the record.
 
 ## Step 3 — Create the map (gated)
 
@@ -446,6 +511,8 @@ Report, in this order:
 - the **frontier** tickets **by name** — what the next session can pick up;
 - the **blocked** tickets by name, each with the open blocker still holding it;
 - what the research subagents resolved, one gist each;
+- the sweep in one line — how many areas ended `none`, and which became tickets,
+  fog or out of scope (this is the `sweep <date>:` notes bullet, read back);
 - the fog lines still unspecified;
 - what was ruled out of scope.
 

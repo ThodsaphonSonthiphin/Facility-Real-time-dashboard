@@ -11,7 +11,7 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(AppDbContext context, IPasswordHasher hasher)
     {
-        // 1. Seed Users if empty
+        // 1. Seed Users if empty, or upgrade legacy password hashes from Phase 1
         if (!await context.Users.AnyAsync())
         {
             var cleaner = new User
@@ -34,6 +34,28 @@ public static class DbInitializer
 
             await context.Users.AddRangeAsync(cleaner, admin);
             await context.SaveChangesAsync();
+        }
+        else
+        {
+            var legacyUsers = await context.Users
+                .Where(u => !u.PasswordHash.StartsWith("pbkdf2-sha256$"))
+                .ToListAsync();
+
+            if (legacyUsers.Count > 0)
+            {
+                foreach (var user in legacyUsers)
+                {
+                    if (user.Username == "somchai")
+                    {
+                        user.PasswordHash = hasher.Hash("password123");
+                    }
+                    else if (user.Username == "admin")
+                    {
+                        user.PasswordHash = hasher.Hash("admin1234");
+                    }
+                }
+                await context.SaveChangesAsync();
+            }
         }
 
         // 2. Seed Service Points if empty

@@ -50,6 +50,22 @@
         "States that it cannot read the workspace and asks the user (or a read-only API call) to supply the real counts, instead of inventing them",
         "Warns that removing the property from a saved segment can change that segment's membership, or otherwise flags a side effect on dependent objects"
       ]
+    },
+    {
+      "id": 3,
+      "name": "failed-after-check-hands-off",
+      "prompt": "ok i did step 2 in the RDS console - changed log_min_duration_statement to 500 in the parameter group and hit save. you said to tell you and you'd measure it. here's what your check gives me now:\n\nSELECT setting FROM pg_settings WHERE name='log_min_duration_statement';\n setting\n---------\n -1\n(1 row)\n\nso it's still -1. what do i do, just do it again?",
+      "expected_output": "Does NOT say try again. Opens with a Freeze line carrying the numbers (expected 500, got -1) and the do-not-redo prohibition with its reason, then enters debug-mantra with the before/after readings as the repro, names the saved-but-not-applied gap (parameter group pending-reboot / apply) as the first hypothesis to disprove by reading the pending state, and - once the cause is confirmed - returns a corrected step in the fixed shape with the apply/reboot as its own numbered line, asserted against -1 as the new baseline, and records the cause and timestamps for the ticket.",
+      "files": [],
+      "assertions": [
+        "The first thing the user reads states expected 500 vs measured -1 AND tells them not to redo the step or change anything in the console, giving the reason (a redo destroys the state that distinguishes not-saved from not-applied from wrong-object)",
+        "Nowhere tells the user to try again or repeat the unchanged step",
+        "Names the saved-but-not-applied gap (RDS parameter group pending-reboot / apply status) as the FIRST hypothesis to check, before any other cause such as wrong parameter group or wrong instance",
+        "Does not ask the user for a reproduction or for what environment they are in; treats the earlier baseline and this -1 reading as the repro",
+        "When it gives the corrected step, the apply/reboot action is its own numbered line, not a clause inside another line, and the step names -1 as the baseline it is asserted against",
+        "Records, or says it will record, the cause and both timestamps (when the step failed, when the corrected step landed) on the ticket rather than only saying done",
+        "If it cannot read the database itself and relies on the user's pasted output, it labels that reading as reported by the operator, not independently measured, rather than calling it verified"
+      ]
     }
   ]
 }

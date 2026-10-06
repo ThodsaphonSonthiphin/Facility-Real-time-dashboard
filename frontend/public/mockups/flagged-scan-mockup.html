@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup: รายการสแกนน่าสงสัย / ติดธง (Flagged Scan Review — Ticket #44)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --card-dark: #131c2e;
+      --card-inner: #1a2642;
+      --border-dark: #27354f;
+      --accent-cyan: #38bdf8;
+      --accent-blue: #3b82f6;
+      --accent-indigo: #6366f1;
+      --success-green: #10b981;
+      --warning-amber: #f59e0b;
+      --danger-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 75%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      text-align: center;
+      max-width: 960px;
+      margin-bottom: 20px;
+    }
+
+    .badge-ticket {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fbbf24;
+      padding: 4px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    p.sub {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* Explanation Banner (What is a Flag?) */
+    .concept-box {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 14px;
+      padding: 16px 20px;
+      max-width: 1040px;
+      width: 100%;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .concept-icon {
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    .concept-text h3 {
+      font-size: 16px;
+      color: #fbbf24;
+      margin-bottom: 4px;
+    }
+
+    .concept-text p {
+      font-size: 13.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    /* Interactive Showcase Container */
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      max-width: 1080px;
+      width: 100%;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .showcase-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Mobile Screen Preview */
+    .phone-mock {
+      background: #000;
+      border-radius: 36px;
+      padding: 12px;
+      box-shadow: 0 20px 40px -10px rgba(0,0,0,0.8), 0 0 0 2px #334155;
+    }
+
+    .phone-inner {
+      background: #0f172a;
+      border-radius: 26px;
+      padding: 18px;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Dashboard Management Panel (Right) */
+    .admin-panel {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .flag-card {
+      background: #1a2642;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .flag-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .flag-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .flag-reason {
+      background: rgba(0, 0, 0, 0.25);
+      border-left: 3px solid #f59e0b;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #e2e8f0;
+      margin: 8px 0 12px 0;
+    }
+
+    .btn-action-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn-approve {
+      background: #10b981;
+      color: #fff;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-reject {
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .point-card-preview {
+      background: #1a2642;
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      border-left: 5px solid #10b981;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge-ticket">🎫 Ticket #44 • Interactive Explanation</div>
+    <h1>คำว่า "ติดธง (Flagged)" คืออะไร และทำงานอย่างไร?</h1>
+    <p class="sub">
+      จำลองสิ่งที่เกิดขึ้นเมื่อระบบตรวจพบการสแกนที่น่าสงสัย (เช่น สแกนจากรูปถ่าย หรือ วิ่งสแกนเร็วผิดปกติ)
+    </p>
+  </header>
+
+  <!-- Explanation Banner -->
+  <div class="concept-box">
+    <div class="concept-icon">🚩</div>
+    <div class="concept-text">
+      <h3>"ติดธง" (Flag) แปลภาษาง่ายๆ คือ "ระบบทำเครื่องหมายเตือนว่ารายการนี้น่าสงสัย"</h3>
+      <p>
+        เหมือนกรรมการฟุตบอลยกธง หรือเหมือนแอปธนาคารส่งเตือนว่า <em>"พบธุรกรรมผิดปกติ"</em><br>
+        ในระบบนี้ แม่บ้านบางคนอาจจะ <strong>แอบถ่ายรูปป้าย QR เก็บไว้ในมือถือ</strong> แล้วนอนเล่นอยู่ในห้องพัก พอถึงรอบก็เปิดรูปขึ้นมาสแกนส่งงานโดยไม่ได้เดินไปห้องน้ำจริง! 
+        เมื่อระบบจับความผิดปกติได้ ระบบจะไม่ปฏิเสธทันที (เพื่อให้งานไม่หยุดชะงัก) แต่จะ <strong>"ติดธงสีส้ม 🚩"</strong> ส่งไปให้หัวหน้าตรวจสอบครับ
+      </p>
+    </div>
+  </div>
+
+  <div class="showcase-grid">
+
+    <!-- LEFT: Mobile View (Cleaner sees NORMAL) -->
+    <div class="phone-mock">
+      <div class="phone-inner">
+        <div>
+          <div style="font-size: 11px; color: #94a3b8; text-align: center; margin-bottom: 16px;">
+            📱 จอมือถือแม่บ้าน (หน้างาน)
+          </div>
+          
+          <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid #10b981; border-radius: 14px; padding: 20px; text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 8px;">✅</div>
+            <h3 style="color: #10b981; font-size: 18px; margin-bottom: 4px;">บันทึกสำเร็จ</h3>
+            <p style="font-size: 13px; color: #f8fafc; font-weight: 600;">ห้องน้ำชาย ตึก 1 ชั้น 1</p>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">เวลา 07:15 น. • สถานะปกติ (Normal)</p>
+          </div>
+
+          <div style="background: #1e293b; border-radius: 8px; padding: 12px; margin-top: 16px; font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+            💡 <strong>ทำไมแม่บ้านถึงไม่เห็นธงเตือน?</strong><br>
+            เพื่อให้แม่บ้านทำงานต่อไปได้โดยไม่มีข้อขัดแย้งหรือตกใจหน้างาน ส่วนข้อมูลที่น่าสงสัยจะถูกส่งไปให้หัวหน้าดูเงียบๆ หลังบ้าน
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: #64748b; text-align: center;">
+          ผู้ปฏิบัติงาน: สมชาย ใจดี
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Admin Dashboard View (Shows Alert Flag) -->
+    <div class="admin-panel">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 16px; color: #38bdf8;">🖥️ สิ่งที่หัวหน้าเห็นบน Dashboard (Admin Screen)</h3>
+        <span style="font-size: 12px; background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 3px 10px; border-radius: 20px; font-weight: 700;">
+          ⚠️ มี 2 รายการน่าสงสัย (ติดธง 🚩)
+        </span>
+      </div>
+
+      <!-- Point Card with Warning Icon -->
+      <div class="point-card-preview">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong style="font-size: 15px;">ห้องน้ำชาย ชั้น 1 (ตึก 1)</strong>
+          <span style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+            🚩 สแกนล่าสุดติดธง
+          </span>
+        </div>
+        <div style="font-size: 12px; color: #34d399; margin: 4px 0;">● สถานะ: ปกติ (NORMAL) — เวลายังเดินต่อรอบใหม่ตามปกติ</div>
+        <div style="font-size: 11px; color: #94a3b8;">สแกนเมื่อ: 07:15 น. โดย สมชาย ใจดี</div>
+      </div>
+
+      <!-- Flagged List to Review -->
+      <h4 style="font-size: 14px; color: #f8fafc; margin-bottom: 10px;">
+        🔍 รายการที่ระบบแจ้งเตือนให้หัวหน้าตรวจสอบ:
+      </h4>
+
+      <!-- Card 1: Suspicious travel time -->
+      <div class="flag-card" id="flag-item-1">
+        <div class="flag-card-header">
+          <strong style="font-size: 14px; color: #fff;">สมชาย ใจดี • ห้องน้ำชาย ตึก 1</strong>
+          <span class="flag-badge">🚩 สแกนเร็วผิดปกติ</span>
+        </div>
+        <div class="flag-reason">
+          ⚠️ <strong>สาเหตุที่ติดธง:</strong> เพิ่งสแกนตึก 4 ไปเมื่อ 07:14 น. แล้วมาสแกนตึก 1 เวลา 07:15 น. (ห่างกันแค่ 1 นาที แต่ระยะทาง 500 เมตร เดินไม่ทันแน่ๆ)
+        </div>
+        <div style="font-size: 12px; color: #94a3b8;">
+          หัวหน้าสามารถตรวจสอบแล้วเลือกได้:
+        </div>
+        <div class="btn-action-group">
+          <button class="btn-approve" onclick="resolveFlag(1, 'approved')">✓ ยืนยันว่าปกติ (ลบธงเตือน)</button>
+          <button class="btn-reject" onclick="resolveFlag(1, 'rejected')">✕ สแกนปลอม (ยกเลิกสแกนนี้)</button>
+        </div>
+      </div>
+
+      <!-- Card 2: Scanned photo instead of NFC -->
+      <div class="flag-card" id="flag-item-2">
+        <div class="flag-card-header">
+          <strong style="font-size: 14px; color: #fff;">วิชัย มั่นคง • แคนทีน ตึก 4</strong>
+          <span class="flag-badge">🚩 สแกนจากรูปภาพ QR</span>
+        </div>
+        <div class="flag-reason">
+          ⚠️ <strong>สาเหตุที่ติดธง:</strong> จุดนี้กำหนดให้แตะป้าย NFC ตัวจริง แต่พบว่าเป็นการเปิดสแกนผ่านรูป QR Code เก่า
+        </div>
+        <div class="btn-action-group">
+          <button class="btn-approve" onclick="resolveFlag(2, 'approved')">✓ ยืนยันว่าปกติ (ลบธงเตือน)</button>
+          <button class="btn-reject" onclick="resolveFlag(2, 'rejected')">✕ สแกนปลอม (ยกเลิกสแกนนี้)</button>
+        </div>
+      </div>
+
+      <div id="resolve-msg" style="display: none; background: #1e293b; border: 1px dashed #10b981; color: #34d399; padding: 12px; border-radius: 8px; font-size: 13px; text-align: center; margin-top: 10px;">
+        <!-- JS Feedback -->
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function resolveFlag(id, action) {
+      const card = document.getElementById(`flag-item-${id}`);
+      const msg = document.getElementById('resolve-msg');
+      if (action === 'approved') {
+        card.style.opacity = '0.5';
+        card.innerHTML = `<div style="color: #34d399; font-size: 13px; padding: 10px;">✅ หัวหน้ายืนยันแล้ว: เป็นรายการปกติ (ลบธงเตือนเรียบร้อย)</div>`;
+      } else {
+        card.style.opacity = '0.5';
+        card.innerHTML = `<div style="color: #f87171; font-size: 13px; padding: 10px;">❌ หัวหน้าสั่งยกเลิก: ถือว่าสแกนนี้เป็นโมฆะ (จุดบริการกลับมานับรอบเดิม)</div>`;
+      }
+      msg.style.display = 'block';
+      msg.innerText = 'บันทึกผลการตรวจสอบของหัวหน้าเรียบร้อยแล้ว!';
+    }
+  </script>
+</body>
+</html>

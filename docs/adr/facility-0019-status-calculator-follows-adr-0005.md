@@ -40,3 +40,5 @@ flowchart TD
 - เปลี่ยนเวลาทำงาน = แก้ `appsettings.json` (หรือ `appsettings.Development.json`/env var `WorkingHours__Start`) แล้ว restart ค่าที่ parse ไม่ได้หรือ Start ≥ End ทำให้แอปไม่ขึ้นตั้งแต่ startup แทนที่จะเงียบไปใช้ค่า default
 - ผู้เขียน a7f87c2 ควรรู้ว่า test `ReturnsNormal_EvenDuringOffHours` ถูกแทนด้วยกรณีตรงข้าม (`Normal_scan_minutes_before_closing_is_grey_after_closing`) ตามการตัดสินใจนี้
 - เวลาทำงานข้ามเที่ยงคืนยังไม่รองรับเช่นเดิม (Start ต้องน้อยกว่า End)
+
+> **แก้ไข 2026-10-06:** config `WorkingHours` และการนับรอบจาก Cleaning Interval ถูกแทนที่โดย facility-0042 `StatusCalculator` ต้องเขียนใหม่ตาม ADR นั้น

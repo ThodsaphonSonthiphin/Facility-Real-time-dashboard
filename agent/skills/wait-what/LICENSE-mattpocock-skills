@@ -1,15 +1,34 @@
-Vendored from https://github.com/mattpocock/skills (branch `main`), retrieved
-2026-08-15. No upstream commit sha is recorded: the GitHub commits API was not
-reachable from this environment, so the pin is the branch and the date.
+Vendored from https://github.com/mattpocock/skills (branch `main`). For the
+2026-08-15 verbatim retrieval of `wait-what` below, no upstream commit sha was
+recorded: the GitHub commits API was not reachable from this environment, so
+the pin is the branch and the date.
 
 Vendored files, copied VERBATIM (not modified):
 
   skills/productivity/wait-what/SKILL.md
     -> plugins/dev-workflows/skills/wait-what/SKILL.md
 
-The `commands/wait-what.md` wrapper in this plugin is NOT upstream — it is this
-marketplace's own thin command entry point, written to the convention in
-CLAUDE.md.
+Vendored files, copied and MODIFIED (retrieved 2026-09-14 from the
+claude-plugins-official copy of mattpocock-skills 1.2.3, pinned to
+`claude-plugins-official` marketplace commit
+6654f6b60cd9d5be8b54c6fafe44346dabeb3b76 — the marketplace commit the
+installed 1.2.3 plugin pins, not an upstream mattpocock/skills commit):
+
+  skills/productivity/handoff/SKILL.md
+    -> plugins/dev-workflows/skills/handoff/SKILL.md
+       MODIFIED: harness-neutral wording ("load the skill the way your harness
+       loads skills" instead of "call the Skill tool"); a fifth destination —
+       a Claude Code cloud session — where the document is committed into the
+       repo and pushed instead of written to temp; a new rule that the
+       generated handoff document itself opens with one small Mermaid diagram
+       (this marketplace's diagram convention) — the SKILL.md carries no
+       diagram of its own; the "It's working if" list adapted from upstream's
+       docs/productivity/handoff.md (ADRs 0227, 0228). `agents/openai.yaml`
+       was not copied.
+
+The `commands/wait-what.md` and `commands/handoff.md` wrappers in this
+plugin are NOT upstream — they are this marketplace's own thin command
+entry points, written to the convention in CLAUDE.md.
 
 --------------------------------------------------------------------------------
 

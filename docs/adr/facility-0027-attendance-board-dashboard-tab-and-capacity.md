@@ -40,3 +40,5 @@ flowchart TD
 - Backend ขยาย SignalR Hub (`ScanHub`) ให้กระจาย event `AttendanceRecorded`
 - ข้อมูล Cleaner Account รองรับการผูกข้อมูลจุดบริการ/ตึกที่รับผิดชอบ (`assigned_service_point_id` หรือ `assigned_building`)
 - Milestone `attendance` สำเร็จแล้ว 2 ใน 3 tickets เหลือเพียง [#40 cleaner-accounts-at-scale](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/40) (การสร้างและจัดการบัญชี 170 ใบ)
+
+> **แก้ไข 2026-10-06:** ข้อ 3 (อัตรากำลังต่อจุด) ถูกแทนที่โดย facility-0040 แม่บ้าน 1 คนต่อ 1 Area ต่อ 1 กะ จึงนับมา-ขาดต่อ Area ในกะที่กำลังดู ข้อ 2 (Admin เท่านั้น) พี่เลี้ยงยืนยันแล้ว (R17)

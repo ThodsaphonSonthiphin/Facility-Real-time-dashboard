@@ -1,0 +1,21 @@
+{
+  "skill_name": "chart-map",
+  "evals": [
+    {
+      "id": 0,
+      "name": "sweep-asks-about-security-and-deploy-the-user-never-raised",
+      "prompt": "we want to build an internal tool for the ops team to approve vendor invoices — a list page with filters, an approve/reject button with a comment box, and an export to Excel at month end. it's bigger than one session so chart it. local markdown is fine. the destination: a written spec the two devs can build from. the things i keep going back and forth on are: whether filters are server-side or client-side, whether the approve button needs a confirm dialog, and what the export columns are.",
+      "expected_output": "A charting run that grills the user's own three concerns first, then — before the gate — asks ONE batched question naming the areas the user never raised (security, identity/RBAC, data, deploy/rollback, operations, reliability, performance, dependencies, scope) with a recommendation, digs only into the ones the user picks, records every unpicked area as none in a single 'sweep <date>:' notes bullet in the dry run, and does not declare 'no map needed' before the sweep has run.",
+      "files": [],
+      "assertions": [
+        "Asks about the user's own three concerns (filters, confirm dialog, export columns) before asking about any area the user did not raise",
+        "Asks, in ONE batched question, which of the untouched areas matter, and that question names at least security and deploy (rollback) among them",
+        "The batched question leads with the agent's own recommendation of which areas matter and waits for the user to answer rather than answering for them",
+        "Does not ask ten separate area questions in a row before the user's own concerns have been grilled",
+        "Every area the user did not pick appears under 'none' in a single notes line of the form 'sweep <YYYY-MM-DD>: none — …' shown in the dry run",
+        "Does not declare that no map is needed before the sweep has been run",
+        "Runs the dry run and asks for a yes before writing anything with --real"
+      ]
+    }
+  ]
+}
