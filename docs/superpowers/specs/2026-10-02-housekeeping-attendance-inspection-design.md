@@ -1,5 +1,7 @@
 # System Design Spec — Housekeeping Attendance & Inspection Management System
 
+> **ล้าสมัย (2026-10-06):** เอกสารนี้ยังเขียนว่า GPS นอกรัศมีแล้วปฏิเสธ, รัศมี 100 ม., มีตัวเลือก NFC และใช้ตึกเป็นหน่วย ห้ามใช้เป็นข้อกำหนด ให้ยึด ADR facility-0035 ถึง facility-0045 และ `docs/requirements-gathering/2026-10-06-supervisor-answers.md`
+
 ```mermaid
 flowchart TD
     subgraph Entrance["1. จุดลงเวลาเข้างาน (Check-In Gate)"]

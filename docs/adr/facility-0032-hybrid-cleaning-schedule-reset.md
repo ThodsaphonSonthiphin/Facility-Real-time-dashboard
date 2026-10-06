@@ -30,3 +30,5 @@ flowchart TD
 - ตาราง `service_points` เพิ่มคอลัมน์ `schedule_type` ENUM (`INTERVAL`, `SHIFT`) ค่าเริ่มต้นเป็น `INTERVAL`
 - ฟังก์ชันคำนวณ Point Status ใน Backend และ Frontend รองรับเงื่อนไขการตัดรอบตาม `schedule_type`
 - Dashboard เพิ่มตัวกรอง (Filter) ให้เลือกดูตามประเภทรอบเวลาได้
+
+> **แก้ไข 2026-10-06:** ADR นี้ถูกแทนที่โดย facility-0042 ทุกจุดใช้รอบตามเวลาที่กำหนด (เช่น 07:00 10:00 13:00 16:00) แทน Interval-based / Shift-based

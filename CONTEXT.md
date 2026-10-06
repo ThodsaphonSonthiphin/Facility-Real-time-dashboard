@@ -41,28 +41,24 @@ _Avoid_: Superuser, Root, Manager
 _Avoid_: Deleted User, Banned, Archived
 
 **Point Status**:
-สถานะของ Service Point ที่แสดงบนการ์ดใน Dashboard คำนวณสดจาก Scan Record ล่าสุด, Cleaning Interval และ Working Hours มี 4 ค่า ตามลำดับความสำคัญ: Issue (แดง), Off Hours (เทา), Overdue (ส้ม), Normal (เขียว) เป็นคนละอย่างกับ Cleaning Status ซึ่งเป็นค่าของการสแกนแต่ละครั้ง
+สถานะของ Service Point ที่แสดงบนการ์ดใน Dashboard คำนวณสดจาก Round Time ของจุด, Shift Pattern ของ Area, Scan Record และ Inspection Record ของรอบปัจจุบัน ตามลำดับความสำคัญ: ต้องแก้ไข, Overdue (เลยรอบ), รอตรวจ, ตรวจผ่าน, ยังไม่ทำ, Off Hours (นอกเวลา) ส่วน Issue ที่แจ้งตอนสแกนยังแสดงตาม facility-0005 เป็นคนละอย่างกับ Cleaning Status ซึ่งเป็นค่าของการสแกนแต่ละครั้ง (facility-0042)
 _Avoid_: Card Color, Point State, Alert Level
 
-**Cleaning Interval**:
-รอบทำความสะอาดของ Service Point หนึ่งจุด หน่วยเป็นนาที ตั้งแยกแต่ละจุด ใช้คำนวณเวลาครบรอบ = max(สแกนล่าสุด, เวลาเปิดของวันนี้) + Cleaning Interval
-_Avoid_: Frequency, SLA, Schedule
+**Round Time**:
+เวลารอบทำความสะอาดตามนาฬิกาของ Service Point หนึ่งจุด ตั้งแยกแต่ละจุดและแยกกะเช้า/กะดึก เช่น 07:00 10:00 13:00 16:00 การส่งงานหลังเวลารอบนับเป็นงานของรอบนั้น (facility-0042)
+_Avoid_: Cleaning Interval, Point Schedule Type, Frequency, SLA
 
 **Overdue**:
-Point Status ที่เวลาปัจจุบันเลยเวลาครบรอบของจุดนั้น ไม่มีเวลาผ่อนผัน
+Point Status ที่เวลาปัจจุบันเกิน Round Time ล่าสุด + ค่าผ่อนผัน แล้วรอบนั้นยังไม่มีการส่งงาน ค่าผ่อนผันเป็นค่าเดียวทั้งระบบ (ค่าเริ่มต้น 30 นาที รอพี่เลี้ยงยืนยัน)
 _Avoid_: Late, Missed, Expired
 
-**Working Hours**:
-ช่วงเวลาทำงานค่าเดียวทั้งระบบ (ค่าเริ่มต้น 08:00–17:00, Asia/Bangkok) ใช้กำหนดว่านับรอบเมื่อไหร่ นอกช่วงนี้ Point Status เป็น Off Hours ยกเว้นจุดที่มี Issue
-_Avoid_: Shift, Opening Time, Business Hours
+**Shift Pattern**:
+รูปแบบกะของ Area มี 2 แบบ: ทำ 2 กะ (เช้า 07:00–19:00 และดึก 19:00–07:00) หรือทำเฉพาะกะเช้า เช่น Office จุดของ Area ที่ทำเฉพาะกะเช้าเป็น Off Hours ตลอดกะดึก (facility-0040, 0042)
+_Avoid_: Working Hours, Opening Time, Business Hours
 
 **Persistent Session**:
 สถานะการเข้าสู่ระบบที่ค้างไว้ในเบราว์เซอร์ของผู้ใช้ (เช่น มือถือผู้สแกน) ทำให้ใช้งานต่อเนื่องได้โดยไม่ต้องกรอกรหัสผ่านซ้ำ จนกว่าจะกด Logout, ไม่ได้ใช้งานนาน 30 วัน หรือบัญชีถูกปิด
 _Avoid_: Cookie, Remember Token, Keep-Alive
-
-**Bound Device**:
-เบราว์เซอร์บนมือถือเครื่องเดียวที่ Cleaner Account หรือ Supervisor Account ผูกไว้ตอน login ครั้งแรก เครื่องอื่น login บัญชีนั้นไม่ได้จนกว่า Admin จะปลดเครื่อง
-_Avoid_: Registered Phone, Device Lock, Trusted Device
 
 **QR Token**:
 ค่ารหัสเฉพาะ (UUID) ประจำจุดบริการที่ฝังอยู่ใน QR Code เพื่อใช้เปิดหน้าเว็บสแกน สามารถกดสร้างใหม่ได้เมื่อป้ายชำรุด โดยไม่ต้องเปลี่ยนรหัสจุดเดิม
@@ -73,27 +69,23 @@ _Avoid_: Secret Key, QR String, Barcode Value
 _Avoid_: Time Attendance, Clock In, Scan Record
 
 **Check-In Sign**:
-ป้ายเฉพาะสำหรับสแกนเข้างาน ติดหน้าประตูทางเข้าของแต่ละตึก ตึกละป้าย แม่บ้านสแกนที่ป้ายของตึกที่ตนรับผิดชอบ แยกจาก QR Sign ของ Service Point
+ป้ายเฉพาะสำหรับลงเวลา ติดที่ Area, Area ละ 1 ป้าย แม่บ้านลงเวลาที่ป้ายของ Area ตัวเอง แยกจาก QR Sign ของ Service Point (facility-0040)
 _Avoid_: Gate QR, Station Sign, Attendance QR
 
 **Attendance Status**:
-สถานะการเข้างานของ Cleaner Account ในกะปัจจุบัน มี 2 ค่าหลักคือ เข้างานแล้ว (Present) และ ยังไม่เข้างาน (Absent / Not Checked In) แสดงบน Dashboard ของหัวหน้า
+สถานะการเข้างานของ Cleaner Account ในกะปัจจุบัน มี 2 ค่าหลักคือ เข้างานแล้ว (Present) และ ยังไม่เข้างาน (Absent / Not Checked In) แสดงบน Attendance Board ซึ่ง Admin เท่านั้นที่เปิดได้
 _Avoid_: Worker Status, Shift State, Member Attendance
 
 **Attendance Board**:
 หน้าจอแสดงรายงานและรายชื่อการเข้างานของ Cleaner Account ทั้ง 170 คนแบบเรียลไทม์ เป็นแท็บย่อยบน Dashboard ให้ Admin Account ตรวจสอบอัตรากำลังและคนขาดในแต่ละกะ
 _Avoid_: Check-In Page, Attendance View, Staff Table
 
-**Area Capacity**:
-จำนวน Cleaner Account ที่ได้รับมอบหมายประจำ ณ จุดบริการหนึ่งจุด พร้อมสถานะว่าเข้างานแล้วกี่คนและขาดกี่คน (เช่น จุดที่ 1 ประจำ 10 คน เข้างาน 7 คน)
-_Avoid_: Staffing Level, Headcount Quota, Worker Ratio
-
 **GPS Geofencing**:
-การเทียบพิกัดมือถือตอนสแกน Check-In Sign กับพิกัดของป้ายนั้น ถ้าอยู่นอกรัศมีจะได้ Geofence Flag ไม่ใช่การปฏิเสธ
+การเทียบพิกัดมือถือตอนสแกนทุกป้าย (Check-In Sign และ QR Sign ของ Service Point) กับพิกัดของป้ายนั้น ถ้าอยู่นอกรัศมีจะได้ Geofence Flag ไม่ใช่การปฏิเสธ (facility-0035, 0037)
 _Avoid_: Location Spoofing, Area Lock, GPS Tracking
 
 **Geofence Flag**:
-ธงบนการลงเวลาที่ระบบรับไว้แล้ว แต่พิกัดอยู่นอกรัศมีหรือคลาดเคลื่อนเกินรัศมีของ Check-In Sign หรือเป็นป้ายของตึกที่ไม่ใช่ตึกที่ตนรับผิดชอบ (ถ้าปิด Location จะลงเวลาไม่ได้เลย จึงไม่เกิดธง) แสดงบน Dashboard ให้หัวหน้าเรียกคุย
+ธงบนการลงเวลา การส่งงาน หรือการตรวจงานที่ระบบรับไว้แล้ว แต่พิกัดอยู่นอกรัศมีหรือคลาดเคลื่อนเกินรัศมีของป้าย (ถ้าปิด Location จะสแกนไม่ได้เลย จึงไม่เกิดธง) แสดงบน Dashboard ให้ Admin เรียกคุย การสแกนป้ายของ Area อื่นไม่ได้ธง แต่เป็น Blocked Scan
 _Avoid_: GPS Error, Location Violation, Rejected Check-In
 
 **Supervisor Account**:
@@ -108,22 +100,22 @@ _Avoid_: Audit Log, Evaluation Record, Check Result
 สถานะผลการตรวจรับงานของจุดบริการ มีค่า: Pending Inspection (รอตรวจ), Passed (สะอาด/ผ่าน), และ Rework (ต้องแก้ไข)
 _Avoid_: Review State, Grade, Score
 
-**Assigned Zone**:
-พื้นที่เป้าหมาย (ระดับ Building หรือ Floor) ที่ Cleaner Account ได้รับมอบหมายให้ปฏิบัติงานประจำ
-_Avoid_: Work Area, Target Station, Duty Location
+**Area**:
+พื้นที่ที่แม่บ้านรับผิดชอบประจำทุกวัน กะละ 1 คน (Area ที่ทำ 2 กะมีแม่บ้านประจำ 2 คน, Area ที่ทำเฉพาะกะเช้ามี 1 คน) อยู่ในตึก 1 ตึก ทั้งโรงงานมี 70–72 Area แต่ละ Area มี Check-In Sign 1 ป้าย กับ Service Point N จุด และมี Shift Pattern ของตัวเอง Admin เป็นคนสร้างและแก้ไข (facility-0040, 0045)
+_Avoid_: Assigned Zone, Zone, Work Area, Duty Location
 
-**Wrong-Zone Flag**:
-ธงแจ้งเตือนบน Scan Record เมื่อ Cleaner Account สแกน ณ จุดบริการที่อยู่นอกพื้นที่รับผิดชอบของตน โดยระบบยอมรับการบันทึกเพื่อความยืดหยุ่นหน้างาน แต่ขึ้นเตือนบน Dashboard ให้หัวหน้างานรับทราบ
-_Avoid_: Unauthorized Scan, Cross-Building Error, Invalid Location
+**Blocked Scan**:
+การสแกนป้ายของ Area ที่ไม่ใช่ Area ของตน และไม่มี Cover Assignment ระบบไม่บันทึกงาน แจ้งบนมือถือ และเก็บไว้ให้ Admin เห็นในรายการที่ขึ้นเตือน ตัดสินจาก QR Token ไม่ใช่ GPS (facility-0041)
+_Avoid_: Wrong-Zone Flag, Unauthorized Scan, Rejected Scan
+
+**Cover Assignment**:
+การที่ Admin มอบหมายให้แม่บ้านทำแทน Area อื่นเฉพาะกะนั้น เช่น วันที่มีคนลา หมดกะแล้วหมดสิทธิ์เอง Scan Record ระหว่างนั้นบันทึกว่าเป็นการทำแทน (facility-0041)
+_Avoid_: Reassignment, Transfer, Swap
 
 **Attendance Event**:
 รายการลงเวลาเข้า-ออกของ Cleaner Account ในรอบวัน มี 4 จังหวะ: เข้างาน (Shift-In), ออกพักเบรก (Break-Out), กลับจากเบรก (Break-In), และ เลิกงาน (Shift-Out) รวมเฉลี่ยประมาณ 4 ครั้ง/คน/วัน (รวม ~680 เรคคอร์ด/วัน สำหรับแม่บ้าน 170 คน)
 _Avoid_: Punch Clock, Time Card, Clock Event
 
-**Point Schedule Type**:
-รูปแบบรอบเวลาการดูแลของ Service Point แบ่งเป็น 2 แบบ: Interval-based (นับถอยหลังตาม Cleaning Interval เหมาะกับห้องน้ำ/แคนทีน) และ Shift-based (ทำ 1 ครั้งต่อกะ รีเซ็ตสถานะอัตโนมัติเมื่อตัดกะ 07:00 และ 19:00 เหมาะกับทางเดิน/ออฟฟิศ)
-_Avoid_: Reset Mode, Schedule Mode, Frequency Type
-
 **Pilot Scope**:
-ขอบเขตการนำร่องในเฟสแรก ประกอบด้วย อาคาร A (2 ชั้น), จุดบริการตัวแทน 10–12 จุด (ผสมห้องน้ำและทางเดิน), แม่บ้านกลุ่มนำร่อง 10–15 คน และหัวหน้างาน 1–2 คน เพื่อพิสูจน์ Paper Flow และระบบจริง ก่อนขยายเต็มรูปแบบ 6 อาคาร (170 คน)
+ขอบเขตการนำร่องในเฟสแรก คือ 1 Area มี Check-In Sign 1 ป้าย และ Service Point อย่างน้อย 1 จุด ผู้ใช้คือแม่บ้านประจำ Area นั้น (ทั้ง 2 กะถ้า Area ทำ 2 กะ) กับหัวหน้างานที่ตรวจ เพื่อพิสูจน์ระบบจริงก่อนขยายไปครบ 70–72 Area (facility-0043)
 _Avoid_: Test Phase, Trial Run, MVP Boundary

@@ -27,3 +27,5 @@ flowchart TD
 - ตาราง `cleaner_accounts` รองรับการผูกข้อมูล `assigned_zone_id` หรือ `assigned_building_id`
 - ตาราง `scan_records` เพิ่มคอลัมน์ `is_wrong_zone` (boolean)
 - หน้าจอ Dashboard ตารางประวัติและ Attendance Board รองรับการกรองและไฮไลต์รายการที่ติดธง Wrong-Zone
+
+> **แก้ไข 2026-10-06:** ADR นี้ถูกแทนที่โดย facility-0041 สแกนป้ายของ Area อื่นถูกบล็อก ไม่ใช่ติดธง และ Admin มอบหมายทำแทนเฉพาะกะได้

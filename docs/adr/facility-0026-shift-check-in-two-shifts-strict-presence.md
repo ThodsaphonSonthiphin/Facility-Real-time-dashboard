@@ -46,3 +46,5 @@ flowchart TD
 - API `/api/scan-records` เพิ่มการตรวจสอบว่า Caller มีประวัติใน `shift_check_ins` ของกะปัจจุบันหรือไม่ก่อนอนุญาตให้บันทึก
 - เพิ่ม Endpoint สำหรับสแกนเข้างาน `POST /api/attendance/check-in`
 - ปลดล็อก [#39 attendance-board](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/39) สำหรับทำหน้าจอรายชื่อและสถานะเข้างานบน Dashboard
+
+> **แก้ไข 2026-10-06:** ข้อ 2 (ป้ายติดที่ทางเข้า) ถูกแทนที่โดย facility-0040 ป้ายลงเวลาติดที่ Area, Area ละ 1 ป้าย กติกาข้ออื่นยังใช้อยู่
