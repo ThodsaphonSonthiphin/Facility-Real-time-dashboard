@@ -60,6 +60,10 @@ _Avoid_: Shift, Opening Time, Business Hours
 สถานะการเข้าสู่ระบบที่ค้างไว้ในเบราว์เซอร์ของผู้ใช้ (เช่น มือถือผู้สแกน) ทำให้ใช้งานต่อเนื่องได้โดยไม่ต้องกรอกรหัสผ่านซ้ำ จนกว่าจะกด Logout, ไม่ได้ใช้งานนาน 30 วัน หรือบัญชีถูกปิด
 _Avoid_: Cookie, Remember Token, Keep-Alive
 
+**Bound Device**:
+เบราว์เซอร์บนมือถือเครื่องเดียวที่ Cleaner Account หรือ Supervisor Account ผูกไว้ตอน login ครั้งแรก เครื่องอื่น login บัญชีนั้นไม่ได้จนกว่า Admin จะปลดเครื่อง
+_Avoid_: Registered Phone, Device Lock, Trusted Device
+
 **QR Token**:
 ค่ารหัสเฉพาะ (UUID) ประจำจุดบริการที่ฝังอยู่ใน QR Code เพื่อใช้เปิดหน้าเว็บสแกน สามารถกดสร้างใหม่ได้เมื่อป้ายชำรุด โดยไม่ต้องเปลี่ยนรหัสจุดเดิม
 _Avoid_: Secret Key, QR String, Barcode Value

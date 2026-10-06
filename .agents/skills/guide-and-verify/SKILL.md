@@ -177,6 +177,53 @@ call it proof.
 If the check fails, say so plainly with the numbers, and diagnose before proposing a redo. Half-applied
 is the common outcome, and telling them to "try again" on a step that partly landed makes it worse.
 
+#### When the check fails: hand off to debug-mantra
+
+A failed after-check — the success condition or the blast radius — is the one moment in this
+skill where something misbehaved and the person is about to act on a guess. Do not diagnose by
+improvising, and never propose a redo on an unverified cause (ADR 0214, the mirror of
+ADR 0011). Hand off to `debug-mantra`, in this order.
+
+**1. The Freeze line goes out first** (ADR 0215). Before the mantra, before any question, the
+person reads one line in the runbook's own shape, with the numbers:
+
+> Check failed: expected `<assertion>`, got `<measured>`.
+> Do not redo the step or change anything in the console — a redo destroys the state that tells not-saved
+> from not-applied from wrong-object. I am finding out why first.
+
+Then load `debug-mantra` through your harness's mechanism and follow it as written. The recital
+stays verbatim and complete; only the Freeze line precedes it (ADR 0216). What changes is what
+you already hold when it opens.
+
+**2. What you already hold, per step** (ADR 0217) — do not ask the person for any of it:
+
+| debug-mantra step | you already have |
+|---|---|
+| ① reproduce | the baseline and the after-measurement — the repro is the diff. The environment is the one the runbook names; there is no "local or deployed?" to ask |
+| ② fail path | the step's own numbered lines — the question is which line did not land |
+| ③ falsify | **hypothesis #1 is always the saved-is-not-applied trap.** Read the pending state first; the table under *The trap that catches nearly every system* says where it lives for each kind of system; rank the rest yourself |
+| ④ breadcrumbs | the per-check measurements you wrote on the ticket in Phase 1 — a half-applied step shows as a contradiction between two of them |
+
+**3. No second channel** (ADR 0218). The handoff fires anyway. Step ① is met the way Phase 1
+meets it when you cannot read the system: borrow the person's eyes — one read-only look, pasted
+back. A read-only look is not a redo — the Freeze line forbids changes, not looks (ADR 0221). That
+run, and every claim built on it, carries the label
+*reported by the operator, not independently measured*.
+
+**4. A second failure in the same runbook** (ADR 0219). The runbook session is one debug session. Send the Freeze line again and re-enter at step ①; do not recite the mantra a second
+time, and keep the ledger — the earlier runs are still evidence, because the system, the person
+and the console are the same.
+
+**5. When the cause is confirmed** (ADR 0220). Return to Phase 3 and write a **Corrected step**
+in the fixed shape — the missing apply or publish as its own numbered line — asserted against
+the failed step's after-measurement as its baseline. Never "try again". If the cause was yours —
+a Phase 1 count, a Phase 2 prediction — say so, and the corrected thing is the runbook. Write
+the cause and both timestamps into the Phase 5 outcome line on the ticket: *"Step 2 failed
+09:14Z — cause: saved, not published; corrected step landed 09:31Z, 1 → 0"*. If the cause is a
+real defect in the system rather than a missed click, that is a hand-off out of the runbook to
+the debug chain (ADR 0003: fix → post-mortem → management-talk) — name it as such and stop the
+runbook there.
+
 ### 5. Teach the self-check, and record the result
 
 Give the person a check they can run **without you**, in that second channel. This is the part that

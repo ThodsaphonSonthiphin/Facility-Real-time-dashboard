@@ -172,29 +172,32 @@ enforced it. Prose is advisory; this is the deterministic half.
 | `gist-budget` | warning | the map's gists collectively run more than `GIST_BUDGET_SLACK` (`GIST_MAX * 5`) past `GIST_MAX`. Reported **once per map**, because `read` returns every stored gist and the overage is therefore re-read by every session that opens the map — a property of the corpus, not of any one ticket (ADR 0068). |
 | `anonymous-claim` | warning | an **open** ticket is held by the literal `--user` default `me`, which names nobody. Structurally impossible on a tracker, where the caller is resolved for real. |
 | `fog-line-graduated` | warning | a line under "Not yet specified" reads as a ticket that already exists. An additive `chart` never deletes, so graduating fog leaves the old line behind and the map keeps advertising a question it has answered. |
+| `map-never-swept` | warning | the map's Notes region carries no bullet opening with `sweep` (followed by a space or a colon, case-insensitive) — the frontier-sweep record chart-map writes on every chart (ADRs 0222, 0224). Fires on a map charted before the sweep existed, on one whose record was deleted by hand, and on a legacy paragraph-Notes map that has no region to carry it; **finished or not** (ADR 0225). Cleared by an additive re-chart that runs the sweep, or by a hand-written `sweep <date>: reviewed, accepted as-is` bullet. `ticket: null` — the map, not a ticket, is unswept. An exact prefix match, not a heuristic. |
 | `milestone-line-unparsable` | error | a line inside the milestones region does not match the grammar above. Skipping it would hide its members, so the map would advertise a smaller milestone than it has. `ticket: null` — the broken thing is the line, not any one ticket. |
 | `milestone-duplicate-slug` | error | a milestone slug is declared more than once. Nothing is unreachable — `membership_of` maps every member of every entry to the shared slug — but `frontier.json`'s milestones list ends up with one row per declaration, all sharing that slug and each counting only its own members, and the decisions index renders the FIRST declaration only — its own count and its own members under its heading; a closed ticket listed only by a later duplicate falls to the `(unassigned)` tail (ADR 0213) — so what goes missing is the *label* of every entry after the first. `ticket: null` — the map holds the duplicate, not a ticket. |
 | `milestone-duplicate-member` | error | a ticket key is listed twice — either as a member of two different milestones (membership is exclusive, ADR 0097) or twice on the same milestone line. The finding names the ticket, and a repeat inside one line fires once per *extra* occurrence — a key listed three times yields two findings. Progress counts **distinct** members, so a repeat never inflates `<closed>/<total>`, but `map.json`'s `milestones[].members` still carries it; and additive `chart` will never rewrite the line, so the fix is a hand edit. |
 | `milestone-unknown-ticket` | error | a milestone lists a ticket key that is not on this map. That member can never close, so the milestone can never complete and its progress reads short forever; the finding names the ticket. |
 
-**Three findings carry `ticket: null`: `gist-budget`, `milestone-line-unparsable`
-and `milestone-duplicate-slug`.** Every other rule names the ticket it fires
-on — `blocker-cycle` covers several and still names one of them, and
-`milestone-duplicate-member` / `milestone-unknown-ticket` name the *ticket*
-even though the milestone is the map-level structure at fault. The three
-`null` findings name the map instead because the broken thing is not any one
-ticket: `gist-budget` is a property of the whole corpus of gists (ADR 0068);
+**Four findings carry `ticket: null`: `gist-budget`, `milestone-line-unparsable`,
+`milestone-duplicate-slug` and `map-never-swept`.** Every other rule names the
+ticket it fires on — `blocker-cycle` covers several and still names one of them,
+and `milestone-duplicate-member` / `milestone-unknown-ticket` name the *ticket*
+even though the milestone is the map-level structure at fault. The four `null`
+findings name the map instead because the broken thing is not any one ticket:
+`gist-budget` is a property of the whole corpus of gists (ADR 0068);
 `milestone-line-unparsable` and `milestone-duplicate-slug` are properties of
 the milestones region itself — an unreadable line or a repeated slug belongs
-to no single ticket. A consumer that assumes `finding.ticket` is always a key
-on the map breaks on any of the three. That assumption was never part of this
-contract.
+to no single ticket; `map-never-swept` is a property of the map's Notes region
+(ADR 0224). A consumer that assumes `finding.ticket` is always a key on the
+map breaks on any of the four. That assumption was never part of this contract.
 
 `fog-line-graduated` is the only **heuristic** rule: it matches significant
 words between a fog line and a ticket title, and its thresholds are deliberately
 strict (at least three shared words, and those words being most of the shorter
 side). A check that cries wolf is worse than no check — a warning nobody trusts
 trains the reader to skip the errors next to it.
+`map-never-swept` is the opposite kind of rule — an exact prefix match on the
+Notes bullets — precisely so it cannot cry wolf either way.
 
 **`notChecked` is part of the contract, not a convenience.** A rule that was
 never run reads as a rule that passed, so any backend that cannot evaluate one
@@ -580,7 +583,12 @@ task=either.
 `map.notes` is `str | list[str]` (ADR 0101): a bare string stays legal — it
 renders as a single tool-owned bullet, so every existing input keeps working
 unchanged — and a list is one bullet per entry, unioned like `notYetSpecified`
-on every later `chart`. See "Milestones" above for `map.milestones`: an
+on every later `chart`.
+chart-map's frontier-sweep record is one such entry — `sweep <YYYY-MM-DD>: none —
+<area>, <area>; ticket — <key>; fog — <area>; out of scope — <area>` — written
+on every chart and read back by `lint`'s `map-never-swept` (ADRs 0222, 0224);
+it is an ordinary notes line, not a field.
+See "Milestones" above for `map.milestones`: an
 optional, ordered list of `{slug, label?, members?}` — `members` is optional
 too, and an entry without it declares an empty milestone. `members` may name a
 ticket not yet present in this input's `tickets[]` or on the map — declaring a

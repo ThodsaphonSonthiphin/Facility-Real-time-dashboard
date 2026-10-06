@@ -35,7 +35,7 @@
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
       "sourceType": "github",
       "skillPath": "skills/chart-map/SKILL.md",
-      "computedHash": "b9b203806826b7ff0ad88e7f21a3ac5f92639d54446fa09389eccc631dbdb696"
+      "computedHash": "99eb209fef52fcb00d7c30ec43bd0cae77cf8eb96f875889143707e4d2867052"
     },
     "classify-github-issues": {
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
@@ -65,7 +65,7 @@
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
       "sourceType": "github",
       "skillPath": "skills/daily/SKILL.md",
-      "computedHash": "311cbd1f9a00134c879ad1d22aa676b4229fcbde0562db961b880e138fc15d7d"
+      "computedHash": "4a873cfbee9a6f9d628bfd1aaae169fe65c0456bbfcbbc3c5b0ab2fa8825bcac"
     },
     "debug-mantra": {
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
@@ -173,7 +173,13 @@
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
       "sourceType": "github",
       "skillPath": "skills/guide-and-verify/SKILL.md",
-      "computedHash": "55600813e84efe8e198b8f30e3f409e046f62225f75630e77145b0da64881d37"
+      "computedHash": "cd971fd29b035c5e5dc4ecd527f6316838373dad36df86af3eff7ab82fd9693a"
+    },
+    "handoff": {
+      "source": "ThodsaphonSonthiphin/workflow-daily-work",
+      "sourceType": "github",
+      "skillPath": "skills/handoff/SKILL.md",
+      "computedHash": "dd846b0a137f2f586f5b5f1e78093d67b8df9b7ea904ed43578053fb5042680d"
     },
     "invoice-generator": {
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
@@ -329,13 +335,13 @@
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
       "sourceType": "github",
       "skillPath": "skills/wait-what/SKILL.md",
-      "computedHash": "05d5bfe4b284b800b2a457b7dd4cb69582a600137c124d27cbfb740b01d071ec"
+      "computedHash": "75653bb55490d85fbbd175ba83999de1e7199cdda90d56b933802c73a758f6f0"
     },
     "work-map": {
       "source": "ThodsaphonSonthiphin/workflow-daily-work",
       "sourceType": "github",
       "skillPath": "skills/work-map/SKILL.md",
-      "computedHash": "2e98e49d86f4b8120408f421ae1e45193f80f3cc4c3d224c75804ab281cab1f4"
+      "computedHash": "77ed787ead0608f23de5c2b44b517c569011e50c6c7c0c4df0f4e404b515a186"
     }
   }
 }
