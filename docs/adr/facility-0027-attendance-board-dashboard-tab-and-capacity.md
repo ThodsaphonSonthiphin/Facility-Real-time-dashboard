@@ -42,3 +42,5 @@ flowchart TD
 - Milestone `attendance` สำเร็จแล้ว 2 ใน 3 tickets เหลือเพียง [#40 cleaner-accounts-at-scale](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/40) (การสร้างและจัดการบัญชี 170 ใบ)
 
 > **แก้ไข 2026-10-06:** ข้อ 3 (อัตรากำลังต่อจุด) ถูกแทนที่โดย facility-0040 แม่บ้าน 1 คนต่อ 1 Area ต่อ 1 กะ จึงนับมา-ขาดต่อ Area ในกะที่กำลังดู ข้อ 2 (Admin เท่านั้น) พี่เลี้ยงยืนยันแล้ว (R17)
+
+> **แก้ไข 2026-10-07:** หน้านี้ไม่แสดงสาย/กลับก่อน (facility-0050) และมีปุ่มให้ Admin เพิ่ม/แก้เวลา (facility-0051)

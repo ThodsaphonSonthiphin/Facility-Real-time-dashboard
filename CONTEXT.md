@@ -17,7 +17,7 @@ _Avoid_: Checkpoint, Station, Location ID
 _Avoid_: Sticker, QR Image, Label
 
 **Flagged Scan Record**:
-Scan Record ที่ระบบรับไว้แต่ติดธงว่าอาจไม่ได้สแกนที่ Service Point จริง เช่น พิกัดมือถืออยู่นอกรัศมีของ QR Sign หรือคลาดเคลื่อนเกินรัศมี หรือเวลาสแกนผิดปกติ
+Scan Record ที่ระบบรับไว้แต่ติดธงว่าอาจไม่ได้สแกนที่ Service Point จริง คือพิกัดมือถืออยู่นอกรัศมีของ QR Sign หรือคลาดเคลื่อนเกินรัศมี (ไม่มีธงจากเวลาสแกน พี่เลี้ยงไม่เลือกกฎนี้)
 _Avoid_: Fake Scan, Rejected Scan, Suspicious Scan
 
 **Deactivated Service Point**:
@@ -25,15 +25,15 @@ Service Point ที่ Admin ปิดใช้งาน หายจาก Das
 _Avoid_: Deleted Point, Archived Point, Hidden Point
 
 **Cleaning Status**:
-สถานะผลการทำความสะอาดของจุดบริการ มีค่าหลักเป็น Normal (เรียบร้อย/ปกติ) และ Issue (พบปัญหาที่ต้องแจ้งเตือนไปยัง Dashboard)
+สถานะผลการทำความสะอาดที่แม่บ้านเลือกตอนส่งงานแต่ละครั้ง มีค่าหลักเป็น Normal (เรียบร้อย/ปกติ) และ Issue (พบปัญหา เช่น ก๊อกรั่ว ของชำรุด) Issue แสดงเป็นป้ายแดงบนการ์ด ไม่ใช่ Point Status และหายเมื่อการส่งงานครั้งถัดไปเป็น Normal (facility-0046)
 _Avoid_: State, Flag, Inspection Result
 
 **Cleaner Account**:
-บัญชีผู้ใช้งานระดับพนักงานทำความสะอาดที่สร้างขึ้นล่วงหน้าโดยผู้ดูแลระบบ (Admin) ประกอบด้วย Username, Password Hash, Display Name และสิทธิ์การใช้งาน
+บัญชีผู้ใช้งานระดับพนักงานทำความสะอาดที่สร้างขึ้นล่วงหน้าโดยผู้ดูแลระบบ (Admin) ประกอบด้วย รหัสพนักงาน, hash ของเบอร์โทรศัพท์, Display Name และสิทธิ์การใช้งาน login ด้วยรหัสพนักงาน + เบอร์โทรศัพท์ (facility-0054)
 _Avoid_: User Profile, Member, Employee Profile
 
 **Admin Account**:
-บัญชีผู้ใช้งานระดับผู้ดูแลระบบ มีสิทธิ์จัดการ Service Point, ออก QR Token ใหม่ และจัดการบัญชีผู้ใช้ ซึ่ง Cleaner Account ทำไม่ได้
+บัญชีผู้ใช้งานระดับผู้ดูแลระบบ มีสิทธิ์จัดการ Service Point, ออก QR Token ใหม่ และจัดการบัญชีผู้ใช้ ซึ่ง Cleaner Account ทำไม่ได้ login ด้วย username + รหัสผ่าน (facility-0002, 0054)
 _Avoid_: Superuser, Root, Manager
 
 **Deactivated Account**:
@@ -41,15 +41,23 @@ _Avoid_: Superuser, Root, Manager
 _Avoid_: Deleted User, Banned, Archived
 
 **Point Status**:
-สถานะของ Service Point ที่แสดงบนการ์ดใน Dashboard คำนวณสดจาก Round Time ของจุด, Shift Pattern ของ Area, Scan Record และ Inspection Record ของรอบปัจจุบัน ตามลำดับความสำคัญ: ต้องแก้ไข, Overdue (เลยรอบ), รอตรวจ, ตรวจผ่าน, ยังไม่ทำ, Off Hours (นอกเวลา) ส่วน Issue ที่แจ้งตอนสแกนยังแสดงตาม facility-0005 เป็นคนละอย่างกับ Cleaning Status ซึ่งเป็นค่าของการสแกนแต่ละครั้ง (facility-0042)
+สถานะของ Service Point ที่แสดงบนการ์ดใน Dashboard คำนวณสดจาก Round Window ปัจจุบันของจุด, Shift Pattern ของ Area, Scan Record และ Inspection Record ของรอบนั้น ตามลำดับความสำคัญ: ต้องแก้ไข, Overdue (เลยรอบ), รอตรวจ, ตรวจผ่าน, ยังไม่ทำ, ยังไม่ถึงรอบ (กะเริ่มแล้วแต่รอบแรกยังไม่เริ่ม), Off Hours (นอกเวลา) รอบใหม่เริ่มแล้วการ์ดเริ่มใหม่เสมอ ผลของรอบเก่า (ไม่ได้ตรวจ, ไม่ได้แก้, ไม่ได้ทำ) เก็บในประวัติ Issue ไม่ใช่ Point Status แต่เป็นป้ายแยก (facility-0046, 0047)
 _Avoid_: Card Color, Point State, Alert Level
 
-**Round Time**:
-เวลารอบทำความสะอาดตามนาฬิกาของ Service Point หนึ่งจุด ตั้งแยกแต่ละจุดและแยกกะเช้า/กะดึก เช่น 07:00 10:00 13:00 16:00 การส่งงานหลังเวลารอบนับเป็นงานของรอบนั้น (facility-0042)
-_Avoid_: Cleaning Interval, Point Schedule Type, Frequency, SLA
+**Round Window**:
+ช่วงเวลารอบทำความสะอาดของ Service Point หนึ่งจุด มีเวลาเริ่มและเวลาสิ้นสุด ตั้งแยกแต่ละจุดและแยกกะเช้า/กะดึก เช่น 07:00–09:00 และ 16:00–18:00 การส่งงานในช่วงนับเป็นงานของรอบนั้น (facility-0047)
+_Avoid_: Round Time, Cleaning Interval, Point Schedule Type, Frequency, SLA
+
+**Late Submission**:
+การส่งงานหลัง Round Window จบ ของรอบที่ยังไม่มีการส่งงาน นับเป็นงานของรอบนั้นแต่บันทึกว่าส่งช้ากี่นาที (facility-0047)
+_Avoid_: Overdue Scan, Missed Round
+
+**Off-Round Submission**:
+การส่งงานนอก Round Window ตอนที่รอบล่าสุดส่งไปแล้ว เช่น ส่ง 15:30 ก่อนรอบ 16:00–18:00 ระบบบันทึกไว้ แต่ไม่นับเป็นรอบใดและการ์ดไม่เปลี่ยน (facility-0047)
+_Avoid_: Extra Scan, Early Scan
 
 **Overdue**:
-Point Status ที่เวลาปัจจุบันเกิน Round Time ล่าสุด + ค่าผ่อนผัน แล้วรอบนั้นยังไม่มีการส่งงาน ค่าผ่อนผันเป็นค่าเดียวทั้งระบบ (ค่าเริ่มต้น 30 นาที รอพี่เลี้ยงยืนยัน)
+Point Status ที่เวลาปัจจุบันพ้นเวลาสิ้นสุดของ Round Window ปัจจุบันแล้ว และรอบนั้นยังไม่มีการส่งงาน ไม่มีค่าผ่อนผัน (facility-0047)
 _Avoid_: Late, Missed, Expired
 
 **Shift Pattern**:
@@ -65,7 +73,7 @@ _Avoid_: Cookie, Remember Token, Keep-Alive
 _Avoid_: Secret Key, QR String, Barcode Value
 
 **Shift Check-In**:
-การบันทึกเวลาเข้างานของ Cleaner Account ในแต่ละกะการทำงาน (Day: 07:00–19:00, Night: 19:00–07:00) สแกนที่ Check-In Sign ก่อนเริ่มงาน เป็นเงื่อนไขจำเป็นก่อนสแกน Service Point ได้ สแกนซ้ำในกะเดียวยึดเวลาแรก (First-in wins)
+การยืนยันว่า Cleaner Account เข้าพื้นที่ (Area) ของตัวเองแล้วในกะนั้น (Day: 07:00–19:00, Night: 19:00–07:00) สแกนที่ Check-In Sign ก่อนเริ่มงาน เป็นเงื่อนไขจำเป็นก่อนสแกน Service Point ได้ สแกนซ้ำในกะเดียวยึดเวลาแรก (First-in wins) ไม่ใช่การลงเวลาทำงานของบริษัท จึงไม่คิดสายหรือกลับก่อน (facility-0050)
 _Avoid_: Time Attendance, Clock In, Scan Record
 
 **Check-In Sign**:
@@ -77,7 +85,7 @@ _Avoid_: Gate QR, Station Sign, Attendance QR
 _Avoid_: Worker Status, Shift State, Member Attendance
 
 **Attendance Board**:
-หน้าจอแสดงรายงานและรายชื่อการเข้างานของ Cleaner Account ทั้ง 170 คนแบบเรียลไทม์ เป็นแท็บย่อยบน Dashboard ให้ Admin Account ตรวจสอบอัตรากำลังและคนขาดในแต่ละกะ
+หน้าจอแสดงรายงานและรายชื่อการเข้างานของ Cleaner Account ทั้งหมด (ประมาณ 170 คน) แบบเรียลไทม์ เป็นแท็บย่อยบน Dashboard ให้ Admin Account ตรวจสอบอัตรากำลังและคนขาดในแต่ละกะ
 _Avoid_: Check-In Page, Attendance View, Staff Table
 
 **GPS Geofencing**:
@@ -89,7 +97,7 @@ _Avoid_: Location Spoofing, Area Lock, GPS Tracking
 _Avoid_: GPS Error, Location Violation, Rejected Check-In
 
 **Supervisor Account**:
-บัญชีผู้ใช้งานระดับหัวหน้างาน มีสิทธิ์สแกนตรวจรับพื้นที่ ประเมินผลความสะอาด (สะอาด หรือ ต้องแก้ไข) และระบุข้อบกพร่อง ซึ่งแยกจากสิทธิ์ของ Cleaner Account และ Admin Account
+บัญชีผู้ใช้งานระดับหัวหน้างาน มีสิทธิ์สแกนตรวจรับพื้นที่ ประเมินผลความสะอาด (สะอาด หรือ ต้องแก้ไข) และระบุข้อบกพร่อง ซึ่งแยกจากสิทธิ์ของ Cleaner Account และ Admin Account หัวหน้าประจำตึก ตรวจได้ทุก Area ในตึกตัวเอง สแกนจุดในตึกอื่นเป็น Blocked Scan ไม่ต้องลงเวลา ตรวจกี่ครั้งก็ได้ แต่ตรวจได้เฉพาะงานที่ส่งในรอบปัจจุบัน login ด้วยรหัสพนักงาน + เบอร์โทรเหมือนแม่บ้าน (facility-0047, 0048, 0054)
 _Avoid_: Inspector, Auditor, Team Lead
 
 **Inspection Record**:
@@ -105,11 +113,11 @@ _Avoid_: Review State, Grade, Score
 _Avoid_: Assigned Zone, Zone, Work Area, Duty Location
 
 **Blocked Scan**:
-การสแกนป้ายของ Area ที่ไม่ใช่ Area ของตน และไม่มี Cover Assignment ระบบไม่บันทึกงาน แจ้งบนมือถือ และเก็บไว้ให้ Admin เห็นในรายการที่ขึ้นเตือน ตัดสินจาก QR Token ไม่ใช่ GPS (facility-0041)
+การสแกนป้ายของ Area ที่ไม่ใช่ Area ของตน (แม่บ้าน) หรือจุดในตึกที่ไม่ใช่ตึกของตน (หัวหน้า) และไม่มี Cover Assignment ระบบไม่บันทึก แจ้งบนมือถือ และเก็บไว้ให้ Admin เห็นในรายการที่ขึ้นเตือน ตัดสินจาก QR Token ไม่ใช่ GPS (facility-0041, 0048)
 _Avoid_: Wrong-Zone Flag, Unauthorized Scan, Rejected Scan
 
 **Cover Assignment**:
-การที่ Admin มอบหมายให้แม่บ้านทำแทน Area อื่นเฉพาะกะนั้น เช่น วันที่มีคนลา หมดกะแล้วหมดสิทธิ์เอง Scan Record ระหว่างนั้นบันทึกว่าเป็นการทำแทน (facility-0041)
+การที่ Admin มอบหมายให้แม่บ้านทำแทน Area อื่นเฉพาะกะนั้น เช่น วันที่มีคนลา หมดกะแล้วหมดสิทธิ์เอง ไม่มีแม่บ้านสำรอง คนทำแทนจึงทำทั้ง Area ตัวเองและ Area ที่ได้รับมอบหมาย Scan Record ระหว่างนั้นบันทึกว่าเป็นการทำแทน ใช้กับหัวหน้าที่ตรวจแทนตึกอื่นด้วย (facility-0041, 0048)
 _Avoid_: Reassignment, Transfer, Swap
 
 **Attendance Event**:
@@ -119,3 +127,19 @@ _Avoid_: Punch Clock, Time Card, Clock Event
 **Pilot Scope**:
 ขอบเขตการนำร่องในเฟสแรก คือ 1 Area มี Check-In Sign 1 ป้าย และ Service Point อย่างน้อย 1 จุด ผู้ใช้คือแม่บ้านประจำ Area นั้น (ทั้ง 2 กะถ้า Area ทำ 2 กะ) กับหัวหน้างานที่ตรวจ เพื่อพิสูจน์ระบบจริงก่อนขยายไปครบ 70–72 Area (facility-0043)
 _Avoid_: Test Phase, Trial Run, MVP Boundary
+
+**Inspection Summary**:
+หน้าบน Dashboard สำหรับ Admin เท่านั้น สรุปการตรวจของหัวหน้าแต่ละคนในช่วงเวลาที่เลือก: ตึกที่ประจำ, จำนวนครั้งที่ตรวจ, งานที่ส่งแล้วไม่ได้ตรวจ, จำนวนครั้งที่ให้แก้ไข และการตรวจที่ติดธง GPS ใช้ประเมินหัวหน้า (facility-0048)
+_Avoid_: Supervisor KPI, Audit Report, Scorecard
+
+**Attendance Correction**:
+การที่ Admin เพิ่มหรือแก้ Attendance Event ให้แม่บ้านที่ลงเวลาไม่ได้หรือลืมลงเวลา ต้องใส่เหตุผล ระบบเก็บค่าเดิมไว้และติดป้าย "แก้โดย Admin" แม่บ้านและหัวหน้าแก้เองไม่ได้ (facility-0051)
+_Avoid_: Manual Punch, Override, Adjustment
+
+**Audit Log**:
+ประวัติทุกการเปลี่ยนแปลงที่ Admin ทำ: ใคร, เมื่อไร, เปลี่ยนอะไร, ค่าก่อนและหลัง เช่น แก้เวลา, มอบหมายทำแทน, แก้เวลารอบ, ออก QR ใหม่, จัดการบัญชี (facility-0051)
+_Avoid_: History, Activity Feed, Change Log
+
+**My Work**:
+หน้า "งานของฉัน" บนมือถือแม่บ้าน แสดงทุกจุดใน Area ของตัวเองและ Area ที่ทำแทนในกะนี้: รอบปัจจุบัน, รอบถัดไป, จุดที่เลยรอบ และจุดที่หัวหน้าให้แก้ ใช้แทนการแจ้งเตือนเด้งขึ้น (facility-0052)
+_Avoid_: Task List, Notifications, Inbox

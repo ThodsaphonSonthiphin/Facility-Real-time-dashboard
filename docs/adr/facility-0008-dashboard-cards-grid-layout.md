@@ -60,3 +60,5 @@ flowchart TD
 ### Consequences
 - แอป React ยังไม่ทำ pagination ตอนนี้ (seed มี 3 จุด) ให้ทำเมื่อจุดบริการเกิน 12 จุด โดยตัดหน้าฝั่ง client ใน `useDashboard` จากรายการที่ `GET /api/service-points` ส่งมาทั้งหมด ไม่ต้องแก้ API
 - บนมือถือ toast บังแถบเลขหน้าประมาณ 6 วินาทีก่อนหายไป ยอมรับได้สำหรับ POC
+
+> **แก้ไข 2026-10-07:** ลำดับสถานะ Issue > Overdue > Normal > Off Hours ถูกแทนที่โดยลำดับใน facility-0047 ข้อ 4 และ Issue เป็นป้ายแยก (facility-0046) การ์ดแสดงรอบเป็นช่วงเวลาแทนรอบเป็นนาที layout แบบ Cards Grid และการแบ่งหน้ายังใช้

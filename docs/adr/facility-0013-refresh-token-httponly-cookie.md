@@ -18,3 +18,5 @@ access token อายุ 5 นาที (facility-0012) จะลดควา�
 ## Consequences
 
 - POC นี้ตั้ง cookie แบบ `Secure` ไม่ได้ เพราะมือถือเข้าผ่าน HTTP (facility-0003) ถ้าเป็นระบบจริงต้องใช้ HTTPS และตั้ง `Secure`
+
+> **แก้ไข 2026-10-07:** ระบบจริงเปิดผ่าน HTTPS (facility-0049) จึงต้องตั้ง cookie เป็น `Secure`

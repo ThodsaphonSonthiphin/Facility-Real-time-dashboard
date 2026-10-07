@@ -16,3 +16,5 @@ flowchart TD
    - บัญชีผู้ใช้จัดเก็บ: `id`, `username`, `password_hash`, `display_name` (ชื่อเรียก เช่น "แม่บ้าน สมศรี"), `role` (`CLEANER`, `ADMIN`)
    - ไม่จัดเก็บข้อมูลส่วนบุคคลที่มีความเสี่ยง เช่น เลขบัตรประชาชน, เบอร์โทรศัพท์ส่วนตัว, หรือบัญชีโซเชียลมีเดีย
    - รหัสผ่านได้รับการแฮชอย่างปลอดภัย (Password Hashing) ก่อนบันทึกลง MySQL
+
+> **แก้ไข 2026-10-07:** Cleaner Account และ Supervisor Account เปลี่ยนเป็น login ด้วยรหัสพนักงาน + เบอร์โทรศัพท์ (เก็บเบอร์เป็น hash) โดย facility-0054 Admin Account ยังใช้ username + รหัสผ่าน
