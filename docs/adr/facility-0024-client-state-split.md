@@ -51,3 +51,5 @@ flowchart TD
 - โครงสร้าง Store ชัดเจน มี 2 Slices หลักคือ `auth` และ `dashboard`
 - ลดความซับซ้อนในหน้า Scan โดยคง `useState` ที่เรียบง่ายและไม่ทิ้งขยะลง Global Store
 - ประสบการณ์ใช้งาน Dashboard ดีขึ้นจากการคงตัวกรองข้ามการนำทาง
+
+> **แก้ไข 2026-10-07:** ค่า `selectedStatusFilter` (Normal/Overdue/Issue/OffHours) ต้องเปลี่ยนตามสถานะใน facility-0047 และตัวกรอง "มีปัญหาที่แจ้ง" แยกตาม facility-0046 การแบ่ง state 3 ระดับยังใช้
