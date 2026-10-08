@@ -27,6 +27,8 @@ public class ShiftCalendarTests
     [Theory]
     [InlineData(Shift.Day, 7, 0, 8, 7, 0)]
     [InlineData(Shift.Day, 16, 0, 8, 16, 0)]
+    [InlineData(Shift.Day, 19, 0, 8, 19, 0)]
+    [InlineData(Shift.Night, 19, 0, 8, 19, 0)]
     [InlineData(Shift.Night, 20, 0, 8, 20, 0)]
     [InlineData(Shift.Night, 3, 0, 9, 3, 0)]
     [InlineData(Shift.Night, 7, 0, 9, 7, 0)]
