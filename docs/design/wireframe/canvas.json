@@ -1,0 +1,335 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Accounts.dc.html": {
+      "expand": "fill",
+      "h": 940,
+      "is_interactive": true,
+      "title": "D6 บัญชีผู้ใช้ (Admin)",
+      "w": 1280,
+      "x": 2720,
+      "y": 2900
+    },
+    "AdminLogin.dc.html": {
+      "expand": "fill",
+      "h": 800,
+      "is_interactive": true,
+      "title": "D0 Admin เข้าสู่ระบบ",
+      "w": 1280,
+      "x": -1360,
+      "y": 1300
+    },
+    "AreaEdit.dc.html": {
+      "expand": "fill",
+      "h": 760,
+      "is_interactive": true,
+      "title": "D10 เพิ่มหรือแก้ Area",
+      "w": 1280,
+      "x": 6800,
+      "y": 2900
+    },
+    "AuditLog.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "D9 ประวัติ Admin",
+      "w": 1280,
+      "x": 5440,
+      "y": 2900
+    },
+    "BoardAttendance.dc.html": {
+      "expand": "fill",
+      "h": 1120,
+      "is_interactive": true,
+      "title": "D2 การเข้างาน และแก้เวลา",
+      "w": 1280,
+      "x": 1360,
+      "y": 1300
+    },
+    "BoardFlags.dc.html": {
+      "expand": "fill",
+      "h": 1180,
+      "is_interactive": true,
+      "title": "D3 รายการที่ขึ้นเตือน และมอบหมายคนทำแทน",
+      "w": 1280,
+      "x": 2720,
+      "y": 1300
+    },
+    "BoardStatus.dc.html": {
+      "expand": "fill",
+      "h": 1040,
+      "is_interactive": true,
+      "title": "D1 สถานะจุดตาม Area",
+      "w": 1280,
+      "x": 0,
+      "y": 1300
+    },
+    "CaptureLocation.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M17 Admin เก็บพิกัดป้าย (มือถือ)",
+      "w": 390,
+      "x": 7520,
+      "y": 0
+    },
+    "CheckinFlagged.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M3 ลงเวลาแล้ว แต่ติดธง",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "CheckinNext.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M10 ลงเวลาพักและเลิกงาน",
+      "w": 390,
+      "x": 4230,
+      "y": 0
+    },
+    "CleanerDone.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M5 ส่งงานแล้ว",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    },
+    "CleanerLate.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M13 ส่งช้า และส่งนอกรอบ",
+      "w": 390,
+      "x": 5640,
+      "y": 0
+    },
+    "CleanerSubmit.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M4 แม่บ้านส่งงาน",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "ExportExcel.dc.html": {
+      "expand": "fill",
+      "h": 820,
+      "is_interactive": true,
+      "title": "D8 ส่งออก Excel",
+      "w": 1280,
+      "x": 4080,
+      "y": 1300
+    },
+    "ImportAccounts.dc.html": {
+      "expand": "fill",
+      "h": 820,
+      "is_interactive": true,
+      "title": "D11 นำเข้าบัญชีจาก Excel (ก่อนขยาย)",
+      "w": 1280,
+      "x": 8160,
+      "y": 2900
+    },
+    "InspectDone.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M7 บันทึกผลตรวจแล้ว",
+      "w": 390,
+      "x": 2820,
+      "y": 0
+    },
+    "InspectNothing.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M16 หัวหน้า: ยังไม่มีงานให้ตรวจ",
+      "w": 390,
+      "x": 7050,
+      "y": 0
+    },
+    "LocationOff.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M2 ปิด Location",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Login.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M0 เข้าสู่ระบบ (ถ้ายังไม่ได้ login)",
+      "w": 390,
+      "x": -470,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M1 ลงเวลา (เริ่มกด Play ที่นี่)",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "MyWork.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M9 งานของฉัน (แม่บ้าน)",
+      "w": 390,
+      "x": 3760,
+      "y": 0
+    },
+    "MyWorkCover.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M14 งานของฉัน วันที่ทำแทน",
+      "w": 390,
+      "x": 6110,
+      "y": 0
+    },
+    "NeedCheckin.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M11 สแกนจุดก่อนลงเวลา (ไม่บันทึก)",
+      "w": 390,
+      "x": 4700,
+      "y": 0
+    },
+    "PointsAdmin.dc.html": {
+      "expand": "fill",
+      "h": 1180,
+      "is_interactive": true,
+      "title": "D4 จัดการ Area จุด และพิกัดป้าย (Admin)",
+      "w": 1280,
+      "x": 0,
+      "y": 2900
+    },
+    "PrintSigns.dc.html": {
+      "expand": "fill",
+      "h": 1240,
+      "is_interactive": true,
+      "title": "D5 พิมพ์ป้าย QR ทีละ Area",
+      "w": 1280,
+      "x": 1360,
+      "y": 2900
+    },
+    "ScanBlocked.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M8 สแกนนอก Area (ถูกบล็อก)",
+      "w": 390,
+      "x": 3290,
+      "y": 0
+    },
+    "SubmitFailed.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M12 ส่งไม่สำเร็จ กดส่งใหม่",
+      "w": 390,
+      "x": 5170,
+      "y": 0
+    },
+    "SupervisorHome.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M15 หัวหน้า: ตึกของฉัน",
+      "w": 390,
+      "x": 6580,
+      "y": 0
+    },
+    "SupervisorInspect.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "M6 หัวหน้าตรวจงาน",
+      "w": 390,
+      "x": 2350,
+      "y": 0
+    },
+    "SupervisorSummary.dc.html": {
+      "expand": "fill",
+      "h": 760,
+      "is_interactive": true,
+      "title": "D7 สรุปการตรวจของหัวหน้า (Admin)",
+      "w": 1280,
+      "x": 4080,
+      "y": 2900
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-03T06:07:13.616Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "admin": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Admin: Area ป้าย พิกัด QR บัญชี สรุปการตรวจ และประวัติ",
+      "w": 240,
+      "x": 0,
+      "y": 2600
+    },
+    "desk": {
+      "kind": "title1",
+      "maxW": 6720,
+      "text": "คอมพิวเตอร์: Dashboard (Admin)",
+      "w": 240,
+      "x": -1360,
+      "y": 1000
+    },
+    "flow": {
+      "fill": "teal",
+      "maxH": 900,
+      "size": 40,
+      "text": "วิธีดู prototype\n\nกด Play ที่ M1 แล้วกดปุ่มตามลำดับ\n(ยังไม่ login จะเจอ M0: รหัสพนักงาน + เบอร์โทร)\n\n1. M1 กด \"เข้างาน\"\n2. M3 ลงเวลาแล้ว (ตัวอย่างที่ติดธง) กด \"สแกน QR ห้องน้ำชาย\"\n3. M4 แม่บ้านกด \"ส่งงาน\"\n4. M5 กด \"ดูว่าหัวหน้าเห็นอะไร\"\n5. M15 หัวหน้าเห็นห้องน้ำชาย \"รอตรวจ\" กดการ์ด\n6. M6 หัวหน้ากด \"บันทึกผลตรวจ\" (ไม่สะอาด)\n7. M7 กด \"ดูหน้าที่แม่บ้านเห็น\" จะเห็นแถบต้องแก้ไข\n\nทางแยกแม่บ้าน: M1 ไป M2 (ปิด Location), M8 (Area อื่น), M11 (สแกนจุดก่อนลงเวลา), M10 (เลิกงาน) · M4 ไป M12 (ส่งไม่สำเร็จ) · M5 ไป M13 (ส่งช้า) · M9 ไป M14 (ทำแทน)\nทางแยกหัวหน้า: M6 ไป M16 (ยังไม่มีงานให้ตรวจ)\nAdmin: M0 ไป D0 · แท็บด้านบนสลับ D1 D2 D3 D7 D4 D6 D9 · ปุ่ม Excel ไป D8 · D4 ไป D10 และ M17 · D6 ไป D11",
+      "w": 440,
+      "x": -960,
+      "y": 0
+    },
+    "mobile": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "มือถือ: แม่บ้านและหัวหน้า",
+      "w": 240,
+      "x": -470,
+      "y": -300
+    }
+  },
+  "order": [
+    "Login.dc.html",
+    "Main.dc.html",
+    "LocationOff.dc.html",
+    "CheckinFlagged.dc.html",
+    "CleanerSubmit.dc.html",
+    "CleanerDone.dc.html",
+    "SupervisorInspect.dc.html",
+    "InspectDone.dc.html",
+    "ScanBlocked.dc.html",
+    "MyWork.dc.html",
+    "CheckinNext.dc.html",
+    "NeedCheckin.dc.html",
+    "SubmitFailed.dc.html",
+    "CleanerLate.dc.html",
+    "MyWorkCover.dc.html",
+    "SupervisorHome.dc.html",
+    "InspectNothing.dc.html",
+    "CaptureLocation.dc.html",
+    "AdminLogin.dc.html",
+    "BoardStatus.dc.html",
+    "BoardAttendance.dc.html",
+    "BoardFlags.dc.html",
+    "ExportExcel.dc.html",
+    "PointsAdmin.dc.html",
+    "PrintSigns.dc.html",
+    "Accounts.dc.html",
+    "SupervisorSummary.dc.html",
+    "AuditLog.dc.html",
+    "AreaEdit.dc.html",
+    "ImportAccounts.dc.html"
+  ],
+  "pages": [],
+  "title": "Wireframe ครบทุกหน้า"
+}

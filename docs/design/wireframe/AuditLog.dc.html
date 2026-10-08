@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ประวัติ Admin</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 24px 32px">
+<div style="max-width: 1216px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">Admin เท่านั้น · อ่านอย่างเดียว</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">ประวัติการเปลี่ยนแปลงของ Admin</h1>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 15px">
+      <a href="BoardStatus.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สถานะจุด</a>
+      <a href="BoardAttendance.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">การเข้างาน</a>
+      <a href="BoardFlags.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">รายการที่ขึ้นเตือน (4)</a>
+      <a href="SupervisorSummary.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สรุปการตรวจ</a>
+      <a href="PointsAdmin.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">จัดการ Area และป้าย</a>
+      <a href="Accounts.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">บัญชีผู้ใช้</a>
+      <a href="AuditLog.dc.html" style="padding: 8px 16px; border-radius: 8px; background: #1D2324; color: #FFFFFF; text-decoration: none">ประวัติ Admin</a>
+    </div>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 14px">
+    <label style="display: inline-flex; gap: 6px; align-items: center">ช่วงวัน<input type="text" value="01/10/2026 – 07/10/2026" style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF; width: 220px; min-height: 36px"></label>
+    <label style="display: inline-flex; gap: 6px; align-items: center">ผู้ทำ<select style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF; min-height: 36px"><option>ทุกคน</option></select></label>
+    <label style="display: inline-flex; gap: 6px; align-items: center">ประเภท<select style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF; min-height: 36px"><option>ทุกประเภท</option><option>แก้การลงเวลา</option><option>มอบหมายทำแทน</option><option>ปิดเตือน</option><option>Area · จุด · รอบ · ป้าย</option><option>ออก QR ใหม่</option><option>บัญชี</option><option>ส่งออก Excel</option></select></label>
+    <input type="search" placeholder="ค้นหาชื่อคน จุด หรือรหัส" style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF; min-height: 36px; width: 240px">
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; overflow: hidden">
+    <table style="width: 100%; border-collapse: collapse">
+      <thead><tr><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">เวลา</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">ผู้ทำ</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">ประเภท</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">รายการที่ถูกแก้</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">ก่อน → หลัง</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">เหตุผล</th></tr></thead>
+      <tbody>
+        <tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums">07/10 10:42</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมชาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top"><b>แก้การลงเวลา</b></td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">ทองใบ · [Area 12] · เข้างาน 7 ต.ค.</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">– → 06:58</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #3B4446">มือถือแบตหมด หัวหน้ายืนยันว่ามาทำงาน</td></tr>
+        <tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums">07/10 09:12</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมชาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top"><b>มอบหมายทำแทน</b></td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมใจ → [Area 12] · กะเช้า 7 ต.ค.</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">– → มอบหมาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #3B4446">ทองใบลา</td></tr>
+        <tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums">07/10 09:05</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมชาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top"><b>ปิดเตือน</b></td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">ลงเวลาไกลจากป้าย · สมศรี 06:52</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">ยังไม่ได้คุย → คุยแล้ว</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #3B4446">GPS ในอาคารเพี้ยน ยืนอยู่หน้าป้ายจริง</td></tr>
+        <tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums">06/10 16:30</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมชาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top"><b>แก้ช่วงรอบ</b></td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">ห้องน้ำชาย · [ชื่อ Area ทดลอง] · กะเช้า</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">13:00–15:00 → 13:30–15:30</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #3B4446"><span style="color: #AEB6B7">–</span></td></tr>
+        <tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums">06/10 15:02</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมชาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top"><b>เก็บพิกัดป้าย</b></td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">AR01-01 ห้องน้ำชาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">แผนที่ → หน้างาน ±18 ม.</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #3B4446"><span style="color: #AEB6B7">–</span></td></tr>
+        <tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums">06/10 14:40</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมชาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top"><b>ออก QR ใหม่</b></td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">AR01-03 จุดทิ้งขยะ</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">QR เดิมใช้ไม่ได้</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #3B4446">ป้ายเดิมถูกฉีก</td></tr>
+        <tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums">06/10 11:20</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมชาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top"><b>แก้เบอร์โทร</b></td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">มาลี (650188)</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">เบอร์เดิม → เบอร์ใหม่ (ไม่แสดงเบอร์)</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #3B4446">เปลี่ยนซิม</td></tr>
+        <tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums">06/10 08:15</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมชาย</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top"><b>ส่งออก Excel</b></td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">การลงเวลา + การส่งงาน</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">01/10–05/10 · ทุกตึก</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #3B4446"><span style="color: #AEB6B7">–</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #3B4446">ไม่มีใครแก้หรือลบรายการในหน้านี้ได้ · เก็บนานเท่ากับข้อมูลที่ถูกแก้ · เบอร์โทรไม่แสดงทั้งก่อนและหลัง · การเปิดดูหน้านี้ไม่ถูกบันทึก</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

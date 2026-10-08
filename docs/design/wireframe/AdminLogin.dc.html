@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Admin เข้าสู่ระบบ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="min-height: 800px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 24px 32px; display: flex; align-items: center; justify-content: center">
+  <div style="width: 400px; background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; padding: 28px">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">ระบบลงเวลาและตรวจงานแม่บ้าน</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">Admin เข้าสู่ระบบ</h1>
+    </div>
+    <label for="au" style="font-size: 14px; font-weight: 600">ชื่อผู้ใช้</label>
+    <input id="au" type="text" autocomplete="username" value="admin.somchai" style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF; min-height: 44px">
+    <label for="ap" style="font-size: 14px; font-weight: 600">รหัสผ่าน</label>
+    <input id="ap" type="password" autocomplete="current-password" value="xxxxxxxxxx" style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF; min-height: 44px">
+    <a href="BoardStatus.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 10px; background: #0E6B66; color: #FFFFFF; font-weight: 700; font-size: 17px; text-decoration: none">เข้าสู่ระบบ</a>
+    <div style="font-size: 13px; color: #5F696B; display: flex; flex-direction: column; gap: 4px">
+      <span>แม่บ้านและหัวหน้าเข้าด้วยรหัสพนักงาน + เบอร์โทรบนมือถือ</span>
+      <span>กรอกผิดหลายครั้ง ชื่อผู้ใช้นี้ต้องรอสักครู่ · ลืมรหัสผ่าน: ให้ Admin อีกคนรีเซ็ต</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

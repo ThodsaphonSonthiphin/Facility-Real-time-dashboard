@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>นำเข้าบัญชี</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="min-height: 820px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 24px 32px">
+<div style="max-width: 1216px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">บัญชีผู้ใช้ › นำเข้าจาก Excel · ทำก่อนขยายครบทุกตึก ไม่อยู่ใน pilot</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">นำเข้าบัญชีจาก Excel</h1>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 15px">
+      <a href="BoardStatus.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สถานะจุด</a>
+      <a href="BoardAttendance.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">การเข้างาน</a>
+      <a href="BoardFlags.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">รายการที่ขึ้นเตือน (4)</a>
+      <a href="SupervisorSummary.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สรุปการตรวจ</a>
+      <a href="PointsAdmin.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">จัดการ Area และป้าย</a>
+      <a href="Accounts.dc.html" style="padding: 8px 16px; border-radius: 8px; background: #1D2324; color: #FFFFFF; text-decoration: none">บัญชีผู้ใช้</a>
+      <a href="AuditLog.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">ประวัติ Admin</a>
+    </div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+    <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; gap: 6px"><b>1. ดาวน์โหลดแบบฟอร์ม</b><span style="font-size: 14px; color: #3B4446">คอลัมน์: รหัสพนักงาน · ชื่อ · เบอร์โทร · บทบาท · Area (แม่บ้าน) หรือตึก (หัวหน้า) · กะ</span><a href="#" style="font-size: 14px">แบบฟอร์ม.xlsx</a></div>
+    <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; gap: 6px"><b>2. อัปโหลดไฟล์</b><span style="font-size: 14px; color: #3B4446">รายชื่อพนักงาน.xlsx · 180 แถว</span></div>
+    <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; gap: 6px; border-color: #E2A39B"><b>3. ระบบตรวจทั้งไฟล์</b><span style="font-size: 14px; color: #8A1C12">ผิด 3 แถว · ยังไม่ได้นำเข้าเลย</span></div>
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+    <h2 style="margin: 0; font-size: 18px">แถวที่ต้องแก้ (3)</h2>
+    <table style="width: 100%; border-collapse: collapse">
+      <thead><tr><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">แถว</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">รหัสพนักงาน</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">ชื่อ</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">บทบาท</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">ประจำที่</th><th style="text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #5F696B; border-bottom: 1px solid #D5DADA; white-space: nowrap">ปัญหา</th></tr></thead>
+      <tbody><tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">14</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">650131</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">นวล</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">แม่บ้าน</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">[Area 9] · ดึก</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #8A1C12; font-weight: 600">Area นี้ทำเฉพาะกะเช้า</td></tr>
+<tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">37</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">650123</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">สมศรี</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">แม่บ้าน</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">[Area 2] · เช้า</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #8A1C12; font-weight: 600">รหัสพนักงานซ้ำกับบัญชีที่มีอยู่</td></tr>
+<tr><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">92</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">650207</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">ลำดวน</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">แม่บ้าน</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top">[Area 40] · เช้า</td><td style="padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #ECEFEF; vertical-align: top; color: #8A1C12; font-weight: 600">เบอร์โทรไม่ครบ 10 หลัก</td></tr></tbody>
+    </table>
+    <span style="font-size: 14px; color: #3B4446">ถ้าผิดแม้แถวเดียวจะไม่นำเข้าเลย แก้ไฟล์แล้วอัปโหลดใหม่</span>
+  </div>
+  <div style="background: #FFFFFF; border: 1px dashed #AEB6B7; border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5F696B; font-size: 14px">
+    <b style="color: #3B4446">เมื่อไฟล์ถูกทั้งหมด</b>
+    <span>กำลังสร้างบัญชี 64 / 180 · ใช้เวลาประมาณ 1–2 นาที เพราะต้องเข้ารหัสเบอร์โทรทีละคน ปิดหน้านี้ได้ งานยังทำต่อ</span>
+    <span>ระบบไม่เก็บไฟล์ไว้หลังนำเข้า · การนำเข้าเก็บลงประวัติ Admin · ชื่อและเบอร์จริงกรอกบนเซิร์ฟเวอร์เท่านั้น ไม่เข้า git</span>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ส่งออก Excel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="min-height: 820px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 24px 32px">
+<div style="max-width: 1216px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">Admin เท่านั้น · ช่วงทดลองใช้ไฟล์ Excel แทนหน้ารายงาน</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">ส่งออก Excel</h1>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 15px">
+      <a href="BoardStatus.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สถานะจุด</a>
+      <a href="BoardAttendance.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">การเข้างาน</a>
+      <a href="BoardFlags.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">รายการที่ขึ้นเตือน (4)</a>
+      <a href="SupervisorSummary.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สรุปการตรวจ</a>
+      <a href="PointsAdmin.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">จัดการ Area และป้าย</a>
+      <a href="Accounts.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">บัญชีผู้ใช้</a>
+      <a href="AuditLog.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">ประวัติ Admin</a>
+    </div>
+  </div>
+  <div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start">
+    <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+      <h2 style="margin: 0; font-size: 18px">1. เลือกข้อมูล</h2>
+      <label style="display: flex; gap: 12px; align-items: flex-start; border: 1px solid #D5DADA; border-radius: 10px; padding: 12px 14px">
+        <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #0E6B66; border: 2px solid #0E6B66; color: #FFFFFF; font-size: 13px; display: flex; align-items: center; justify-content: center">✓</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><b style="font-size: 15px">การลงเวลา</b><span style="font-size: 13px; color: #5F696B">คน · Area · กะ · เวลา 4 ครั้ง · ที่มา (สแกนเอง / แก้โดย Admin) · ธง GPS</span></span>
+      </label>
+      <label style="display: flex; gap: 12px; align-items: flex-start; border: 1px solid #D5DADA; border-radius: 10px; padding: 12px 14px">
+        <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #0E6B66; border: 2px solid #0E6B66; color: #FFFFFF; font-size: 13px; display: flex; align-items: center; justify-content: center">✓</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><b style="font-size: 15px">การส่งงาน</b><span style="font-size: 13px; color: #5F696B">จุด · รอบ · เวลา · ผล (ตรงเวลา / ส่งช้า / นอกรอบ) · Issue · ทำแทนหรือไม่ · ธง GPS · รอบที่ไม่ได้ทำ</span></span>
+      </label>
+      <label style="display: flex; gap: 12px; align-items: flex-start; border: 1px solid #D5DADA; border-radius: 10px; padding: 12px 14px">
+        <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #FFFFFF; border: 2px solid #AEB6B7; color: #FFFFFF; font-size: 13px; display: flex; align-items: center; justify-content: center"></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><b style="font-size: 15px">การตรวจงาน</b><span style="font-size: 13px; color: #5F696B">หัวหน้า · จุด · รอบ · ผล · ข้อบกพร่อง · ธง GPS · รอบที่ไม่ได้ตรวจ / ไม่ได้แก้</span></span>
+      </label>
+      <h2 style="margin: 6px 0 0; font-size: 18px">2. ช่วงวันและตึก</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: end">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600">ตั้งแต่<input type="text" value="01/10/2026" style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF; width: 150px"></label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600">ถึง<input type="text" value="07/10/2026" style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF; width: 150px"></label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600">ตึก<select style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF; width: 140px"><option>ทุกตึก</option><option>A</option></select></label>
+        <span style="font-size: 13px; color: #5F696B; padding-bottom: 10px">ปุ่มลัด: วันนี้ · 7 วัน · เดือนนี้</span>
+      </div>
+    </div>
+    <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+      <h2 style="margin: 0; font-size: 18px">3. ดาวน์โหลด</h2>
+      <div style="background: #F4F5F4; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 14px">
+        <b>facility_2026-10-01_2026-10-07.xlsx</b>
+        <span style="color: #5F696B">2 แผ่นงาน · การลงเวลา 28 แถว · การส่งงาน 412 แถว</span>
+      </div>
+      <button type="button" style="font: inherit; font-size: 15px; font-weight: 600; min-height: 44px; padding: 0 20px; border: 0; border-radius: 10px; background: #0E6B66; color: #FFFFFF">ดาวน์โหลด .xlsx</button>
+      <div style="font-size: 13px; color: #3B4446; display: flex; flex-direction: column; gap: 6px">
+        <span>ไม่มีพิกัด GPS ดิบ มีแค่ระยะห่างจากป้าย และผลในรัศมี / นอกรัศมี</span>
+        <span>การส่งออกเก็บลงประวัติ Admin (ใคร เมื่อไร ชุดไหน ช่วงวันไหน)</span>
+        <span>ไฟล์ที่ดาวน์โหลดแล้วอยู่นอกการลบตามระยะเวลาเก็บข้อมูล ห้ามส่งต่อนอกบริษัท (เรื่องคนเก็บไฟล์รอคุยกับ HR)</span>
+      </div>
+      <a href="BoardStatus.dc.html" style="font-size: 14px">‹ กลับไป Dashboard</a>
+    </div>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

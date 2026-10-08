@@ -1,0 +1,461 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ฐานข้อมูลระบบตรวจงานแม่บ้าน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a schema reference — a sticky table index on the left, the diagram and each table's column sheet on the right. */
+:root {
+  --bg: #F1F4F3; --surface: #FFFFFF; --surface-2: #E9EEED; --fg: #1B2223; --muted: #5C6869; --line: #D3DAD9;
+  --accent: #0E6B66; --accent-soft: #E1F0EE; --pk: #8A5A00; --fk: #2F5E86; --db: #2E6E4A; --db-soft: #E5F2EA; --app: #3F6283; --app-soft: #E8EFF6;
+  --rework: #B42318; --over: #A85A00; --wait: #3F6283; --pass: #2E6E4A; --todo: #6B7476; --notyet: #A7AFB0; --off: #D3DAD9;
+  --font: 'IBM Plex Sans Thai', 'Noto Sans Thai', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111716; --surface: #1A2221; --surface-2: #232D2C; --fg: #E6ECEB; --muted: #9AA7A6; --line: #33403F;
+  --accent: #4FB3AA; --accent-soft: #16312E; --pk: #F2C27A; --fk: #A9C6E3; --db: #8FD3A9; --db-soft: #16301F; --app: #A9C6E3; --app-soft: #1B2A38;
+  --rework: #D04437; --over: #C27512; --wait: #5A82A8; --pass: #3F8F62; --todo: #7C8789; --notyet: #5A6466; --off: #33403F; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #111716; --surface: #1A2221; --surface-2: #232D2C; --fg: #E6ECEB; --muted: #9AA7A6; --line: #33403F;
+  --accent: #4FB3AA; --accent-soft: #16312E; --pk: #F2C27A; --fk: #A9C6E3; --db: #8FD3A9; --db-soft: #16301F; --app: #A9C6E3; --app-soft: #1B2A38;
+  --rework: #D04437; --over: #C27512; --wait: #5A82A8; --pass: #3F8F62; --todo: #7C8789; --notyet: #5A6466; --off: #33403F; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--font); font-size: 15px; line-height: 1.6; padding: 0 16px 48px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; line-height: 1.3; }
+p { margin: 0; }
+a { color: var(--accent); }
+.mono { font-family: var(--mono); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.nowrap { white-space: nowrap; }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; }
+@media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); } nav.toc { display: none; } }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); align-self: start; max-height: calc(100vh - 32px); overflow-y: auto; padding-block: 24px; font-size: 14px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; }
+nav.toc > ul > li { margin-bottom: 12px; }
+nav.toc > ul > li > a { font-weight: 600; color: var(--fg); text-decoration: none; }
+nav.toc li ul li a { font-size: 12.5px; color: var(--muted); text-decoration: none; display: block; padding: 1px 0 1px 10px; border-left: 1px solid var(--line); }
+nav.toc li ul li a:hover { color: var(--accent); border-color: var(--accent); }
+main { min-width: 0; display: flex; flex-direction: column; gap: 40px; padding-block: 28px; }
+.hero { display: flex; flex-direction: column; gap: 10px; max-width: 70ch; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
+.hero h1 { font-size: 32px; font-weight: 700; }
+.hero p { font-size: 16px; color: var(--muted); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 13px; }
+.fact b { font-family: var(--mono); }
+.block { display: flex; flex-direction: column; gap: 14px; }
+.block > h2, .ghead h2 { font-size: 22px; }
+.block > p, .ghead p { color: var(--muted); max-width: 70ch; }
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 10px; }
+pre.mermaid { margin: 0; background: transparent; font-family: var(--font); }
+.two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .two { grid-template-columns: minmax(0, 1fr); } }
+ol.status { list-style: none; margin: 0; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; gap: 8px; counter-reset: s; }
+ol.status li { display: grid; grid-template-columns: 22px 14px 92px minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 14px; counter-increment: s; }
+ol.status li::before { content: counter(s); font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; transform: translateY(1px); }
+.s-rework { background: var(--rework); } .s-over { background: var(--over); } .s-wait { background: var(--wait); } .s-pass { background: var(--pass); }
+.s-todo { background: var(--todo); } .s-notyet { background: transparent; border: 1.5px dashed var(--notyet); } .s-off { background: var(--off); }
+.group { display: flex; flex-direction: column; gap: 16px; }
+.ghead { display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; border-bottom: 2px solid var(--fg); }
+.tbl { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; scroll-margin-top: 16px; min-width: 0; }
+.tbl header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
+.tbl h3 { font-size: 18px; font-weight: 600; }
+.tbl p { color: var(--muted); }
+.adr { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--line); background: var(--surface-2); white-space: nowrap; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.col { white-space: nowrap; font-weight: 500; }
+td.col.pk { color: var(--pk); font-weight: 600; }
+td.col.fk { color: var(--fk); }
+td.type { white-space: nowrap; color: var(--muted); font-size: 12.5px; }
+td.null { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+tr.gpsrow td { background: var(--surface-2); font-size: 13px; }
+ul.idx { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+ul.idx li { font-family: var(--mono); font-size: 12px; background: var(--surface-2); border-radius: 6px; padding: 2px 8px; }
+.where { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 9px; white-space: nowrap; }
+.where.db { background: var(--db-soft); color: var(--db); }
+.where.app { background: var(--app-soft); color: var(--app); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend span b { font-family: var(--mono); }
+.choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.choice { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.choice b { font-size: 15px; }
+.choice span { color: var(--muted); }
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="สารบัญ"><ul>
+  <li><a href="#overview">ภาพรวม</a></li>
+  <li><a href="#status">สถานะการ์ดมาจากไหน</a></li>
+  <li><a href="#place">สถานที่และป้าย</a><ul><li><a class="mono" href="#buildings">buildings</a></li><li><a class="mono" href="#areas">areas</a></li><li><a class="mono" href="#service_points">service_points</a></li><li><a class="mono" href="#signs">signs</a></li><li><a class="mono" href="#point_round_windows">point_round_windows</a></li></ul></li><li><a href="#people">คนและสิทธิ์</a><ul><li><a class="mono" href="#users">users</a></li><li><a class="mono" href="#refresh_tokens">refresh_tokens</a></li><li><a class="mono" href="#cover_assignments">cover_assignments</a></li></ul></li><li><a href="#field">สิ่งที่เกิดหน้างาน</a><ul><li><a class="mono" href="#shift_attendances">shift_attendances</a></li><li><a class="mono" href="#cleaning_submissions">cleaning_submissions</a></li><li><a class="mono" href="#inspections">inspections</a></li><li><a class="mono" href="#blocked_scans">blocked_scans</a></li></ul></li><li><a href="#admin">งานของ Admin</a><ul><li><a class="mono" href="#alert_reviews">alert_reviews</a></li><li><a class="mono" href="#audit_log">audit_log</a></li></ul></li><li><a href="#later">หลังเก็บครบ 1 ปี</a><ul><li><a class="mono" href="#point_monthly_summaries">point_monthly_summaries</a></li></ul></li>
+  <li><a href="#gps">ชุดคอลัมน์ GPS</a></li>
+  <li><a href="#rules">กติกาที่ใครกัน</a></li>
+  <li><a href="#jobs">งานลบข้อมูล</a></li>
+  <li><a href="#from">จากตารางเดิม</a></li>
+  <li><a href="#choices">สิ่งที่ตัดสินตอนออกแบบ</a></li>
+</ul></nav>
+<main>
+  <header class="hero">
+    <span class="eyebrow">FACILITY REAL-TIME DASHBOARD · ออกแบบฐานข้อมูล</span>
+    <h1>ฐานข้อมูลระบบตรวจงานแม่บ้าน</h1>
+    <p>ตารางทั้งหมดที่ระบบใหม่ต้องใช้ ตาม ADR 0001–0056 · ทุกตารางบอกว่ามาจาก ADR ไหน · เขียนก่อนเริ่มแก้โค้ด เพื่อให้เห็นภาพรวมก่อนวางแผนพัฒนา</p>
+    <div class="facts"><span class="fact">MySQL <b>8</b> Community</span><span class="fact"><b>15</b> ตาราง</span><span class="fact">EF Core + <b>MySql.EntityFrameworkCore</b></span><span class="fact">ตั้งชื่อ <b>snake_case</b></span><span class="fact">เวลา <b>UTC</b></span></div>
+  </header>
+
+  <section class="block" id="overview">
+    <h2>ภาพรวม</h2>
+    <p>สถานที่ (ตึก › Area › จุด › ป้าย › ช่วงรอบ) เป็นข้อมูลที่ Admin ตั้งค่า ส่วนการลงเวลา การส่งงาน การตรวจ และการสแกนที่ถูกบล็อก เกิดจากการสแกนที่หน้างาน ทุกการแก้ของ Admin ลง audit_log</p>
+    <figure>
+      <pre class="mermaid">erDiagram
+  buildings ||--o{ areas : &quot;มี&quot;
+  areas ||--o{ service_points : &quot;มี&quot;
+  areas ||--|{ signs : &quot;ป้าย&quot;
+  service_points ||--o| signs : &quot;ป้ายของจุด&quot;
+  service_points ||--o{ point_round_windows : &quot;ช่วงรอบ&quot;
+  areas ||--o{ users : &quot;แม่บ้านประจำ&quot;
+  buildings ||--o{ users : &quot;หัวหน้าประจำ&quot;
+  users ||--o{ refresh_tokens : &quot;session&quot;
+  users ||--o{ cover_assignments : &quot;ทำแทน&quot;
+  users ||--o{ shift_attendances : &quot;ลงเวลา&quot;
+  signs ||--o{ shift_attendances : &quot;สแกน&quot;
+  users ||--o{ cleaning_submissions : &quot;ส่งงาน&quot;
+  service_points ||--o{ cleaning_submissions : &quot;ที่จุด&quot;
+  point_round_windows |o--o{ cleaning_submissions : &quot;เข้ารอบ&quot;
+  cover_assignments |o--o{ cleaning_submissions : &quot;ทำแทน&quot;
+  cleaning_submissions ||--o{ inspections : &quot;ถูกตรวจ&quot;
+  users ||--o{ inspections : &quot;หัวหน้าตรวจ&quot;
+  users ||--o{ blocked_scans : &quot;ถูกบล็อก&quot;
+  signs ||--o{ blocked_scans : &quot;ป้ายที่สแกน&quot;
+  users ||--o{ audit_log : &quot;Admin ทำ&quot;
+  users ||--o{ alert_reviews : &quot;ปิดเตือน&quot;
+  service_points ||--o{ point_monthly_summaries : &quot;สรุปรายเดือน&quot;
+  buildings {
+    int id PK
+    varchar code UK
+  }
+  areas {
+    int id PK
+    int building_id FK
+    varchar code UK
+  }
+  service_points {
+    int id PK
+    int area_id FK
+  }
+  signs {
+    int id PK
+    int area_id FK
+    int service_point_id FK
+    varchar code UK
+    varchar qr_token UK
+    smallint radius_m
+    int checkin_area_id
+  }
+  point_round_windows {
+    int id PK
+    int service_point_id FK
+    enum shift
+    time start_time
+    time end_time
+  }
+  users {
+    int id PK
+    enum role
+    varchar employee_id UK
+    int area_id FK
+    int building_id FK
+    enum shift
+  }
+  refresh_tokens {
+    bigint id PK
+    int user_id FK
+    char session_id
+  }
+  cover_assignments {
+    int id PK
+    int user_id FK
+    int area_id FK
+    int building_id FK
+    date shift_date
+    enum shift
+  }
+  shift_attendances {
+    bigint id PK
+    int user_id FK
+    int area_id FK
+    date shift_date
+    enum shift
+    enum event_type
+    int sign_id FK
+    boolean within_radius
+  }
+  cleaning_submissions {
+    bigint id PK
+    int service_point_id FK
+    int sign_id FK
+    int user_id FK
+    date shift_date
+    enum shift
+    int round_window_id FK
+    enum placement
+    int cover_assignment_id FK
+    boolean within_radius
+  }
+  inspections {
+    bigint id PK
+    bigint submission_id FK
+    int service_point_id FK
+    int supervisor_id FK
+    enum result
+    int cover_assignment_id FK
+    boolean within_radius
+  }
+  blocked_scans {
+    bigint id PK
+    int user_id FK
+    int sign_id FK
+    enum reason
+    boolean within_radius
+  }
+  alert_reviews {
+    bigint id PK
+    bigint record_id
+  }
+  audit_log {
+    bigint id PK
+    int actor_id FK
+    bigint entity_id
+    varchar reason
+  }
+  point_monthly_summaries {
+    int service_point_id PK
+    date month PK
+  }</pre>
+      <figcaption>แผนภาพแสดงเฉพาะคีย์และคอลัมน์หลัก รายละเอียดทุกคอลัมน์อยู่ในแต่ละตารางด้านล่าง · PK = คีย์หลัก, FK = คีย์อ้างอิง, UK = ห้ามซ้ำ</figcaption>
+    </figure>
+  </section>
+
+  <section class="block" id="status">
+    <h2>สถานะการ์ดมาจากไหน</h2>
+    <p>สถานะของจุดไม่ได้เก็บเป็นคอลัมน์ ระบบคำนวณสดทุกครั้งจากช่วงรอบปัจจุบัน งานที่ส่งในรอบนั้น และการตรวจของรอบนั้น สิ่งที่เก็บจริงคือผลการจัดงานเข้ารอบ (placement) ตอนแม่บ้านส่งงาน</p>
+    <div class="two">
+      <figure>
+        <pre class="mermaid">flowchart TD
+  S[&quot;แม่บ้านส่งงานที่จุด เวลาเซิร์ฟเวอร์ t&quot;] --&gt; C{&quot;กะนี้มีรอบที่เริ่มแล้วไหม&lt;br/&gt;(รอบล่าสุดที่ start ≤ t)&quot;}
+  C --&gt;|ไม่มี| OFF[&quot;OFF_ROUND&lt;br/&gt;บันทึกไว้ การ์ดไม่เปลี่ยน&quot;]
+  C --&gt;|มี รอบ R| IN{&quot;t อยู่ในช่วงของ R?&quot;}
+  IN --&gt;|ใช่| RW1{&quot;R อยู่ในสถานะต้องแก้ไข?&quot;}
+  RW1 --&gt;|ใช่| REWORK[&quot;REWORK ของรอบ R&quot;]
+  RW1 --&gt;|ไม่| ONTIME[&quot;ON_TIME ของรอบ R&quot;]
+  IN --&gt;|เลยช่วงแล้ว| NONE{&quot;R ยังไม่มีงานส่งเลย?&quot;}
+  NONE --&gt;|ใช่| LATE[&quot;LATE ของรอบ R&lt;br/&gt;late_minutes = t − end&quot;]
+  NONE --&gt;|ไม่| RW2{&quot;R อยู่ในสถานะต้องแก้ไข?&quot;}
+  RW2 --&gt;|ใช่| REWORK
+  RW2 --&gt;|ไม่| OFF
+</pre>
+        <figcaption>งานที่ส่งเข้ารอบไหน (ADR 0047) · ผลเก็บใน cleaning_submissions.placement และ round_window_id</figcaption>
+      </figure>
+      <div class="block">
+        <ol class="status" aria-label="ลำดับความสำคัญของสถานะ"><li><span class="sw s-rework"></span><b>ต้องแก้ไข</b><span>การตรวจล่าสุดของรอบเป็น FAIL และยังไม่มีงานส่งหลังจากนั้น</span></li><li><span class="sw s-over"></span><b>เลยรอบ</b><span>รอบจบแล้ว ยังไม่มีงานส่ง</span></li><li><span class="sw s-wait"></span><b>รอตรวจ</b><span>มีงานส่งที่ยังไม่ถูกตรวจ</span></li><li><span class="sw s-pass"></span><b>ตรวจผ่าน</b><span>การตรวจล่าสุดเป็น PASS</span></li><li><span class="sw s-todo"></span><b>ยังไม่ทำ</b><span>รอบยังไม่จบ ยังไม่มีงานส่ง</span></li><li><span class="sw s-notyet"></span><b>ยังไม่ถึงรอบ</b><span>กะเริ่มแล้ว รอบแรกยังไม่เริ่ม</span></li><li><span class="sw s-off"></span><b>นอกเวลา</b><span>Area ไม่มีกะนี้ หรือปิดใช้งาน</span></li></ol>
+        <p class="small muted">เรียงตามความสำคัญ ตัวบนชนะตัวล่าง · รอบใหม่เริ่มแล้วการ์ดเริ่มใหม่ ผลของรอบเก่า (ไม่ได้ทำ, ไม่ได้ตรวจ, ไม่ได้แก้) หาได้จากตารางเดียวกัน ไม่ต้องเก็บแยก · ป้าย "แจ้งปัญหา" มาจากงานล่าสุดที่ status = ISSUE</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="legend"><span><b style="color: var(--pk)">id</b> คีย์หลัก</span><span><b style="color: var(--fk)">area_id</b> คีย์อ้างอิง</span><span><b>NULL</b> ว่างได้</span></div>
+  <section class="group" id="place"><div class="ghead"><h2>สถานที่และป้าย</h2><p>Admin ตั้งค่าเอง เปลี่ยนได้ตลอด (0045)</p></div><article class="tbl" id="buildings">
+  <header><h3 class="mono">buildings</h3><span class="adr">ADR 0048</span></header>
+  <p>ตึก ใช้ผูกหัวหน้ากับตึก (0048)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">INT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono ">code</td><td class="type mono">VARCHAR(20)</td><td class="null"></td><td>UNIQUE เช่น A, B</td></tr><tr><td class="col mono ">name</td><td class="type mono">VARCHAR(100)</td><td class="null"></td><td></td></tr><tr><td class="col mono ">is_active</td><td class="type mono">BOOLEAN</td><td class="null"></td><td>ไม่มีการลบ ใช้ปิดใช้งาน</td></tr><tr><td class="col mono ">created_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr></tbody></table></div>
+  
+</article><article class="tbl" id="areas">
+  <header><h3 class="mono">areas</h3><span class="adr">ADR 0040 · ADR 0043 · ADR 0045</span></header>
+  <p>Area หน่วยที่มอบหมายแม่บ้าน 1 คนต่อกะ (0040)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">INT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">building_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → buildings</td></tr><tr><td class="col mono ">code</td><td class="type mono">VARCHAR(20)</td><td class="null"></td><td>UNIQUE ขึ้นต้นรหัสป้าย เช่น AR01</td></tr><tr><td class="col mono ">name</td><td class="type mono">VARCHAR(150)</td><td class="null"></td><td></td></tr><tr><td class="col mono ">shift_pattern</td><td class="type mono">ENUM(&#x27;DAY_AND_NIGHT&#x27;,&#x27;DAY_ONLY&#x27;)</td><td class="null"></td><td>Area ที่ไม่มีกะดึก การ์ดเป็น &quot;นอกเวลา&quot; ตอนกะดึก</td></tr><tr><td class="col mono ">is_active</td><td class="type mono">BOOLEAN</td><td class="null"></td><td></td></tr><tr><td class="col mono ">created_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr></tbody></table></div>
+  <ul class="idx"><li>INDEX (building_id)</li></ul>
+</article><article class="tbl" id="service_points">
+  <header><h3 class="mono">service_points</h3><span class="adr">ADR 0040 · ADR 0045</span></header>
+  <p>จุดทำความสะอาดใน Area</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">INT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">area_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → areas</td></tr><tr><td class="col mono ">name</td><td class="type mono">VARCHAR(150)</td><td class="null"></td><td>เช่น ห้องน้ำชาย</td></tr><tr><td class="col mono ">sort_order</td><td class="type mono">SMALLINT</td><td class="null"></td><td>ลำดับบนการ์ดและป้าย</td></tr><tr><td class="col mono ">is_active</td><td class="type mono">BOOLEAN</td><td class="null"></td><td>ปิดแล้วหายจาก Dashboard ประวัติยังอยู่</td></tr><tr><td class="col mono ">created_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr></tbody></table></div>
+  <ul class="idx"><li>INDEX (area_id, sort_order)</li></ul>
+</article><article class="tbl" id="signs">
+  <header><h3 class="mono">signs</h3><span class="adr">ADR 0037 · ADR 0038 · ADR 0045</span></header>
+  <p>ป้าย QR ทุกป้าย: ป้ายลงเวลา 1 ป้ายต่อ Area และป้ายของแต่ละจุด</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">INT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">area_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → areas</td></tr><tr><td class="col mono fk">service_point_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → service_points · NULL = ป้ายลงเวลา</td></tr><tr><td class="col mono ">code</td><td class="type mono">VARCHAR(30)</td><td class="null"></td><td>UNIQUE เช่น AR01-IN, AR01-03 พิมพ์บนป้าย</td></tr><tr><td class="col mono ">qr_token</td><td class="type mono">VARCHAR(100)</td><td class="null"></td><td>UNIQUE · ออกใหม่แล้วป้ายเดิมสแกนไม่ได้</td></tr><tr><td class="col mono ">qr_issued_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr><tr class="gpsrow"><td colspan="4"><span class="mono">latitude · longitude · accuracy_m · distance_m · within_radius</span> <span class="muted">ชุดคอลัมน์ GPS ใช้เหมือนกันทุกตารางหน้างาน ดู <a href="#gps">ด้านล่าง</a></span></td></tr><tr><td class="col mono ">location_accuracy_m</td><td class="type mono">SMALLINT</td><td class="null">NULL</td><td>เช่น 18</td></tr><tr><td class="col mono ">location_source</td><td class="type mono">ENUM(&#x27;SITE&#x27;,&#x27;MAP&#x27;)</td><td class="null">NULL</td><td>MAP = ยังไม่ยืนยันหน้างาน</td></tr><tr><td class="col mono ">located_at</td><td class="type mono">DATETIME</td><td class="null">NULL</td><td></td></tr><tr><td class="col mono ">radius_m</td><td class="type mono">SMALLINT</td><td class="null"></td><td>ค่าเริ่ม 50 แก้รายป้ายได้ (0038)</td></tr><tr><td class="col mono ">checkin_area_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>คอลัมน์คำนวณ = area_id เมื่อเป็นป้ายลงเวลา ใช้กันไม่ให้มี 2 ป้าย</td></tr></tbody></table></div>
+  <ul class="idx"><li>UNIQUE (service_point_id)</li><li>UNIQUE (checkin_area_id) · 1 ป้ายลงเวลาต่อ Area</li><li>INDEX (area_id)</li></ul>
+</article><article class="tbl" id="point_round_windows">
+  <header><h3 class="mono">point_round_windows</h3><span class="adr">ADR 0047</span></header>
+  <p>ช่วงเวลารอบของแต่ละจุด แยกกะ (0047)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">INT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">service_point_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → service_points</td></tr><tr><td class="col mono ">shift</td><td class="type mono">ENUM(&#x27;DAY&#x27;,&#x27;NIGHT&#x27;)</td><td class="null"></td><td></td></tr><tr><td class="col mono ">start_time</td><td class="type mono">TIME</td><td class="null"></td><td>เวลาท้องถิ่น เช่น 10:00</td></tr><tr><td class="col mono ">end_time</td><td class="type mono">TIME</td><td class="null"></td><td>กะดึกที่ข้ามเที่ยงคืน end_time น้อยกว่า start_time ได้</td></tr><tr><td class="col mono ">created_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr></tbody></table></div>
+  <ul class="idx"><li>INDEX (service_point_id, shift, start_time)</li><li>แอปตรวจ: ห้ามซ้อนกัน และต้องอยู่ในกะ</li></ul>
+</article></section><section class="group" id="people"><div class="ghead"><h2>คนและสิทธิ์</h2><p>บัญชี การ login และการมอบหมายทำแทน</p></div><article class="tbl" id="users">
+  <header><h3 class="mono">users</h3><span class="adr">ADR 0002 · ADR 0048 · ADR 0054 · ADR 0056</span></header>
+  <p>บัญชีทุกบทบาท</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">INT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono ">role</td><td class="type mono">ENUM(&#x27;CLEANER&#x27;,&#x27;SUPERVISOR&#x27;,&#x27;ADMIN&#x27;)</td><td class="null"></td><td></td></tr><tr><td class="col mono ">employee_id</td><td class="type mono">VARCHAR(20)</td><td class="null">NULL</td><td>UNIQUE · แม่บ้านและหัวหน้า login ด้วยช่องนี้</td></tr><tr><td class="col mono ">username</td><td class="type mono">VARCHAR(100)</td><td class="null">NULL</td><td>UNIQUE · Admin เท่านั้น</td></tr><tr><td class="col mono ">display_name</td><td class="type mono">VARCHAR(150)</td><td class="null"></td><td></td></tr><tr><td class="col mono ">secret_hash</td><td class="type mono">VARCHAR(255)</td><td class="null"></td><td>PBKDF2 ของเบอร์โทร (แม่บ้าน หัวหน้า) หรือรหัสผ่าน (Admin) · ไม่มีเบอร์จริงในฐานข้อมูล</td></tr><tr><td class="col mono fk">area_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → areas · แม่บ้านเท่านั้น</td></tr><tr><td class="col mono fk">building_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → buildings · หัวหน้าเท่านั้น</td></tr><tr><td class="col mono ">shift</td><td class="type mono">ENUM(&#x27;DAY&#x27;,&#x27;NIGHT&#x27;)</td><td class="null">NULL</td><td>กะประจำของแม่บ้านและหัวหน้า</td></tr><tr><td class="col mono ">is_active</td><td class="type mono">BOOLEAN</td><td class="null"></td><td>ไม่มีการลบ</td></tr><tr><td class="col mono ">secret_changed_at</td><td class="type mono">DATETIME</td><td class="null">NULL</td><td>เปลี่ยนเบอร์หรือรีเซ็ตรหัสผ่าน แล้ว revoke session ทั้งหมด</td></tr><tr><td class="col mono ">created_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr><tr><td class="col mono ">cleaner_slot</td><td class="type mono">VARCHAR(30)</td><td class="null">NULL</td><td>คอลัมน์คำนวณ = area_id:shift เมื่อเป็นแม่บ้านที่ใช้งานอยู่</td></tr><tr><td class="col mono ">supervisor_slot</td><td class="type mono">VARCHAR(30)</td><td class="null">NULL</td><td>คอลัมน์คำนวณ = building_id:shift เมื่อเป็นหัวหน้าที่ใช้งานอยู่</td></tr></tbody></table></div>
+  <ul class="idx"><li>UNIQUE (employee_id)</li><li>UNIQUE (username)</li><li>UNIQUE (cleaner_slot) · Area ละ 1 คนต่อกะ</li><li>UNIQUE (supervisor_slot) · ตึกละ 1 คนต่อกะ</li><li>CHECK: ADMIN มี username · คนอื่นมี employee_id</li></ul>
+</article><article class="tbl" id="refresh_tokens">
+  <header><h3 class="mono">refresh_tokens</h3><span class="adr">ADR 0014 · ADR 0015 · ADR 0016</span></header>
+  <p>session 30 วันแบบเลื่อน ใช้ของเดิม (0014–0016)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">BIGINT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">user_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → users</td></tr><tr><td class="col mono ">session_id</td><td class="type mono">CHAR(36)</td><td class="null"></td><td>ทุก token ที่หมุนจาก login เดียวกันใช้ค่าเดียวกัน</td></tr><tr><td class="col mono ">token_hash</td><td class="type mono">CHAR(64)</td><td class="null"></td><td>UNIQUE · SHA-256</td></tr><tr><td class="col mono ">created_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr><tr><td class="col mono ">expires_at</td><td class="type mono">DATETIME</td><td class="null"></td><td>created_at + 30 วัน</td></tr><tr><td class="col mono ">rotated_at</td><td class="type mono">DATETIME</td><td class="null">NULL</td><td></td></tr><tr><td class="col mono ">revoked_at</td><td class="type mono">DATETIME</td><td class="null">NULL</td><td>logout, ปิดใช้งาน, แก้เบอร์, รีเซ็ตรหัสผ่าน</td></tr></tbody></table></div>
+  <ul class="idx"><li>INDEX (session_id)</li><li>INDEX (user_id)</li></ul>
+</article><article class="tbl" id="cover_assignments">
+  <header><h3 class="mono">cover_assignments</h3><span class="adr">ADR 0041 · ADR 0048</span></header>
+  <p>Admin มอบหมายให้ทำแทนหรือตรวจแทน เฉพาะกะนั้น (0041, 0048)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">INT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">user_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → users · คนที่ทำแทน</td></tr><tr><td class="col mono fk">area_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → areas · แม่บ้านทำแทน Area</td></tr><tr><td class="col mono fk">building_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → buildings · หัวหน้าตรวจแทนตึก</td></tr><tr><td class="col mono ">shift_date</td><td class="type mono">DATE</td><td class="null"></td><td>วันที่กะเริ่ม</td></tr><tr><td class="col mono ">shift</td><td class="type mono">ENUM(&#x27;DAY&#x27;,&#x27;NIGHT&#x27;)</td><td class="null"></td><td>หมดสิทธิ์เองเมื่อกะจบ ไม่ต้องมีคอลัมน์หมดอายุ</td></tr><tr><td class="col mono fk">assigned_by</td><td class="type mono">INT</td><td class="null"></td><td>FK → users (Admin)</td></tr><tr><td class="col mono ">assigned_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr><tr><td class="col mono fk">cancelled_by</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → users</td></tr><tr><td class="col mono ">cancelled_at</td><td class="type mono">DATETIME</td><td class="null">NULL</td><td>ยกเลิกก่อนหมดกะ</td></tr></tbody></table></div>
+  <ul class="idx"><li>INDEX (user_id, shift_date, shift)</li><li>INDEX (area_id, shift_date, shift)</li><li>CHECK: มี area_id หรือ building_id อย่างใดอย่างหนึ่ง</li></ul>
+</article></section><section class="group" id="field"><div class="ghead"><h2>สิ่งที่เกิดหน้างาน</h2><p>ทุกแถวมาจากการสแกน ยกเว้นการลงเวลาที่ Admin เพิ่มหรือแก้</p></div><article class="tbl" id="shift_attendances">
+  <header><h3 class="mono">shift_attendances</h3><span class="adr">ADR 0031 · ADR 0050 · ADR 0051</span></header>
+  <p>ลงเวลา 4 ครั้งต่อกะ เพื่อยืนยันว่าเข้า Area แล้ว (0031, 0050)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">BIGINT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">user_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → users</td></tr><tr><td class="col mono fk">area_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → areas · Area ประจำของคนนั้น ณ ตอนลงเวลา</td></tr><tr><td class="col mono ">shift_date</td><td class="type mono">DATE</td><td class="null"></td><td>วันที่กะเริ่ม · กะดึก 7 ต.ค. 19:00 ถึง 8 ต.ค. 07:00 = 2026-10-07</td></tr><tr><td class="col mono ">shift</td><td class="type mono">ENUM(&#x27;DAY&#x27;,&#x27;NIGHT&#x27;)</td><td class="null"></td><td></td></tr><tr><td class="col mono ">event_type</td><td class="type mono">ENUM(&#x27;SHIFT_IN&#x27;,&#x27;BREAK_OUT&#x27;,&#x27;BREAK_IN&#x27;,&#x27;SHIFT_OUT&#x27;)</td><td class="null"></td><td></td></tr><tr><td class="col mono ">occurred_at</td><td class="type mono">DATETIME</td><td class="null"></td><td>เวลาเซิร์ฟเวอร์ (UTC)</td></tr><tr><td class="col mono ">source</td><td class="type mono">ENUM(&#x27;SCAN&#x27;,&#x27;ADMIN_ADD&#x27;,&#x27;ADMIN_EDIT&#x27;)</td><td class="null"></td><td>ADMIN_* = ป้าย &quot;แก้โดย Admin&quot; · ค่าเดิมอยู่ใน audit_log</td></tr><tr><td class="col mono fk">sign_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → signs · NULL เมื่อ Admin เพิ่ม</td></tr><tr class="gpsrow"><td colspan="4"><span class="mono">latitude · longitude · accuracy_m · distance_m · within_radius</span> <span class="muted">ชุดคอลัมน์ GPS ใช้เหมือนกันทุกตารางหน้างาน ดู <a href="#gps">ด้านล่าง</a></span></td></tr><tr><td class="col mono ">created_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr></tbody></table></div>
+  <ul class="idx"><li>UNIQUE (user_id, shift_date, shift, event_type)</li><li>INDEX (shift_date, shift, area_id)</li></ul>
+</article><article class="tbl" id="cleaning_submissions">
+  <header><h3 class="mono">cleaning_submissions</h3><span class="adr">ADR 0046 · ADR 0047 · ADR 0052</span></header>
+  <p>แม่บ้านส่งงานที่จุด (Scan Record เดิม)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">BIGINT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">service_point_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → service_points</td></tr><tr><td class="col mono fk">sign_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → signs</td></tr><tr><td class="col mono fk">user_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → users</td></tr><tr><td class="col mono ">shift_date</td><td class="type mono">DATE</td><td class="null"></td><td></td></tr><tr><td class="col mono ">shift</td><td class="type mono">ENUM(&#x27;DAY&#x27;,&#x27;NIGHT&#x27;)</td><td class="null"></td><td></td></tr><tr><td class="col mono fk">round_window_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → point_round_windows (SET NULL) · NULL = นอกรอบ</td></tr><tr><td class="col mono ">round_start</td><td class="type mono">TIME</td><td class="null">NULL</td><td>สำเนาเวลารอบตอนส่ง เพราะ Admin แก้ช่วงรอบทีหลังได้</td></tr><tr><td class="col mono ">round_end</td><td class="type mono">TIME</td><td class="null">NULL</td><td></td></tr><tr><td class="col mono ">placement</td><td class="type mono">ENUM(&#x27;ON_TIME&#x27;,&#x27;LATE&#x27;,&#x27;REWORK&#x27;,&#x27;OFF_ROUND&#x27;)</td><td class="null"></td><td>ผลการจัดเข้ารอบ ดูแผนภาพด้านล่าง</td></tr><tr><td class="col mono ">late_minutes</td><td class="type mono">SMALLINT</td><td class="null">NULL</td><td>เมื่อ LATE</td></tr><tr><td class="col mono ">status</td><td class="type mono">ENUM(&#x27;NORMAL&#x27;,&#x27;ISSUE&#x27;)</td><td class="null"></td><td>ISSUE = ป้ายแดงบนการ์ด ไม่ใช่สถานะ (0046)</td></tr><tr><td class="col mono ">issue_tags</td><td class="type mono">VARCHAR(200)</td><td class="null">NULL</td><td>เช่น ของชำรุด, น้ำยาหมด</td></tr><tr><td class="col mono ">note</td><td class="type mono">VARCHAR(1000)</td><td class="null">NULL</td><td></td></tr><tr><td class="col mono fk">cover_assignment_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → cover_assignments · มีค่า = ทำแทน</td></tr><tr><td class="col mono ">submitted_at</td><td class="type mono">DATETIME</td><td class="null"></td><td>เวลาเซิร์ฟเวอร์ตอนส่งสำเร็จ (0052)</td></tr><tr class="gpsrow"><td colspan="4"><span class="mono">latitude · longitude · accuracy_m · distance_m · within_radius</span> <span class="muted">ชุดคอลัมน์ GPS ใช้เหมือนกันทุกตารางหน้างาน ดู <a href="#gps">ด้านล่าง</a></span></td></tr></tbody></table></div>
+  <ul class="idx"><li>INDEX (service_point_id, shift_date, shift)</li><li>INDEX (user_id, submitted_at)</li><li>INDEX (submitted_at)</li></ul>
+</article><article class="tbl" id="inspections">
+  <header><h3 class="mono">inspections</h3><span class="adr">ADR 0047 · ADR 0048</span></header>
+  <p>หัวหน้าตรวจงานที่ส่งในรอบปัจจุบัน</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">BIGINT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">submission_id</td><td class="type mono">BIGINT</td><td class="null"></td><td>FK → cleaning_submissions · ตรวจได้เฉพาะงานที่ส่งแล้ว</td></tr><tr><td class="col mono fk">service_point_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → service_points · ซ้ำเพื่อ query สถานะเร็ว</td></tr><tr><td class="col mono fk">supervisor_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → users</td></tr><tr><td class="col mono ">result</td><td class="type mono">ENUM(&#x27;PASS&#x27;,&#x27;FAIL&#x27;)</td><td class="null"></td><td>FAIL = การ์ด &quot;ต้องแก้ไข&quot;</td></tr><tr><td class="col mono ">defect</td><td class="type mono">VARCHAR(1000)</td><td class="null">NULL</td><td>CHECK: ต้องมีเมื่อ FAIL</td></tr><tr><td class="col mono fk">cover_assignment_id</td><td class="type mono">INT</td><td class="null">NULL</td><td>FK → cover_assignments · ตรวจแทนตึกอื่น</td></tr><tr><td class="col mono ">inspected_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr><tr class="gpsrow"><td colspan="4"><span class="mono">latitude · longitude · accuracy_m · distance_m · within_radius</span> <span class="muted">ชุดคอลัมน์ GPS ใช้เหมือนกันทุกตารางหน้างาน ดู <a href="#gps">ด้านล่าง</a></span></td></tr></tbody></table></div>
+  <ul class="idx"><li>INDEX (submission_id)</li><li>INDEX (service_point_id, inspected_at)</li><li>INDEX (supervisor_id, inspected_at)</li></ul>
+</article><article class="tbl" id="blocked_scans">
+  <header><h3 class="mono">blocked_scans</h3><span class="adr">ADR 0041 · ADR 0048</span></header>
+  <p>สแกนที่ถูกบล็อก ไม่ได้บันทึกงาน แต่ Admin เห็น (0041, 0048)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">BIGINT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">user_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → users</td></tr><tr><td class="col mono fk">sign_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → signs</td></tr><tr><td class="col mono ">reason</td><td class="type mono">ENUM(&#x27;OTHER_AREA&#x27;,&#x27;OTHER_BUILDING&#x27;,&#x27;OUTSIDE_SHIFT&#x27;)</td><td class="null"></td><td>แม่บ้าน = OTHER_AREA · หัวหน้า = ตึกหรือกะ</td></tr><tr><td class="col mono ">scanned_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr><tr class="gpsrow"><td colspan="4"><span class="mono">latitude · longitude · accuracy_m · distance_m · within_radius</span> <span class="muted">ชุดคอลัมน์ GPS ใช้เหมือนกันทุกตารางหน้างาน ดู <a href="#gps">ด้านล่าง</a></span></td></tr></tbody></table></div>
+  <ul class="idx"><li>INDEX (scanned_at)</li><li>INDEX (sign_id, scanned_at)</li></ul>
+</article></section><section class="group" id="admin"><div class="ghead"><h2>งานของ Admin</h2><p>ปิดเตือน และประวัติทุกการเปลี่ยนแปลง</p></div><article class="tbl" id="alert_reviews">
+  <header><h3 class="mono">alert_reviews</h3><span class="adr">ADR 0035 · ADR 0041 · ADR 0051</span></header>
+  <p>กด &quot;คุยแล้ว ปิดเตือน&quot; (0035, 0041)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">BIGINT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono ">alert_type</td><td class="type mono">ENUM(&#x27;ATTENDANCE_GPS&#x27;,&#x27;SUBMISSION_GPS&#x27;,&#x27;INSPECTION_GPS&#x27;,&#x27;BLOCKED_SCAN&#x27;)</td><td class="null"></td><td>เตือนลืมลงเวลาเลิกงานปิดเองเมื่อ Admin เติมเวลา</td></tr><tr><td class="col mono ">record_id</td><td class="type mono">BIGINT</td><td class="null"></td><td>id ในตารางของประเภทนั้น</td></tr><tr><td class="col mono fk">reviewed_by</td><td class="type mono">INT</td><td class="null"></td><td>FK → users</td></tr><tr><td class="col mono ">reviewed_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr></tbody></table></div>
+  <ul class="idx"><li>UNIQUE (alert_type, record_id)</li></ul>
+</article><article class="tbl" id="audit_log">
+  <header><h3 class="mono">audit_log</h3><span class="adr">ADR 0051 · ADR 0053 · ADR 0056</span></header>
+  <p>ประวัติของ Admin อ่านอย่างเดียว (0051)</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">id</td><td class="type mono">BIGINT</td><td class="null"></td><td>PK</td></tr><tr><td class="col mono fk">actor_id</td><td class="type mono">INT</td><td class="null"></td><td>FK → users</td></tr><tr><td class="col mono ">occurred_at</td><td class="type mono">DATETIME</td><td class="null"></td><td></td></tr><tr><td class="col mono ">action</td><td class="type mono">VARCHAR(50)</td><td class="null"></td><td>เช่น ATTENDANCE_EDIT, COVER_ASSIGN, ROUND_WINDOW_ADD, QR_REGENERATE, PHONE_CHANGE, EXCEL_EXPORT</td></tr><tr><td class="col mono ">entity_type</td><td class="type mono">VARCHAR(40)</td><td class="null"></td><td>ชื่อตารางที่ถูกแก้</td></tr><tr><td class="col mono ">entity_id</td><td class="type mono">BIGINT</td><td class="null">NULL</td><td></td></tr><tr><td class="col mono ">summary</td><td class="type mono">VARCHAR(300)</td><td class="null"></td><td>ข้อความที่แสดงในหน้าประวัติ</td></tr><tr><td class="col mono ">before_json</td><td class="type mono">JSON</td><td class="null">NULL</td><td>ไม่มีเบอร์โทรหรือรหัสผ่านทั้งก่อนและหลัง</td></tr><tr><td class="col mono ">after_json</td><td class="type mono">JSON</td><td class="null">NULL</td><td></td></tr><tr><td class="col mono ">reason</td><td class="type mono">VARCHAR(500)</td><td class="null">NULL</td><td>บังคับเมื่อแก้การลงเวลา</td></tr></tbody></table></div>
+  <ul class="idx"><li>INDEX (occurred_at)</li><li>INDEX (entity_type, entity_id)</li><li>user ของแอปไม่มีสิทธิ์ UPDATE / DELETE ตารางนี้</li></ul>
+</article></section><section class="group" id="later"><div class="ghead"><h2>หลังเก็บครบ 1 ปี</h2><p>สร้างก่อนข้อมูลจริงอายุครบ 1 ปี (0055)</p></div><article class="tbl" id="point_monthly_summaries">
+  <header><h3 class="mono">point_monthly_summaries</h3><span class="adr">ADR 0055</span></header>
+  <p>สรุปรายเดือนต่อจุด ไม่มีชื่อคน แทนรายการรายครั้งที่ลบแล้ว</p>
+  <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th></th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono pk">service_point_id</td><td class="type mono">INT</td><td class="null"></td><td>PK · FK → service_points</td></tr><tr><td class="col mono pk">month</td><td class="type mono">DATE</td><td class="null"></td><td>PK · วันที่ 1 ของเดือน</td></tr><tr><td class="col mono ">rounds_total</td><td class="type mono">INT</td><td class="null"></td><td></td></tr><tr><td class="col mono ">submitted_on_time</td><td class="type mono">INT</td><td class="null"></td><td></td></tr><tr><td class="col mono ">submitted_late</td><td class="type mono">INT</td><td class="null"></td><td></td></tr><tr><td class="col mono ">not_done</td><td class="type mono">INT</td><td class="null"></td><td>รอบที่ไม่ได้ทำ</td></tr><tr><td class="col mono ">inspected_pass</td><td class="type mono">INT</td><td class="null"></td><td></td></tr><tr><td class="col mono ">inspected_fail</td><td class="type mono">INT</td><td class="null"></td><td></td></tr><tr><td class="col mono ">not_inspected</td><td class="type mono">INT</td><td class="null"></td><td></td></tr><tr><td class="col mono ">issues_reported</td><td class="type mono">INT</td><td class="null"></td><td></td></tr></tbody></table></div>
+  
+</article></section>
+
+  <section class="block" id="gps">
+    <h2>ชุดคอลัมน์ GPS</h2>
+    <p>ใช้เหมือนกันใน shift_attendances, cleaning_submissions, inspections และ blocked_scans ระบบอ่านตำแหน่งทุกครั้งที่สแกน ถ้าปิด Location จะสแกนไม่ได้ จึงไม่มีแถวที่ไม่มีตำแหน่ง ยกเว้นการลงเวลาที่ Admin เพิ่ม</p>
+    <div class="tw"><table><thead><tr><th>คอลัมน์</th><th>ชนิด</th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="col mono">latitude</td><td class="type mono">DECIMAL(9,6)</td><td>พิกัดดิบ ลบทิ้งเมื่ออายุ 90 วัน (0055)</td></tr><tr><td class="col mono">longitude</td><td class="type mono">DECIMAL(9,6)</td><td>พิกัดดิบ ลบทิ้งเมื่ออายุ 90 วัน</td></tr><tr><td class="col mono">accuracy_m</td><td class="type mono">SMALLINT</td><td>ความแม่นยำที่มือถือรายงาน (ม.) ลบพร้อมพิกัด</td></tr><tr><td class="col mono">distance_m</td><td class="type mono">SMALLINT</td><td>ระยะห่างจากป้าย เก็บต่อหลัง 90 วัน</td></tr><tr><td class="col mono">within_radius</td><td class="type mono">BOOLEAN</td><td>false = ติดธง ไม่บล็อก (0035, 0037) เก็บต่อหลัง 90 วัน</td></tr></tbody></table></div>
+  </section>
+
+  <section class="block" id="rules">
+    <h2>กติกาที่ใครกัน</h2>
+    <p>กติกาที่ฐานข้อมูลกันได้ ให้ฐานข้อมูลกัน เพื่อไม่ให้ข้อมูลผิดแม้แอปมีบั๊ก ส่วนกติกาที่ขึ้นกับเวลาและสถานะ แอปตรวจตอนสแกนหรือตอนบันทึก</p>
+    <div class="tw"><table><thead><tr><th>กติกา</th><th>กันด้วย</th><th>ใครกัน</th></tr></thead><tbody><tr><td>Area ละ 1 แม่บ้านต่อกะ</td><td class="mono small">UNIQUE (cleaner_slot)</td><td><span class="where db">ฐานข้อมูล</span></td></tr><tr><td>ตึกละ 1 หัวหน้าต่อกะ</td><td class="mono small">UNIQUE (supervisor_slot)</td><td><span class="where db">ฐานข้อมูล</span></td></tr><tr><td>1 ป้ายลงเวลาต่อ Area</td><td class="mono small">UNIQUE (checkin_area_id)</td><td><span class="where db">ฐานข้อมูล</span></td></tr><tr><td>ลงเวลาแต่ละแบบได้ครั้งเดียวต่อกะ (เวลาแรกชนะ)</td><td class="mono small">UNIQUE (user_id, shift_date, shift, event_type)</td><td><span class="where db">ฐานข้อมูล</span></td></tr><tr><td>ไม่สะอาดต้องมีข้อบกพร่อง</td><td class="mono small">CHECK บน inspections</td><td><span class="where db">ฐานข้อมูล</span></td></tr><tr><td>รหัสพนักงานห้ามซ้ำ</td><td class="mono small">UNIQUE (employee_id)</td><td><span class="where db">ฐานข้อมูล</span></td></tr><tr><td>ช่วงรอบห้ามซ้อนกัน และต้องอยู่ในกะ</td><td class="mono small">ตรวจตอนบันทึก</td><td><span class="where app">แอป</span></td></tr><tr><td>ลงเวลาตามลำดับ และกดซ้ำภายใน 5 นาทีไม่นับ</td><td class="mono small">ตรวจตอนสแกน</td><td><span class="where app">แอป</span></td></tr><tr><td>ส่งงานต้องลงเวลาเข้างานกะนี้แล้ว</td><td class="mono small">ตรวจตอนสแกน</td><td><span class="where app">แอป</span></td></tr><tr><td>สแกนได้เฉพาะ Area ตัวเอง หรือ Area ที่ได้รับมอบหมายกะนี้</td><td class="mono small">ตรวจตอนสแกน ไม่ผ่าน = เขียน blocked_scans</td><td><span class="where app">แอป</span></td></tr><tr><td>หัวหน้าตรวจได้เฉพาะตึกและกะตัวเอง และเฉพาะงานของรอบปัจจุบัน</td><td class="mono small">ตรวจตอนสแกน</td><td><span class="where app">แอป</span></td></tr><tr><td>จำกัดจำนวนครั้งที่ login ผิด</td><td class="mono small">นับในหน่วยความจำของเซิร์ฟเวอร์ ไม่ต้องมีตาราง</td><td><span class="where app">แอป</span></td></tr></tbody></table></div>
+  </section>
+
+  <section class="block" id="jobs">
+    <h2>งานลบข้อมูล</h2>
+    <p>ตาม ADR 0055 ช่วงทดลองแรกๆ ยังไม่ต้องรัน แต่ต้องเปิดใช้ก่อนข้อมูลจริงอายุถึง 90 วัน ตัวเลขทุกตัวอยู่ใน config</p>
+    <div class="tw"><table><thead><tr><th>เมื่อไร</th><th>ทำอะไร</th><th>หมายเหตุ</th></tr></thead><tbody><tr><td class="nowrap">ทุกคืน</td><td>ลบ latitude, longitude, accuracy_m ของแถวที่อายุเกิน 90 วัน ใน shift_attendances, cleaning_submissions, inspections, blocked_scans</td><td class="muted">distance_m และ within_radius อยู่ต่อ</td></tr><tr><td class="nowrap">ทุกคืน</td><td>ลบ shift_attendances และ blocked_scans ที่อายุเกิน 1 ปี</td><td class="muted"></td></tr><tr><td class="nowrap">ทุกต้นเดือน</td><td>สรุปเดือนที่อายุครบ 1 ปีลง point_monthly_summaries แล้วลบ cleaning_submissions, inspections ของเดือนนั้น</td><td class="muted">ไม่มีชื่อคนในสรุป</td></tr><tr><td class="nowrap">ทุกคืน</td><td>ลบ audit_log และ alert_reviews ที่ชี้ไปยังแถวที่ถูกลบแล้ว</td><td class="muted">เก็บนานเท่ากับข้อมูลที่ถูกแก้</td></tr><tr><td class="nowrap">ทุกคืน</td><td>ลบ refresh_tokens ที่หมดอายุเกิน 30 วัน</td><td class="muted"></td></tr></tbody></table></div>
+  </section>
+
+  <section class="block" id="from">
+    <h2>จากตารางเดิม</h2>
+    <p>โค้ดตอนนี้มี 4 ตารางจากเฟสแรก ยังไม่มีข้อมูลจริง จึงสร้าง migration ชุดใหม่ได้เลย</p>
+    <div class="tw"><table><thead><tr><th>ตารางเดิม</th><th>ตารางใหม่</th><th>เปลี่ยนอะไร</th></tr></thead><tbody><tr><td class="mono">service_points</td><td class="mono">service_points + signs</td><td>ย้าย qr_token ไปที่ signs · เลิกใช้ location และ cleaning_interval_minutes (แทนด้วย point_round_windows)</td></tr><tr><td class="mono">scan_records</td><td class="mono">cleaning_submissions</td><td>เพิ่มรอบ, placement, ทำแทน, GPS</td></tr><tr><td class="mono">users</td><td class="mono">users</td><td>username + password_hash → employee_id + secret_hash (Admin ยังใช้ username) · เพิ่ม area, building, shift</td></tr><tr><td class="mono">refresh_tokens</td><td class="mono">refresh_tokens</td><td>ใช้เหมือนเดิม</td></tr><tr><td class="mono">–</td><td class="mono">buildings, areas, point_round_windows, cover_assignments, shift_attendances, inspections, blocked_scans, alert_reviews, audit_log, point_monthly_summaries</td><td>ตารางใหม่</td></tr></tbody></table></div>
+  </section>
+
+  <section class="block" id="choices">
+    <h2>สิ่งที่ตัดสินตอนออกแบบ</h2>
+    <p>เรื่องเทคนิคที่ ADR ไม่ได้บอก ผมเลือกไว้แบบนี้ แก้ได้ก่อนเริ่มเขียนโค้ด</p>
+    <div class="choices"><div class="choice"><b>วันของกะดึก</b><span>shift_date คือวันที่กะเริ่ม กะดึก 19:00 วันที่ 7 ถึง 07:00 วันที่ 8 นับเป็นวันที่ 7 ทั้งกะ</span></div><div class="choice"><b>เวลา</b><span>เก็บ DATETIME เป็น UTC ตามเวลาเซิร์ฟเวอร์ ส่วนช่วงรอบเก็บเป็น TIME เวลาไทย แอปแปลงให้</span></div><div class="choice"><b>สำเนาเวลารอบ</b><span>cleaning_submissions เก็บ round_start, round_end ไว้ด้วย เพราะ Admin แก้หรือลบช่วงรอบทีหลังได้ แต่ประวัติต้องบอกได้ว่าตอนส่งเป็นรอบไหน</span></div><div class="choice"><b>สถานะการ์ด</b><span>ไม่เก็บเป็นคอลัมน์ คำนวณสดจากช่วงรอบ งานส่ง และการตรวจของกะนี้ (ตามนิยาม Point Status)</span></div><div class="choice"><b>GPS</b><span>เก็บเป็นคอลัมน์ในแต่ละตาราง ไม่แยกตาราง เพราะงานลบพิกัดหลัง 90 วันแค่ตั้งค่า 3 ช่องเป็น NULL</span></div><div class="choice"><b>บัญชีตารางเดียว</b><span>ทุกบทบาทอยู่ใน users ใช้คอลัมน์คำนวณกับ UNIQUE กันคนซ้ำในช่องเดียวกัน ปิดใช้งานแล้วช่องว่างเอง</span></div><div class="choice"><b>ลงเวลาก่อนกะ</b><span>ต้นแบบให้ลงเวลาได้ตั้งแต่ 1 ชั่วโมงก่อนกะเริ่ม (เช่น 06:52 นับเป็นกะเช้า) ตัวเลขอยู่ใน config ยังไม่มี ADR</span></div><div class="choice"><b>migration</b><span>ยังไม่มีข้อมูลจริง สร้าง migration ชุดใหม่ตั้งแต่ต้นได้ ไม่ต้องย้ายข้อมูล</span></div></div>
+  </section>
+</main>
+</div>
+
+<!--claude-mermaid-runtime-begin:3477-->
+<style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.16.1/dist/mermaid.min.js"></script>
+<script>(function(){
+var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
+if(typeof mermaid==='undefined')return;
+var pres=Array.prototype.slice.call(document.querySelectorAll('pre.mermaid')).filter(function(p){if(p.hasAttribute('data-claude-mermaid-claimed'))return false;p.setAttribute('data-claude-mermaid-claimed','1');return true;});
+if(!pres.length)return;
+var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
+var root=document.documentElement;
+var items=pres.map(function(pre){
+var mount=document.createElement('div');mount.className='mermaid-diagram';
+return {pre:pre,mount:mount,src:pre.textContent||''};
+});
+var seq=0;
+var renderGen=0;
+var lastKey='';
+function pageBg(fallback){
+var els=[document.body,document.documentElement];
+for(var i=0;i<els.length;i++){
+var c=els[i]&&getComputedStyle(els[i]).backgroundColor;
+if(c&&c!=='transparent'&&c!=='rgba(0, 0, 0, 0)')return c;
+}
+return fallback;
+}
+function render(){
+var theme=root.getAttribute('data-theme');
+var dark=theme==='dark'||(!!(mq&&mq.matches)&&theme!=='light');
+var pal=dark?CFG.palettes.dark:CFG.palettes.light;
+var bg=pageBg(pal.bg);
+var key=(dark?'d':'l')+'|'+bg;
+if(key===lastKey)return;
+lastKey=key;
+var gen=++renderGen;
+var font=getComputedStyle(document.body).fontFamily||'sans-serif';
+var nat={useMaxWidth:false};
+mermaid.initialize({
+startOnLoad:false,securityLevel:'strict',theme:'base',
+flowchart:nat,sequence:nat,er:nat,state:nat,class:nat,pie:nat,
+gantt:nat,journey:nat,timeline:nat,gitGraph:nat,mindmap:nat,xyChart:nat,
+quadrantChart:nat,sankey:nat,c4:nat,requirement:nat,block:nat,
+packet:nat,kanban:nat,architecture:nat,radar:nat,
+themeVariables:{background:bg,mainBkg:pal.surface,primaryColor:pal.surface,
+primaryTextColor:pal.text,lineColor:pal.line,primaryBorderColor:pal.border,
+nodeBorder:pal.border,clusterBorder:pal.border,edgeLabelBackground:bg,
+clusterBkg:'rgba(127,127,127,0.07)',titleColor:pal.text,
+darkMode:dark,rowOdd:bg,rowEven:'rgba(127,127,127,0.07)',
+attributeBackgroundColorOdd:bg,attributeBackgroundColorEven:'rgba(127,127,127,0.07)',
+fontSize:'16px',fontFamily:font},
+themeCSS:'.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
+});
+items.forEach(function(it){
+var id='claude-mermaid-'+seq++;
+mermaid.render(id,it.src).then(function(r){
+if(gen!==renderGen)return;
+var prev=it.pre.previousElementSibling;
+if(prev&&prev.className==='mermaid-diagram'&&prev!==it.mount)return;
+it.mount.innerHTML=r.svg;
+if(!it.mount.parentNode)it.pre.parentNode.insertBefore(it.mount,it.pre);
+it.pre.style.display='none';
+},function(){
+var scratch=document.getElementById(id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+scratch=document.getElementById('d'+id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+if(gen!==renderGen)return;
+if(it.mount.parentNode)it.mount.parentNode.removeChild(it.mount);
+it.pre.style.display='';
+});
+});
+}
+render();
+if(mq&&mq.addEventListener)mq.addEventListener('change',render);
+if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
+})();</script>
+<!--claude-mermaid-runtime-end-->
+
+</body></html>

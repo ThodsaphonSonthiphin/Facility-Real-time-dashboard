@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>งานของฉัน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px; padding: 24px 20px">
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <div style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">[ชื่อ Area ทดลอง] · ตึก A · ตอนนี้ 10:25</div>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">งานของฉัน</h1>
+    <div style="font-size: 15px; color: #5F696B">สมศรี · กะเช้า · เข้างาน 06:52</div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; text-align: center">
+    <sc-for list="{{sum}}" as="s" hint-placeholder-count="3">
+      <div style="{{s.box}}">
+        <span style="{{s.num}}">{{s.n}}</span>
+        <span style="font-size: 12px">{{s.label}}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <sc-for list="{{items}}" as="p" hint-placeholder-count="4">
+      <sc-if value="{{p.link}}" hint-placeholder-val="{{false}}">
+        <a href="CleanerSubmit.dc.html" style="{{p.box}}">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px">
+            <span style="font-size: 16px; font-weight: 600">{{p.name}}</span>
+            <span style="{{p.chip}}">{{p.state}}</span>
+          </div>
+          <span style="font-size: 13px; color: #5F696B; font-variant-numeric: tabular-nums">{{p.round}}</span>
+          <span style="font-size: 14px">{{p.detail}}</span>
+          <span style="font-size: 13px; font-weight: 600; color: #0E6B66">แก้แล้วสแกน QR ที่จุดนี้เพื่อส่งงานใหม่ ›</span>
+        </a>
+      </sc-if>
+      <sc-if value="{{p.plain}}" hint-placeholder-val="{{true}}">
+        <div style="{{p.box}}">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px">
+            <span style="font-size: 16px; font-weight: 600">{{p.name}}</span>
+            <span style="{{p.chip}}">{{p.state}}</span>
+          </div>
+          <span style="font-size: 13px; color: #5F696B; font-variant-numeric: tabular-nums">{{p.round}}</span>
+          <span style="font-size: 14px">{{p.detail}}</span>
+          <sc-if value="{{p.issue}}" hint-placeholder-val="{{false}}">
+            <span style="align-self: flex-start; font-size: 13px; font-weight: 600; color: #8A1C12; background: #FDECEA; border: 1px solid #E2A39B; border-radius: 6px; padding: 2px 8px">แจ้งปัญหา: {{p.issue}}</span>
+          </sc-if>
+        </div>
+      </sc-if>
+    </sc-for>
+  </div>
+  <div style="font-size: 13px; color: #5F696B">วันนี้ไม่ได้ทำแทน Area อื่น · ถ้า Admin มอบหมาย จุดของ Area นั้นจะขึ้นในหน้านี้ด้วย · <a href="MyWorkCover.dc.html">ดูตัวอย่าง</a></div>
+  <div style="flex-grow: 1"></div>
+  <div style="font-size: 13px; color: #5F696B; text-align: center">ไม่มีแจ้งเตือนเด้งขึ้น เปิดหน้านี้เพื่อดูงาน · หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจ</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const C = {
+  rework: ['ต้องแก้ไข', '#B42318'],
+  over: ['เลยรอบ', '#A85A00'],
+  wait: ['รอตรวจ', '#4A6378'],
+  pass: ['ตรวจผ่าน', '#2E6E4A']
+};
+const chip = (k) => 'font-size: 12px; font-weight: 600; color: #FFFFFF; white-space: nowrap; border-radius: 999px; padding: 2px 10px; background: ' + C[k][1];
+const box = (k) => 'background: #FFFFFF; border: ' + (k === 'rework' ? '2px solid #B42318' : '1px solid #D5DADA') + '; border-radius: 10px; padding: ' + (k === 'rework' ? '11px 13px' : '12px 14px') + '; display: flex; flex-direction: column; gap: 6px; color: #1D2324; text-decoration: none';
+const it = (name, k, round, detail, issue) => ({ name: name, state: C[k][0], chip: chip(k), box: box(k), round: round, detail: detail, issue: issue || false, link: k === 'rework', plain: k !== 'rework' });
+const items = [
+  it('จุดทิ้งขยะ', 'rework', 'รอบ 08:00–10:00', 'วิไล 09:40: "รอบถังขยะยังมีคราบ"'),
+  it('โถงทางเดิน', 'over', 'รอบ 07:30–09:00', 'ยังไม่ส่งงาน · เลยมา 1 ชม. 25 นาที'),
+  it('ห้องน้ำชาย', 'wait', 'รอบ 10:00–12:00', 'ส่งงาน 10:05 · รอบถัดไป 13:00–15:00'),
+  it('ห้องน้ำหญิง', 'pass', 'รอบ 10:00–12:00', 'ตรวจผ่าน 10:20 · รอบถัดไป 13:00–15:00', 'ก๊อกอ่างที่ 2 รั่ว')
+];
+const tile = (bg, bd) => 'background: ' + bg + '; border: 1px solid ' + bd + '; border-radius: 10px; padding: 8px 4px; display: flex; flex-direction: column; gap: 2px';
+const num = (c) => 'font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; color: ' + c;
+const sum = [
+  { n: 1, label: 'ต้องแก้', box: tile('#FDECEA', '#E2A39B'), num: num('#8A1C12') },
+  { n: 1, label: 'เลยรอบ', box: tile('#FFF4E5', '#E3B776'), num: num('#7A4300') },
+  { n: 2, label: 'ส่งแล้ว', box: tile('#FFFFFF', '#D5DADA'), num: num('#1D2324') }
+];
+return { items: items, sum: sum };
+}
+}
+</script>
+</body>
+</html>

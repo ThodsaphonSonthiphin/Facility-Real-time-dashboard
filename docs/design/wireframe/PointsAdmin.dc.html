@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>จัดการ Area จุด และพิกัดป้าย</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="min-height: 1180px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 24px 32px">
+<div style="max-width: 1216px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">สำหรับผู้ดูแลระบบ (Admin)</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">จัดการ Area จุด และพิกัดป้าย</h1>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 15px">
+      <a href="BoardStatus.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สถานะจุด</a>
+      <a href="BoardAttendance.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">การเข้างาน</a>
+      <a href="BoardFlags.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">รายการที่ขึ้นเตือน (4)</a>
+      <a href="SupervisorSummary.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สรุปการตรวจ</a>
+      <a href="PointsAdmin.dc.html" style="padding: 8px 16px; border-radius: 8px; background: #1D2324; color: #FFFFFF; text-decoration: none">จัดการ Area และป้าย</a>
+      <a href="Accounts.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">บัญชีผู้ใช้</a>
+      <a href="AuditLog.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">ประวัติ Admin</a>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+    <nav aria-label="รายชื่อ Area" style="flex: 1 1 220px; max-width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Area ทั้งหมด ({{areaCount}})</h2>
+      </div>
+      <sc-for list="{{areas}}" as="a" hint-placeholder-count="4">
+        <a href="#" style="{{a.style}}">
+          <span style="font-weight: 600">{{a.name}}</span>
+          <span style="font-size: 12px; color: #5F696B">{{a.meta}}</span>
+        </a>
+      </sc-for>
+      <a href="AreaEdit.dc.html" style="font-size: 14px; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: center; border: 1px dashed #0E6B66; border-radius: 10px; color: #0E6B66; text-decoration: none">+ เพิ่ม Area</a>
+    </nav>
+
+    <div style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+      <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 16px 18px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 12px; color: #5F696B">Area ที่เลือก · ตึก A</span>
+          <span style="font-size: 20px; font-weight: 700">[ชื่อ Area ทดลอง]</span>
+          <span style="font-size: 13px; color: #5F696B">ทำ 2 กะ (เช้า + ดึก) · แม่บ้านประจำ: เช้า สมศรี · ดึก บุษบา · ป้าย 1 + 4</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <a href="AreaEdit.dc.html" style="font-size: 14px; min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid #D5DADA; border-radius: 10px; background: #FFFFFF; color: #1D2324; text-decoration: none">แก้ไข Area</a>
+          <a href="PrintSigns.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 10px; background: #0E6B66; color: #FFFFFF; font-weight: 600; text-decoration: none">พิมพ์ป้ายของ Area นี้ ›</a>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto; background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px">
+        <table style="width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px">
+          <thead>
+            <tr style="text-align: left; color: #5F696B; font-size: 12px">
+              <th style="padding: 10px 12px; border-bottom: 1px solid #D5DADA">ป้าย</th>
+              <th style="padding: 10px 12px; border-bottom: 1px solid #D5DADA">ช่วงเวลารอบ</th>
+              <th style="padding: 10px 12px; border-bottom: 1px solid #D5DADA">พิกัด · ความแม่นยำ</th>
+              <th style="padding: 10px 12px; border-bottom: 1px solid #D5DADA"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+              <tr style="{{r.rowStyle}}">
+                <td style="padding: 10px 12px; border-bottom: 1px solid #ECEFEF"><b>{{r.name}}</b><br><span style="font-size: 12px; color: #5F696B">{{r.kind}}</span></td>
+                <td style="padding: 10px 12px; border-bottom: 1px solid #ECEFEF; font-variant-numeric: tabular-nums; color: #3B4446">{{r.times}}</td>
+                <td style="padding: 10px 12px; border-bottom: 1px solid #ECEFEF"><span style="{{r.geoStyle}}">{{r.geo}}</span><br><span style="font-size: 12px; color: #5F696B">{{r.geoNote}}</span></td>
+                <td style="padding: 10px 12px; border-bottom: 1px solid #ECEFEF; white-space: nowrap"><a href="#">แก้ไข</a> · <a href="PrintSigns.dc.html">พิมพ์</a></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <button type="button" style="align-self: flex-start; font: inherit; font-size: 14px; font-weight: 600; min-height: 44px; padding: 0 16px; border: 1px dashed #0E6B66; border-radius: 10px; background: transparent; color: #0E6B66">+ เพิ่มจุดทำความสะอาดใน Area นี้</button>
+      <div style="font-size: 13px; color: #5F696B">แม่บ้านสแกนได้เฉพาะป้ายของ Area ตัวเอง (R12) · ป้ายลงเวลา 1 ป้ายต่อ Area ระบบสร้างให้เองเมื่อเพิ่ม Area · ทุกการแก้ในหน้านี้เก็บลงประวัติ (ใคร เมื่อไร ค่าก่อนและหลัง)</div>
+    </div>
+
+    <form style="flex: 1 1 340px; min-width: 0; background: #FFFFFF; border: 2px solid #0E6B66; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 12px; color: #5F696B">แก้ไขจุด · [ชื่อ Area ทดลอง]</span>
+        <h2 style="margin: 0; font-size: 18px; font-weight: 600">ห้องน้ำหญิง</h2>
+      </div>
+      <label for="f-name" style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">ชื่อจุด<input id="f-name" value="ห้องน้ำหญิง" style="font: inherit; font-size: 15px; font-weight: 400; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 10px"></label>
+
+      <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+        <legend style="font-size: 13px; font-weight: 600; padding: 0; margin-bottom: 6px">ช่วงเวลารอบทำความสะอาด</legend>
+        <span style="font-size: 12px; color: #5F696B">กะเช้า</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-for list="{{dayTimes}}" as="t" hint-placeholder-count="4">
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; background: #E3F1EF; color: #0E6B66; font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px">{{t}}<button type="button" aria-label="ลบเวลา" style="font: inherit; font-size: 14px; width: 24px; height: 24px; border: 0; border-radius: 999px; background: transparent; color: #0E6B66">×</button></span>
+          </sc-for>
+        </div>
+        <span style="font-size: 12px; color: #5F696B">กะดึก</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-for list="{{nightTimes}}" as="t" hint-placeholder-count="4">
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; background: #E3F1EF; color: #0E6B66; font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px">{{t}}<button type="button" aria-label="ลบเวลา" style="font: inherit; font-size: 14px; width: 24px; height: 24px; border: 0; border-radius: 999px; background: transparent; color: #0E6B66">×</button></span>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+          <span style="font-size: 13px">เพิ่มช่วง</span>
+          <label for="f-start" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px">เริ่ม<input id="f-start" type="time" value="13:00" style="font: inherit; font-size: 15px; border: 1px solid #D5DADA; border-radius: 8px; padding: 6px 8px"></label>
+          <label for="f-end" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px">ถึง<input id="f-end" type="time" value="15:00" style="font: inherit; font-size: 15px; border: 1px solid #D5DADA; border-radius: 8px; padding: 6px 8px"></label>
+          <button type="button" style="font: inherit; font-size: 14px; min-height: 40px; padding: 0 12px; border: 1px solid #0E6B66; border-radius: 8px; background: #FFFFFF; color: #0E6B66; font-weight: 600">เพิ่ม</button>
+        </div>
+        <span style="font-size: 12px; color: #5F696B">ช่วงห้ามซ้อนกันและต้องอยู่ในกะ · ส่งหลังช่วงจบนับเป็นส่งช้า · Area ที่ทำเฉพาะกะเช้าจะไม่มีช่องกะดึก</span>
+      </fieldset>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; background: #F4F5F4; border-radius: 10px; padding: 14px">
+        <span style="font-size: 13px; font-weight: 600">พิกัดของป้าย</span>
+        <button type="button" style="font: inherit; font-size: 16px; font-weight: 700; min-height: 52px; border: 0; border-radius: 10px; background: #0E6B66; color: #FFFFFF">ใช้ตำแหน่งตรงนี้</button>
+        <a href="CaptureLocation.dc.html" style="font-size: 14px">ดูหน้านี้บนมือถือ (M17) ›</a>
+        <span style="font-size: 12px; color: #5F696B">เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย แล้วกด ระบบอ่าน GPS ต่อเนื่อง 30 วินาที แล้วใช้ค่ากลาง ให้ยืนนิ่งจนครบเวลา</span>
+
+        <div role="status" style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 13px">
+            <span style="font-weight: 600">อ่านครบแล้ว</span>
+            <span style="color: #5F696B; font-variant-numeric: tabular-nums">28 ครั้ง ใน 30 วินาที</span>
+          </div>
+          <div style="height: 6px; border-radius: 999px; background: #0E6B66"></div>
+          <div style="font-size: 13px; font-variant-numeric: tabular-nums; color: #3B4446">ค่ากลาง: [ละติจูด], [ลองจิจูด]</div>
+          <div style="font-size: 13px; font-weight: 600; color: #2E6E4A">ความแม่นยำ ±18 ม. · น้อยกว่ารัศมี ใช้ได้</div>
+        </div>
+
+        <label for="f-rad" style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">รัศมี (เมตร)<input id="f-rad" value="50" style="font: inherit; font-size: 15px; font-weight: 400; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 10px; background: #FFFFFF"></label>
+        <a href="#" style="font-size: 13px">ยังไม่ได้ไปหน้างาน? เลือกบนแผนที่ไปก่อน</a>
+        <span style="font-size: 12px; color: #5F696B">พิกัดจากแผนที่จะขึ้นว่า "ยังไม่ยืนยันหน้างาน" จนกว่าจะมากดที่ป้ายจริง</span>
+      </div>
+
+      <button type="submit" style="font: inherit; font-size: 16px; font-weight: 700; min-height: 52px; border: 0; border-radius: 10px; background: #1D2324; color: #FFFFFF">บันทึก</button>
+    </form>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+renderVals() {
+const sel = 'display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; border: 2px solid #0E6B66; background: #E3F1EF; color: #1D2324; text-decoration: none';
+const idle = 'display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none';
+const areas = [
+  { name: '[ชื่อ Area ทดลอง]', meta: 'ตึก A · 2 กะ · ป้าย 1 + 4', style: sel },
+  { name: '[Area ถัดไป]', meta: 'ตึก A · 2 กะ · ป้าย 1 + 1', style: idle },
+  { name: '[Area Office]', meta: 'ตึก B · กะเช้าอย่างเดียว · ป้าย 1 + 2', style: idle }
+];
+const ok = 'font-size: 13px; font-weight: 600; color: #2E6E4A';
+const warn = 'font-size: 13px; font-weight: 600; color: #A85A00';
+const miss = 'font-size: 13px; font-weight: 600; color: #8A3B12';
+const hi = 'background: #F1F8F7';
+const rows = [
+  { name: 'ป้ายลงเวลา', kind: 'ป้ายลงเวลาของ Area', times: '—', geo: '±12 ม. · รัศมี 50 ม.', geoStyle: ok, geoNote: 'เก็บที่หน้างาน', rowStyle: '' },
+  { name: 'ห้องน้ำชาย', kind: 'จุดทำความสะอาด', times: 'เช้า 07:00–09:00 10:00–12:00 13:00–15:00 16:00–18:00 · ดึก 19:00–21:00 22:00–00:00 01:00–03:00 04:00–06:00', geo: '±21 ม. · รัศมี 50 ม.', geoStyle: ok, geoNote: 'เก็บที่หน้างาน', rowStyle: '' },
+  { name: 'ห้องน้ำหญิง', kind: 'จุดทำความสะอาด', times: 'เช้า 07:00–09:00 10:00–12:00 13:00–15:00 16:00–18:00 · ดึก 19:00–21:00 22:00–00:00 01:00–03:00 04:00–06:00', geo: '±18 ม. · รัศมี 50 ม.', geoStyle: ok, geoNote: 'กำลังแก้ไข', rowStyle: hi },
+  { name: 'จุดทิ้งขยะ', kind: 'จุดทำความสะอาด', times: 'เช้า 08:00–10:00 14:00–16:00 · ดึก 20:00–22:00 02:00–04:00', geo: '±62 ม. · รัศมี 50 ม.', geoStyle: warn, geoNote: 'แม่นยำน้อยกว่ารัศมี ขยายรัศมีหรือเก็บใหม่', rowStyle: '' },
+  { name: 'โถงทางเดิน', kind: 'จุดทำความสะอาด', times: 'เช้า 07:30–09:00 · ดึก 19:30–21:00', geo: 'จากแผนที่', geoStyle: miss, geoNote: 'ยังไม่ยืนยันหน้างาน', rowStyle: '' }
+];
+return { areas: areas, areaCount: '70–72', rows: rows, dayTimes: ['07:00–09:00', '10:00–12:00', '13:00–15:00', '16:00–18:00'], nightTimes: ['19:00–21:00', '22:00–00:00', '01:00–03:00', '04:00–06:00'] };
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>รายการที่ขึ้นเตือน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="min-height: 1180px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 24px 32px">
+<div style="max-width: 1216px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">ทุก Area · วันนี้ · กะเช้า 07:00–19:00 · Admin เท่านั้น</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">รายการที่ขึ้นเตือน</h1>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 15px">
+      <a href="BoardStatus.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สถานะจุด</a>
+      <a href="BoardAttendance.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">การเข้างาน</a>
+      <a href="BoardFlags.dc.html" style="padding: 8px 16px; border-radius: 8px; background: #1D2324; color: #FFFFFF; text-decoration: none">รายการที่ขึ้นเตือน (4)</a>
+      <a href="SupervisorSummary.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สรุปการตรวจ</a>
+      <a href="PointsAdmin.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">จัดการ Area และป้าย</a>
+      <a href="Accounts.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">บัญชีผู้ใช้</a>
+      <a href="AuditLog.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">ประวัติ Admin</a>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; align-items: start">
+    <section style="background: #FDF3F2; border: 2px solid #B42318; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #8A1C12">Area ที่ยังไม่มีคน (2)</h2>
+        <span style="font-size: 13px; color: #8A4A42">ข้อมูลเดียวกับ <a href="BoardAttendance.dc.html">การเข้างาน</a></span>
+      </div>
+      <sc-for list="{{empty}}" as="e" hint-placeholder-count="2">
+        <div style="background: #FFFFFF; border: 1px solid #E2A39B; border-radius: 8px; padding: 10px 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px">
+          <div style="display: flex; flex-direction: column">
+            <span style="font-size: 15px; font-weight: 600">{{e.area}} · ตึก {{e.bld}}</span>
+            <span style="font-size: 13px; color: #5F696B">{{e.note}}</span>
+          </div>
+          <button type="button" style="{{e.btn}}">{{e.btnText}}</button>
+        </div>
+      </sc-for>
+    </section>
+
+    <section style="background: #FFFFFF; border: 2px solid #0E6B66; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700">มอบหมายคนทำแทน · [Area 12]</h2>      </div>
+      <span style="font-size: 14px; color: #5F696B">แม่บ้านประจำ: ทองใบ · ยังไม่ลงเวลา</span>
+      <label for="cover-who" style="font-size: 14px; font-weight: 600">ให้ใครทำแทน</label>
+      <select id="cover-who" style="font: inherit; font-size: 15px; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 10px; background: #FFFFFF">
+        <option>สมใจ · Area 7 · เข้างานแล้ว 06:55 · สแกนป้าย Area 12 เมื่อ 09:10</option>
+        <option>สมศรี · [ชื่อ Area ทดลอง] · เข้างานแล้ว 06:52</option>
+        <option>จันทร์เพ็ญ · Area Office · เข้างานแล้ว 07:02</option>
+      </select>
+      <div style="background: #F4F5F4; border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #3B4446; display: flex; flex-direction: column; gap: 4px">
+        <span>มีผลเฉพาะ <b>กะเช้าวันนี้</b> · หมดสิทธิ์เองตอน 19:00 ไม่ต้องกดยกเลิก</span>
+        <span>สมใจลงเวลาที่ป้าย Area ของตัวเองตามปกติ แล้วสแกนจุดของ [Area 12] ได้</span>
+        <span>งานที่สแกนจะบันทึกว่า "ทำแทน"</span>
+      </div>
+      <div style="display: flex; gap: 8px">
+        <button type="button" style="font: inherit; font-size: 16px; font-weight: 600; min-height: 44px; padding: 0 20px; border: 0; border-radius: 10px; background: #0E6B66; color: #FFFFFF">ยืนยันมอบหมาย</button>
+        <button type="button" style="font: inherit; font-size: 15px; min-height: 44px; padding: 0 16px; border: 1px solid #AEB6B7; border-radius: 10px; background: #FFFFFF; color: #1D2324">ยกเลิก</button>
+      </div>
+    </section>
+  </div>
+
+  <section style="display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 700">รายการที่ขึ้นเตือน</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 14px">
+        <span style="padding: 5px 12px; border-radius: 999px; background: #1D2324; color: #FFFFFF">ยังไม่ได้คุย (4)</span>
+        <span style="padding: 5px 12px; border-radius: 999px; border: 1px solid #D5DADA; background: #FFFFFF">คุยแล้ว (5)</span>
+        <span style="padding: 5px 12px; border-radius: 999px; border: 1px solid #D5DADA; background: #FFFFFF">ทั้งหมด</span>
+        <label for="f-type" style="display: inline-flex; align-items: center; gap: 6px; margin-left: 6px">ประเภท<select id="f-type" style="font: inherit; font-size: 14px; border: 1px solid #D5DADA; border-radius: 8px; padding: 4px 8px; background: #FFFFFF"><option>ทุกประเภท</option><option>สแกนนอก Area (ถูกบล็อก)</option><option>ไกลจากป้าย</option><option>ไม่ได้ลงเวลาเลิกงาน</option></select></label>
+      </div>
+    </div>
+    <sc-for list="{{flags}}" as="f" hint-placeholder-count="3">
+      <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 14px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px">
+        <span style="font-size: 15px; font-variant-numeric: tabular-nums; color: #5F696B; min-width: 48px">{{f.time}}</span>
+        <div style="display: flex; flex-direction: column; flex: 999 1 420px; min-width: 0; gap: 4px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+            <span style="font-size: 16px; font-weight: 600">{{f.who}}</span>
+            <span style="{{f.chip}}">{{f.type}}</span>
+          </div>
+          <span style="font-size: 14px; color: #5F696B">{{f.detail}}</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-if value="{{f.cover}}" hint-placeholder-val="{{true}}">
+            <button type="button" style="font: inherit; font-size: 15px; font-weight: 600; min-height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: #0E6B66; color: #FFFFFF">{{f.coverText}}</button>
+          </sc-if>
+          <sc-if value="{{f.fix}}" hint-placeholder-val="{{false}}">
+            <a href="BoardAttendance.dc.html" style="display: inline-flex; align-items: center; font-size: 15px; font-weight: 600; min-height: 44px; padding: 0 18px; border-radius: 10px; background: #0E6B66; color: #FFFFFF; text-decoration: none">{{f.fixText}}</a>
+          </sc-if>
+          <button type="button" style="font: inherit; font-size: 15px; font-weight: 600; min-height: 44px; padding: 0 18px; border: 1px solid #0E6B66; border-radius: 10px; background: #FFFFFF; color: #0E6B66">คุยแล้ว ปิดเตือน</button>
+        </div>
+      </div>
+    </sc-for>
+    <span style="font-size: 13px; color: #5F696B">ไม่มีเตือนจากเวลาที่สแกน (พี่เลี้ยงไม่เลือกกฎนี้ ข้อ 4) · ไม่คิดสายหรือกลับก่อน · Admin เป็นคนดูหน้านี้ (ข้อ 4.1) · ทุกการกดในหน้านี้เก็บลงประวัติของ Admin</span>
+  </section>
+
+  <section style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+    <h2 style="margin: 0; font-size: 18px; font-weight: 700">คนทำแทนกะนี้ (3)</h2>
+    <sc-for list="{{covers}}" as="c" hint-placeholder-count="3">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid #ECEFEF; padding-top: 8px; font-size: 15px">
+        <span><b>{{c.who}}</b> ทำแทน {{c.area}} <span style="color: #5F696B">· แทน {{c.absent}} · Admin มอบหมาย {{c.at}}</span></span>
+        <span style="font-size: 13px; color: #5F696B">หมดสิทธิ์ 19:00 · <a href="#">ยกเลิกก่อนหมดกะ</a></span>
+      </div>
+    </sc-for>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+renderVals() {
+const chipBase = 'font-size: 12px; font-weight: 600; color: #FFFFFF; white-space: nowrap; border-radius: 999px; padding: 2px 10px; background: ';
+const blocked = chipBase + '#B42318';
+const far = chipBase + '#A85A00';
+const primary = 'font: inherit; font-size: 15px; font-weight: 600; min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: #0E6B66; color: #FFFFFF';
+const outline = 'font: inherit; font-size: 15px; font-weight: 600; min-height: 40px; padding: 0 16px; border: 2px solid #0E6B66; border-radius: 10px; background: #E3F1EF; color: #0E6B66';
+return {
+  empty: [
+    { area: '[Area 12]', bld: 'B', note: 'ทองใบ ยังไม่ลงเวลา · มีคนสแกนป้ายของ Area นี้ 09:10', btn: outline, btnText: 'กำลังมอบหมาย ›' },
+    { area: '[Area 31]', bld: 'D', note: 'บุญมี ยังไม่ลงเวลา', btn: primary, btnText: 'มอบหมายคนทำแทน' }
+  ],
+  flags: [
+    { time: '09:10', who: 'สมใจ', type: 'สแกนนอก Area (ถูกบล็อก)', chip: blocked, detail: 'ป้าย AR12-02 ห้องน้ำหญิง ของ [Area 12] · Area ของสมใจคือ [Area 7] · ไม่ได้บันทึกงาน', cover: true, coverText: 'ให้ทำแทน [Area 12] กะนี้', fix: false, fixText: '' },
+    { time: '07:00', who: 'บุษบา', type: 'ไม่ได้ลงเวลาเลิกงาน', chip: chipBase + '#4A6378', detail: 'กะดึกเมื่อคืน [ชื่อ Area ทดลอง] · เข้างาน 18:55 · ช่องเลิกงานว่าง', cover: false, coverText: '', fix: true, fixText: 'เติมเวลาเลิกงาน' },
+    { time: '06:52', who: 'สมศรี', type: 'ลงเวลาไกลจากป้าย', chip: far, detail: 'ป้ายลงเวลา AR01-IN [ชื่อ Area ทดลอง] · ห่าง 85 ม. (รัศมี 50 ม.) · ความแม่นยำ ±40 ม.', cover: false, coverText: '', fix: false, fixText: '' },
+    { time: '10:15', who: 'วิไล (หัวหน้า)', type: 'ตรวจงานไกลจากป้าย', chip: far, detail: 'AR01-03 จุดทิ้งขยะ [ชื่อ Area ทดลอง] · ห่าง 62 ม. · ความแม่นยำ ±25 ม.', cover: false, coverText: '', fix: false, fixText: '' }
+  ],
+  covers: [
+    { who: 'ประไพ', area: '[Area ถัดไป]', absent: 'มาลีลา', at: '07:10' },
+    { who: 'สมพร', area: '[Area 22]', absent: 'ลำดวน', at: '07:25' },
+    { who: 'อรุณี', area: '[Area 45]', absent: 'ศรีนวล', at: '08:02' }
+  ]
+};
+}
+}
+</script>
+</body>
+</html>

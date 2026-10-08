@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ส่งงานแล้ว</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; display: flex; flex-direction: column; gap: 16px; padding: 24px 20px">
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <div style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">[ชื่อ Area ทดลอง] · ตึก A</div>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">ส่งงานแล้ว 10:05</h1>
+    <div style="font-size: 15px; color: #5F696B">ห้องน้ำชาย · รอบ 10:00–12:00 · สมศรี · เรียบร้อย</div>
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+      <span style="font-size: 15px; font-weight: 600">สถานะของจุดนี้</span>
+      <span style="font-size: 13px; font-weight: 600; color: #FFFFFF; background: #4A6378; border-radius: 999px; padding: 2px 10px">รอตรวจ</span>
+    </div>
+    <span style="font-size: 14px; color: #5F696B">หน้าตึกของฉันของหัวหน้าและ Dashboard ของ Admin เปลี่ยนเป็น "รอตรวจ" ทันที</span>
+    <span style="font-size: 14px; color: #5F696B">รอบถัดไป 13:00–15:00 · วันนี้ 07:00–09:00 ✓ · 10:00–12:00 ✓ · 13:00–15:00 · 16:00–18:00</span>
+  </div>
+  <div style="flex-grow: 1"></div>
+  <a href="SupervisorHome.dc.html" style="display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; min-height: 56px; border-radius: 14px; background: #0E6B66; color: #FFFFFF; text-decoration: none">ดูว่าหัวหน้าเห็นอะไร ›</a>
+  <a href="CleanerLate.dc.html" style="font-size: 14px; text-align: center">ดูตัวอย่าง: ถ้าส่งหลังรอบจบ (ส่งช้า)</a>
+  <a href="MyWork.dc.html" style="display: flex; align-items: center; justify-content: center; font-size: 16px; min-height: 48px; border: 1px solid #AEB6B7; border-radius: 14px; background: #FFFFFF; color: #1D2324; text-decoration: none">ดูงานของฉัน</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
