@@ -164,5 +164,7 @@ public static class AuthEndpoints
     }
 
     private static AuthResponse ToResponse(User user, AccessToken access) =>
-        new(access.Token, access.ExpiresAtUtc, new AuthUserDto(user.Id, user.Username, user.FullName, user.Role));
+        new(access.Token, access.ExpiresAtUtc, ToUserDto(user));
+
+    internal static AuthUserDto ToUserDto(User user) => new(user.Id, user.Username, user.FullName, user.Role);
 }

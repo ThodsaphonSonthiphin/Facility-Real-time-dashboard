@@ -1,99 +1,61 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Domain.Entities;
+using FacilityRealtime.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.Infrastructure.Persistence;
 
+/// <summary>Development and test data only. Every name and phone number is made up: this repo is public.</summary>
 public static class DbInitializer
 {
-    public static async Task SeedAsync(AppDbContext context, IPasswordHasher hasher)
+    public static async Task SeedAsync(AppDbContext db, IPasswordHasher hasher)
     {
-        // 1. Seed Users if empty, or upgrade legacy password hashes from Phase 1
-        if (!await context.Users.AnyAsync())
+        if (await db.Users.AnyAsync())
         {
-            var cleaner = new User
-            {
-                Username = "somchai",
-                PasswordHash = hasher.Hash("password123"),
-                FullName = "สมชาย ใจดี",
-                Role = "cleaner",
-                CreatedAt = DateTime.UtcNow
-            };
-
-            var admin = new User
-            {
-                Username = "admin",
-                PasswordHash = hasher.Hash("admin1234"),
-                FullName = "ผู้ดูแลระบบ",
-                Role = "admin",
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await context.Users.AddRangeAsync(cleaner, admin);
-            await context.SaveChangesAsync();
-        }
-        else
-        {
-            var legacyUsers = await context.Users
-                .Where(u => !u.PasswordHash.StartsWith("pbkdf2-sha256$"))
-                .ToListAsync();
-
-            if (legacyUsers.Count > 0)
-            {
-                foreach (var user in legacyUsers)
-                {
-                    if (user.Username == "somchai")
-                    {
-                        user.PasswordHash = hasher.Hash("password123");
-                    }
-                    else if (user.Username == "admin")
-                    {
-                        user.PasswordHash = hasher.Hash("admin1234");
-                    }
-                }
-                await context.SaveChangesAsync();
-            }
+            return;
         }
 
-        // 2. Seed Service Points if empty
-        if (!await context.ServicePoints.AnyAsync())
-        {
-            var points = new[]
-            {
-                new ServicePoint
-                {
-                    Name = "ห้องน้ำชาย ชั้น 1",
-                    Location = "อาคาร A ชั้น 1 (ทิศเหนือ)",
-                    CleaningIntervalMinutes = 60,
-                    QrToken = "token-restroom-m1",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                },
-                new ServicePoint
-                {
-                    Name = "ห้องน้ำหญิง ชั้น 1",
-                    Location = "อาคาร A ชั้น 1 (ทิศใต้)",
-                    CleaningIntervalMinutes = 60,
-                    QrToken = "token-restroom-f1",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                },
-                new ServicePoint
-                {
-                    Name = "จุดแยกขยะ โซน B",
-                    Location = "อาคาร B โถงกลาง",
-                    CleaningIntervalMinutes = 120,
-                    QrToken = "token-waste-zone-b",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                }
-            };
+        var now = DateTime.UtcNow;
 
-            await context.ServicePoints.AddRangeAsync(points);
-            await context.SaveChangesAsync();
+        var buildingA = new Building { Code = "A", Name = "ตึก A", CreatedAt = now };
+        var area1 = new Area { Building = buildingA, Code = "AR01", Name = "Area 1 ชั้น 1", ShiftPattern = ShiftPattern.DayAndNight, CreatedAt = now };
+        var area2 = new Area { Building = buildingA, Code = "AR02", Name = "Office ชั้น 2", ShiftPattern = ShiftPattern.DayOnly, CreatedAt = now };
+
+        var menRestroom = new ServicePoint { Area = area1, Name = "ห้องน้ำชาย ชั้น 1", SortOrder = 1, CreatedAt = now };
+        var womenRestroom = new ServicePoint { Area = area1, Name = "ห้องน้ำหญิง ชั้น 1", SortOrder = 2, CreatedAt = now };
+        var meetingRoom = new ServicePoint { Area = area2, Name = "ห้องประชุม", SortOrder = 1, CreatedAt = now };
+
+        db.Signs.AddRange(
+            new Sign { Area = area1, Code = "AR01-IN", QrToken = "token-checkin-ar01", QrIssuedAt = now },
+            new Sign { Area = area1, ServicePoint = menRestroom, Code = "AR01-01", QrToken = "token-restroom-m1", QrIssuedAt = now },
+            new Sign { Area = area1, ServicePoint = womenRestroom, Code = "AR01-02", QrToken = "token-restroom-f1", QrIssuedAt = now },
+            new Sign { Area = area2, Code = "AR02-IN", QrToken = "token-checkin-ar02", QrIssuedAt = now },
+            new Sign { Area = area2, ServicePoint = meetingRoom, Code = "AR02-01", QrToken = "token-meeting-room", QrIssuedAt = now });
+
+        foreach (var restroom in new[] { menRestroom, womenRestroom })
+        {
+            db.PointRoundWindows.AddRange(
+                Window(restroom, Shift.Day, 7, 9),
+                Window(restroom, Shift.Day, 16, 18),
+                Window(restroom, Shift.Night, 20, 22),
+                Window(restroom, Shift.Night, 3, 5));
         }
+
+        db.PointRoundWindows.Add(Window(meetingRoom, Shift.Day, 8, 10));
+
+        db.Users.AddRange(
+            new User { Username = "somchai", PasswordHash = hasher.Hash("password123"), FullName = "สมชาย ใจดี", Role = "cleaner", CreatedAt = now },
+            new User { Username = "admin", PasswordHash = hasher.Hash("admin1234"), FullName = "ผู้ดูแลระบบ", Role = "admin", CreatedAt = now });
+
+        await db.SaveChangesAsync();
+
+        PointRoundWindow Window(ServicePoint point, Shift shift, int startHour, int endHour) => new()
+        {
+            ServicePoint = point,
+            Shift = shift,
+            StartTime = new TimeOnly(startHour, 0),
+            EndTime = new TimeOnly(endHour, 0),
+            CreatedAt = now,
+        };
     }
 }

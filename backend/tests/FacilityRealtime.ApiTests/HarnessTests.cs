@@ -20,16 +20,19 @@ public class HarnessTests
     public async Task Seed_runs_against_the_test_database()
     {
         using var factory = new FacilityApiFactory();
-        var pointCount = 0;
-        var userCount = 0;
+        var counts = Array.Empty<int>();
 
-        await factory.WithDbAsync(async db =>
+        await factory.WithDbAsync(async db => counts = new[]
         {
-            pointCount = await db.ServicePoints.CountAsync();
-            userCount = await db.Users.CountAsync();
+            await db.Buildings.CountAsync(),
+            await db.Areas.CountAsync(),
+            await db.ServicePoints.CountAsync(),
+            await db.Signs.CountAsync(),
+            await db.PointRoundWindows.CountAsync(),
+            await db.Users.CountAsync(),
         });
 
-        Assert.Equal(3, pointCount);
-        Assert.Equal(2, userCount);
+        // buildings, areas, points, signs (3 point + 2 check-in), round windows, users
+        Assert.Equal(new[] { 1, 2, 3, 5, 9, 2 }, counts);
     }
 }
