@@ -959,7 +959,7 @@ public class SchemaRuleTests
             checkinAreaIds = await db.Signs.Where(s => s.ServicePointId != null).Select(s => s.CheckinAreaId).ToListAsync());
 
         Assert.Equal(3, checkinAreaIds.Count);
-        Assert.All(checkinAreaIds, Assert.Null);
+        Assert.All(checkinAreaIds, id => Assert.Null(id));
     }
 
     [Fact]
