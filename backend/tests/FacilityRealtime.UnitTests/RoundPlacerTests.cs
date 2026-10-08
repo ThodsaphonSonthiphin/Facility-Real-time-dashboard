@@ -155,4 +155,54 @@ public class RoundPlacerTests
         Assert.Equal(Placement.Late, late.Placement);
         Assert.Equal(20, late.LateMinutes);
     }
+
+    [Fact]
+    public void Earlier_round_submission_does_not_count_for_the_current_round()
+    {
+        var placed = Place(Thai(8, 18, 30), [new SubmissionFact(10, 1, Thai(8, 8, 10))]);
+
+        Assert.Equal(Placement.Late, placed.Placement);
+        Assert.Equal(2, placed.Round?.Id);
+        Assert.Equal(30, placed.LateMinutes);
+    }
+
+    [Fact]
+    public void Rework_of_an_earlier_round_does_not_carry_into_the_next()
+    {
+        var placed = Place(
+            Thai(8, 16, 30),
+            [new SubmissionFact(10, 1, Thai(8, 8, 10))],
+            [new InspectionFact(10, InspectionResult.Rework, Thai(8, 10, 0))]);
+
+        Assert.Equal(Placement.OnTime, placed.Placement);
+        Assert.Equal(2, placed.Round?.Id);
+    }
+
+    [Fact]
+    public void Latest_inspection_decides_rework_after_a_pass()
+    {
+        var placed = Place(
+            Thai(8, 8, 55),
+            [new SubmissionFact(10, 1, Thai(8, 8, 10))],
+            [
+                new InspectionFact(10, InspectionResult.Passed, Thai(8, 8, 20)),
+                new InspectionFact(10, InspectionResult.Rework, Thai(8, 8, 50)),
+            ]);
+
+        Assert.Equal(Placement.Rework, placed.Placement);
+    }
+
+    [Fact]
+    public void Latest_inspection_decides_on_time_after_a_rework()
+    {
+        var placed = Place(
+            Thai(8, 8, 55),
+            [new SubmissionFact(10, 1, Thai(8, 8, 10))],
+            [
+                new InspectionFact(10, InspectionResult.Rework, Thai(8, 8, 20)),
+                new InspectionFact(10, InspectionResult.Passed, Thai(8, 8, 50)),
+            ]);
+
+        Assert.Equal(Placement.OnTime, placed.Placement);
+    }
 }
