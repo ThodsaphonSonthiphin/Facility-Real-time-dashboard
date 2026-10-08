@@ -256,68 +256,30 @@ sequenceDiagram
 ```mermaid
 classDiagram
     direction LR
-    class User {
-        <<users>>
-        +int Id
-        +string Username «unique»
-        +string PasswordHash
-        +string FullName
-        +string Role  cleaner | admin
-        +bool IsActive
-        +DateTime CreatedAt
-    }
-    class ServicePoint {
-        <<service_points>>
-        +int Id
-        +string Name
-        +string Location
-        +int CleaningIntervalMinutes
-        +string QrToken «unique»
-        +bool IsActive
-        +DateTime CreatedAt
-    }
-    class ScanRecord {
-        <<scan_records>>
-        +long Id
-        +int ServicePointId
-        +int UserId
-        +ScanStatus Status
-        +string IssueTags  comma-separated
-        +string Notes
-        +DateTime ScannedAt
-    }
-    class RefreshToken {
-        <<refresh_tokens>>
-        +long Id
-        +int UserId
-        +Guid SessionId
-        +string TokenHash «unique, SHA-256»
-        +DateTime CreatedAt
-        +DateTime ExpiresAt
-        +DateTime? RotatedAt
-        +DateTime? RevokedAt
-    }
-    class ScanStatus {
-        <<enumeration>>
-        Normal
-        Issue
-    }
-    class PointStatus {
-        <<enumeration>>
-        Normal
-        Overdue
-        Issue
-        OffHours
-    }
+    class Building { <<buildings>> +int Id +string Code «unique» +string Name +bool IsActive }
+    class Area { <<areas>> +int Id +int BuildingId +string Code «unique» +string Name +ShiftPattern ShiftPattern +bool IsActive }
+    class ServicePoint { <<service_points>> +int Id +int AreaId +string Name +short SortOrder +bool IsActive }
+    class Sign { <<signs>> +int Id +int AreaId +int? ServicePointId «unique» +string Code «unique» +string QrToken «unique» +int? CheckinAreaId «computed, unique» }
+    class PointRoundWindow { <<point_round_windows>> +int Id +int ServicePointId +Shift Shift +TimeOnly StartTime +TimeOnly EndTime }
+    class User { <<users>> +int Id +UserRole Role +string? EmployeeId «unique» +string? Username «unique» +string DisplayName +string SecretHash +int? AreaId +int? BuildingId +Shift? Shift +bool IsActive +int? CleanerSlot «computed, unique» +int? SupervisorSlot «computed, unique» }
+    class RefreshToken { <<refresh_tokens>> +long Id +int UserId +Guid SessionId +string TokenHash «unique» }
+    class ScanRecord { <<scan_records>> +long Id +int ServicePointId +int SignId +int UserId +DateOnly ShiftDate +Shift Shift +int? RoundWindowId +Placement Placement +int? LateMinutes +CleaningStatus Status +DateTime SubmittedAt }
+    class InspectionRecord { <<inspections>> +long Id +long ScanRecordId +int ServicePointId +int SupervisorId +InspectionResult Result +string? Defect +DateTime InspectedAt }
 
-    ServicePoint "1" <-- "0..*" ScanRecord : cascade delete
-    User "1" <-- "0..*" ScanRecord : restrict delete
+    Building "1" <-- "0..*" Area
+    Area "1" <-- "0..*" ServicePoint
+    Area "1" <-- "1..*" Sign
+    ServicePoint "1" <-- "0..1" Sign
+    ServicePoint "1" <-- "0..*" PointRoundWindow
+    Area "0..1" <-- "0..*" User : Cleaner
+    Building "0..1" <-- "0..*" User : Supervisor
     User "1" <-- "0..*" RefreshToken : cascade delete
-    ScanRecord --> ScanStatus
+    ServicePoint "1" <-- "0..*" ScanRecord
+    PointRoundWindow "0..1" <-- "0..*" ScanRecord : set null on delete
+    ScanRecord "1" <-- "0..*" InspectionRecord
 ```
 
-`PointStatus` is not stored. The API calculates it on each request from the latest scan,
-`CleaningIntervalMinutes` and `WorkingHours` (08:00–17:00 in `appsettings.json`), using `StatusCalculator` ([facility-0005](adr/facility-0005-point-status-rules.md), [facility-0019](adr/facility-0019-status-calculator-follows-adr-0005.md)).
+The full target schema, including the tables later plans add, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`).
 
 ---
 
