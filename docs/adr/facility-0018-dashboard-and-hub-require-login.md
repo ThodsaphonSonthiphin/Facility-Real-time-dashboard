@@ -26,3 +26,5 @@ flowchart TD
 - `Clients.All` ใน hub ยังใช้ได้ เพราะทุก connection ที่ต่อสำเร็จคือคนที่ login แล้ว ไม่ต้องแยก group
 - `GET /api/service-points/by-token/{token}` ที่หน้าสแกนใช้ ต้อง login เช่นกัน เพราะหน้าสแกนเปิดได้เฉพาะเมื่อ login แล้วอยู่แล้ว (facility-0017) และคืนชื่อแม่บ้านคนล่าสุดเหมือน endpoint ของ Dashboard
 - ปุ่ม "เปิดหน้าสแกนบนมือถือ" และ dev navbar ใน `App.tsx` เป็นความสะดวกตอนพัฒนา ไม่ใช่ตัวกัน (facility-0010)
+
+> **แก้ไข 2026-10-08:** ข้อ "บัญชีใดก็ได้ (cleaner หรือ admin) เปิด Dashboard ได้" ถูกแทนที่โดย facility-0058 Dashboard เปิดได้เฉพาะ Admin แม่บ้านใช้หน้างานของฉัน (facility-0052) หัวหน้าใช้หน้าตึกของฉัน (facility-0057) ส่วนข้อที่ทุก endpoint และ hub ต้อง login ยังใช้เหมือนเดิม และ `Clients.All` ใช้ไม่ได้แล้ว
