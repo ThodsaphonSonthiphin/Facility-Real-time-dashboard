@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>เก็บพิกัดป้าย</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px; padding: 24px 20px">
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <div style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">Admin · เก็บพิกัดป้าย · [ชื่อ Area ทดลอง]</div>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">AR01-01 ห้องน้ำชาย</h1>
+    <div style="font-size: 15px; color: #5F696B">รัศมี 50 ม. · ตอนนี้: ยังไม่ยืนยันหน้างาน (เลือกจากแผนที่)</div>
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; gap: 10px">
+    <div style="display: flex; justify-content: space-between; font-size: 15px"><b>กำลังอ่าน GPS</b><span style="font-variant-numeric: tabular-nums">18 / 30 วินาที</span></div>
+    <div style="height: 10px; border-radius: 999px; background: #E4E8E8; overflow: hidden"><div style="width: 60%; height: 100%; background: #0E6B66"></div></div>
+    <span style="font-size: 14px; color: #3B4446">ยืนนิ่งตรงที่ติดป้าย · อ่านได้ 17 ครั้ง · ความแม่นยำตอนนี้ ±16 ม.</span>
+  </div>
+  <div style="background: #FFFFFF; border: 1px dashed #AEB6B7; border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5F696B">
+    <b style="color: #3B4446">เมื่อครบ 30 วินาที</b>
+    <span>ใช้ค่ากลางของทุกครั้งที่อ่านได้ แสดงความแม่นยำ เช่น ±18 ม. ใช้ได้ (น้อยกว่ารัศมี)</span>
+    <span>ถ้าความแม่นยำแย่กว่ารัศมี ระบบเตือนให้ขยายรัศมีหรือเก็บใหม่</span>
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 15px; font-weight: 600">ป้ายของ Area นี้</span>
+    <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span><b>AR01-IN</b> ป้ายลงเวลา</span><span style="color: #2E6E4A">หน้างาน ±14 ม.</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span><b>AR01-01</b> ห้องน้ำชาย</span><span style="color: #0E6B66">กำลังเก็บ</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span><b>AR01-02</b> ห้องน้ำหญิง</span><span style="color: #A85A00">ยังไม่ยืนยัน</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span><b>AR01-03</b> จุดทิ้งขยะ</span><span style="color: #A85A00">ยังไม่ยืนยัน</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span><b>AR01-04</b> โถงทางเดิน</span><span style="color: #A85A00">ยังไม่ยืนยัน</span></div>
+  </div>
+  <div style="flex-grow: 1"></div>
+  <button type="button" style="font: inherit; font-size: 18px; font-weight: 700; min-height: 56px; border: 0; border-radius: 14px; background: #AEB6B7; color: #FFFFFF">บันทึกพิกัด (รอครบ 30 วินาที)</button>
+  <div style="font-size: 13px; color: #5F696B; text-align: center">ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติ Admin</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

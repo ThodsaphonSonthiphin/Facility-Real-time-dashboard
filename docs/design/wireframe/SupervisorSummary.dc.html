@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>สรุปการตรวจของหัวหน้า</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="min-height: 760px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 24px 32px">
+<div style="max-width: 1216px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">Admin เท่านั้น · 7 วันล่าสุด (1–7 ต.ค.)</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">สรุปการตรวจของหัวหน้า</h1>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 15px">
+      <a href="BoardStatus.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สถานะจุด</a>
+      <a href="BoardAttendance.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">การเข้างาน</a>
+      <a href="BoardFlags.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">รายการที่ขึ้นเตือน (4)</a>
+      <a href="SupervisorSummary.dc.html" style="padding: 8px 16px; border-radius: 8px; background: #1D2324; color: #FFFFFF; text-decoration: none">สรุปการตรวจ</a>
+      <a href="PointsAdmin.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">จัดการ Area และป้าย</a>
+      <a href="Accounts.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">บัญชีผู้ใช้</a>
+      <a href="AuditLog.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">ประวัติ Admin</a>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px">
+    <label for="s-range" style="display: inline-flex; align-items: center; gap: 6px">ช่วงเวลา<select id="s-range" style="font: inherit; font-size: 14px; border: 1px solid #D5DADA; border-radius: 8px; padding: 4px 8px; background: #FFFFFF"><option>7 วันล่าสุด</option><option>เดือนนี้</option><option>เลือกวันเอง</option></select></label>
+    <label for="s-bld" style="display: inline-flex; align-items: center; gap: 6px">ตึก<select id="s-bld" style="font: inherit; font-size: 14px; border: 1px solid #D5DADA; border-radius: 8px; padding: 4px 8px; background: #FFFFFF"><option>ทุกตึก</option><option>A</option><option>B</option></select></label>
+    <span style="font-size: 12px; font-weight: 600; color: #5C4A00; background: #FFF3C4; border-radius: 999px; padding: 2px 10px">ตัวเลขตัวอย่าง</span>
+    <a href="ExportExcel.dc.html" style="font-size: 14px; font-weight: 600; margin-left: auto; min-height: 36px; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid #0E6B66; border-radius: 8px; background: #FFFFFF; color: #0E6B66; text-decoration: none">ส่งออก Excel</a>
+  </div>
+
+  <div style="overflow-x: auto; background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px">
+    <table style="width: 100%; min-width: 900px; border-collapse: collapse; font-size: 15px">
+      <thead>
+        <tr style="text-align: left; color: #5F696B; font-size: 13px">
+          <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA">หัวหน้า</th>
+          <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA">ตึก · กะ</th>
+          <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA">จุดที่ตรวจแล้ว</th>
+          <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA; text-align: right">งานที่แม่บ้านส่ง</th>
+          <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA; text-align: right">ตรวจแล้ว</th>
+          <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA">สัดส่วนที่ตรวจ</th>
+          <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA; text-align: right">ไม่ได้ตรวจ</th>
+          <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA; text-align: right">ให้แก้ไข</th>
+          <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA; text-align: right">ตรวจที่ติดธง GPS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+          <tr>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF"><b>{{r.name}}</b></td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF">{{r.bld}}</td>
+            <td style="{{r.ptCell}}">{{r.points}}</td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF; text-align: right; font-variant-numeric: tabular-nums">{{r.sub}}</td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF; text-align: right; font-variant-numeric: tabular-nums">{{r.ins}}</td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <div style="width: 120px; height: 8px; border-radius: 999px; background: #E1E5E5; overflow: hidden"><div style="{{r.bar}}"></div></div>
+                <span style="font-size: 13px; font-variant-numeric: tabular-nums">{{r.pct}}</span>
+              </div>
+            </td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF; text-align: right; font-variant-numeric: tabular-nums">{{r.miss}}</td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF; text-align: right; font-variant-numeric: tabular-nums">{{r.rework}}</td>
+            <td style="{{r.flagCell}}">{{r.flags}}</td>
+          </tr>
+        </sc-for>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="font-size: 14px; color: #3B4446; display: flex; flex-direction: column; gap: 6px; max-width: 80ch">
+    <span>หน้านี้แสดงข้อมูลให้ Admin เห็น ระบบไม่ประเมินผลเอง และไม่มีขั้นต่ำว่าหัวหน้าต้องตรวจกี่ครั้ง · "จุดที่ตรวจแล้ว" นับจุดในตึกและกะของหัวหน้าที่ถูกตรวจอย่างน้อย 1 ครั้งในช่วงที่เลือก</span>
+    <span>"ไม่ได้ตรวจ" คืองานที่แม่บ้านส่งแล้ว แต่รอบจบก่อนหัวหน้ามาตรวจ · "ตรวจที่ติดธง GPS" คือตรวจตอนที่มือถืออยู่นอกรัศมีของป้าย</span>
+    <span>ดูรายละเอียดรายครั้งได้จากไฟล์ Excel</span>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+renderVals() {
+const cell = 'padding: 10px 14px; border-bottom: 1px solid #ECEFEF; text-align: right; font-variant-numeric: tabular-nums';
+const ptBase = 'padding: 10px 14px; border-bottom: 1px solid #ECEFEF; font-variant-numeric: tabular-nums; white-space: nowrap';
+const r = (name, bld, sub, ins, rework, flags, ptDone, ptAll) => {
+  if (sub === null) {
+    return { name: name, bld: bld, sub: '…', ins: '…', pct: '…', bar: 'width: 0', miss: '…', rework: '…', flags: '…', flagCell: cell, points: '…', ptCell: ptBase };
+  }
+  const p = Math.round((ins / sub) * 100);
+  const gap = ptAll - ptDone;
+  return {
+    points: ptDone + ' จาก ' + ptAll + ' จุด' + (gap > 0 ? ' · ไม่ได้ตรวจ ' + gap + ' จุด' : ''),
+    ptCell: ptBase + (gap > 0 ? '; color: #7A4300; font-weight: 600' : ''),
+    name: name, bld: bld, sub: sub, ins: ins, pct: p + '%',
+    bar: 'height: 100%; width: ' + p + '%; background: ' + (p < 30 ? '#A85A00' : '#0E6B66'),
+    miss: sub - ins, rework: rework, flags: flags,
+    flagCell: cell + (flags >= 5 ? '; color: #7A4300; font-weight: 700' : '')
+  };
+};
+return { rows: [
+  r('วิไล', 'A · เช้า', 168, 96, 11, 3, 12, 12),
+  r('ประเสริฐ', 'A · ดึก', 150, 40, 2, 1, 9, 12),
+  r('สมหญิง', 'B · เช้า', 140, 18, 1, 0, 4, 10),
+  r('ประสิทธิ์', 'C · เช้า', 150, 120, 14, 9, 11, 11),
+  r('[หัวหน้าตึก B–F อีก 8 คน]', '…', null)
+] };
+}
+}
+</script>
+</body>
+</html>

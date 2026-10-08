@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ส่งช้า</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px; padding: 24px 20px">
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <div style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">[ชื่อ Area ทดลอง] · ตึก A</div>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">ส่งงานแล้ว 12:25</h1>
+    <div style="font-size: 15px; color: #5F696B">ห้องน้ำชาย · รอบ 10:00–12:00 · สมศรี · เรียบร้อย</div>
+  </div>
+  <div style="background: #FFF4E5; border: 1px solid #E3B776; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px">
+    <span style="font-size: 16px; font-weight: 700; color: #7A4300">ส่งช้า 25 นาที</span>
+    <span style="font-size: 14px; color: #5C3A08">รอบ 10:00–12:00 จบ 12:00 · รอบนี้ยังไม่มีใครส่ง จึงนับเป็นงานของรอบนี้ แต่ติดว่าส่งช้า</span>
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+      <span style="font-size: 15px; font-weight: 600">สถานะของจุดนี้</span>
+      <span style="font-size: 12px; font-weight: 600; color: #FFFFFF; white-space: nowrap; border-radius: 999px; padding: 2px 10px; background: #4A6378">รอตรวจ</span>
+    </div>
+    <span style="font-size: 14px; color: #5F696B">รอบถัดไป 13:00–15:00</span>
+  </div>
+  <div style="background: #FFFFFF; border: 1px dashed #AEB6B7; border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5F696B">
+    <b style="color: #3B4446">ตัวอย่างอีกแบบ: ส่งนอกรอบ</b>
+    <span>ถ้าส่งตอนที่ไม่มีรอบไหนรับงาน (เช่น รอบที่จบแล้วมีคนส่งไปแล้ว และรอบถัดไปยังไม่เริ่ม) ระบบบันทึกไว้เป็น "นอกรอบ" การ์ดไม่เปลี่ยน</span>
+    <span>ถ้ารอบนั้นหัวหน้าให้แก้ไข ส่งหลังรอบจบได้ นับเป็นงานแก้ของรอบนั้น</span>
+  </div>
+  <div style="flex-grow: 1"></div>
+  <a href="MyWork.dc.html" style="display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; min-height: 56px; border-radius: 14px; background: #0E6B66; color: #FFFFFF; text-decoration: none">ดูงานของฉัน</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

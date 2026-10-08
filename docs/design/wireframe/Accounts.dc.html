@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>บัญชีผู้ใช้</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="min-height: 940px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 24px 32px">
+<div style="max-width: 1216px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">Admin เท่านั้น</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">บัญชีผู้ใช้</h1>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 15px">
+      <a href="BoardStatus.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สถานะจุด</a>
+      <a href="BoardAttendance.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">การเข้างาน</a>
+      <a href="BoardFlags.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">รายการที่ขึ้นเตือน (4)</a>
+      <a href="SupervisorSummary.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สรุปการตรวจ</a>
+      <a href="PointsAdmin.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">จัดการ Area และป้าย</a>
+      <a href="Accounts.dc.html" style="padding: 8px 16px; border-radius: 8px; background: #1D2324; color: #FFFFFF; text-decoration: none">บัญชีผู้ใช้</a>
+      <a href="AuditLog.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">ประวัติ Admin</a>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+    <div style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px">
+        <span style="padding: 5px 12px; border-radius: 999px; background: #1D2324; color: #FFFFFF">ทั้งหมด (182)</span>
+        <span style="padding: 5px 12px; border-radius: 999px; border: 1px solid #D5DADA; background: #FFFFFF">แม่บ้าน (168)</span>
+        <span style="padding: 5px 12px; border-radius: 999px; border: 1px solid #D5DADA; background: #FFFFFF">หัวหน้า (12)</span>
+        <span style="padding: 5px 12px; border-radius: 999px; border: 1px solid #D5DADA; background: #FFFFFF">Admin (2)</span>
+        <span style="padding: 5px 12px; border-radius: 999px; border: 1px solid #D5DADA; background: #FFFFFF">ปิดใช้งาน (3)</span>
+        <label for="a-q" style="display: inline-flex; align-items: center; gap: 6px; margin-left: 6px">ค้นหา<input id="a-q" placeholder="ชื่อ, รหัสพนักงาน หรือ Area" style="font: inherit; font-size: 14px; border: 1px solid #D5DADA; border-radius: 8px; padding: 4px 8px; background: #FFFFFF"></label>
+      </div>
+      <div style="overflow-x: auto; background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px">
+        <table style="width: 100%; min-width: 760px; border-collapse: collapse; font-size: 15px">
+          <thead>
+            <tr style="text-align: left; color: #5F696B; font-size: 13px">
+              <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA">ชื่อ</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA">รหัสพนักงาน / ชื่อผู้ใช้</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA">บทบาท</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA">ประจำที่</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA">ใช้งาน</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #D5DADA"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{users}}" as="u" hint-placeholder-count="8">
+              <tr style="{{u.rowStyle}}">
+                <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF"><b>{{u.name}}</b></td>
+                <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF; font-family: ui-monospace, monospace; font-size: 14px">{{u.user}}</td>
+                <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF">{{u.role}}</td>
+                <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF">{{u.area}}</td>
+                <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF"><span style="{{u.sw}}">{{u.active}}</span></td>
+                <td style="padding: 10px 14px; border-bottom: 1px solid #ECEFEF; white-space: nowrap"><a href="#">แก้ไข</a> · <a href="#">{{u.act}}</a></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <span style="font-size: 13px; color: #5F696B">ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติการสแกนยังอยู่ · ปิดใช้งาน แก้เบอร์โทร หรือรีเซ็ตรหัสผ่านแล้ว ทุกเครื่องของคนนั้นหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ · ทุกการแก้ในหน้านี้เก็บลงประวัติของ Admin</span>
+    </div>
+
+    <section style="flex: 1 1 340px; background: #FFFFFF; border: 2px solid #0E6B66; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><h2 style="margin: 0 0 4px; font-size: 18px; font-weight: 700">เพิ่มบัญชี</h2><a href="ImportAccounts.dc.html" style="font-size: 14px">นำเข้าจาก Excel (ก่อนขยาย) ›</a></div>
+      <span style="font-size: 14px; font-weight: 600">บทบาท</span>
+      <div style="display: flex; gap: 6px; font-size: 14px">
+        <span style="padding: 6px 14px; border-radius: 999px; background: #1D2324; color: #FFFFFF">แม่บ้าน</span>
+        <span style="padding: 6px 14px; border-radius: 999px; border: 1px solid #D5DADA">หัวหน้า</span>
+        <span style="padding: 6px 14px; border-radius: 999px; border: 1px solid #D5DADA">Admin</span>
+      </div>
+      <label for="n-name" style="font-size: 14px; font-weight: 600; margin-top: 4px">ชื่อที่แสดง</label>
+      <input id="n-name" value="ลำไย" style="font: inherit; font-size: 15px; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 10px">
+      <label for="n-emp" style="font-size: 14px; font-weight: 600">รหัสพนักงาน <span style="font-weight: 400; color: #5F696B">(ห้ามซ้ำ แก้ทีหลังไม่ได้)</span></label>
+      <input id="n-emp" inputmode="numeric" value="650412" style="font: inherit; font-size: 15px; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, monospace">
+      <label for="n-tel" style="font-size: 14px; font-weight: 600">เบอร์โทรศัพท์ <span style="font-weight: 400; color: #5F696B">(ใช้แทนรหัสผ่าน)</span></label>
+      <input id="n-tel" type="tel" value="000-000-0015" style="font: inherit; font-size: 15px; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 10px">
+      <span style="font-size: 12px; color: #5F696B">ระบบเก็บเบอร์แบบที่เปิดดูไม่ได้ ใช้ตรวจตอน login อย่างเดียว · เปลี่ยนเบอร์ทีหลังได้ด้วยปุ่ม "แก้เบอร์โทร"</span>
+      <label for="n-area" style="font-size: 14px; font-weight: 600; margin-top: 4px">Area ประจำ</label>
+      <select id="n-area" style="font: inherit; font-size: 15px; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 10px; background: #FFFFFF"><option>[Area 12] · ตึก B · 2 กะ · กะเช้ามีคนแล้ว (ทองใบ)</option><option>[ชื่อ Area ทดลอง] · ตึก A · 2 กะ</option><option>[Area Office] · ตึก B · กะเช้าอย่างเดียว</option></select>
+      <span style="font-size: 14px; font-weight: 600; margin-top: 4px">กะ</span>
+      <span style="font-size: 12px; color: #5F696B">Area ละ 1 คนต่อกะ · ถ้ากะนี้มีคนประจำแล้วจะเลือกไม่ได้ · Area ที่ทำเฉพาะกะเช้าเลือกได้แค่กะเช้า</span>
+      <div style="display: flex; gap: 6px; font-size: 14px">
+        <span style="padding: 6px 14px; border-radius: 999px; border: 1px dashed #D5DADA; color: #8A9294; text-decoration: line-through">เช้า 07:00–19:00</span>
+        <span style="padding: 6px 14px; border-radius: 999px; background: #1D2324; color: #FFFFFF">ดึก 19:00–07:00</span>
+      </div>
+      <div style="background: #F4F5F4; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #3B4446; display: flex; flex-direction: column; gap: 2px">
+        <span>หัวหน้า: รหัสพนักงาน + เบอร์โทร แล้วเลือกตึกและกะที่ประจำแทน Area · ตึกละ 1 คนต่อกะ · ตรวจได้เฉพาะในกะตัวเอง · ไม่ต้องลงเวลา</span>
+        <span>Admin: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว (บอกเองด้วยวาจาหรือกระดาษ)</span>
+      </div>
+      <button type="button" style="font: inherit; font-size: 16px; font-weight: 600; min-height: 48px; margin-top: 6px; border: 0; border-radius: 10px; background: #0E6B66; color: #FFFFFF">สร้างบัญชี</button>
+    </section>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":940}}'>
+class Component extends DCLogic {
+renderVals() {
+const on = 'font-size: 12px; font-weight: 600; color: #FFFFFF; white-space: nowrap; border-radius: 999px; padding: 2px 10px; background: #2E6E4A';
+const off = 'font-size: 12px; font-weight: 600; color: #FFFFFF; white-space: nowrap; border-radius: 999px; padding: 2px 10px; background: #8A9294';
+const u = (name, user, role, area, active) => ({ name: name, user: user, role: role, area: area, active: active ? 'เปิด' : 'ปิดใช้งาน', sw: active ? on : off, act: role === 'Admin' ? 'รีเซ็ตรหัสผ่าน' : 'แก้เบอร์โทร', rowStyle: active ? '' : 'color: #8A9294' });
+return { users: [
+  u('สมศรี', '650123', 'แม่บ้าน', '[ชื่อ Area ทดลอง] · เช้า', true),
+  u('ทองใบ', '650218', 'แม่บ้าน', '[Area 12] · เช้า', true),
+  u('บุษบา', '650301', 'แม่บ้าน', '[ชื่อ Area ทดลอง] · ดึก', true),
+  u('สมใจ', '650077', 'แม่บ้าน', '[Area 7] · เช้า', true),
+  u('จันทร์เพ็ญ', '650370', 'แม่บ้าน', '[Area Office] · เช้าอย่างเดียว', true),
+  u('วิไล', '640015', 'หัวหน้า', 'ตึก A · เช้า', true),
+  u('ประเสริฐ', '640022', 'หัวหน้า', 'ตึก A · ดึก', true),
+  u('admin', 'admin', 'Admin', '–', true),
+  u('ลำเจียก', '640903', 'แม่บ้าน', '– (ลาออก)', false)
+] };
+}
+}
+</script>
+</body>
+</html>

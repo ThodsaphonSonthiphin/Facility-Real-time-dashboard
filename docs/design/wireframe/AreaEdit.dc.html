@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>แก้ไข Area</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="min-height: 760px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 24px 32px">
+<div style="max-width: 1216px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">จัดการ Area และป้าย › แก้ไข Area</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">แก้ไข Area · [ชื่อ Area ทดลอง]</h1>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 15px">
+      <a href="BoardStatus.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สถานะจุด</a>
+      <a href="BoardAttendance.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">การเข้างาน</a>
+      <a href="BoardFlags.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">รายการที่ขึ้นเตือน (4)</a>
+      <a href="SupervisorSummary.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">สรุปการตรวจ</a>
+      <a href="PointsAdmin.dc.html" style="padding: 8px 16px; border-radius: 8px; background: #1D2324; color: #FFFFFF; text-decoration: none">จัดการ Area และป้าย</a>
+      <a href="Accounts.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">บัญชีผู้ใช้</a>
+      <a href="AuditLog.dc.html" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #D5DADA; background: #FFFFFF; color: #1D2324; text-decoration: none">ประวัติ Admin</a>
+    </div>
+  </div>
+  <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; align-items: start">
+    <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600">ชื่อ Area<input type="text" value="[ชื่อ Area ทดลอง]" style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF"></label>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600">ตึก<select style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF"><option>A</option><option>B</option><option>C</option></select></label>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 14px; font-weight: 600">รูปแบบกะ</span>
+        <div style="display: flex; gap: 8px">
+          <span style="border: 2px solid #0E6B66; background: #E3F1EF; color: #0A4F4B; border-radius: 10px; padding: 8px 14px; font-weight: 600">2 กะ (เช้า + ดึก)</span>
+          <span style="border: 1px solid #AEB6B7; border-radius: 10px; padding: 8px 14px">เฉพาะกะเช้า</span>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600">แม่บ้านประจำกะเช้า<select style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF"><option>สมศรี (650123)</option></select></label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600">แม่บ้านประจำกะดึก<select style="font: inherit; font-size: 15px; min-height: 40px; box-sizing: border-box; border: 1px solid #AEB6B7; border-radius: 8px; padding: 0 10px; background: #FFFFFF"><option>บุษบา (650140)</option></select></label>
+      </div>
+      <span style="font-size: 13px; color: #5F696B">Area ละ 1 คนต่อกะ · รายชื่อแสดงเฉพาะแม่บ้านที่ยังไม่มี Area ในกะนั้น · เปลี่ยนเป็น "เฉพาะกะเช้า" แล้วช่องกะดึกและเวลารอบกะดึกหายไป</span>
+      <div style="display: flex; gap: 8px">
+        <a href="PointsAdmin.dc.html" style="font: inherit; font-size: 15px; font-weight: 600; min-height: 44px; padding: 0 20px; border: 0; border-radius: 10px; background: #0E6B66; color: #FFFFFF; display: inline-flex; align-items: center; text-decoration: none">บันทึก</a>
+        <a href="PointsAdmin.dc.html" style="font: inherit; font-size: 15px; min-height: 44px; padding: 0 18px; border: 1px solid #D5DADA; border-radius: 10px; background: #FFFFFF; color: #1D2324; display: inline-flex; align-items: center; text-decoration: none">ยกเลิก</a>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 16px">ป้ายของ Area นี้</h2>
+        <span style="font-size: 14px">ป้ายลงเวลา <b>AR01-IN</b> ระบบสร้างให้เองตอนเพิ่ม Area</span>
+        <span style="font-size: 14px">จุดทำความสะอาด 4 จุด · เพิ่มหรือแก้ที่หน้า <a href="PointsAdmin.dc.html">จัดการ Area และป้าย</a></span>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 16px">ปิดใช้งาน Area</h2>
+        <span style="font-size: 14px; color: #3B4446">Area และทุกป้ายหายจาก Dashboard และสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้ ไม่มีปุ่มลบ</span>
+        <button type="button" style="font: inherit; font-size: 15px; min-height: 44px; padding: 0 18px; border: 1px solid #D5DADA; border-radius: 10px; background: #FFFFFF; color: #1D2324; align-self: flex-start; color: #8A1C12; border-color: #E2A39B">ปิดใช้งาน Area นี้</button>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #3B4446">การบันทึกทุกครั้งเก็บลงประวัติ Admin · หน้า "+ เพิ่ม Area" ใช้ฟอร์มเดียวกันแต่ว่าง</div>
+    </div>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

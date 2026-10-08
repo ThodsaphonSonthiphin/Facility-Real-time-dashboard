@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>สแกนนอก Area</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; display: flex; flex-direction: column; gap: 16px; padding: 24px 20px">
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <div style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">ป้ายจุดทำความสะอาด · ห้องน้ำหญิง</div>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">จุดนี้ไม่ใช่ Area ของคุณ</h1>
+    <div style="font-size: 15px; color: #5F696B">สมศรี · กะเช้า 07:00–19:00</div>
+  </div>
+
+  <div style="background: #FDECEA; border: 1px solid #E4A39B; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+    <span style="font-size: 16px; font-weight: 700; color: #8A1C12">ไม่ได้บันทึกงาน</span>
+    <div style="display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 14px; color: #5A1A12">
+      <span>ป้ายที่สแกน</span><b>ห้องน้ำหญิง · [Area ถัดไป]</b>
+      <span>Area ของคุณ</span><b>[ชื่อ Area ทดลอง]</b>
+    </div>
+  </div>
+
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+    <span style="font-size: 15px; font-weight: 600">ถ้าได้รับมอบหมายให้ทำแทน</span>
+    <span style="font-size: 14px; color: #3B4446">Admin เห็นการสแกนครั้งนี้แล้ว ให้แจ้ง Admin ว่าคุณทำแทน [Area ถัดไป] เมื่อ Admin กดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ</span>
+  </div>
+
+  <div style="font-size: 13px; color: #5F696B">หัวหน้าที่สแกนตรวจจุดนอกตึกหรือนอกกะของตัวเองก็ถูกบล็อกแบบเดียวกัน</div>
+
+  <div style="flex-grow: 1"></div>
+  <a href="MyWork.dc.html" style="display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; min-height: 56px; border-radius: 14px; background: #0E6B66; color: #FFFFFF; text-decoration: none">กลับไปงานของฉัน</a>
+  <a href="BoardFlags.dc.html" style="font-size: 14px; text-align: center; color: #0E6B66">ดูว่า Admin เห็นอะไร</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

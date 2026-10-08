@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>แม่บ้านส่งงาน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px; padding: 24px 20px">
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <div style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">[ชื่อ Area ทดลอง] · ตึก A · ป้าย AR01-01</div>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">ห้องน้ำชาย</h1>
+    <div style="font-size: 15px; color: #5F696B">สมศรี · รอบ 10:00–12:00 · ส่งหลัง 12:00 นับเป็นส่งช้า</div>
+  </div>
+  <div style="background: #FDECEA; border: 1px solid #E2A39B; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px">
+    <span style="font-size: 14px; font-weight: 600; color: #8A1C12">หัวหน้าให้แก้ไข · 10:15 · วิไล</span>
+    <span style="font-size: 14px; color: #6B2018">"พื้นใต้อ่างล้างมือยังเปียก"</span>
+    <span style="font-size: 12px; color: #8A4A42">แถบนี้แสดงเฉพาะเมื่อหัวหน้าให้แก้ไข</span>
+  </div>
+  <div style="display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 12px 16px; gap: 8px">
+    <span style="font-size: 14px; color: #5F696B">ห่างป้าย 6 ม. · ±12 ม.</span>
+    <span style="font-size: 13px; font-weight: 600; color: #FFFFFF; background: #2E6E4A; border-radius: 999px; padding: 2px 10px">อยู่ในรัศมี</span>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <button type="button" style="font: inherit; font-size: 17px; font-weight: 600; min-height: 56px; border: 2px solid #0E6B66; border-radius: 12px; background: #E3F1EF; color: #0E6B66">เรียบร้อย</button>
+    <button type="button" style="font: inherit; font-size: 17px; font-weight: 600; min-height: 56px; border: 1px solid #AEB6B7; border-radius: 12px; background: #FFFFFF; color: #1D2324">พบปัญหา</button>
+  </div>
+  <div style="background: #FFFFFF; border: 1px dashed #AEB6B7; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px">
+    <span style="font-size: 13px; color: #5F696B">ถ้าเลือก "พบปัญหา" จะแสดงส่วนนี้</span>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 14px">
+      <span style="border: 1px solid #AEB6B7; border-radius: 999px; padding: 4px 12px">ขยะล้น</span>
+      <span style="border: 1px solid #AEB6B7; border-radius: 999px; padding: 4px 12px">น้ำยาหมด</span>
+      <span style="border: 1px solid #AEB6B7; border-radius: 999px; padding: 4px 12px">พื้นเปียก</span>
+      <span style="border: 1px solid #AEB6B7; border-radius: 999px; padding: 4px 12px">ของชำรุด</span>
+    </div>
+    <label style="font-size: 13px; color: #5F696B" for="note">หมายเหตุ</label>
+    <input id="note" type="text" placeholder="เช่น ก๊อกน้ำห้องที่ 2 รั่ว" style="font: inherit; font-size: 15px; border: 1px solid #D5DADA; border-radius: 8px; padding: 8px 10px">
+  </div>
+  <div style="flex-grow: 1"></div>
+  <a href="CleanerDone.dc.html" style="display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; min-height: 72px; border-radius: 14px; background: #0E6B66; color: #FFFFFF; text-decoration: none">ส่งงาน</a>
+  <div style="background: #FFFFFF; border: 1px dashed #AEB6B7; border-radius: 10px; padding: 8px 12px; font-size: 13px; color: #5F696B">ถ้าไม่มีสัญญาณ: หน้าจอขึ้น "ยังไม่ได้บันทึก" พร้อมปุ่มส่งใหม่ เดินไปตรงที่มีสัญญาณแล้วกด เวลาที่บันทึกคือตอนที่ส่งสำเร็จ · <a href="SubmitFailed.dc.html">ดูหน้านั้น</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

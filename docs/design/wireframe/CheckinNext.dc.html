@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ลงเวลาเลิกงาน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0E6B66}a:hover{color:#0A4F4B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F5F4; color: #1D2324; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px; padding: 24px 20px">
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <div style="font-size: 13px; color: #5F696B; letter-spacing: 0.04em">ป้ายลงเวลา · [ชื่อ Area ทดลอง] · ตึก A</div>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">ลงเวลา</h1>
+    <div style="font-size: 15px; color: #5F696B">สมศรี · กะเช้า 07:00–19:00 · ตอนนี้ 18:55</div>
+  </div>
+  <div style="display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 12px 16px; gap: 8px">
+    <span style="font-size: 14px; color: #5F696B">ห่างป้าย 9 ม. · รัศมี 50 ม. · ±12 ม.</span>
+    <span style="font-size: 13px; font-weight: 600; color: #FFFFFF; white-space: nowrap; border-radius: 999px; padding: 2px 10px; background: #2E6E4A">อยู่ในรัศมี</span>
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; gap: 10px">
+    <span style="font-size: 15px; font-weight: 600">วันนี้</span>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; text-align: center; font-size: 12px">
+      <div style="border: 1px solid #9CCBC6; background: #E3F1EF; border-radius: 8px; padding: 8px 2px; color: #0A4F4B">เข้างาน<br><b>06:52</b></div>
+      <div style="border: 1px solid #9CCBC6; background: #E3F1EF; border-radius: 8px; padding: 8px 2px; color: #0A4F4B">ออกพัก<br><b>12:01</b></div>
+      <div style="border: 1px solid #9CCBC6; background: #E3F1EF; border-radius: 8px; padding: 8px 2px; color: #0A4F4B">กลับจากพัก<br><b>12:58</b></div>
+      <div style="border: 2px solid #0E6B66; border-radius: 8px; padding: 8px 2px; color: #0E6B66; font-weight: 600">เลิกงาน<br>ตอนนี้</div>
+    </div>
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #D5DADA; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 15px; font-weight: 600">ลำดับการลงเวลา</span>
+    <span style="font-size: 14px; color: #3B4446">เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน ระบบแสดงปุ่มถัดไปให้เอง หลังเข้างานเลือก "ออกพัก" หรือ "เลิกงาน" ได้ ถ้าวันนั้นไม่ได้พัก</span>
+  </div>
+  <div style="background: #EAF0F4; border: 1px solid #A9BCCB; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px">
+    <span style="font-size: 16px; font-weight: 700; color: #2F4658">ถ้าลืมลงเวลาเลิกงาน</span>
+    <span style="font-size: 14px; color: #3B4F60">ช่องเลิกงานว่างไว้ หมดกะแล้วขึ้นในรายการที่ขึ้นเตือนให้ Admin เติม ระบบไม่เติมให้เอง</span>
+  </div>
+  <div style="flex-grow: 1"></div>
+  <a href="MyWork.dc.html" style="display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; min-height: 72px; border-radius: 14px; background: #0E6B66; color: #FFFFFF; text-decoration: none">เลิกงาน 18:55</a>
+  <div style="font-size: 13px; color: #5F696B; text-align: center">กดซ้ำภายใน 5 นาทีไม่นับ · ไม่คิดสายหรือกลับก่อน</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

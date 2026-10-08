@@ -1,0 +1,973 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ต้นแบบระบบตรวจงานแม่บ้าน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: field and office side by side — the phone in a cleaner's or supervisor's hand on the left,
+   the Admin dashboard on the right, one simulated clock above both. */
+:root {
+  --bg: #F1F4F3; --surface: #FFFFFF; --surface-2: #E9EEED; --fg: #1B2223; --muted: #5C6869; --line: #D3DAD9;
+  --accent: #0E6B66; --accent-hover: #0A4F4B; --accent-ink: #FFFFFF; --accent-soft: #E1F0EE; --frame: #1B2223;
+  --rework: #B42318; --rework-soft: #FDECEA; --rework-ink: #8A1C12; --rework-line: #E2A39B;
+  --over: #A85A00; --over-soft: #FFF3E0; --over-ink: #7A4300; --over-line: #E3B776;
+  --wait: #3F6283; --wait-soft: #E8EFF6; --wait-ink: #2F4658; --wait-line: #A9BCCB;
+  --pass: #2E6E4A; --pass-soft: #E5F2EA; --pass-ink: #1F5236; --pass-line: #A8CDB5;
+  --todo: #6B7476; --notyet: #8C9496; --off: #A7AFB0;
+  --font: 'IBM Plex Sans Thai', 'Noto Sans Thai', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111716; --surface: #1A2221; --surface-2: #232D2C; --fg: #E6ECEB; --muted: #9AA7A6; --line: #33403F;
+  --accent: #4FB3AA; --accent-hover: #6CC7BE; --accent-ink: #0B1514; --accent-soft: #16312E; --frame: #000000;
+  --rework: #D04437; --rework-soft: #3A1A17; --rework-ink: #F4A79E; --rework-line: #6B2E28;
+  --over: #C27512; --over-soft: #3A2A12; --over-ink: #F2C27A; --over-line: #6A4A1C;
+  --wait: #5A82A8; --wait-soft: #1B2A38; --wait-ink: #A9C6E3; --wait-line: #36506A;
+  --pass: #3F8F62; --pass-soft: #16301F; --pass-ink: #8FD3A9; --pass-line: #2D5A3E;
+  --todo: #7C8789; --notyet: #6A7476; --off: #4F595A; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #111716; --surface: #1A2221; --surface-2: #232D2C; --fg: #E6ECEB; --muted: #9AA7A6; --line: #33403F;
+  --accent: #4FB3AA; --accent-hover: #6CC7BE; --accent-ink: #0B1514; --accent-soft: #16312E; --frame: #000000;
+  --rework: #D04437; --rework-soft: #3A1A17; --rework-ink: #F4A79E; --rework-line: #6B2E28;
+  --over: #C27512; --over-soft: #3A2A12; --over-ink: #F2C27A; --over-line: #6A4A1C;
+  --wait: #5A82A8; --wait-soft: #1B2A38; --wait-ink: #A9C6E3; --wait-line: #36506A;
+  --pass: #3F8F62; --pass-soft: #16301F; --pass-ink: #8FD3A9; --pass-line: #2D5A3E;
+  --todo: #7C8789; --notyet: #6A7476; --off: #4F595A; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--font); font-size: 15px; line-height: 1.5; padding: 0 16px 32px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+/* top rail */
+.rail { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); padding-block: 12px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+.brand { display: flex; flex-direction: column; min-width: 0; }
+.brand b { font-size: 17px; }
+.brand span { font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.clock { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
+.clock-face { display: flex; align-items: baseline; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 4px 12px; }
+.clock-face .t { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+.clock-face .d { font-size: 13px; color: var(--muted); }
+.chipbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 11px; font-size: 13px; min-height: 32px; }
+.chipbtn:hover { border-color: var(--accent); color: var(--accent); }
+.chipbtn.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.shift-pill { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 10px; background: var(--accent-soft); color: var(--accent); }
+
+/* split */
+.split { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 24px; padding-top: 20px; align-items: start; }
+@media (max-width: 980px) { .split { grid-template-columns: minmax(0, 1fr); } }
+.field { display: flex; flex-direction: column; gap: 12px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px); }
+@media (max-width: 980px) { .field { position: static; align-items: center; } }
+.pane-label { font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--muted); }
+.phone { width: 100%; max-width: 400px; height: 760px; border: 10px solid var(--frame); border-radius: 40px; background: var(--bg); overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 40px -24px rgba(0,0,0,.45); }
+.phone-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px 8px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--surface); }
+.phone-bar b { color: var(--fg); font-size: 13px; }
+.phone-bar button { border: 0; background: none; color: var(--accent); font-size: 13px; padding: 4px; }
+.screen { flex: 1; overflow-y: auto; padding: 18px 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.sim { width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.sim-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sim-row > label, .sim-row > span.lbl { font-size: 13px; color: var(--muted); min-width: 64px; }
+.sim select { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 8px; background: var(--surface); min-height: 36px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 5px 10px; font-size: 13px; min-height: 32px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }
+
+/* mobile screen parts */
+.kicker { font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.title { font-size: 24px; font-weight: 700; line-height: 1.25; }
+.sub { font-size: 14px; color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.alert { border-radius: var(--r-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; border: 1px solid; }
+.alert b { font-size: 15px; }
+.alert span { font-size: 14px; }
+.alert.red { background: var(--rework-soft); border-color: var(--rework-line); color: var(--rework-ink); }
+.alert.amber { background: var(--over-soft); border-color: var(--over-line); color: var(--over-ink); }
+.alert.blue { background: var(--wait-soft); border-color: var(--wait-line); color: var(--wait-ink); }
+.alert.green { background: var(--pass-soft); border-color: var(--pass-line); color: var(--pass-ink); }
+.big { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 64px; border: 0; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-size: 20px; font-weight: 700; }
+.big:hover { background: var(--accent-hover); }
+.big[disabled] { background: var(--line); color: var(--muted); cursor: not-allowed; }
+.ghost { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); font-size: 16px; }
+.linkbtn { border: 0; background: none; color: var(--accent); padding: 4px 0; font-size: 14px; text-align: left; }
+.grow { flex: 1; }
+.pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pick button { min-height: 52px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); font-size: 16px; font-weight: 600; }
+.pick button.on { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); }
+.pick button.on.bad { border-color: var(--rework); background: var(--rework-soft); color: var(--rework-ink); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags button { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: var(--surface); font-size: 14px; }
+.tags button.on { border-color: var(--rework); color: var(--rework-ink); background: var(--rework-soft); }
+.inp { width: 100%; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 9px 11px; background: var(--surface); font-size: 16px; min-height: 46px; }
+textarea.inp { min-height: 80px; resize: vertical; }
+.lbl { font-size: 14px; font-weight: 600; }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; text-align: center; font-size: 12px; }
+.steps div { border: 1px dashed var(--line); border-radius: var(--r-sm); padding: 7px 2px; color: var(--muted); }
+.steps div.done { border: 1px solid var(--pass-line); background: var(--pass-soft); color: var(--pass-ink); }
+.steps div.next { border: 2px solid var(--accent); color: var(--accent); font-weight: 600; }
+.steps b { display: block; font-family: var(--mono); font-size: 13px; }
+.gps { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.tile { border-radius: var(--r-md); padding: 8px 4px; border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; }
+.tile b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.tile span { font-size: 12px; }
+.tile.red { background: var(--rework-soft); border-color: var(--rework-line); color: var(--rework-ink); }
+.tile.amber { background: var(--over-soft); border-color: var(--over-line); color: var(--over-ink); }
+.tile.blue { background: var(--wait-soft); border-color: var(--wait-line); color: var(--wait-ink); }
+.sect { font-size: 13px; font-weight: 700; color: var(--muted); margin-top: 4px; }
+
+/* status chip + point card */
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #FFFFFF; white-space: nowrap; border-radius: 999px; padding: 2px 10px; }
+.chip.k-rework { background: var(--rework); } .chip.k-over { background: var(--over); } .chip.k-wait { background: var(--wait); }
+.chip.k-pass { background: var(--pass); } .chip.k-todo { background: var(--todo); }
+.chip.k-notyet { background: transparent; color: var(--muted); border: 1px dashed var(--muted); }
+.chip.k-off { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.chip.flag { background: var(--over-soft); color: var(--over-ink); border: 1px solid var(--over-line); }
+.chip.blocked { background: var(--rework-soft); color: var(--rework-ink); border: 1px solid var(--rework-line); }
+.chip.neutral { background: var(--surface-2); color: var(--fg); }
+.chip.admin { background: var(--wait-soft); color: var(--wait-ink); border: 1px solid var(--wait-line); }
+.pt { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 11px 13px; display: flex; flex-direction: column; gap: 3px; text-align: left; width: 100%; }
+.pt.k-rework { border: 2px solid var(--rework); padding: 10px 12px; }
+.pt.k-over { box-shadow: inset 4px 0 0 var(--over); }
+.pt.k-wait { box-shadow: inset 4px 0 0 var(--wait); }
+.pt.k-off, .pt.k-notyet { background: var(--surface-2); }
+.pt-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.pt-name { font-size: 16px; font-weight: 600; }
+.pt-round { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pt-detail { font-size: 14px; }
+.issue { align-self: flex-start; font-size: 12px; font-weight: 600; color: var(--rework-ink); background: var(--rework-soft); border: 1px solid var(--rework-line); border-radius: 6px; padding: 1px 8px; }
+button.pt { cursor: pointer; }
+button.pt:hover { border-color: var(--accent); }
+
+/* office */
+.office { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.office-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-sm); padding: 7px 14px; font-size: 14px; }
+.tabs button.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.tabs .count { display: inline-block; min-width: 20px; margin-left: 4px; border-radius: 999px; background: var(--rework); color: #FFFFFF; font-size: 12px; padding: 0 6px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; }
+.toolbar select, .toolbar input { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 5px 8px; background: var(--surface); min-height: 34px; }
+.legend { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px 11px; font-size: 13px; }
+.legend button { border: 0; background: none; padding: 0; display: inline-flex; gap: 6px; align-items: center; }
+.legend.on { border-color: var(--fg); }
+.dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+.area { display: flex; flex-direction: column; gap: 10px; }
+.area-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.area-head h3 { font-size: 17px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-sm); padding: 6px 12px; font-size: 14px; min-height: 34px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.danger { color: var(--rework-ink); border-color: var(--rework-line); }
+.btn.sm { padding: 3px 9px; min-height: 28px; font-size: 13px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel h3 { font-size: 16px; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.t { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+.note { font-size: 13px; color: var(--muted); }
+.two { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1180px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.form-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; font-weight: 600; }
+.form-grid input, .form-grid select, .form-grid textarea { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 9px; background: var(--surface); min-height: 36px; font-weight: 400; }
+.err { color: var(--rework-ink); font-size: 13px; font-weight: 600; }
+.bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; min-width: 80px; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.drawer { border: 2px solid var(--accent); }
+.hist { display: grid; grid-template-columns: max-content max-content 1fr; gap: 4px 12px; font-size: 14px; align-items: baseline; }
+.win { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 4px 1px 10px; font-family: var(--mono); font-size: 13px; background: var(--surface-2); }
+.win button { border: 0; background: none; color: var(--muted); padding: 0 4px; }
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: var(--r-md); font-size: 14px; max-width: min(92vw, 520px); z-index: 50; box-shadow: 0 10px 30px -10px rgba(0,0,0,.5); }
+.areapick { display: flex; flex-direction: column; gap: 6px; }
+.areapick button { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-sm); padding: 8px 12px; }
+.areapick button.on { border: 2px solid var(--accent); padding: 7px 11px; }
+@media (prefers-reduced-motion: no-preference) { .flash { animation: flash 1.4s ease-out; } @keyframes flash { from { box-shadow: 0 0 0 4px var(--accent); } to { box-shadow: 0 0 0 0 transparent; } } }
+</style>
+
+<div id="app"></div>
+
+<script>
+'use strict';
+/* ───────── helpers ───────── */
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hm = (h, m) => h * 60 + m;
+const pad = (n) => String(n).padStart(2, '0');
+const tod = (t) => ((t % 1440) + 1440) % 1440;
+const fmt = (t) => `${pad(Math.floor(tod(t) / 60))}:${pad(tod(t) % 60)}`;
+const dayOf = (t) => Math.floor(t / 1440);
+const DATES = { '-2': '5 ต.ค.', '-1': '6 ต.ค.', '0': '7 ต.ค.', '1': '8 ต.ค.', '2': '9 ต.ค.' };
+const WD = { '-2': 'จันทร์', '-1': 'อังคาร', '0': 'พุธ', '1': 'พฤหัสบดี', '2': 'ศุกร์' };
+const fmtD = (t) => `${DATES[dayOf(t)] || ''} ${fmt(t)}`;
+const dur = (m) => (m >= 60 ? `${Math.floor(m / 60)} ชม. ${m % 60 ? (m % 60) + ' นาที' : ''}` : `${m} นาที`).trim();
+const parseT = (s) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s).trim()); if (!m) return null; const h = +m[1], mi = +m[2]; if (h > 23 || mi > 59) return null; return hm(h, mi); };
+let uid = 1000; const nid = (p) => `${p}${++uid}`;
+
+/* shifts: day 07:00–19:00, night 19:00–07:00 */
+function shiftAt(t) {
+  const d = dayOf(t), m = tod(t);
+  if (m >= 420 && m < 1140) return { type: 'D', key: `${d}D`, start: d * 1440 + 420, end: d * 1440 + 1140, day: d };
+  const nd = m >= 1140 ? d : d - 1;
+  return { type: 'N', key: `${nd}N`, start: nd * 1440 + 1140, end: nd * 1440 + 1860, day: nd };
+}
+const SHIFT_NAME = { D: 'กะเช้า 07:00–19:00', N: 'กะดึก 19:00–07:00' };
+const SHIFT_SHORT = { D: 'เช้า', N: 'ดึก' };
+/* the shift instance of a given type that is running now (or within the check-in grace around it) */
+function shiftOfType(type, t, grace = 0) {
+  for (const k of [-1, 0, 1]) {
+    const base = (dayOf(t) + k) * 1440;
+    const s = type === 'D' ? base + 420 : base + 1140;
+    if (t >= s - grace && t < s + 720 + grace) return { type, key: `${dayOf(s)}${type}`, start: s, end: s + 720, day: dayOf(s) };
+  }
+  return null;
+}
+const winAbs = (sh, w) => { let s = w[0], e = w[1]; if (sh.type === 'N') { if (s < 720) s += 1440; if (e < 720) e += 1440; } const b = sh.day * 1440; return { s: b + s, e: b + e }; };
+
+/* ───────── seed data (examples, not real people) ───────── */
+const CFG = { radius: 50, debounce: 5, checkinGrace: 60 };
+const W = (...pairs) => pairs.map(([a, b]) => [parseT(a), parseT(b)]);
+const S = {
+  now: hm(10, 25),
+  areas: [
+    { id: 'AR01', name: 'โซนต้อนรับ ชั้น 1', bld: 'A', pattern: '2', active: true },
+    { id: 'AR02', name: 'โรงอาหาร', bld: 'A', pattern: '2', active: true },
+    { id: 'AR03', name: 'สำนักงาน ชั้น 2', bld: 'A', pattern: 'D', active: true },
+    { id: 'AR12', name: 'ไลน์ผลิต 3', bld: 'B', pattern: '2', active: true },
+    { id: 'AR13', name: 'คลังสินค้า', bld: 'B', pattern: '2', active: true },
+  ],
+  points: [
+    { id: 'AR01-01', area: 'AR01', name: 'ห้องน้ำชาย', loc: ['site', 18], win: { D: W(['07:00', '09:00'], ['10:00', '12:00'], ['13:00', '15:00'], ['16:00', '18:00']), N: W(['20:00', '22:00'], ['01:00', '03:00'], ['05:00', '06:30']) } },
+    { id: 'AR01-02', area: 'AR01', name: 'ห้องน้ำหญิง', loc: ['site', 15], win: { D: W(['07:00', '09:00'], ['10:00', '12:00'], ['13:00', '15:00'], ['16:00', '18:00']), N: W(['20:00', '22:00'], ['01:00', '03:00'], ['05:00', '06:30']) } },
+    { id: 'AR01-03', area: 'AR01', name: 'จุดทิ้งขยะ', loc: ['map', null], win: { D: W(['08:00', '10:00'], ['14:00', '16:00']), N: W(['21:00', '23:00'], ['04:00', '05:30']) } },
+    { id: 'AR01-04', area: 'AR01', name: 'โถงทางเดิน', loc: ['map', null], win: { D: W(['07:30', '09:00'], ['13:00', '14:30'], ['17:00', '18:30']), N: W(['21:00', '22:30'], ['04:00', '05:30']) } },
+    { id: 'AR02-01', area: 'AR02', name: 'ห้องน้ำรวม', loc: ['site', 21], win: { D: W(['07:00', '09:00'], ['10:00', '12:00'], ['13:00', '15:00'], ['16:00', '18:00']), N: W(['20:00', '22:00'], ['02:00', '04:00']) } },
+    { id: 'AR02-02', area: 'AR02', name: 'โต๊ะอาหาร', loc: ['site', 24], win: { D: W(['09:30', '11:00'], ['13:00', '14:00'], ['17:00', '18:00']), N: W(['21:00', '22:00'], ['01:00', '02:00']) } },
+    { id: 'AR02-03', area: 'AR02', name: 'ลานล้างจาน', loc: ['site', 19], win: { D: W(['11:00', '12:30'], ['14:00', '15:00']), N: W(['22:00', '23:00']) } },
+    { id: 'AR03-01', area: 'AR03', name: 'ห้องประชุม', loc: ['site', 12], win: { D: W(['08:00', '09:00'], ['13:00', '14:00']), N: [] } },
+    { id: 'AR03-02', area: 'AR03', name: 'ห้องน้ำ ชั้น 2', loc: ['site', 14], win: { D: W(['07:00', '09:00'], ['10:00', '12:00'], ['14:00', '16:00']), N: [] } },
+    { id: 'AR03-03', area: 'AR03', name: 'แพนทรี', loc: ['site', 16], win: { D: W(['09:00', '10:00'], ['15:00', '16:00']), N: [] } },
+    { id: 'AR12-01', area: 'AR12', name: 'ห้องน้ำหญิง', loc: ['site', 27], win: { D: W(['08:00', '10:00'], ['13:00', '15:00']), N: W(['20:00', '22:00'], ['03:00', '05:00']) } },
+    { id: 'AR12-02', area: 'AR12', name: 'ห้องพักพนักงาน', loc: ['site', 22], win: { D: W(['10:00', '12:00'], ['16:00', '17:00']), N: W(['23:00', '00:30']) } },
+    { id: 'AR12-03', area: 'AR12', name: 'ทางเดินไลน์', loc: ['site', 30], win: { D: W(['07:00', '08:00'], ['12:00', '13:00']), N: W(['20:00', '21:00'], ['02:00', '03:00']) } },
+    { id: 'AR13-01', area: 'AR13', name: 'ห้องน้ำคลัง', loc: ['site', 20], win: { D: W(['07:00', '09:00'], ['10:00', '12:00'], ['15:00', '17:00']), N: W(['21:00', '23:00'], ['03:00', '05:00']) } },
+    { id: 'AR13-02', area: 'AR13', name: 'ลานขนถ่าย', loc: ['site', 33], win: { D: W(['09:00', '11:00'], ['14:00', '16:00']), N: W(['22:00', '00:00']) } },
+  ],
+  users: [
+    { id: 'u1', emp: '650123', name: 'สมศรี', role: 'cleaner', phone: '0000000001', area: 'AR01', shift: 'D', active: true },
+    { id: 'u2', emp: '650140', name: 'บุษบา', role: 'cleaner', phone: '0000000002', area: 'AR01', shift: 'N', active: true },
+    { id: 'u3', emp: '650188', name: 'มาลี', role: 'cleaner', phone: '0000000003', area: 'AR02', shift: 'D', active: true },
+    { id: 'u4', emp: '650191', name: 'จำปา', role: 'cleaner', phone: '0000000004', area: 'AR02', shift: 'N', active: true },
+    { id: 'u5', emp: '650202', name: 'จันทร์เพ็ญ', role: 'cleaner', phone: '0000000005', area: 'AR03', shift: 'D', active: true },
+    { id: 'u6', emp: '650215', name: 'ทองใบ', role: 'cleaner', phone: '0000000006', area: 'AR12', shift: 'D', active: true },
+    { id: 'u7', emp: '650216', name: 'ลำดวน', role: 'cleaner', phone: '0000000007', area: 'AR12', shift: 'N', active: true },
+    { id: 'u8', emp: '650230', name: 'สมใจ', role: 'cleaner', phone: '0000000008', area: 'AR13', shift: 'D', active: true },
+    { id: 'u9', emp: '650231', name: 'นวล', role: 'cleaner', phone: '0000000009', area: 'AR13', shift: 'N', active: true },
+    { id: 'u10', emp: '650099', name: 'ประไพ', role: 'cleaner', phone: '0000000010', area: null, shift: 'D', active: false },
+    { id: 's1', emp: '640011', name: 'วิไล', role: 'supervisor', phone: '0000000011', bld: 'A', shift: 'D', active: true },
+    { id: 's2', emp: '640012', name: 'ประเสริฐ', role: 'supervisor', phone: '0000000012', bld: 'A', shift: 'N', active: true },
+    { id: 's3', emp: '640021', name: 'สุนีย์', role: 'supervisor', phone: '0000000013', bld: 'B', shift: 'D', active: true },
+    { id: 's4', emp: '640022', name: 'อำนาจ', role: 'supervisor', phone: '0000000014', bld: 'B', shift: 'N', active: true },
+    { id: 'a1', emp: 'admin.somchai', name: 'สมชาย', role: 'admin', active: true },
+  ],
+  att: [], subs: [], insps: [], blocked: [], covers: [], acks: {}, audit: [],
+  phone: { user: null, screen: 'login', ctx: {}, gps: 'in', net: true, form: { emp: '650123', phone: '0000000001' }, err: '' },
+  office: { tab: 'status', bld: 'all', filter: null, issueOnly: false, open: null, editAtt: null, coverFor: null, areaSel: 'AR01', acc: { q: '', role: 'all', add: null, phoneFor: null }, auditType: 'all', flagView: 'open', xl: { att: true, sub: true, ins: true } },
+  toast: null, flash: null,
+};
+const U = (id) => S.users.find((u) => u.id === id);
+const A = (id) => S.areas.find((a) => a.id === id);
+const PT = (id) => S.points.find((p) => p.id === id);
+const pointsOf = (areaId) => S.points.filter((p) => p.area === areaId);
+const D0 = 0, DM1 = -1;
+const at = (d, h, m) => d * 1440 + hm(h, m);
+function seed() {
+  const ev = (user, shiftKey, type, t, dist, src = 'scan') => {
+    let rec = S.att.find((a) => a.user === user && a.shift === shiftKey);
+    if (!rec) { rec = { id: nid('att'), user, shift: shiftKey, ev: {} }; S.att.push(rec); }
+    rec.ev[type] = { t, dist, flag: dist > CFG.radius, src };
+  };
+  ev('u2', '-1N', 'SHIFT_IN', at(DM1, 18, 55), 11);
+  ev('u4', '-1N', 'SHIFT_IN', at(DM1, 18, 58), 9); ev('u4', '-1N', 'SHIFT_OUT', at(D0, 7, 5), 14);
+  ev('u7', '-1N', 'SHIFT_IN', at(DM1, 18, 50), 20); ev('u7', '-1N', 'SHIFT_OUT', at(D0, 7, 2), 18);
+  ev('u9', '-1N', 'SHIFT_IN', at(DM1, 18, 57), 8); ev('u9', '-1N', 'SHIFT_OUT', at(D0, 7, 1), 12);
+  ev('u1', '0D', 'SHIFT_IN', at(D0, 6, 52), 85);
+  ev('u3', '0D', 'SHIFT_IN', at(D0, 6, 58), 12);
+  ev('u5', '0D', 'SHIFT_IN', at(D0, 7, 2), 7);
+  ev('u8', '0D', 'SHIFT_IN', at(D0, 6, 55), 10);
+  const sub = (point, user, h, m, round, kind, opt = {}) => { const s = { id: nid('sub'), point, user, t: at(D0, h, m), round, kind, status: opt.issue ? 'ISSUE' : 'NORMAL', tags: opt.issue ? [opt.issue] : [], note: opt.note || '', dist: opt.dist ?? 8, flag: (opt.dist ?? 8) > CFG.radius, cover: false, late: 0 }; S.subs.push(s); return s; };
+  const ins = (point, sup, sub, h, m, result, defect = '', dist = 6) => S.insps.push({ id: nid('ins'), point, user: sup, sub: sub.id, t: at(D0, h, m), round: sub.round, result, defect, dist, flag: dist > CFG.radius });
+  let s;
+  s = sub('AR01-01', 'u1', 7, 40, '0D:0', 'ontime'); ins('AR01-01', 's1', s, 8, 10, 'pass');
+  sub('AR01-01', 'u1', 10, 5, '0D:1', 'ontime');
+  s = sub('AR01-02', 'u1', 8, 20, '0D:0', 'ontime'); ins('AR01-02', 's1', s, 8, 30, 'pass');
+  s = sub('AR01-02', 'u1', 10, 12, '0D:1', 'ontime', { issue: 'ของชำรุด', note: 'ก๊อกอ่างที่ 2 รั่ว' }); ins('AR01-02', 's1', s, 10, 20, 'pass');
+  s = sub('AR01-03', 'u1', 8, 40, '0D:0', 'ontime'); ins('AR01-03', 's1', s, 9, 40, 'fail', 'รอบถังขยะยังมีคราบ', 62);
+  s = sub('AR02-01', 'u3', 7, 50, '0D:0', 'ontime'); ins('AR02-01', 's1', s, 8, 15, 'pass');
+  sub('AR02-02', 'u3', 10, 15, '0D:0', 'ontime');
+  sub('AR03-01', 'u5', 8, 30, '0D:0', 'ontime');
+  s = sub('AR03-02', 'u5', 7, 45, '0D:0', 'ontime'); ins('AR03-02', 's1', s, 8, 50, 'pass');
+  sub('AR03-02', 'u5', 10, 20, '0D:1', 'ontime');
+  s = sub('AR13-01', 'u8', 7, 30, '0D:0', 'ontime'); ins('AR13-01', 's3', s, 8, 0, 'pass');
+  s = sub('AR13-01', 'u8', 10, 10, '0D:1', 'ontime');
+  S.blocked.push({ id: nid('blk'), t: at(D0, 9, 10), user: 'u8', point: 'AR12-01', reason: 'area' });
+  S.audit.push(
+    { id: nid('aud'), t: at(DM1, 16, 30), who: 'a1', type: 'แก้ช่วงรอบ', target: 'ห้องน้ำชาย · โซนต้อนรับ ชั้น 1 · กะเช้า', before: '13:00–15:00', after: '13:30–15:30 → กลับเป็น 13:00–15:00', reason: '' },
+    { id: nid('aud'), t: at(DM1, 15, 2), who: 'a1', type: 'เก็บพิกัดป้าย', target: 'AR01-01 ห้องน้ำชาย', before: 'แผนที่', after: 'หน้างาน ±18 ม.', reason: '' },
+    { id: nid('aud'), t: at(DM1, 11, 20), who: 'a1', type: 'แก้เบอร์โทร', target: 'มาลี (650188)', before: 'เบอร์เดิม', after: 'เบอร์ใหม่ (ไม่แสดงเบอร์)', reason: 'เปลี่ยนซิม' },
+  );
+}
+seed();
+
+/* ───────── domain rules (ADR 0047, 0041, 0048, 0050) ───────── */
+const roundKey = (sh, i) => `${sh.key}:${i}`;
+function roundsNow(point, t) {
+  const area = A(point.area); const sh = shiftAt(t);
+  if (!area.active) return { off: true, sh, wins: [] };
+  if (sh.type === 'N' && area.pattern === 'D') return { off: true, sh, wins: [] };
+  const wins = (point.win[sh.type] || []).map((w, i) => ({ ...winAbs(sh, w), i, key: roundKey(sh, i) }));
+  let cur = null; for (const w of wins) if (w.s <= t) cur = w;
+  return { off: false, sh, wins, cur, next: wins.find((w) => w.s > t) };
+}
+function roundState(point, key, t) {
+  const subs = S.subs.filter((s) => s.point === point.id && s.round === key && s.t <= t);
+  const ins = S.insps.filter((i) => i.point === point.id && i.round === key && i.t <= t);
+  const lastIns = ins[ins.length - 1];
+  const pending = subs.filter((s) => !lastIns || s.t > lastIns.t);
+  return { subs, ins, lastIns, pending: pending[pending.length - 1] };
+}
+function pointStatus(point, t = S.now) {
+  const r = roundsNow(point, t);
+  if (r.off) return { k: 'off', r };
+  if (!r.cur) return { k: 'notyet', r };
+  const st = roundState(point, r.cur.key, t);
+  let k;
+  if (st.lastIns && st.lastIns.result === 'fail' && !st.pending) k = 'rework';
+  else if (st.pending) k = 'wait';
+  else if (st.lastIns && st.lastIns.result === 'pass') k = 'pass';
+  else k = t > r.cur.e ? 'over' : 'todo';
+  return { k, r, st };
+}
+const K = { rework: 'ต้องแก้ไข', over: 'เลยรอบ', wait: 'รอตรวจ', pass: 'ตรวจผ่าน', todo: 'ยังไม่ทำ', notyet: 'ยังไม่ถึงรอบ', off: 'นอกเวลา' };
+const ORDER = ['rework', 'over', 'wait', 'pass', 'todo', 'notyet', 'off'];
+function latestIssue(point) { const subs = S.subs.filter((s) => s.point === point.id && s.t <= S.now); const l = subs[subs.length - 1]; return l && l.status === 'ISSUE' ? l : null; }
+/* where a new submission lands */
+function assignSubmission(point, t) {
+  const r = roundsNow(point, t);
+  if (r.off || !r.cur) return { kind: 'offround', round: null };
+  const before = pointStatus(point, t);
+  if (t <= r.cur.e) return { kind: before.k === 'rework' ? 'rework' : 'ontime', round: r.cur.key, win: r.cur };
+  if (before.st.subs.length === 0) return { kind: 'late', round: r.cur.key, win: r.cur, late: t - r.cur.e };
+  if (before.k === 'rework') return { kind: 'rework', round: r.cur.key, win: r.cur };
+  return { kind: 'offround', round: null, win: r.cur };
+}
+function attRec(userId, shiftKey) { return S.att.find((a) => a.user === userId && a.shift === shiftKey); }
+const EV = ['SHIFT_IN', 'BREAK_OUT', 'BREAK_IN', 'SHIFT_OUT'];
+const EVN = { SHIFT_IN: 'เข้างาน', BREAK_OUT: 'ออกพัก', BREAK_IN: 'กลับจากพัก', SHIFT_OUT: 'เลิกงาน' };
+function nextEvents(rec) {
+  const e = rec ? rec.ev : {};
+  if (!e.SHIFT_IN) return ['SHIFT_IN'];
+  if (e.SHIFT_OUT) return [];
+  if (!e.BREAK_OUT) return ['BREAK_OUT', 'SHIFT_OUT'];
+  if (!e.BREAK_IN) return ['BREAK_IN'];
+  return ['SHIFT_OUT'];
+}
+function coverOf(userId, areaId, shKey) { return S.covers.find((c) => c.user === userId && c.area === areaId && c.shift === shKey && !c.cancelled); }
+function areaPresence(area, sh) {
+  const owner = S.users.find((u) => u.role === 'cleaner' && u.active && u.area === area.id && u.shift === sh.type);
+  const rec = owner && attRec(owner.id, sh.key);
+  const cover = S.covers.find((c) => c.area === area.id && c.shift === sh.key && !c.cancelled);
+  let k = 'empty';
+  if (rec && rec.ev.SHIFT_IN) { k = rec.ev.SHIFT_OUT ? 'done' : (rec.ev.BREAK_OUT && !rec.ev.BREAK_IN ? 'brk' : 'work'); }
+  else if (cover) k = 'cover';
+  return { owner, rec, cover, k };
+}
+const PRES = { empty: ['ยังไม่มีคน', 'k-rework'], work: ['ทำงานอยู่', 'k-pass'], brk: ['พักเบรก', 'k-wait'], done: ['เลิกงานแล้ว', 'k-todo'], cover: ['มีคนทำแทน', 'k-wait'] };
+function needsArea(area, sh) { return area.active && !(sh.type === 'N' && area.pattern === 'D'); }
+
+/* ───────── audit + flags ───────── */
+function audit(type, target, before, after, reason = '') { S.audit.push({ id: nid('aud'), t: S.now, who: 'a1', type, target, before, after, reason }); }
+function allFlags() {
+  const out = [];
+  for (const r of S.att) for (const ev of EV) { const e = r.ev[ev]; if (e && e.flag && e.t <= S.now) out.push({ id: `${r.id}:${ev}`, t: e.t, who: r.user, type: `ลงเวลา${EVN[ev]}ไกลจากป้าย`, cls: 'flag', detail: `ป้ายลงเวลา ${A(U(r.user).area)?.id}-IN · ห่าง ${e.dist} ม. (รัศมี ${CFG.radius} ม.)` }); }
+  for (const s of S.subs) if (s.flag && s.t <= S.now) out.push({ id: s.id, t: s.t, who: s.user, type: 'ส่งงานไกลจากป้าย', cls: 'flag', detail: `${s.point} ${PT(s.point).name} · ห่าง ${s.dist} ม.` });
+  for (const i of S.insps) if (i.flag && i.t <= S.now) out.push({ id: i.id, t: i.t, who: i.user, type: 'ตรวจงานไกลจากป้าย', cls: 'flag', detail: `${i.point} ${PT(i.point).name} · ห่าง ${i.dist} ม.` });
+  for (const b of S.blocked) if (b.t <= S.now) {
+    const u = U(b.user), p = PT(b.point), ar = A(p.area);
+    const why = b.reason === 'area' ? `ป้ายของ ${ar.name} · Area ของ${u.name}คือ ${A(u.area)?.name || '–'}` : b.reason === 'bld' ? `ป้ายในตึก ${ar.bld} · ${u.name}ประจำตึก ${u.bld}` : `นอก${SHIFT_NAME[u.shift]}ของ${u.name}`;
+    out.push({ id: b.id, t: b.t, who: b.user, type: u.role === 'supervisor' ? 'หัวหน้าสแกนนอกตึกหรือนอกกะ (ถูกบล็อก)' : 'สแกนนอก Area (ถูกบล็อก)', cls: 'blocked', detail: `${p.id} ${p.name} · ${why} · ไม่ได้บันทึกงาน`, blk: b });
+  }
+  for (const r of S.att) {
+    const sh = { key: r.shift, type: r.shift.slice(-1), day: parseInt(r.shift, 10) };
+    const end = sh.type === 'D' ? sh.day * 1440 + 1140 : sh.day * 1440 + 1860;
+    if (r.ev.SHIFT_IN && !r.ev.SHIFT_OUT && S.now >= end) out.push({ id: `${r.id}:out`, t: end, who: r.user, type: 'ไม่ได้ลงเวลาเลิกงาน', cls: 'neutral', detail: `${SHIFT_NAME[sh.type]} ${DATES[sh.day]} · ${A(U(r.user).area).name} · เข้างาน ${fmt(r.ev.SHIFT_IN.t)} · ช่องเลิกงานว่าง`, fix: r });
+  }
+  return out.sort((a, b) => b.t - a.t);
+}
+const openFlags = () => allFlags().filter((f) => !S.acks[f.id] && !(f.fix && f.fix.ev.SHIFT_OUT));
+
+/* ───────── actions ───────── */
+function toast(msg) { S.toast = msg; clearTimeout(toast.h); toast.h = setTimeout(() => { S.toast = null; render(); }, 3200); }
+function gpsRead() { if (S.phone.gps === 'off') return null; return S.phone.gps === 'in' ? 4 + Math.floor(Math.random() * 14) : 70 + Math.floor(Math.random() * 40); }
+function go(screen, ctx = {}) { S.phone.screen = screen; S.phone.ctx = ctx; }
+function login() {
+  const f = S.phone.form; const u = S.users.find((x) => x.emp === f.emp.trim() && x.role !== 'admin');
+  if (!u || u.phone !== f.phone.replace(/\D/g, '')) { S.phone.err = 'รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง'; return; }
+  if (!u.active) { S.phone.err = 'บัญชีนี้ถูกปิดใช้งาน ติดต่อ Admin'; return; }
+  S.phone.user = u.id; S.phone.err = '';
+  const pend = S.phone.ctx.after; go('home'); if (pend) scan(pend);
+}
+function scan(signId) {
+  const me = U(S.phone.user);
+  if (!me) { go('login', { after: signId }); return; }
+  if (S.phone.gps === 'off') { go('locoff', { sign: signId }); return; }
+  if (signId.endsWith('-IN')) return scanCheckin(me, A(signId.slice(0, 4)));
+  const p = PT(signId);
+  return me.role === 'supervisor' ? scanInspect(me, p) : scanPoint(me, p);
+}
+function scanCheckin(me, area) {
+  if (me.role !== 'cleaner') { go('msg', { kind: 'blue', title: 'ป้ายนี้สำหรับแม่บ้าน', body: 'หัวหน้าไม่ต้องลงเวลา สแกนป้ายจุดทำความสะอาดเพื่อตรวจงาน' }); return; }
+  if (area.id !== me.area) { S.blocked.push({ id: nid('blk'), t: S.now, user: me.id, point: pointsOf(area.id)[0].id, reason: 'area' }); go('blocked', { area: area.id, checkin: true }); return; }
+  const sh = shiftOfType(me.shift, S.now, CFG.checkinGrace);
+  if (!sh) { go('msg', { kind: 'blue', title: 'ยังไม่ถึงกะของคุณ', body: `คุณอยู่${SHIFT_NAME[me.shift]} ลงเวลาได้ตั้งแต่ 1 ชั่วโมงก่อนกะเริ่ม` }); return; }
+  go('checkin', { area: area.id, shift: sh.key });
+}
+function doAttendance(type) {
+  const me = U(S.phone.user); const c = S.phone.ctx;
+  if (!S.phone.net) { go('failed', { ...c, retry: { kind: 'att', type }, what: `${EVN[type]} · ป้ายลงเวลา ${c.area}-IN` }); return; }
+  let rec = attRec(me.id, c.shift);
+  const last = rec ? Math.max(...Object.values(rec.ev).map((e) => e.t)) : -1e9;
+  if (S.now - last < CFG.debounce) { toast('กดซ้ำภายใน 5 นาที ระบบไม่นับ'); return; }
+  if (!rec) { rec = { id: nid('att'), user: me.id, shift: c.shift, ev: {} }; S.att.push(rec); }
+  const dist = gpsRead();
+  rec.ev[type] = { t: S.now, dist, flag: dist > CFG.radius, src: 'scan' };
+  go('checkinDone', { ...c, type, dist });
+}
+function myShiftNow(me) { const sh = shiftAt(S.now); return sh.type === me.shift ? sh : null; }
+function scanPoint(me, p) {
+  const sh = myShiftNow(me);
+  if (!sh) { go('msg', { kind: 'blue', title: 'นอกกะของคุณ', body: `คุณอยู่${SHIFT_NAME[me.shift]} ส่งงานได้เฉพาะในกะของตัวเอง` }); return; }
+  const rec = attRec(me.id, sh.key);
+  if (!rec || !rec.ev.SHIFT_IN) { go('needCheckin', { point: p.id }); return; }
+  const cover = p.area !== me.area ? coverOf(me.id, p.area, sh.key) : null;
+  if (p.area !== me.area && !cover) { S.blocked.push({ id: nid('blk'), t: S.now, user: me.id, point: p.id, reason: 'area' }); go('blocked', { point: p.id }); return; }
+  S.phone.sel = { status: 'NORMAL', tags: [], note: '' };
+  go('submit', { point: p.id, cover: !!cover });
+}
+function doSubmit() {
+  const me = U(S.phone.user); const c = S.phone.ctx; const p = PT(c.point); const sel = S.phone.sel;
+  if (sel.status === 'ISSUE' && !sel.tags.length && !sel.note.trim()) { toast('เลือกปัญหาหรือเขียนหมายเหตุก่อนส่ง'); return; }
+  if (!S.phone.net) { go('failed', { ...c, retry: { kind: 'sub' }, what: `${p.name} · ${sel.status === 'ISSUE' ? 'พบปัญหา' : 'เรียบร้อย'}` }); return; }
+  const a = assignSubmission(p, S.now); const dist = gpsRead();
+  const s = { id: nid('sub'), point: p.id, user: me.id, t: S.now, round: a.round, kind: a.kind, late: a.late || 0, status: sel.status, tags: [...sel.tags], note: sel.note.trim(), dist, flag: dist > CFG.radius, cover: !!c.cover };
+  S.subs.push(s); S.flash = p.id;
+  go('submitDone', { point: p.id, sub: s.id, win: a.win });
+}
+function scanInspect(me, p) {
+  const ar = A(p.area); const sh = shiftAt(S.now);
+  if (ar.bld !== me.bld) { S.blocked.push({ id: nid('blk'), t: S.now, user: me.id, point: p.id, reason: 'bld' }); go('blocked', { point: p.id, sup: 'bld' }); return; }
+  if (sh.type !== me.shift) { S.blocked.push({ id: nid('blk'), t: S.now, user: me.id, point: p.id, reason: 'shift' }); go('blocked', { point: p.id, sup: 'shift' }); return; }
+  const st = pointStatus(p);
+  if (st.k !== 'wait') { go('nothing', { point: p.id }); return; }
+  S.phone.sel = { result: null, defect: '' };
+  go('inspect', { point: p.id, sub: st.st.pending.id });
+}
+function doInspect() {
+  const me = U(S.phone.user); const c = S.phone.ctx; const p = PT(c.point); const sel = S.phone.sel;
+  if (!sel.result) { toast('เลือก "สะอาด" หรือ "ไม่สะอาด"'); return; }
+  if (sel.result === 'fail' && !sel.defect.trim()) { toast('ไม่สะอาด ต้องเขียนข้อบกพร่อง'); return; }
+  if (!S.phone.net) { go('failed', { ...c, retry: { kind: 'ins' }, what: `ตรวจ ${p.name} · ${sel.result === 'pass' ? 'สะอาด' : 'ไม่สะอาด'}` }); return; }
+  const sub = S.subs.find((s) => s.id === c.sub);
+  const st = pointStatus(p);
+  if (st.k !== 'wait' || !st.st.pending || st.st.pending.id !== sub.id) { go('nothing', { point: p.id }); return; }
+  const dist = gpsRead();
+  S.insps.push({ id: nid('ins'), point: p.id, user: me.id, sub: sub.id, t: S.now, round: sub.round, result: sel.result, defect: sel.defect.trim(), dist, flag: dist > CFG.radius });
+  S.flash = p.id;
+  go('inspectDone', { point: p.id, result: sel.result, defect: sel.defect.trim() });
+}
+function retry() {
+  const r = S.phone.ctx.retry; if (!S.phone.net) { toast('ยังไม่มีสัญญาณ ลองเดินไปตรงที่มีสัญญาณ'); return; }
+  const ctx = { ...S.phone.ctx }; delete ctx.retry; delete ctx.what; S.phone.ctx = ctx;
+  if (r.kind === 'att') doAttendance(r.type); else if (r.kind === 'sub') doSubmit(); else doInspect();
+}
+
+/* ───────── render: phone ───────── */
+const chip = (k) => `<span class="chip k-${k}">${K[k]}</span>`;
+function roundLabel(r) { return r ? `รอบ ${fmt(r.s)}–${fmt(r.e)}` : ''; }
+function pointCard(p, opts = {}) {
+  const st = pointStatus(p); const iss = latestIssue(p);
+  let round = st.k === 'off' ? 'Area นี้ไม่มีกะนี้' : st.r.cur ? roundLabel(st.r.cur) : st.r.next ? `รอบแรก ${fmt(st.r.next.s)}–${fmt(st.r.next.e)}` : 'วันนี้ไม่มีรอบ';
+  let detail = '';
+  if (st.k === 'rework') detail = `${U(st.st.lastIns.user).name} ${fmt(st.st.lastIns.t)}: "${esc(st.st.lastIns.defect)}"`;
+  else if (st.k === 'wait') detail = `ส่งงาน ${fmt(st.st.pending.t)} · ${U(st.st.pending.user).name}${st.st.pending.kind === 'late' ? ' · ส่งช้า' : ''}`;
+  else if (st.k === 'pass') detail = `ตรวจผ่าน ${fmt(st.st.lastIns.t)}`;
+  else if (st.k === 'over') detail = `ยังไม่ส่งงาน · เลยมา ${dur(S.now - st.r.cur.e)}`;
+  else if (st.k === 'todo') detail = `ยังไม่ส่ง · เหลือ ${dur(st.r.cur.e - S.now)}`;
+  else if (st.k === 'notyet') detail = 'กะเริ่มแล้ว รอบแรกยังไม่เริ่ม';
+  if (st.r.next && !['notyet', 'off'].includes(st.k)) detail += `${detail ? ' · ' : ''}รอบถัดไป ${fmt(st.r.next.s)}`;
+  const tag = opts.click ? 'button' : 'div';
+  const attr = opts.click ? ` type="button" data-a="${opts.click}" data-id="${p.id}"` : '';
+  const flash = S.flash === p.id ? ' flash' : '';
+  return `<${tag} class="pt k-${st.k}${flash}"${attr}>
+    <div class="pt-top"><span class="pt-name">${esc(p.name)}${opts.showArea ? ` <span class="muted small">· ${esc(A(p.area).name)}</span>` : ''}</span>${chip(st.k)}</div>
+    <span class="pt-round">${round}</span>
+    ${detail ? `<span class="pt-detail">${detail}</span>` : ''}
+    ${iss ? `<span class="issue">แจ้งปัญหา: ${esc([...iss.tags, iss.note].filter(Boolean).join(' · '))}</span>` : ''}
+    ${opts.hint ? `<span class="small" style="color: var(--accent); font-weight: 600">${opts.hint}</span>` : ''}
+  </${tag}>`;
+}
+function gpsCard(dist) {
+  if (dist == null) return '';
+  const ok = dist <= CFG.radius;
+  return `<div class="card gps"><span class="small muted">ห่างป้าย ${dist} ม. · รัศมี ${CFG.radius} ม.</span><span class="chip ${ok ? 'k-pass' : 'flag'}">${ok ? 'อยู่ในรัศมี' : 'นอกรัศมี · ติดธง'}</span></div>`;
+}
+function head(kicker, title, sub) { return `<div><div class="kicker">${kicker}</div><div class="title">${title}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`; }
+function screenHtml() {
+  const P = S.phone, me = U(P.user), c = P.ctx;
+  switch (P.screen) {
+    case 'login': return `${head('ระบบลงเวลาและตรวจงานแม่บ้าน', 'เข้าสู่ระบบ')}
+      ${c.after ? `<div class="alert green"><b>สแกนป้าย ${esc(c.after)} แล้ว</b><span>เข้าสู่ระบบก่อน แล้วระบบพากลับไปที่ป้ายนี้ทันที</span></div>` : ''}
+      <div class="card" style="gap: 8px">
+        <label class="lbl" for="f-emp">รหัสพนักงาน</label><input class="inp mono" id="f-emp" data-f="emp" inputmode="numeric" autocomplete="username" value="${esc(P.form.emp)}">
+        <label class="lbl" for="f-phone">เบอร์โทรศัพท์</label><input class="inp mono" id="f-phone" data-f="phone" inputmode="tel" autocomplete="current-password" value="${esc(P.form.phone)}">
+        <span class="small muted">เบอร์ที่แจ้ง Admin ไว้ตอนสร้างบัญชี</span>
+      </div>
+      ${P.err ? `<div class="alert red"><b>${esc(P.err)}</b><span>กรอกผิดหลายครั้ง รหัสนี้ต้องรอสักครู่</span></div>` : ''}
+      <div class="grow"></div>
+      <button class="big" type="button" data-a="login">เข้าสู่ระบบ</button>
+      <div class="small muted" style="text-align: center">เปลี่ยนเบอร์: แจ้ง Admin · login ค้างไว้ได้ 30 วัน · ใช้ได้หลายเครื่อง</div>`;
+    case 'home': return me.role === 'supervisor' ? supHome(me) : myWork(me);
+    case 'locoff': return `${head('ต้องเปิด Location', 'เปิดตำแหน่งก่อนสแกน')}
+      <div class="alert red"><b>ไม่ได้บันทึก</b><span>ระบบต้องอ่านตำแหน่งทุกครั้งที่สแกน ทั้งลงเวลา ส่งงาน และตรวจงาน</span></div>
+      <div class="card"><span class="lbl">วิธีเปิด</span><span class="small">ตั้งค่า › ความเป็นส่วนตัว › บริการหาตำแหน่ง › เปิด และอนุญาตให้เบราว์เซอร์ใช้ตำแหน่ง</span></div>
+      <div class="grow"></div><button class="big" type="button" data-a="rescan">เปิดแล้ว สแกนใหม่</button>`;
+    case 'checkin': {
+      const rec = attRec(me.id, c.shift); const nx = nextEvents(rec); const a = A(c.area); const dist = P.gps === 'in' ? 9 : 85;
+      return `${head(`ป้ายลงเวลา · ${esc(a.name)} · ตึก ${a.bld}`, 'ลงเวลา', `${esc(me.name)} · ${SHIFT_NAME[me.shift]}`)}
+        ${gpsCard(dist)}
+        <div class="card"><span class="lbl">กะนี้</span><div class="steps">${EV.map((e) => { const v = rec && rec.ev[e]; return `<div class="${v ? 'done' : nx[0] === e ? 'next' : ''}">${EVN[e]}<b>${v ? fmt(v.t) : nx[0] === e ? 'ถัดไป' : '–'}</b>${v && v.src !== 'scan' ? '<span class="small">แก้โดย Admin</span>' : ''}</div>`; }).join('')}</div></div>
+        <div class="grow"></div>
+        ${nx.length ? nx.map((e, i) => i === 0 ? `<button class="big" type="button" data-a="att" data-id="${e}">${EVN[e]} ${fmt(S.now)}</button>` : `<button class="ghost" type="button" data-a="att" data-id="${e}">${EVN[e]}เลย (วันนี้ไม่ได้พัก)</button>`).join('') : '<div class="alert green"><b>ลงเวลาครบกะนี้แล้ว</b></div>'}
+        <div class="small muted" style="text-align: center">ระบบแสดงปุ่มถัดไปให้เอง · กดซ้ำภายใน 5 นาทีไม่นับ · ไม่คิดสายหรือกลับก่อน</div>
+        <button class="linkbtn" type="button" data-a="home" style="text-align: center">ดูงานของฉัน</button>`;
+    }
+    case 'checkinDone': {
+      const a = A(c.area); const flagged = c.dist > CFG.radius;
+      const nextPt = c.type === 'SHIFT_IN' || c.type === 'BREAK_IN' ? pointsOf(a.id).map((p) => ({ p, st: pointStatus(p) })).find((x) => ['rework', 'over', 'todo'].includes(x.st.k)) : null;
+      return `${head(`ป้ายลงเวลา · ${esc(a.name)}`, `${EVN[c.type]}แล้ว ${fmt(S.now)}`, `${esc(me.name)} · ${SHIFT_NAME[me.shift]}`)}
+        ${flagged ? `<div class="alert amber"><b>บันทึกแล้ว แต่อยู่ไกลจากป้าย</b><span>ห่าง ${c.dist} ม. (รัศมี ${CFG.radius} ม.) · Admin จะเห็นรายการนี้ ถ้ายืนอยู่หน้าป้ายจริงแจ้ง Admin ได้</span></div>` : `<div class="alert green"><b>บันทึกแล้ว</b><span>ห่างป้าย ${c.dist} ม. อยู่ในรัศมี</span></div>`}
+        ${c.type === 'SHIFT_OUT' ? '<div class="card"><span>เลิกงานแล้ว สแกนจุดทำความสะอาดไม่ได้จนกว่าจะเข้างานกะถัดไป</span></div>' : ''}
+        ${nextPt ? `<div class="card"><span class="small muted">ต่อไป</span><span class="lbl">${esc(nextPt.p.name)} · ${roundLabel(nextPt.st.r.cur)}</span><span class="small">ทำเสร็จแล้วสแกน QR ที่จุดนั้น</span></div>` : ''}
+        <div class="grow"></div><button class="big" type="button" data-a="home">ดูงานของฉัน</button>`;
+    }
+    case 'needCheckin': { const p = PT(c.point); return `${head(`ป้ายจุด · ${esc(p.name)} · ${esc(A(p.area).name)}`, 'ยังไม่ได้ลงเวลาเข้างาน')}
+      <div class="alert red"><b>ไม่ได้บันทึกงาน</b><span>ต้องสแกนป้ายลงเวลาของ Area ก่อน แล้วค่อยสแกนจุดนี้</span></div>
+      <div class="card"><span class="lbl">ป้ายลงเวลาของคุณ <span class="mono">${me.area}-IN</span></span><span class="small">${esc(A(me.area).name)} · ตึก ${A(me.area).bld}</span></div>
+      <div class="card small muted">ลงเวลาไม่ได้ (แบตหมด ไม่มีเน็ต) แจ้ง Admin ให้เพิ่มเวลาเข้างานให้ Admin ต้องใส่เหตุผลทุกครั้ง</div>
+      <div class="grow"></div><button class="big" type="button" data-a="home">ดูงานของฉัน</button>`; }
+    case 'blocked': {
+      const p = c.point ? PT(c.point) : pointsOf(c.area)[0]; const a = A(p.area);
+      const msg = c.sup === 'bld' ? `จุดนี้อยู่ตึก ${a.bld} คุณประจำตึก ${me.bld}` : c.sup === 'shift' ? `ตอนนี้ไม่ใช่${SHIFT_NAME[me.shift]}ของคุณ` : `ป้ายนี้เป็นของ ${esc(a.name)} · Area ของคุณคือ ${esc(A(me.area)?.name || '–')}`;
+      return `${head(c.checkin ? `ป้ายลงเวลา · ${esc(a.name)}` : `ป้ายจุด · ${esc(p.name)} · ${esc(a.name)}`, me.role === 'supervisor' ? 'ตรวจจุดนี้ไม่ได้' : 'จุดนี้ไม่ใช่ Area ของคุณ')}
+        <div class="alert red"><b>ไม่ได้บันทึก</b><span>${msg}</span></div>
+        <div class="card"><span class="lbl">${me.role === 'supervisor' ? 'ถ้าได้รับมอบหมายให้ตรวจแทน' : 'ถ้าได้รับมอบหมายให้ทำแทน'}</span><span class="small">Admin เห็นการสแกนครั้งนี้แล้ว แจ้ง Admin ได้เลย เมื่อ Admin กดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ</span></div>
+        <div class="grow"></div><button class="big" type="button" data-a="home">${me.role === 'supervisor' ? 'กลับไปตึกของฉัน' : 'กลับไปงานของฉัน'}</button>`;
+    }
+    case 'submit': {
+      const p = PT(c.point); const st = pointStatus(p); const sel = P.sel; const a = assignSubmission(p, S.now);
+      const when = a.kind === 'late' ? `ส่งตอนนี้นับเป็นส่งช้า ${dur(a.late)}` : a.kind === 'offround' ? 'ส่งตอนนี้นับเป็นนอกรอบ การ์ดไม่เปลี่ยน' : a.win ? `ส่งหลัง ${fmt(a.win.e)} นับเป็นส่งช้า` : '';
+      return `${head(`${esc(A(p.area).name)} · ป้าย <span class="mono">${p.id}</span>${c.cover ? ' · ทำแทน' : ''}`, esc(p.name), `${esc(me.name)} · ${st.r.cur ? roundLabel(st.r.cur) : 'ไม่มีรอบตอนนี้'}`)}
+        ${st.k === 'rework' ? `<div class="alert red"><b>หัวหน้าให้แก้ไข · ${fmt(st.st.lastIns.t)} · ${U(st.st.lastIns.user).name}</b><span>"${esc(st.st.lastIns.defect)}"</span></div>` : ''}
+        ${when ? `<div class="small ${a.kind === 'ontime' || a.kind === 'rework' ? 'muted' : ''}" style="${a.kind === 'late' || a.kind === 'offround' ? 'color: var(--over-ink); font-weight: 600' : ''}">${when}</div>` : ''}
+        <div class="pick"><button type="button" class="${sel.status === 'NORMAL' ? 'on' : ''}" data-a="selStatus" data-id="NORMAL">เรียบร้อย</button><button type="button" class="${sel.status === 'ISSUE' ? 'on bad' : ''}" data-a="selStatus" data-id="ISSUE">พบปัญหา</button></div>
+        ${sel.status === 'ISSUE' ? `<div class="card"><span class="small muted">ปัญหาที่พบ (ไม่ใช่สถานะของการ์ด แต่ขึ้นป้ายแดงให้ Admin เห็น)</span><div class="tags">${['ขยะล้น', 'น้ำยาหมด', 'พื้นเปียก', 'ของชำรุด'].map((t) => `<button type="button" class="${sel.tags.includes(t) ? 'on' : ''}" data-a="tag" data-id="${t}">${t}</button>`).join('')}</div><label class="small muted" for="f-note">หมายเหตุ</label><input class="inp" id="f-note" data-f="note" placeholder="เช่น ก๊อกน้ำห้องที่ 2 รั่ว" value="${esc(sel.note)}"></div>` : ''}
+        <div class="grow"></div><button class="big" type="button" data-a="submit">ส่งงาน</button>`;
+    }
+    case 'submitDone': {
+      const p = PT(c.point); const s = S.subs.find((x) => x.id === c.sub); const st = pointStatus(p);
+      const kinds = { ontime: ['green', 'ส่งงานแล้ว', `${roundLabel(c.win)} · ตรงเวลา`], late: ['amber', `ส่งช้า ${dur(s.late)}`, `${roundLabel(c.win)} จบ ${fmt(c.win?.e)} · รอบนี้ยังไม่มีใครส่ง จึงนับเป็นงานของรอบนี้แต่ติดว่าส่งช้า`], rework: ['green', 'ส่งงานแก้แล้ว', 'หัวหน้าจะตรวจอีกรอบ'], offround: ['blue', 'บันทึกเป็นนอกรอบ', 'ตอนนี้ไม่มีรอบไหนรับงาน การ์ดไม่เปลี่ยน งานยังเก็บในประวัติ'] };
+      const k = kinds[s.kind];
+      return `${head(esc(A(p.area).name), `ส่งงานแล้ว ${fmt(s.t)}`, `${esc(p.name)} · ${esc(me.name)} · ${s.status === 'ISSUE' ? 'พบปัญหา' : 'เรียบร้อย'}`)}
+        <div class="alert ${k[0]}"><b>${k[1]}</b><span>${k[2]}</span></div>
+        ${gpsCard(s.dist)}
+        <div class="card"><div class="pt-top"><span class="lbl">สถานะของจุดนี้</span>${chip(st.k)}</div><span class="small muted">หน้าตึกของฉันของหัวหน้า และ Dashboard ของ Admin เปลี่ยนทันที${st.r.next ? ` · รอบถัดไป ${fmt(st.r.next.s)}–${fmt(st.r.next.e)}` : ''}</span></div>
+        <div class="grow"></div><button class="big" type="button" data-a="home">ดูงานของฉัน</button>`;
+    }
+    case 'failed': return `${head('ยังไม่ได้บันทึก', 'ส่งไม่สำเร็จ', 'ไม่มีสัญญาณ')}
+      <div class="alert red"><b>ยังไม่ได้บันทึก</b><span>ลองล่าสุด ${fmt(S.now)} · ${esc(c.what)}</span></div>
+      <div class="card"><span class="lbl">ทำอย่างไรต่อ</span><span class="small">1. อย่าปิดหน้านี้<br>2. เดินไปตรงที่มีสัญญาณ<br>3. กด "ส่งใหม่"</span></div>
+      <div class="card small muted">เวลาที่บันทึกคือเวลาที่ส่งสำเร็จ ถ้าพ้นช่วงรอบจะนับเป็นส่งช้า · ถ้าเดินออกไกลจากป้ายอาจติดธง · ระบบไม่เก็บงานไว้ในมือถือแล้วส่งเองทีหลัง</div>
+      <div class="grow"></div><button class="big" type="button" data-a="retry">ส่งใหม่</button>
+      <div class="small muted" style="text-align: center">ลองเปลี่ยน "สัญญาณ" ใต้มือถือเป็น "มี" ก่อนกด</div>`;
+    case 'inspect': {
+      const p = PT(c.point); const sub = S.subs.find((x) => x.id === c.sub); const sel = P.sel; const dist = P.gps === 'in' ? 5 : 80;
+      return `${head(`ตรวจงาน · ${esc(A(p.area).name)} · ตึก ${A(p.area).bld}`, esc(p.name), `หัวหน้า: ${esc(me.name)} · ประจำตึก ${me.bld} ${SHIFT_SHORT[me.shift]}`)}
+        <div class="card"><span class="small muted">งานที่รอตรวจ</span><span class="lbl">${fmt(sub.t)} · ${esc(U(sub.user).name)} · ${sub.status === 'ISSUE' ? 'พบปัญหา' : 'เรียบร้อย'}${sub.kind === 'late' ? ' · ส่งช้า' : sub.kind === 'rework' ? ' · งานแก้' : ''}</span>${sub.status === 'ISSUE' ? `<span class="issue">${esc([...sub.tags, sub.note].filter(Boolean).join(' · '))}</span>` : ''}</div>
+        ${gpsCard(dist)}
+        <span class="lbl">ผลการตรวจ</span>
+        <div class="pick"><button type="button" class="${sel.result === 'pass' ? 'on' : ''}" data-a="selResult" data-id="pass">สะอาด</button><button type="button" class="${sel.result === 'fail' ? 'on bad' : ''}" data-a="selResult" data-id="fail">ไม่สะอาด</button></div>
+        ${sel.result === 'fail' ? `<label class="lbl" for="f-defect">ข้อบกพร่อง <span class="small muted">(ต้องกรอก)</span></label><textarea class="inp" id="f-defect" data-f="defect" placeholder="เช่น พื้นใต้อ่างล้างมือยังเปียก">${esc(sel.defect)}</textarea>` : ''}
+        <div class="grow"></div><button class="big" type="button" data-a="inspect">บันทึกผลตรวจ</button>`;
+    }
+    case 'inspectDone': { const p = PT(c.point); return `${head(`ตรวจงาน · ${esc(A(p.area).name)}`, `บันทึกผลตรวจแล้ว ${fmt(S.now)}`, `${esc(p.name)} · ${esc(me.name)}`)}
+      ${c.result === 'pass' ? '<div class="alert green"><b>ผล: สะอาด</b><span>การ์ดเป็น "ตรวจผ่าน" จนกว่ารอบถัดไปจะเริ่ม</span></div>' : `<div class="alert red"><b>ผล: ไม่สะอาด · ต้องแก้ไข</b><span>"${esc(c.defect)}" · แม่บ้านเห็นทันทีในหน้างานของฉัน แก้แล้วสแกนจุดนี้ส่งใหม่</span></div>`}
+      <div class="grow"></div><button class="big" type="button" data-a="home">กลับไปตึกของฉัน</button>`; }
+    case 'nothing': { const p = PT(c.point); const st = pointStatus(p); return `${head(`ตรวจงาน · ${esc(A(p.area).name)} · ตึก ${A(p.area).bld}`, esc(p.name), `หัวหน้า: ${esc(me.name)}`)}
+      <div class="alert blue"><b>ยังไม่มีงานให้ตรวจ</b><span>${st.k === 'pass' ? 'รอบนี้ตรวจผ่านแล้ว' : st.k === 'rework' ? 'รอแม่บ้านแก้แล้วส่งใหม่' : st.k === 'notyet' || st.k === 'off' ? 'ยังไม่มีรอบที่เริ่ม' : `${roundLabel(st.r.cur)} แม่บ้านยังไม่ส่งงาน`} · ตรวจได้เฉพาะงานที่ส่งในรอบปัจจุบัน</span></div>
+      <div class="card"><span class="lbl">รอบของจุดนี้</span><div class="hist">${roundHistory(p).map((h) => `<span class="mono">${fmt(h.w.s)}–${fmt(h.w.e)}</span><span>${h.label}</span><span></span>`).join('') || '<span class="muted">ไม่มีรอบในกะนี้</span>'}</div></div>
+      <div class="grow"></div><button class="big" type="button" data-a="home">กลับไปตึกของฉัน</button>`; }
+    case 'msg': return `${head('แจ้งเตือน', esc(c.title))}<div class="alert ${c.kind}"><b>${esc(c.title)}</b><span>${esc(c.body)}</span></div><div class="grow"></div><button class="big" type="button" data-a="home">กลับหน้าหลัก</button>`;
+  }
+  return '';
+}
+function myWork(me) {
+  const sh = myShiftNow(me); const rec = sh && attRec(me.id, sh.key);
+  const mine = pointsOf(me.area).map((p) => ({ p, st: pointStatus(p) }));
+  const covers = sh ? S.covers.filter((c) => c.user === me.id && c.shift === sh.key && !c.cancelled) : [];
+  const sortPts = (arr) => arr.sort((a, b) => ORDER.indexOf(a.st.k) - ORDER.indexOf(b.st.k));
+  const all = [...mine, ...covers.flatMap((c) => pointsOf(c.area).map((p) => ({ p, st: pointStatus(p) })))];
+  const n = (k) => all.filter((x) => x.st.k === k).length;
+  const a = A(me.area);
+  return `${head(`${esc(a?.name || '–')} · ตึก ${a?.bld || '–'} · ตอนนี้ ${fmt(S.now)}`, 'งานของฉัน', `${esc(me.name)} · ${SHIFT_NAME[me.shift]}${rec?.ev.SHIFT_IN ? ` · เข้างาน ${fmt(rec.ev.SHIFT_IN.t)}` : ''}`)}
+    ${!sh ? `<div class="alert blue"><b>นอกกะของคุณ</b><span>งานจะขึ้นเมื่อ${SHIFT_NAME[me.shift]}เริ่ม</span></div>` : !rec?.ev.SHIFT_IN ? `<div class="alert amber"><b>ยังไม่ได้ลงเวลาเข้างาน</b><span>สแกนป้ายลงเวลา <span class="mono">${me.area}-IN</span> ก่อนเริ่มงาน</span></div>` : ''}
+    <div class="tiles"><div class="tile red"><b>${n('rework')}</b><span>ต้องแก้</span></div><div class="tile amber"><b>${n('over')}</b><span>เลยรอบ</span></div><div class="tile"><b>${n('wait') + n('pass')}</b><span>ส่งแล้ว</span></div></div>
+    ${covers.map((c) => `<div class="alert blue"><b>วันนี้ทำแทน ${esc(A(c.area).name)} ด้วย</b><span>Admin มอบหมาย ${fmt(c.at)} · หมดสิทธิ์เอง ${fmt(shiftAt(S.now).end)}</span></div>`).join('')}
+    ${covers.length ? `<div class="sect">${esc(a.name)} (Area ของฉัน)</div>` : ''}
+    ${sortPts(mine).map((x) => pointCard(x.p, { hint: x.st.k === 'rework' ? 'แก้แล้วสแกน QR ที่จุดนี้เพื่อส่งงานใหม่' : '' })).join('')}
+    ${covers.map((c) => `<div class="sect">${esc(A(c.area).name)} · ตึก ${A(c.area).bld} (ทำแทน)</div>${sortPts(pointsOf(c.area).map((p) => ({ p, st: pointStatus(p) }))).map((x) => pointCard(x.p)).join('')}`).join('')}
+    <div class="small muted" style="text-align: center">ไม่มีแจ้งเตือนเด้งขึ้น เปิดหน้านี้เพื่อดูงาน · อัปเดตเองเมื่อหัวหน้าตรวจ</div>`;
+}
+function supHome(me) {
+  const inShift = shiftAt(S.now).type === me.shift;
+  const pts = S.points.filter((p) => A(p.area).bld === me.bld && A(p.area).active).map((p) => ({ p, st: pointStatus(p) }));
+  const wait = pts.filter((x) => x.st.k === 'wait').sort((a, b) => a.st.st.pending.t - b.st.st.pending.t);
+  const rework = pts.filter((x) => x.st.k === 'rework');
+  const done = S.insps.filter((i) => i.user === me.id && shiftAt(i.t).key === shiftAt(S.now).key && i.t <= S.now).length;
+  return `${head(`หัวหน้า · ตึก ${me.bld} · ${SHIFT_NAME[me.shift]} · ตอนนี้ ${fmt(S.now)}`, 'ตึกของฉัน', `${esc(me.name)} · ${S.areas.filter((a) => a.bld === me.bld && a.active).length} Area · ${pts.length} จุด`)}
+    ${inShift ? '' : `<div class="alert blue"><b>นอกกะของคุณ</b><span>ดูได้ แต่ตรวจไม่ได้จนกว่า${SHIFT_NAME[me.shift]}จะเริ่ม</span></div>`}
+    <div class="tiles"><div class="tile blue"><b>${wait.length}</b><span>รอตรวจ</span></div><div class="tile red"><b>${rework.length}</b><span>รอแม่บ้านแก้</span></div><div class="tile"><b>${done}</b><span>ตรวจแล้วกะนี้</span></div></div>
+    <div class="sect">รอตรวจ (เรียงจากส่งก่อน)</div>
+    ${wait.map((x) => pointCard(x.p, { showArea: true, click: 'scanFromList', hint: 'ไปที่จุดนี้แล้วสแกน QR เพื่อตรวจ ›' })).join('') || '<div class="card small muted">ไม่มีงานรอตรวจ</div>'}
+    ${rework.length ? `<div class="sect">รอแม่บ้านแก้</div>${rework.map((x) => pointCard(x.p, { showArea: true })).join('')}` : ''}
+    <div class="small muted" style="text-align: center">ตรวจได้โดยสแกน QR ที่จุดเท่านั้น · ในต้นแบบกดการ์ดแทนการเดินไปสแกน</div>`;
+}
+function roundHistory(p, sh = shiftAt(S.now)) {
+  const area = A(p.area); if (sh.type === 'N' && area.pattern === 'D') return [];
+  return (p.win[sh.type] || []).map((w, i) => {
+    const ab = winAbs(sh, w); const key = roundKey(sh, i);
+    if (ab.s > S.now) return { w: ab, label: 'ยังไม่ถึงรอบ', k: 'notyet' };
+    const st = roundState(p, key, S.now);
+    const cur = roundsNow(p, S.now).cur; const isCur = cur && cur.key === key;
+    let label, k;
+    if (st.lastIns?.result === 'fail' && !st.pending) { label = isCur ? 'ต้องแก้ไข' : 'ไม่ได้แก้'; k = 'rework'; }
+    else if (st.pending) { label = isCur ? 'รอตรวจ' : 'ไม่ได้ตรวจ'; k = 'wait'; }
+    else if (st.lastIns?.result === 'pass') { label = 'ตรวจผ่าน'; k = 'pass'; }
+    else { label = isCur ? (S.now > ab.e ? 'เลยรอบ' : 'ยังไม่ทำ') : 'ไม่ได้ทำ'; k = isCur && S.now <= ab.e ? 'todo' : 'over'; }
+    const late = st.subs.find((s) => s.kind === 'late');
+    return { w: ab, label: label + (isCur ? ' · รอบปัจจุบัน' : '') + (late ? ` · ส่งช้า ${dur(late.late)}` : ''), k, st };
+  });
+}
+
+/* ───────── render: office (Admin) ───────── */
+const TABS = [['status', 'สถานะจุด'], ['att', 'การเข้างาน'], ['flags', 'รายการที่ขึ้นเตือน'], ['summary', 'สรุปการตรวจ'], ['areas', 'จัดการ Area และป้าย'], ['accounts', 'บัญชีผู้ใช้'], ['audit', 'ประวัติ Admin'], ['excel', 'ส่งออก Excel']];
+function office() {
+  const O = S.office; const nf = openFlags().length + S.areas.filter((a) => needsArea(a, shiftAt(S.now)) && areaPresence(a, shiftAt(S.now)).k === 'empty').length;
+  const body = { status: tabStatus, att: tabAtt, flags: tabFlags, summary: tabSummary, areas: tabAreas, accounts: tabAccounts, audit: tabAudit, excel: tabExcel }[O.tab]();
+  return `<div class="office-head"><div><div class="pane-label">DASHBOARD · ADMIN สมชาย</div><h2 style="font-size: 24px">${TABS.find((t) => t[0] === O.tab)[1]}</h2></div>
+    <div class="tabs" role="tablist">${TABS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${O.tab === k}" class="${O.tab === k ? 'on' : ''}" data-a="tab" data-id="${k}">${l}${k === 'flags' && nf ? `<span class="count">${nf}</span>` : ''}</button>`).join('')}</div></div>${body}`;
+}
+function tabStatus() {
+  const O = S.office; const areas = S.areas.filter((a) => a.active && (O.bld === 'all' || a.bld === O.bld));
+  const pts = areas.flatMap((a) => pointsOf(a.id)).map((p) => ({ p, st: pointStatus(p) }));
+  const cnt = (k) => pts.filter((x) => x.st.k === k).length; const issues = pts.filter((x) => latestIssue(x.p)).length;
+  const show = (x) => (!O.filter || x.st.k === O.filter) && (!O.issueOnly || latestIssue(x.p));
+  const colors = { rework: 'var(--rework)', over: 'var(--over)', wait: 'var(--wait)', pass: 'var(--pass)', todo: 'var(--todo)', notyet: 'var(--notyet)', off: 'var(--off)' };
+  const open = O.open && PT(O.open);
+  return `<div class="toolbar">
+      <label for="f-bld">ตึก</label><select id="f-bld" data-f="bld"><option value="all">ทุกตึก</option>${['A', 'B'].map((b) => `<option value="${b}" ${O.bld === b ? 'selected' : ''}>${b}</option>`).join('')}</select>
+      ${ORDER.map((k) => `<span class="legend ${O.filter === k ? 'on' : ''}"><button type="button" data-a="filter" data-id="${k}"><span class="dot" style="background: ${colors[k]}"></span>${K[k]} <b class="num">${cnt(k)}</b></button></span>`).join('')}
+      <span class="legend ${O.issueOnly ? 'on' : ''}" style="border-color: var(--rework-line)"><button type="button" data-a="issueOnly" style="color: var(--rework-ink)">มีปัญหาที่แจ้ง <b class="num">${issues}</b></button></span>
+    </div>
+    ${open ? pointDrawer(open) : ''}
+    ${areas.map((a) => { const list = pointsOf(a.id).map((p) => ({ p, st: pointStatus(p) })).filter(show).sort((x, y) => ORDER.indexOf(x.st.k) - ORDER.indexOf(y.st.k)); if (!list.length) return ''; const pr = areaPresence(a, shiftAt(S.now)); return `<section class="area"><div class="area-head"><h3>${esc(a.name)}</h3><span class="small muted">ตึก ${a.bld} · ${a.pattern === 'D' ? 'เฉพาะกะเช้า' : '2 กะ'} · ${needsArea(a, shiftAt(S.now)) ? `${pr.owner ? esc(pr.owner.name) : '–'} <span class="chip ${PRES[pr.k][1]}">${PRES[pr.k][0]}</span>` : 'ไม่มีกะนี้'}</span></div><div class="grid">${list.map((x) => pointCard(x.p, { click: 'openPoint' })).join('')}</div></section>`; }).join('') || '<div class="panel muted">ไม่มีจุดตามตัวกรองนี้</div>'}
+    <div class="note">รอบเป็นช่วงเวลา พ้นเวลาสิ้นสุดแล้วยังไม่ส่ง = เลยรอบ · ส่งหลังช่วงจบนับเป็นรอบนั้นแต่ติดว่าส่งช้า · รอบใหม่เริ่มการ์ดเริ่มใหม่ ผลรอบเก่าอยู่ในประวัติ (กดการ์ดเพื่อดู) · ป้ายแดง "แจ้งปัญหา" ไม่ใช่สถานะของการ์ด</div>`;
+}
+function pointDrawer(p) {
+  const subs = S.subs.filter((s) => s.point === p.id && s.t <= S.now && shiftAt(s.t).key === shiftAt(S.now).key);
+  const ins = S.insps.filter((i) => i.point === p.id && i.t <= S.now && shiftAt(i.t).key === shiftAt(S.now).key);
+  const events = [...subs.map((s) => ({ t: s.t, txt: `${U(s.user).name} ส่งงาน · ${s.status === 'ISSUE' ? 'พบปัญหา: ' + esc([...s.tags, s.note].filter(Boolean).join(' · ')) : 'เรียบร้อย'} · ${{ ontime: 'ตรงเวลา', late: `ส่งช้า ${dur(s.late)}`, rework: 'งานแก้', offround: 'นอกรอบ' }[s.kind]}${s.cover ? ' · ทำแทน' : ''}${s.flag ? ` · <span class="chip flag">ห่าง ${s.dist} ม.</span>` : ''}` })), ...ins.map((i) => ({ t: i.t, txt: `${U(i.user).name} ตรวจ · ${i.result === 'pass' ? 'สะอาด' : `ไม่สะอาด: "${esc(i.defect)}"`}${i.flag ? ` · <span class="chip flag">ห่าง ${i.dist} ม.</span>` : ''}` }))].sort((a, b) => a.t - b.t);
+  return `<div class="panel drawer"><div class="pt-top"><h3>${esc(p.name)} · <span class="mono">${p.id}</span> · ${esc(A(p.area).name)}</h3><button class="btn sm" type="button" data-a="openPoint" data-id="${p.id}">ปิด</button></div>
+    <div class="two"><div><div class="lbl" style="margin-bottom: 6px">รอบของกะนี้</div><div class="hist">${roundHistory(p).map((h) => `<span class="mono">${fmt(h.w.s)}–${fmt(h.w.e)}</span><span class="dot" style="background: var(--${h.k === 'notyet' ? 'notyet' : h.k})"></span><span>${h.label}</span>`).join('') || '<span class="muted">ไม่มีรอบ</span>'}</div></div>
+    <div><div class="lbl" style="margin-bottom: 6px">เกิดอะไรขึ้นกะนี้</div><div class="hist" style="grid-template-columns: max-content 1fr">${events.map((e) => `<span class="mono">${fmt(e.t)}</span><span>${e.txt}</span>`).join('') || '<span class="muted">ยังไม่มี</span>'}</div></div></div></div>`;
+}
+function tabAtt() {
+  const O = S.office; const sh = shiftAt(S.now);
+  const rows = S.areas.filter((a) => needsArea(a, sh)).map((a) => ({ a, pr: areaPresence(a, sh) })).sort((x, y) => (x.pr.k === 'empty' ? -1 : 0) - (y.pr.k === 'empty' ? -1 : 0));
+  const ed = O.editAtt;
+  return `<div class="toolbar"><span class="shift-pill">${SHIFT_NAME[sh.type]} · ${DATES[sh.day]}</span><span class="note">เรียง Area ที่ยังไม่มีคนขึ้นก่อน · Area ที่ทำเฉพาะกะเช้าไม่นับในกะดึก</span></div>
+    ${ed ? attEditor(ed) : ''}
+    <div class="tablewrap"><table><thead><tr><th>Area</th><th>แม่บ้าน</th><th>สถานะ</th>${EV.map((e) => `<th>${EVN[e]}</th>`).join('')}<th>ธง</th><th></th></tr></thead><tbody>
+    ${rows.map(({ a, pr }) => `<tr><td><b>${esc(a.name)}</b><div class="small muted">ตึก ${a.bld}</div></td><td>${pr.owner ? esc(pr.owner.name) : '–'}${pr.cover ? `<div class="small muted">ทำแทน: ${esc(U(pr.cover.user).name)}</div>` : ''}</td><td><span class="chip ${PRES[pr.k][1]}">${PRES[pr.k][0]}</span></td>
+      ${EV.map((e) => { const v = pr.rec?.ev[e]; return `<td class="t">${v ? fmt(v.t) : '–'}${v && v.src !== 'scan' ? ' <span class="chip admin">แก้โดย Admin</span>' : ''}</td>`; }).join('')}
+      <td>${EV.some((e) => pr.rec?.ev[e]?.flag) ? '<span class="chip flag">ไกลจากป้าย</span>' : ''}</td>
+      <td>${pr.owner ? `<button class="btn sm" type="button" data-a="editAtt" data-id="${pr.owner.id}|${sh.key}">${pr.rec ? 'แก้เวลา' : 'เพิ่มเวลา'}</button>` : ''}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="note">หน้านี้ดูว่าแต่ละ Area มีคนอยู่หรือยัง ไม่ใช่ระบบลงเวลาทำงานของบริษัท จึงไม่คิดสายหรือกลับก่อน · มอบหมายคนทำแทนได้ที่ "รายการที่ขึ้นเตือน"</div>`;
+}
+function attEditor(ed) {
+  const u = U(ed.user); const rec = attRec(ed.user, ed.shift);
+  return `<div class="panel drawer"><h3>${rec ? 'แก้เวลา' : 'เพิ่มเวลา'} · ${esc(u.name)} · ${esc(A(u.area).name)}</h3>
+    <div class="form-grid"><label>รายการ<select data-f="ed.type">${EV.map((e) => `<option value="${e}" ${ed.type === e ? 'selected' : ''}>${EVN[e]}${rec?.ev[e] ? ` (ตอนนี้ ${fmt(rec.ev[e].t)})` : ''}</option>`).join('')}</select></label>
+    <label>เวลา<input data-f="ed.time" class="mono" placeholder="07:00" value="${esc(ed.time)}"></label>
+    <label style="grid-column: span 2">เหตุผล (ต้องกรอก)<input data-f="ed.reason" placeholder="เช่น มือถือแบตหมด หัวหน้ายืนยันว่ามาทำงาน" value="${esc(ed.reason)}"></label></div>
+    ${ed.err ? `<div class="err">${esc(ed.err)}</div>` : ''}
+    <div class="toolbar"><button class="btn primary" type="button" data-a="saveAtt">บันทึก</button><button class="btn" type="button" data-a="editAtt">ยกเลิก</button><span class="note">ระบบเก็บค่าเดิม ผู้แก้ และเวลาที่แก้ไว้ในประวัติ · รายการนี้จะมีป้าย "แก้โดย Admin"</span></div></div>`;
+}
+function tabFlags() {
+  const O = S.office; const sh = shiftAt(S.now);
+  const empty = S.areas.filter((a) => needsArea(a, sh) && areaPresence(a, sh).k === 'empty');
+  const flags = allFlags(); const list = O.flagView === 'open' ? flags.filter((f) => !S.acks[f.id] && !(f.fix && f.fix.ev.SHIFT_OUT)) : O.flagView === 'done' ? flags.filter((f) => S.acks[f.id] || (f.fix && f.fix.ev.SHIFT_OUT)) : flags;
+  const covers = S.covers.filter((c) => c.shift === sh.key && !c.cancelled);
+  const cf = O.coverFor;
+  return `<div class="two"><div class="panel"><h3>Area ที่ยังไม่มีคน (${empty.length})</h3>
+      ${empty.map((a) => { const pr = areaPresence(a, sh); const tried = S.blocked.filter((b) => PT(b.point).area === a.id && shiftAt(b.t).key === sh.key && U(b.user).role === 'cleaner'); return `<div class="card"><div class="pt-top"><b>${esc(a.name)} · ตึก ${a.bld}</b><button class="btn sm ${cf === a.id ? '' : 'primary'}" type="button" data-a="coverFor" data-id="${a.id}">${cf === a.id ? 'ปิด' : 'มอบหมายคนทำแทน'}</button></div><span class="small muted">${pr.owner ? `${esc(pr.owner.name)} ยังไม่ลงเวลา` : 'ไม่มีแม่บ้านประจำกะนี้'}${tried.length ? ` · มีคนสแกนป้ายของ Area นี้ ${tried.map((b) => `${U(b.user).name} ${fmt(b.t)}`).join(', ')}` : ''}</span>${cf === a.id ? coverPicker(a, sh, tried) : ''}</div>`; }).join('') || '<span class="muted small">ทุก Area มีคนแล้ว</span>'}
+      <h3 style="margin-top: 6px">คนทำแทนกะนี้ (${covers.length})</h3>
+      ${covers.map((c) => `<div class="card"><span><b>${esc(U(c.user).name)}</b> ทำแทน ${esc(A(c.area).name)} · Admin มอบหมาย ${fmt(c.at)}</span><div class="pt-top"><span class="small muted">หมดสิทธิ์เอง ${fmt(sh.end)}</span><button class="btn sm danger" type="button" data-a="cancelCover" data-id="${c.id}">ยกเลิกก่อนหมดกะ</button></div></div>`).join('') || '<span class="muted small">ยังไม่มี</span>'}
+    </div>
+    <div class="panel"><div class="pt-top"><h3>รายการที่ขึ้นเตือน</h3><div class="seg">${[['open', 'ยังไม่ได้คุย'], ['done', 'คุยแล้ว'], ['all', 'ทั้งหมด']].map(([k, l]) => `<button type="button" class="${O.flagView === k ? 'on' : ''}" data-a="flagView" data-id="${k}">${l}</button>`).join('')}</div></div>
+      ${list.map((f) => `<div class="card"><div class="pt-top"><span><span class="mono small">${fmtD(f.t)}</span> · <b>${esc(U(f.who).name)}</b>${U(f.who).role === 'supervisor' ? ' (หัวหน้า)' : ''}</span><span class="chip ${f.cls}">${f.type}</span></div><span class="small">${f.detail}</span>
+        <div class="toolbar">${f.fix && !f.fix.ev.SHIFT_OUT ? `<button class="btn sm primary" type="button" data-a="editAtt" data-id="${f.fix.user}|${f.fix.shift}|SHIFT_OUT">เติมเวลาเลิกงาน</button>` : ''}${f.blk && U(f.who).role === 'cleaner' && !coverOf(f.who, PT(f.blk.point).area, shiftAt(f.t).key) && shiftAt(f.t).key === sh.key ? `<button class="btn sm primary" type="button" data-a="coverFor" data-id="${PT(f.blk.point).area}">ให้ทำแทน</button>` : ''}${!f.fix && !S.acks[f.id] ? `<button class="btn sm" type="button" data-a="ack" data-id="${f.id}">คุยแล้ว ปิดเตือน</button>` : ''}${S.acks[f.id] ? '<span class="small muted">ปิดเตือนแล้ว</span>' : ''}</div></div>`).join('') || '<span class="muted small">ไม่มีรายการ</span>'}
+      <div class="note">ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติ Admin</div></div></div>`;
+}
+function coverPicker(area, sh, tried) {
+  const cands = S.users.filter((u) => u.role === 'cleaner' && u.active && u.shift === sh.type && u.area !== area.id && attRec(u.id, sh.key)?.ev.SHIFT_IN && !attRec(u.id, sh.key)?.ev.SHIFT_OUT);
+  return `<div class="areapick">${cands.map((u) => `<button type="button" data-a="assignCover" data-id="${u.id}|${area.id}"><b>${esc(u.name)}</b> · ${esc(A(u.area).name)} · เข้างานแล้ว ${fmt(attRec(u.id, sh.key).ev.SHIFT_IN.t)}${tried.some((b) => b.user === u.id) ? ' · <span style="color: var(--accent)">สแกนป้ายของ Area นี้แล้ว</span>' : ''}</button>`).join('') || '<span class="small muted">ไม่มีแม่บ้านที่เข้างานอยู่ให้เลือก</span>'}</div><span class="small muted">มีผลเฉพาะ${SHIFT_NAME[sh.type]}นี้ หมดสิทธิ์เองตอน ${fmt(sh.end)} · คนทำแทนลงเวลาที่ป้ายของ Area ตัวเองตามปกติ</span>`;
+}
+function tabSummary() {
+  const sh = shiftAt(S.now); const day = sh.day;
+  const sups = S.users.filter((u) => u.role === 'supervisor' && u.active);
+  return `<div class="toolbar"><span class="shift-pill">วันนี้ ${DATES[day]}</span><span class="note">ช่วงทดลองแสดงวันนี้ ระบบจริงเลือกช่วงวันได้ (ค่าเริ่ม 7 วัน)</span></div>
+    <div class="tablewrap"><table><thead><tr><th>หัวหน้า</th><th>ตึก · กะ</th><th>ตรวจ (ครั้ง)</th><th>จุดที่ตรวจแล้ว</th><th></th><th>งานที่ส่งแล้วไม่ได้ตรวจ</th><th>ให้แก้ไข</th><th>ตรวจไกลจากป้าย</th></tr></thead><tbody>
+    ${sups.map((s) => {
+      const ins = S.insps.filter((i) => i.user === s.id && i.t <= S.now && dayOf(i.t) === day);
+      const pts = S.points.filter((p) => A(p.area).bld === s.bld && A(p.area).active && (s.shift === 'D' || A(p.area).pattern === '2'));
+      const inspected = new Set(ins.map((i) => i.point)).size;
+      const subsInBld = S.subs.filter((x) => x.t <= S.now && dayOf(x.t) === day && x.round && A(PT(x.point).area).bld === s.bld && shiftAt(x.t).type === s.shift);
+      const missed = subsInBld.filter((x) => !S.insps.some((i) => i.sub === x.id) && roundsNow(PT(x.point), S.now).cur?.key !== x.round).length;
+      const pct = pts.length ? Math.round((inspected / pts.length) * 100) : 0;
+      return `<tr><td><b>${esc(s.name)}</b></td><td>ตึก ${s.bld} · ${SHIFT_SHORT[s.shift]}</td><td class="num">${ins.length}</td><td class="num">${inspected} จาก ${pts.length} จุด<div class="small muted">ไม่ได้ตรวจ ${pts.length - inspected} จุด</div></td><td><div class="bar"><i style="width: ${pct}%"></i></div></td><td class="num">${missed}</td><td class="num">${ins.filter((i) => i.result === 'fail').length}</td><td class="num">${ins.filter((i) => i.flag).length}</td></tr>`;
+    }).join('')}</tbody></table></div>
+    <div class="note">ระบบไม่ประเมินผลใคร แค่แสดงข้อมูลให้ Admin เห็น · "ไม่ได้ตรวจ" นับเฉพาะงานของรอบที่จบไปแล้ว · หน้านี้ Admin เท่านั้น</div>`;
+}
+function tabAreas() {
+  const O = S.office; const a = A(O.areaSel); const ed = O.winEd || {};
+  return `<div class="two" style="grid-template-columns: minmax(0, 0.6fr) minmax(0, 1.4fr)"><div class="panel"><h3>Area ทั้งหมด (${S.areas.length})</h3><div class="areapick">${S.areas.map((x) => `<button type="button" class="${x.id === O.areaSel ? 'on' : ''}" data-a="areaSel" data-id="${x.id}"><b>${esc(x.name)}</b><div class="small muted">ตึก ${x.bld} · ${x.pattern === 'D' ? 'เฉพาะกะเช้า' : '2 กะ'} · ${pointsOf(x.id).length} จุด${x.active ? '' : ' · ปิดใช้งาน'}</div></button>`).join('')}</div></div>
+    <div class="panel"><div class="pt-top"><div><div class="small muted">ตึก ${a.bld} · ${a.pattern === 'D' ? 'เฉพาะกะเช้า' : '2 กะ (เช้า + ดึก)'}</div><h3 style="font-size: 20px">${esc(a.name)}</h3><div class="small">แม่บ้านประจำ: ${['D', 'N'].filter((t) => t === 'D' || a.pattern === '2').map((t) => `${SHIFT_SHORT[t]} ${esc(S.users.find((u) => u.role === 'cleaner' && u.area === a.id && u.shift === t && u.active)?.name || '–')}`).join(' · ')}</div></div>
+      <button class="btn ${a.active ? 'danger' : ''}" type="button" data-a="toggleArea">${a.active ? 'ปิดใช้งาน Area' : 'เปิดใช้งาน'}</button></div>
+      <div class="card"><div class="pt-top"><span><span class="mono">${a.id}-IN</span> · ป้ายลงเวลา (ระบบสร้างให้เอง)</span><span class="chip k-pass">หน้างาน ±14 ม.</span></div></div>
+      ${pointsOf(a.id).map((p) => `<div class="card"><div class="pt-top"><b>${esc(p.name)} <span class="mono small muted">${p.id}</span></b><span class="chip ${p.loc[0] === 'site' ? 'k-pass' : 'flag'}">${p.loc[0] === 'site' ? `หน้างาน ±${p.loc[1]} ม.` : 'ยังไม่ยืนยันหน้างาน'}</span></div>
+        ${['D', 'N'].filter((t) => t === 'D' || a.pattern === '2').map((t) => `<div class="toolbar"><span class="small muted" style="min-width: 48px">${SHIFT_SHORT[t]}</span>${p.win[t].map((w, i) => `<span class="win">${fmt(w[0])}–${fmt(w[1])}<button type="button" aria-label="ลบช่วง" data-a="delWin" data-id="${p.id}|${t}|${i}">×</button></span>`).join('')}
+          ${ed.p === p.id && ed.t === t ? `<input class="mono" style="width: 70px" data-f="winEd.s" placeholder="เริ่ม" value="${esc(ed.s || '')}"><input class="mono" style="width: 70px" data-f="winEd.e" placeholder="ถึง" value="${esc(ed.e || '')}"><button class="btn sm primary" type="button" data-a="addWin">เพิ่ม</button><button class="btn sm" type="button" data-a="winEd">ยกเลิก</button>` : `<button class="btn sm" type="button" data-a="winEd" data-id="${p.id}|${t}">+ ช่วง</button>`}</div>`).join('')}
+        ${ed.p === p.id && ed.err ? `<div class="err">${esc(ed.err)}</div>` : ''}
+        <div class="toolbar"><button class="btn sm" type="button" data-a="regenQr" data-id="${p.id}">ออก QR ใหม่</button><span class="note">เก็บพิกัด: เปิดหน้านี้บนมือถือ ยืนที่ป้าย กด "ใช้ตำแหน่งตรงนี้" (อ่าน GPS 30 วินาที ใช้ค่ากลาง)</span></div></div>`).join('')}
+      <div class="note">ช่วงรอบห้ามซ้อนกันและต้องอยู่ในกะ · แก้แล้วการ์ดบน Dashboard คำนวณใหม่ทันที · ทุกการแก้เก็บลงประวัติ Admin</div></div></div>`;
+}
+function tabAccounts() {
+  const O = S.office.acc; const q = O.q.trim();
+  const list = S.users.filter((u) => u.role !== 'admin' && (O.role === 'all' || (O.role === 'off' ? !u.active : u.role === O.role)) && (!q || u.name.includes(q) || u.emp.includes(q)));
+  const n = (f) => S.users.filter(f).length;
+  const add = O.add;
+  return `<div class="toolbar"><div class="seg">${[['all', `ทั้งหมด (${n((u) => u.role !== 'admin')})`], ['cleaner', `แม่บ้าน (${n((u) => u.role === 'cleaner')})`], ['supervisor', `หัวหน้า (${n((u) => u.role === 'supervisor')})`], ['off', `ปิดใช้งาน (${n((u) => !u.active)})`]].map(([k, l]) => `<button type="button" class="${O.role === k ? 'on' : ''}" data-a="accRole" data-id="${k}">${l}</button>`).join('')}</div>
+      <input type="search" id="f-accq" data-f="acc.q" placeholder="ค้นหาชื่อหรือรหัสพนักงาน" value="${esc(O.q)}"><button class="btn primary" type="button" data-a="addAcc" style="margin-left: auto">${add ? 'ปิดฟอร์ม' : '+ เพิ่มบัญชี'}</button></div>
+    ${add ? accForm(add) : ''}
+    <div class="tablewrap"><table><thead><tr><th>ชื่อ</th><th>รหัสพนักงาน</th><th>บทบาท</th><th>ประจำที่</th><th>สถานะ</th><th></th></tr></thead><tbody>
+    ${list.map((u) => `<tr><td><b>${esc(u.name)}</b></td><td class="t">${u.emp}</td><td>${u.role === 'cleaner' ? 'แม่บ้าน' : 'หัวหน้า'}</td><td>${u.role === 'cleaner' ? (u.area ? `${esc(A(u.area).name)} · ${SHIFT_SHORT[u.shift]}` : '–') : `ตึก ${u.bld} · ${SHIFT_SHORT[u.shift]}`}</td><td>${u.active ? '<span class="chip k-pass">ใช้งาน</span>' : '<span class="chip k-off">ปิดใช้งาน</span>'}</td>
+      <td>${O.phoneFor === u.id ? `<span class="toolbar"><input class="mono" style="width: 130px" data-f="acc.newPhone" placeholder="เบอร์ใหม่ 10 หลัก" value="${esc(O.newPhone || '')}"><button class="btn sm primary" type="button" data-a="savePhone">บันทึก</button><button class="btn sm" type="button" data-a="phoneFor">ยกเลิก</button></span>${O.phoneErr ? `<div class="err">${esc(O.phoneErr)}</div>` : ''}` : `<span class="toolbar"><button class="btn sm" type="button" data-a="phoneFor" data-id="${u.id}">แก้เบอร์โทร</button><button class="btn sm ${u.active ? 'danger' : ''}" type="button" data-a="toggleUser" data-id="${u.id}">${u.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</button></span>`}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="note">ไม่มีปุ่มลบ ใช้ปิดใช้งานแทนเพื่อให้ประวัติยังอยู่ · แก้เบอร์หรือปิดใช้งานแล้ว ทุกเครื่องของคนนั้นหลุดทันที · ระบบเก็บเบอร์แบบเปิดดูไม่ได้ (ต้นแบบนี้เก็บไว้ในหน้าเว็บเพื่อสาธิตเท่านั้น) · นำเข้าจาก Excel มาก่อนขยายครบทุกตึก</div>`;
+}
+function accForm(f) {
+  const slots = S.areas.filter((a) => a.active).flatMap((a) => ['D', 'N'].filter((t) => t === 'D' || a.pattern === '2').map((t) => ({ a, t, taken: S.users.find((u) => u.role === 'cleaner' && u.active && u.area === a.id && u.shift === t) })));
+  const sslots = ['A', 'B'].flatMap((b) => ['D', 'N'].map((t) => ({ b, t, taken: S.users.find((u) => u.role === 'supervisor' && u.active && u.bld === b && u.shift === t) })));
+  return `<div class="panel drawer"><h3>เพิ่มบัญชี</h3><div class="form-grid">
+    <label>บทบาท<select data-f="acc.add.role"><option value="cleaner" ${f.role === 'cleaner' ? 'selected' : ''}>แม่บ้าน</option><option value="supervisor" ${f.role === 'supervisor' ? 'selected' : ''}>หัวหน้า</option></select></label>
+    <label>ชื่อที่แสดง<input data-f="acc.add.name" value="${esc(f.name)}"></label>
+    <label>รหัสพนักงาน (ห้ามซ้ำ)<input class="mono" data-f="acc.add.emp" value="${esc(f.emp)}"></label>
+    <label>เบอร์โทร (ใช้แทนรหัสผ่าน)<input class="mono" data-f="acc.add.phone" value="${esc(f.phone)}"></label>
+    <label style="grid-column: span 2">${f.role === 'cleaner' ? 'Area และกะ' : 'ตึกและกะ'}<select data-f="acc.add.slot"><option value="">เลือก</option>${f.role === 'cleaner' ? slots.map((s) => `<option value="${s.a.id}|${s.t}" ${s.taken ? 'disabled' : ''} ${f.slot === `${s.a.id}|${s.t}` ? 'selected' : ''}>${esc(s.a.name)} · ${SHIFT_SHORT[s.t]}${s.taken ? ` (มี ${esc(s.taken.name)} แล้ว)` : ''}</option>`).join('') : sslots.map((s) => `<option value="${s.b}|${s.t}" ${s.taken ? 'disabled' : ''} ${f.slot === `${s.b}|${s.t}` ? 'selected' : ''}>ตึก ${s.b} · ${SHIFT_SHORT[s.t]}${s.taken ? ` (มี ${esc(s.taken.name)} แล้ว)` : ''}</option>`).join('')}</select></label></div>
+    ${f.err ? `<div class="err">${esc(f.err)}</div>` : ''}
+    <div class="toolbar"><button class="btn primary" type="button" data-a="saveAcc">สร้างบัญชี</button><span class="note">${f.role === 'cleaner' ? 'Area ละ 1 คนต่อกะ ช่องที่มีคนแล้วเลือกไม่ได้' : 'ตึกละ 1 คนต่อกะ ตรวจได้เฉพาะในกะตัวเอง ไม่ต้องลงเวลา'}</span></div></div>`;
+}
+function tabAudit() {
+  const O = S.office; const types = [...new Set(S.audit.map((a) => a.type))];
+  const list = S.audit.filter((a) => a.t <= S.now && (O.auditType === 'all' || a.type === O.auditType)).slice().reverse();
+  return `<div class="toolbar"><label for="f-audt">ประเภท</label><select id="f-audt" data-f="auditType"><option value="all">ทุกประเภท</option>${types.map((t) => `<option ${O.auditType === t ? 'selected' : ''}>${t}</option>`).join('')}</select><span class="note">ลองแก้อะไรสักอย่างในแท็บอื่น แล้วกลับมาดูที่นี่</span></div>
+    <div class="tablewrap"><table><thead><tr><th>เวลา</th><th>ผู้ทำ</th><th>ประเภท</th><th>รายการที่ถูกแก้</th><th>ก่อน → หลัง</th><th>เหตุผล</th></tr></thead><tbody>
+    ${list.map((a) => `<tr><td class="t">${fmtD(a.t)}</td><td>${esc(U(a.who).name)}</td><td><b>${esc(a.type)}</b></td><td>${esc(a.target)}</td><td>${esc(a.before)} → ${esc(a.after)}</td><td>${a.reason ? esc(a.reason) : '<span class="muted">–</span>'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">ยังไม่มี</td></tr>'}
+    </tbody></table></div>
+    <div class="note">อ่านอย่างเดียว ไม่มีใครแก้หรือลบได้ · เก็บนานเท่ากับข้อมูลที่ถูกแก้ · เบอร์โทรไม่แสดงทั้งก่อนและหลัง</div>`;
+}
+function tabExcel() {
+  const X = S.office.xl; const day = shiftAt(S.now).day;
+  const atRows = S.att.filter((r) => U(r.user).area).map((r) => { const u = U(r.user); return [u.name, A(u.area).name, `${SHIFT_SHORT[r.shift.slice(-1)]} ${DATES[parseInt(r.shift, 10)]}`, ...EV.map((e) => (r.ev[e] && r.ev[e].t <= S.now ? fmt(r.ev[e].t) : '')), EV.some((e) => r.ev[e]?.src && r.ev[e].src !== 'scan') ? 'แก้โดย Admin' : 'สแกนเอง', EV.some((e) => r.ev[e]?.flag) ? 'นอกรัศมี' : 'ในรัศมี']; });
+  const subRows = S.subs.filter((s) => s.t <= S.now).map((s) => [fmtD(s.t), PT(s.point).name, A(PT(s.point).area).name, U(s.user).name, { ontime: 'ตรงเวลา', late: `ส่งช้า ${s.late} นาที`, rework: 'งานแก้', offround: 'นอกรอบ' }[s.kind], s.status === 'ISSUE' ? [...s.tags, s.note].filter(Boolean).join(' · ') : '', s.cover ? 'ใช่' : '', `${s.dist} ม. · ${s.flag ? 'นอกรัศมี' : 'ในรัศมี'}`]);
+  const insRows = S.insps.filter((i) => i.t <= S.now).map((i) => [fmtD(i.t), U(i.user).name, PT(i.point).name, i.result === 'pass' ? 'สะอาด' : 'ไม่สะอาด', i.defect, `${i.dist} ม. · ${i.flag ? 'นอกรัศมี' : 'ในรัศมี'}`]);
+  const sheet = (on, title, cols, rows) => on ? `<div class="panel"><h3>แผ่นงาน: ${title} <span class="small muted">(${rows.length} แถว)</span></h3><div class="tablewrap"><table><thead><tr>${cols.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.slice(0, 8).map((r) => `<tr>${r.map((v) => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${rows.length > 8 ? `<span class="note">แสดง 8 แถวแรก</span>` : ''}</div>` : '';
+  return `<div class="panel"><div class="toolbar">${[['att', 'การลงเวลา'], ['sub', 'การส่งงาน'], ['ins', 'การตรวจงาน']].map(([k, l]) => `<label style="display: inline-flex; gap: 6px; align-items: center"><input type="checkbox" id="xl-${k}" data-f="xl.${k}" ${X[k] ? 'checked' : ''}>${l}</label>`).join('')}
+      <span class="shift-pill">ช่วงวัน: ${DATES[day - 1]} – ${DATES[day]}</span><button class="btn primary" type="button" data-a="export" style="margin-left: auto">ส่งออก .xlsx</button></div>
+      <span class="note">ไม่มีพิกัด GPS ดิบ มีแค่ระยะห่างและผลในรัศมี/นอกรัศมี · การส่งออกเก็บลงประวัติ Admin · ไฟล์ที่ดาวน์โหลดแล้วอยู่นอกการลบตามระยะเวลาเก็บข้อมูล · ต้นแบบนี้แสดงตัวอย่างข้อมูลในไฟล์ ไม่ดาวน์โหลดจริง</span></div>
+    ${sheet(X.att, 'การลงเวลา', ['คน', 'Area', 'กะ', ...EV.map((e) => EVN[e]), 'ที่มา', 'GPS'], atRows)}
+    ${sheet(X.sub, 'การส่งงาน', ['เวลา', 'จุด', 'Area', 'แม่บ้าน', 'ผล', 'Issue', 'ทำแทน', 'GPS'], subRows)}
+    ${sheet(X.ins, 'การตรวจงาน', ['เวลา', 'หัวหน้า', 'จุด', 'ผล', 'ข้อบกพร่อง', 'GPS'], insRows)}`;
+}
+
+/* ───────── shell ───────── */
+function signOptions() {
+  return S.areas.map((a) => `<optgroup label="${esc(a.name)} · ตึก ${a.bld}"><option value="${a.id}-IN">${a.id}-IN · ป้ายลงเวลา</option>${pointsOf(a.id).map((p) => `<option value="${p.id}">${p.id} · ${esc(p.name)}</option>`).join('')}</optgroup>`).join('');
+}
+function render() {
+  const P = S.phone, me = U(P.user), sh = shiftAt(S.now);
+  const focus = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.f : null;
+  const selStart = focus && document.activeElement.selectionStart;
+  document.getElementById('app').innerHTML = `
+  <header class="rail"><div class="brand"><b>ต้นแบบระบบตรวจงานแม่บ้าน</b><span>ข้อมูลตัวอย่าง · กดได้จริง · ไม่มีเซิร์ฟเวอร์</span></div>
+    <div class="clock"><div class="clock-face"><span class="d">${WD[sh.day] || ''} ${DATES[dayOf(S.now)] || ''}</span><span class="t">${fmt(S.now)}</span><span class="shift-pill">${SHIFT_NAME[sh.type]}</span></div>
+      <button class="chipbtn" type="button" data-a="time" data-id="-30">−30 นาที</button><button class="chipbtn" type="button" data-a="time" data-id="5">+5</button><button class="chipbtn" type="button" data-a="time" data-id="30">+30</button><button class="chipbtn" type="button" data-a="time" data-id="60">+1 ชม.</button>
+      ${[['06:55', at(0, 6, 55)], ['10:25', at(0, 10, 25)], ['12:30', at(0, 12, 30)], ['18:55', at(0, 18, 55)], ['20:30', at(0, 20, 30)]].map(([l, v]) => `<button class="chipbtn ${S.now === v ? 'on' : ''}" type="button" data-a="setTime" data-id="${v}">${l}</button>`).join('')}</div></header>
+  <div class="split">
+    <section class="field" aria-label="มือถือ">
+      <div class="pane-label">มือถือ · ${me ? `${esc(me.name)} (${me.role === 'supervisor' ? 'หัวหน้า' : 'แม่บ้าน'})` : 'ยังไม่ login'}</div>
+      <div class="phone"><div class="phone-bar"><span class="mono">${fmt(S.now)}</span><b>${me ? esc(me.name) : 'ระบบตรวจงาน'}</b>${me ? `<span><button type="button" data-a="home">${me.role === 'supervisor' ? 'ตึกของฉัน' : 'งานของฉัน'}</button><button type="button" data-a="logout">ออก</button></span>` : '<span></span>'}</div>
+        <div class="screen" id="screen">${screenHtml()}</div></div>
+      <div class="sim">
+        <div class="sim-row"><label for="sim-who">ใครถือมือถือ</label><select id="sim-who" data-f="who"><option value="">เลือกคน (login ใหม่)</option>${S.users.filter((u) => u.role !== 'admin').map((u) => `<option value="${u.id}" ${P.user === u.id ? 'selected' : ''}>${esc(u.name)} · ${u.role === 'supervisor' ? `หัวหน้าตึก ${u.bld}` : A(u.area)?.name || '–'} · ${SHIFT_SHORT[u.shift]}${u.active ? '' : ' (ปิดใช้งาน)'}</option>`).join('')}</select></div>
+        <div class="sim-row"><label for="sim-sign">สแกนป้าย</label><select id="sim-sign" data-f="sign">${signOptions()}</select><button class="btn primary" type="button" data-a="scan">สแกน QR</button></div>
+        <div class="sim-row"><span class="lbl">ตำแหน่ง</span><div class="seg">${[['in', 'ในรัศมี'], ['out', 'นอกรัศมี'], ['off', 'ปิด Location']].map(([k, l]) => `<button type="button" class="${P.gps === k ? 'on' : ''}" data-a="gps" data-id="${k}">${l}</button>`).join('')}</div></div>
+        <div class="sim-row"><span class="lbl">สัญญาณ</span><div class="seg">${[['1', 'มี'], ['0', 'ไม่มี']].map(([k, l]) => `<button type="button" class="${String(+P.net) === k ? 'on' : ''}" data-a="net" data-id="${k}">${l}</button>`).join('')}</div></div>
+        <span class="small muted">ในงานจริง แม่บ้านสแกน QR ด้วยกล้องมือถือแล้วหน้าเว็บเปิดเอง ส่วนนี้ใช้จำลองแทน</span>
+      </div>
+    </section>
+    <section class="office" aria-label="Dashboard">${office()}</section>
+  </div>
+  ${S.toast ? `<div class="toast" role="status">${esc(S.toast)}</div>` : ''}`;
+  const sel = document.getElementById('sim-sign'); if (sel && S.sign) sel.value = S.sign;
+  if (focus) { const el = document.querySelector(`[data-f="${focus}"]`); if (el) { el.focus(); try { if (selStart != null) el.setSelectionRange(selStart, selStart); } catch (e) { /* not a text field */ } } }
+  S.flash = null;
+}
+
+/* ───────── events ───────── */
+const ACT = {
+  time: (v) => { S.now += +v; },
+  setTime: (v) => { S.now = +v; },
+  login, logout: () => { S.phone.user = null; go('login'); },
+  home: () => go('home'),
+  scan: () => scan(S.sign || document.getElementById('sim-sign').value),
+  rescan: () => scan(S.phone.ctx.sign),
+  scanFromList: (id) => scan(id),
+  gps: (v) => { S.phone.gps = v; },
+  net: (v) => { S.phone.net = v === '1'; },
+  att: (v) => doAttendance(v),
+  selStatus: (v) => { S.phone.sel.status = v; },
+  tag: (v) => { const t = S.phone.sel.tags; const i = t.indexOf(v); i < 0 ? t.push(v) : t.splice(i, 1); },
+  submit: doSubmit, retry,
+  selResult: (v) => { S.phone.sel.result = v; },
+  inspect: doInspect,
+  tab: (v) => { S.office.tab = v; },
+  filter: (v) => { S.office.filter = S.office.filter === v ? null : v; },
+  issueOnly: () => { S.office.issueOnly = !S.office.issueOnly; },
+  openPoint: (v) => { S.office.open = S.office.open === v ? null : v; },
+  editAtt: (v) => { if (!v) { S.office.editAtt = null; return; } const [user, shift, type] = v.split('|'); const rec = attRec(user, shift); S.office.editAtt = { user, shift, type: type || EV.find((e) => !rec?.ev[e]) || 'SHIFT_IN', time: '', reason: '', err: '' }; S.office.tab = 'att'; },
+  saveAtt: () => {
+    const ed = S.office.editAtt; const t0 = parseT(ed.time);
+    if (t0 == null) { ed.err = 'กรอกเวลาเป็น ชม:นาที เช่น 06:58'; return; }
+    if (!ed.reason.trim()) { ed.err = 'ต้องใส่เหตุผลทุกครั้ง'; return; }
+    const d = parseInt(ed.shift, 10), type = ed.shift.slice(-1);
+    let t = d * 1440 + t0; if (type === 'N' && t0 < 720) t += 1440; if (type === 'D' && t0 < 300) t += 1440;
+    let rec = attRec(ed.user, ed.shift); if (!rec) { rec = { id: nid('att'), user: ed.user, shift: ed.shift, ev: {} }; S.att.push(rec); }
+    const before = rec.ev[ed.type] ? fmt(rec.ev[ed.type].t) : '–';
+    rec.ev[ed.type] = { t, dist: null, flag: false, src: rec.ev[ed.type] ? 'admin-edit' : 'admin-add' };
+    audit(before === '–' ? 'เพิ่มการลงเวลา' : 'แก้การลงเวลา', `${U(ed.user).name} · ${A(U(ed.user).area).name} · ${EVN[ed.type]} ${SHIFT_SHORT[type]} ${DATES[d]}`, before, fmt(t), ed.reason.trim());
+    S.office.editAtt = null; toast('บันทึกแล้ว รายการนี้มีป้าย "แก้โดย Admin"');
+  },
+  coverFor: (v) => { S.office.coverFor = S.office.coverFor === v ? null : v; S.office.tab = 'flags'; },
+  assignCover: (v) => { const [user, area] = v.split('|'); const sh = shiftAt(S.now); S.covers.push({ id: nid('cov'), user, area, shift: sh.key, at: S.now }); audit('มอบหมายทำแทน', `${U(user).name} → ${A(area).name} · ${SHIFT_NAME[sh.type]} ${DATES[sh.day]}`, '–', 'มอบหมาย'); S.office.coverFor = null; toast(`${U(user).name} สแกนจุดของ ${A(area).name} ได้แล้วจนหมดกะ`); },
+  cancelCover: (v) => { const c = S.covers.find((x) => x.id === v); c.cancelled = true; audit('ยกเลิกทำแทน', `${U(c.user).name} → ${A(c.area).name}`, 'มอบหมาย', 'ยกเลิก'); },
+  flagView: (v) => { S.office.flagView = v; },
+  ack: (v) => { S.acks[v] = S.now; const f = allFlags().find((x) => x.id === v); audit('ปิดเตือน', `${f.type} · ${U(f.who).name} ${fmt(f.t)}`, 'ยังไม่ได้คุย', 'คุยแล้ว'); },
+  areaSel: (v) => { S.office.areaSel = v; S.office.winEd = null; },
+  toggleArea: () => { const a = A(S.office.areaSel); a.active = !a.active; audit(a.active ? 'เปิดใช้งาน Area' : 'ปิดใช้งาน Area', a.name, a.active ? 'ปิด' : 'เปิด', a.active ? 'เปิด' : 'ปิด'); },
+  winEd: (v) => { if (!v) { S.office.winEd = null; return; } const [p, t] = v.split('|'); S.office.winEd = { p, t, s: '', e: '', err: '' }; },
+  addWin: () => {
+    const ed = S.office.winEd; const p = PT(ed.p); const s = parseT(ed.s), e = parseT(ed.e);
+    if (s == null || e == null) { ed.err = 'กรอกเวลาเป็น ชม:นาที'; return; }
+    const norm = (x) => (ed.t === 'N' ? (x < 420 ? x + 1440 : x) : x);
+    const ns = norm(s), ne = norm(e); const lo = ed.t === 'D' ? 420 : 1140, hi = lo + 720;
+    if (ne <= ns) { ed.err = 'เวลาสิ้นสุดต้องหลังเวลาเริ่ม'; return; }
+    if (ns < lo || ne > hi) { ed.err = `ช่วงต้องอยู่ใน${SHIFT_NAME[ed.t]}`; return; }
+    if (p.win[ed.t].some((w) => ns < norm(w[1]) && norm(w[0]) < ne)) { ed.err = 'ช่วงนี้ซ้อนกับช่วงที่มีอยู่'; return; }
+    p.win[ed.t].push([s, e]); p.win[ed.t].sort((a, b) => norm(a[0]) - norm(b[0]));
+    audit('เพิ่มช่วงรอบ', `${p.name} · ${A(p.area).name} · ${SHIFT_SHORT[ed.t]}`, '–', `${fmt(s)}–${fmt(e)}`); S.office.winEd = null;
+  },
+  delWin: (v) => { const [pid, t, i] = v.split('|'); const p = PT(pid); const w = p.win[t].splice(+i, 1)[0]; audit('ลบช่วงรอบ', `${p.name} · ${A(p.area).name} · ${SHIFT_SHORT[t]}`, `${fmt(w[0])}–${fmt(w[1])}`, '–'); toast('ลบช่วงแล้ว การ์ดคำนวณใหม่ทันที'); },
+  regenQr: (v) => { audit('ออก QR ใหม่', `${v} ${PT(v).name}`, 'QR เดิม', 'QR ใหม่ · ป้ายเดิมสแกนไม่ได้'); toast(`ออก QR ใหม่ของ ${v} แล้ว ต้องพิมพ์ป้ายใหม่ไปติด`); },
+  accRole: (v) => { S.office.acc.role = v; },
+  addAcc: () => { S.office.acc.add = S.office.acc.add ? null : { role: 'cleaner', name: '', emp: '', phone: '', slot: '', err: '' }; },
+  saveAcc: () => {
+    const f = S.office.acc.add; const ph = f.phone.replace(/\D/g, '');
+    if (!f.name.trim() || !f.emp.trim()) { f.err = 'กรอกชื่อและรหัสพนักงาน'; return; }
+    if (S.users.some((u) => u.emp === f.emp.trim())) { f.err = 'รหัสพนักงานนี้มีอยู่แล้ว'; return; }
+    if (ph.length !== 10) { f.err = 'เบอร์โทรต้องมี 10 หลัก'; return; }
+    if (!f.slot) { f.err = f.role === 'cleaner' ? 'เลือก Area และกะ' : 'เลือกตึกและกะ'; return; }
+    const [x, t] = f.slot.split('|');
+    const u = { id: nid('u'), emp: f.emp.trim(), name: f.name.trim(), role: f.role, phone: ph, shift: t, active: true, ...(f.role === 'cleaner' ? { area: x } : { bld: x }) };
+    S.users.push(u); audit('สร้างบัญชี', `${u.name} (${u.emp}) · ${f.role === 'cleaner' ? 'แม่บ้าน' : 'หัวหน้า'}`, '–', f.role === 'cleaner' ? `${A(x).name} · ${SHIFT_SHORT[t]}` : `ตึก ${x} · ${SHIFT_SHORT[t]}`);
+    S.office.acc.add = null; toast(`สร้างบัญชี ${u.name} แล้ว login ด้วย ${u.emp} + เบอร์โทร`);
+  },
+  phoneFor: (v) => { S.office.acc.phoneFor = v || null; S.office.acc.newPhone = ''; S.office.acc.phoneErr = ''; },
+  savePhone: () => { const O = S.office.acc; const ph = (O.newPhone || '').replace(/\D/g, ''); if (ph.length !== 10) { O.phoneErr = 'เบอร์โทรต้องมี 10 หลัก'; return; } const u = U(O.phoneFor); u.phone = ph; audit('แก้เบอร์โทร', `${u.name} (${u.emp})`, 'เบอร์เดิม', 'เบอร์ใหม่ (ไม่แสดงเบอร์)'); if (S.phone.user === u.id) { S.phone.user = null; go('login'); } O.phoneFor = null; toast(`แก้เบอร์ของ ${u.name} แล้ว ทุกเครื่องของ ${u.name} หลุดออกจากระบบ`); },
+  toggleUser: (v) => { const u = U(v); u.active = !u.active; audit(u.active ? 'เปิดใช้งานบัญชี' : 'ปิดใช้งานบัญชี', `${u.name} (${u.emp})`, u.active ? 'ปิด' : 'เปิด', u.active ? 'เปิด' : 'ปิด'); if (!u.active && S.phone.user === u.id) { S.phone.user = null; go('login'); toast(`${u.name} หลุดออกจากระบบทุกเครื่อง`); } },
+  export: () => { const X = S.office.xl; const sets = [X.att && 'การลงเวลา', X.sub && 'การส่งงาน', X.ins && 'การตรวจงาน'].filter(Boolean); if (!sets.length) { toast('เลือกอย่างน้อย 1 ชุด'); return; } const d = shiftAt(S.now).day; audit('ส่งออก Excel', sets.join(' + '), '–', `${DATES[d - 1]} – ${DATES[d]} · ทุกตึก`); toast('บันทึกการส่งออกลงประวัติ Admin แล้ว (ต้นแบบไม่ดาวน์โหลดไฟล์จริง)'); },
+};
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-a]'); if (!el) return;
+  const fn = ACT[el.dataset.a]; if (!fn) return;
+  e.preventDefault(); fn(el.dataset.id); render();
+});
+function setPath(obj, path, val) { const ks = path.split('.'); let o = obj; for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks[ks.length - 1]] = val; }
+document.addEventListener('input', (e) => {
+  const f = e.target.dataset && e.target.dataset.f; if (!f) return; const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+  if (f === 'emp' || f === 'phone') { S.phone.form[f] = v; return; }
+  if (f === 'note' || f === 'defect') { S.phone.sel[f] = v; return; }
+  if (f === 'sign') { S.sign = v; return; }
+  if (f.startsWith('ed.')) { S.office.editAtt[f.slice(3)] = v; if (e.target.tagName === 'SELECT') render(); return; }
+  if (f.startsWith('winEd.')) { S.office.winEd[f.slice(6)] = v; return; }
+  if (f === 'acc.q') { S.office.acc.q = v; render(); return; }
+  if (f.startsWith('acc.')) { setPath(S.office, f, v); if (e.target.tagName === 'SELECT') render(); return; }
+  if (f.startsWith('xl.')) { S.office.xl[f.slice(3)] = v; render(); return; }
+});
+document.addEventListener('change', (e) => {
+  const f = e.target.dataset && e.target.dataset.f; if (!f) return;
+  if (f === 'who') { const u = U(e.target.value); S.phone.user = null; S.phone.form = { emp: u ? u.emp : '', phone: u ? u.phone : '' }; S.phone.err = ''; go('login'); render(); return; }
+  if (f === 'bld') { S.office.bld = e.target.value; render(); return; }
+  if (f === 'auditType') { S.office.auditType = e.target.value; render(); return; }
+  if (f === 'sign') { S.sign = e.target.value; }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && S.phone.screen === 'login' && (e.target.dataset?.f === 'emp' || e.target.dataset?.f === 'phone')) { login(); render(); } });
+S.phone.user = 'u1'; go('home'); S.sign = 'AR01-01';
+render();
+</script>
+
+</body></html>
