@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Application.Auth;
+using FacilityRealtime.Infrastructure.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 
@@ -130,8 +131,31 @@ public class LoginTests
     public async Task Cleaner_cannot_use_the_admin_form()
     {
         using var factory = new FacilityApiFactory();
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.EmployeeId == "E1001")).Username = "e1001-web";
+            await db.SaveChangesAsync();
+        });
 
-        var response = await factory.CreateApiClient().PostAsJsonAsync("/api/auth/login", new { username = "E1001", password = "0810000001" });
+        // The password equals the phone whose hash is stored, so only the Admin-role guard stops this.
+        var response = await factory.CreateApiClient().PostAsJsonAsync("/api/auth/login", new { username = "e1001-web", password = "0810000001" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_cannot_use_the_employee_form()
+    {
+        using var factory = new FacilityApiFactory();
+        await factory.WithDbAsync(async db =>
+        {
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            admin.EmployeeId = "A9000";
+            admin.SecretHash = new Pbkdf2PasswordHasher(iterations: 1_000).Hash("0830000001");
+            await db.SaveChangesAsync();
+        });
+
+        var response = await AuthApi.LoginAsync(factory.CreateApiClient(), "A9000", "0830000001");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
