@@ -61,9 +61,14 @@ npm --prefix frontend test
   - `http://<MAC_LAN_IP>:5173/scan/token-restroom-m1` (เช่น `http://10.249.194.205:5173/scan/token-restroom-m1`)
   - login ครั้งแรกบนมือถือแล้วระบบจำไว้ จนกด "ออก" หรือไม่ได้ใช้เลย 30 วัน
 
-### บัญชีผู้ใช้ทดสอบ (Seed Data)
-- **แม่บ้าน**: username: `somchai` / password: `password123`
-- **ผู้ดูแลระบบ**: username: `admin` / password: `admin1234`
+### บัญชีผู้ใช้ทดสอบ (Seed Data, ข้อมูลสมมุติทั้งหมด ใช้ได้เฉพาะตอนรันแบบ Development)
+- **แม่บ้าน Area AR01 กะเช้า**: รหัสพนักงาน `E1001` / เบอร์โทร `0810000001`
+- **แม่บ้าน Area AR01 กะดึก**: รหัสพนักงาน `E1002` / เบอร์โทร `0810000002`
+- **แม่บ้าน Area AR02 (Office กะเช้าอย่างเดียว)**: รหัสพนักงาน `E1003` / เบอร์โทร `0810000003`
+- **หัวหน้า ตึก A กะเช้า**: รหัสพนักงาน `S2001` / เบอร์โทร `0820000001`
+- **ผู้ดูแลระบบ**: username `admin` / password `admin1234`
+
+หน้า login ของ frontend ยังมีช่อง username/password จนกว่าแผน frontend จะเปลี่ยน ตอนนี้จึง login จากหน้าเว็บได้แค่ Admin
 
 ### หมายเหตุด้านความปลอดภัยของ POC
 - cookie ของ refresh token ไม่ได้ตั้ง `Secure` เพราะมือถือเข้าผ่าน HTTP ในวง WiFi (ADR facility-0013) ถ้าติดตั้งบน HTTPS ให้ตั้งค่า `Jwt:RefreshCookieSecure` เป็น `true`

@@ -1,5 +1,6 @@
 using System.Net;
 using FacilityRealtime.ApiTests.Infrastructure;
+using FacilityRealtime.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 
@@ -19,7 +20,7 @@ public class RefreshTests
         var second = AuthApi.RefreshCookieValue(response);
         Assert.False(string.IsNullOrEmpty(second));
         Assert.NotEqual(first, second);
-        Assert.Equal("somchai", (await AuthApi.ReadAuthAsync(response)).User.Username);
+        Assert.Equal("E1001", (await AuthApi.ReadAuthAsync(response)).User.Username);
     }
 
     [Fact]
@@ -117,14 +118,14 @@ public class RefreshTests
         var (client, auth, token) = await AuthApi.LoggedInAsync(factory);
         await factory.WithDbAsync(async db =>
         {
-            (await db.Users.SingleAsync(u => u.Id == auth.User.Id)).Role = "admin";
+            (await db.Users.SingleAsync(u => u.Id == auth.User.Id)).Role = UserRole.Supervisor;
             await db.SaveChangesAsync();
         });
 
         var refreshed = await AuthApi.ReadAuthAsync(await AuthApi.RefreshAsync(client, token));
 
-        Assert.Equal("admin", refreshed.User.Role);
-        Assert.Equal("admin", new JsonWebToken(refreshed.AccessToken).GetClaim("role").Value);
+        Assert.Equal("supervisor", refreshed.User.Role);
+        Assert.Equal("supervisor", new JsonWebToken(refreshed.AccessToken).GetClaim("role").Value);
     }
 
     [Theory]

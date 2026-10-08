@@ -24,7 +24,7 @@ public class RefreshTokenModelTests
 
         await factory.WithDbAsync(async db => activeCount = await db.Users.CountAsync(u => u.IsActive));
 
-        Assert.Equal(2, activeCount);
+        Assert.Equal(5, activeCount);
     }
 
     [Fact]
@@ -34,13 +34,13 @@ public class RefreshTokenModelTests
 
         await factory.WithDbAsync(async db =>
         {
-            var user = await db.Users.SingleAsync(u => u.Username == "somchai");
+            var user = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
             user.IsActive = false;
             await db.SaveChangesAsync();
         });
 
         var isActive = true;
-        await factory.WithDbAsync(async db => isActive = (await db.Users.AsNoTracking().SingleAsync(u => u.Username == "somchai")).IsActive);
+        await factory.WithDbAsync(async db => isActive = (await db.Users.AsNoTracking().SingleAsync(u => u.EmployeeId == "E1001")).IsActive);
         Assert.False(isActive);
     }
 

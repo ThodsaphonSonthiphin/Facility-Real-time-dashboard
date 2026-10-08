@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Application.Auth;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,7 @@ namespace FacilityRealtime.ApiTests.Auth;
 public class LoginTests
 {
     [Fact]
-    public async Task Valid_login_returns_a_five_minute_access_token_and_the_user()
+    public async Task Cleaner_logs_in_with_employee_id_and_phone()
     {
         using var factory = new FacilityApiFactory();
 
@@ -17,15 +18,39 @@ public class LoginTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await AuthApi.ReadAuthAsync(response);
-        Assert.Equal("somchai", body.User.Username);
+        Assert.Equal("E1001", body.User.Username);
         Assert.Equal("สมชาย ใจดี", body.User.FullName);
         Assert.Equal("cleaner", body.User.Role);
         var expected = factory.Clock.GetUtcNow().UtcDateTime.AddMinutes(5);
         Assert.InRange(body.ExpiresAt.ToUniversalTime(), expected.AddSeconds(-1), expected.AddSeconds(1));
     }
 
+    [Theory]
+    [InlineData("081-000-0001")]
+    [InlineData("+66 81 000 0001")]
+    [InlineData(" 0810000001 ")]
+    public async Task Phone_may_be_typed_with_spaces_dashes_or_country_code(string phone)
+    {
+        using var factory = new FacilityApiFactory();
+
+        var response = await AuthApi.LoginAsync(factory.CreateApiClient(), "E1001", phone);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     [Fact]
-    public async Task Access_token_carries_user_id_username_name_and_role()
+    public async Task Supervisor_logs_in_the_same_way()
+    {
+        using var factory = new FacilityApiFactory();
+
+        var body = await AuthApi.ReadAuthAsync(await AuthApi.LoginAsync(factory.CreateApiClient(), "S2001", "0820000001"));
+
+        Assert.Equal("S2001", body.User.Username);
+        Assert.Equal("supervisor", body.User.Role);
+    }
+
+    [Fact]
+    public async Task Access_token_carries_user_id_login_name_display_name_and_role()
     {
         using var factory = new FacilityApiFactory();
 
@@ -33,19 +58,20 @@ public class LoginTests
 
         var jwt = new JsonWebToken(body.AccessToken);
         Assert.Equal(body.User.Id.ToString(), jwt.GetClaim("sub").Value);
-        Assert.Equal("somchai", jwt.GetClaim("preferred_username").Value);
+        Assert.Equal("E1001", jwt.GetClaim("preferred_username").Value);
         Assert.Equal("สมชาย ใจดี", jwt.GetClaim("name").Value);
         Assert.Equal("cleaner", jwt.GetClaim("role").Value);
         Assert.Equal(TimeSpan.FromMinutes(5), jwt.ValidTo - jwt.IssuedAt);
     }
 
     [Fact]
-    public async Task Admin_login_reports_the_admin_role()
+    public async Task Admin_logs_in_with_username_and_password()
     {
         using var factory = new FacilityApiFactory();
 
-        var body = await AuthApi.ReadAuthAsync(await AuthApi.LoginAsync(factory.CreateApiClient(), "admin", "admin1234"));
+        var body = await AuthApi.ReadAuthAsync(await AuthApi.AdminLoginAsync(factory.CreateApiClient()));
 
+        Assert.Equal("admin", body.User.Username);
         Assert.Equal("admin", body.User.Role);
     }
 
@@ -61,7 +87,7 @@ public class LoginTests
         Assert.Contains("samesite=strict", header);
         Assert.Contains("path=/api/auth", header);
         Assert.Contains("expires=", header);
-        Assert.DoesNotContain("secure", header); // ADR facility-0013: phones reach the POC over plain HTTP
+        Assert.DoesNotContain("secure", header); // ADR facility-0013: Jwt:RefreshCookieSecure is false in development
     }
 
     [Fact]
@@ -78,16 +104,36 @@ public class LoginTests
     }
 
     [Theory]
-    [InlineData("somchai", "wrong-password")]
-    [InlineData("nobody", "password123")]
-    public async Task Bad_credentials_are_401_and_set_no_cookie(string username, string password)
+    [InlineData("E1001", "0899999999")]
+    [InlineData("E9999", "0810000001")]
+    public async Task Wrong_employee_id_or_phone_is_401_and_sets_no_cookie(string employeeId, string phone)
     {
         using var factory = new FacilityApiFactory();
 
-        var response = await AuthApi.LoginAsync(factory.CreateApiClient(), username, password);
+        var response = await AuthApi.LoginAsync(factory.CreateApiClient(), employeeId, phone);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Null(AuthApi.RefreshSetCookieHeader(response));
+    }
+
+    [Fact]
+    public async Task Wrong_admin_password_is_401()
+    {
+        using var factory = new FacilityApiFactory();
+
+        var response = await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin", "wrong-password");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Cleaner_cannot_use_the_admin_form()
+    {
+        using var factory = new FacilityApiFactory();
+
+        var response = await factory.CreateApiClient().PostAsJsonAsync("/api/auth/login", new { username = "E1001", password = "0810000001" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
@@ -96,7 +142,7 @@ public class LoginTests
         using var factory = new FacilityApiFactory();
         await factory.WithDbAsync(async db =>
         {
-            (await db.Users.SingleAsync(u => u.Username == "somchai")).IsActive = false;
+            (await db.Users.SingleAsync(u => u.EmployeeId == "E1001")).IsActive = false;
             await db.SaveChangesAsync();
         });
 

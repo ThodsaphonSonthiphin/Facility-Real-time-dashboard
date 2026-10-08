@@ -70,15 +70,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.ServicePoint).WithMany().HasForeignKey(x => x.ServicePointId).OnDelete(DeleteBehavior.Restrict);
         });
 
-        // Phase-1 shape until the accounts task reshapes it (Task 5)
         modelBuilder.Entity<User>(e =>
         {
-            e.ToTable("users");
-            e.Property(x => x.Username).HasMaxLength(100).IsRequired();
-            e.Property(x => x.PasswordHash).HasMaxLength(255).IsRequired();
-            e.Property(x => x.FullName).HasMaxLength(150).IsRequired();
-            e.Property(x => x.Role).HasMaxLength(50).IsRequired();
+            e.ToTable("users", t => t.HasCheckConstraint(
+                "ck_users_login_name",
+                "(role = 'ADMIN' AND username IS NOT NULL) OR (role <> 'ADMIN' AND employee_id IS NOT NULL)"));
+            e.Property(x => x.Role).HasConversion(new UpperSnakeEnumConverter<UserRole>()).HasMaxLength(20);
+            e.Property(x => x.EmployeeId).HasMaxLength(20);
+            e.Property(x => x.Username).HasMaxLength(100);
+            e.Property(x => x.DisplayName).HasMaxLength(150).IsRequired();
+            e.Property(x => x.SecretHash).HasMaxLength(255).IsRequired();
+            e.Property(x => x.Shift).HasConversion(new UpperSnakeEnumConverter<Shift>()).HasMaxLength(10);
+
+            // An INT slot instead of database.html's 'area_id:shift' text: same uniqueness, and the SQL runs on MySQL and SQLite.
+            // A deactivated account gets NULL, which a UNIQUE index allows any number of times.
+            e.Property(x => x.CleanerSlot).HasComputedColumnSql(
+                "CASE WHEN role = 'CLEANER' AND is_active = 1 THEN area_id * 2 + (CASE WHEN shift = 'NIGHT' THEN 1 ELSE 0 END) END",
+                stored: true);
+            e.Property(x => x.SupervisorSlot).HasComputedColumnSql(
+                "CASE WHEN role = 'SUPERVISOR' AND is_active = 1 THEN building_id * 2 + (CASE WHEN shift = 'NIGHT' THEN 1 ELSE 0 END) END",
+                stored: true);
+
+            e.HasIndex(x => x.EmployeeId).IsUnique();
             e.HasIndex(x => x.Username).IsUnique();
+            e.HasIndex(x => x.CleanerSlot).IsUnique();
+            e.HasIndex(x => x.SupervisorSlot).IsUnique();
+            e.HasOne(x => x.Area).WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Building).WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ADR facility-0014

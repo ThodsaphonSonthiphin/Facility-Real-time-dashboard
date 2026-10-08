@@ -27,9 +27,9 @@ public sealed class JwtAccessTokenIssuer(IOptions<JwtSettings> options, TimeProv
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim(AuthClaims.UserId, user.Id.ToString()),
-                new Claim(AuthClaims.Username, user.Username),
-                new Claim(AuthClaims.Name, user.FullName),
-                new Claim(AuthClaims.Role, user.Role),
+                new Claim(AuthClaims.Username, user.LoginName),
+                new Claim(AuthClaims.Name, user.DisplayName),
+                new Claim(AuthClaims.Role, user.Role.ToClaimValue()),
             }),
             SigningCredentials = new SigningCredentials(JwtKeys.SigningKey(settings), SecurityAlgorithms.HmacSha256),
         });

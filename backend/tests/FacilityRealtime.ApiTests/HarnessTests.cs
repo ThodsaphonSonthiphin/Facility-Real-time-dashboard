@@ -33,6 +33,6 @@ public class HarnessTests
         });
 
         // buildings, areas, points, signs (3 point + 2 check-in), round windows, users
-        Assert.Equal(new[] { 1, 2, 3, 5, 9, 2 }, counts);
+        Assert.Equal(new[] { 1, 2, 3, 5, 9, 5 }, counts);
     }
 }
