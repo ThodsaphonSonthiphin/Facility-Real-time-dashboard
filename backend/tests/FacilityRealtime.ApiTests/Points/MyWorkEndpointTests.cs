@@ -78,4 +78,35 @@ public class MyWorkEndpointTests
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Night_cleaner_before_the_shift_sees_the_night_slot_not_the_running_day_shift()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1002", "0810000002");
+        await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 10));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 18, 30));
+
+        var work = (await cleaner.GetFromJsonAsync<MyWorkModel>("/api/my-work"))!;
+
+        var mens = Assert.Single(Assert.Single(work.Areas).Points, p => p.Name == "ห้องน้ำชาย ชั้น 1");
+        Assert.Equal("BeforeFirstRound", mens.Status);
+    }
+
+    [Theory]
+    [InlineData("E1003", "2026-10-08", Shift.Day, false)]
+    [InlineData("E1001", "2026-10-08", Shift.Day, true)]
+    [InlineData("E1001", "2026-10-07", Shift.Day, false)]
+    [InlineData("E1001", "2026-10-08", Shift.Night, false)]
+    public async Task Covers_that_do_not_apply_to_this_cleaner_and_shift_are_not_listed(string employeeId, string shiftDate, Shift shift, bool cancelled)
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        await TestData.AddCoverAsync(factory, employeeId, "AR02", DateOnly.Parse(shiftDate), shift, cancelled);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+
+        var work = (await cleaner.GetFromJsonAsync<MyWorkModel>("/api/my-work"))!;
+
+        Assert.Equal("AR01", Assert.Single(work.Areas).AreaCode);
+    }
 }
