@@ -51,13 +51,23 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
+// 5. OpenAPI document (served only in Development, below)
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
+
 var app = builder.Build();
 
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// 5. Migrate on startup. Seed only on a developer machine: the seed's known Admin password must never reach a server on the internet (facility-0049).
+// Swagger UI for trying the API by hand: Development only, never on a server reachable from the internet (facility-0049)
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Facility Real-time Dashboard API"));
+}
+
+// 6. Migrate on startup. Seed only on a developer machine: the seed's known Admin password must never reach a server on the internet (facility-0049).
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
@@ -69,10 +79,10 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
-// 6. SignalR Hub Mapping
+// 7. SignalR Hub Mapping
 app.MapHub<ScanHub>("/hubs/scan");
 
-// 7. Endpoints
+// 8. Endpoints
 app.MapGet("/", () => Results.Ok(new { status = "healthy", service = "Facility Real-time Dashboard API" }));
 app.MapAuthEndpoints();
 app.MapMeEndpoints();

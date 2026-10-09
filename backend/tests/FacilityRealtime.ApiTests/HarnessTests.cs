@@ -16,6 +16,18 @@ public class HarnessTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("/openapi/v1.json")]
+    [InlineData("/swagger/index.html")]
+    public async Task Api_documentation_is_not_served_outside_development(string path)
+    {
+        using var factory = new FacilityApiFactory();
+
+        var response = await factory.CreateClient().GetAsync(path);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode); // facility-0049: the server is on the internet
+    }
+
     [Fact]
     public async Task Seed_runs_against_the_test_database()
     {
