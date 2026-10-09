@@ -26,15 +26,28 @@ public record PointStatusDto(
     LastScanDto? LastScan,
     IssueDto? Issue);
 
-/// <summary>facility-0017: no UserId, the scanner is the account in the access token. "Notes" keeps the phase-1 field name.</summary>
-public record CreateScanRecordRequest(string QrToken, CleaningStatus? Status, List<string>? IssueTags, string? Notes);
+/// <summary>
+/// facility-0017: no UserId, the scanner is the account in the access token. "Notes" keeps the phase-1 field name.
+/// Latitude, Longitude and AccuracyM are what the browser's Geolocation API reported (facility-0036/0037).
+/// </summary>
+public record CreateScanRecordRequest(
+    string QrToken,
+    CleaningStatus? Status,
+    List<string>? IssueTags,
+    string? Notes,
+    double? Latitude,
+    double? Longitude,
+    double? AccuracyM);
 
+/// <summary>WithinRadius false = Geofence Flag; null = the sign has no coordinates yet.</summary>
 public record ScanRecordCreatedResponse(
     long ScanRecordId,
     int ServicePointId,
     Placement Placement,
     int? LateMinutes,
     PointStatus NewPointStatus,
+    int? DistanceM,
+    bool? WithinRadius,
     DateTime SubmittedAt);
 
 public static class PointDtoMapper
