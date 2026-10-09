@@ -152,7 +152,7 @@ flowchart TB
 
     Ep --> Status
     Ep --> Ctx
-    Ep -->|"IHubContext.Clients.All"| Hub
+    Ep -->|"Clients.Group(admins)"| Hub
     AuthEp --> Rules
     AuthEp --> Ctx
     Jwt -.->|validates| Ep & Hub
@@ -225,11 +225,15 @@ sequenceDiagram
     participant DB as MySQL
     participant Api as API /api/* or /hubs/scan
 
-    User->>FE: Enter username + password
+    User->>FE: Enter employee ID + phone (Cleaner/Supervisor)<br/>or username + password (Admin)
     FE->>Auth: POST /api/auth/login
-    Auth->>DB: Find user, verify PBKDF2 hash
-    Auth->>DB: INSERT refresh_tokens (SHA-256 hash only)
-    Auth-->>FE: 200 { accessToken, expiresAt, user }<br/>Set-Cookie: facility_refresh (HttpOnly, Path=/api/auth)
+    alt Fewer than 5 failed attempts for this account in 15 minutes
+        Auth->>DB: Find user, verify credentials
+        Auth->>DB: INSERT refresh_tokens (SHA-256 hash only)
+        Auth-->>FE: 200 { accessToken, expiresAt, user }<br/>Set-Cookie: facility_refresh (HttpOnly, Path=/api/auth)
+    else 5 attempts within 15 minutes (facility-0054)
+        Auth-->>FE: 429 (refused for 15 minutes)
+    end
 
     FE->>Api: Request with Authorization: Bearer <accessToken>
     Api-->>FE: 200

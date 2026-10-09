@@ -12,6 +12,6 @@ public enum Placement
     /// <summary>The rework a Supervisor asked for on that round.</summary>
     Rework,
 
-    /// <summary>An Off-Round Submission: kept, but counts for no round and does not change the card.</summary>
+    /// <summary>An Off-Round Submission: kept, but counts for no round and does not change the Point Status.</summary>
     OffRound,
 }

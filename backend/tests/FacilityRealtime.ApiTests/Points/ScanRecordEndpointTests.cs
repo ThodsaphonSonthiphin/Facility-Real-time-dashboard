@@ -56,6 +56,18 @@ public class ScanRecordEndpointTests
     }
 
     [Fact]
+    public async Task Admin_accounts_can_scan_too()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, auth, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        var created = await ScanAtAsync(factory, admin, ThaiClock.At(8, 8, 10));
+
+        var stored = await StoredAsync(factory, created.ScanRecordId);
+        Assert.Equal(auth.User.Id, stored.UserId);
+    }
+
+    [Fact]
     public async Task Scan_inside_the_round_is_on_time_and_waits_for_inspection()
     {
         using var factory = new FacilityApiFactory();
