@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
+using FacilityRealtime.Domain.Entities;
+using FacilityRealtime.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.ApiTests.Admin;
 
@@ -94,6 +97,7 @@ public class AreaAdminEndpointTests
         var response = await admin.GetAsync($"{Areas}/9999");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("ไม่พบ Area นี้", await AdminSetupApi.MessageAsync(response));
     }
 
     [Fact]
@@ -108,5 +112,35 @@ public class AreaAdminEndpointTests
         Assert.Equal("A", Assert.Single(buildings).Code);
         Assert.Equal(new[] { "E1001", "E1002", "E1003" }, cleaners.Select(c => c.EmployeeId)); // no Supervisor, no Admin
         Assert.Equal(("Night", "AR01"), (cleaners[1].Shift, cleaners[1].AreaCode));
+    }
+
+    [Fact]
+    public async Task Inactive_rows_are_skipped_and_map_picked_signs_count_as_unconfirmed()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            var point2 = await db.Signs.Where(s => s.Code == "AR01-02").Select(s => s.ServicePoint!).SingleAsync();
+            point2.IsActive = false;
+            (await db.Signs.SingleAsync(s => s.Code == "AR01-01")).LocationSource = LocationSource.Map;
+            (await db.Signs.SingleAsync(s => s.Code == "AR01-02")).LocationSource = LocationSource.Map; // would count, were its point not inactive
+            (await db.Users.SingleAsync(u => u.EmployeeId == "E1002")).IsActive = false;
+            db.Buildings.Add(new Building { Code = "Z", Name = "ตึกปิด", IsActive = false, CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        });
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+
+        var summary = (await admin.GetFromJsonAsync<List<AreaSummaryModel>>(Areas))!.Single(a => a.Code == "AR01");
+        var detail = (await admin.GetFromJsonAsync<AreaDetailModel>($"{Areas}/{area1}"))!;
+        var buildings = (await admin.GetFromJsonAsync<List<BuildingModel>>("/api/admin/buildings"))!;
+        var cleaners = (await admin.GetFromJsonAsync<List<CleanerOptionModel>>("/api/admin/cleaners"))!;
+
+        Assert.Equal(1, summary.ActivePointCount);
+        Assert.Equal(1, summary.SignsNotConfirmedOnSite); // AR01-01 is only a map pick; AR01-02 is a map pick too but belongs to an inactive point; AR01-IN is on site
+        Assert.Null(summary.NightCleaner);
+        Assert.Equal(new[] { true, false }, detail.Points.Select(p => p.IsActive));
+        Assert.DoesNotContain(buildings, b => b.Code == "Z");
+        Assert.DoesNotContain(cleaners, c => c.EmployeeId == "E1002");
     }
 }
