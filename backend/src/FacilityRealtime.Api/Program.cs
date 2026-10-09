@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.Endpoints;
 using FacilityRealtime.Api.Hubs;
+using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Infrastructure.Auth;
 using FacilityRealtime.Infrastructure.Persistence;
@@ -15,6 +16,13 @@ builder.Services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher());
 builder.Services.AddSingleton(
     builder.Configuration.GetSection(LoginThrottleSettings.SectionName).Get<LoginThrottleSettings>() ?? new LoginThrottleSettings());
 builder.Services.AddSingleton<LoginThrottle>();
+var attendance = builder.Configuration.GetSection(AttendanceSettings.SectionName).Get<AttendanceSettings>() ?? new AttendanceSettings();
+if (attendance.OpensMinutesBeforeShift is < 0 or > 360 || attendance.ClosesMinutesAfterShift is < 0 or > 360 || attendance.RepeatIgnoreMinutes < 0)
+{
+    throw new InvalidOperationException("Attendance: window minutes must be 0-360 and RepeatIgnoreMinutes 0 or more.");
+}
+
+builder.Services.AddSingleton(attendance);
 builder.Services.AddFacilityAuth(builder.Configuration);
 
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -86,6 +94,7 @@ app.MapHub<ScanHub>("/hubs/scan");
 app.MapGet("/", () => Results.Ok(new { status = "healthy", service = "Facility Real-time Dashboard API" }));
 app.MapAuthEndpoints();
 app.MapMeEndpoints();
+app.MapAttendanceEndpoints();
 app.MapServicePointEndpoints();
 app.MapScanRecordEndpoints();
 

@@ -50,6 +50,10 @@ public static class AuthApi
     public static Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> LoggedInAdminAsync(FacilityApiFactory factory) =>
         LoggedInWithAsync(factory, client => AdminLoginAsync(client));
 
+    public static Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> LoggedInAsEmployeeAsync(
+        FacilityApiFactory factory, string employeeId, string phone) =>
+        LoggedInWithAsync(factory, client => LoginAsync(client, employeeId, phone));
+
     private static async Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> LoggedInWithAsync(
         FacilityApiFactory factory, Func<HttpClient, Task<HttpResponseMessage>> login)
     {
