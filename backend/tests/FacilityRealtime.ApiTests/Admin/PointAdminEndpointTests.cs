@@ -96,6 +96,21 @@ public class PointAdminEndpointTests
     }
 
     [Fact]
+    public async Task A_point_edit_without_the_window_list_is_refused_and_keeps_every_window()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var id = await AdminSetupApi.PointIdAsync(factory, "AR01-01");
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/points/{id}", new { name = "ห้องน้ำชาย ชั้น 1" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("ต้องส่งรายการช่วงรอบ", await AdminSetupApi.MessageAsync(response));
+        Assert.Equal(4, await AdminSetupApi.ReadAsync(factory, db => db.PointRoundWindows.CountAsync(w => w.ServicePointId == id)));
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
     public async Task Editing_keeps_unchanged_rounds_and_the_scans_linked_to_them()
     {
         using var factory = new FacilityApiFactory();

@@ -43,7 +43,13 @@ public static class AdminSignEndpoints
         var accuracy = source == LocationSource.Map ? 0 : request.AccuracyM;
         if (!GpsInput.TryRead(request.Latitude, request.Longitude, accuracy, out var gps, out var gpsError))
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, gpsError);
+            // GpsInput's wording is for scanning; the Admin is capturing a sign's location
+            var message = gpsError == GpsInput.Required
+                ? "ต้องส่งพิกัด (ละติจูด ลองจิจูด) และความแม่นยำเมื่อเก็บที่หน้างาน"
+                : gpsError == GpsInput.Invalid
+                    ? "พิกัดที่ส่งมาไม่ถูกต้อง ลองเก็บพิกัดใหม่อีกครั้ง"
+                    : gpsError;
+            return ApiResults.Message(StatusCodes.Status400BadRequest, message);
         }
 
         var sign = await db.Signs.FirstOrDefaultAsync(s => s.Id == id);

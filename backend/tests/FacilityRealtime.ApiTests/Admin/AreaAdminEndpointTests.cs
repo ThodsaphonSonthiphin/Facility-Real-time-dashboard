@@ -41,6 +41,27 @@ public class AreaAdminEndpointTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("/api/admin/areas")]
+    [InlineData("/api/admin/areas/1")]
+    [InlineData("/api/admin/buildings")]
+    [InlineData("/api/admin/cleaners")]
+    public async Task A_deactivated_admin_with_a_live_token_cannot_read_admin_pages(string path)
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            var user = await db.Users.SingleAsync(u => u.Username == "admin");
+            user.IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await admin.GetAsync(path);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     [Fact]
     public async Task Area_list_shows_cleaners_point_counts_and_unconfirmed_signs()
     {

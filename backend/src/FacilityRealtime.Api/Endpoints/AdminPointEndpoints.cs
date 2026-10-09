@@ -172,7 +172,14 @@ public static class AdminPointEndpoints
             return false;
         }
 
-        foreach (var window in request.RoundWindows ?? [])
+        // A missing list must not read as "no windows": a rename-only body would delete every window
+        if (request.RoundWindows is null)
+        {
+            error = "ต้องส่งรายการช่วงรอบ (ส่ง [] ถ้าจุดนี้ไม่มีรอบ)";
+            return false;
+        }
+
+        foreach (var window in request.RoundWindows)
         {
             if (window.Shift is not { } shift || !Enum.IsDefined(shift))
             {

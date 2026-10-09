@@ -17,9 +17,17 @@ public static class AdminAreaEndpoints
         var admin = app.MapGroup("/api/admin").RequireAuthorization(AuthSetup.AdminOnly);
         admin.MapGet("/buildings", ListBuildingsAsync);
         admin.MapGet("/cleaners", ListCleanersAsync);
-        admin.MapGet("/areas", async (AppDbContext db) => Results.Ok(await AdminSetupView.LoadAreasAsync(db)));
-        admin.MapGet("/areas/{id:int}", async (int id, AppDbContext db) =>
-            await AdminSetupView.LoadAreaAsync(db, id) is { } area ? Results.Ok(area) : AreaNotFound());
+        admin.MapGet("/areas", async (ClaimsPrincipal principal, AppDbContext db) =>
+            await CurrentUser.LoadAsync(principal, db) is null ? Results.Unauthorized() : Results.Ok(await AdminSetupView.LoadAreasAsync(db)));
+        admin.MapGet("/areas/{id:int}", async (int id, ClaimsPrincipal principal, AppDbContext db) =>
+        {
+            if (await CurrentUser.LoadAsync(principal, db) is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            return await AdminSetupView.LoadAreaAsync(db, id) is { } area ? Results.Ok(area) : AreaNotFound();
+        });
         admin.MapPost("/areas", CreateAsync);
         admin.MapPut("/areas/{id:int}", UpdateAsync);
         admin.MapPost("/areas/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
@@ -29,16 +37,20 @@ public static class AdminAreaEndpoints
         return app;
     }
 
-    private static async Task<IResult> ListBuildingsAsync(AppDbContext db) =>
-        Results.Ok(await db.Buildings.AsNoTracking()
-            .Where(b => b.IsActive)
-            .OrderBy(b => b.Code)
-            .Select(b => new BuildingDto(b.Id, b.Code, b.Name))
-            .ToListAsync());
+    private static async Task<IResult> ListBuildingsAsync(ClaimsPrincipal principal, AppDbContext db) =>
+        await CurrentUser.LoadAsync(principal, db) is null
+            ? Results.Unauthorized()
+            : Results.Ok(await db.Buildings.AsNoTracking()
+                .Where(b => b.IsActive)
+                .OrderBy(b => b.Code)
+                .Select(b => new BuildingDto(b.Id, b.Code, b.Name))
+                .ToListAsync());
 
     /// <summary>Every active Cleaner with their regular shift and current Area; the form offers those without an Area.</summary>
-    private static async Task<IResult> ListCleanersAsync(AppDbContext db) =>
-        Results.Ok(await db.Users.AsNoTracking()
+    private static async Task<IResult> ListCleanersAsync(ClaimsPrincipal principal, AppDbContext db) =>
+        await CurrentUser.LoadAsync(principal, db) is null
+            ? Results.Unauthorized()
+            : Results.Ok(await db.Users.AsNoTracking()
             .Where(u => u.Role == UserRole.Cleaner && u.IsActive)
             .OrderBy(u => u.EmployeeId)
             .Select(u => new CleanerOptionDto(

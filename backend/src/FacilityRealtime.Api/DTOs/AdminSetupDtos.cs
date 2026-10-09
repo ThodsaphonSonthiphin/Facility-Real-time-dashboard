@@ -52,7 +52,7 @@ public record UpdateAreaRequest(string? Name, int BuildingId, ShiftPattern? Shif
 /// <summary>Start and End as "HH:mm" Thai wall-clock, e.g. "07:00" (facility-0047).</summary>
 public record RoundWindowRequest(Shift? Shift, string? Start, string? End);
 
-/// <summary>The full list of the point's windows: unchanged ones are kept, the rest replaced.</summary>
+/// <summary>The full list of the point's windows, required: unchanged ones are kept, the rest replaced, and [] means no windows. Omitting it is a 400.</summary>
 public record SavePointRequest(string? Name, List<RoundWindowRequest>? RoundWindows);
 
 /// <summary>
