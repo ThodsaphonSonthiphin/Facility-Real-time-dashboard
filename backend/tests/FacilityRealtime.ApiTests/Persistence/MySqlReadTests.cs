@@ -9,6 +9,7 @@ using System.Text.Json;
 namespace FacilityRealtime.ApiTests.Persistence;
 
 /// <summary>The Oracle MySQL provider returns DATE/TIME as DateTime/TimeSpan; SQLite hides that, so this reads DateOnly/TimeOnly back from real MySQL.</summary>
+[Collection("MySQL")]
 public class MySqlReadTests
 {
     [MySqlFact]

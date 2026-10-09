@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace FacilityRealtime.ApiTests.Persistence;
 
 /// <summary>users.cleaner_slot is a stored computed column with a UNIQUE index, checked row by row on MySQL.</summary>
+[Collection("MySQL")]
 public class MySqlAreaCleanerTests
 {
     [MySqlFact]

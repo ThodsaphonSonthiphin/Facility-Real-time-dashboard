@@ -127,16 +127,15 @@ public static class AdminAreaEndpoints
         area.Name = form.Name;
         area.BuildingId = form.Building.Id;
         area.ShiftPattern = form.Pattern;
-        List<PointRoundWindow> nightWindows = form.Pattern == ShiftPattern.DayOnly
-            ? await db.PointRoundWindows.Where(w => w.Shift == Shift.Night && w.ServicePoint!.AreaId == area.Id).ToListAsync()
-            : [];
-        // Wireframe D10: a day-only Area has no night rounds
-        await RoundWindowRemoval.RemoveAsync(db, nightWindows);
-
         var now = clock.GetUtcNow().UtcDateTime;
         await using var transaction = await db.Database.BeginTransactionAsync();
         try
         {
+            List<PointRoundWindow> nightWindows = form.Pattern == ShiftPattern.DayOnly
+                ? await db.PointRoundWindows.Where(w => w.Shift == Shift.Night && w.ServicePoint!.AreaId == area.Id).ToListAsync()
+                : [];
+            // Wireframe D10: a day-only Area has no night rounds
+            await RoundWindowRemoval.RemoveAsync(db, nightWindows);
             await AreaCleaners.ApplyAsync(db, area.Id, form.DayCleaner, form.NightCleaner);
             var after = Snapshot(area, form.DayCleaner, form.NightCleaner);
             if (after != before || nightWindows.Count > 0)

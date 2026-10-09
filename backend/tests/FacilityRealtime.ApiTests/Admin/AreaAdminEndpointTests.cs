@@ -385,4 +385,31 @@ public class AreaAdminEndpointTests
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Theory]
+    [InlineData("PUT", "")]
+    [InlineData("POST", "/deactivate")]
+    [InlineData("POST", "/activate")]
+    public async Task Unknown_areas_are_not_found(string method, string suffix)
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var body = method == "PUT" ? JsonContent.Create(await Ar01FormAsync(factory, null, null)) : null;
+
+        var response = await admin.SendAsync(new HttpRequestMessage(new HttpMethod(method), $"{Areas}/9999{suffix}") { Content = body });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
+    public async Task Supervisors_cannot_create_areas()
+    {
+        using var factory = new FacilityApiFactory();
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "S2001", "0820000001");
+
+        var response = await supervisor.PostAsJsonAsync(Areas, new { code = "AR03", name = "Lobby", buildingId = 1, shiftPattern = "DayOnly" });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
 }
