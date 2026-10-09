@@ -105,4 +105,20 @@ public class RoundWindowRulesTests
     {
         Assert.False(RoundWindowRules.TryParseTime(text, out _));
     }
+
+    [Theory]
+    [InlineData(Shift.Day, "07:00", "09:00", "DAY 07:00-09:00")]
+    [InlineData(Shift.Night, "23:00", "01:00", "NIGHT 23:00-01:00")]
+    public void Describe_names_the_shift_and_the_window_for_the_audit_log(Shift shift, string start, string end, string expected)
+    {
+        Assert.Equal(expected, RoundWindowRules.Describe(W(shift, start, end)));
+    }
+
+    [Theory]
+    [InlineData(Shift.Day, "07:00", "18:59")]
+    [InlineData(Shift.Night, "19:00", "06:59")]
+    public void The_last_minute_before_the_shift_change_is_still_valid(Shift shift, string start, string end)
+    {
+        Assert.Null(RoundWindowRules.Validate([W(shift, start, end)], ShiftPattern.DayAndNight));
+    }
 }

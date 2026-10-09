@@ -52,6 +52,8 @@ public class SignCodesTests
         var second = SignCodes.NewQrToken();
 
         Assert.True(Guid.TryParse(first, out _));
+        Assert.Equal(36, first.Length);
+        Assert.Equal('4', first[14]);
         Assert.NotEqual(first, second);
     }
 }
