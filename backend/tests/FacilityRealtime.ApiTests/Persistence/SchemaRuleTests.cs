@@ -1,7 +1,9 @@
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
+using FacilityRealtime.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace FacilityRealtime.ApiTests.Persistence;
 
@@ -225,5 +227,26 @@ public class SchemaRuleTests
 
         Assert.Equal(new[] { "AR01-01", "AR01-02", "AR01-IN" }, located);
         Assert.All(radii, r => Assert.Equal(50, r));
+    }
+
+    [Fact]
+    public async Task Audit_entry_round_trips_its_json()
+    {
+        using var factory = new FacilityApiFactory();
+        AuditEntry? entry = null;
+        int areaId = 0;
+
+        await factory.WithDbAsync(async db =>
+        {
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            var area = await db.Areas.SingleAsync(a => a.Code == "AR02");
+            areaId = area.Id;
+            AuditTrail.Add(db, admin.Id, DateTime.UtcNow, "COVER_ASSIGN", "cover_assignments", 1, "test cover", before: null, after: new { AreaId = area.Id });
+            await db.SaveChangesAsync();
+            entry = await db.AuditLog.AsNoTracking().SingleAsync();
+        });
+
+        Assert.Equal("COVER_ASSIGN", entry!.Action);
+        Assert.Equal(areaId, JsonDocument.Parse(entry.AfterJson!).RootElement.GetProperty("AreaId").GetInt32());
     }
 }

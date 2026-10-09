@@ -4,6 +4,7 @@ using FacilityRealtime.Domain.Enums;
 using FacilityRealtime.Infrastructure.Auth;
 using FacilityRealtime.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace FacilityRealtime.ApiTests.Persistence;
 
@@ -25,7 +26,7 @@ public class MySqlReadTests
 
         try
         {
-            int userId, pointId, signId;
+            int userId, pointId, signId, area2Id;
             await using (var write = new AppDbContext(options))
             {
                 await DbInitializer.SeedAsync(write, new Pbkdf2PasswordHasher(iterations: 1_000));
@@ -66,7 +67,8 @@ public class MySqlReadTests
                     WithinRadius = true,
                     CreatedAt = DateTime.UtcNow,
                 });
-                write.CoverAssignments.Add(new CoverAssignment
+                area2Id = area2.Id;
+                var coverAssignment = new CoverAssignment
                 {
                     UserId = cleaner.Id,
                     AreaId = area2.Id,
@@ -74,7 +76,10 @@ public class MySqlReadTests
                     Shift = Shift.Day,
                     AssignedById = userId,
                     AssignedAt = DateTime.UtcNow,
-                });
+                };
+                write.CoverAssignments.Add(coverAssignment);
+                await write.SaveChangesAsync();
+                AuditTrail.Add(write, userId, DateTime.UtcNow, "COVER_ASSIGN", "cover_assignments", coverAssignment.Id, "test cover", before: null, after: new { AreaId = area2.Id });
                 await write.SaveChangesAsync();
             }
 
@@ -96,6 +101,10 @@ public class MySqlReadTests
 
             var cover = await read.CoverAssignments.AsNoTracking().SingleAsync();
             Assert.Equal(new DateOnly(2026, 10, 8), cover.ShiftDate);
+
+            var entry = await read.AuditLog.AsNoTracking().SingleAsync();
+            Assert.Equal("COVER_ASSIGN", entry.Action);
+            Assert.Equal(area2Id, JsonDocument.Parse(entry.AfterJson!).RootElement.GetProperty("AreaId").GetInt32());
         }
         finally
         {
