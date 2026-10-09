@@ -74,6 +74,16 @@ npm --prefix frontend test
 
 ลองใน Swagger (`/swagger`): แม่บ้านต้องลงเวลาเข้างานก่อนส่งงาน — `POST /api/attendance` ด้วย `qrToken` = `token-checkin-ar01`, `eventType` = `ShiftIn` และพิกัด เช่น `latitude` 13.7563, `longitude` 100.5018, `accuracyM` 10 (ป้ายของ AR01 มีพิกัดตัวอย่าง ป้ายของ AR02 ยังไม่มี) จากนั้นจึง `POST /api/scan-records` ได้ ลงเวลาได้ตั้งแต่ 60 นาทีก่อนกะถึง 60 นาทีหลังกะ (ADR facility-0069)
 
+ตั้งค่า Area ใน Swagger (login เป็น `admin`, ADR facility-0045):
+
+- `GET /api/admin/areas/{id}` ดูป้ายทุกป้ายพร้อม QR Token, พิกัด และช่วงรอบ
+- `POST /api/admin/areas` เพิ่ม Area ระบบสร้างป้ายลงเวลา `<รหัส>-IN` ให้เอง
+- `POST /api/admin/areas/{areaId}/points` เพิ่มจุดพร้อมช่วงรอบ เช่น `{ "shift": "Day", "start": "07:00", "end": "09:00" }`
+  - ช่วงรอบห้ามซ้อนกัน ต้องอยู่ในกะ และห้ามจบตรง 19:00 หรือ 07:00 (ADR facility-0047)
+- `PUT /api/admin/signs/{id}/location` บันทึกพิกัดป้าย
+- `POST /api/admin/signs/{id}/regenerate-token` ออก QR ใหม่
+- ทุกการแก้ลงตาราง `audit_log`
+
 ### หมายเหตุด้านความปลอดภัยของ POC
 - cookie ของ refresh token ไม่ได้ตั้ง `Secure` เพราะมือถือเข้าผ่าน HTTP ในวง WiFi (ADR facility-0013) ถ้าติดตั้งบน HTTPS ให้ตั้งค่า `Jwt:RefreshCookieSecure` เป็น `true`
 - บัญชีทดสอบข้างบนเป็นข้อมูลตัวอย่างเท่านั้น

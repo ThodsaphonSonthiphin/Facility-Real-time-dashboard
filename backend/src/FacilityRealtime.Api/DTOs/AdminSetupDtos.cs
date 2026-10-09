@@ -54,3 +54,11 @@ public record RoundWindowRequest(Shift? Shift, string? Start, string? End);
 
 /// <summary>The full list of the point's windows: unchanged ones are kept, the rest replaced.</summary>
 public record SavePointRequest(string? Name, List<RoundWindowRequest>? RoundWindows);
+
+/// <summary>
+/// facility-0045: Site = the median of 30 s of GPS readings taken standing at the sign (the page computes it) with its accuracy;
+/// Map = picked on a map, no accuracy, shown as "ยังไม่ยืนยันหน้างาน".
+/// </summary>
+public record SignLocationRequest(double? Latitude, double? Longitude, double? AccuracyM, LocationSource? Source);
+
+public record SignRadiusRequest(int? RadiusM);
