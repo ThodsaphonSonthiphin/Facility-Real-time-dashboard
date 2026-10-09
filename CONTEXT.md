@@ -69,7 +69,7 @@ _Avoid_: Working Hours, Opening Time, Business Hours
 _Avoid_: Cookie, Remember Token, Keep-Alive
 
 **QR Token**:
-ค่ารหัสเฉพาะ (UUID) ประจำจุดบริการที่ฝังอยู่ใน QR Code เพื่อใช้เปิดหน้าเว็บสแกน สามารถกดสร้างใหม่ได้เมื่อป้ายชำรุด โดยไม่ต้องเปลี่ยนรหัสจุดเดิม
+ค่ารหัสเฉพาะ (UUID) ประจำจุดบริการที่ฝังอยู่ใน QR Code เพื่อใช้เปิดหน้าเว็บสแกน สามารถกดสร้างใหม่ได้เมื่อป้ายชำรุด โดยไม่ต้องเปลี่ยนรหัสจุดเดิม Cleaner Account และ Supervisor Account ได้ QR Token จากการสแกน QR Sign ที่จุดเท่านั้น ไม่มีหน้าจอไหนแสดงให้ ส่วน Admin Account เห็นได้ในหน้าจัดการจุดและหน้าพิมพ์ป้าย ไม่ใช่บน Dashboard (facility-0059, 0060)
 _Avoid_: Secret Key, QR String, Barcode Value
 
 **Shift Check-In**:
