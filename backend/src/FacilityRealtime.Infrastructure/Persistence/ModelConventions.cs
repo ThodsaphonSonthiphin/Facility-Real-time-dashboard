@@ -31,3 +31,13 @@ public sealed class UpperSnakeEnumConverter<TEnum>() : ValueConverter<TEnum, str
     where TEnum : struct, Enum
 {
 }
+
+// The Oracle MySQL provider materializes DATE/TIME as DateTime/TimeSpan, so DateOnly/TimeOnly need converters.
+public sealed class DateOnlyConverter() : ValueConverter<DateOnly, DateTime>(
+    d => d.ToDateTime(TimeOnly.MinValue),
+    t => DateOnly.FromDateTime(t));
+
+// The Oracle MySQL provider materializes DATE/TIME as DateTime/TimeSpan, so DateOnly/TimeOnly need converters.
+public sealed class TimeOnlyConverter() : ValueConverter<TimeOnly, TimeSpan>(
+    t => t.ToTimeSpan(),
+    s => TimeOnly.FromTimeSpan(s));
