@@ -224,7 +224,7 @@ public class CoverAssignmentEndpointTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
         var first = await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
-        await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
+        var second = await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
 
         var cancel = await admin.DeleteAsync($"{Path}/{first}");
 
@@ -233,6 +233,8 @@ public class CoverAssignmentEndpointTests
         await factory.WithDbAsync(async db => covers = await db.CoverAssignments.ToListAsync());
         Assert.Equal(2, covers.Count);
         Assert.All(covers, c => Assert.NotNull(c.CancelledAt));
-        Assert.Single((await AuditAsync(factory)).Where(a => a.Action == "COVER_CANCEL"));
+        var audit = Assert.Single(await AuditAsync(factory), a => a.Action == "COVER_CANCEL");
+        using var after = System.Text.Json.JsonDocument.Parse(audit.AfterJson!);
+        Assert.Equal(new[] { second }, after.RootElement.GetProperty("alsoCancelled").EnumerateArray().Select(e => e.GetInt32()));
     }
 }

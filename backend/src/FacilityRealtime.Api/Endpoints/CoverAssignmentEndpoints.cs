@@ -132,7 +132,7 @@ public static class CoverAssignmentEndpoints
             db, admin.Id, now, "COVER_CANCEL", "cover_assignments", cover.Id,
             $"ยกเลิกการทำแทนของ {cover.User!.DisplayName} ที่ {cover.Area!.Code} กะ{ShiftName(cover.Shift)} {cover.ShiftDate:yyyy-MM-dd}",
             before: new { cancelled = false },
-            after: new { cancelled = true });
+            after: new { cancelled = true, alsoCancelled = twins.Select(t => t.Id).ToList() });
         await db.SaveChangesAsync();
 
         return Results.NoContent();

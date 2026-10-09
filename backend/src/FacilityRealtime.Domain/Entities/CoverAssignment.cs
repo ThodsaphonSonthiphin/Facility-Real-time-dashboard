@@ -2,7 +2,7 @@ using FacilityRealtime.Domain.Enums;
 
 namespace FacilityRealtime.Domain.Entities;
 
-/// <summary>CONTEXT.md, Cover Assignment: an Admin lets a Cleaner work another Area for one shift; it lapses when the shift ends.</summary>
+/// <summary>CONTEXT.md, Cover Assignment: an Admin lets a Cleaner work another Area for one shift; it lapses when that Cleaner's attendance window for the shift closes (facility-0069).</summary>
 public class CoverAssignment
 {
     public int Id { get; set; }

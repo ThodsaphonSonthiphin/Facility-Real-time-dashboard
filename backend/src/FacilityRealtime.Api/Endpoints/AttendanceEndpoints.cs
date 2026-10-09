@@ -64,7 +64,7 @@ public static class AttendanceEndpoints
         var slot = user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null;
         if (slot is null || !area.HasShift(slot.Shift))
         {
-            return ApiResults.Message(StatusCodes.Status409Conflict, "ตอนนี้ยังไม่อยู่ในช่วงลงเวลาของกะคุณ");
+            return ApiResults.Message(StatusCodes.Status409Conflict, "ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ");
         }
 
         var existing = await LoadEventsAsync(db, user.Id, slot);
