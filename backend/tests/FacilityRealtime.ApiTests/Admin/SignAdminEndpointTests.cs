@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -103,8 +104,8 @@ public class SignAdminEndpointTests
         Assert.Equal(HttpStatusCode.OK, same.StatusCode);
         var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
         Assert.Equal("SIGN_RADIUS", entry.Action);
-        Assert.Contains("50", entry.BeforeJson);
-        Assert.Contains("80", entry.AfterJson);
+        Assert.Equal(50, JsonDocument.Parse(entry.BeforeJson!).RootElement.GetProperty("RadiusM").GetInt32());
+        Assert.Equal(80, JsonDocument.Parse(entry.AfterJson!).RootElement.GetProperty("RadiusM").GetInt32());
     }
 
     [Fact]
@@ -137,6 +138,49 @@ public class SignAdminEndpointTests
         var response = await admin.PostAsync($"/api/admin/signs/{await AdminSetupApi.SignIdAsync(factory, "AR01-01")}/regenerate-token", null);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Saving_the_same_location_again_changes_and_logs_nothing()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        var first = await LocateAsync(factory, admin, "AR02-01", 13.757, 100.502, null, "Map");
+        factory.Clock.Advance(TimeSpan.FromMinutes(5));
+        var second = await LocateAsync(factory, admin, "AR02-01", 13.757, 100.502, null, "Map");
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        var firstSign = (await first.Content.ReadFromJsonAsync<AdminSignModel>())!;
+        var secondSign = (await second.Content.ReadFromJsonAsync<AdminSignModel>())!;
+        Assert.Equal(firstSign.LocatedAt, secondSign.LocatedAt);
+        Assert.Single(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
+    public async Task A_sign_in_a_deactivated_area_gets_no_new_qr_token()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var areaId = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/admin/areas/{areaId}/deactivate", null)).StatusCode);
+
+        var response = await admin.PostAsync($"/api/admin/signs/{await AdminSetupApi.SignIdAsync(factory, "AR02-IN")}/regenerate-token", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_huge_accuracy_is_clamped_to_the_column_range()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        var response = await LocateAsync(factory, admin, "AR02-IN", 13.757, 100.502, 40000, "Site");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(short.MaxValue, (await response.Content.ReadFromJsonAsync<AdminSignModel>())!.LocationAccuracyM);
     }
 
     [Fact]

@@ -58,11 +58,20 @@ public static class AdminSignEndpoints
             return ApiResults.Message(StatusCodes.Status409Conflict, "ป้ายนี้ยืนยันพิกัดที่หน้างานแล้ว ถ้าจะแก้ให้เก็บใหม่ที่หน้างาน");
         }
 
+        var latitude = Math.Round((decimal)gps.Latitude, 6);
+        var longitude = Math.Round((decimal)gps.Longitude, 6);
+        short? accuracyM = source == LocationSource.Site ? (short)Math.Min(Math.Ceiling(gps.AccuracyM), short.MaxValue) : null;
+        if (sign.Latitude == latitude && sign.Longitude == longitude && sign.LocationAccuracyM == accuracyM && sign.LocationSource == source)
+        {
+            // Saving the same location again changes nothing, so it logs nothing and keeps LocatedAt
+            return Results.Ok(AdminSetupView.ToDto(sign));
+        }
+
         var before = LocationSnapshot(sign);
         var now = clock.GetUtcNow().UtcDateTime;
-        sign.Latitude = Math.Round((decimal)gps.Latitude, 6);
-        sign.Longitude = Math.Round((decimal)gps.Longitude, 6);
-        sign.LocationAccuracyM = source == LocationSource.Site ? (short)Math.Min(Math.Ceiling(gps.AccuracyM), short.MaxValue) : null;
+        sign.Latitude = latitude;
+        sign.Longitude = longitude;
+        sign.LocationAccuracyM = accuracyM;
         sign.LocationSource = source;
         sign.LocatedAt = now;
         AuditTrail.Add(

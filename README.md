@@ -81,6 +81,7 @@ npm --prefix frontend test
 - `POST /api/admin/areas/{areaId}/points` เพิ่มจุดพร้อมช่วงรอบ เช่น `{ "shift": "Day", "start": "07:00", "end": "09:00" }`
   - ช่วงรอบห้ามซ้อนกัน ต้องอยู่ในกะ และห้ามจบตรง 19:00 หรือ 07:00 (ADR facility-0047)
 - `PUT /api/admin/signs/{id}/location` บันทึกพิกัดป้าย
+- `PUT /api/admin/signs/{id}/radius` ตั้งรัศมีของป้าย 10–500 เมตร (ค่าเริ่ม 50)
 - `POST /api/admin/signs/{id}/regenerate-token` ออก QR ใหม่
 - ทุกการแก้ลงตาราง `audit_log`
 
