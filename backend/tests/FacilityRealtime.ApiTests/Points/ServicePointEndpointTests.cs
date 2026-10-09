@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.ApiTests.Points;
 
@@ -213,5 +214,63 @@ public class ServicePointEndpointTests
         var response = await factory.CreateApiClient().GetAsync("/api/service-points/by-token/token-restroom-m1");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Yesterdays_scan_does_not_count_today()
+    {
+        using var factory = new FacilityApiFactory();
+        await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(7, 8, 10));
+
+        var point = Point(await DashboardAtAsync(factory, ThaiClock.At(8, 8, 30)), MenRestroom);
+
+        Assert.Equal("NotYetDone", point.Status);
+        Assert.Equal(ThaiClock.At(7, 8, 10).UtcDateTime, point.LastScan?.SubmittedAt);
+    }
+
+    [Fact]
+    public async Task Issue_tag_follows_the_latest_scan_across_shifts()
+    {
+        using var factory = new FacilityApiFactory();
+        await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 17, 0), CleaningStatus.Issue, "wet_floor");
+
+        var point = Point(await DashboardAtAsync(factory, ThaiClock.At(8, 20, 30)), MenRestroom);
+
+        Assert.NotNull(point.Issue); // the day-shift scan, seen from the night shift
+    }
+
+    [Fact]
+    public async Task Deactivated_point_disappears_from_the_dashboard_and_the_lookup()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            var point = await db.ServicePoints.SingleAsync(p => p.Name == MenRestroom);
+            point.IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var points = await DashboardAtAsync(factory, ThaiClock.At(8, 8, 30));
+        var response = await cleaner.GetAsync("/api/service-points/by-token/token-restroom-m1");
+
+        Assert.DoesNotContain(points, p => p.Name == MenRestroom);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Deactivated_area_is_off_hours()
+    {
+        using var factory = new FacilityApiFactory();
+        await factory.WithDbAsync(async db =>
+        {
+            var area = await db.Areas.SingleAsync(a => a.Code == "AR01");
+            area.IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var point = Point(await DashboardAtAsync(factory, ThaiClock.At(8, 8, 30)), MenRestroom);
+
+        Assert.Equal("OffHours", point.Status);
     }
 }

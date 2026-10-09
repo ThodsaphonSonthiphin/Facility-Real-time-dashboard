@@ -27,10 +27,13 @@ public static class PointBoardQuery
         var facts = await RoundFactsQuery.LoadAsync(db, ids, slot);
 
         // facility-0046: the issue tag follows the point's latest Scan Record, whatever shift it was in
+        var latestIds = db.ScanRecords
+            .Where(x => ids.Contains(x.ServicePointId))
+            .GroupBy(x => x.ServicePointId)
+            .Select(g => g.Max(x => x.Id));
         var lastScans = await db.ScanRecords.AsNoTracking()
             .Include(s => s.User)
-            .Where(s => ids.Contains(s.ServicePointId)
-                && s.Id == db.ScanRecords.Where(x => x.ServicePointId == s.ServicePointId).Max(x => x.Id))
+            .Where(s => latestIds.Contains(s.Id))
             .ToListAsync();
 
         return points.Select(point =>
