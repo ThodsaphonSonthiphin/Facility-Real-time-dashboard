@@ -2,7 +2,8 @@ using System;
 
 namespace FacilityRealtime.Api.DTOs;
 
-public record LoginRequest(string Username, string Password);
+/// <summary>facility-0054: Cleaners and Supervisors send EmployeeId + Phone; the Admin sends Username + Password.</summary>
+public record LoginRequest(string? EmployeeId, string? Phone, string? Username, string? Password);
 
 public record AuthUserDto(int Id, string Username, string FullName, string Role);
 

@@ -16,7 +16,12 @@ public static class AuthApi
     public static HttpClient CreateApiClient(this FacilityApiFactory factory) =>
         factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, AllowAutoRedirect = false });
 
-    public static Task<HttpResponseMessage> LoginAsync(HttpClient client, string username = "somchai", string password = "password123") =>
+    /// <summary>facility-0054: Cleaner and Supervisor Accounts log in with employee ID + phone. Defaults to seeded cleaner E1001.</summary>
+    public static Task<HttpResponseMessage> LoginAsync(HttpClient client, string employeeId = "E1001", string phone = "0810000001") =>
+        client.PostAsJsonAsync("/api/auth/login", new { employeeId, phone });
+
+    /// <summary>The Admin Account keeps username + password.</summary>
+    public static Task<HttpResponseMessage> AdminLoginAsync(HttpClient client, string username = "admin", string password = "admin1234") =>
         client.PostAsJsonAsync("/api/auth/login", new { username, password });
 
     public static async Task<AuthResponseModel> ReadAuthAsync(HttpResponseMessage response) =>
@@ -38,12 +43,18 @@ public static class AuthApi
     public static Task<HttpResponseMessage> LogoutAsync(HttpClient client, string? refreshToken) =>
         PostWithCookieAsync(client, "/api/auth/logout", refreshToken);
 
-    /// <summary>Logs in and returns a client that already sends the access token.</summary>
-    public static async Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> LoggedInAsync(
-        FacilityApiFactory factory, string username = "somchai", string password = "password123")
+    /// <summary>Logs in as seeded cleaner E1001 and returns a client that already sends the access token.</summary>
+    public static Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> LoggedInAsync(FacilityApiFactory factory) =>
+        LoggedInWithAsync(factory, client => LoginAsync(client));
+
+    public static Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> LoggedInAdminAsync(FacilityApiFactory factory) =>
+        LoggedInWithAsync(factory, client => AdminLoginAsync(client));
+
+    private static async Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> LoggedInWithAsync(
+        FacilityApiFactory factory, Func<HttpClient, Task<HttpResponseMessage>> login)
     {
         var client = factory.CreateApiClient();
-        var response = await LoginAsync(client, username, password);
+        var response = await login(client);
         response.EnsureSuccessStatusCode();
         var auth = await ReadAuthAsync(response);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);

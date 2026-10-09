@@ -19,34 +19,208 @@ namespace FacilityRealtime.Infrastructure.Migrations
                 .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.Area", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BuildingId")
+                        .HasColumnType("int")
+                        .HasColumnName("building_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("ShiftPattern")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("shift_pattern");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildingId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("areas", (string)null);
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.Building", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("buildings", (string)null);
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.InspectionRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Defect")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("defect");
+
+                    b.Property<DateTime>("InspectedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("inspected_at");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("result");
+
+                    b.Property<long>("ScanRecordId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("scan_record_id");
+
+                    b.Property<int>("ServicePointId")
+                        .HasColumnType("int")
+                        .HasColumnName("service_point_id");
+
+                    b.Property<int>("SupervisorId")
+                        .HasColumnType("int")
+                        .HasColumnName("supervisor_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScanRecordId");
+
+                    b.HasIndex("ServicePointId", "InspectedAt");
+
+                    b.HasIndex("SupervisorId", "InspectedAt");
+
+                    b.ToTable("inspections", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_inspections_rework_has_defect", "result <> 'REWORK' OR defect IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.PointRoundWindow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time")
+                        .HasColumnName("end_time");
+
+                    b.Property<int>("ServicePointId")
+                        .HasColumnType("int")
+                        .HasColumnName("service_point_id");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time")
+                        .HasColumnName("start_time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServicePointId", "Shift", "StartTime");
+
+                    b.ToTable("point_round_windows", (string)null);
+                });
+
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.RefreshToken", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("expires_at");
 
                     b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("revoked_at");
 
                     b.Property<DateTime?>("RotatedAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("rotated_at");
 
                     b.Property<Guid>("SessionId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("char(36)")
+                        .HasColumnName("session_id");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("varchar(64)");
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("token_hash");
 
                     b.Property<int>("UserId")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
 
                     b.HasKey("Id");
 
@@ -64,35 +238,84 @@ namespace FacilityRealtime.Infrastructure.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
 
                     b.Property<string>("IssueTags")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("issue_tags");
 
-                    b.Property<string>("Notes")
+                    b.Property<int?>("LateMinutes")
+                        .HasColumnType("int")
+                        .HasColumnName("late_minutes");
+
+                    b.Property<string>("Note")
                         .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)");
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("note");
 
-                    b.Property<DateTime>("ScannedAt")
-                        .HasColumnType("datetime(6)");
+                    b.Property<string>("Placement")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("placement");
+
+                    b.Property<TimeOnly?>("RoundEnd")
+                        .HasColumnType("time")
+                        .HasColumnName("round_end");
+
+                    b.Property<TimeOnly?>("RoundStart")
+                        .HasColumnType("time")
+                        .HasColumnName("round_start");
+
+                    b.Property<int?>("RoundWindowId")
+                        .HasColumnType("int")
+                        .HasColumnName("round_window_id");
 
                     b.Property<int>("ServicePointId")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("service_point_id");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<DateOnly>("ShiftDate")
+                        .HasColumnType("date")
+                        .HasColumnName("shift_date");
+
+                    b.Property<int>("SignId")
+                        .HasColumnType("int")
+                        .HasColumnName("sign_id");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("submitted_at");
 
                     b.Property<int>("UserId")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("RoundWindowId");
 
-                    b.HasIndex("ServicePointId", "ScannedAt");
+                    b.HasIndex("SignId");
+
+                    b.HasIndex("SubmittedAt");
+
+                    b.HasIndex("UserId", "SubmittedAt");
+
+                    b.HasIndex("ServicePointId", "ShiftDate", "Shift");
 
                     b.ToTable("scan_records", (string)null);
                 });
@@ -101,78 +324,231 @@ namespace FacilityRealtime.Infrastructure.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("id");
 
-                    b.Property<int>("CleaningIntervalMinutes")
-                        .HasColumnType("int");
+                    b.Property<int>("AreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("area_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("Location")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("varchar(150)");
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("name");
+
+                    b.Property<short>("SortOrder")
+                        .HasColumnType("smallint")
+                        .HasColumnName("sort_order");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AreaId", "SortOrder");
+
+                    b.ToTable("service_points", (string)null);
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.Sign", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("area_id");
+
+                    b.Property<int?>("CheckinAreaId")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("int")
+                        .HasColumnName("checkin_area_id")
+                        .HasComputedColumnSql("CASE WHEN service_point_id IS NULL THEN area_id END", true);
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("QrIssuedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("qr_issued_at");
 
                     b.Property<string>("QrToken")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("qr_token");
+
+                    b.Property<int?>("ServicePointId")
+                        .HasColumnType("int")
+                        .HasColumnName("service_point_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("CheckinAreaId")
+                        .IsUnique();
+
+                    b.HasIndex("Code")
+                        .IsUnique();
 
                     b.HasIndex("QrToken")
                         .IsUnique();
 
-                    b.ToTable("service_points", (string)null);
+                    b.HasIndex("ServicePointId")
+                        .IsUnique();
+
+                    b.ToTable("signs", (string)null);
                 });
 
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("AreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("area_id");
+
+                    b.Property<int?>("BuildingId")
+                        .HasColumnType("int")
+                        .HasColumnName("building_id");
+
+                    b.Property<int?>("CleanerSlot")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("int")
+                        .HasColumnName("cleaner_slot")
+                        .HasComputedColumnSql("CASE WHEN role = 'CLEANER' AND is_active = 1 THEN area_id * 2 + (CASE WHEN shift = 'NIGHT' THEN 1 ELSE 0 END) END", true);
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
 
-                    b.Property<string>("FullName")
+                    b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("varchar(150)");
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("EmployeeId")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("employee_id");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
 
                     b.Property<string>("Role")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("role");
+
+                    b.Property<string>("SecretHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("secret_hash");
+
+                    b.Property<string>("Shift")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<int?>("SupervisorSlot")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("int")
+                        .HasColumnName("supervisor_slot")
+                        .HasComputedColumnSql("CASE WHEN role = 'SUPERVISOR' AND is_active = 1 THEN building_id * 2 + (CASE WHEN shift = 'NIGHT' THEN 1 ELSE 0 END) END", true);
 
                     b.Property<string>("Username")
-                        .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("username");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("BuildingId");
+
+                    b.HasIndex("CleanerSlot")
+                        .IsUnique();
+
+                    b.HasIndex("EmployeeId")
+                        .IsUnique();
+
+                    b.HasIndex("SupervisorSlot")
+                        .IsUnique();
 
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("users", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_users_login_name", "(role = 'ADMIN' AND username IS NOT NULL) OR (role <> 'ADMIN' AND employee_id IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.Area", b =>
+                {
+                    b.HasOne("FacilityRealtime.Domain.Entities.Building", "Building")
+                        .WithMany()
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Building");
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.InspectionRecord", b =>
+                {
+                    b.HasOne("FacilityRealtime.Domain.Entities.ScanRecord", "ScanRecord")
+                        .WithMany()
+                        .HasForeignKey("ScanRecordId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FacilityRealtime.Domain.Entities.ServicePoint", null)
+                        .WithMany()
+                        .HasForeignKey("ServicePointId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FacilityRealtime.Domain.Entities.User", "Supervisor")
+                        .WithMany()
+                        .HasForeignKey("SupervisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ScanRecord");
+
+                    b.Navigation("Supervisor");
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.PointRoundWindow", b =>
+                {
+                    b.HasOne("FacilityRealtime.Domain.Entities.ServicePoint", "ServicePoint")
+                        .WithMany()
+                        .HasForeignKey("ServicePointId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ServicePoint");
                 });
 
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.RefreshToken", b =>
@@ -188,10 +564,21 @@ namespace FacilityRealtime.Infrastructure.Migrations
 
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.ScanRecord", b =>
                 {
+                    b.HasOne("FacilityRealtime.Domain.Entities.PointRoundWindow", "RoundWindow")
+                        .WithMany()
+                        .HasForeignKey("RoundWindowId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("FacilityRealtime.Domain.Entities.ServicePoint", "ServicePoint")
                         .WithMany()
                         .HasForeignKey("ServicePointId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FacilityRealtime.Domain.Entities.Sign", "Sign")
+                        .WithMany()
+                        .HasForeignKey("SignId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("FacilityRealtime.Domain.Entities.User", "User")
@@ -200,9 +587,59 @@ namespace FacilityRealtime.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("RoundWindow");
+
                     b.Navigation("ServicePoint");
 
+                    b.Navigation("Sign");
+
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.ServicePoint", b =>
+                {
+                    b.HasOne("FacilityRealtime.Domain.Entities.Area", "Area")
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Area");
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.Sign", b =>
+                {
+                    b.HasOne("FacilityRealtime.Domain.Entities.Area", "Area")
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FacilityRealtime.Domain.Entities.ServicePoint", "ServicePoint")
+                        .WithMany()
+                        .HasForeignKey("ServicePointId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Area");
+
+                    b.Navigation("ServicePoint");
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.User", b =>
+                {
+                    b.HasOne("FacilityRealtime.Domain.Entities.Area", "Area")
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FacilityRealtime.Domain.Entities.Building", "Building")
+                        .WithMany()
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Area");
+
+                    b.Navigation("Building");
                 });
 #pragma warning restore 612, 618
         }

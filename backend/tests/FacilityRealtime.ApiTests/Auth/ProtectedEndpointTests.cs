@@ -16,72 +16,28 @@ namespace FacilityRealtime.ApiTests.Auth;
 
 public class ProtectedEndpointTests
 {
-    private const string QrToken = "token-restroom-m1";
-
     // A throwaway literal for the "signed with a different key" test below; not a real secret.
     private const string DifferentSigningKey = "different-throwaway-signing-key-0123456789-abcdefghijklmnop";
 
-    [Theory]
-    [InlineData("/api/service-points")]
-    [InlineData("/api/service-points/by-token/" + QrToken)]
-    public async Task Dashboard_and_point_lookup_require_login(string path)
+    [Fact]
+    public async Task Me_requires_login()
     {
         using var factory = new FacilityApiFactory();
 
-        var response = await factory.CreateApiClient().GetAsync(path);
+        var response = await factory.CreateApiClient().GetAsync("/api/me");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task Any_logged_in_account_can_read_the_dashboard_and_a_point()
-    {
-        using var factory = new FacilityApiFactory();
-        var (client, _, _) = await AuthApi.LoggedInAsync(factory);
-
-        var list = await client.GetAsync("/api/service-points");
-        var point = await client.GetAsync("/api/service-points/by-token/" + QrToken);
-
-        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, point.StatusCode);
-    }
-
-    [Fact]
-    public async Task Scanning_requires_login()
-    {
-        using var factory = new FacilityApiFactory();
-
-        var response = await factory.CreateApiClient().PostAsJsonAsync("/api/scan-records", new { qrToken = QrToken, status = "Normal" });
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Scan_is_recorded_as_the_logged_in_user_even_if_the_body_names_someone_else()
+    public async Task Me_returns_the_account_in_the_access_token()
     {
         using var factory = new FacilityApiFactory();
         var (client, auth, _) = await AuthApi.LoggedInAsync(factory);
-        var adminId = 0;
-        await factory.WithDbAsync(async db => adminId = (await db.Users.SingleAsync(u => u.Username == "admin")).Id);
 
-        // Master's contract accepted userId in the body; an old client or curl may still send it
-        var response = await client.PostAsJsonAsync("/api/scan-records", new { qrToken = QrToken, userId = adminId, status = "Normal" });
+        var me = await client.GetFromJsonAsync<AuthUserModel>("/api/me");
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var recordedUserId = 0;
-        await factory.WithDbAsync(async db => recordedUserId = (await db.ScanRecords.OrderByDescending(r => r.Id).FirstAsync()).UserId);
-        Assert.Equal(auth.User.Id, recordedUserId);
-    }
-
-    [Fact]
-    public async Task Admin_accounts_can_scan_too()
-    {
-        using var factory = new FacilityApiFactory();
-        var (client, _, _) = await AuthApi.LoggedInAsync(factory, "admin", "admin1234");
-
-        var response = await client.PostAsJsonAsync("/api/scan-records", new { qrToken = QrToken, status = "Normal" });
-
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(auth.User, me);
     }
 
     [Fact]
@@ -111,7 +67,7 @@ public class ProtectedEndpointTests
         using var factory = new FacilityApiFactory();
         var (_, auth, _) = await AuthApi.LoggedInAsync(factory);
 
-        var response = await factory.CreateApiClient().GetAsync($"/api/service-points?access_token={auth.AccessToken}");
+        var response = await factory.CreateApiClient().GetAsync($"/api/me?access_token={auth.AccessToken}");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -133,7 +89,7 @@ public class ProtectedEndpointTests
         var client = factory.CreateApiClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await client.GetAsync("/api/service-points");
+        var response = await client.GetAsync("/api/me");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -151,7 +107,7 @@ public class ProtectedEndpointTests
         var client = factory.CreateApiClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await client.GetAsync("/api/service-points");
+        var response = await client.GetAsync("/api/me");
 
         Assert.Equal(expected, response.StatusCode);
     }
@@ -168,17 +124,17 @@ public class ProtectedEndpointTests
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim(AuthClaims.UserId, user.Id.ToString()),
-                new Claim(AuthClaims.Username, user.Username),
-                new Claim(AuthClaims.Name, user.FullName),
-                new Claim(AuthClaims.Role, user.Role),
+                new Claim(AuthClaims.Username, user.LoginName),
+                new Claim(AuthClaims.Name, user.DisplayName),
+                new Claim(AuthClaims.Role, user.Role.ToClaimValue()),
             }),
             SigningCredentials = new SigningCredentials(JwtKeys.SigningKey(settings), SecurityAlgorithms.HmacSha256),
         });
 
-    private static async Task<User> SeededUserAsync(FacilityApiFactory factory, string username = "somchai")
+    private static async Task<User> SeededUserAsync(FacilityApiFactory factory, string employeeId = "E1001")
     {
         User? user = null;
-        await factory.WithDbAsync(async db => user = await db.Users.SingleAsync(u => u.Username == username));
+        await factory.WithDbAsync(async db => user = await db.Users.SingleAsync(u => u.EmployeeId == employeeId));
         return user!;
     }
 }

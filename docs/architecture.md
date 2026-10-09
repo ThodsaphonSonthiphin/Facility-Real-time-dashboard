@@ -118,13 +118,13 @@ flowchart TB
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
         subgraph ApiP["FacilityRealtime.Api"]
-            Ep["Program.cs<br/>/api/service-points<br/>/api/scan-records"]
+            Ep["Endpoints/ServicePointEndpoints, ScanRecordEndpoints, MeEndpoints<br/>/api/service-points (Admin) | /api/scan-records | /api/me"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
             Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]"]
             Jwt["Auth/AuthSetup.cs<br/>JWT bearer validation"]
         end
         subgraph AppP["FacilityRealtime.Application"]
-            Status["StatusCalculator<br/>WorkingHours"]
+            Status["Shifts/ShiftCalendar<br/>Rounds/RoundPlacer, PointStatusCalculator"]
             Rules["RefreshTokenRules<br/>IAccessTokenIssuer, IPasswordHasher"]
         end
         subgraph InfP["FacilityRealtime.Infrastructure"]
@@ -152,7 +152,7 @@ flowchart TB
 
     Ep --> Status
     Ep --> Ctx
-    Ep -->|"IHubContext.Clients.All"| Hub
+    Ep -->|"Clients.Group(admins)"| Hub
     AuthEp --> Rules
     AuthEp --> Ctx
     Jwt -.->|validates| Ep & Hub
@@ -167,13 +167,13 @@ flowchart TB
 
 Project references follow Clean Architecture: `Api → Application, Infrastructure`; `Infrastructure → Application, Domain`; `Application → Domain`; `Domain` depends on nothing.
 
-> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers are lambdas in `Program.cs` that use `AppDbContext` directly.
+> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers live in `Endpoints/` (AuthEndpoints, MeEndpoints, ServicePointEndpoints, ScanRecordEndpoints), use `AppDbContext` directly, and `Program.cs` only composes them.
 
 ---
 
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
-This is the main flow of the POC.
+This is the main flow: a Cleaner submits a Scan Record and the Admin Dashboard updates.
 
 ```mermaid
 sequenceDiagram
@@ -181,31 +181,32 @@ sequenceDiagram
     actor Cleaner
     participant Phone as Phone browser<br/>(ScanRecordPage)
     participant Vite as Vite :5173<br/>(proxy)
-    participant Api as API :5001<br/>(Program.cs)
+    participant Api as API :5001<br/>(Endpoints/*)
     participant DB as MySQL
     participant Hub as ScanHub<br/>/hubs/scan
     participant Dash as Dashboard browser<br/>(DashboardView)
 
-    Note over Dash,Hub: Earlier: the dashboard opened a WebSocket to /hubs/scan<br/>with ?access_token=<JWT> and listens for "ScanRecorded"
+    Note over Dash,Hub: Earlier: an Admin opened the Dashboard; its WebSocket to /hubs/scan<br/>(?access_token=<JWT>) joined the "admins" group (facility-0058)
 
     Cleaner->>Phone: Scan QR with phone camera → opens /scan/{qrToken}
     Phone->>Vite: GET /api/service-points/by-token/{qrToken}<br/>Authorization: Bearer <JWT>
     Vite->>Api: forward
-    Api->>DB: SELECT service point + latest scan
+    Api->>DB: SELECT sign → point, this shift's Round Windows, Scan and Inspection Records
     DB-->>Api: rows
-    Api-->>Phone: 200 ServicePointStatusDto
+    Api-->>Phone: 200 PointStatusDto (no QR Token)
 
     Cleaner->>Phone: Choose Normal / Issue (+ tags, notes), tap submit
     Phone->>Vite: POST /api/scan-records { qrToken, status, issueTags, notes }
     Vite->>Api: forward
     Note right of Api: The scanner is the user in the JWT,<br/>never a field in the body (facility-0017)
-    Api->>DB: INSERT scan_records
+    Api->>Api: RoundPlacer.Place(...) → OnTime / Late / Rework / OffRound (facility-0047)
+    Api->>DB: INSERT scan_records (shift, round, placement)
     DB-->>Api: OK
-    Api->>Api: StatusCalculator.CalculateStatus(...)
-    Api->>Hub: Clients.All.SendAsync("ScanRecorded", dto)
+    Api->>Api: PointStatusCalculator.Calculate(...)
+    Api->>Hub: Clients.Group("admins").SendAsync("ScanRecorded", dto)
     Hub-->>Dash: "ScanRecorded" (WebSocket push)
     Dash->>Dash: Update the card and KPI bar, no page reload
-    Api-->>Phone: 201 Created { id, pointStatus, scannedAt }
+    Api-->>Phone: 201 Created { scanRecordId, placement, lateMinutes, newPointStatus, submittedAt }
 ```
 
 ---
@@ -224,11 +225,15 @@ sequenceDiagram
     participant DB as MySQL
     participant Api as API /api/* or /hubs/scan
 
-    User->>FE: Enter username + password
+    User->>FE: Enter employee ID + phone (Cleaner/Supervisor)<br/>or username + password (Admin)
     FE->>Auth: POST /api/auth/login
-    Auth->>DB: Find user, verify PBKDF2 hash
-    Auth->>DB: INSERT refresh_tokens (SHA-256 hash only)
-    Auth-->>FE: 200 { accessToken, expiresAt, user }<br/>Set-Cookie: facility_refresh (HttpOnly, Path=/api/auth)
+    alt Fewer than 5 failed attempts for this account in 15 minutes
+        Auth->>DB: Find user, verify credentials
+        Auth->>DB: INSERT refresh_tokens (SHA-256 hash only)
+        Auth-->>FE: 200 { accessToken, expiresAt, user }<br/>Set-Cookie: facility_refresh (HttpOnly, Path=/api/auth)
+    else 5 attempts within 15 minutes (facility-0054)
+        Auth-->>FE: 429 (refused for 15 minutes)
+    end
 
     FE->>Api: Request with Authorization: Bearer <accessToken>
     Api-->>FE: 200
@@ -256,68 +261,112 @@ sequenceDiagram
 ```mermaid
 classDiagram
     direction LR
-    class User {
-        <<users>>
+    class Building {
+        <<buildings>>
         +int Id
-        +string Username «unique»
-        +string PasswordHash
-        +string FullName
-        +string Role  cleaner | admin
+        +string Code «unique»
+        +string Name
         +bool IsActive
-        +DateTime CreatedAt
+    }
+    class Area {
+        <<areas>>
+        +int Id
+        +int BuildingId
+        +string Code «unique»
+        +string Name
+        +ShiftPattern ShiftPattern
+        +bool IsActive
     }
     class ServicePoint {
         <<service_points>>
         +int Id
+        +int AreaId
         +string Name
-        +string Location
-        +int CleaningIntervalMinutes
-        +string QrToken «unique»
+        +short SortOrder
         +bool IsActive
-        +DateTime CreatedAt
     }
-    class ScanRecord {
-        <<scan_records>>
-        +long Id
+    class Sign {
+        <<signs>>
+        +int Id
+        +int AreaId
+        +int? ServicePointId «unique»
+        +string Code «unique»
+        +string QrToken «unique»
+        +int? CheckinAreaId «computed, unique»
+    }
+    class PointRoundWindow {
+        <<point_round_windows>>
+        +int Id
         +int ServicePointId
-        +int UserId
-        +ScanStatus Status
-        +string IssueTags  comma-separated
-        +string Notes
-        +DateTime ScannedAt
+        +Shift Shift
+        +TimeOnly StartTime
+        +TimeOnly EndTime
+    }
+    class User {
+        <<users>>
+        +int Id
+        +UserRole Role
+        +string? EmployeeId «unique»
+        +string? Username «unique»
+        +string DisplayName
+        +string SecretHash
+        +int? AreaId
+        +int? BuildingId
+        +Shift? Shift
+        +bool IsActive
+        +int? CleanerSlot «computed, unique»
+        +int? SupervisorSlot «computed, unique»
     }
     class RefreshToken {
         <<refresh_tokens>>
         +long Id
         +int UserId
         +Guid SessionId
-        +string TokenHash «unique, SHA-256»
-        +DateTime CreatedAt
-        +DateTime ExpiresAt
-        +DateTime? RotatedAt
-        +DateTime? RevokedAt
+        +string TokenHash «unique»
     }
-    class ScanStatus {
-        <<enumeration>>
-        Normal
-        Issue
+    class ScanRecord {
+        <<scan_records>>
+        +long Id
+        +int ServicePointId
+        +int SignId
+        +int UserId
+        +DateOnly ShiftDate
+        +Shift Shift
+        +int? RoundWindowId
+        +Placement Placement
+        +int? LateMinutes
+        +CleaningStatus Status
+        +DateTime SubmittedAt
     }
-    class PointStatus {
-        <<enumeration>>
-        Normal
-        Overdue
-        Issue
-        OffHours
+    class InspectionRecord {
+        <<inspections>>
+        +long Id
+        +long ScanRecordId
+        +int ServicePointId
+        +int SupervisorId
+        +InspectionResult Result
+        +string? Defect
+        +DateTime InspectedAt
     }
 
-    ServicePoint "1" <-- "0..*" ScanRecord : cascade delete
-    User "1" <-- "0..*" ScanRecord : restrict delete
+    Building "1" <-- "0..*" Area
+    Area "1" <-- "0..*" ServicePoint
+    Area "1" <-- "1..*" Sign
+    ServicePoint "1" <-- "0..1" Sign
+    ServicePoint "1" <-- "0..*" PointRoundWindow
+    Area "0..1" <-- "0..*" User : Cleaner
+    Building "0..1" <-- "0..*" User : Supervisor
     User "1" <-- "0..*" RefreshToken : cascade delete
-    ScanRecord --> ScanStatus
+    ServicePoint "1" <-- "0..*" ScanRecord
+    PointRoundWindow "0..1" <-- "0..*" ScanRecord : set null on delete
+    ScanRecord "1" <-- "0..*" InspectionRecord
+    Sign "1" <-- "0..*" ScanRecord
+    User "1" <-- "0..*" ScanRecord : cleaner
+    ServicePoint "1" <-- "0..*" InspectionRecord
+    User "1" <-- "0..*" InspectionRecord : supervisor
 ```
 
-`PointStatus` is not stored. The API calculates it on each request from the latest scan,
-`CleaningIntervalMinutes` and `WorkingHours` (08:00–17:00 in `appsettings.json`), using `StatusCalculator` ([facility-0005](adr/facility-0005-point-status-rules.md), [facility-0019](adr/facility-0019-status-calculator-follows-adr-0005.md)).
+The full target schema, including the tables later plans add, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`).
 
 ---
 
