@@ -41,4 +41,15 @@ public class ShiftCalendarTests
 
         Assert.Equal(Thai(expectedDay, expectedHour, expectedMinute), utc);
     }
+
+    [Theory]
+    [InlineData(Shift.Day, 8, 7, 8, 19)]
+    [InlineData(Shift.Night, 8, 19, 9, 7)]
+    public void Shift_starts_and_ends_twelve_hours_later(Shift shift, int startDay, int startHour, int endDay, int endHour)
+    {
+        var slot = new ShiftSlot(new DateOnly(2026, 10, 8), shift);
+
+        Assert.Equal(Thai(startDay, startHour, 0), ShiftCalendar.StartUtc(slot));
+        Assert.Equal(Thai(endDay, endHour, 0), ShiftCalendar.EndUtc(slot));
+    }
 }
