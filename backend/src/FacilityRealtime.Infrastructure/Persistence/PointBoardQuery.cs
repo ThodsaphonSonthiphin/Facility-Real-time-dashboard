@@ -10,7 +10,7 @@ public sealed record PointBoardRow(ServicePoint Point, PointStatusResult Status,
 
 public static class PointBoardQuery
 {
-    /// <summary>The Dashboard: every active point as seen from the shift running now.</summary>
+    /// <summary>The Dashboard: every active point of an active Area, as seen from the shift running now.</summary>
     public static Task<IReadOnlyList<PointBoardRow>> LoadAsync(AppDbContext db, DateTime nowUtc, int? servicePointId = null) =>
         LoadAsync(db, nowUtc, ShiftCalendar.SlotAt(nowUtc), areaIds: null, servicePointId);
 
@@ -20,7 +20,7 @@ public static class PointBoardQuery
     {
         var query = db.ServicePoints.AsNoTracking()
             .Include(p => p.Area!).ThenInclude(a => a.Building)
-            .Where(p => p.IsActive);
+            .Where(p => p.IsActive && p.Area!.IsActive);
         if (servicePointId is int onlyId)
         {
             query = query.Where(p => p.Id == onlyId);

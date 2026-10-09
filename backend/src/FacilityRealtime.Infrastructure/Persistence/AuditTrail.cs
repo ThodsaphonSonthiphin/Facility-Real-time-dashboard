@@ -25,8 +25,15 @@ public static class AuditTrail
             EntityType = entityType,
             EntityId = entityId,
             Summary = summary,
-            BeforeJson = before is null ? null : JsonSerializer.Serialize(before),
-            AfterJson = after is null ? null : JsonSerializer.Serialize(after),
+            BeforeJson = Serialize(before, nameof(before)),
+            AfterJson = Serialize(after, nameof(after)),
             Reason = reason,
         });
+
+    /// <summary>facility-0057: no phone or password in the log. An entity can carry a hash, so only snapshots are accepted.</summary>
+    private static string? Serialize(object? snapshot, string parameterName) =>
+        snapshot is null ? null
+        : snapshot.GetType().Assembly == typeof(AuditEntry).Assembly
+            ? throw new ArgumentException($"Pass a snapshot, not the {snapshot.GetType().Name} entity.", parameterName)
+            : JsonSerializer.Serialize(snapshot);
 }

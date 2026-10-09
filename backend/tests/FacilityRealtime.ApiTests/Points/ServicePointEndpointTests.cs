@@ -259,7 +259,7 @@ public class ServicePointEndpointTests
     }
 
     [Fact]
-    public async Task Deactivated_area_is_off_hours()
+    public async Task Deactivated_area_leaves_the_dashboard()
     {
         using var factory = new FacilityApiFactory();
         await factory.WithDbAsync(async db =>
@@ -269,8 +269,8 @@ public class ServicePointEndpointTests
             await db.SaveChangesAsync();
         });
 
-        var point = Point(await DashboardAtAsync(factory, ThaiClock.At(8, 8, 30)), MenRestroom);
+        var points = await DashboardAtAsync(factory, ThaiClock.At(8, 8, 30));
 
-        Assert.Equal("OffHours", point.Status);
+        Assert.DoesNotContain(points, p => p.Name == MenRestroom);
     }
 }

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
@@ -142,5 +143,246 @@ public class AreaAdminEndpointTests
         Assert.Equal(new[] { true, false }, detail.Points.Select(p => p.IsActive));
         Assert.DoesNotContain(buildings, b => b.Code == "Z");
         Assert.DoesNotContain(cleaners, c => c.EmployeeId == "E1002");
+    }
+
+    private static async Task<object> Ar01FormAsync(FacilityApiFactory factory, string? day, string? night, string pattern = "DayAndNight") => new
+    {
+        name = "Area 1 ชั้น 1",
+        buildingId = await AdminSetupApi.BuildingIdAsync(factory),
+        shiftPattern = pattern,
+        dayCleanerId = day is null ? (int?)null : await AdminSetupApi.UserIdAsync(factory, day),
+        nightCleanerId = night is null ? (int?)null : await AdminSetupApi.UserIdAsync(factory, night),
+    };
+
+    private static Task<int?> AreaOfAsync(FacilityApiFactory factory, string employeeId) =>
+        AdminSetupApi.ReadAsync(factory, db => db.Users.Where(u => u.EmployeeId == employeeId).Select(u => u.AreaId).SingleAsync());
+
+    [Fact]
+    public async Task Admin_creates_an_area_with_its_check_in_sign_and_it_is_logged()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        var response = await admin.PostAsJsonAsync(Areas, new
+        {
+            code = " ar03 ",
+            name = "Lobby ชั้น 1",
+            buildingId = await AdminSetupApi.BuildingIdAsync(factory),
+            shiftPattern = "DayOnly",
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var detail = (await response.Content.ReadFromJsonAsync<AreaDetailModel>())!;
+        Assert.Equal("AR03", detail.Area.Code);
+        Assert.Equal("DayOnly", detail.Area.ShiftPattern);
+        Assert.Equal("AR03-IN", detail.CheckInSign.Code);
+        Assert.True(Guid.TryParse(detail.CheckInSign.QrToken, out _));
+        Assert.Equal(50, detail.CheckInSign.RadiusM);
+        Assert.Null(detail.CheckInSign.LocationSource);
+        Assert.Empty(detail.Points);
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal("AREA_CREATE", entry.Action);
+        Assert.Equal(adminAuth.User.Id, entry.ActorId);
+        Assert.Equal("areas", entry.EntityType);
+        Assert.Equal(detail.Area.Id, entry.EntityId);
+        Assert.DoesNotContain(detail.CheckInSign.QrToken, entry.AfterJson);
+    }
+
+    [Fact]
+    public async Task A_new_area_can_take_a_cleaner_without_an_area()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var newcomer = await TestData.AddCleanerAsync(factory, "E1009", Shift.Day);
+
+        var response = await admin.PostAsJsonAsync(Areas, new
+        {
+            code = "AR03",
+            name = "Lobby ชั้น 1",
+            buildingId = await AdminSetupApi.BuildingIdAsync(factory),
+            shiftPattern = "DayOnly",
+            dayCleanerId = newcomer,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var detail = (await response.Content.ReadFromJsonAsync<AreaDetailModel>())!;
+        Assert.Equal("E1009", detail.Area.DayCleaner!.EmployeeId);
+        Assert.Equal(detail.Area.Id, await AreaOfAsync(factory, "E1009"));
+    }
+
+    [Theory]
+    [InlineData("A", "Lobby", "DayOnly", false)]        // code too short
+    [InlineData("AR-03", "Lobby", "DayOnly", false)]    // hyphen
+    [InlineData("AR03", "  ", "DayOnly", false)]        // no name
+    [InlineData("AR03", "Lobby", null, false)]          // no shift pattern
+    [InlineData("AR03", "Lobby", "DayOnly", true)]      // unknown building
+    public async Task Invalid_new_areas_are_refused(string code, string name, string? pattern, bool unknownBuilding)
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        var response = await admin.PostAsJsonAsync(Areas, new
+        {
+            code,
+            name,
+            buildingId = unknownBuilding ? 9999 : await AdminSetupApi.BuildingIdAsync(factory),
+            shiftPattern = pattern,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal(2, await AdminSetupApi.ReadAsync(factory, db => db.Areas.CountAsync()));
+    }
+
+    [Fact]
+    public async Task Area_codes_are_unique()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        var response = await admin.PostAsJsonAsync(Areas, new
+        {
+            code = "ar01",
+            name = "อีก Area",
+            buildingId = await AdminSetupApi.BuildingIdAsync(factory),
+            shiftPattern = "DayOnly",
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("day", "E1002", HttpStatusCode.BadRequest)]   // a Night Cleaner in the Day slot
+    [InlineData("night", "E1009", HttpStatusCode.BadRequest)] // AR02 works days only
+    [InlineData("day", "S2001", HttpStatusCode.BadRequest)]   // not a Cleaner
+    [InlineData("day", "E1001", HttpStatusCode.Conflict)]     // already the Day Cleaner of AR01
+    public async Task Cleaner_choices_are_checked(string slot, string employeeId, HttpStatusCode expected)
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddCleanerAsync(factory, "E1009", Shift.Night);
+        var chosen = await AdminSetupApi.UserIdAsync(factory, employeeId);
+        var current = await AdminSetupApi.UserIdAsync(factory, "E1003");
+
+        var response = await admin.PutAsJsonAsync($"{Areas}/{await AdminSetupApi.AreaIdAsync(factory, "AR02")}", new
+        {
+            name = "Office ชั้น 2",
+            buildingId = await AdminSetupApi.BuildingIdAsync(factory),
+            shiftPattern = "DayOnly",
+            dayCleanerId = slot == "day" ? chosen : current,
+            nightCleanerId = slot == "night" ? chosen : (int?)null,
+        });
+
+        Assert.Equal(expected, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal(await AdminSetupApi.AreaIdAsync(factory, "AR02"), await AreaOfAsync(factory, "E1003"));
+    }
+
+    [Fact]
+    public async Task Replacing_a_cleaner_takes_the_old_one_off_the_area()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var newcomer = await TestData.AddCleanerAsync(factory, "E1009", Shift.Day);
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+
+        var response = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1009", "E1002"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = (await response.Content.ReadFromJsonAsync<AreaDetailModel>())!;
+        Assert.Equal("E1009", detail.Area.DayCleaner!.EmployeeId);
+        Assert.Equal("E1002", detail.Area.NightCleaner!.EmployeeId);
+        Assert.Null(await AreaOfAsync(factory, "E1001"));
+        Assert.Equal(area1, await AreaOfAsync(factory, "E1009"));
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal("AREA_UPDATE", entry.Action);
+        var before = JsonDocument.Parse(entry.BeforeJson!).RootElement;
+        var after = JsonDocument.Parse(entry.AfterJson!).RootElement;
+        Assert.Equal(await AdminSetupApi.UserIdAsync(factory, "E1001"), before.GetProperty("DayCleanerId").GetInt32());
+        Assert.Equal(newcomer, after.GetProperty("DayCleanerId").GetInt32());
+    }
+
+    [Fact]
+    public async Task Leaving_a_shift_empty_takes_its_cleaner_off()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+
+        var response = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1001", night: null));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null((await response.Content.ReadFromJsonAsync<AreaDetailModel>())!.Area.NightCleaner);
+        Assert.Null(await AreaOfAsync(factory, "E1002"));
+        Assert.Equal(area1, await AreaOfAsync(factory, "E1001"));
+    }
+
+    [Fact]
+    public async Task Switching_to_day_only_removes_night_rounds_and_keeps_old_scans_round_times()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var nightScan = await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 20, 30));
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+
+        var response = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1001", null, "DayOnly"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = (await response.Content.ReadFromJsonAsync<AreaDetailModel>())!;
+        Assert.Equal("DayOnly", detail.Area.ShiftPattern);
+        Assert.All(detail.Points, p => Assert.All(p.RoundWindows, w => Assert.Equal("Day", w.Shift)));
+        Assert.Equal(4, detail.Points.Sum(p => p.RoundWindows.Count));
+        var scan = await AdminSetupApi.ReadAsync(factory, db => db.ScanRecords.AsNoTracking().SingleAsync(s => s.Id == nightScan));
+        Assert.Null(scan.RoundWindowId);
+        Assert.Equal(new TimeOnly(20, 0), scan.RoundStart);
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal(4, JsonDocument.Parse(entry.AfterJson!).RootElement.GetProperty("RemovedNightWindows").GetInt32());
+    }
+
+    [Fact]
+    public async Task Saving_an_unchanged_area_logs_nothing()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+
+        var response = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1001", "E1002"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
+    public async Task A_deactivated_area_leaves_the_dashboard_and_the_scan_page_until_reactivated()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var area2 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+
+        var off = await admin.PostAsync($"{Areas}/{area2}/deactivate", null);
+        var offAgain = await admin.PostAsync($"{Areas}/{area2}/deactivate", null);
+
+        Assert.Equal(HttpStatusCode.OK, off.StatusCode);
+        Assert.False((await off.Content.ReadFromJsonAsync<AreaDetailModel>())!.Area.IsActive);
+        Assert.Equal(HttpStatusCode.OK, offAgain.StatusCode);
+        Assert.DoesNotContain("ห้องประชุม", await AdminSetupApi.DashboardNamesAsync(admin));
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync("/api/service-points/by-token/token-meeting-room")).StatusCode);
+
+        var on = await admin.PostAsync($"{Areas}/{area2}/activate", null);
+
+        Assert.Equal(HttpStatusCode.OK, on.StatusCode);
+        Assert.Contains("ห้องประชุม", await AdminSetupApi.DashboardNamesAsync(admin));
+        Assert.Equal(new[] { "AREA_DEACTIVATE", "AREA_ACTIVATE" }, (await AdminSetupApi.AuditAsync(factory)).Select(a => a.Action));
+    }
+
+    [Fact]
+    public async Task Cleaners_cannot_create_areas()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+
+        var response = await cleaner.PostAsJsonAsync(Areas, new { code = "AR03", name = "Lobby", buildingId = 1, shiftPattern = "DayOnly" });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }

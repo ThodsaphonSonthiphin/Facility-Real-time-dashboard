@@ -42,3 +42,9 @@ public record AdminRoundWindowDto(int Id, Shift Shift, string Start, string End)
 public record AdminPointDto(int Id, string Name, short SortOrder, bool IsActive, AdminSignDto Sign, IReadOnlyList<AdminRoundWindowDto> RoundWindows);
 
 public record AreaDetailDto(AreaSummaryDto Area, AdminSignDto CheckInSign, IReadOnlyList<AdminPointDto> Points);
+
+/// <summary>The Area form (wireframe D10). The code is fixed once created: every sign of the Area prints it.</summary>
+public record CreateAreaRequest(string? Code, string? Name, int BuildingId, ShiftPattern? ShiftPattern, int? DayCleanerId, int? NightCleanerId);
+
+/// <summary>An empty Cleaner slot takes that shift's Cleaner off the Area.</summary>
+public record UpdateAreaRequest(string? Name, int BuildingId, ShiftPattern? ShiftPattern, int? DayCleanerId, int? NightCleanerId);
