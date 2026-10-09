@@ -100,4 +100,17 @@ internal static class AdminSetupView
 
     /// <summary>The database returns Unspecified; marking it UTC makes the JSON end in "Z".</summary>
     private static DateTime Utc(DateTime stored) => DateTime.SpecifyKind(stored, DateTimeKind.Utc);
+
+    public static async Task<AdminPointDto?> LoadPointAsync(AppDbContext db, int pointId)
+    {
+        var point = await db.ServicePoints.AsNoTracking().FirstOrDefaultAsync(p => p.Id == pointId);
+        if (point is null)
+        {
+            return null;
+        }
+
+        var sign = await db.Signs.AsNoTracking().SingleAsync(s => s.ServicePointId == pointId);
+        var windows = await db.PointRoundWindows.AsNoTracking().Where(w => w.ServicePointId == pointId).ToListAsync();
+        return ToDto(point, sign, windows);
+    }
 }

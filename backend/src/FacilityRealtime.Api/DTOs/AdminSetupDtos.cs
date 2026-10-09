@@ -48,3 +48,9 @@ public record CreateAreaRequest(string? Code, string? Name, int BuildingId, Shif
 
 /// <summary>An empty Cleaner slot takes that shift's Cleaner off the Area.</summary>
 public record UpdateAreaRequest(string? Name, int BuildingId, ShiftPattern? ShiftPattern, int? DayCleanerId, int? NightCleanerId);
+
+/// <summary>Start and End as "HH:mm" Thai wall-clock, e.g. "07:00" (facility-0047).</summary>
+public record RoundWindowRequest(Shift? Shift, string? Start, string? End);
+
+/// <summary>The full list of the point's windows: unchanged ones are kept, the rest replaced.</summary>
+public record SavePointRequest(string? Name, List<RoundWindowRequest>? RoundWindows);
