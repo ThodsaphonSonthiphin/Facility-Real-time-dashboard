@@ -179,4 +179,51 @@ public class SchemaRuleTests
         Shift = shift,
         CreatedAt = DateTime.UtcNow,
     };
+
+    [Fact]
+    public async Task Each_attendance_event_is_recorded_once_per_shift()
+    {
+        using var factory = new FacilityApiFactory();
+
+        await factory.WithDbAsync(async db =>
+        {
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var sign = await db.Signs.SingleAsync(s => s.QrToken == "token-checkin-ar01");
+            ShiftAttendance Entry() => new()
+            {
+                UserId = cleaner.Id,
+                AreaId = cleaner.AreaId!.Value,
+                ShiftDate = new DateOnly(2026, 10, 8),
+                Shift = Shift.Day,
+                EventType = AttendanceEvent.ShiftIn,
+                OccurredAt = DateTime.UtcNow,
+                Source = AttendanceSource.Scan,
+                SignId = sign.Id,
+                CreatedAt = DateTime.UtcNow,
+            };
+
+            db.ShiftAttendances.Add(Entry());
+            await db.SaveChangesAsync();
+            db.ShiftAttendances.Add(Entry());
+
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        });
+    }
+
+    [Fact]
+    public async Task Seeded_area_1_signs_have_coordinates_and_area_2_signs_do_not()
+    {
+        using var factory = new FacilityApiFactory();
+        var located = new List<string>();
+        var radii = new List<short>();
+
+        await factory.WithDbAsync(async db =>
+        {
+            located = await db.Signs.Where(s => s.Latitude != null).OrderBy(s => s.Code).Select(s => s.Code).ToListAsync();
+            radii = await db.Signs.Select(s => s.RadiusM).ToListAsync();
+        });
+
+        Assert.Equal(new[] { "AR01-01", "AR01-02", "AR01-IN" }, located);
+        Assert.All(radii, r => Assert.Equal(50, r));
+    }
 }

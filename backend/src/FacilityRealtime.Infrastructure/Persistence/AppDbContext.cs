@@ -1,6 +1,7 @@
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FacilityRealtime.Infrastructure.Persistence;
 
@@ -16,6 +17,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<ScanRecord> ScanRecords => Set<ScanRecord>();
     public DbSet<InspectionRecord> InspectionRecords => Set<InspectionRecord>();
+    public DbSet<ShiftAttendance> ShiftAttendances => Set<ShiftAttendance>();
+    public DbSet<BlockedScan> BlockedScans => Set<BlockedScan>();
+    public DbSet<CoverAssignment> CoverAssignments => Set<CoverAssignment>();
+    public DbSet<AuditEntry> AuditLog => Set<AuditEntry>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -59,6 +64,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable("signs");
             e.Property(x => x.Code).HasMaxLength(30).IsRequired();
             e.Property(x => x.QrToken).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Latitude).HasPrecision(9, 6);
+            e.Property(x => x.Longitude).HasPrecision(9, 6);
+            e.Property(x => x.LocationSource).HasConversion(new UpperSnakeEnumConverter<LocationSource>()).HasMaxLength(10);
+            e.Property(x => x.RadiusM).HasDefaultValue((short)50);
             e.Property(x => x.CheckinAreaId)
                 .HasComputedColumnSql("CASE WHEN service_point_id IS NULL THEN area_id END", stored: true);
             e.HasIndex(x => x.Code).IsUnique();
@@ -125,6 +134,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Status).HasConversion(new UpperSnakeEnumConverter<CleaningStatus>()).HasMaxLength(10);
             e.Property(x => x.IssueTags).HasMaxLength(200);
             e.Property(x => x.Note).HasMaxLength(1000);
+            MapGps(e);
+            e.HasOne(x => x.CoverAssignment).WithMany().HasForeignKey(x => x.CoverAssignmentId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.ServicePointId, x.ShiftDate, x.Shift });
             e.HasIndex(x => new { x.UserId, x.SubmittedAt });
             e.HasIndex(x => x.SubmittedAt);
@@ -147,6 +158,65 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Supervisor).WithMany().HasForeignKey(x => x.SupervisorId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<ShiftAttendance>(e =>
+        {
+            e.ToTable("shift_attendances");
+            e.Property(x => x.Shift).HasConversion(new UpperSnakeEnumConverter<Shift>()).HasMaxLength(10);
+            e.Property(x => x.EventType).HasConversion(new UpperSnakeEnumConverter<AttendanceEvent>()).HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion(new UpperSnakeEnumConverter<AttendanceSource>()).HasMaxLength(20);
+            MapGps(e);
+            // facility-0026: each event once per shift, the first press wins
+            e.HasIndex(x => new { x.UserId, x.ShiftDate, x.Shift, x.EventType }).IsUnique();
+            e.HasIndex(x => new { x.ShiftDate, x.Shift, x.AreaId });
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Area>().WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Sign>().WithMany().HasForeignKey(x => x.SignId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<BlockedScan>(e =>
+        {
+            e.ToTable("blocked_scans");
+            e.Property(x => x.Reason).HasConversion(new UpperSnakeEnumConverter<BlockReason>()).HasMaxLength(20);
+            MapGps(e);
+            e.HasIndex(x => x.ScannedAt);
+            e.HasIndex(x => new { x.SignId, x.ScannedAt });
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Sign>().WithMany().HasForeignKey(x => x.SignId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CoverAssignment>(e =>
+        {
+            e.ToTable("cover_assignments");
+            e.Property(x => x.Shift).HasConversion(new UpperSnakeEnumConverter<Shift>()).HasMaxLength(10);
+            e.HasIndex(x => new { x.UserId, x.ShiftDate, x.Shift });
+            e.HasIndex(x => new { x.AreaId, x.ShiftDate, x.Shift });
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Area).WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.AssignedById).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CancelledById).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AuditEntry>(e =>
+        {
+            e.ToTable("audit_log");
+            e.Property(x => x.Action).HasMaxLength(50).IsRequired();
+            e.Property(x => x.EntityType).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Summary).HasMaxLength(300).IsRequired();
+            e.Property(x => x.BeforeJson).HasColumnType("json");
+            e.Property(x => x.AfterJson).HasColumnType("json");
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.HasIndex(x => x.OccurredAt);
+            e.HasIndex(x => new { x.EntityType, x.EntityId });
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.ActorId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.UseSnakeCaseColumns();
+    }
+
+    /// <summary>database.html GPS column set: DECIMAL(9,6) coordinates; SMALLINT accuracy and distance follow from short.</summary>
+    private static void MapGps<T>(EntityTypeBuilder<T> e) where T : class, IGpsStamped
+    {
+        e.Property(x => x.Latitude).HasPrecision(9, 6);
+        e.Property(x => x.Longitude).HasPrecision(9, 6);
     }
 }

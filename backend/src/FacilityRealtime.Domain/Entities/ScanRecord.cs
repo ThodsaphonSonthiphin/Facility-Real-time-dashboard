@@ -3,7 +3,7 @@ using FacilityRealtime.Domain.Enums;
 namespace FacilityRealtime.Domain.Entities;
 
 /// <summary>CONTEXT.md, Scan Record: one submission at a Service Point, placed into a Round Window when saved (facility-0047).</summary>
-public class ScanRecord
+public class ScanRecord : IGpsStamped
 {
     public long Id { get; set; }
     public int ServicePointId { get; set; }
@@ -37,8 +37,18 @@ public class ScanRecord
     /// <summary>Server time when the submission was saved (facility-0052).</summary>
     public DateTime SubmittedAt { get; set; }
 
+    /// <summary>Set when the Cleaner submitted for an Area they were assigned to cover (facility-0041).</summary>
+    public int? CoverAssignmentId { get; set; }
+
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
+    public short? AccuracyM { get; set; }
+    public short? DistanceM { get; set; }
+    public bool? WithinRadius { get; set; }
+
     public ServicePoint? ServicePoint { get; set; }
     public Sign? Sign { get; set; }
     public User? User { get; set; }
     public PointRoundWindow? RoundWindow { get; set; }
+    public CoverAssignment? CoverAssignment { get; set; }
 }
