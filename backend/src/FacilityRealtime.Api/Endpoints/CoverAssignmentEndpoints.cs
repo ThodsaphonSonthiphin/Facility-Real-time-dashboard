@@ -118,8 +118,16 @@ public static class CoverAssignmentEndpoints
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
-        cover.CancelledById = admin.Id;
-        cover.CancelledAt = now;
+        // No unique index guards against a racing duplicate, so close every identical active cover with this one.
+        var twins = await db.CoverAssignments
+            .Where(c => c.Id != cover.Id && c.UserId == cover.UserId && c.AreaId == cover.AreaId
+                && c.ShiftDate == cover.ShiftDate && c.Shift == cover.Shift && c.CancelledAt == null)
+            .ToListAsync();
+        foreach (var twin in twins.Append(cover))
+        {
+            twin.CancelledById = admin.Id;
+            twin.CancelledAt = now;
+        }
         AuditTrail.Add(
             db, admin.Id, now, "COVER_CANCEL", "cover_assignments", cover.Id,
             $"ยกเลิกการทำแทนของ {cover.User!.DisplayName} ที่ {cover.Area!.Code} กะ{ShiftName(cover.Shift)} {cover.ShiftDate:yyyy-MM-dd}",
