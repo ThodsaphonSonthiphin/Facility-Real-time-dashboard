@@ -45,4 +45,15 @@ public class AttendanceCalendarTests
         Assert.Null(AttendanceCalendar.SlotFor(Shift.Day, Thai(8, 6, 59), strict));
         Assert.Equal(Slot(8, Shift.Day), AttendanceCalendar.SlotFor(Shift.Day, Thai(8, 7, 0), strict));
     }
+
+    [Fact]
+    public void Opening_and_closing_minutes_come_from_settings()
+    {
+        var asymmetric = new AttendanceSettings { OpensMinutesBeforeShift = 30, ClosesMinutesAfterShift = 90 };
+
+        Assert.Null(AttendanceCalendar.SlotFor(Shift.Day, Thai(8, 6, 29), asymmetric));
+        Assert.Equal(Slot(8, Shift.Day), AttendanceCalendar.SlotFor(Shift.Day, Thai(8, 6, 30), asymmetric));
+        Assert.Equal(Slot(8, Shift.Day), AttendanceCalendar.SlotFor(Shift.Day, Thai(8, 20, 30), asymmetric));
+        Assert.Null(AttendanceCalendar.SlotFor(Shift.Day, Thai(8, 20, 31), asymmetric));
+    }
 }
