@@ -18,7 +18,6 @@ public static class PointBoardQuery
     public static async Task<IReadOnlyList<PointBoardRow>> LoadAsync(
         AppDbContext db, DateTime nowUtc, ShiftSlot slot, IReadOnlyCollection<int>? areaIds, int? servicePointId = null)
     {
-
         var query = db.ServicePoints.AsNoTracking()
             .Include(p => p.Area!).ThenInclude(a => a.Building)
             .Where(p => p.IsActive);

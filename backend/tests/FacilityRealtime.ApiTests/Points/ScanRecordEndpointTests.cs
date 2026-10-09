@@ -79,6 +79,8 @@ public class ScanRecordEndpointTests
         var response = await client.PostAsJsonAsync("/api/scan-records", Body());
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(0, await CountAsync(factory, db => db.BlockedScans)); // refused for the role, not blocked as another Area
+        Assert.Equal(0, await CountAsync(factory, db => db.ScanRecords));
     }
 
     [Theory]
@@ -210,6 +212,11 @@ public class ScanRecordEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
+        var adminGot = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+        adminHub.On<JsonElement>("ScanRecorded", point => adminGot.TrySetResult(point));
+        await Task.Delay(200);
 
         var created = await CheckInAndScanAtAsync(factory, cleaner, ThaiClock.At(8, 6, 45));
 
@@ -217,6 +224,10 @@ public class ScanRecordEndpointTests
         Assert.Equal(new DateOnly(2026, 10, 8), stored.ShiftDate);
         Assert.Equal(Shift.Day, stored.Shift);
         Assert.Equal("OffRound", created.Placement);
+        // The Cleaner sees the point in the Day shift; the Dashboard still shows the shift running now (Night, until 07:00)
+        Assert.Equal("BeforeFirstRound", created.NewPointStatus);
+        var payload = await adminGot.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("Overdue", payload.GetProperty("status").GetString());
     }
 
     [Fact]
@@ -278,6 +289,38 @@ public class ScanRecordEndpointTests
         var response = await cleaner.PostAsJsonAsync("/api/scan-records", Body(qrToken: MeetingRoomToken));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(7, Shift.Day)]    // yesterday's Day cover
+    [InlineData(8, Shift.Night)]  // tonight's cover, not the Day cleaner's shift
+    public async Task Cover_for_another_date_or_shift_does_not_count(int coverDay, Shift coverShift)
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, coverDay), coverShift);
+        await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 8, 0));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+
+        var response = await cleaner.PostAsJsonAsync("/api/scan-records", Body(qrToken: MeetingRoomToken));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(1, await CountAsync(factory, db => db.BlockedScans.Where(b => b.Reason == BlockReason.OtherArea)));
+        Assert.Equal(0, await CountAsync(factory, db => db.ScanRecords));
+    }
+
+    [Fact]
+    public async Task Scan_outside_the_attendance_window_is_refused()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 8, 0));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 21, 0)); // the Day window closed at 20:00
+
+        var response = await cleaner.PostAsJsonAsync("/api/scan-records", Body());
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(0, await CountAsync(factory, db => db.ScanRecords));
     }
 
     [Fact]
