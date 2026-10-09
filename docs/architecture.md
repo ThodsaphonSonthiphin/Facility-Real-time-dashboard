@@ -118,13 +118,13 @@ flowchart TB
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
         subgraph ApiP["FacilityRealtime.Api"]
-            Ep["Program.cs<br/>/api/service-points<br/>/api/scan-records"]
+            Ep["Endpoints/ServicePointEndpoints, ScanRecordEndpoints, MeEndpoints<br/>/api/service-points (Admin) | /api/scan-records | /api/me"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
             Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]"]
             Jwt["Auth/AuthSetup.cs<br/>JWT bearer validation"]
         end
         subgraph AppP["FacilityRealtime.Application"]
-            Status["StatusCalculator<br/>WorkingHours"]
+            Status["Shifts/ShiftCalendar<br/>Rounds/RoundPlacer, PointStatusCalculator"]
             Rules["RefreshTokenRules<br/>IAccessTokenIssuer, IPasswordHasher"]
         end
         subgraph InfP["FacilityRealtime.Infrastructure"]
@@ -173,7 +173,7 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
-This is the main flow of the POC.
+This is the main flow: a Cleaner submits a Scan Record and the Admin Dashboard updates.
 
 ```mermaid
 sequenceDiagram
@@ -181,31 +181,32 @@ sequenceDiagram
     actor Cleaner
     participant Phone as Phone browser<br/>(ScanRecordPage)
     participant Vite as Vite :5173<br/>(proxy)
-    participant Api as API :5001<br/>(Program.cs)
+    participant Api as API :5001<br/>(Endpoints/*)
     participant DB as MySQL
     participant Hub as ScanHub<br/>/hubs/scan
     participant Dash as Dashboard browser<br/>(DashboardView)
 
-    Note over Dash,Hub: Earlier: the dashboard opened a WebSocket to /hubs/scan<br/>with ?access_token=<JWT> and listens for "ScanRecorded"
+    Note over Dash,Hub: Earlier: an Admin opened the Dashboard; its WebSocket to /hubs/scan<br/>(?access_token=<JWT>) joined the "admins" group (facility-0058)
 
     Cleaner->>Phone: Scan QR with phone camera → opens /scan/{qrToken}
     Phone->>Vite: GET /api/service-points/by-token/{qrToken}<br/>Authorization: Bearer <JWT>
     Vite->>Api: forward
-    Api->>DB: SELECT service point + latest scan
+    Api->>DB: SELECT sign → point, this shift's Round Windows, Scan and Inspection Records
     DB-->>Api: rows
-    Api-->>Phone: 200 ServicePointStatusDto
+    Api-->>Phone: 200 PointStatusDto (no QR Token)
 
     Cleaner->>Phone: Choose Normal / Issue (+ tags, notes), tap submit
     Phone->>Vite: POST /api/scan-records { qrToken, status, issueTags, notes }
     Vite->>Api: forward
     Note right of Api: The scanner is the user in the JWT,<br/>never a field in the body (facility-0017)
-    Api->>DB: INSERT scan_records
+    Api->>Api: RoundPlacer.Place(...) → OnTime / Late / Rework / OffRound (facility-0047)
+    Api->>DB: INSERT scan_records (shift, round, placement)
     DB-->>Api: OK
-    Api->>Api: StatusCalculator.CalculateStatus(...)
-    Api->>Hub: Clients.All.SendAsync("ScanRecorded", dto)
+    Api->>Api: PointStatusCalculator.Calculate(...)
+    Api->>Hub: Clients.Group("admins").SendAsync("ScanRecorded", dto)
     Hub-->>Dash: "ScanRecorded" (WebSocket push)
     Dash->>Dash: Update the card and KPI bar, no page reload
-    Api-->>Phone: 201 Created { id, pointStatus, scannedAt }
+    Api-->>Phone: 201 Created { scanRecordId, placement, lateMinutes, newPointStatus, submittedAt }
 ```
 
 ---

@@ -26,6 +26,17 @@ public record PointStatusDto(
     LastScanDto? LastScan,
     IssueDto? Issue);
 
+/// <summary>facility-0017: no UserId, the scanner is the account in the access token. "Notes" keeps the phase-1 field name.</summary>
+public record CreateScanRecordRequest(string QrToken, CleaningStatus Status, List<string>? IssueTags, string? Notes);
+
+public record ScanRecordCreatedResponse(
+    long ScanRecordId,
+    int ServicePointId,
+    Placement Placement,
+    int? LateMinutes,
+    PointStatus NewPointStatus,
+    DateTime SubmittedAt);
+
 public static class PointDtoMapper
 {
     public static PointStatusDto ToDto(PointBoardRow row)

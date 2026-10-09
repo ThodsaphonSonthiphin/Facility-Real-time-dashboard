@@ -74,6 +74,7 @@ app.MapGet("/", () => Results.Ok(new { status = "healthy", service = "Facility R
 app.MapAuthEndpoints();
 app.MapMeEndpoints();
 app.MapServicePointEndpoints();
+app.MapScanRecordEndpoints();
 
 app.Run();
 
