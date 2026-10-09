@@ -23,6 +23,9 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
 
     public TestTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
 
+    /// <summary>Set before the first request: a test-only hook to add or replace services (e.g. an EF interceptor).</summary>
+    public Action<IServiceCollection>? ConfigureTestServices { get; init; }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -36,6 +39,7 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
             services.AddSingleton<TimeProvider>(Clock);
             // 600,000 iterations per login would make the API suite slow; the format is identical
             services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher(iterations: 1_000));
+            ConfigureTestServices?.Invoke(services);
         });
     }
 

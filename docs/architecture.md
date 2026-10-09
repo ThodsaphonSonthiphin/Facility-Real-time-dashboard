@@ -118,13 +118,13 @@ flowchart TB
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
         subgraph ApiP["FacilityRealtime.Api"]
-            Ep["Endpoints/ServicePointEndpoints, ScanRecordEndpoints, MeEndpoints<br/>/api/service-points (Admin) | /api/scan-records | /api/me"]
+            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work<br/>/api/admin/cover-assignments | /api/me"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
             Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]"]
             Jwt["Auth/AuthSetup.cs<br/>JWT bearer validation"]
         end
         subgraph AppP["FacilityRealtime.Application"]
-            Status["Shifts/ShiftCalendar<br/>Rounds/RoundPlacer, PointStatusCalculator"]
+            Status["Shifts/ShiftCalendar<br/>Rounds/RoundPlacer, PointStatusCalculator<br/>Attendance/AttendanceCalendar, AttendanceRules<br/>Geo/Geofence, GpsStamping"]
             Rules["RefreshTokenRules<br/>IAccessTokenIssuer, IPasswordHasher"]
         end
         subgraph InfP["FacilityRealtime.Infrastructure"]
@@ -132,7 +132,7 @@ flowchart TB
             Hash["Pbkdf2PasswordHasher"]
         end
         subgraph DomP["FacilityRealtime.Domain"]
-            Ent["Entities: User, ServicePoint,<br/>ScanRecord, RefreshToken"]
+            Ent["Entities: User, ServicePoint,<br/>ScanRecord, RefreshToken,<br/>ShiftAttendance, BlockedScan,<br/>CoverAssignment, AuditEntry"]
         end
     end
 
@@ -167,7 +167,7 @@ flowchart TB
 
 Project references follow Clean Architecture: `Api → Application, Infrastructure`; `Infrastructure → Application, Domain`; `Application → Domain`; `Domain` depends on nothing.
 
-> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers live in `Endpoints/` (AuthEndpoints, MeEndpoints, ServicePointEndpoints, ScanRecordEndpoints), use `AppDbContext` directly, and `Program.cs` only composes them.
+> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers live in `Endpoints/` (AuthEndpoints, MeEndpoints, ServicePointEndpoints, ScanRecordEndpoints, AttendanceEndpoints, CoverAssignmentEndpoints, MyWorkEndpoints), use `AppDbContext` directly, and `Program.cs` only composes them.
 
 ---
 
@@ -195,18 +195,32 @@ sequenceDiagram
     DB-->>Api: rows
     Api-->>Phone: 200 PointStatusDto (no QR Token)
 
+    Note over Cleaner,Phone: Before any scan the Cleaner records Shift-In: POST /api/attendance<br/>at the Area's check-in sign (the same QR flow, with the phone's GPS fix)
+
     Cleaner->>Phone: Choose Normal / Issue (+ tags, notes), tap submit
-    Phone->>Vite: POST /api/scan-records { qrToken, status, issueTags, notes }
+    Phone->>Vite: POST /api/scan-records { qrToken, status, issueTags, notes,<br/>latitude, longitude, accuracyM }
     Vite->>Api: forward
     Note right of Api: The scanner is the user in the JWT,<br/>never a field in the body (facility-0017)
-    Api->>Api: RoundPlacer.Place(...) → OnTime / Late / Rework / OffRound (facility-0047)
-    Api->>DB: INSERT scan_records (shift, round, placement)
+    Api->>Api: CurrentUser (401), Cleaner only (403),<br/>validate tags and note, status, GPS via GpsInput.TryRead (400)
+    Api->>DB: Find sign by QR Token → active point and Area (404 if none)
+    DB-->>Api: sign, point, Area
+    alt Sign is in another Area and the Cleaner has no active Cover Assignment for this shift slot
+        Api->>DB: INSERT blocked_scans (OTHER_AREA)
+        Api-->>Phone: 403 (sign's Area code and name)
+    end
+    Api->>Api: AttendanceCalendar.SlotFor(user.Shift, now) → 409 outside the attendance window
+    Api->>DB: Read today's attendance events
+    Api->>Api: AttendanceRules.IsOnDuty(...) → 409 if not on duty (Shift-In to Shift-Out, breaks do not block)
+    Api->>Api: RoundFactsQuery + RoundPlacer.Place(...) → OnTime / Late / Rework / OffRound (facility-0047)
+    Api->>Api: GpsStamping.StampGps → latitude, longitude, accuracy, distance, within radius (no verdict if the sign has no coordinates)
+    Api->>DB: INSERT scan_records (shift, round, placement, GPS, cover assignment)
     DB-->>Api: OK
     Api->>Api: PointStatusCalculator.Calculate(...)
     Api->>Hub: Clients.Group("admins").SendAsync("ScanRecorded", dto)
+    Note right of Hub: Sent for the Dashboard's running shift (ShiftCalendar), not the Cleaner's attendance slot
     Hub-->>Dash: "ScanRecorded" (WebSocket push)
     Dash->>Dash: Update the card and KPI bar, no page reload
-    Api-->>Phone: 201 Created { scanRecordId, placement, lateMinutes, newPointStatus, submittedAt }
+    Api-->>Phone: 201 Created { scanRecordId, placement, lateMinutes, newPointStatus, submittedAt,<br/>distanceM, withinRadius }
 ```
 
 ---
@@ -292,6 +306,12 @@ classDiagram
         +int? ServicePointId «unique»
         +string Code «unique»
         +string QrToken «unique»
+        +decimal? Latitude
+        +decimal? Longitude
+        +short? LocationAccuracyM
+        +LocationSource? LocationSource
+        +DateTime? LocatedAt
+        +short RadiusM «default 50»
         +int? CheckinAreaId «computed, unique»
     }
     class PointRoundWindow {
@@ -337,6 +357,12 @@ classDiagram
         +int? LateMinutes
         +CleaningStatus Status
         +DateTime SubmittedAt
+        +int? CoverAssignmentId
+        +decimal? Latitude
+        +decimal? Longitude
+        +short? AccuracyM
+        +short? DistanceM
+        +bool? WithinRadius
     }
     class InspectionRecord {
         <<inspections>>
@@ -347,6 +373,62 @@ classDiagram
         +InspectionResult Result
         +string? Defect
         +DateTime InspectedAt
+    }
+    class ShiftAttendance {
+        <<shift_attendances>>
+        +long Id
+        +int UserId
+        +int AreaId
+        +DateOnly ShiftDate
+        +Shift Shift
+        +AttendanceEvent EventType «unique with user, date, shift»
+        +DateTime OccurredAt
+        +AttendanceSource Source
+        +int? SignId
+        +decimal? Latitude
+        +decimal? Longitude
+        +short? AccuracyM
+        +short? DistanceM
+        +bool? WithinRadius
+        +DateTime CreatedAt
+    }
+    class BlockedScan {
+        <<blocked_scans>>
+        +long Id
+        +int UserId
+        +int SignId
+        +BlockReason Reason
+        +DateTime ScannedAt
+        +decimal? Latitude
+        +decimal? Longitude
+        +short? AccuracyM
+        +short? DistanceM
+        +bool? WithinRadius
+    }
+    class CoverAssignment {
+        <<cover_assignments>>
+        +int Id
+        +int UserId
+        +int AreaId
+        +DateOnly ShiftDate
+        +Shift Shift
+        +int AssignedById
+        +DateTime AssignedAt
+        +int? CancelledById
+        +DateTime? CancelledAt
+    }
+    class AuditEntry {
+        <<audit_log>>
+        +long Id
+        +int ActorId
+        +DateTime OccurredAt
+        +string Action
+        +string EntityType
+        +long? EntityId
+        +string Summary
+        +string? BeforeJson
+        +string? AfterJson
+        +string? Reason
     }
 
     Building "1" <-- "0..*" Area
@@ -364,9 +446,19 @@ classDiagram
     User "1" <-- "0..*" ScanRecord : cleaner
     ServicePoint "1" <-- "0..*" InspectionRecord
     User "1" <-- "0..*" InspectionRecord : supervisor
+    User "1" <-- "0..*" ShiftAttendance
+    Area "1" <-- "0..*" ShiftAttendance
+    Sign "0..1" <-- "0..*" ShiftAttendance
+    User "1" <-- "0..*" BlockedScan
+    Sign "1" <-- "0..*" BlockedScan
+    User "1" <-- "0..*" CoverAssignment : covering Cleaner
+    Area "1" <-- "0..*" CoverAssignment : covered Area
+    User "1" <-- "0..*" CoverAssignment : assigned by, cancelled by
+    CoverAssignment "0..1" <-- "0..*" ScanRecord : cover used
+    User "1" <-- "0..*" AuditEntry : actor
 ```
 
-The full target schema, including the tables later plans add, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`).
+The full target schema, including the tables later plans add, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`). A Cover Assignment lets one Cleaner work another Area for one shift; it lapses when that Cleaner's attendance window for the shift closes ([facility-0069](adr/facility-0069-attendance-scan-window-60-minutes-around-the-shift.md)). Blocked Scans and Audit Log rows are write-only history for the Admin (facility-0041, facility-0051).
 
 ---
 

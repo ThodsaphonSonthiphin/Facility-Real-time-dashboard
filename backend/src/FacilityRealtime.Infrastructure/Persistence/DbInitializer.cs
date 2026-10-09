@@ -26,9 +26,9 @@ public static class DbInitializer
         var meetingRoom = new ServicePoint { Area = area2, Name = "ห้องประชุม", SortOrder = 1, CreatedAt = now };
 
         db.Signs.AddRange(
-            new Sign { Area = area1, Code = "AR01-IN", QrToken = "token-checkin-ar01", QrIssuedAt = now },
-            new Sign { Area = area1, ServicePoint = menRestroom, Code = "AR01-01", QrToken = "token-restroom-m1", QrIssuedAt = now },
-            new Sign { Area = area1, ServicePoint = womenRestroom, Code = "AR01-02", QrToken = "token-restroom-f1", QrIssuedAt = now },
+            Located(new Sign { Area = area1, Code = "AR01-IN", QrToken = "token-checkin-ar01", QrIssuedAt = now }, 13.756300m, 100.501800m),
+            Located(new Sign { Area = area1, ServicePoint = menRestroom, Code = "AR01-01", QrToken = "token-restroom-m1", QrIssuedAt = now }, 13.756350m, 100.501850m),
+            Located(new Sign { Area = area1, ServicePoint = womenRestroom, Code = "AR01-02", QrToken = "token-restroom-f1", QrIssuedAt = now }, 13.756250m, 100.501750m),
             new Sign { Area = area2, Code = "AR02-IN", QrToken = "token-checkin-ar02", QrIssuedAt = now },
             new Sign { Area = area2, ServicePoint = meetingRoom, Code = "AR02-01", QrToken = "token-meeting-room", QrIssuedAt = now });
 
@@ -63,6 +63,17 @@ public static class DbInitializer
             Shift = shift,
             CreatedAt = now,
         };
+
+        // Made-up coordinates; AR02's signs are left uncaptured so both cases can be tried
+        Sign Located(Sign sign, decimal latitude, decimal longitude)
+        {
+            sign.Latitude = latitude;
+            sign.Longitude = longitude;
+            sign.LocationAccuracyM = 10;
+            sign.LocationSource = LocationSource.Site;
+            sign.LocatedAt = now;
+            return sign;
+        }
 
         PointRoundWindow Window(ServicePoint point, Shift shift, int startHour, int endHour) => new()
         {

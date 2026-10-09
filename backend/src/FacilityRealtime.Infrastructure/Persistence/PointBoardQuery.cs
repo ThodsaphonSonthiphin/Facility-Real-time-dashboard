@@ -10,16 +10,26 @@ public sealed record PointBoardRow(ServicePoint Point, PointStatusResult Status,
 
 public static class PointBoardQuery
 {
-    public static async Task<IReadOnlyList<PointBoardRow>> LoadAsync(AppDbContext db, DateTime nowUtc, int? servicePointId = null)
-    {
-        var slot = ShiftCalendar.SlotAt(nowUtc);
+    /// <summary>The Dashboard: every active point as seen from the shift running now.</summary>
+    public static Task<IReadOnlyList<PointBoardRow>> LoadAsync(AppDbContext db, DateTime nowUtc, int? servicePointId = null) =>
+        LoadAsync(db, nowUtc, ShiftCalendar.SlotAt(nowUtc), areaIds: null, servicePointId);
 
+    /// <summary>Points as seen from <paramref name="slot"/>; <paramref name="areaIds"/> narrows to those Areas (My Work).</summary>
+    public static async Task<IReadOnlyList<PointBoardRow>> LoadAsync(
+        AppDbContext db, DateTime nowUtc, ShiftSlot slot, IReadOnlyCollection<int>? areaIds, int? servicePointId = null)
+    {
         var query = db.ServicePoints.AsNoTracking()
             .Include(p => p.Area!).ThenInclude(a => a.Building)
             .Where(p => p.IsActive);
         if (servicePointId is int onlyId)
         {
             query = query.Where(p => p.Id == onlyId);
+        }
+
+        if (areaIds is not null)
+        {
+            var onlyAreas = areaIds.ToList();
+            query = query.Where(p => onlyAreas.Contains(p.AreaId));
         }
 
         var points = await query.OrderBy(p => p.Area!.Code).ThenBy(p => p.SortOrder).ToListAsync();

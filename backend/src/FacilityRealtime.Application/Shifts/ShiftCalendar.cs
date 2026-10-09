@@ -26,6 +26,12 @@ public static class ShiftCalendar
         return new ShiftSlot(date, time < NightStart ? Shift.Day : Shift.Night);
     }
 
+    /// <summary>When the shift starts, as UTC: 07:00 (Day) or 19:00 (Night) Thai on ShiftDate.</summary>
+    public static DateTime StartUtc(ShiftSlot slot) => ToUtc(slot, slot.Shift == Shift.Day ? DayStart : NightStart);
+
+    /// <summary>Every shift is 12 hours long.</summary>
+    public static DateTime EndUtc(ShiftSlot slot) => StartUtc(slot).AddHours(12);
+
     /// <summary>
     /// A Thai wall-clock time inside the shift, as UTC. In a night shift every time before 19:00
     /// is after midnight, so it falls on the day after ShiftDate.

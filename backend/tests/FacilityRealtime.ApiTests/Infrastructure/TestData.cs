@@ -72,4 +72,32 @@ public static class TestData
             });
             await db.SaveChangesAsync();
         });
+
+    /// <summary>A Cover Assignment written straight to the database, assigned by the seeded Admin.</summary>
+    public static async Task<int> AddCoverAsync(
+        FacilityApiFactory factory, string employeeId, string areaCode, DateOnly shiftDate, Shift shift, bool cancelled = false)
+    {
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
+            var area = await db.Areas.SingleAsync(a => a.Code == areaCode);
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            var cover = new CoverAssignment
+            {
+                UserId = cleaner.Id,
+                AreaId = area.Id,
+                ShiftDate = shiftDate,
+                Shift = shift,
+                AssignedById = admin.Id,
+                AssignedAt = DateTime.UtcNow,
+                CancelledById = cancelled ? admin.Id : null,
+                CancelledAt = cancelled ? DateTime.UtcNow : null,
+            };
+            db.CoverAssignments.Add(cover);
+            await db.SaveChangesAsync();
+            id = cover.Id;
+        });
+        return id;
+    }
 }
