@@ -4,6 +4,7 @@ using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Infrastructure.Auth;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace FacilityRealtime.ApiTests.Auth;
@@ -193,6 +194,73 @@ public class LoginTests
         Assert.Equal(HttpStatusCode.TooManyRequests, lockedEvenWithTheRightPhone.StatusCode);
         Assert.Equal(HttpStatusCode.OK, otherEmployee.StatusCode);
         Assert.Equal(HttpStatusCode.OK, afterTheLock.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_successful_login_clears_the_failures()
+    {
+        using var factory = new FacilityApiFactory();
+        var client = factory.CreateApiClient();
+        var statuses = new List<HttpStatusCode>();
+        for (var i = 0; i < 4; i++)
+        {
+            statuses.Add((await AuthApi.LoginAsync(client, "E1001", "0899999999")).StatusCode);
+        }
+
+        statuses.Add((await AuthApi.LoginAsync(client)).StatusCode);
+        for (var i = 0; i < 4; i++)
+        {
+            statuses.Add((await AuthApi.LoginAsync(client, "E1001", "0899999999")).StatusCode);
+        }
+
+        Assert.Equal(new[]
+        {
+            HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized,
+            HttpStatusCode.OK,
+            HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized,
+        }, statuses);
+    }
+
+    [Fact]
+    public async Task Unknown_employee_ids_lock_the_same_way()
+    {
+        using var factory = new FacilityApiFactory();
+        var client = factory.CreateApiClient();
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.LoginAsync(client, "E9999", "0810000001")).StatusCode);
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await AuthApi.LoginAsync(client, "E9999", "0810000001")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_form_locks_too()
+    {
+        using var factory = new FacilityApiFactory();
+        var client = factory.CreateApiClient();
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.AdminLoginAsync(client, "admin", "wrong")).StatusCode);
+        }
+
+        var lockedWithTheRightPassword = await AuthApi.AdminLoginAsync(client);
+        factory.Clock.Advance(TimeSpan.FromMinutes(15));
+        var afterTheLock = await AuthApi.AdminLoginAsync(client);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, lockedWithTheRightPassword.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, afterTheLock.StatusCode);
+    }
+
+    [Fact]
+    public async Task Overlong_login_names_are_refused_and_not_kept()
+    {
+        using var factory = new FacilityApiFactory();
+
+        var response = await AuthApi.LoginAsync(factory.CreateApiClient(), new string('x', 101));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(0, factory.Services.GetRequiredService<LoginThrottle>().TrackedKeys);
     }
 
     [Fact]

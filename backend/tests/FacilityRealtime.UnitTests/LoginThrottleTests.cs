@@ -11,7 +11,7 @@ public class LoginThrottleTests
         public override DateTimeOffset GetUtcNow() => Now;
     }
 
-    private const string Key = "employee:E1001";
+    private const string Key = "user:1";
     private readonly ManualClock _clock = new();
     private readonly LoginThrottle _throttle;
 
@@ -20,72 +20,98 @@ public class LoginThrottleTests
         _throttle = new LoginThrottle(_clock, new LoginThrottleSettings { MaxFailures = 5, LockMinutes = 15 });
     }
 
-    private void Fail(int times, string key = Key)
+    private int Attempt(int times, string key = Key)
     {
+        var allowed = 0;
         for (var i = 0; i < times; i++)
         {
-            _throttle.RecordFailure(key);
+            if (_throttle.TryBeginAttempt(key))
+            {
+                allowed++;
+            }
         }
+
+        return allowed;
     }
 
     [Fact]
-    public void Four_failures_do_not_lock()
+    public void Five_attempts_are_allowed_and_the_sixth_is_refused()
     {
-        Fail(4);
-
-        Assert.False(_throttle.IsLocked(Key));
+        Assert.Equal(5, Attempt(5));
+        Assert.False(_throttle.TryBeginAttempt(Key));
     }
 
     [Fact]
-    public void Fifth_failure_locks_for_fifteen_minutes()
+    public void The_lock_lasts_fifteen_minutes_from_the_refused_attempt()
     {
-        Fail(5);
-        var lockedAtFirst = _throttle.IsLocked(Key);
+        Attempt(5);
+        Assert.False(_throttle.TryBeginAttempt(Key));
+
         _clock.Now = _clock.Now.AddMinutes(14).AddSeconds(59);
-        var lockedJustBefore = _throttle.IsLocked(Key);
+        var stillLocked = _throttle.TryBeginAttempt(Key);
         _clock.Now = _clock.Now.AddSeconds(1);
+        var unlocked = _throttle.TryBeginAttempt(Key);
 
-        Assert.True(lockedAtFirst);
-        Assert.True(lockedJustBefore);
-        Assert.False(_throttle.IsLocked(Key));
+        Assert.False(stillLocked);
+        Assert.True(unlocked);
     }
 
     [Fact]
-    public void Success_resets_the_count()
+    public void Success_clears_the_count()
     {
-        Fail(4);
+        Attempt(4);
         _throttle.Reset(Key);
-        Fail(4);
 
-        Assert.False(_throttle.IsLocked(Key));
+        Assert.Equal(5, Attempt(5));
     }
 
     [Fact]
-    public void Failures_spread_over_more_than_the_window_start_over()
+    public void Attempts_spread_over_more_than_the_window_start_over()
     {
-        Fail(4);
+        Attempt(4);
         _clock.Now = _clock.Now.AddMinutes(15);
-        Fail(1);
 
-        Assert.False(_throttle.IsLocked(Key));
+        Assert.Equal(5, Attempt(5));
     }
 
     [Fact]
-    public void After_a_lock_ends_counting_starts_over()
+    public void Keys_are_counted_separately_ignoring_case()
     {
-        Fail(5);
+        Attempt(5);
+
+        Assert.False(_throttle.TryBeginAttempt("USER:1"));
+        Assert.True(_throttle.TryBeginAttempt("user:2"));
+    }
+
+    [Fact]
+    public async Task Concurrent_attempts_never_pass_the_limit()
+    {
+        var allowed = 0;
+
+        await Task.Run(() => Parallel.For(0, 200, _ =>
+        {
+            if (_throttle.TryBeginAttempt(Key))
+            {
+                Interlocked.Increment(ref allowed);
+            }
+        }));
+
+        Assert.Equal(5, allowed);
+    }
+
+    [Fact]
+    public void Expired_keys_are_swept_once_many_are_tracked()
+    {
+        for (var i = 0; i < LoginThrottle.SweepThreshold; i++)
+        {
+            _throttle.TryBeginAttempt($"k{i}");
+        }
+
+        Assert.Equal(LoginThrottle.SweepThreshold, _throttle.TrackedKeys);
+
         _clock.Now = _clock.Now.AddMinutes(15);
-        Fail(1);
+        _throttle.TryBeginAttempt("fresh");
 
-        Assert.False(_throttle.IsLocked(Key));
-    }
-
-    [Fact]
-    public void Login_names_are_counted_separately_ignoring_case()
-    {
-        Fail(5);
-
-        Assert.True(_throttle.IsLocked("employee:e1001"));
-        Assert.False(_throttle.IsLocked("employee:E1002"));
+        Assert.Equal(1, _throttle.TrackedKeys);
     }
 }

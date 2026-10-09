@@ -17,6 +17,8 @@ public static class AuthEndpoints
     /// <summary>ADR facility-0013: the browser sends the refresh cookie to these routes and nowhere else.</summary>
     private const string RefreshCookiePath = "/api/auth";
 
+    private const int MaxLoginNameLength = 100; // users.username, the longest login column
+
     /// <summary>Verified against a dummy hash when the account is unknown, so every failed login costs one PBKDF2 run.</summary>
     private static readonly string DummyPasswordHash =
         $"pbkdf2-sha256${Pbkdf2PasswordHasher.DefaultIterations}${Convert.ToBase64String(new byte[16])}${Convert.ToBase64String(new byte[32])}";
@@ -44,19 +46,29 @@ public static class AuthEndpoints
         var byEmployeeId = !string.IsNullOrWhiteSpace(request.EmployeeId);
         var loginName = (byEmployeeId ? request.EmployeeId : request.Username)?.Trim() ?? string.Empty;
         var secret = byEmployeeId ? PhoneNumber.Normalize(request.Phone) : request.Password ?? string.Empty;
-        var throttleKey = (byEmployeeId ? "employee:" : "admin:") + loginName;
-        if (throttle.IsLocked(throttleKey))
+        if (loginName.Length > MaxLoginNameLength)
         {
-            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+            // Longer than any login column, so no account can match; nothing is counted or kept in memory
+            return Results.Unauthorized();
         }
 
         var user = byEmployeeId
             ? await db.Users.FirstOrDefaultAsync(u => u.EmployeeId == loginName && u.Role != UserRole.Admin)
             : await db.Users.FirstOrDefaultAsync(u => u.Username == loginName && u.Role == UserRole.Admin);
+
+        // Count per account when the name matches one, so spellings the database collation folds together
+        // (case, accents) share one counter; per typed name otherwise, so unknown names lock the same way
+        var throttleKey = user is not null
+            ? $"user:{user.Id}"
+            : (byEmployeeId ? "employee:" : "admin:") + loginName;
+        if (!throttle.TryBeginAttempt(throttleKey))
+        {
+            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+        }
+
         var secretMatches = hasher.Verify(secret, user?.SecretHash ?? DummyPasswordHash);
         if (user is null || !user.IsActive || !secretMatches)
         {
-            throttle.RecordFailure(throttleKey);
             return Results.Unauthorized();
         }
 
