@@ -44,6 +44,11 @@ public static class ScanRecordEndpoints
             return Results.BadRequest(new { message = "แท็กปัญหาหรือหมายเหตุยาวเกินไป" });
         }
 
+        if (request.Status is not { } status || !Enum.IsDefined(status))
+        {
+            return Results.BadRequest(new { message = "ต้องระบุสถานะการทำความสะอาด" });
+        }
+
         var sign = await db.Signs
             .Include(s => s.ServicePoint).ThenInclude(p => p!.Area)
             .FirstOrDefaultAsync(s => s.QrToken == request.QrToken && s.ServicePointId != null);
@@ -69,7 +74,7 @@ public static class ScanRecordEndpoints
             RoundEnd = placed.Round?.End,
             Placement = placed.Placement,
             LateMinutes = placed.LateMinutes,
-            Status = request.Status,
+            Status = status,
             IssueTags = issueTags,
             Note = note,
             SubmittedAt = now,

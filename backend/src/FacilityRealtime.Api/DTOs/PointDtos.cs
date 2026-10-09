@@ -27,7 +27,7 @@ public record PointStatusDto(
     IssueDto? Issue);
 
 /// <summary>facility-0017: no UserId, the scanner is the account in the access token. "Notes" keeps the phase-1 field name.</summary>
-public record CreateScanRecordRequest(string QrToken, CleaningStatus Status, List<string>? IssueTags, string? Notes);
+public record CreateScanRecordRequest(string QrToken, CleaningStatus? Status, List<string>? IssueTags, string? Notes);
 
 public record ScanRecordCreatedResponse(
     long ScanRecordId,

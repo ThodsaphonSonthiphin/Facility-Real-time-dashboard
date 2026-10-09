@@ -167,7 +167,7 @@ flowchart TB
 
 Project references follow Clean Architecture: `Api → Application, Infrastructure`; `Infrastructure → Application, Domain`; `Application → Domain`; `Domain` depends on nothing.
 
-> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers are lambdas in `Program.cs` that use `AppDbContext` directly.
+> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers live in `Endpoints/` (AuthEndpoints, MeEndpoints, ServicePointEndpoints, ScanRecordEndpoints), use `AppDbContext` directly, and `Program.cs` only composes them.
 
 ---
 

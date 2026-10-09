@@ -180,4 +180,106 @@ public class ScanRecordEndpointTests
         await Task.Delay(500);
         Assert.False(cleanerGot.Task.IsCompleted); // facility-0058
     }
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("undefined-number")]
+    public async Task Missing_or_unknown_status_is_rejected(string kind)
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        object body = kind == "missing"
+            ? new { qrToken = MenRestroomToken }
+            : new { qrToken = MenRestroomToken, status = 7 };
+
+        var response = await cleaner.PostAsJsonAsync("/api/scan-records", body);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Deactivated_point_is_404()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            var sign = await db.Signs.Include(s => s.ServicePoint).SingleAsync(s => s.QrToken == MenRestroomToken);
+            sign.ServicePoint!.IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await cleaner.PostAsJsonAsync("/api/scan-records", new { qrToken = MenRestroomToken, status = "Normal" });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Deactivated_area_is_404()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            var sign = await db.Signs.Include(s => s.ServicePoint).ThenInclude(p => p!.Area).SingleAsync(s => s.QrToken == MenRestroomToken);
+            sign.ServicePoint!.Area!.IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await cleaner.PostAsJsonAsync("/api/scan-records", new { qrToken = MenRestroomToken, status = "Normal" });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(66, 66, 66, HttpStatusCode.Created)]      // 66+66+66+2 commas = 200, at the limit
+    [InlineData(67, 66, 66, HttpStatusCode.BadRequest)]   // 201
+    public async Task Issue_tags_length_boundary(int a, int b, int c, HttpStatusCode expected)
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 10));
+
+        var response = await cleaner.PostAsJsonAsync("/api/scan-records", new
+        {
+            qrToken = MenRestroomToken,
+            status = "Issue",
+            issueTags = new[] { new string('a', a), new string('b', b), new string('c', c) },
+        });
+
+        Assert.Equal(expected, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Deactivated_user_is_401()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.Id == auth.User.Id)).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await cleaner.PostAsJsonAsync("/api/scan-records", new { qrToken = MenRestroomToken, status = "Normal" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Scan_after_midnight_belongs_to_the_previous_days_night_shift()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+
+        var created = await ScanAtAsync(factory, cleaner, ThaiClock.At(9, 2, 0));
+
+        var stored = await StoredAsync(factory, created.ScanRecordId);
+        Assert.Equal(new DateOnly(2026, 10, 8), stored.ShiftDate);
+        Assert.Equal(Shift.Night, stored.Shift);
+        Assert.Equal("Late", created.Placement);
+        Assert.Equal(240, created.LateMinutes);
+        Assert.Equal(new TimeOnly(20, 0), stored.RoundStart);
+        Assert.Equal(new TimeOnly(22, 0), stored.RoundEnd);
+    }
 }
