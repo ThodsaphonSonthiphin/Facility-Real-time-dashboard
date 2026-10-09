@@ -1,0 +1,44 @@
+using FacilityRealtime.Application.Rounds;
+using FacilityRealtime.Application.Shifts;
+using FacilityRealtime.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace FacilityRealtime.Infrastructure.Persistence;
+
+/// <summary>One card: the point (with Area and building), its Point Status, and its latest Scan Record in any shift (with the cleaner).</summary>
+public sealed record PointBoardRow(ServicePoint Point, PointStatusResult Status, ScanRecord? LastScan);
+
+public static class PointBoardQuery
+{
+    public static async Task<IReadOnlyList<PointBoardRow>> LoadAsync(AppDbContext db, DateTime nowUtc, int? servicePointId = null)
+    {
+        var slot = ShiftCalendar.SlotAt(nowUtc);
+
+        var query = db.ServicePoints.AsNoTracking()
+            .Include(p => p.Area!).ThenInclude(a => a.Building)
+            .Where(p => p.IsActive);
+        if (servicePointId is int onlyId)
+        {
+            query = query.Where(p => p.Id == onlyId);
+        }
+
+        var points = await query.OrderBy(p => p.Area!.Code).ThenBy(p => p.SortOrder).ToListAsync();
+        var ids = points.Select(p => p.Id).ToList();
+        var facts = await RoundFactsQuery.LoadAsync(db, ids, slot);
+
+        // facility-0046: the issue tag follows the point's latest Scan Record, whatever shift it was in
+        var lastScans = await db.ScanRecords.AsNoTracking()
+            .Include(s => s.User)
+            .Where(s => ids.Contains(s.ServicePointId)
+                && s.Id == db.ScanRecords.Where(x => x.ServicePointId == s.ServicePointId).Max(x => x.Id))
+            .ToListAsync();
+
+        return points.Select(point =>
+        {
+            var pointFacts = facts[point.Id];
+            var status = PointStatusCalculator.Calculate(
+                point.Area!.HasShift(slot.Shift), pointFacts.Windows, pointFacts.Submissions, pointFacts.Inspections, nowUtc);
+            return new PointBoardRow(point, status, lastScans.FirstOrDefault(s => s.ServicePointId == point.Id));
+        }).ToList();
+    }
+}

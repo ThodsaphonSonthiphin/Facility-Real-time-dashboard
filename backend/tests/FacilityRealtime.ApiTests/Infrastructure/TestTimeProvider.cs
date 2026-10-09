@@ -8,4 +8,10 @@ public sealed class TestTimeProvider(DateTimeOffset start) : TimeProvider
     public override DateTimeOffset GetUtcNow() => _now;
 
     public void Advance(TimeSpan by) => _now = _now.Add(by);
+
+    /// <summary>
+    /// Jumps to an exact moment. Log in before calling it: JwtBearer validates tokens against the real
+    /// clock, while the API's business logic reads this one.
+    /// </summary>
+    public void SetUtcNow(DateTimeOffset value) => _now = value.ToUniversalTime();
 }

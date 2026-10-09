@@ -73,6 +73,7 @@ app.MapHub<ScanHub>("/hubs/scan");
 app.MapGet("/", () => Results.Ok(new { status = "healthy", service = "Facility Real-time Dashboard API" }));
 app.MapAuthEndpoints();
 app.MapMeEndpoints();
+app.MapServicePointEndpoints();
 
 app.Run();
 
