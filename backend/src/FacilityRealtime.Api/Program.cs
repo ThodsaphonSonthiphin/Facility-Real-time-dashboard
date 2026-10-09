@@ -98,6 +98,7 @@ app.MapAttendanceEndpoints();
 app.MapServicePointEndpoints();
 app.MapScanRecordEndpoints();
 app.MapCoverAssignmentEndpoints();
+app.MapMyWorkEndpoints();
 
 app.Run();
 
