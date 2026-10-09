@@ -176,6 +176,26 @@ public class LoginTests
     }
 
     [Fact]
+    public async Task Five_wrong_phones_lock_that_employee_id_for_fifteen_minutes()
+    {
+        using var factory = new FacilityApiFactory();
+        var client = factory.CreateApiClient();
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.LoginAsync(client, "E1001", "0899999999")).StatusCode);
+        }
+
+        var lockedEvenWithTheRightPhone = await AuthApi.LoginAsync(client);
+        var otherEmployee = await AuthApi.LoginAsync(client, "E1003", "0810000003");
+        factory.Clock.Advance(TimeSpan.FromMinutes(15));
+        var afterTheLock = await AuthApi.LoginAsync(client);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, lockedEvenWithTheRightPhone.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, otherEmployee.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, afterTheLock.StatusCode);
+    }
+
+    [Fact]
     public void App_refuses_to_start_without_a_signing_key()
     {
         using var factory = new FacilityApiFactory(signingKey: "");

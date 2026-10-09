@@ -12,6 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Clock, hashing, auth and database. The "Testing" environment (API tests) registers its own SQLite context.
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher());
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection(LoginThrottleSettings.SectionName).Get<LoginThrottleSettings>() ?? new LoginThrottleSettings());
+builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddFacilityAuth(builder.Configuration);
 
 if (!builder.Environment.IsEnvironment("Testing"))

@@ -36,6 +36,7 @@ public static class AuthEndpoints
         AppDbContext db,
         IPasswordHasher hasher,
         IAccessTokenIssuer issuer,
+        LoginThrottle throttle,
         TimeProvider clock,
         IOptions<JwtSettings> jwt)
     {
@@ -43,6 +44,11 @@ public static class AuthEndpoints
         var byEmployeeId = !string.IsNullOrWhiteSpace(request.EmployeeId);
         var loginName = (byEmployeeId ? request.EmployeeId : request.Username)?.Trim() ?? string.Empty;
         var secret = byEmployeeId ? PhoneNumber.Normalize(request.Phone) : request.Password ?? string.Empty;
+        var throttleKey = (byEmployeeId ? "employee:" : "admin:") + loginName;
+        if (throttle.IsLocked(throttleKey))
+        {
+            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+        }
 
         var user = byEmployeeId
             ? await db.Users.FirstOrDefaultAsync(u => u.EmployeeId == loginName && u.Role != UserRole.Admin)
@@ -50,8 +56,11 @@ public static class AuthEndpoints
         var secretMatches = hasher.Verify(secret, user?.SecretHash ?? DummyPasswordHash);
         if (user is null || !user.IsActive || !secretMatches)
         {
+            throttle.RecordFailure(throttleKey);
             return Results.Unauthorized();
         }
+
+        throttle.Reset(throttleKey);
 
         var now = clock.GetUtcNow().UtcDateTime;
         var refresh = AddRefreshToken(db, user.Id, sessionId: Guid.NewGuid(), now);
