@@ -41,9 +41,9 @@ public static class AttendanceEndpoints
             return ApiResults.Message(StatusCodes.Status400BadRequest, "ต้องระบุประเภทการลงเวลา");
         }
 
-        if (GpsInput.Read(request.Latitude, request.Longitude, request.AccuracyM) is not { } gps)
+        if (!GpsInput.TryRead(request.Latitude, request.Longitude, request.AccuracyM, out var gps, out var gpsError))
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, GpsInput.Required);
+            return ApiResults.Message(StatusCodes.Status400BadRequest, gpsError);
         }
 
         var sign = await db.Signs.Include(s => s.Area)

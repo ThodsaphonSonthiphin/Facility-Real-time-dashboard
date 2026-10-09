@@ -4,7 +4,9 @@ using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
 using FacilityRealtime.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace FacilityRealtime.ApiTests.Attendance;
 
@@ -249,5 +251,93 @@ public class AttendanceEndpointTests
         Assert.Equal(new[] { "ShiftIn" }, before.NextEvents);
         Assert.Null(outside.ShiftDate);
         Assert.Empty(outside.NextEvents);
+    }
+
+    [Fact]
+    public async Task Coarse_accuracy_is_still_a_location_and_is_flagged()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
+
+        var response = await AttendanceApi.RecordAsync(cleaner, "ShiftIn", accuracyM: 20_000);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.False(Assert.Single(await AllAsync(factory, db => db.ShiftAttendances)).WithinRadius);
+    }
+
+    [Fact]
+    public async Task An_impossible_latitude_is_a_bad_request()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
+
+        var response = await AttendanceApi.RecordAsync(cleaner, "ShiftIn", latitude: 200);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(await AllAsync(factory, db => db.ShiftAttendances));
+    }
+
+    [Fact]
+    public async Task A_deactivated_account_is_turned_away_even_with_a_valid_token()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.EmployeeId == "E1001")).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var record = await AttendanceApi.RecordAsync(cleaner, "ShiftIn");
+        var mine = await cleaner.GetAsync("/api/attendance/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, record.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, mine.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_press_that_loses_the_race_returns_the_first_one()
+    {
+        var race = new RacingShiftInInterceptor();
+        using var factory = new FacilityApiFactory { ConfigureTestServices = services => services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(race)) };
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
+        race.Armed = true;
+
+        var response = await AttendanceApi.RecordAsync(cleaner, "ShiftIn");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("AlreadyRecorded", (await response.Content.ReadFromJsonAsync<AttendanceStateModel>())!.Outcome);
+        Assert.Single(await AllAsync(factory, db => db.ShiftAttendances));
+    }
+
+    /// <summary>Inserts the competing press through a second context on the same connection just before the first save.</summary>
+    private sealed class RacingShiftInInterceptor : SaveChangesInterceptor
+    {
+        public bool Armed { get; set; }
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            var pending = eventData.Context!.ChangeTracker.Entries<ShiftAttendance>().FirstOrDefault(e => e.State == EntityState.Added);
+            if (Armed && pending is not null)
+            {
+                Armed = false;
+                var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(eventData.Context.Database.GetDbConnection()).Options;
+                await using var other = new AppDbContext(options);
+                var p = pending.Entity;
+                other.ShiftAttendances.Add(new ShiftAttendance
+                {
+                    UserId = p.UserId, AreaId = p.AreaId, ShiftDate = p.ShiftDate, Shift = p.Shift, EventType = p.EventType,
+                    OccurredAt = p.OccurredAt, Source = p.Source, SignId = p.SignId, CreatedAt = p.CreatedAt,
+                });
+                await other.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
     }
 }
