@@ -99,6 +99,7 @@ app.MapServicePointEndpoints();
 app.MapScanRecordEndpoints();
 app.MapCoverAssignmentEndpoints();
 app.MapMyWorkEndpoints();
+app.MapAdminAreaEndpoints();
 
 app.Run();
 
