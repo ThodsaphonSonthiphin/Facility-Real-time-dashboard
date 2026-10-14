@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<BlockedScan> BlockedScans => Set<BlockedScan>();
     public DbSet<CoverAssignment> CoverAssignments => Set<CoverAssignment>();
     public DbSet<AuditEntry> AuditLog => Set<AuditEntry>();
+    public DbSet<AlertReview> AlertReviews => Set<AlertReview>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -208,6 +209,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => x.OccurredAt);
             e.HasIndex(x => new { x.EntityType, x.EntityId });
             e.HasOne<User>().WithMany().HasForeignKey(x => x.ActorId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AlertReview>(e =>
+        {
+            e.ToTable("alert_reviews");
+            e.Property(x => x.AlertType).HasConversion(new UpperSnakeEnumConverter<AlertType>()).HasMaxLength(20);
+            // database.html: an alert is closed once
+            e.HasIndex(x => new { x.AlertType, x.RecordId }).IsUnique();
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.ReviewedById).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.UseSnakeCaseColumns();

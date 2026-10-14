@@ -15,7 +15,7 @@ public class MySqlAreaCleanerTests
     public async Task Replacing_an_areas_cleaner_passes_the_unique_slot_on_MySQL()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySQL(Environment.GetEnvironmentVariable("FACILITY_MYSQL_TEST")!)
+            .UseMySQL(MySqlTestDatabase.ConnectionString())
             .Options;
 
         await using (var setup = new AppDbContext(options))

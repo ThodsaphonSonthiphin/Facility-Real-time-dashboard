@@ -1,12 +1,14 @@
 using System.Security.Claims;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
+using FacilityRealtime.Api.Hubs;
 using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Geo;
 using FacilityRealtime.Application.Shifts;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
 using FacilityRealtime.Infrastructure.Persistence;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.Api.Endpoints;
@@ -23,7 +25,12 @@ public static class AttendanceEndpoints
     }
 
     private static async Task<IResult> RecordAsync(
-        RecordAttendanceRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, AttendanceSettings settings)
+        RecordAttendanceRequest request,
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        TimeProvider clock,
+        AttendanceSettings settings,
+        IHubContext<ScanHub> hub)
     {
         var user = await CurrentUser.LoadAsync(principal, db);
         if (user is null)
@@ -117,6 +124,7 @@ public static class AttendanceEndpoints
             return Results.Ok(State(slot, recordedNow, AttendanceOutcome.AlreadyRecorded));
         }
 
+        await AttendanceBoard.NotifyAsync(hub, area.Id, slot);
         return Results.Ok(State(slot, [.. existing, entry], AttendanceOutcome.Recorded));
     }
 
