@@ -73,6 +73,30 @@ public static class TestData
             await db.SaveChangesAsync();
         });
 
+    /// <summary>An active Cleaner who never logs in, on <paramref name="shift"/>, in no Area unless one is given.</summary>
+    public static async Task<int> AddCleanerAsync(FacilityApiFactory factory, string employeeId, Shift shift, string? areaCode = null)
+    {
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var area = areaCode is null ? null : await db.Areas.SingleAsync(a => a.Code == areaCode);
+            var cleaner = new User
+            {
+                Role = UserRole.Cleaner,
+                EmployeeId = employeeId,
+                DisplayName = $"แม่บ้านทดสอบ {employeeId}",
+                SecretHash = "not-a-hash",
+                AreaId = area?.Id,
+                Shift = shift,
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Users.Add(cleaner);
+            await db.SaveChangesAsync();
+            id = cleaner.Id;
+        });
+        return id;
+    }
+
     /// <summary>A Cover Assignment written straight to the database, assigned by the seeded Admin.</summary>
     public static async Task<int> AddCoverAsync(
         FacilityApiFactory factory, string employeeId, string areaCode, DateOnly shiftDate, Shift shift, bool cancelled = false)
