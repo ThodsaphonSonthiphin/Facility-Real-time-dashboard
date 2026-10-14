@@ -23,7 +23,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 2 | Attendance + scan rules | merged (PR #51) |
 | 3 | Admin setup: Areas, points, round windows, sign location, radius, new QR | merged (PR #52) |
 | 4 | Attendance page (D2), alert list (D3), Admin history (D9) | merged (PR #53, `7cd8ba4`) |
-| 5 | Accounts page (D6) + Excel export (D8) | done, reviewed, MySQL check passed; PR #54 open, not merged (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
+| 5 | Accounts page (D6) + Excel export (D8) | done, merged (PR #54, `c530c84`) (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -158,3 +158,4 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 ### Setting up a new machine (e.g. the Mac)
 
 Install the .NET 10 SDK, MySQL 8.0, the GitHub CLI and Claude Code. Then `git clone`, check out the branch, run `dotnet tool restore` and `dotnet test backend/FacilityRealtime.slnx`.
+- 2026-10-14 · PR #54 merged by the owner (`c530c84`). Plan 5 is done. Next: the owner chooses the next plan (see Pending work).
