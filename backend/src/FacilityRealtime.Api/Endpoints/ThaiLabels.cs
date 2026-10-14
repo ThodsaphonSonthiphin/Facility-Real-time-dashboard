@@ -10,6 +10,13 @@ internal static class ThaiLabels
 {
     public static string ShiftName(Shift shift) => shift == Shift.Day ? "เช้า" : "ดึก";
 
+    public static string RoleName(UserRole role) => role switch
+    {
+        UserRole.Cleaner => "แม่บ้าน",
+        UserRole.Supervisor => "หัวหน้า",
+        _ => "Admin",
+    };
+
     public static string EventName(AttendanceEvent eventType) => eventType switch
     {
         AttendanceEvent.ShiftIn => "เข้างาน",

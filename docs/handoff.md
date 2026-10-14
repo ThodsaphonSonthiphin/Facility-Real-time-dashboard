@@ -40,6 +40,7 @@ Plan 4 test results at merge:
   - Branch `feat/accounts-export` created from master `7cd8ba4`. The owner chose subagent-driven execution.
   - Next: plan 5 Task 1.
 - 2026-10-14 · Task 1 done: AccountRules, PhoneNumber.IsComplete, audit categories Account and Export. Unit and API tests pass. Next: Task 2 (account list and create).
+- 2026-10-14 · Task 2 done: GET/POST /api/admin/accounts (list; add Cleaner, Supervisor or Admin; slot and login-name checks; ACCOUNT_CREATE). All tests pass. Next: Task 3 (edit, deactivate, activate).
 
 ## Pending work (ask the owner before starting)
 

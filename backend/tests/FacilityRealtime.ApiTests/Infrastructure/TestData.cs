@@ -124,4 +124,34 @@ public static class TestData
         });
         return id;
     }
+
+    /// <summary>A new building with no Areas, e.g. "B".</summary>
+    public static async Task<int> AddBuildingAsync(FacilityApiFactory factory, string code)
+    {
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var building = new Building { Code = code, Name = $"ตึก {code}", CreatedAt = DateTime.UtcNow };
+            db.Buildings.Add(building);
+            await db.SaveChangesAsync();
+            id = building.Id;
+        });
+        return id;
+    }
+
+    /// <summary>A new Area with its check-in sign and no Cleaner, e.g. "AR03" in building A.</summary>
+    public static async Task<int> AddAreaAsync(
+        FacilityApiFactory factory, string code, string buildingCode = "A", ShiftPattern pattern = ShiftPattern.DayAndNight)
+    {
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var building = await db.Buildings.SingleAsync(b => b.Code == buildingCode);
+            var area = new Area { BuildingId = building.Id, Code = code, Name = $"Area {code}", ShiftPattern = pattern, CreatedAt = DateTime.UtcNow };
+            db.Signs.Add(new Sign { Area = area, Code = $"{code}-IN", QrToken = $"token-checkin-{code.ToLowerInvariant()}", QrIssuedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+            id = area.Id;
+        });
+        return id;
+    }
 }
