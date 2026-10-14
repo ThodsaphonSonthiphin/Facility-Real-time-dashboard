@@ -93,12 +93,12 @@ npm --prefix frontend test
 - `POST /api/admin/cover-assignments` ใส่ `blockedScanId` เพื่อมอบหมายทำแทนจากการสแกนที่ถูกบล็อก (ADR facility-0041)
 - `GET /api/admin/cover-assignments/candidates?areaId=&shiftDate=&shift=` รายชื่อคนที่ทำแทนได้ของ Area และกะนั้น
 - `GET /api/admin/audit-log/actors` รายชื่อผู้ทำสำหรับตัวกรอง
-- `GET /api/admin/audit-log` ประวัติ Admin อ่านอย่างเดียว กรองได้ด้วย `from`, `to` (yyyy-MM-dd), `actorId`, `category` (Attendance, Cover, AlertReview, Setup, QrToken), `beforeId` และ `limit` (1–500 ค่าเริ่ม 100) (ADR facility-0057)
+- `GET /api/admin/audit-log` ประวัติ Admin อ่านอย่างเดียว กรองได้ด้วย `from`, `to` (yyyy-MM-dd), `actorId`, `category` (Attendance, Cover, AlertReview, Setup, QrToken, Account, Export), `beforeId` และ `limit` (1–500 ค่าเริ่ม 100) (ADR facility-0057)
 
 จัดการบัญชีและส่งออก Excel ใน Swagger (login เป็น `admin`, ADR facility-0020, 0053, 0054):
 
 - `GET /api/admin/accounts` รายชื่อบัญชีทั้งหมด (ไม่มีเบอร์โทรและรหัสผ่าน) และ `POST /api/admin/accounts` เพิ่มบัญชี: แม่บ้านและหัวหน้าใส่ `employeeId` กับ `phone` (10 หลัก ขึ้นต้นด้วย 0) ส่วน Admin ใส่ `username` กับ `password` ชั่วคราว ช่องที่ไม่เกี่ยวกับบทบาทให้เว้นไว้ ห้ามส่งค่าว่าง
-- `PUT /api/admin/accounts/{id}` แก้ชื่อที่แสดง Area ตึก หรือกะ (บทบาท รหัสพนักงาน และ username แก้ไม่ได้)
+- `PUT /api/admin/accounts/{id}` แก้ชื่อที่แสดง Area ตึก หรือกะ (บทบาท รหัสพนักงาน และ username แก้ไม่ได้) PUT แทนที่ทุกช่อง: ถ้าไม่ส่ง `areaId` แม่บ้านจะหลุดจาก Area จึงต้องส่ง `areaId` เดิมกลับไปถ้าจะให้อยู่ Area เดิม
 - `POST /api/admin/accounts/{id}/deactivate` ปิดบัญชี (ให้ออกจากระบบทุกเครื่อง และแม่บ้านจะหลุดจาก Area) และ `POST /api/admin/accounts/{id}/activate` เปิดบัญชีอีกครั้ง ปิดบัญชีตัวเองไม่ได้ ไม่มีการลบบัญชี
 - `PUT /api/admin/accounts/{id}/phone` เปลี่ยนเบอร์โทรของแม่บ้านหรือหัวหน้า และ `PUT /api/admin/accounts/{id}/password` รีเซ็ตรหัสผ่านของ Admin ทั้งสองอย่างทำให้คนนั้นต้อง login ใหม่ทุกเครื่อง และประวัติไม่เก็บเบอร์หรือรหัส (ADR facility-0057)
 - `POST /api/admin/export` ได้ไฟล์ `.xlsx` เช่น `{ "from": "2026-10-01", "to": "2026-10-07", "buildingId": 1, "sets": ["Attendance", "Submissions"] }` เลือกได้ 1–31 วัน ไม่ใส่ `buildingId` คือทุกตึก ชีต "การส่งงาน" มีแถว "ไม่ได้ทำ" ของรอบที่ไม่มีใครทำ ทุกการส่งออกลงตาราง `audit_log`

@@ -23,7 +23,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 2 | Attendance + scan rules | merged (PR #51) |
 | 3 | Admin setup: Areas, points, round windows, sign location, radius, new QR | merged (PR #52) |
 | 4 | Attendance page (D2), alert list (D3), Admin history (D9) | merged (PR #53, `7cd8ba4`) |
-| 5 | Accounts page (D6) + Excel export (D8) | done, MySQL check and whole-branch review pending, PR not yet open (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
+| 5 | Accounts page (D6) + Excel export (D8) | done; final review done and its fixes are in; MySQL run on the Mac and the PR still pending (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -46,6 +46,7 @@ Plan 4 test results at merge:
 - 2026-10-14 · Task 5 done: ExportRules.MissedRounds and ExportQuery (attendance, submissions, points with windows; date range and building filter). All tests pass. Next: Task 6 (the .xlsx endpoint).
 - 2026-10-14 · Task 6 done: POST /api/admin/export returns .xlsx (การลงเวลา, การส่งงาน with ไม่ได้ทำ rows; text-only cells; EXPORT_EXCEL logged). New package ClosedXML 0.104.2. All tests pass. Next: Task 7 (MySQL check and docs).
 - 2026-10-14 · Task 7 done: a MySQL test of the export queries, the case-insensitive employee ID rule and the deactivation transaction (user change plus session revocation); README and architecture docs. The MySQL test compiles and is skipped without `FACILITY_MYSQL_TEST`; the controller runs it on real MySQL. All other tests pass (421 passed, 4 skipped in API tests; 260 unit tests). Next: the MySQL run, the whole-branch review, then a PR for the owner.
+- 2026-10-14 · Final review fixes: (F1) the export's "ไม่ได้ทำ" rows now wait until the attendance window closes (ClosesMinutesAfterShift after shift end, inclusive), because a Late Submission is accepted until then; (F2) the workbook is built before the EXPORT_EXCEL row is saved; (F3) editing a Cleaner whose Area was deactivated keeps the Area, moving one to a deactivated Area still gets 400; (F4) test pins that PUT without `areaId` clears the Area, documented in README and the frontend notes; (F5) README audit categories and this file's roadmap line corrected. All tests pass (MySQL ones skipped). Next: owner runs the MySQL tests on the Mac, then a PR.
 
 ## Pending work (ask the owner before starting)
 
@@ -123,6 +124,7 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 
 - Key alerts by kind **and** id: the "far from sign" and "no Shift-Out" alerts of one attendance share an id.
 - Leave out unused filters entirely; an empty value gets 400. The same holds for unused account fields in plan 5.
+- `PUT /api/admin/accounts/{id}` replaces every place field: leaving `areaId` out clears a Cleaner's Area, so the client sends the current `areaId` to keep it.
 - The "no Shift-Out" alert has no shift or check-in time yet for the D3 layout.
 - The attendance page does not yet return the Admin's reason to show beside "แก้โดย Admin" (D2).
 
@@ -134,7 +136,7 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 
 - The MySQL root password that was in the plan-2 file is scrubbed in the working copy but **still in git history**, and the repo is public. Change the root password on this laptop.
 - GitGuardian once flagged `LoginTests.cs`. It is a made-up test credential; whoever manages GitGuardian should mark it Resolved as a test credential.
-- The untracked file `docs/roadmap.html` is not part of any plan and has not been touched.
+- `docs/roadmap.html` was committed on this branch by the owner (`0e9ab37`); it is not part of any plan.
 - Build warning NU1903: `Microsoft.AspNetCore.SignalR.Common` 10.0.12 has a known high-severity advisory. It comes in through `Microsoft.AspNetCore.SignalR.Client` in the ApiTests project (it existed before plan 5, and plan 5 did not cause it). Bump the package when a patched version exists.
 
 ## Working method that works
