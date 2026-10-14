@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using ClosedXML.Excel;
 using FacilityRealtime.ApiTests.Infrastructure;
+using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -96,6 +98,128 @@ public class ExportEndpointTests
         Assert.Equal(new[] { ("เช้า", "ไม่ได้ทำ") }, rows.Where(r => r[5] == "AR02-01").Select(r => (r[1], r[8])));
     }
 
+    /// <summary>A Scan Record written straight to the database, in the window of that sign's point that starts at <paramref name="windowStartHour"/>.</summary>
+    private static Task AddRecordAsync(
+        FacilityApiFactory factory,
+        string qrToken,
+        string employeeId,
+        Placement placement,
+        int? windowStartHour,
+        DateTimeOffset at,
+        int? lateMinutes = null,
+        CleaningStatus status = CleaningStatus.Normal,
+        string? issueTags = null,
+        int? coverAssignmentId = null,
+        short? distanceM = null,
+        bool? withinRadius = null) =>
+        factory.WithDbAsync(async db =>
+        {
+            var sign = await db.Signs.SingleAsync(s => s.QrToken == qrToken);
+            var user = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
+            var dayWindows = await db.PointRoundWindows.Where(w => w.ServicePointId == sign.ServicePointId && w.Shift == Shift.Day).ToListAsync();
+            var window = windowStartHour is { } hour ? dayWindows.Single(w => w.StartTime.Hour == hour) : null;
+            db.ScanRecords.Add(new ScanRecord
+            {
+                ServicePointId = sign.ServicePointId!.Value,
+                SignId = sign.Id,
+                UserId = user.Id,
+                ShiftDate = Oct8,
+                Shift = Shift.Day,
+                RoundWindowId = window?.Id,
+                RoundStart = window?.StartTime,
+                RoundEnd = window?.EndTime,
+                Placement = placement,
+                LateMinutes = lateMinutes,
+                Status = status,
+                IssueTags = issueTags,
+                SubmittedAt = at.UtcDateTime,
+                CoverAssignmentId = coverAssignmentId,
+                DistanceM = distanceM,
+                WithinRadius = withinRadius,
+            });
+            await db.SaveChangesAsync();
+        });
+
+    [Fact]
+    public async Task Each_kind_of_submission_prints_its_result_issue_and_gps_and_a_late_round_still_counts_as_done()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        const string women = "token-restroom-f1";
+        await AddRecordAsync(factory, women, "E1001", Placement.Late, 7, ThaiClock.At(8, 9, 15), lateMinutes: 15,
+            status: CleaningStatus.Issue, issueTags: null, distanceM: 12, withinRadius: true);
+        await AddRecordAsync(factory, women, "E1001", Placement.OffRound, null, ThaiClock.At(8, 12, 0));
+        await AddRecordAsync(factory, women, "E1001", Placement.Rework, 16, ThaiClock.At(8, 16, 30), distanceM: 900, withinRadius: false);
+
+        using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Submissions"]));
+
+        var rows = Rows(workbook.Worksheet(1)).Where(r => r[5] == "AR01-02").Select(r => (r[1], r[6], r[7], r[8], r[9], r[10], r[13])).ToList();
+        Assert.Equal(
+            new[]
+            {
+                // Late only: its round is done, so there is no "ไม่ได้ทำ" row for 07:00–09:00
+                ("เช้า", "07:00–09:00", "09:15", "ส่งช้า 15 นาที", "มี Issue", "", "ในรัศมี 12 ม."),
+                ("เช้า", "", "12:00", "นอกรอบ", "", "", "-"),
+                ("เช้า", "16:00–18:00", "16:30", "ส่งงานแก้", "", "", "นอกรัศมี 900 ม."),
+                ("ดึก", "20:00–22:00", "", "ไม่ได้ทำ", "", "", ""),
+                ("ดึก", "03:00–05:00", "", "ไม่ได้ทำ", "", "", ""),
+            },
+            rows);
+    }
+
+    [Fact]
+    public async Task A_round_with_only_an_off_round_submission_is_still_not_done()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        await AddRecordAsync(factory, "token-restroom-m1", "E1001", Placement.OffRound, null, ThaiClock.At(8, 12, 0));
+
+        using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Submissions"]));
+
+        var rows = Rows(workbook.Worksheet(1)).Where(r => r[5] == "AR01-01").Select(r => (r[1], r[6], r[8])).ToList();
+        Assert.Equal(
+            new[]
+            {
+                ("เช้า", "07:00–09:00", "ไม่ได้ทำ"),
+                ("เช้า", "", "นอกรอบ"),
+                ("เช้า", "16:00–18:00", "ไม่ได้ทำ"),
+                ("ดึก", "20:00–22:00", "ไม่ได้ทำ"),
+                ("ดึก", "03:00–05:00", "ไม่ได้ทำ"),
+            },
+            rows);
+    }
+
+    [Fact]
+    public async Task A_cover_submission_is_marked_and_names_the_cleaner_who_covered()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        await TestData.AddCleanerAsync(factory, "E9001", Shift.Day);
+        var coverId = await TestData.AddCoverAsync(factory, "E9001", "AR02", Oct8, Shift.Day);
+        await AddRecordAsync(factory, "token-meeting-room", "E9001", Placement.OnTime, 8, ThaiClock.At(8, 8, 30), coverAssignmentId: coverId);
+
+        using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Submissions"]));
+
+        var row = Assert.Single(Rows(workbook.Worksheet(1)), r => r[5] == "AR02-01");
+        Assert.Equal(("ตรงเวลา", "ทำแทน", "E9001", "แม่บ้านทดสอบ E9001"), (row[8], row[10], row[11], row[12]));
+    }
+
+    [Fact]
+    public async Task A_range_of_two_days_lists_the_missed_rounds_of_both()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+
+        using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-07", "2026-10-08", ["Submissions"]));
+
+        var rows = Rows(workbook.Worksheet(1));
+        // per date: 5 Day rounds (2 restrooms x 2, meeting room x 1) and 4 Night rounds
+        Assert.Equal(18, rows.Count);
+        Assert.All(rows, r => Assert.Equal("ไม่ได้ทำ", r[8]));
+        Assert.Equal(new[] { "2026-10-07", "2026-10-08" }, rows.Select(r => r[0]).Distinct());
+        Assert.Equal(new[] { "2026-10-07", "2026-10-08" }, rows.Where(r => r[5] == "AR02-01").Select(r => r[0]));
+    }
+
     [Fact]
     public async Task A_shift_still_running_shows_no_missed_rounds()
     {
@@ -142,7 +266,11 @@ public class ExportEndpointTests
         Assert.Contains("\"From\":\"2026-10-08\"", entry.AfterJson);
         Assert.Contains("\"Sets\":[\"Attendance\"]", entry.AfterJson);
         Assert.Contains("\"Rows\":[1]", entry.AfterJson);
-        Assert.DoesNotContain("สมชาย", entry.AfterJson);
+        // Only the request and the counts: no row content. (A Thai name would be escaped as \uXXXX, so a text search cannot prove this.)
+        using var after = JsonDocument.Parse(entry.AfterJson!);
+        Assert.Equal(
+            new[] { "From", "To", "BuildingId", "Sets", "Rows" },
+            after.RootElement.EnumerateObject().Select(p => p.Name));
     }
 
     [Fact]
@@ -188,6 +316,7 @@ public class ExportEndpointTests
         """{ "from": "2026-10-08", "to": "2026-10-08", "sets": [] }""",
         """{ "from": "2026-10-08", "to": "2026-10-08" }""",
         """{ "from": "2026-10-08", "to": "2026-10-08", "sets": ["Attendance"], "buildingId": 9999 }""",
+        """{ "from": "2026-10-08", "to": "2026-10-08", "sets": [99] }""",
     };
 
     [Theory]
