@@ -23,6 +23,11 @@ public static class AdminAccountEndpoints
         accounts.MapGet("", async (ClaimsPrincipal principal, AppDbContext db) =>
             await CurrentUser.LoadAsync(principal, db) is null ? Results.Unauthorized() : Results.Ok(await AccountView.LoadAsync(db)));
         accounts.MapPost("", CreateAsync);
+        accounts.MapPut("/{id:int}", UpdateAsync);
+        accounts.MapPost("/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
+            SetActiveAsync(id, false, principal, db, clock));
+        accounts.MapPost("/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
+            SetActiveAsync(id, true, principal, db, clock));
         return app;
     }
 
@@ -134,6 +139,116 @@ public static class AdminAccountEndpoints
         }
 
         return Results.Created($"/api/admin/accounts/{user.Id}", await AccountView.LoadOneAsync(db, user.Id));
+    }
+
+    private static async Task<IResult> UpdateAsync(int id, UpdateAccountRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    {
+        var admin = await CurrentUser.LoadAsync(principal, db);
+        if (admin is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (AccountRules.NormalizeDisplayName(request.DisplayName) is not { } displayName)
+        {
+            return Bad($"ต้องใส่ชื่อที่แสดง ไม่เกิน {AccountRules.MaxDisplayName} ตัวอักษร");
+        }
+
+        // Decision 4: a deactivated Cleaner holds no Area; the Area's slot may already be someone else's
+        if (!user.IsActive && user.Role == UserRole.Cleaner && request.AreaId is not null)
+        {
+            return Bad("เปิดใช้งานบัญชีก่อน แล้วค่อยเลือก Area");
+        }
+
+        var (place, error) = await ReadPlaceAsync(db, user.Role, user.Id, request.AreaId, request.BuildingId, request.Shift);
+        if (place is null)
+        {
+            return error!;
+        }
+
+        var before = Snapshot(user);
+        user.DisplayName = displayName;
+        user.AreaId = place.Area?.Id;
+        user.BuildingId = place.Building?.Id;
+        user.Shift = place.Shift;
+        var after = Snapshot(user);
+        if (after == before)
+        {
+            return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+        }
+
+        AuditTrail.Add(
+            db, admin.Id, clock.GetUtcNow().UtcDateTime, "ACCOUNT_UPDATE", "users", user.Id,
+            $"แก้บัญชี{ThaiLabels.RoleName(user.Role)} {user.LoginName} {user.DisplayName}", before, after);
+        if (await SaveAsync(db, ClaimOf(user)) is { } conflict)
+        {
+            return conflict;
+        }
+
+        return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+    }
+
+    /// <summary>
+    /// facility-0020: no delete, only deactivate. A deactivated account cannot log in and every refresh token is revoked
+    /// (facility-0014), so its devices drop within 5 minutes. History keeps its name.
+    /// </summary>
+    private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    {
+        var admin = await CurrentUser.LoadAsync(principal, db);
+        if (admin is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        // facility-0020: so one active Admin always remains
+        if (!active && user.Id == admin.Id)
+        {
+            return Bad("ปิดบัญชีของตัวเองไม่ได้");
+        }
+
+        if (user.IsActive == active)
+        {
+            return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+        }
+
+        if (active && await HolderAsync(db, user.Role, user.AreaId, user.BuildingId, user.Shift, user.Id) is { } holder)
+        {
+            return Conflict(SlotTaken(holder));
+        }
+
+        var before = Snapshot(user);
+        user.IsActive = active;
+        if (!active && user.Role == UserRole.Cleaner)
+        {
+            // Decision 3: the Area's slot opens at once, so the Area form (D10) can offer it to someone else
+            user.AreaId = null;
+        }
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        AuditTrail.Add(
+            db, admin.Id, now, active ? "ACCOUNT_ACTIVATE" : "ACCOUNT_DEACTIVATE", "users", user.Id,
+            $"{(active ? "เปิด" : "ปิด")}ใช้งานบัญชี{ThaiLabels.RoleName(user.Role)} {user.LoginName} {user.DisplayName}",
+            before, Snapshot(user));
+        Func<Task>? revokeSessions = active ? null : () => db.RevokeUserSessionsAsync(user.Id, now);
+        var conflict = await SaveAsync(db, ClaimOf(user), revokeSessions);
+        if (conflict is not null)
+        {
+            return conflict;
+        }
+
+        return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
     }
 
     /// <summary>
