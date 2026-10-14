@@ -30,7 +30,7 @@
 - Attendance order: none → Shift-In; Shift-In → Break-Out or Shift-Out; Break-Out → Break-In or Shift-Out (a forgotten Break-In stays empty, ADR 0051); Break-In → Shift-Out; nothing after Shift-Out. Pressing an already-recorded event returns the first time (ADR 0026). A different event within `RepeatIgnoreMinutes` (5) of the latest one is ignored, not recorded (ADR 0031).
 - GPS columns everywhere: `latitude`, `longitude` DECIMAL(9,6); `accuracy_m`, `distance_m` SMALLINT (clamped to 32767); `within_radius` BOOLEAN (NULL = no verdict).
 - Every Admin change writes an `audit_log` row in the same transaction (ADR 0051); never put phone numbers or passwords into `before_json`/`after_json`.
-- The runtime provider is Oracle's `MySql.EntityFrameworkCore`; SQLite tests cannot catch provider-only failures. After the migration task, apply it to a throwaway MySQL database and run the `[MySqlFact]` test (`FACILITY_MYSQL_TEST`). MySQL 8.0.46 runs on this laptop as service `MySQL80`, user `root`, password `root`; only ever use throwaway databases (`facility_*_test`), never `facility_dashboard`, and never write the password into a committed file.
+- The runtime provider is Oracle's `MySql.EntityFrameworkCore`; SQLite tests cannot catch provider-only failures. After the migration task, apply it to a throwaway MySQL database and run the `[MySqlFact]` test (`FACILITY_MYSQL_TEST`). MySQL 8.0.46 runs on this laptop as service `MySQL80`, user `root` (ask the owner for the password each time); only ever use throwaway databases (`facility_*_test`), never `facility_dashboard`, and never write the password into a committed file.
 - Keep every existing rule from PR #50 (auth, throttle, Dashboard Admin-only, no QR Token in payloads).
 
 ### Deviations from database.html (decided while planning)
@@ -1027,9 +1027,9 @@ Expected: 0 failures (the MySQL test is skipped).
 - [ ] **Step 7: Verify on real MySQL**
 
 ```bash
-FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_scanrules_test;Uid=root;Pwd=root;CharSet=utf8mb4;" dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~MySqlReadTests"
-dotnet ef database update --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api --connection "Server=localhost;Port=3306;Database=facility_migration_test;Uid=root;Pwd=root;CharSet=utf8mb4;"
-"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -uroot -proot -e "DROP DATABASE IF EXISTS facility_migration_test; DROP DATABASE IF EXISTS facility_scanrules_test;"
+FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_scanrules_test;Uid=root;Pwd=<local root password>;CharSet=utf8mb4;" dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~MySqlReadTests"
+dotnet ef database update --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api --connection "Server=localhost;Port=3306;Database=facility_migration_test;Uid=root;Pwd=<local root password>;CharSet=utf8mb4;"
+"/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -uroot -p'<local root password>' -e "DROP DATABASE IF EXISTS facility_migration_test; DROP DATABASE IF EXISTS facility_scanrules_test;"
 ```
 
 Expected: the MySQL test PASSES (1/1); `database update` applies `PilotSchema` then `ScanRules` with no error; both throwaway databases are dropped. Never point these commands at `facility_dashboard`.

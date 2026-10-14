@@ -20,8 +20,16 @@ public class DeactivatedAdminTests
     [InlineData("GET", "/api/admin/alerts", null)]
     [InlineData("POST", "/api/admin/alerts/review", """{ "kind": "BlockedScan", "recordId": 1 }""")]
     [InlineData("GET", "/api/admin/cover-assignments/candidates?areaId=1&shiftDate=2026-10-08&shift=Day", null)]
+    [InlineData("GET", "/api/admin/accounts", null)]
+    [InlineData("POST", "/api/admin/accounts", """{ "role": "Cleaner", "displayName": "x", "employeeId": "E9", "phone": "0000000099", "shift": "Day" }""")]
+    [InlineData("PUT", "/api/admin/accounts/2", """{ "displayName": "x", "shift": "Day" }""")]
+    [InlineData("PUT", "/api/admin/accounts/2/phone", """{ "phone": "0000000099" }""")]
+    [InlineData("PUT", "/api/admin/accounts/1/password", """{ "password": "temporary-9" }""")]
+    [InlineData("POST", "/api/admin/accounts/2/deactivate", null)]
+    [InlineData("POST", "/api/admin/accounts/2/activate", null)]
     [InlineData("GET", "/api/admin/audit-log", null)]
     [InlineData("GET", "/api/admin/audit-log/actors", null)]
+    [InlineData("POST", "/api/admin/export", """{ "from": "2026-10-08", "to": "2026-10-08", "sets": ["Attendance"] }""")]
     public async Task A_deactivated_admin_with_a_live_token_is_refused_and_nothing_is_logged(string method, string path, string? body)
     {
         using var factory = new FacilityApiFactory();

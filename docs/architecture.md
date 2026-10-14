@@ -118,7 +118,7 @@ flowchart TB
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
         subgraph ApiP["FacilityRealtime.Api"]
-            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log"]
+            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
             Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, AttendanceRecorded → Admins"]
             Jwt["Auth/AuthSetup.cs<br/>JWT bearer validation"]
@@ -130,6 +130,8 @@ flowchart TB
         subgraph InfP["FacilityRealtime.Infrastructure"]
             Ctx["AppDbContext (EF Core)<br/>Migrations, DbInitializer"]
             Hash["Pbkdf2PasswordHasher"]
+            Reads["Persistence/*Query<br/>AlertQuery, AuditLogQuery, ExportQuery"]
+            Xlsx["Export/ExcelWorkbook<br/>(ClosedXML 0.104.2)"]
         end
         subgraph DomP["FacilityRealtime.Domain"]
             Ent["Entities: User, ServicePoint,<br/>ScanRecord, RefreshToken,<br/>ShiftAttendance, BlockedScan,<br/>CoverAssignment, AuditEntry, AlertReview"]
@@ -152,6 +154,9 @@ flowchart TB
 
     Ep --> Status
     Ep --> Ctx
+    Ep --> Reads
+    Ep -->|"export sheets"| Xlsx
+    Reads --> Ctx
     Ep -->|"Clients.Group(admins)"| Hub
     AuthEp --> Rules
     AuthEp --> Ctx
@@ -167,7 +172,9 @@ flowchart TB
 
 Project references follow Clean Architecture: `Api → Application, Infrastructure`; `Infrastructure → Application, Domain`; `Application → Domain`; `Domain` depends on nothing.
 
-> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers live in `Endpoints/` (AuthEndpoints, MeEndpoints, ServicePointEndpoints, ScanRecordEndpoints, AttendanceEndpoints, CoverAssignmentEndpoints, MyWorkEndpoints), use `AppDbContext` directly, and `Program.cs` only composes them.
+> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers live in `Endpoints/` (AuthEndpoints, MeEndpoints, ServicePointEndpoints, ScanRecordEndpoints, AttendanceEndpoints, CoverAssignmentEndpoints, MyWorkEndpoints), use `AppDbContext` directly, and `Program.cs` only composes them. The Admin pages add `AdminAccountEndpoints` (accounts, plan 5) and `AdminExportEndpoints` (Excel export, plan 5) beside the earlier Admin endpoints.
+
+**Excel export (facility-0053).** `POST /api/admin/export` reads rows through `ExportQuery` (attendance, submissions, and the active points with their Round Windows, from which the "ไม่ได้ทำ" rows are computed by `ExportRules`). `ExportSheets` turns them into sheets and `Infrastructure/Export/ExcelWorkbook` writes the `.xlsx` with ClosedXML 0.104.2 (MIT licence, the only package plan 5 added). Every cell is written as text (dates `yyyy-MM-dd`, times `HH:mm`), so a name such as `=1+1` can never become a formula when the Admin opens the file. Column widths are fixed, because auto-fit needs fonts that the server may not have. Each export writes one `EXPORT_EXCEL` audit row with the range, building, sets and row counts, and no row content.
 
 ---
 

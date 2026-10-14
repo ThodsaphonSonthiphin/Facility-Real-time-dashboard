@@ -10,6 +10,13 @@ internal static class ThaiLabels
 {
     public static string ShiftName(Shift shift) => shift == Shift.Day ? "เช้า" : "ดึก";
 
+    public static string RoleName(UserRole role) => role switch
+    {
+        UserRole.Cleaner => "แม่บ้าน",
+        UserRole.Supervisor => "หัวหน้า",
+        _ => "Admin",
+    };
+
     public static string EventName(AttendanceEvent eventType) => eventType switch
     {
         AttendanceEvent.ShiftIn => "เข้างาน",
@@ -30,5 +37,22 @@ internal static class ThaiLabels
         AlertKind.AttendanceGps => "ลงเวลาไกลจากป้าย",
         AlertKind.SubmissionGps => "ส่งงานไกลจากป้าย",
         _ => "ไม่ได้ลงเวลาเลิกงาน",
+    };
+
+    /// <summary>facility-0047: ผล of a submission on the export.</summary>
+    public static string SubmissionResult(Placement placement, int? lateMinutes) => placement switch
+    {
+        Placement.OnTime => "ตรงเวลา",
+        Placement.Late => $"ส่งช้า {lateMinutes ?? 0} นาที",
+        Placement.Rework => "ส่งงานแก้",
+        _ => "นอกรอบ",
+    };
+
+    /// <summary>facility-0053: distance and verdict only, never coordinates.</summary>
+    public static string Gps(short? distanceM, bool? withinRadius) => withinRadius switch
+    {
+        true => $"ในรัศมี {distanceM} ม.",
+        false => $"นอกรัศมี {distanceM} ม.",
+        null => "-",
     };
 }

@@ -1,6 +1,6 @@
 namespace FacilityRealtime.Application.Audit;
 
-/// <summary>The "ประเภท" filter of the Admin history page (wireframe D9, facility-0057). Plan 5 adds accounts and the Excel export.</summary>
+/// <summary>The "ประเภท" filter of the Admin history page (wireframe D9, facility-0057).</summary>
 public enum AuditCategory
 {
     Attendance,
@@ -8,6 +8,8 @@ public enum AuditCategory
     AlertReview,
     Setup,
     QrToken,
+    Account,
+    Export,
 }
 
 public static class AuditCategories
@@ -24,6 +26,11 @@ public static class AuditCategories
             "SIGN_LOCATION", "SIGN_RADIUS",
         ],
         [AuditCategory.QrToken] = ["QR_REGENERATE"],
+        [AuditCategory.Account] =
+        [
+            "ACCOUNT_CREATE", "ACCOUNT_UPDATE", "ACCOUNT_PHONE", "ACCOUNT_PASSWORD", "ACCOUNT_ACTIVATE", "ACCOUNT_DEACTIVATE",
+        ],
+        [AuditCategory.Export] = ["EXPORT_EXCEL"],
     };
 
     public static IReadOnlyList<string> ActionsOf(AuditCategory category) => Actions[category];

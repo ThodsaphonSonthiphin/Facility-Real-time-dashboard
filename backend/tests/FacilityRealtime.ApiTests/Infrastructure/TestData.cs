@@ -124,4 +124,85 @@ public static class TestData
         });
         return id;
     }
+
+    /// <summary>A new building with no Areas, e.g. "B".</summary>
+    public static async Task<int> AddBuildingAsync(FacilityApiFactory factory, string code)
+    {
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var building = new Building { Code = code, Name = $"ตึก {code}", CreatedAt = DateTime.UtcNow };
+            db.Buildings.Add(building);
+            await db.SaveChangesAsync();
+            id = building.Id;
+        });
+        return id;
+    }
+
+    /// <summary>A new Area with its check-in sign and no Cleaner, e.g. "AR03" in building A.</summary>
+    public static async Task<int> AddAreaAsync(
+        FacilityApiFactory factory, string code, string buildingCode = "A", ShiftPattern pattern = ShiftPattern.DayAndNight)
+    {
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var building = await db.Buildings.SingleAsync(b => b.Code == buildingCode);
+            var area = new Area { BuildingId = building.Id, Code = code, Name = $"Area {code}", ShiftPattern = pattern, CreatedAt = DateTime.UtcNow };
+            db.Signs.Add(new Sign { Area = area, Code = $"{code}-IN", QrToken = $"token-checkin-{code.ToLowerInvariant()}", QrIssuedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+            id = area.Id;
+        });
+        return id;
+    }
+
+    /// <summary>
+    /// One attendance event of a Cleaner in their own Area, written straight to the database. A scan gets the Area's
+    /// check-in sign and a GPS verdict; an Admin addition has neither (facility-0051).
+    /// </summary>
+    public static Task AddAttendanceAsync(
+        FacilityApiFactory factory,
+        string employeeId,
+        DateOnly shiftDate,
+        Shift shift,
+        AttendanceEvent eventType,
+        DateTimeOffset at,
+        AttendanceSource source = AttendanceSource.Scan,
+        short distanceM = 12,
+        bool withinRadius = true) =>
+        factory.WithDbAsync(async db =>
+        {
+            var user = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
+            var sign = await db.Signs.SingleAsync(s => s.AreaId == user.AreaId && s.ServicePointId == null);
+            var scanned = source != AttendanceSource.AdminAdd;
+            db.ShiftAttendances.Add(new ShiftAttendance
+            {
+                UserId = user.Id,
+                AreaId = user.AreaId!.Value,
+                ShiftDate = shiftDate,
+                Shift = shift,
+                EventType = eventType,
+                OccurredAt = at.UtcDateTime,
+                Source = source,
+                SignId = scanned ? sign.Id : null,
+                Latitude = scanned ? 13.756300m : null,
+                Longitude = scanned ? 100.501800m : null,
+                AccuracyM = scanned ? (short)10 : null,
+                DistanceM = scanned ? distanceM : null,
+                WithinRadius = scanned ? withinRadius : null,
+                CreatedAt = at.UtcDateTime,
+            });
+            await db.SaveChangesAsync();
+        });
+
+    /// <summary>
+    /// The seed stamps its points and windows with the real clock, which is later than the October 2026 test dates. Move
+    /// them back to 1 October so rounds on test dates existed when they started (export "ไม่ได้ทำ").
+    /// </summary>
+    public static Task BackdateSetupAsync(FacilityApiFactory factory) =>
+        factory.WithDbAsync(async db =>
+        {
+            var longAgo = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+            await db.PointRoundWindows.ExecuteUpdateAsync(s => s.SetProperty(w => w.CreatedAt, longAgo));
+            await db.ServicePoints.ExecuteUpdateAsync(s => s.SetProperty(p => p.CreatedAt, longAgo));
+        });
 }

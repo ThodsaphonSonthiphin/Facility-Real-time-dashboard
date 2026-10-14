@@ -1,114 +1,160 @@
-# Handoff: สถานะงานและขั้นต่อไป
+# Handoff: status and next steps
 
-ไฟล์นี้ให้เครื่องหรือเซสชันใหม่อ่านก่อนทำงานต่อ อัปเดตทุกครั้งที่จบ task สำคัญ
+Read this first on a new machine or in a new session. It is updated after **every** task (owner's rule).
 
-repo นี้เป็น public: ห้ามใส่รหัสผ่าน เบอร์โทร ชื่อจริง หรือความลับในไฟล์นี้
+This repo is public: never put a password, phone number, real name or any secret in this file.
 
-อัปเดตล่าสุด: 2026-10-14
+Last updated: 2026-10-14
 
-## โปรเจกต์
+## Project
 
-ระบบตรวจความสะอาดโรงงาน (6 ตึก, Area 70–72 แห่ง, แม่บ้านราว 170 คน)
+A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 housekeepers.
 
-- Backend: .NET 10 Minimal API แบบ Clean Architecture, EF Core 10, SignalR, xUnit
-- Runtime ใช้ Oracle `MySql.EntityFrameworkCore` (MySQL 8.0) ส่วน test ใช้ SQLite in-memory
-- ADR ใน `docs/adr/facility-NNNN-*.md` เป็นข้อกำหนดหลัก ถ้าขัดกับ wireframe ให้ถือ ADR ก่อน
-- แผนทั้งหมดอยู่ใน `docs/superpowers/plans/`
+- Backend: .NET 10 Minimal API (Clean Architecture), EF Core 10, SignalR, xUnit.
+- Runtime uses Oracle `MySql.EntityFrameworkCore` (MySQL 8.0); tests use SQLite in memory.
+- The ADRs in `docs/adr/facility-NNNN-*.md` are the main spec. Where they conflict with a wireframe, the ADR wins.
+- Plans live in `docs/superpowers/plans/`.
 
-## สถานะ
+## Status
 
-| แผน | เรื่อง | สถานะ |
+| Plan | Scope | Status |
 |---|---|---|
-| 1 | ข้อมูลพื้นฐาน | merge แล้ว (PR #50) |
-| 2 | ลงเวลา + กติกาการสแกน | merge แล้ว (PR #51) |
-| 3 | Admin ตั้งค่า Area / จุด / ช่วงรอบ / พิกัดป้าย / รัศมี / QR ใหม่ | merge แล้ว (PR #52) |
-| 4 | หน้าการเข้างาน (D2), รายการที่ขึ้นเตือน (D3), ประวัติ Admin (D9) | ทำครบ 7 task เปิด PR #53 รอผู้ใช้สั่ง merge |
+| 1 | Data model | merged (PR #50) |
+| 2 | Attendance + scan rules | merged (PR #51) |
+| 3 | Admin setup: Areas, points, round windows, sign location, radius, new QR | merged (PR #52) |
+| 4 | Attendance page (D2), alert list (D3), Admin history (D9) | merged (PR #53, `7cd8ba4`) |
+| 5 | Accounts page (D6) + Excel export (D8) | done, reviewed, MySQL check passed; PR #54 open, not merged (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
 
-PR #53 อยู่บน branch `feat/attendance-alerts-history` ผลทดสอบ: unit 215 ผ่าน, API 332 ผ่านข้าม 3 (test ของ MySQL ต้องตั้ง `FACILITY_MYSQL_TEST`) รันกับ MySQL จริงแล้วผ่านหมด (migration, test MySQL และสคริปต์ยิง API 18 กรณี)
+Plan 4 test results at merge:
+- Unit tests: 215 passed.
+- API tests: 332 passed, 3 skipped (the MySQL tests need `FACILITY_MYSQL_TEST`).
+- On real MySQL, all passed: migrations, the MySQL tests, and an 18-case API script.
 
-## งานที่ยังไม่ได้ทำ (ถามผู้ใช้ก่อนเริ่มเสมอ)
+## Task log (plan 5)
 
-- merge PR #53 หรือไม่
-- แผน 5: บัญชีผู้ใช้ (D6) และส่งออก Excel (D8)
-- แผน Supervisor: ตรวจงาน, block reason แบบ `OUTSIDE_SHIFT` / `OTHER_BUILDING`, cover ของหัวหน้า, เตือน `INSPECTION_GPS`
-- frontend
+- 2026-10-14 · Owner approved: merge PR #53, scrub the MySQL password from the plan-2 file, delete the leftover pilot branches, write plan 5.
+  - PR #53 merged (`7cd8ba4`); its branch was deleted locally and on GitHub.
+  - The two pilot branches (`feat/pilot-data-model`, `feat/pilot-scan-rules`) no longer existed on GitHub; nothing to delete.
+  - The password is replaced with `<local root password>` in `docs/superpowers/plans/2026-10-09-pilot-scan-rules-backend.md` (lines 33, 1030–1032).
+  - The plan-5 file was written; this handoff was rewritten in English (the owner now prefers English).
+  - Branch `feat/accounts-export` created from master `7cd8ba4`. The owner chose subagent-driven execution.
+  - Next: plan 5 Task 1.
+- 2026-10-14 · Task 1 done: AccountRules, PhoneNumber.IsComplete, audit categories Account and Export. Unit and API tests pass. Next: Task 2 (account list and create).
+- 2026-10-14 · Task 2 done: GET/POST /api/admin/accounts (list; add Cleaner, Supervisor or Admin; slot and login-name checks; ACCOUNT_CREATE). All tests pass. Next: Task 3 (edit, deactivate, activate).
+- 2026-10-14 · Task 3 done: PUT /api/admin/accounts/{id}, /deactivate, /activate (deactivation revokes sessions and frees the Cleaner's Area; no self-deactivation; slot check on activation). All tests pass. Next: Task 4 (phone and password).
+- 2026-10-14 · Task 4 done: PUT /api/admin/accounts/{id}/phone and /password (sessions revoked, nothing secret logged); test that the history never shows a phone, password, hash or QR Token. All tests pass. Next: Task 5 (export rules and query).
+- 2026-10-14 · Task 5 done: ExportRules.MissedRounds and ExportQuery (attendance, submissions, points with windows; date range and building filter). All tests pass. Next: Task 6 (the .xlsx endpoint).
+- 2026-10-14 · Task 6 done: POST /api/admin/export returns .xlsx (การลงเวลา, การส่งงาน with ไม่ได้ทำ rows; text-only cells; EXPORT_EXCEL logged). New package ClosedXML 0.104.2. All tests pass. Next: Task 7 (MySQL check and docs).
+- 2026-10-14 · Task 7 done: a MySQL test of the export queries, the case-insensitive employee ID rule and the deactivation transaction (user change plus session revocation); README and architecture docs. The MySQL test compiles and is skipped without `FACILITY_MYSQL_TEST`; the controller runs it on real MySQL. All other tests pass (421 passed, 4 skipped in API tests; 260 unit tests). Next: the MySQL run, the whole-branch review, then a PR for the owner.
+- 2026-10-14 · Final review fixes: (F1) the export's "ไม่ได้ทำ" rows now wait until the attendance window closes (ClosesMinutesAfterShift after shift end, inclusive), because a Late Submission is accepted until then; (F2) the workbook is built before the EXPORT_EXCEL row is saved; (F3) editing a Cleaner whose Area was deactivated keeps the Area, moving one to a deactivated Area still gets 400; (F4) test pins that PUT without `areaId` clears the Area, documented in README and the frontend notes; (F5) README audit categories and this file's roadmap line corrected. All tests pass (MySQL ones skipped). Next: owner runs the MySQL tests on the Mac, then a PR.
+- 2026-10-14 · MySQL check on the Mac (Homebrew MySQL 26.7, not 8.0): the owner ran the whole suite with `FACILITY_MYSQL_TEST` set; 691 passed, 0 skipped (263 unit, 428 API including the 4 MySQL tests). The throwaway database was dropped and `facility_dashboard` is untouched. Next: push the branch and open the PR, with the owner's OK.
+- 2026-10-14 · PR #54 opened (owner approved the push). Not merged. Next: the owner reviews PR #54 and rules on the parked items listed in it; after the merge, ask which plan comes next (see Pending work).
 
-## กติกาที่ผู้ใช้ตั้งไว้ (ยังมีผล)
+## Pending work (ask the owner before starting)
 
-- ห้าม merge PR หรือผลงานของน้องชายโดยไม่ถามก่อน (PR #50, #51, #52 ผู้ใช้อนุมัติไปแล้ว)
-- MySQL ใช้ได้เฉพาะฐานข้อมูลทดลอง `facility_*_test` ห้ามแตะ `facility_dashboard` ตอนนี้ test ของ MySQL ปฏิเสธชื่ออื่นให้เองแล้ว
-- ขอรหัสราก MySQL จากผู้ใช้ทุกครั้งที่จะรัน และห้ามบันทึกลงไฟล์ใดๆ หรือหน่วยความจำ
-- ผู้ใช้สื่อสารเป็นภาษาไทย ตอบสั้นและตรงประเด็น
+- Supervisor plan: inspection, block reasons `OUTSIDE_SHIFT` / `OTHER_BUILDING`, Supervisor covers, the `INSPECTION_GPS` alert, and the inspection sheet of the Excel export.
+- Excel import of accounts (ADR 0056; before rollout to every building).
+- Frontend.
 
-## กติกาของระบบที่ตัดสินแล้ว (ที่มาของโค้ด)
+## Owner's rules (still in force)
 
-- ลงเวลาได้ตั้งแต่ 60 นาทีก่อนกะถึง 60 นาทีหลังกะ (ADR 0069)
-- มีแต่แม่บ้านที่ส่งงานได้ ส่งได้ตั้งแต่ Shift-In ถึง Shift-Out พักไม่บล็อก
-- cover ใช้ได้เฉพาะกะประจำของแม่บ้านคนนั้น
-- ช่วงรอบห้ามจบตรง 19:00 (กะเช้า) หรือ 07:00 (กะดึก)
-- ปิด Area แล้วจุดหายจาก Dashboard, หน้าสแกน และหน้างานของฉัน
-- ไม่คิดสายหรือกลับก่อนในหน้าการเข้างาน (ADR 0050)
+- Never merge a PR or the younger brother's work without asking. PR #50–#53 were approved.
+- MySQL: only throwaway databases `facility_*_test`; never touch `facility_dashboard`. The MySQL tests now refuse any other name.
+- Ask the owner for the MySQL root password every time it is needed. Never write it into any file or into memory.
+- Reply in English (switched from Thai on 2026-10-14), short and direct.
+- Update this file after every task.
 
-## Ruling ที่ตัดสินแทนผู้ใช้ระหว่างทำแผน 4
+## System rules already decided (why the code is as it is)
 
-รายการ 13 ข้อที่ตัดสินตอนวางแผนอยู่ในหัวแผน และในคำอธิบาย PR #53 ที่นี่เป็นข้อที่ตัดสินระหว่างลงมือ
+- Attendance can be recorded from 60 minutes before the shift to 60 minutes after it (ADR 0069).
+- Only Cleaners submit work, from Shift-In to Shift-Out; a break does not block it.
+- A cover is only in that Cleaner's own regular shift.
+- A round window cannot end exactly at 19:00 (Day) or 07:00 (Night).
+- A deactivated Area leaves the Dashboard, the scan page and "my work".
+- The attendance page never computes late or early (ADR 0050).
 
-1. ให้ subagent ข้ามขั้นตอนที่ต้องใช้ MySQL แล้วรันเองตอนท้าย เพื่อไม่ส่งรหัสผ่านให้ subagent
-2. ฟังก์ชัน `Utc(DateTime)` บรรทัดเดียวมีซ้ำในหลายไฟล์ ปล่อยไว้ตามแบบ `AdminSetupView`
-3. เพิ่ม test ว่า `AttendanceRecorded` ไปถึงเฉพาะ Admin (ADR 0058)
-4. ตอนแก้เวลา หรือปิดเตือน ถ้า `DbUpdateException` ตอบ 409 เฉพาะเมื่อแถวที่ชนมีอยู่จริง ไม่อย่างนั้นโยน error ต่อ ไม่กลืน error ของฐานข้อมูล
-5. เพิ่ม test แยกแต่ละกติกาของการแก้เวลา และ test ว่าการแก้เวลาส่ง event สด
-6. ไม่เสนอทำแทนให้แม่บ้านที่ไม่มี Area หรือ Area ที่ปิดอยู่
-7. เพิ่ม test ปิดเตือนครบทุกประเภท, หมายเหตุเกิน 500 ตัว และกติกาเสนอคนทำแทน
-8. ถ้า Admin เลือกคนทำแทนที่ไม่ใช่คนที่สแกนผิด Area เตือนนั้นไม่ถูกปิดเอง ต้องกด "คุยแล้ว" เอง
-9. Blocked Scan ที่ส่งมากับการมอบหมายต้องอยู่ในกะเดียวกับการทำแทน ไม่อย่างนั้นตอบ 400
-10. เพิ่ม test ชุดเดียวว่า Admin ที่ถูกปิดบัญชีแล้วแต่ token ยังไม่หมดอายุ ถูกปฏิเสธ (401) ในทุก route ใหม่ 7 ตัว
-11. บันทึกเวลาเดิมในนาทีเดียวกับที่แม่บ้านสแกน ไม่ถือว่าแก้ (ไม่ลงประวัติ ไม่ติดป้าย "แก้โดย Admin")
-12. test ของ MySQL ปฏิเสธฐานข้อมูลที่ชื่อไม่ตรงแบบ `facility_*_test`
+## Rulings made for the owner during plan 5
 
-## เรื่องที่พักไว้ ไม่ต้องแก้ก่อน merge
+The 16 planning decisions are at the top of the plan-5 file (`docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md`), which has the detail. In short:
 
-- ถ้าแม่บ้านลืมลงเวลาเลิกงาน แล้วภายหลังถูกปิดบัญชีหรือย้ายกะ เตือนนั้นจะเติมเวลาหรือปิดไม่ได้ (ช่วงวันปกติจะไม่เห็นมัน)
-- ส่งวันที่ผิดปกติมาก เช่น ปี 9999 จะได้ 500 แทน 400
-- ปิดเตือนหรือมอบหมายทำแทนพร้อมกันโดย Admin สองคน มอบหมายทำแทนอาจได้ 500 (ไม่มีข้อมูลค้างครึ่งทาง)
-- ช่วงเวลาลงเวลา (opens/closes) คำนวณซ้ำ 3 จุด ควรดึงไปเป็น `AttendanceCalendar.WindowOf`
-- `AuditLogQuery` ใช้ 2 query อาจเปลี่ยนเป็น join ครั้งเดียว
-- `NextBeforeId` ของหน้าประวัติ เมื่อแถวพอดี limit จะเสนอหน้าถัดไปที่ว่าง
-- ยังไม่มี test ว่า timestamp ในทุก response ลงท้าย `Z`
-- จากแผน 3: เพิ่มจุดใน Area ที่ปิดอยู่ได้, Admin 2 คนแก้จุดเดียวกันพร้อมกันได้ 500 แทน 409, ขาด test 404 ของ route ป้าย, ลบช่วงรอบแล้วโหลดงานทั้งหมดเข้าหน่วยความจำ
+1. Routes are `/api/admin/accounts`, like every Admin page since plan 3.
+2. Role, employee ID and username are fixed once created.
+3. Deactivating a Cleaner frees their Area; activating brings them back with no Area; a Supervisor keeps building and shift; activating answers 409 if the slot is taken.
+4. A deactivated Cleaner cannot be given an Area (400).
+5. Changing a phone or resetting a password revokes all refresh tokens; the log row has no before or after; the same value again changes and logs nothing.
+6. An Admin may reset their own password but cannot deactivate themselves.
+7. On creation a Cleaner's Area is optional, a Supervisor needs building and shift, an Admin has neither.
+8. Input limits: employee ID 1–20 characters, username 3–100, temporary password 8–100, display name 1–150, phone exactly 10 Arabic digits starting with 0.
+9. Fields that do not belong to the role must be omitted (400 otherwise).
+10. The export is `POST /api/admin/export`, returns the `.xlsx`, covers 1–31 shift dates, one building or all, sets `Attendance` and `Submissions`.
+11. No inspection sheet yet; the Supervisor plan adds it.
+12. "ไม่ได้ทำ" rows come from today's setup, for shifts that have ended; a window counts only if it existed when its round started.
+13. The submissions sheet names the Cleaner.
+14. Issue tags are exported as stored.
+15. Every cell is text, with fixed column widths.
+16. Each export writes `EXPORT_EXCEL` with range, building, sets and row counts, and no row content.
 
-## ข้อมูลสำหรับแผน frontend
+## Rulings made for the owner during plan 4
 
-- รายการเตือนต้องใช้ทั้งประเภทและ id เป็นคีย์ (เตือน "ลงเวลาไกลป้าย" กับ "ไม่ได้ลงเวลาเลิกงาน" ของการลงเวลาเดียวกันใช้ id เดียวกัน)
-- ตัวกรองที่ไม่ได้ใช้ต้องไม่ส่งไปเลย ห้ามส่งค่าว่าง ไม่อย่างนั้นได้ 400
-- เตือน "ไม่ได้ลงเวลาเลิกงาน" ยังไม่มีข้อมูลกะและเวลาเข้างานสำหรับแสดงตามต้นแบบ D3
-- หน้าการเข้างานยังไม่มีเหตุผลที่ Admin แก้เวลา ไว้แสดงข้างป้าย "แก้โดย Admin" (ต้นแบบ D2)
+The 13 planning decisions are at the top of the plan-4 file and in the PR #53 description. These were made while building it:
 
-## ก่อนเริ่มแผน 5
+1. Subagents skip the steps that need MySQL; the controller runs them at the end, so the password never goes to a subagent.
+2. The one-line `Utc(DateTime)` helper is repeated in several files, following `AdminSetupView`.
+3. A test checks that `AttendanceRecorded` reaches Admins only (ADR 0058).
+4. On an attendance correction or closing an alert, a `DbUpdateException` answers 409 only if the racing row really exists; otherwise it is rethrown. Database errors are never swallowed.
+5. Each correction rule has its own test, and a test checks that a correction sends the live event.
+6. No cover is offered to a Cleaner without an Area, or for a deactivated Area.
+7. Tests cover closing every alert type, a note over 500 characters, and the cover-candidate rules.
+8. If the Admin picks a cover who is not the person who scanned the wrong Area, that alert is not closed automatically; "คุยแล้ว" must be pressed.
+9. A Blocked Scan sent with a cover assignment must be in the same shift as the cover, or the answer is 400.
+10. One test set checks that a deactivated Admin with a live token gets 401 on all 7 new routes.
+11. Saving the same minute the Cleaner scanned is not a change (nothing logged, no "แก้โดย Admin" badge).
+12. The MySQL tests refuse a database whose name is not `facility_*_test`.
 
-- เพิ่ม test ว่าหน้าประวัติไม่มีเบอร์โทรหรือ QR Token เพราะแผน 5 จะเริ่มลงประวัติของบัญชีผู้ใช้
-- ที่ฐานข้อมูลตอน deploy: ไม่ให้ผู้ใช้ MySQL ของแอปมีสิทธิ์ UPDATE/DELETE ตาราง `audit_log` (ADR 0057)
+## Parked; not needed before merging
 
-## เรื่องค้างที่ควรแจ้งผู้ใช้
+- A Cleaner who forgot Shift-Out and is later deactivated or moved to another shift: that alert can no longer be filled or closed. Normal date ranges do not show it.
+- A wildly wrong date (e.g. year 9999) gives 500 instead of 400.
+- Two Admins closing an alert or assigning a cover at the same moment: assigning may give 500 (nothing is left half-saved).
+- The attendance window (opens/closes) is computed in 3 places; it should become `AttendanceCalendar.WindowOf`.
+- `AuditLogQuery` runs 2 queries; one join would do.
+- History paging: `NextBeforeId` offers an empty next page when the rows exactly fill the limit.
+- No test yet that every timestamp in every response ends in `Z`.
+- From plan 3: a point can be added to a deactivated Area; two Admins editing one point at once get 500 instead of 409; the 404 tests of the sign routes are missing; removing a round window loads its Scan Records into memory.
 
-- ไฟล์แผน 2 (`docs/superpowers/plans/2026-10-09-pilot-scan-rules-backend.md`) บน master มีรหัสผ่านราก MySQL ในเครื่องผู้ใช้ 3 จุด (ประมาณบรรทัด 33, 1030, 1031) รหัสนี้เดาง่าย และ repo เป็น public จึงแนะนำให้เปลี่ยนรหัสราก และแก้ 3 จุดนั้นเป็นข้อความแทนรหัส ผู้ใช้ยังไม่ได้ตอบ
-- GitGuardian เคยแจ้งเตือนที่ `LoginTests.cs` ว่าเป็นรหัสทดสอบสมมุติ ทางที่ถูกคือให้คนดูแล GitGuardian กด Resolve เป็น test credential
-- ไฟล์ `docs/roadmap.html` ที่ยังไม่ได้ track ไม่ใช่ไฟล์ของแผนนี้ ยังไม่ได้แตะ
+## Notes for the frontend plan
 
-## วิธีทำงานที่ใช้ได้ผล
+- Key alerts by kind **and** id: the "far from sign" and "no Shift-Out" alerts of one attendance share an id.
+- Leave out unused filters entirely; an empty value gets 400. The same holds for unused account fields in plan 5.
+- `PUT /api/admin/accounts/{id}` replaces every place field: leaving `areaId` out clears a Cleaner's Area, so the client sends the current `areaId` to keep it.
+- The "no Shift-Out" alert has no shift or check-in time yet for the D3 layout.
+- The attendance page does not yet return the Admin's reason to show beside "แก้โดย Admin" (D2).
 
-- วางแผนด้วย skill `sp-writing-plans` แล้วลงมือด้วย `sp-subagent-driven-development` คือส่ง subagent ทีละ task พร้อม review ทีละ task และ review ทั้ง branch ตอนท้าย
-- ทดสอบกับ API จริง: เปิด API แบบ Development ด้วย `ConnectionStrings__DefaultConnection` ชี้ไปฐานข้อมูลทดลอง แล้วรันสคริปต์ Python ยิง API (ตั้ง `python -X utf8` เมื่อพิมพ์ภาษาไทย)
-- `dotnet test backend/FacilityRealtime.slnx` รันทุก test
-- migration ใหม่: `dotnet ef migrations add <ชื่อ> --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api` (ต้อง `dotnet tool restore` ก่อน)
+## Before plan 5
 
-### ข้อควรระวังเฉพาะเครื่อง Windows ของบริษัท
+- At deployment: the app's MySQL user must not have UPDATE/DELETE on `audit_log` (ADR 0057).
 
-- `gh` อยู่ที่ `...\WinGet\Packages\GitHub.cli_Microsoft.Winget.Source_8wekyb3d8bbwe\bin` ต้องเพิ่มเข้า PATH เอง
-- ข้อความภาษาไทยใน shell heredoc ล้มเหลว ให้เขียนไฟล์ด้วยเครื่องมือ Write หรือ Edit
-- ปิด API ที่เปิดค้างก่อน build เพราะ Windows ล็อกไฟล์ DLL
-- `TZ=Asia/Bangkok date` ใน Git Bash แสดงเวลา UTC ไม่ใช่เวลาไทย
+## Open items to tell the owner
 
-### ตั้งเครื่องใหม่ (เช่น Mac)
+- The MySQL root password that was in the plan-2 file is scrubbed in the working copy but **still in git history**, and the repo is public. Change the root password on this laptop.
+- GitGuardian once flagged `LoginTests.cs`. It is a made-up test credential; whoever manages GitGuardian should mark it Resolved as a test credential.
+- `docs/roadmap.html` was committed on this branch by the owner (`0e9ab37`); it is not part of any plan.
+- Build warning NU1903: `Microsoft.AspNetCore.SignalR.Common` 10.0.12 has a known high-severity advisory. It comes in through `Microsoft.AspNetCore.SignalR.Client` in the ApiTests project (it existed before plan 5, and plan 5 did not cause it). Bump the package when a patched version exists.
 
-ติดตั้ง .NET 10 SDK, MySQL 8.0, GitHub CLI และ Claude Code แล้ว `git clone`, checkout branch, รัน `dotnet tool restore` และ `dotnet test backend/FacilityRealtime.slnx`
+## Working method that works
+
+- Plan with the `sp-writing-plans` skill, then run it with `sp-subagent-driven-development`: one subagent per task, a review per task, and a whole-branch review at the end.
+- Test against the real API: run the API in Development with `ConnectionStrings__DefaultConnection` pointing at a throwaway database, then drive it with a Python script (use `python -X utf8` when printing Thai).
+- `dotnet test backend/FacilityRealtime.slnx` runs every test.
+- New migration: `dotnet ef migrations add <Name> --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api` (run `dotnet tool restore` first).
+
+### Quirks of the company Windows laptop
+
+- `gh` is in `...\WinGet\Packages\GitHub.cli_Microsoft.Winget.Source_8wekyb3d8bbwe\bin`; add it to PATH yourself.
+- Thai text in a shell heredoc breaks; write such files with the Write or Edit tool.
+- Stop any running API before building, because Windows locks its DLLs.
+- `TZ=Asia/Bangkok date` in Git Bash prints UTC, not Thai time.
+
+### Setting up a new machine (e.g. the Mac)
+
+Install the .NET 10 SDK, MySQL 8.0, the GitHub CLI and Claude Code. Then `git clone`, check out the branch, run `dotnet tool restore` and `dotnet test backend/FacilityRealtime.slnx`.
