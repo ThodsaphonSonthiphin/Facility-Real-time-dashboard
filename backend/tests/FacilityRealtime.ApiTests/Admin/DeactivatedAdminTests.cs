@@ -29,6 +29,7 @@ public class DeactivatedAdminTests
     [InlineData("POST", "/api/admin/accounts/2/activate", null)]
     [InlineData("GET", "/api/admin/audit-log", null)]
     [InlineData("GET", "/api/admin/audit-log/actors", null)]
+    [InlineData("POST", "/api/admin/export", """{ "from": "2026-10-08", "to": "2026-10-08", "sets": ["Attendance"] }""")]
     public async Task A_deactivated_admin_with_a_live_token_is_refused_and_nothing_is_logged(string method, string path, string? body)
     {
         using var factory = new FacilityApiFactory();
