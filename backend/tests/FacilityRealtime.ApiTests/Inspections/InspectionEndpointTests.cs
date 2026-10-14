@@ -105,6 +105,34 @@ public class InspectionEndpointTests
     }
 
     [Fact]
+    public async Task A_defect_of_exactly_1000_characters_is_accepted()
+    {
+        using var factory = new FacilityApiFactory();
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+
+        var response = await InspectionApi.InspectAsync(supervisor, scanId, "Rework", new string('ก', 1000));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_blank_defect_with_passed_counts_as_left_out()
+    {
+        using var factory = new FacilityApiFactory();
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+
+        var response = await InspectionApi.InspectAsync(supervisor, scanId, "Passed", "");
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = (await response.Content.ReadFromJsonAsync<InspectionCreatedModel>())!;
+        Assert.Null((await StoredAsync(factory, created.InspectionId)).Defect);
+    }
+
+    [Fact]
     public async Task Result_and_submission_are_required()
     {
         using var factory = new FacilityApiFactory();
@@ -203,6 +231,7 @@ public class InspectionEndpointTests
         var created = (await response.Content.ReadFromJsonAsync<InspectionCreatedModel>())!;
         Assert.False(created.WithinRadius);
         Assert.True(created.DistanceM > 1000);
+        Assert.False((await StoredAsync(factory, created.InspectionId)).WithinRadius);
     }
 
     [Fact]
@@ -243,17 +272,23 @@ public class InspectionEndpointTests
         using var factory = new FacilityApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (_, cleanerAuth, _) = await AuthApi.LoggedInAsync(factory);
         await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
+        await using var cleanerHub = await HubClient.ConnectAsync(factory, cleanerAuth.AccessToken);
+        var cleanerGot = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+        cleanerHub.On<JsonElement>("InspectionRecorded", point => cleanerGot.TrySetResult(point));
         var adminGot = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
         adminHub.On<JsonElement>("InspectionRecorded", point => adminGot.TrySetResult(point));
         await Task.Delay(200); // OnConnectedAsync joins the admin group just after the handshake
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
-        await InspectionApi.InspectedAsync(supervisor, scanId, "Passed");
+        await InspectionApi.InspectedAsync(supervisor, scanId, "Rework", "พื้นยังเปียก");
 
         var payload = await adminGot.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Equal("Passed", payload.GetProperty("status").GetString());
+        Assert.Equal("Rework", payload.GetProperty("status").GetString());
         Assert.False(payload.TryGetProperty("qrToken", out _)); // facility-0060
+        await Task.Delay(500);
+        Assert.False(cleanerGot.Task.IsCompleted); // facility-0058
     }
 }
