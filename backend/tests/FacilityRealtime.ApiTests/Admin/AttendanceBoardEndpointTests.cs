@@ -167,14 +167,17 @@ public class AttendanceBoardEndpointTests
     }
 
     [Fact]
-    public async Task A_check_in_reaches_the_admins_live()
+    public async Task A_check_in_reaches_the_admins_live_and_only_the_admins()
     {
         using var factory = new FacilityApiFactory();
-        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (cleaner, cleanerAuth, _) = await AuthApi.LoggedInAsync(factory);
         var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
+        await using var cleanerHub = await HubClient.ConnectAsync(factory, cleanerAuth.AccessToken);
         var got = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleanerGot = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
         adminHub.On<JsonElement>("AttendanceRecorded", payload => got.TrySetResult(payload));
+        cleanerHub.On<JsonElement>("AttendanceRecorded", payload => cleanerGot.TrySetResult(payload));
         await Task.Delay(200);
 
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
@@ -183,5 +186,7 @@ public class AttendanceBoardEndpointTests
         Assert.Equal(await AdminSetupApi.AreaIdAsync(factory, "AR01"), payload.GetProperty("areaId").GetInt32());
         Assert.Equal("2026-10-08", payload.GetProperty("shiftDate").GetString());
         Assert.Equal("Day", payload.GetProperty("shift").GetString());
+        await Task.Delay(500);
+        Assert.False(cleanerGot.Task.IsCompleted); // facility-0058
     }
 }
