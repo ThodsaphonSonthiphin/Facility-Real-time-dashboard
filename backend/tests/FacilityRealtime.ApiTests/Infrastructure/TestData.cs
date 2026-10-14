@@ -154,4 +154,55 @@ public static class TestData
         });
         return id;
     }
+
+    /// <summary>
+    /// One attendance event of a Cleaner in their own Area, written straight to the database. A scan gets the Area's
+    /// check-in sign and a GPS verdict; an Admin addition has neither (facility-0051).
+    /// </summary>
+    public static Task AddAttendanceAsync(
+        FacilityApiFactory factory,
+        string employeeId,
+        DateOnly shiftDate,
+        Shift shift,
+        AttendanceEvent eventType,
+        DateTimeOffset at,
+        AttendanceSource source = AttendanceSource.Scan,
+        short distanceM = 12,
+        bool withinRadius = true) =>
+        factory.WithDbAsync(async db =>
+        {
+            var user = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
+            var sign = await db.Signs.SingleAsync(s => s.AreaId == user.AreaId && s.ServicePointId == null);
+            var scanned = source != AttendanceSource.AdminAdd;
+            db.ShiftAttendances.Add(new ShiftAttendance
+            {
+                UserId = user.Id,
+                AreaId = user.AreaId!.Value,
+                ShiftDate = shiftDate,
+                Shift = shift,
+                EventType = eventType,
+                OccurredAt = at.UtcDateTime,
+                Source = source,
+                SignId = scanned ? sign.Id : null,
+                Latitude = scanned ? 13.756300m : null,
+                Longitude = scanned ? 100.501800m : null,
+                AccuracyM = scanned ? (short)10 : null,
+                DistanceM = scanned ? distanceM : null,
+                WithinRadius = scanned ? withinRadius : null,
+                CreatedAt = at.UtcDateTime,
+            });
+            await db.SaveChangesAsync();
+        });
+
+    /// <summary>
+    /// The seed stamps its points and windows with the real clock, which is later than the October 2026 test dates. Move
+    /// them back to 1 October so rounds on test dates existed when they started (export "ไม่ได้ทำ").
+    /// </summary>
+    public static Task BackdateSetupAsync(FacilityApiFactory factory) =>
+        factory.WithDbAsync(async db =>
+        {
+            var longAgo = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+            await db.PointRoundWindows.ExecuteUpdateAsync(s => s.SetProperty(w => w.CreatedAt, longAgo));
+            await db.ServicePoints.ExecuteUpdateAsync(s => s.SetProperty(p => p.CreatedAt, longAgo));
+        });
 }
