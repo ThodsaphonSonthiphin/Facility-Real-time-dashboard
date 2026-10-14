@@ -6,6 +6,7 @@ using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Infrastructure.Auth;
 using FacilityRealtime.Infrastructure.Persistence;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,6 +41,7 @@ builder.Services.AddSignalR()
         options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
+builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 
 // 3. CORS (Allow local network devices & dev servers)
 builder.Services.AddCors(options =>
@@ -100,6 +102,7 @@ app.MapScanRecordEndpoints();
 app.MapCoverAssignmentEndpoints();
 app.MapMyWorkEndpoints();
 app.MapInspectionEndpoints();
+app.MapMyBuildingEndpoints();
 app.MapAdminAreaEndpoints();
 app.MapAdminPointEndpoints();
 app.MapAdminSignEndpoints();

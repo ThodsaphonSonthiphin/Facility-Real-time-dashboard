@@ -192,7 +192,7 @@ public static class InspectionEndpoints
 
         // The Supervisor's shift is the clock's, which is also the Dashboard's
         var board = (await PointBoardQuery.LoadAsync(db, visit.Now, visit.Point.Id)).Single();
-        await hub.Clients.Group(ScanHub.AdminGroup).SendAsync("InspectionRecorded", PointDtoMapper.ToDto(board));
+        await PointNotifications.SendAsync(hub, db, "InspectionRecorded", board, visit.Now);
 
         return Results.Created(
             $"/api/inspections/{inspection.Id}",

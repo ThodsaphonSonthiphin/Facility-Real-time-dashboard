@@ -133,7 +133,7 @@ public static class ScanRecordEndpoints
         // in the hour before or after the Cleaner's shift)
         var mine = (await PointBoardQuery.LoadAsync(db, now, slot, areaIds: null, point.Id)).Single();
         var board = slot == ShiftCalendar.SlotAt(now) ? mine : (await PointBoardQuery.LoadAsync(db, now, point.Id)).Single();
-        await hub.Clients.Group(ScanHub.AdminGroup).SendAsync("ScanRecorded", PointDtoMapper.ToDto(board));
+        await PointNotifications.SendAsync(hub, db, "ScanRecorded", board, now);
 
         return Results.Created(
             $"/api/scan-records/{record.Id}",
