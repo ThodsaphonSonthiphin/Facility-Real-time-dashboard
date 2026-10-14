@@ -20,3 +20,5 @@ public record AlertModel(
     string Kind, long RecordId, DateTime At, AlertPersonModel Person, string AreaCode, string AreaName,
     string? SignCode, string? PointName, short? DistanceM, short? RadiusM, short? AccuracyM,
     List<string> MissingEvents, bool Reviewed, DateTime? ReviewedAt, CoverSuggestionModel? Cover);
+
+public record CoverCandidateModel(int Id, string EmployeeId, string DisplayName, string AreaCode, DateTime? ShiftInAt, DateTime? ScannedThisAreaAt);
