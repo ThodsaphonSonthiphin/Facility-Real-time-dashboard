@@ -39,6 +39,7 @@ Plan 4 test results at merge:
   - The plan-5 file was written; this handoff was rewritten in English (the owner now prefers English).
   - Branch `feat/accounts-export` created from master `7cd8ba4`. The owner chose subagent-driven execution.
   - Next: plan 5 Task 1.
+- 2026-10-14 · Task 1 done: AccountRules, PhoneNumber.IsComplete, audit categories Account and Export. Unit and API tests pass. Next: Task 2 (account list and create).
 
 ## Pending work (ask the owner before starting)
 

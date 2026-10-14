@@ -21,6 +21,13 @@ public class AuditCategoriesTests
     [InlineData("POINT_DEACTIVATE", AuditCategory.Setup)]
     [InlineData("SIGN_LOCATION", AuditCategory.Setup)]
     [InlineData("SIGN_RADIUS", AuditCategory.Setup)]
+    [InlineData("ACCOUNT_CREATE", AuditCategory.Account)]
+    [InlineData("ACCOUNT_UPDATE", AuditCategory.Account)]
+    [InlineData("ACCOUNT_PHONE", AuditCategory.Account)]
+    [InlineData("ACCOUNT_PASSWORD", AuditCategory.Account)]
+    [InlineData("ACCOUNT_ACTIVATE", AuditCategory.Account)]
+    [InlineData("ACCOUNT_DEACTIVATE", AuditCategory.Account)]
+    [InlineData("EXPORT_EXCEL", AuditCategory.Export)]
     [InlineData("QR_REGENERATE", AuditCategory.QrToken)]
     public void Every_action_written_so_far_has_its_category(string action, AuditCategory category) =>
         Assert.Equal((AuditCategory?)category, AuditCategories.Of(action));
