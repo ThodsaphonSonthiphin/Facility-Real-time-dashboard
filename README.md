@@ -91,7 +91,7 @@ npm --prefix frontend test
 - `PUT /api/admin/attendance` เพิ่มหรือแก้เวลา เช่น `{ "userId": 3, "shiftDate": "2026-10-08", "shift": "Day", "eventType": "ShiftOut", "time": "18:58", "reason": "ลืมสแกน" }` ต้องมีเหตุผลทุกครั้ง (ADR facility-0051)
 - `GET /api/admin/alerts` รายการที่ขึ้นเตือนของเมื่อวานและวันนี้ และ `POST /api/admin/alerts/review` ปิดเตือน
 - `POST /api/admin/cover-assignments` ใส่ `blockedScanId` เพื่อมอบหมายทำแทนจากการสแกนที่ถูกบล็อก (ADR facility-0041)
-- `GET /api/admin/audit-log` ประวัติ Admin อ่านอย่างเดียว (ADR facility-0057)
+- `GET /api/admin/audit-log` ประวัติ Admin อ่านอย่างเดียว กรองได้ด้วย `from`, `to` (yyyy-MM-dd), `actorId`, `category` (Attendance, Cover, AlertReview, Setup, QrToken), `beforeId` และ `limit` (1–500 ค่าเริ่ม 100) (ADR facility-0057)
 
 ### หมายเหตุด้านความปลอดภัยของ POC
 - cookie ของ refresh token ไม่ได้ตั้ง `Secure` เพราะมือถือเข้าผ่าน HTTP ในวง WiFi (ADR facility-0013) ถ้าติดตั้งบน HTTPS ให้ตั้งค่า `Jwt:RefreshCookieSecure` เป็น `true`
