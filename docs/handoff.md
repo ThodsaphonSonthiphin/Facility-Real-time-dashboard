@@ -42,6 +42,7 @@ Plan 4 test results at merge:
 - 2026-10-14 · Task 1 done: AccountRules, PhoneNumber.IsComplete, audit categories Account and Export. Unit and API tests pass. Next: Task 2 (account list and create).
 - 2026-10-14 · Task 2 done: GET/POST /api/admin/accounts (list; add Cleaner, Supervisor or Admin; slot and login-name checks; ACCOUNT_CREATE). All tests pass. Next: Task 3 (edit, deactivate, activate).
 - 2026-10-14 · Task 3 done: PUT /api/admin/accounts/{id}, /deactivate, /activate (deactivation revokes sessions and frees the Cleaner's Area; no self-deactivation; slot check on activation). All tests pass. Next: Task 4 (phone and password).
+- 2026-10-14 · Task 4 done: PUT /api/admin/accounts/{id}/phone and /password (sessions revoked, nothing secret logged); test that the history never shows a phone, password, hash or QR Token. All tests pass. Next: Task 5 (export rules and query).
 
 ## Pending work (ask the owner before starting)
 
@@ -103,7 +104,6 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 
 ## Before plan 5
 
-- Add a test that the history page never shows a phone number or QR Token, because plan 5 starts logging account actions. Plan 5 Task 4 does this.
 - At deployment: the app's MySQL user must not have UPDATE/DELETE on `audit_log` (ADR 0057).
 
 ## Open items to tell the owner

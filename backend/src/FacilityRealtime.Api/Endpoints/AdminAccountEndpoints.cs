@@ -28,6 +28,8 @@ public static class AdminAccountEndpoints
             SetActiveAsync(id, false, principal, db, clock));
         accounts.MapPost("/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
             SetActiveAsync(id, true, principal, db, clock));
+        accounts.MapPut("/{id:int}/phone", ChangePhoneAsync);
+        accounts.MapPut("/{id:int}/password", ResetPasswordAsync);
         return app;
     }
 
@@ -249,6 +251,88 @@ public static class AdminAccountEndpoints
         }
 
         return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+    }
+
+    /// <summary>facility-0054 rule 4: the Admin types the Cleaner's or Supervisor's new phone; every device of theirs must log in again.</summary>
+    private static async Task<IResult> ChangePhoneAsync(
+        int id, AccountPhoneRequest request, ClaimsPrincipal principal, AppDbContext db, IPasswordHasher hasher, TimeProvider clock)
+    {
+        var admin = await CurrentUser.LoadAsync(principal, db);
+        if (admin is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (user.Role == UserRole.Admin)
+        {
+            return Bad("บัญชี Admin ไม่มีเบอร์โทร ใช้ปุ่มรีเซ็ตรหัสผ่าน");
+        }
+
+        var phone = PhoneNumber.Normalize(request.Phone);
+        if (!PhoneNumber.IsComplete(phone))
+        {
+            return Bad("เบอร์โทรต้องเป็นเลขอารบิก 10 หลัก ขึ้นต้นด้วย 0");
+        }
+
+        await ReplaceSecretAsync(db, hasher, clock, admin, user, phone, "ACCOUNT_PHONE", $"แก้เบอร์โทรของ {user.LoginName} {user.DisplayName}");
+        return Results.NoContent();
+    }
+
+    /// <summary>facility-0020: the Admin gives another Admin (or themselves) a new temporary password, told by voice or on paper.</summary>
+    private static async Task<IResult> ResetPasswordAsync(
+        int id, AccountPasswordRequest request, ClaimsPrincipal principal, AppDbContext db, IPasswordHasher hasher, TimeProvider clock)
+    {
+        var admin = await CurrentUser.LoadAsync(principal, db);
+        if (admin is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (user.Role != UserRole.Admin)
+        {
+            return Bad("แม่บ้านและหัวหน้าไม่มีรหัสผ่าน ใช้ปุ่มแก้เบอร์โทร");
+        }
+
+        if (!AccountRules.IsAllowedPassword(request.Password))
+        {
+            return Bad($"รหัสผ่านชั่วคราวต้องยาว {AccountRules.MinPassword}–{AccountRules.MaxPassword} ตัวอักษร");
+        }
+
+        await ReplaceSecretAsync(db, hasher, clock, admin, user, request.Password!, "ACCOUNT_PASSWORD", $"รีเซ็ตรหัสผ่านของ {user.LoginName} {user.DisplayName}");
+        return Results.NoContent();
+    }
+
+    /// <summary>
+    /// The same secret again changes nothing and logs nothing. A new one is hashed, logged with no before or after
+    /// (facility-0057), and every refresh token of the person is revoked (facility-0014).
+    /// </summary>
+    private static async Task ReplaceSecretAsync(
+        AppDbContext db, IPasswordHasher hasher, TimeProvider clock, User admin, User user, string secret, string action, string summary)
+    {
+        if (hasher.Verify(secret, user.SecretHash))
+        {
+            return;
+        }
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        user.SecretHash = hasher.Hash(secret);
+        AuditTrail.Add(db, admin.Id, now, action, "users", user.Id, summary, before: null, after: null);
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await db.SaveChangesAsync();
+        await db.RevokeUserSessionsAsync(user.Id, now);
+        await transaction.CommitAsync();
     }
 
     /// <summary>
