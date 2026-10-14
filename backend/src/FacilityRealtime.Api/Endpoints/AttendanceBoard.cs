@@ -33,7 +33,8 @@ internal static class AttendanceBoard
             .ToListAsync();
         var covers = await db.CoverAssignments.AsNoTracking()
             .Include(c => c.User!).ThenInclude(u => u.Area)
-            .Where(c => c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null && areaIds.Contains(c.AreaId))
+            .Where(c => c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null
+                && c.AreaId != null && areaIds.Contains(c.AreaId.Value))
             .OrderBy(c => c.AssignedAt)
             .ToListAsync();
         var userIds = cleaners.Select(u => u.Id).Concat(covers.Select(c => c.UserId)).Distinct().ToList();

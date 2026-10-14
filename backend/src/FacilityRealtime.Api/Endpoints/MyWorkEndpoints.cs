@@ -34,8 +34,8 @@ public static class MyWorkEndpoints
         var slot = (user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null) ?? ShiftCalendar.SlotAt(now);
 
         var coveredAreaIds = await db.CoverAssignments
-            .Where(c => c.UserId == user.Id && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
-            .Select(c => c.AreaId)
+            .Where(c => c.UserId == user.Id && c.AreaId != null && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
+            .Select(c => c.AreaId!.Value)
             .ToListAsync();
         var areaIds = (user.AreaId is int own ? coveredAreaIds.Prepend(own) : coveredAreaIds).Distinct().ToList();
 
