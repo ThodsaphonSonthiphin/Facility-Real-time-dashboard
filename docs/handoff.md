@@ -23,7 +23,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 2 | Attendance + scan rules | merged (PR #51) |
 | 3 | Admin setup: Areas, points, round windows, sign location, radius, new QR | merged (PR #52) |
 | 4 | Attendance page (D2), alert list (D3), Admin history (D9) | merged (PR #53, `7cd8ba4`) |
-| 5 | Accounts page (D6) + Excel export (D8) | done, reviewed, MySQL check passed; PR pending (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
+| 5 | Accounts page (D6) + Excel export (D8) | done, reviewed, MySQL check passed; PR #54 open, not merged (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -48,6 +48,7 @@ Plan 4 test results at merge:
 - 2026-10-14 · Task 7 done: a MySQL test of the export queries, the case-insensitive employee ID rule and the deactivation transaction (user change plus session revocation); README and architecture docs. The MySQL test compiles and is skipped without `FACILITY_MYSQL_TEST`; the controller runs it on real MySQL. All other tests pass (421 passed, 4 skipped in API tests; 260 unit tests). Next: the MySQL run, the whole-branch review, then a PR for the owner.
 - 2026-10-14 · Final review fixes: (F1) the export's "ไม่ได้ทำ" rows now wait until the attendance window closes (ClosesMinutesAfterShift after shift end, inclusive), because a Late Submission is accepted until then; (F2) the workbook is built before the EXPORT_EXCEL row is saved; (F3) editing a Cleaner whose Area was deactivated keeps the Area, moving one to a deactivated Area still gets 400; (F4) test pins that PUT without `areaId` clears the Area, documented in README and the frontend notes; (F5) README audit categories and this file's roadmap line corrected. All tests pass (MySQL ones skipped). Next: owner runs the MySQL tests on the Mac, then a PR.
 - 2026-10-14 · MySQL check on the Mac (Homebrew MySQL 26.7, not 8.0): the owner ran the whole suite with `FACILITY_MYSQL_TEST` set; 691 passed, 0 skipped (263 unit, 428 API including the 4 MySQL tests). The throwaway database was dropped and `facility_dashboard` is untouched. Next: push the branch and open the PR, with the owner's OK.
+- 2026-10-14 · PR #54 opened (owner approved the push). Not merged. Next: the owner reviews PR #54 and rules on the parked items listed in it; after the merge, ask which plan comes next (see Pending work).
 
 ## Pending work (ask the owner before starting)
 
