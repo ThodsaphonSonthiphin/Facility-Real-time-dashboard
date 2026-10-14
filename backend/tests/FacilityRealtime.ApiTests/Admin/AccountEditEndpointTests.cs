@@ -95,6 +95,10 @@ public class AccountEditEndpointTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var account = await AccountApi.ReadAsync(response);
         Assert.Equal((false, (int?)null), (account.IsActive, account.AreaId));
+        // The endpoint itself revokes the sessions; Refresh would answer 401 for an inactive account even without that
+        var tokens = await AdminSetupApi.ReadAsync(factory, db => db.RefreshTokens.Where(t => t.UserId == e1001).ToListAsync());
+        Assert.NotEmpty(tokens);
+        Assert.All(tokens, t => Assert.NotNull(t.RevokedAt));
         Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.RefreshAsync(factory.CreateApiClient(), cleanerRefresh)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.LoginAsync(factory.CreateApiClient())).StatusCode);
         var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
@@ -165,6 +169,25 @@ public class AccountEditEndpointTests
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal("กะเช้าของตึก A มีหัวหน้าประจำแล้ว (หัวหน้าแทน ทดสอบ)", await AdminSetupApi.MessageAsync(response));
         Assert.False(await AdminSetupApi.ReadAsync(factory, db => db.Users.Where(u => u.Id == s2001).Select(u => u.IsActive).SingleAsync()));
+    }
+
+    [Fact]
+    public async Task A_deactivated_supervisor_whose_slot_was_filled_can_still_be_renamed()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var s2001 = await AdminSetupApi.UserIdAsync(factory, "S2001");
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
+        await DeactivateAsync(admin, s2001);
+        Assert.Equal(HttpStatusCode.Created, (await AccountApi.CreateSupervisorAsync(admin, "S2002", "0000000021", buildingA, "Day", "หัวหน้าแทน ทดสอบ")).StatusCode);
+
+        var response = await EditAsync(admin, s2001, new { displayName = "สมปอง เปลี่ยนชื่อ", buildingId = buildingA, shift = "Day" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("สมปอง เปลี่ยนชื่อ", (await AccountApi.ReadAsync(response)).DisplayName);
+        var updates = (await AdminSetupApi.AuditAsync(factory)).Where(e => e.Action == "ACCOUNT_UPDATE").ToList();
+        Assert.Equal((long?)s2001, Assert.Single(updates).EntityId);
+        Assert.Equal(HttpStatusCode.Conflict, (await ActivateAsync(admin, s2001)).StatusCode);
     }
 
     [Fact]

@@ -30,9 +30,10 @@ internal static class AccountChecks
     /// <summary>
     /// Cleaner: shift required, Area optional, no building. Supervisor: building and shift, no Area. Admin: none of them.
     /// <paramref name="userId"/> is the account being edited (0 for a new one), so it never collides with itself.
+    /// <paramref name="checkSlot"/> is false for a deactivated account, which holds no slot; activation checks it later.
     /// </summary>
     public static async Task<(AccountPlace? Place, IResult? Error)> ReadPlaceAsync(
-        AppDbContext db, UserRole role, int userId, int? areaId, int? buildingId, Shift? shift)
+        AppDbContext db, UserRole role, int userId, int? areaId, int? buildingId, Shift? shift, bool checkSlot = true)
     {
         if (shift is { } given && !Enum.IsDefined(given))
         {
@@ -74,7 +75,7 @@ internal static class AccountChecks
                     return (null, Bad($"{area.Code} ทำเฉพาะกะเช้า เลือกกะดึกไม่ได้"));
                 }
 
-                return await HolderAsync(db, role, area.Id, null, cleanerShift, userId) is { } holder
+                return checkSlot && await HolderAsync(db, role, area.Id, null, cleanerShift, userId) is { } holder
                     ? (null, Conflict(SlotTaken(holder)))
                     : (new AccountPlace(area, null, cleanerShift), null);
             }
@@ -97,7 +98,7 @@ internal static class AccountChecks
                     return (null, Bad("ต้องเลือกตึกที่ใช้งานอยู่"));
                 }
 
-                return await HolderAsync(db, role, null, building.Id, supervisorShift, userId) is { } holder
+                return checkSlot && await HolderAsync(db, role, null, building.Id, supervisorShift, userId) is { } holder
                     ? (null, Conflict(SlotTaken(holder)))
                     : (new AccountPlace(null, building, supervisorShift), null);
             }
