@@ -95,12 +95,13 @@ public static class AlertQuery
 
         AlertReview? ReviewOf(AlertType type, long id) => reviews.FirstOrDefault(r => r.AlertType == type && r.RecordId == id);
 
-        // facility-0041 rule 4: offer a cover for the scan's own shift while that shift has not ended and none exists yet
+        // facility-0041 rule 4: offer a cover for the scan's own shift while that shift has not ended and none exists yet.
+        // Not for a Cleaner without an Area (no sign to check in at, decision 10); HasShift is false for a deactivated Area.
         ShiftSlot? CoverSlotFor(BlockedScan scan)
         {
             var user = users[scan.UserId];
             var area = signs[scan.SignId].Area!;
-            if (user is not { Role: UserRole.Cleaner, IsActive: true, Shift: { } shift } || user.AreaId == area.Id || !area.HasShift(shift))
+            if (user is not { Role: UserRole.Cleaner, IsActive: true, Shift: { } shift } || user.AreaId is not int ownAreaId || ownAreaId == area.Id || !area.HasShift(shift))
             {
                 return null;
             }

@@ -29,6 +29,21 @@ public class AlertEndpointTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>A Scan Record at 08:00 whose GPS verdict is "outside the radius" (120 m); the clock is left at 08:09.</summary>
+    private static async Task<long> FarSubmissionAsync(FacilityApiFactory factory)
+    {
+        var scanId = await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 0));
+        await factory.WithDbAsync(async db =>
+        {
+            var scan = await db.ScanRecords.SingleAsync(s => s.Id == scanId);
+            scan.WithinRadius = false;
+            scan.DistanceM = 120;
+            await db.SaveChangesAsync();
+        });
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 0));
+        return scanId;
+    }
+
     [Fact]
     public async Task A_blocked_scan_is_listed_with_the_cover_the_admin_can_assign()
     {
@@ -105,15 +120,7 @@ public class AlertEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var scanId = await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 0));
-        await factory.WithDbAsync(async db =>
-        {
-            var scan = await db.ScanRecords.SingleAsync(s => s.Id == scanId);
-            scan.WithinRadius = false;
-            scan.DistanceM = 120;
-            await db.SaveChangesAsync();
-        });
-        factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 0));
+        var scanId = await FarSubmissionAsync(factory);
 
         var alert = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin));
 
@@ -174,6 +181,117 @@ public class AlertEndpointTests
         Assert.Equal("shift_attendances", entry.EntityType);
         Assert.Equal(alert.RecordId, entry.EntityId);
         Assert.Equal("GPS ในอาคารเพี้ยน ยืนอยู่หน้าป้ายจริง", entry.Reason);
+    }
+
+    [Fact]
+    public async Task A_cancelled_cover_does_not_hide_the_cover_offer()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await BlockedAtAr02Async(factory, cleaner);
+        await TestData.AddCoverAsync(factory, "E1001", "AR02", Oct8, Shift.Day, cancelled: true);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        Assert.NotNull(Assert.Single(await AdminAttendanceApi.AlertsAsync(admin)).Cover);
+    }
+
+    [Fact]
+    public async Task No_cover_is_offered_into_a_deactivated_area()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await BlockedAtAr02Async(factory, cleaner);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Areas.SingleAsync(a => a.Code == "AR02")).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        Assert.Null(Assert.Single(await AdminAttendanceApi.AlertsAsync(admin)).Cover);
+    }
+
+    [Fact]
+    public async Task No_cover_is_offered_to_a_cleaner_without_an_area()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var userId = await TestData.AddCleanerAsync(factory, "E1009", Shift.Day);
+        await factory.WithDbAsync(async db =>
+        {
+            var sign = await db.Signs.SingleAsync(s => s.Code == "AR02-IN");
+            db.BlockedScans.Add(new FacilityRealtime.Domain.Entities.BlockedScan
+            {
+                UserId = userId,
+                SignId = sign.Id,
+                Reason = BlockReason.OtherArea,
+                ScannedAt = ThaiClock.At(8, 7, 10).UtcDateTime,
+            });
+            await db.SaveChangesAsync();
+        });
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        var alert = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin));
+
+        Assert.Equal("E1009", alert.Person.EmployeeId);
+        Assert.Null(alert.Person.AreaCode);
+        Assert.Null(alert.Cover);
+    }
+
+    [Fact]
+    public async Task A_blocked_scan_can_be_reviewed()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await BlockedAtAr02Async(factory, cleaner);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+        var alert = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin));
+
+        var review = await AdminAttendanceApi.ReviewAsync(admin, "BlockedScan", alert.RecordId);
+
+        Assert.Equal(HttpStatusCode.NoContent, review.StatusCode);
+        Assert.True(Assert.Single(await AdminAttendanceApi.AlertsAsync(admin)).Reviewed);
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal("ALERT_REVIEW", entry.Action);
+        Assert.Equal("blocked_scans", entry.EntityType);
+        Assert.Equal(alert.RecordId, entry.EntityId);
+    }
+
+    [Fact]
+    public async Task A_submission_far_from_its_sign_can_be_reviewed()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var scanId = await FarSubmissionAsync(factory);
+
+        var review = await AdminAttendanceApi.ReviewAsync(admin, "SubmissionGps", scanId);
+
+        Assert.Equal(HttpStatusCode.NoContent, review.StatusCode);
+        Assert.True(Assert.Single(await AdminAttendanceApi.AlertsAsync(admin)).Reviewed);
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal("ALERT_REVIEW", entry.Action);
+        Assert.Equal("scan_records", entry.EntityType);
+        Assert.Equal(scanId, entry.EntityId);
+    }
+
+    [Fact]
+    public async Task A_note_over_500_characters_is_refused()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await FarCheckInAsync(factory, cleaner);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+        var alert = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin));
+
+        var response = await AdminAttendanceApi.ReviewAsync(admin, "AttendanceGps", alert.RecordId, new string('ก', 501));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+        Assert.False(Assert.Single(await AdminAttendanceApi.AlertsAsync(admin)).Reviewed);
     }
 
     [Theory]
