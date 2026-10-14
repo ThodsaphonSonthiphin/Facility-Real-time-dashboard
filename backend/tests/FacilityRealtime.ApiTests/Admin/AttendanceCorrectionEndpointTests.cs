@@ -146,6 +146,26 @@ public class AttendanceCorrectionEndpointTests
         Assert.Single(await AdminSetupApi.AuditAsync(factory));
     }
 
+    [Fact]
+    public async Task Saving_the_minute_a_scan_shows_changes_nothing()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 6, 50).AddSeconds(23));
+        Assert.Equal(HttpStatusCode.OK, (await AttendanceApi.RecordAsync(cleaner, "ShiftIn")).StatusCode);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+
+        var response = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Day", "ShiftIn", "06:50", "ลืมสแกน");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+        var stored = Assert.Single(await EventsAsync(factory, "E1001"));
+        Assert.Equal(AttendanceSource.Scan, stored.Source);
+        Assert.Equal(ThaiClock.At(8, 6, 50).AddSeconds(23).UtcDateTime, stored.OccurredAt);
+    }
+
     // Each case below is valid except for the one guard it names, so deleting that guard turns it red.
     [Fact]
     public async Task A_cleaner_is_corrected_only_in_their_regular_shift()

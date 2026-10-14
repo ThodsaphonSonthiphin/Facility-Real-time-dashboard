@@ -20,7 +20,7 @@ public class MySqlAdminQueryTests
     public async Task Alert_and_history_queries_run_on_MySQL()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySQL(Environment.GetEnvironmentVariable("FACILITY_MYSQL_TEST")!)
+            .UseMySQL(MySqlTestDatabase.ConnectionString())
             .Options;
 
         await using (var setup = new AppDbContext(options))

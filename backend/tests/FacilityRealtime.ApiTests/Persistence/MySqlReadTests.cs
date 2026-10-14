@@ -16,7 +16,7 @@ public class MySqlReadTests
     public async Task DateOnly_and_TimeOnly_columns_are_read_back_from_MySQL()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySQL(Environment.GetEnvironmentVariable("FACILITY_MYSQL_TEST")!)
+            .UseMySQL(MySqlTestDatabase.ConnectionString())
             .Options;
 
         await using (var setup = new AppDbContext(options))

@@ -122,9 +122,11 @@ public static class AdminAttendanceEndpoints
             return Bad(orderError);
         }
 
-        if (existing is not null && existing.OccurredAt == at)
+        if (existing is not null
+            && existing.OccurredAt.Ticks / TimeSpan.TicksPerMinute == at.Ticks / TimeSpan.TicksPerMinute)
         {
-            // Saving the same time again changes nothing, so it logs nothing
+            // Saving the same time again changes nothing, so it logs nothing. The form only has HH:mm while a
+            // scan keeps its seconds, so the same minute counts as the same time (Thai is a whole-hour offset)
             return Results.Ok(AttendanceBoard.ToDto(existing));
         }
 
