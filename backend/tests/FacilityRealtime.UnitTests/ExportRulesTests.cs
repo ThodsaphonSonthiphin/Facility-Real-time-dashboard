@@ -9,8 +9,9 @@ namespace FacilityRealtime.UnitTests;
 public class ExportRulesTests
 {
     private static readonly ShiftSlot Day8 = new(new DateOnly(2026, 10, 8), Shift.Day);
+    private const int Closes = 60;
     private static readonly DateTime LongAgo = new(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
-    private static readonly DateTime AfterTheShift = ShiftCalendar.EndUtc(Day8).AddMinutes(1);
+    private static readonly DateTime AfterTheShift = ShiftCalendar.EndUtc(Day8).AddMinutes(Closes + 1);
 
     private static (RoundWindow Window, DateTime CreatedAtUtc) Window(int id, int startHour, int endHour, DateTime? createdAtUtc = null) =>
         (RoundWindow.For(id, new TimeOnly(startHour, 0), new TimeOnly(endHour, 0), Day8), createdAtUtc ?? LongAgo);
@@ -18,7 +19,7 @@ public class ExportRulesTests
     [Fact]
     public void Rounds_with_no_counted_submission_are_missed_in_the_order_of_the_shift()
     {
-        var missed = ExportRules.MissedRounds([Window(1, 16, 18), Window(2, 7, 9)], new HashSet<int>(), Day8, AfterTheShift);
+        var missed = ExportRules.MissedRounds([Window(1, 16, 18), Window(2, 7, 9)], new HashSet<int>(), Day8, AfterTheShift, Closes);
 
         Assert.Equal(new[] { 2, 1 }, missed.Select(w => w.Id));
     }
@@ -26,7 +27,7 @@ public class ExportRulesTests
     [Fact]
     public void A_done_round_is_not_missed()
     {
-        var missed = ExportRules.MissedRounds([Window(1, 7, 9), Window(2, 16, 18)], new HashSet<int> { 1 }, Day8, AfterTheShift);
+        var missed = ExportRules.MissedRounds([Window(1, 7, 9), Window(2, 16, 18)], new HashSet<int> { 1 }, Day8, AfterTheShift, Closes);
 
         Assert.Equal(new[] { 2 }, missed.Select(w => w.Id));
     }
@@ -34,9 +35,27 @@ public class ExportRulesTests
     [Fact]
     public void Nothing_is_missed_while_the_shift_is_still_running()
     {
-        var missed = ExportRules.MissedRounds([Window(1, 7, 9)], new HashSet<int>(), Day8, ShiftCalendar.EndUtc(Day8).AddMinutes(-1));
+        var missed = ExportRules.MissedRounds([Window(1, 7, 9)], new HashSet<int>(), Day8, ShiftCalendar.EndUtc(Day8).AddMinutes(-1), Closes);
 
         Assert.Empty(missed);
+    }
+
+    [Theory]
+    [InlineData(30)]
+    [InlineData(Closes)]
+    public void Nothing_is_missed_while_a_late_submission_is_still_accepted(int minutesAfterTheShift)
+    {
+        var missed = ExportRules.MissedRounds([Window(1, 7, 9)], new HashSet<int>(), Day8, ShiftCalendar.EndUtc(Day8).AddMinutes(minutesAfterTheShift), Closes);
+
+        Assert.Empty(missed);
+    }
+
+    [Fact]
+    public void Rounds_are_missed_just_after_the_attendance_window_closes()
+    {
+        var missed = ExportRules.MissedRounds([Window(1, 7, 9)], new HashSet<int>(), Day8, ShiftCalendar.EndUtc(Day8).AddMinutes(Closes).AddSeconds(1), Closes);
+
+        Assert.Equal(new[] { 1 }, missed.Select(w => w.Id));
     }
 
     [Fact]
@@ -44,7 +63,7 @@ public class ExportRulesTests
     {
         var startUtc = RoundWindow.For(1, new TimeOnly(7, 0), new TimeOnly(9, 0), Day8).StartUtc;
 
-        var missed = ExportRules.MissedRounds([Window(1, 7, 9, startUtc.AddMinutes(1))], new HashSet<int>(), Day8, AfterTheShift);
+        var missed = ExportRules.MissedRounds([Window(1, 7, 9, startUtc.AddMinutes(1))], new HashSet<int>(), Day8, AfterTheShift, Closes);
 
         Assert.Empty(missed);
     }
@@ -55,7 +74,7 @@ public class ExportRulesTests
         var night8 = new ShiftSlot(new DateOnly(2026, 10, 8), Shift.Night);
         (RoundWindow, DateTime) Night(int id, int start, int end) => (RoundWindow.For(id, new TimeOnly(start, 0), new TimeOnly(end, 0), night8), LongAgo);
 
-        var missed = ExportRules.MissedRounds([Night(1, 3, 5), Night(2, 20, 22)], new HashSet<int>(), night8, ShiftCalendar.EndUtc(night8));
+        var missed = ExportRules.MissedRounds([Night(1, 3, 5), Night(2, 20, 22)], new HashSet<int>(), night8, ShiftCalendar.EndUtc(night8).AddMinutes(Closes + 1), Closes);
 
         Assert.Equal(new[] { 2, 1 }, missed.Select(w => w.Id));
     }

@@ -18,12 +18,14 @@ public static class ExportRules
 
     /// <summary>
     /// facility-0047 rule 5 "ไม่ได้ทำ": the rounds of one point in one shift with no OnTime, Late or Rework submission.
-    /// Only once the shift has ended, because a Late Submission can still come until then. A window created after its
-    /// round started did not exist for that round. Returned in the order the shift meets them.
+    /// Only once the attendance window has closed (<paramref name="closesMinutesAfterShift"/> after the shift ends, inclusive),
+    /// because a Late Submission is still accepted until then. A window created after its round started did not exist
+    /// for that round. Returned in the order the shift meets them.
     /// </summary>
     public static IReadOnlyList<RoundWindow> MissedRounds(
-        IEnumerable<(RoundWindow Window, DateTime CreatedAtUtc)> windows, IReadOnlySet<int> doneWindowIds, ShiftSlot slot, DateTime nowUtc) =>
-        ShiftCalendar.EndUtc(slot) > nowUtc
+        IEnumerable<(RoundWindow Window, DateTime CreatedAtUtc)> windows, IReadOnlySet<int> doneWindowIds, ShiftSlot slot, DateTime nowUtc,
+        int closesMinutesAfterShift) =>
+        ShiftCalendar.EndUtc(slot).AddMinutes(closesMinutesAfterShift) >= nowUtc
             ? []
             : windows
                 .Where(w => w.CreatedAtUtc <= w.Window.StartUtc && !doneWindowIds.Contains(w.Window.Id))

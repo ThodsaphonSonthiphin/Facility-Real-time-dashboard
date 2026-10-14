@@ -168,7 +168,7 @@ public static class AdminAccountEndpoints
             return Bad("เปิดใช้งานบัญชีก่อน แล้วค่อยเลือก Area");
         }
 
-        var (place, error) = await ReadPlaceAsync(db, user.Role, user.Id, request.AreaId, request.BuildingId, request.Shift, checkSlot: user.IsActive);
+        var (place, error) = await ReadPlaceAsync(db, user.Role, user.Id, request.AreaId, request.BuildingId, request.Shift, checkSlot: user.IsActive, currentAreaId: user.AreaId);
         if (place is null)
         {
             return error!;

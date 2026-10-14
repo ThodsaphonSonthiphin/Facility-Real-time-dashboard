@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
+using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Export;
 using FacilityRealtime.Infrastructure.Export;
 using FacilityRealtime.Infrastructure.Persistence;
@@ -22,7 +23,7 @@ public static class AdminExportEndpoints
         return app;
     }
 
-    private static async Task<IResult> ExportAsync(ExportRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> ExportAsync(ExportRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, AttendanceSettings settings)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -75,9 +76,11 @@ public static class AdminExportEndpoints
                 await ExportQuery.LoadPointsAsync(db, request.BuildingId),
                 first,
                 last,
-                now));
+                now,
+                settings.ClosesMinutesAfterShift));
         }
 
+        var file = ExcelWorkbook.Write(sheets);
         var from = ThaiLabels.Date(first);
         var to = ThaiLabels.Date(last);
         AuditTrail.Add(
@@ -94,7 +97,7 @@ public static class AdminExportEndpoints
             });
         await db.SaveChangesAsync();
 
-        return Results.File(ExcelWorkbook.Write(sheets), XlsxType, $"facility_{from}_{to}.xlsx");
+        return Results.File(file, XlsxType, $"facility_{from}_{to}.xlsx");
     }
 
     private static IResult Bad(string message) => ApiResults.Message(StatusCodes.Status400BadRequest, message);

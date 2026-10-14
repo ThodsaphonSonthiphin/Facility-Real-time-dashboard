@@ -191,6 +191,55 @@ public class AccountEditEndpointTests
     }
 
     [Fact]
+    public async Task A_cleaner_whose_area_was_deactivated_can_be_renamed_and_keeps_the_area()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/admin/areas/{ar02}/deactivate", null)).StatusCode);
+
+        var response = await EditAsync(admin, e1003, new { displayName = "สมศรี เปลี่ยนชื่อ", areaId = ar02, shift = "Day" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var edited = await AccountApi.ReadAsync(response);
+        Assert.Equal(("สมศรี เปลี่ยนชื่อ", ar02), (edited.DisplayName, edited.AreaId));
+    }
+
+    [Fact]
+    public async Task Moving_a_cleaner_to_a_deactivated_area_is_refused()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        await admin.PostAsync($"/api/admin/areas/{ar02}/deactivate", null);
+
+        var response = await EditAsync(admin, e1001, new { displayName = "สมชาย ใจดี", areaId = ar02, shift = "Day" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("ต้องเลือก Area ที่ใช้งานอยู่", await AdminSetupApi.MessageAsync(response));
+    }
+
+    [Fact]
+    public async Task Leaving_the_area_out_of_an_edit_clears_it_and_the_history_shows_it()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+
+        var response = await EditAsync(admin, e1001, new { displayName = "สมชาย ใจดี", shift = "Day" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null((await AccountApi.ReadAsync(response)).AreaId);
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal(("ACCOUNT_UPDATE", (long?)e1001), (entry.Action, entry.EntityId));
+        Assert.Contains($"\"AreaId\":{ar01}", entry.BeforeJson);
+        Assert.Contains("\"AreaId\":null", entry.AfterJson);
+    }
+
+    [Fact]
     public async Task A_deactivated_cleaner_gets_no_area_until_activated()
     {
         using var factory = new FacilityApiFactory();

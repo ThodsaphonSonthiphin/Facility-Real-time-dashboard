@@ -31,9 +31,12 @@ internal static class AccountChecks
     /// Cleaner: shift required, Area optional, no building. Supervisor: building and shift, no Area. Admin: none of them.
     /// <paramref name="userId"/> is the account being edited (0 for a new one), so it never collides with itself.
     /// <paramref name="checkSlot"/> is false for a deactivated account, which holds no slot; activation checks it later.
+    /// <paramref name="currentAreaId"/> is the Cleaner's Area now: keeping it is allowed even after the Area was deactivated
+    /// (Area deactivation does not unassign Cleaners), but moving to an inactive Area is not.
     /// </summary>
     public static async Task<(AccountPlace? Place, IResult? Error)> ReadPlaceAsync(
-        AppDbContext db, UserRole role, int userId, int? areaId, int? buildingId, Shift? shift, bool checkSlot = true)
+        AppDbContext db, UserRole role, int userId, int? areaId, int? buildingId, Shift? shift, bool checkSlot = true,
+        int? currentAreaId = null)
     {
         if (shift is { } given && !Enum.IsDefined(given))
         {
@@ -64,13 +67,14 @@ internal static class AccountChecks
                     return (new AccountPlace(null, null, cleanerShift), null);
                 }
 
-                var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive);
+                var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && (a.IsActive || a.Id == currentAreaId));
                 if (area is null)
                 {
                     return (null, Bad("ต้องเลือก Area ที่ใช้งานอยู่"));
                 }
 
-                if (!area.HasShift(cleanerShift))
+                // Not HasShift: it is false for an inactive Area, and a kept inactive Area must still pass when the shift fits
+                if (cleanerShift == Shift.Night && area.ShiftPattern != ShiftPattern.DayAndNight)
                 {
                     return (null, Bad($"{area.Code} ทำเฉพาะกะเช้า เลือกกะดึกไม่ได้"));
                 }

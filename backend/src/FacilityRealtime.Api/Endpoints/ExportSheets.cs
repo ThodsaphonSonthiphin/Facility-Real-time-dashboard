@@ -53,9 +53,10 @@ internal static class ExportSheets
             Sort(rows));
     }
 
-    /// <summary>Every submission, plus a "ไม่ได้ทำ" row for each round of an ended shift that nobody did (decision 12).</summary>
+    /// <summary>Every submission, plus a "ไม่ได้ทำ" row for each round of a closed shift that nobody did (decision 12).</summary>
     public static ExcelSheet Submissions(
-        IReadOnlyList<SubmissionExportRow> submissions, IReadOnlyList<ExportPoint> points, DateOnly first, DateOnly last, DateTime nowUtc)
+        IReadOnlyList<SubmissionExportRow> submissions, IReadOnlyList<ExportPoint> points, DateOnly first, DateOnly last, DateTime nowUtc,
+        int closesMinutesAfterShift)
     {
         var rows = submissions.Select(s => new SortedRow(
             s.ShiftDate,
@@ -97,7 +98,7 @@ internal static class ExportSheets
                     var windows = point.Windows
                         .Where(w => w.Shift == shift)
                         .Select(w => (RoundWindow.For(w.Id, w.Start, w.End, slot), w.CreatedAtUtc));
-                    foreach (var missed in ExportRules.MissedRounds(windows, doneIds, slot, nowUtc))
+                    foreach (var missed in ExportRules.MissedRounds(windows, doneIds, slot, nowUtc, closesMinutesAfterShift))
                     {
                         rows.Add(new SortedRow(date, shift, missed.StartUtc, point.AreaCode + "|" + point.SignCode,
                         [
