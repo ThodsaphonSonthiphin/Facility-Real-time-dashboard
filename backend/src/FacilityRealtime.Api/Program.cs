@@ -103,6 +103,7 @@ app.MapAdminAreaEndpoints();
 app.MapAdminPointEndpoints();
 app.MapAdminSignEndpoints();
 app.MapAdminAttendanceEndpoints();
+app.MapAdminAlertEndpoints();
 
 app.Run();
 

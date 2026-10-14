@@ -1,4 +1,5 @@
 using System.Globalization;
+using FacilityRealtime.Application.Alerts;
 using FacilityRealtime.Application.Common;
 using FacilityRealtime.Domain.Enums;
 
@@ -22,4 +23,12 @@ internal static class ThaiLabels
 
     /// <summary>Gregorian yyyy-MM-dd whatever the server's culture; th-TH would print the Buddhist year.</summary>
     public static string Date(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    public static string AlertName(AlertKind kind) => kind switch
+    {
+        AlertKind.BlockedScan => "สแกนนอก Area",
+        AlertKind.AttendanceGps => "ลงเวลาไกลจากป้าย",
+        AlertKind.SubmissionGps => "ส่งงานไกลจากป้าย",
+        _ => "ไม่ได้ลงเวลาเลิกงาน",
+    };
 }

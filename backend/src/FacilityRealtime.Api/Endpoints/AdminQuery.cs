@@ -1,4 +1,5 @@
 using System.Globalization;
+using FacilityRealtime.Application.Common;
 using FacilityRealtime.Application.Shifts;
 using FacilityRealtime.Domain.Enums;
 
@@ -34,6 +35,40 @@ internal static class AdminQuery
         }
 
         slot = new ShiftSlot(date, parsed);
+        return null;
+    }
+
+    /// <summary>
+    /// Thai dates from and to, both included, as the UTC range [from 00:00, the day after to 00:00) Thai time.
+    /// Neither given: the <paramref name="defaultDays"/> days ending today. Returns the error to show, or null.
+    /// </summary>
+    public static string? ReadDateRange(
+        string? from, string? to, DateTime nowUtc, int defaultDays, int maxDays, out DateTime fromUtc, out DateTime toUtc)
+    {
+        fromUtc = toUtc = default;
+        DateOnly first, last;
+        if (from is null && to is null)
+        {
+            last = DateOnly.FromDateTime(ThaiTime.FromUtc(nowUtc));
+            first = last.AddDays(1 - defaultDays);
+        }
+        else if (!TryReadDate(from, out first) || !TryReadDate(to, out last))
+        {
+            return "ต้องระบุทั้งวันเริ่ม (from) และวันสุดท้าย (to) แบบ yyyy-MM-dd";
+        }
+
+        if (last < first)
+        {
+            return "วันสุดท้ายต้องไม่ก่อนวันเริ่ม";
+        }
+
+        if (last.DayNumber - first.DayNumber + 1 > maxDays)
+        {
+            return $"เลือกได้ไม่เกิน {maxDays} วัน";
+        }
+
+        fromUtc = ThaiTime.ToUtc(first.ToDateTime(TimeOnly.MinValue));
+        toUtc = ThaiTime.ToUtc(last.AddDays(1).ToDateTime(TimeOnly.MinValue));
         return null;
     }
 }
