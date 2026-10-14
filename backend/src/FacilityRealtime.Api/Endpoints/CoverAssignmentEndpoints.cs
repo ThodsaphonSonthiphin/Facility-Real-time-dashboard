@@ -3,6 +3,7 @@ using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
 using FacilityRealtime.Application.Alerts;
 using FacilityRealtime.Application.Attendance;
+using FacilityRealtime.Application.Inspections;
 using FacilityRealtime.Application.Shifts;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
@@ -11,7 +12,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.Api.Endpoints;
 
-/// <summary>facility-0041: the Admin lets a Cleaner work another Area for one shift. Every change is logged (facility-0051).</summary>
+/// <summary>
+/// facility-0041: the Admin lets a Cleaner work another Area for one shift; facility-0048: a Supervisor inspect another
+/// building, or their own outside their shift, for one shift. Every change is logged (facility-0051).
+/// </summary>
 public static class CoverAssignmentEndpoints
 {
     public static IEndpointRouteBuilder MapCoverAssignmentEndpoints(this IEndpointRouteBuilder app)
@@ -33,47 +37,58 @@ public static class CoverAssignmentEndpoints
 
         if (request.Shift is not { } shift || !Enum.IsDefined(shift))
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "ต้องระบุกะ");
+            return Bad("ต้องระบุกะ");
         }
 
-        var cleaner = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId && u.Role == UserRole.Cleaner && u.IsActive);
-        if (cleaner is null)
+        var person = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId && u.IsActive && u.Role != UserRole.Admin);
+        if (person is null)
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "ต้องเลือกแม่บ้านที่ใช้งานอยู่");
-        }
-
-        var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == request.AreaId && a.IsActive);
-        if (area is null)
-        {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "ไม่พบ Area นี้ หรือปิดใช้งานแล้ว");
-        }
-
-        if (area.Id == cleaner.AreaId)
-        {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "Area นี้เป็น Area ประจำของแม่บ้านคนนี้อยู่แล้ว");
-        }
-
-        // Owner decision 2026-10-09: a cover only in the Cleaner's own regular shift
-        if (shift != cleaner.Shift)
-        {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "ทำแทนได้เฉพาะกะประจำของแม่บ้านคนนี้");
-        }
-
-        if (!area.HasShift(shift))
-        {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "Area นี้ไม่มีกะนี้");
+            return Bad("ต้องเลือกแม่บ้านหรือหัวหน้าที่ใช้งานอยู่");
         }
 
         var slot = new ShiftSlot(request.ShiftDate, shift);
         var now = clock.GetUtcNow().UtcDateTime;
-        if (ShiftCalendar.EndUtc(slot) <= now)
+        return person.Role == UserRole.Supervisor
+            ? await AssignBuildingAsync(request, db, admin, person, slot, now)
+            : await AssignAreaAsync(request, db, admin, person, slot, now, settings);
+    }
+
+    /// <summary>facility-0041: a Cleaner works another Area, only in their own regular shift (owner decision 2026-10-09).</summary>
+    private static async Task<IResult> AssignAreaAsync(
+        AssignCoverRequest request, AppDbContext db, User admin, User cleaner, ShiftSlot slot, DateTime now, AttendanceSettings settings)
+    {
+        if (request.BuildingId is not null)
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "กะนี้จบไปแล้ว");
+            return Bad("แม่บ้านทำแทนเป็น Area ไม่ต้องระบุตึก");
         }
 
-        var duplicate = await db.CoverAssignments.AnyAsync(c =>
-            c.UserId == cleaner.Id && c.AreaId == area.Id && c.ShiftDate == slot.ShiftDate && c.Shift == shift && c.CancelledAt == null);
-        if (duplicate)
+        var area = request.AreaId is int areaId ? await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive) : null;
+        if (area is null)
+        {
+            return Bad("ไม่พบ Area นี้ หรือปิดใช้งานแล้ว");
+        }
+
+        if (area.Id == cleaner.AreaId)
+        {
+            return Bad("Area นี้เป็น Area ประจำของแม่บ้านคนนี้อยู่แล้ว");
+        }
+
+        if (slot.Shift != cleaner.Shift)
+        {
+            return Bad("ทำแทนได้เฉพาะกะประจำของแม่บ้านคนนี้");
+        }
+
+        if (!area.HasShift(slot.Shift))
+        {
+            return Bad("Area นี้ไม่มีกะนี้");
+        }
+
+        if (ShiftCalendar.EndUtc(slot) <= now)
+        {
+            return Bad("กะนี้จบไปแล้ว");
+        }
+
+        if (await IsDuplicateAsync(db, cleaner.Id, area.Id, null, slot))
         {
             return ApiResults.Message(StatusCodes.Status409Conflict, "มอบหมายไว้แล้ว");
         }
@@ -85,54 +100,144 @@ public static class CoverAssignmentEndpoints
             blocked = await db.BlockedScans.FirstOrDefaultAsync(b => b.Id == blockedScanId);
             if (blocked is null)
             {
-                return ApiResults.Message(StatusCodes.Status400BadRequest, "ไม่พบการสแกนที่ถูกบล็อกนี้");
+                return Bad("ไม่พบการสแกนที่ถูกบล็อกนี้");
             }
 
             var signId = blocked.SignId;
             var signAreaId = await db.Signs.Where(s => s.Id == signId).Select(s => s.AreaId).SingleAsync();
             if (blocked.UserId != cleaner.Id || signAreaId != area.Id)
             {
-                return ApiResults.Message(StatusCodes.Status400BadRequest, "การสแกนที่ถูกบล็อกนี้ไม่ใช่ของแม่บ้านคนนี้ที่ Area นี้");
+                return Bad("การสแกนที่ถูกบล็อกนี้ไม่ใช่ของแม่บ้านคนนี้ที่ Area นี้");
             }
 
             // A scan from another shift is no reason to cover this one
-            if (AttendanceCalendar.SlotFor(shift, blocked.ScannedAt, settings) != slot)
+            if (AttendanceCalendar.SlotFor(slot.Shift, blocked.ScannedAt, settings) != slot)
             {
-                return ApiResults.Message(StatusCodes.Status400BadRequest, "การสแกนที่ถูกบล็อกนี้ไม่ได้อยู่ในกะนี้");
+                return Bad("การสแกนที่ถูกบล็อกนี้ไม่ได้อยู่ในกะนี้");
             }
         }
 
-        await using var transaction = await db.Database.BeginTransactionAsync();
         var cover = new CoverAssignment
         {
             UserId = cleaner.Id,
             AreaId = area.Id,
             ShiftDate = slot.ShiftDate,
-            Shift = shift,
+            Shift = slot.Shift,
             AssignedById = admin.Id,
             AssignedAt = now,
         };
+        return await SaveAsync(
+            db, admin, cleaner, cover, blocked, now,
+            $"มอบหมาย {cleaner.DisplayName} ทำแทน {area.Code} กะ{ThaiLabels.ShiftName(slot.Shift)} {ThaiLabels.Date(slot.ShiftDate)}",
+            $"มอบหมายทำแทน {area.Code} แล้ว",
+            area,
+            null);
+    }
+
+    /// <summary>
+    /// facility-0048 rule 2 and its amendment: a Supervisor inspects another building, or their own outside their shift.
+    /// Any shift may be covered except the one they already hold (decision 7). The shift is the clock's.
+    /// </summary>
+    private static async Task<IResult> AssignBuildingAsync(
+        AssignCoverRequest request, AppDbContext db, User admin, User supervisor, ShiftSlot slot, DateTime now)
+    {
+        if (request.AreaId is not null)
+        {
+            return Bad("หัวหน้าตรวจแทนเป็นตึก ไม่ต้องระบุ Area");
+        }
+
+        var building = request.BuildingId is int buildingId ? await db.Buildings.FirstOrDefaultAsync(b => b.Id == buildingId && b.IsActive) : null;
+        if (building is null)
+        {
+            return Bad("ไม่พบตึกนี้ หรือปิดใช้งานแล้ว");
+        }
+
+        if (SupervisorScope.WithoutCover(supervisor.BuildingId, supervisor.Shift, building.Id, slot.Shift) is null)
+        {
+            return Bad("ตึกและกะนี้เป็นของหัวหน้าคนนี้อยู่แล้ว");
+        }
+
+        if (ShiftCalendar.EndUtc(slot) <= now)
+        {
+            return Bad("กะนี้จบไปแล้ว");
+        }
+
+        if (await IsDuplicateAsync(db, supervisor.Id, null, building.Id, slot))
+        {
+            return ApiResults.Message(StatusCodes.Status409Conflict, "มอบหมายไว้แล้ว");
+        }
+
+        BlockedScan? blocked = null;
+        if (request.BlockedScanId is long blockedScanId)
+        {
+            blocked = await db.BlockedScans.FirstOrDefaultAsync(b => b.Id == blockedScanId);
+            if (blocked is null)
+            {
+                return Bad("ไม่พบการสแกนที่ถูกบล็อกนี้");
+            }
+
+            var signId = blocked.SignId;
+            var signBuildingId = await db.Signs.Where(s => s.Id == signId).Select(s => s.Area!.BuildingId).SingleAsync();
+            if (blocked.UserId != supervisor.Id || signBuildingId != building.Id)
+            {
+                return Bad("การสแกนที่ถูกบล็อกนี้ไม่ใช่ของหัวหน้าคนนี้ที่ตึกนี้");
+            }
+
+            if (ShiftCalendar.SlotAt(blocked.ScannedAt) != slot)
+            {
+                return Bad("การสแกนที่ถูกบล็อกนี้ไม่ได้อยู่ในกะนี้");
+            }
+        }
+
+        var cover = new CoverAssignment
+        {
+            UserId = supervisor.Id,
+            BuildingId = building.Id,
+            ShiftDate = slot.ShiftDate,
+            Shift = slot.Shift,
+            AssignedById = admin.Id,
+            AssignedAt = now,
+        };
+        return await SaveAsync(
+            db, admin, supervisor, cover, blocked, now,
+            $"มอบหมาย {supervisor.DisplayName} ตรวจแทนตึก {building.Code} กะ{ThaiLabels.ShiftName(slot.Shift)} {ThaiLabels.Date(slot.ShiftDate)}",
+            $"มอบหมายตรวจแทนตึก {building.Code} แล้ว",
+            null,
+            building);
+    }
+
+    /// <summary>An active cover of the same person, place and shift. AreaId and BuildingId compare as SQL IS NULL when null.</summary>
+    private static Task<bool> IsDuplicateAsync(AppDbContext db, int userId, int? areaId, int? buildingId, ShiftSlot slot) =>
+        db.CoverAssignments.AnyAsync(c =>
+            c.UserId == userId && c.AreaId == areaId && c.BuildingId == buildingId
+            && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null);
+
+    /// <summary>Saves the cover with its audit row and, from a Blocked Scan, closes that alert unless an Admin already did (facility-0041 rule 4).</summary>
+    private static async Task<IResult> SaveAsync(
+        AppDbContext db, User admin, User person, CoverAssignment cover, BlockedScan? blocked, DateTime now,
+        string summary, string alertOutcome, Area? area, Building? building)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync();
         db.CoverAssignments.Add(cover);
         await db.SaveChangesAsync();
         AuditTrail.Add(
-            db, admin.Id, now, "COVER_ASSIGN", "cover_assignments", cover.Id,
-            $"มอบหมาย {cleaner.DisplayName} ทำแทน {area.Code} กะ{ThaiLabels.ShiftName(shift)} {ThaiLabels.Date(slot.ShiftDate)}",
+            db, admin.Id, now, "COVER_ASSIGN", "cover_assignments", cover.Id, summary,
             before: null,
             after: new
             {
                 cover.UserId,
                 cover.AreaId,
+                cover.BuildingId,
                 ShiftDate = ThaiLabels.Date(cover.ShiftDate),
-                Shift = shift.ToString(),
+                Shift = cover.Shift.ToString(),
                 BlockedScanId = blocked?.Id,
             });
 
-        // The alert is handled: close it, unless an Admin already did (facility-0041 rule 4)
         if (blocked is { } scan && !await db.AlertReviews.AnyAsync(r => r.AlertType == AlertType.BlockedScan && r.RecordId == scan.Id))
         {
             AdminAlertEndpoints.AddReview(
                 db, AlertType.BlockedScan, scan.Id, "blocked_scans", admin.Id, now,
-                $"ปิดเตือน{ThaiLabels.AlertName(AlertKind.BlockedScan)} ของ {cleaner.DisplayName} เวลา {ThaiLabels.Clock(scan.ScannedAt)}: มอบหมายทำแทน {area.Code} แล้ว",
+                $"ปิดเตือน{ThaiLabels.AlertName(AlertKind.BlockedScan)} ของ {person.DisplayName} เวลา {ThaiLabels.Clock(scan.ScannedAt)}: {alertOutcome}",
                 note: null);
         }
 
@@ -141,8 +246,12 @@ public static class CoverAssignmentEndpoints
 
         return Results.Created(
             $"/api/admin/cover-assignments/{cover.Id}",
-            new CoverAssignmentDto(cover.Id, cleaner.Id, cleaner.DisplayName, area.Id, area.Code, cover.ShiftDate, shift, DateTime.SpecifyKind(now, DateTimeKind.Utc)));
+            new CoverAssignmentDto(
+                cover.Id, person.Id, person.DisplayName, area?.Id, area?.Code, building?.Id, building?.Code,
+                cover.ShiftDate, cover.Shift, DateTime.SpecifyKind(now, DateTimeKind.Utc)));
     }
+
+    private static IResult Bad(string message) => ApiResults.Message(StatusCodes.Status400BadRequest, message);
 
     private static async Task<IResult> CancelAsync(int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
     {
@@ -155,6 +264,7 @@ public static class CoverAssignmentEndpoints
         var cover = await db.CoverAssignments
             .Include(c => c.User)
             .Include(c => c.Area)
+            .Include(c => c.Building)
             .FirstOrDefaultAsync(c => c.Id == id && c.CancelledAt == null);
         if (cover is null)
         {
@@ -164,7 +274,7 @@ public static class CoverAssignmentEndpoints
         var now = clock.GetUtcNow().UtcDateTime;
         // No unique index guards against a racing duplicate, so close every identical active cover with this one.
         var twins = await db.CoverAssignments
-            .Where(c => c.Id != cover.Id && c.UserId == cover.UserId && c.AreaId == cover.AreaId
+            .Where(c => c.Id != cover.Id && c.UserId == cover.UserId && c.AreaId == cover.AreaId && c.BuildingId == cover.BuildingId
                 && c.ShiftDate == cover.ShiftDate && c.Shift == cover.Shift && c.CancelledAt == null)
             .ToListAsync();
         foreach (var twin in twins.Append(cover))
@@ -172,9 +282,12 @@ public static class CoverAssignmentEndpoints
             twin.CancelledById = admin.Id;
             twin.CancelledAt = now;
         }
+        var what = cover.Area is { } area
+            ? $"การทำแทนของ {cover.User!.DisplayName} ที่ {area.Code}"
+            : $"การตรวจแทนของ {cover.User!.DisplayName} ที่ตึก {cover.Building!.Code}";
         AuditTrail.Add(
             db, admin.Id, now, "COVER_CANCEL", "cover_assignments", cover.Id,
-            $"ยกเลิกการทำแทนของ {cover.User!.DisplayName} ที่ {cover.Area!.Code} กะ{ThaiLabels.ShiftName(cover.Shift)} {ThaiLabels.Date(cover.ShiftDate)}",
+            $"ยกเลิก{what} กะ{ThaiLabels.ShiftName(cover.Shift)} {ThaiLabels.Date(cover.ShiftDate)}",
             before: new { cancelled = false },
             after: new { cancelled = true, alsoCancelled = twins.Select(t => t.Id).ToList() });
         await db.SaveChangesAsync();

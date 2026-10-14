@@ -61,6 +61,8 @@ Plan 4 test results at merge:
 
 - 2026-10-14 · Task 4 done: POST /api/inspections (สะอาด / ไม่สะอาด with defect, GPS and cover stamped, 409 when the scanned submission is stale or a rework is owed); cards in ต้องแก้ไข show the defect; Admins get InspectionRecorded live. All tests pass. Next: Task 5 (Supervisor covers).
 
+- 2026-10-14 · Task 5 done: POST /api/admin/cover-assignments takes a Supervisor with buildingId (any shift but their own building-shift; from a Blocked Scan it closes that alert); cancel handles both kinds; CoverAssignmentDto.CleanerName renamed PersonName. All tests pass. Next: Task 6 (My Building and live updates).
+
 ## Pending work (ask the owner before starting)
 
 - Supervisor plan: inspection, block reasons `OUTSIDE_SHIFT` / `OTHER_BUILDING`, Supervisor covers, the `INSPECTION_GPS` alert, and the inspection sheet of the Excel export.
