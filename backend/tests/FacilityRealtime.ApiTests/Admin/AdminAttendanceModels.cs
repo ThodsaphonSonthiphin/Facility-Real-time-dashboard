@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace FacilityRealtime.ApiTests.Admin;
 
 public record BoardEventModel(long Id, string EventType, DateTime OccurredAt, string Source, bool? WithinRadius, short? DistanceM);
@@ -22,3 +24,11 @@ public record AlertModel(
     List<string> MissingEvents, bool Reviewed, DateTime? ReviewedAt, CoverSuggestionModel? Cover);
 
 public record CoverCandidateModel(int Id, string EmployeeId, string DisplayName, string AreaCode, DateTime? ShiftInAt, DateTime? ScannedThisAreaAt);
+
+public record AuditLogEntryModel(
+    long Id, DateTime OccurredAt, int ActorId, string ActorName, string Action, string? Category,
+    string EntityType, long? EntityId, string Summary, JsonElement? Before, JsonElement? After, string? Reason);
+
+public record AuditLogPageModel(List<AuditLogEntryModel> Entries, long? NextBeforeId);
+
+public record AuditActorModel(int Id, string DisplayName);

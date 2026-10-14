@@ -104,6 +104,7 @@ app.MapAdminPointEndpoints();
 app.MapAdminSignEndpoints();
 app.MapAdminAttendanceEndpoints();
 app.MapAdminAlertEndpoints();
+app.MapAdminAuditLogEndpoints();
 
 app.Run();
 

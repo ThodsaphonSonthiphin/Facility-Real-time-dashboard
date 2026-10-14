@@ -118,9 +118,9 @@ flowchart TB
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
         subgraph ApiP["FacilityRealtime.Api"]
-            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners"]
+            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
-            Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]"]
+            Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, AttendanceRecorded → Admins"]
             Jwt["Auth/AuthSetup.cs<br/>JWT bearer validation"]
         end
         subgraph AppP["FacilityRealtime.Application"]
@@ -132,7 +132,7 @@ flowchart TB
             Hash["Pbkdf2PasswordHasher"]
         end
         subgraph DomP["FacilityRealtime.Domain"]
-            Ent["Entities: User, ServicePoint,<br/>ScanRecord, RefreshToken,<br/>ShiftAttendance, BlockedScan,<br/>CoverAssignment, AuditEntry"]
+            Ent["Entities: User, ServicePoint,<br/>ScanRecord, RefreshToken,<br/>ShiftAttendance, BlockedScan,<br/>CoverAssignment, AuditEntry, AlertReview"]
         end
     end
 
@@ -430,6 +430,14 @@ classDiagram
         +string? AfterJson
         +string? Reason
     }
+    class AlertReview {
+        <<alert_reviews>>
+        +long Id
+        +AlertType AlertType
+        +long RecordId
+        +int ReviewedById
+        +DateTime ReviewedAt
+    }
 
     Building "1" <-- "0..*" Area
     Area "1" <-- "0..*" ServicePoint
@@ -456,9 +464,10 @@ classDiagram
     User "1" <-- "0..*" CoverAssignment : assigned by, cancelled by
     CoverAssignment "0..1" <-- "0..*" ScanRecord : cover used
     User "1" <-- "0..*" AuditEntry : actor
+    User "1" <-- "0..*" AlertReview : reviewed by
 ```
 
-The full target schema, including the tables later plans add, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`). A Cover Assignment lets one Cleaner work another Area for one shift; it lapses when that Cleaner's attendance window for the shift closes ([facility-0069](adr/facility-0069-attendance-scan-window-60-minutes-around-the-shift.md)). Blocked Scans and Audit Log rows are write-only history for the Admin (facility-0041, facility-0051).
+The full target schema, including the tables later plans add, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`). A Cover Assignment lets one Cleaner work another Area for one shift; it lapses when that Cleaner's attendance window for the shift closes ([facility-0069](adr/facility-0069-attendance-scan-window-60-minutes-around-the-shift.md)). Blocked Scans and Audit Log rows are write-only history for the Admin (facility-0041, facility-0051). An Alert Review records that the Admin closed one alert ("คุยแล้ว ปิดเตือน") on a Blocked Scan or a scan outside its sign's radius, one per alert; a missing Shift-Out is never reviewed, it closes when the Admin fills the time (facility-0051).
 
 ---
 

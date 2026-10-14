@@ -85,6 +85,14 @@ npm --prefix frontend test
 - `POST /api/admin/signs/{id}/regenerate-token` ออก QR ใหม่
 - ทุกการแก้ลงตาราง `audit_log`
 
+ดูการเข้างาน รายการที่ขึ้นเตือน และประวัติใน Swagger (login เป็น `admin`):
+
+- `GET /api/admin/attendance` การเข้างานของกะที่กำลังเดินอยู่ หรือส่ง `shiftDate=2026-10-08&shift=Day` เพื่อดูกะอื่น (ADR facility-0050)
+- `PUT /api/admin/attendance` เพิ่มหรือแก้เวลา เช่น `{ "userId": 3, "shiftDate": "2026-10-08", "shift": "Day", "eventType": "ShiftOut", "time": "18:58", "reason": "ลืมสแกน" }` ต้องมีเหตุผลทุกครั้ง (ADR facility-0051)
+- `GET /api/admin/alerts` รายการที่ขึ้นเตือนของเมื่อวานและวันนี้ และ `POST /api/admin/alerts/review` ปิดเตือน
+- `POST /api/admin/cover-assignments` ใส่ `blockedScanId` เพื่อมอบหมายทำแทนจากการสแกนที่ถูกบล็อก (ADR facility-0041)
+- `GET /api/admin/audit-log` ประวัติ Admin อ่านอย่างเดียว (ADR facility-0057)
+
 ### หมายเหตุด้านความปลอดภัยของ POC
 - cookie ของ refresh token ไม่ได้ตั้ง `Secure` เพราะมือถือเข้าผ่าน HTTP ในวง WiFi (ADR facility-0013) ถ้าติดตั้งบน HTTPS ให้ตั้งค่า `Jwt:RefreshCookieSecure` เป็น `true`
 - บัญชีทดสอบข้างบนเป็นข้อมูลตัวอย่างเท่านั้น
