@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.ApiTests.Admin;
@@ -142,6 +144,131 @@ public class AttendanceCorrectionEndpointTests
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal(HttpStatusCode.OK, again.StatusCode);
         Assert.Single(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    // Each case below is valid except for the one guard it names, so deleting that guard turns it red.
+    [Fact]
+    public async Task A_cleaner_is_corrected_only_in_their_regular_shift()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 21, 0));
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001"); // a Day Cleaner
+
+        var response = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Night", "ShiftIn", "20:00", "ลืมสแกน");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertNothingChangedAsync(factory, "E1001");
+    }
+
+    [Fact]
+    public async Task A_deactivated_cleaner_is_refused()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.Id == e1003)).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertNothingChangedAsync(factory, "E1003");
+    }
+
+    [Fact]
+    public async Task A_supervisor_with_an_area_and_shift_is_still_not_a_cleaner()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+        var supervisor = await AdminSetupApi.UserIdAsync(factory, "S2001");
+        var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        await factory.WithDbAsync(async db =>
+        {
+            var user = await db.Users.SingleAsync(u => u.Id == supervisor);
+            user.AreaId = ar02;
+            user.Shift = Shift.Day;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await AdminAttendanceApi.CorrectAsync(admin, supervisor, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertNothingChangedAsync(factory, "S2001");
+    }
+
+    [Fact]
+    public async Task A_time_after_the_window_closed_is_refused_though_it_is_not_in_the_future()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 22, 0));
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+
+        var response = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Day", "ShiftOut", "21:00", "ลืมสแกน");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Single(await EventsAsync(factory, "E1001"));
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
+    public async Task A_time_before_the_window_opened_is_refused_when_nothing_else_is_wrong()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+
+        var response = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "05:00", "ลืมสแกน");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertNothingChangedAsync(factory, "E1003");
+    }
+
+    [Fact]
+    public async Task A_correction_reaches_the_admins_live_for_an_add_and_for_an_edit()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
+        var received = new System.Collections.Concurrent.ConcurrentQueue<JsonElement>();
+        var signal = new SemaphoreSlim(0);
+        adminHub.On<JsonElement>("AttendanceRecorded", payload =>
+        {
+            received.Enqueue(payload);
+            signal.Release();
+        });
+        await Task.Delay(200);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+
+        await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");
+        Assert.True(await signal.WaitAsync(TimeSpan.FromSeconds(5)));
+        await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "06:40", "เวลาผิด");
+        Assert.True(await signal.WaitAsync(TimeSpan.FromSeconds(5)));
+
+        Assert.Equal(2, received.Count);
+        foreach (var payload in received)
+        {
+            Assert.Equal(ar02, payload.GetProperty("areaId").GetInt32());
+            Assert.Equal("2026-10-08", payload.GetProperty("shiftDate").GetString());
+            Assert.Equal("Day", payload.GetProperty("shift").GetString());
+        }
+    }
+
+    private static async Task AssertNothingChangedAsync(FacilityApiFactory factory, string employeeId)
+    {
+        Assert.Empty(await EventsAsync(factory, employeeId));
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
     }
 
     [Fact]

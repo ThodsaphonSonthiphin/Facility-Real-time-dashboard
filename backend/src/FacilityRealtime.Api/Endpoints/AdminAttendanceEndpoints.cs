@@ -153,7 +153,15 @@ public static class AdminAttendanceEndpoints
             }
             catch (DbUpdateException)
             {
-                // The Cleaner scanned the same event a moment ago and the unique index kept theirs (facility-0026)
+                // facility-0026: the Cleaner scanned the same event a moment ago and the unique index kept theirs; anything else is a real error
+                db.ChangeTracker.Clear();
+                var racedScan = await db.ShiftAttendances.AnyAsync(a =>
+                    a.UserId == cleaner.Id && a.ShiftDate == slot.ShiftDate && a.Shift == slot.Shift && a.EventType == eventType);
+                if (!racedScan)
+                {
+                    throw;
+                }
+
                 return ApiResults.Message(StatusCodes.Status409Conflict, "มีการลงเวลารายการนี้แล้ว โหลดหน้าใหม่แล้วลองอีกครั้ง");
             }
 
