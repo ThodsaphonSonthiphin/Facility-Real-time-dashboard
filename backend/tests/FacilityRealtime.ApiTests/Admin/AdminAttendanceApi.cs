@@ -14,4 +14,8 @@ public static class AdminAttendanceApi
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<AttendanceBoardModel>())!;
     }
+
+    public static Task<HttpResponseMessage> CorrectAsync(
+        HttpClient admin, int userId, DateOnly shiftDate, string shift, string eventType, string? time, string? reason) =>
+        admin.PutAsJsonAsync(BoardPath, new { userId, shiftDate, shift, eventType, time, reason });
 }

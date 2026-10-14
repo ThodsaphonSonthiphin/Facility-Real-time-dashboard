@@ -27,3 +27,6 @@ public record AttendanceBoardDto(DateOnly ShiftDate, Shift Shift, bool ShiftEnde
 
 /// <summary>SignalR "AttendanceRecorded" to Admins (facility-0027 rule 5): the page reloads that shift's board.</summary>
 public record AttendanceChangedDto(int AreaId, DateOnly ShiftDate, Shift Shift);
+
+/// <summary>facility-0051. Time is Thai wall-clock "HH:mm" inside the shift's attendance window (facility-0069); Reason is required.</summary>
+public record CorrectAttendanceRequest(int UserId, DateOnly? ShiftDate, Shift? Shift, AttendanceEvent? EventType, string? Time, string? Reason);
