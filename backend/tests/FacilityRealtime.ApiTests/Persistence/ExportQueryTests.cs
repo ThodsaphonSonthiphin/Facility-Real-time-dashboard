@@ -22,6 +22,7 @@ public class ExportQueryTests
     public async Task Attendance_rows_carry_the_person_and_place_inside_the_date_range_only()
     {
         using var factory = new FacilityApiFactory();
+        await TestData.AddAttendanceAsync(factory, "E1001", new DateOnly(2026, 10, 7), Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(7, 6, 57));
         await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
         await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftOut, ThaiClock.At(8, 19, 2), AttendanceSource.AdminAdd);
         await TestData.AddAttendanceAsync(factory, "E1001", new DateOnly(2026, 10, 10), Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(10, 6, 59));
@@ -34,6 +35,19 @@ public class ExportQueryTests
         Assert.Equal((AttendanceSource.Scan, (short?)12, (bool?)true), (shiftIn.Source, shiftIn.DistanceM, shiftIn.WithinRadius));
         Assert.Equal(ThaiClock.At(8, 6, 58).UtcDateTime, DateTime.SpecifyKind(shiftIn.OccurredAtUtc, DateTimeKind.Utc));
         Assert.Equal((AttendanceSource.AdminAdd, (bool?)null), (rows[1].Source, rows[1].WithinRadius));
+    }
+
+    [Fact]
+    public async Task Submission_rows_are_limited_to_the_date_range_on_both_ends()
+    {
+        using var factory = new FacilityApiFactory();
+        await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(7, 8, 10));
+        await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 10));
+        await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(10, 8, 10));
+
+        var rows = await QueryAsync(factory, db => ExportQuery.LoadSubmissionsAsync(db, Oct8, Oct9, null));
+
+        Assert.Equal(new[] { Oct8 }, rows.Select(r => r.ShiftDate));
     }
 
     [Fact]
