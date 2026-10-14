@@ -56,4 +56,27 @@ public class AttendanceCalendarTests
         Assert.Equal(Slot(8, Shift.Day), AttendanceCalendar.SlotFor(Shift.Day, Thai(8, 20, 30), asymmetric));
         Assert.Null(AttendanceCalendar.SlotFor(Shift.Day, Thai(8, 20, 31), asymmetric));
     }
+
+    [Theory]
+    [InlineData(Shift.Day, 6, 30, 8)]      // before the shift starts
+    [InlineData(Shift.Day, 19, 45, 8)]     // after it ends
+    [InlineData(Shift.Night, 18, 15, 8)]
+    [InlineData(Shift.Night, 23, 0, 8)]
+    [InlineData(Shift.Night, 3, 0, 9)]     // after midnight: the next calendar day
+    [InlineData(Shift.Night, 7, 50, 9)]
+    public void An_admins_time_lands_inside_the_shifts_attendance_window(Shift shift, int hour, int minute, int expectedDay)
+    {
+        Assert.Equal((DateTime?)Thai(expectedDay, hour, minute), AttendanceCalendar.PlaceTime(Slot(8, shift)!, new TimeOnly(hour, minute), Settings));
+    }
+
+    [Theory]
+    [InlineData(Shift.Day, 5, 59)]
+    [InlineData(Shift.Day, 20, 1)]
+    [InlineData(Shift.Night, 17, 59)]
+    [InlineData(Shift.Night, 8, 1)]
+    [InlineData(Shift.Night, 12, 0)]
+    public void A_time_outside_the_window_has_no_place(Shift shift, int hour, int minute)
+    {
+        Assert.Null(AttendanceCalendar.PlaceTime(Slot(8, shift)!, new TimeOnly(hour, minute), Settings));
+    }
 }

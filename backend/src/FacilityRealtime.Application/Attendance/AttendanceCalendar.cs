@@ -27,4 +27,26 @@ public static class AttendanceCalendar
 
         return null;
     }
+
+    /// <summary>
+    /// facility-0051: the moment an Admin means by a Thai wall-clock <paramref name="thaiTime"/> typed for <paramref name="slot"/>,
+    /// as UTC: the one inside the slot's attendance window, or null when there is none. A Day slot's 06:30 is before
+    /// the shift starts; a Night slot's 07:20 is the next morning. The window opens at most 6 hours early (Program.cs),
+    /// so the moment is on ShiftDate or the day after.
+    /// </summary>
+    public static DateTime? PlaceTime(ShiftSlot slot, TimeOnly thaiTime, AttendanceSettings settings)
+    {
+        var opens = ShiftCalendar.StartUtc(slot).AddMinutes(-settings.OpensMinutesBeforeShift);
+        var closes = ShiftCalendar.EndUtc(slot).AddMinutes(settings.ClosesMinutesAfterShift);
+        foreach (var date in new[] { slot.ShiftDate, slot.ShiftDate.AddDays(1) })
+        {
+            var utc = ThaiTime.ToUtc(date.ToDateTime(thaiTime));
+            if (utc >= opens && utc <= closes)
+            {
+                return utc;
+            }
+        }
+
+        return null;
+    }
 }
