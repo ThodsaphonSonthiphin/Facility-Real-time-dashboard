@@ -90,6 +90,22 @@ public class InspectionScanEndpointTests
     }
 
     [Fact]
+    public async Task Far_from_the_sign_is_flagged_not_blocked()
+    {
+        using var factory = new FacilityApiFactory();
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+
+        var response = await InspectionApi.ScanAsync(supervisor, InspectionApi.MenRestroom, TestGps.FarLatitude, TestGps.FarLongitude);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var scan = (await response.Content.ReadFromJsonAsync<InspectionScanModel>())!;
+        Assert.False(scan.WithinRadius);
+        Assert.True(scan.DistanceM > 1000);
+        Assert.Empty(await BlockedAsync(factory));
+    }
+
+    [Fact]
     public async Task The_current_rounds_submission_is_offered()
     {
         using var factory = new FacilityApiFactory();
