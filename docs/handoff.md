@@ -23,7 +23,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 2 | Attendance + scan rules | merged (PR #51) |
 | 3 | Admin setup: Areas, points, round windows, sign location, radius, new QR | merged (PR #52) |
 | 4 | Attendance page (D2), alert list (D3), Admin history (D9) | merged (PR #53, `7cd8ba4`) |
-| 5 | Accounts page (D6) + Excel export (D8) | **in progress** on branch `feat/accounts-export`: `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
+| 5 | Accounts page (D6) + Excel export (D8) | done, MySQL check and whole-branch review pending, PR not yet open (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -45,6 +45,7 @@ Plan 4 test results at merge:
 - 2026-10-14 · Task 4 done: PUT /api/admin/accounts/{id}/phone and /password (sessions revoked, nothing secret logged); test that the history never shows a phone, password, hash or QR Token. All tests pass. Next: Task 5 (export rules and query).
 - 2026-10-14 · Task 5 done: ExportRules.MissedRounds and ExportQuery (attendance, submissions, points with windows; date range and building filter). All tests pass. Next: Task 6 (the .xlsx endpoint).
 - 2026-10-14 · Task 6 done: POST /api/admin/export returns .xlsx (การลงเวลา, การส่งงาน with ไม่ได้ทำ rows; text-only cells; EXPORT_EXCEL logged). New package ClosedXML 0.104.2. All tests pass. Next: Task 7 (MySQL check and docs).
+- 2026-10-14 · Task 7 done: a MySQL test of the export queries, the case-insensitive employee ID rule and the deactivation transaction (user change plus session revocation); README and architecture docs. The MySQL test compiles and is skipped without `FACILITY_MYSQL_TEST`; the controller runs it on real MySQL. All other tests pass (421 passed, 4 skipped in API tests; 260 unit tests). Next: the MySQL run, the whole-branch review, then a PR for the owner.
 
 ## Pending work (ask the owner before starting)
 
@@ -68,6 +69,27 @@ Plan 4 test results at merge:
 - A round window cannot end exactly at 19:00 (Day) or 07:00 (Night).
 - A deactivated Area leaves the Dashboard, the scan page and "my work".
 - The attendance page never computes late or early (ADR 0050).
+
+## Rulings made for the owner during plan 5
+
+The 16 planning decisions are at the top of the plan-5 file (`docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md`), which has the detail. In short:
+
+1. Routes are `/api/admin/accounts`, like every Admin page since plan 3.
+2. Role, employee ID and username are fixed once created.
+3. Deactivating a Cleaner frees their Area; activating brings them back with no Area; a Supervisor keeps building and shift; activating answers 409 if the slot is taken.
+4. A deactivated Cleaner cannot be given an Area (400).
+5. Changing a phone or resetting a password revokes all refresh tokens; the log row has no before or after; the same value again changes and logs nothing.
+6. An Admin may reset their own password but cannot deactivate themselves.
+7. On creation a Cleaner's Area is optional, a Supervisor needs building and shift, an Admin has neither.
+8. Input limits: employee ID 1–20 characters, username 3–100, temporary password 8–100, display name 1–150, phone exactly 10 Arabic digits starting with 0.
+9. Fields that do not belong to the role must be omitted (400 otherwise).
+10. The export is `POST /api/admin/export`, returns the `.xlsx`, covers 1–31 shift dates, one building or all, sets `Attendance` and `Submissions`.
+11. No inspection sheet yet; the Supervisor plan adds it.
+12. "ไม่ได้ทำ" rows come from today's setup, for shifts that have ended; a window counts only if it existed when its round started.
+13. The submissions sheet names the Cleaner.
+14. Issue tags are exported as stored.
+15. Every cell is text, with fixed column widths.
+16. Each export writes `EXPORT_EXCEL` with range, building, sets and row counts, and no row content.
 
 ## Rulings made for the owner during plan 4
 
@@ -113,6 +135,7 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - The MySQL root password that was in the plan-2 file is scrubbed in the working copy but **still in git history**, and the repo is public. Change the root password on this laptop.
 - GitGuardian once flagged `LoginTests.cs`. It is a made-up test credential; whoever manages GitGuardian should mark it Resolved as a test credential.
 - The untracked file `docs/roadmap.html` is not part of any plan and has not been touched.
+- Build warning NU1903: `Microsoft.AspNetCore.SignalR.Common` 10.0.12 has a known high-severity advisory. It comes in through `Microsoft.AspNetCore.SignalR.Client` in the ApiTests project (it existed before plan 5, and plan 5 did not cause it). Bump the package when a patched version exists.
 
 ## Working method that works
 
