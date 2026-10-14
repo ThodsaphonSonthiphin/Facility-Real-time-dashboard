@@ -55,6 +55,8 @@ Plan 4 test results at merge:
 
 - 2026-10-14 · Task 1 done: migration SupervisorInspection (inspection GPS and cover; Supervisor covers by building with a one-place CHECK); attendance board and My Work read Area covers only. All tests pass (MySQL skipped). Next: Task 2 (Supervisor rules).
 
+- 2026-10-14 · Task 2 done: BlockReason OtherBuilding and OutsideShift; SupervisorScope.WithoutCover and InspectionRules.Find (latest submission of the current round, nothing while rework is owed). Unit tests pass. Next: Task 3 (the Supervisor's scan).
+
 ## Pending work (ask the owner before starting)
 
 - Supervisor plan: inspection, block reasons `OUTSIDE_SHIFT` / `OTHER_BUILDING`, Supervisor covers, the `INSPECTION_GPS` alert, and the inspection sheet of the Excel export.
