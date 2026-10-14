@@ -89,4 +89,16 @@ public class InspectionRulesTests
         Assert.Equal(1, target.Submission!.Id);
         Assert.Null(target.Refusal);
     }
+
+    [Fact]
+    public void An_earlier_rounds_unfixed_rework_does_not_block_the_current_round()
+    {
+        var target = Find(
+            Thai(16, 30),
+            [Sent(1, 1, 8, 10), Sent(2, 2, 16, 10)],
+            [Inspected(1, InspectionResult.Rework, 8, 20)]);
+
+        Assert.Equal(2, target.Submission!.Id);
+        Assert.Null(target.Refusal);
+    }
 }
