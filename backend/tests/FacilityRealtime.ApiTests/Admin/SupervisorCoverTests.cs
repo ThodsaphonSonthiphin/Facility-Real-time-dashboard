@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.ApiTests.Inspections;
+using FacilityRealtime.Domain.Entities;
+using FacilityRealtime.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.ApiTests.Admin;
@@ -186,7 +188,7 @@ public class SupervisorCoverTests
     [Theory]
     [InlineData("A", "Night")]
     [InlineData("B", "Night")]
-    public async Task A_blocked_scan_of_another_building_or_shift_does_not_fit(string buildingCode, string shift)
+    public async Task A_blocked_scan_of_another_shift_does_not_fit(string buildingCode, string shift)
     {
         using var factory = new FacilityApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
@@ -200,6 +202,87 @@ public class SupervisorCoverTests
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.CoverAssignments.ToListAsync()));
+    }
+
+    [Fact]
+    public async Task A_blocked_scan_at_another_building_does_not_fit()
+    {
+        using var factory = new FacilityApiFactory();
+        await InspectionApi.AddBuildingBAsync(factory);
+        await TestData.AddBuildingAsync(factory, "C");
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+        await InspectionApi.ScanAsync(supervisor, InspectionApi.BuildingBPoint); // blocked at B in the Day shift
+        var blockedId = await AdminSetupApi.ReadAsync(factory, db => db.BlockedScans.Select(b => b.Id).SingleAsync());
+
+        var response = await AssignAsync(factory, admin, "C", "Day", blockedId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.CoverAssignments.ToListAsync()));
+    }
+
+    [Fact]
+    public async Task Another_users_blocked_scan_does_not_fit()
+    {
+        using var factory = new FacilityApiFactory();
+        await InspectionApi.AddBuildingBAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+        await factory.WithDbAsync(async db =>
+        {
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var sign = await db.Signs.SingleAsync(s => s.Code == "BR01-01");
+            db.BlockedScans.Add(new BlockedScan
+            {
+                UserId = cleaner.Id, SignId = sign.Id, Reason = BlockReason.OtherArea, ScannedAt = ThaiClock.At(8, 8, 30).UtcDateTime,
+            });
+            await db.SaveChangesAsync();
+        });
+        var blockedId = await AdminSetupApi.ReadAsync(factory, db => db.BlockedScans.Select(b => b.Id).SingleAsync());
+
+        var response = await AssignAsync(factory, admin, "B", "Day", blockedId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.CoverAssignments.ToListAsync()));
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
+    public async Task An_unknown_building_is_refused()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        var response = await admin.PostAsJsonAsync(Path, new
+        {
+            userId = await AdminSetupApi.UserIdAsync(factory, "S2001"),
+            buildingId = 9999,
+            shiftDate = Oct8,
+            shift = "Day",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task An_admin_cannot_be_given_a_cover()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+        var adminId = await AdminSetupApi.ReadAsync(factory, db => db.Users.Where(u => u.Username == "admin").Select(u => u.Id).SingleAsync());
+
+        var response = await admin.PostAsJsonAsync(Path, new
+        {
+            userId = adminId,
+            areaId = await AdminSetupApi.AreaIdAsync(factory, "AR02"),
+            shiftDate = Oct8,
+            shift = "Day",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
