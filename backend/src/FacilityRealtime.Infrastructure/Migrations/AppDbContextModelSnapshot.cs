@@ -19,6 +19,41 @@ namespace FacilityRealtime.Infrastructure.Migrations
                 .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.AlertReview", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AlertType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("alert_type");
+
+                    b.Property<long>("RecordId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("record_id");
+
+                    b.Property<DateTime>("ReviewedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<int>("ReviewedById")
+                        .HasColumnType("int")
+                        .HasColumnName("reviewed_by_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewedById");
+
+                    b.HasIndex("AlertType", "RecordId")
+                        .IsUnique();
+
+                    b.ToTable("alert_reviews", (string)null);
+                });
+
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.Area", b =>
                 {
                     b.Property<int>("Id")
@@ -817,6 +852,15 @@ namespace FacilityRealtime.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("ck_users_login_name", "(role = 'ADMIN' AND username IS NOT NULL) OR (role <> 'ADMIN' AND employee_id IS NOT NULL)");
                         });
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.AlertReview", b =>
+                {
+                    b.HasOne("FacilityRealtime.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.Area", b =>

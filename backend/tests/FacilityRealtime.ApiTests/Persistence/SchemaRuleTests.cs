@@ -249,4 +249,23 @@ public class SchemaRuleTests
         Assert.Equal("COVER_ASSIGN", entry!.Action);
         Assert.Equal(areaId, JsonDocument.Parse(entry.AfterJson!).RootElement.GetProperty("AreaId").GetInt32());
     }
+
+    [Fact]
+    public async Task An_alert_is_reviewed_once()
+    {
+        using var factory = new FacilityApiFactory();
+
+        await factory.WithDbAsync(async db =>
+        {
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            // The same id in two different tables is two different alerts
+            db.AlertReviews.Add(new AlertReview { AlertType = AlertType.BlockedScan, RecordId = 7, ReviewedById = admin.Id, ReviewedAt = DateTime.UtcNow });
+            db.AlertReviews.Add(new AlertReview { AlertType = AlertType.AttendanceGps, RecordId = 7, ReviewedById = admin.Id, ReviewedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+
+            db.AlertReviews.Add(new AlertReview { AlertType = AlertType.BlockedScan, RecordId = 7, ReviewedById = admin.Id, ReviewedAt = DateTime.UtcNow });
+
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        });
+    }
 }
