@@ -13,6 +13,9 @@ public record InspectionScanModel(
 
 public record BlockedModel(string Message, string AreaCode, string AreaName, string Reason, string BuildingCode);
 
+public record InspectionCreatedModel(
+    long InspectionId, int ServicePointId, long ScanRecordId, string Result, string NewPointStatus, int? DistanceM, bool? WithinRadius, DateTime InspectedAt);
+
 /// <summary>
 /// The Supervisor's phone. Seeded S2001 (phone 0820000001) is the Day Supervisor of building A, which holds AR01 (both
 /// restrooms) and AR02 (the meeting room). Log in before moving the clock.
@@ -47,5 +50,25 @@ public static class InspectionApi
         await TestData.AddBuildingAsync(factory, "B");
         await TestData.AddAreaAsync(factory, "BR01", "B");
         await TestData.AddPointAsync(factory, "BR01", "BR01-01", BuildingBPoint);
+    }
+
+    public static Task<HttpResponseMessage> InspectAsync(
+        HttpClient client,
+        long? scanRecordId,
+        string result,
+        string? defect = null,
+        string qrToken = MenRestroom,
+        double latitude = TestGps.NearLatitude,
+        double longitude = TestGps.NearLongitude,
+        double accuracyM = 10) =>
+        client.PostAsJsonAsync("/api/inspections", new { qrToken, scanRecordId, result, defect, latitude, longitude, accuracyM });
+
+    /// <summary>Records a verdict and asserts 201.</summary>
+    public static async Task<InspectionCreatedModel> InspectedAsync(
+        HttpClient client, long scanRecordId, string result, string? defect = null, string qrToken = MenRestroom)
+    {
+        var response = await InspectAsync(client, scanRecordId, result, defect, qrToken);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<InspectionCreatedModel>())!;
     }
 }

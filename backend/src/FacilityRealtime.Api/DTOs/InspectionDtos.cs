@@ -1,3 +1,4 @@
+using FacilityRealtime.Application.Rounds;
 using FacilityRealtime.Domain.Enums;
 
 namespace FacilityRealtime.Api.DTOs;
@@ -16,3 +17,21 @@ public record InspectionSubmissionDto(
 /// </summary>
 public record InspectionScanDto(
     PointStatusDto Point, InspectionSubmissionDto? Submission, string? Refusal, bool IsCover, int? DistanceM, bool? WithinRadius);
+
+/// <summary>
+/// facility-0029. ScanRecordId is the submission the scan showed (InspectionScanDto.Submission.Id). Result: Passed = สะอาด,
+/// Rework = ไม่สะอาด. Defect is required with Rework and must be left out with Passed.
+/// </summary>
+public record CreateInspectionRequest(
+    string? QrToken, long? ScanRecordId, InspectionResult? Result, string? Defect, double? Latitude, double? Longitude, double? AccuracyM);
+
+/// <summary>WithinRadius false = Geofence Flag (the INSPECTION_GPS alert); null = the sign has no coordinates yet.</summary>
+public record InspectionCreatedResponse(
+    long InspectionId,
+    int ServicePointId,
+    long ScanRecordId,
+    InspectionResult Result,
+    PointStatus NewPointStatus,
+    int? DistanceM,
+    bool? WithinRadius,
+    DateTime InspectedAt);

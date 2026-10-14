@@ -1,12 +1,14 @@
 using System.Security.Claims;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
+using FacilityRealtime.Api.Hubs;
 using FacilityRealtime.Application.Geo;
 using FacilityRealtime.Application.Inspections;
 using FacilityRealtime.Application.Shifts;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
 using FacilityRealtime.Infrastructure.Persistence;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.Api.Endpoints;
@@ -23,6 +25,7 @@ public static class InspectionEndpoints
     public static IEndpointRouteBuilder MapInspectionEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("/api/inspections/scan", ScanAsync).RequireAuthorization();
+        app.MapPost("/api/inspections", CreateAsync).RequireAuthorization();
         return app;
     }
 
@@ -124,4 +127,79 @@ public static class InspectionEndpoints
         InspectionRefusal.AwaitingRework => "รอแม่บ้านส่งงานแก้ ยังไม่มีงานใหม่ให้ตรวจ",
         _ => null,
     };
+
+    /// <summary>The verdict. Every check of the scan runs again, so a direct call is blocked the same way.</summary>
+    private static async Task<IResult> CreateAsync(
+        CreateInspectionRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, IHubContext<ScanHub> hub)
+    {
+        var (visit, stop) = await VisitAsync(principal, db, clock, request.QrToken, request.Latitude, request.Longitude, request.AccuracyM);
+        if (visit is null)
+        {
+            return stop!;
+        }
+
+        if (request.Result is not { } result || !Enum.IsDefined(result))
+        {
+            return Bad("ต้องเลือกผลการตรวจ: สะอาด หรือ ไม่สะอาด");
+        }
+
+        var defect = string.IsNullOrWhiteSpace(request.Defect) ? null : request.Defect.Trim();
+        if (result == InspectionResult.Rework && defect is null)
+        {
+            return Bad("เลือกไม่สะอาดต้องระบุข้อบกพร่อง");
+        }
+
+        if (result == InspectionResult.Passed && defect is not null)
+        {
+            return Bad("ข้อบกพร่องใส่ได้เฉพาะเมื่อเลือกไม่สะอาด");
+        }
+
+        if (defect is { Length: > InspectionRules.MaxDefectLength })
+        {
+            return Bad($"ข้อบกพร่องยาวได้ไม่เกิน {InspectionRules.MaxDefectLength} ตัวอักษร");
+        }
+
+        if (request.ScanRecordId is not { } scanRecordId)
+        {
+            return Bad("ต้องระบุงานที่ตรวจ (scanRecordId จากการสแกน)");
+        }
+
+        var target = await TargetAsync(db, visit);
+        if (target.Refusal is { } refusal)
+        {
+            return ApiResults.Message(StatusCodes.Status409Conflict, RefusalText(refusal)!);
+        }
+
+        // Decision 2: never judge work the Supervisor was not shown
+        if (target.Submission!.Id != scanRecordId)
+        {
+            return ApiResults.Message(StatusCodes.Status409Conflict, "มีการส่งงานใหม่หลังจากที่คุณสแกน ให้สแกนป้ายอีกครั้ง");
+        }
+
+        var inspection = new InspectionRecord
+        {
+            ScanRecordId = scanRecordId,
+            ServicePointId = visit.Point.Id,
+            SupervisorId = visit.Supervisor.Id,
+            Result = result,
+            Defect = defect,
+            CoverAssignmentId = visit.Cover?.Id,
+            InspectedAt = visit.Now,
+        };
+        inspection.StampGps(visit.Gps, visit.Sign);
+        db.InspectionRecords.Add(inspection);
+        await db.SaveChangesAsync();
+
+        // The Supervisor's shift is the clock's, which is also the Dashboard's
+        var board = (await PointBoardQuery.LoadAsync(db, visit.Now, visit.Point.Id)).Single();
+        await hub.Clients.Group(ScanHub.AdminGroup).SendAsync("InspectionRecorded", PointDtoMapper.ToDto(board));
+
+        return Results.Created(
+            $"/api/inspections/{inspection.Id}",
+            new InspectionCreatedResponse(
+                inspection.Id, visit.Point.Id, scanRecordId, result, board.Status.Status,
+                inspection.DistanceM, inspection.WithinRadius, DateTime.SpecifyKind(visit.Now, DateTimeKind.Utc)));
+    }
+
+    private static IResult Bad(string message) => ApiResults.Message(StatusCodes.Status400BadRequest, message);
 }
