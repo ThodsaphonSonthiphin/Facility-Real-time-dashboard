@@ -23,7 +23,7 @@ public static class CoverAssignmentEndpoints
         return app;
     }
 
-    private static async Task<IResult> AssignAsync(AssignCoverRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> AssignAsync(AssignCoverRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, AttendanceSettings settings)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -93,6 +93,12 @@ public static class CoverAssignmentEndpoints
             if (blocked.UserId != cleaner.Id || signAreaId != area.Id)
             {
                 return ApiResults.Message(StatusCodes.Status400BadRequest, "การสแกนที่ถูกบล็อกนี้ไม่ใช่ของแม่บ้านคนนี้ที่ Area นี้");
+            }
+
+            // A scan from another shift is no reason to cover this one
+            if (AttendanceCalendar.SlotFor(shift, blocked.ScannedAt, settings) != slot)
+            {
+                return ApiResults.Message(StatusCodes.Status400BadRequest, "การสแกนที่ถูกบล็อกนี้ไม่ได้อยู่ในกะนี้");
             }
         }
 

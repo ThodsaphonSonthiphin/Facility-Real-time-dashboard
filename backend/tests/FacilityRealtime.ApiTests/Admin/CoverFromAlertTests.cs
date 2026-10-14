@@ -51,8 +51,18 @@ public class CoverFromAlertTests
             await db.SaveChangesAsync();
         });
 
-    private static Task<HttpResponseMessage> AssignAsync(HttpClient admin, int userId, int areaId, long? blockedScanId) =>
-        admin.PostAsJsonAsync("/api/admin/cover-assignments", new { userId, areaId, shiftDate = Oct8, shift = "Day", blockedScanId });
+    /// <summary>A Blocked Scan at AR02's check-in sign written straight to the database, for a Cleaner who cannot log in.</summary>
+    private static Task AddBlockedAtAr02Async(FacilityApiFactory factory, string employeeId, DateTimeOffset at) =>
+        factory.WithDbAsync(async db =>
+        {
+            var user = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
+            var sign = await db.Signs.SingleAsync(s => s.QrToken == "token-checkin-ar02");
+            db.BlockedScans.Add(new BlockedScan { UserId = user.Id, SignId = sign.Id, Reason = BlockReason.OtherArea, ScannedAt = at.UtcDateTime });
+            await db.SaveChangesAsync();
+        });
+
+    private static Task<HttpResponseMessage> AssignAsync(HttpClient admin, int userId, int areaId, long? blockedScanId, DateOnly? shiftDate = null) =>
+        admin.PostAsJsonAsync("/api/admin/cover-assignments", new { userId, areaId, shiftDate = shiftDate ?? Oct8, shift = "Day", blockedScanId });
 
     private static async Task<List<CoverCandidateModel>> CandidatesAsync(HttpClient admin, string query)
     {
@@ -147,6 +157,124 @@ public class CoverFromAlertTests
 
         await TestData.AddCoverAsync(factory, "E1009", "AR02", Oct8, Shift.Day);
         Assert.Equal(new[] { "E1001" }, (await CandidatesAsync(admin, query)).Select(c => c.EmployeeId));
+    }
+
+    [Fact]
+    public async Task The_blocked_scan_must_belong_to_the_cleaner_being_assigned()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await AddAreaAsync(factory, "AR03");
+        var e1009 = await TestData.AddCleanerAsync(factory, "E1009", Shift.Day, "AR03");
+        var blockedId = await BlockedAtAr02Async(factory, cleaner);   // E1001's scan
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 30));
+
+        var response = await AssignAsync(admin, e1009, await AdminSetupApi.AreaIdAsync(factory, "AR02"), blockedId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.CoverAssignments.ToListAsync()));
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
+    public async Task The_blocked_scan_must_be_in_the_shift_of_the_cover()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var blockedId = await BlockedAtAr02Async(factory, cleaner);   // Oct 8 Day
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 30));
+
+        var response = await AssignAsync(
+            admin, await AdminSetupApi.UserIdAsync(factory, "E1001"), await AdminSetupApi.AreaIdAsync(factory, "AR02"), blockedId, new DateOnly(2026, 10, 9));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.CoverAssignments.ToListAsync()));
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
+    public async Task Candidates_leave_out_a_deactivated_cleaner()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await AddAreaAsync(factory, "AR03");
+        await TestData.AddCleanerAsync(factory, "E1009", Shift.Day, "AR03");
+        var query = $"?areaId={await AdminSetupApi.AreaIdAsync(factory, "AR02")}&shiftDate=2026-10-08&shift=Day";
+        Assert.Contains("E1009", (await CandidatesAsync(admin, query)).Select(c => c.EmployeeId));
+
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.EmployeeId == "E1009")).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        Assert.DoesNotContain("E1009", (await CandidatesAsync(admin, query)).Select(c => c.EmployeeId));
+    }
+
+    [Fact]
+    public async Task Candidates_answer_404_for_a_deactivated_area()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Areas.SingleAsync(a => a.Code == "AR02")).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await admin.GetAsync($"{CandidatesPath}?areaId={ar02}&shiftDate=2026-10-08&shift=Day");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_scan_from_another_shift_does_not_count_as_scanning_this_area()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await AddAreaAsync(factory, "AR03");
+        await TestData.AddCleanerAsync(factory, "E1009", Shift.Day, "AR03");
+        await AddBlockedAtAr02Async(factory, "E1009", ThaiClock.At(7, 10, 0));   // yesterday's Day shift
+        var query = $"?areaId={await AdminSetupApi.AreaIdAsync(factory, "AR02")}&shiftDate=2026-10-08&shift=Day";
+
+        var candidate = Assert.Single(await CandidatesAsync(admin, query), c => c.EmployeeId == "E1009");
+
+        Assert.Null(candidate.ScannedThisAreaAt);
+    }
+
+    [Fact]
+    public async Task Candidates_are_ordered_latest_scan_then_earliest_check_in_then_employee_id()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        foreach (var code in new[] { "AR03", "AR04", "AR05", "AR06", "AR07", "AR08" })
+        {
+            await AddAreaAsync(factory, code);
+        }
+
+        // Added in an order that differs from the expected one, so only the rules can produce it
+        await TestData.AddCleanerAsync(factory, "E1011", Shift.Day, "AR03");   // scanned 08:00, checked in 06:30
+        await TestData.AddCleanerAsync(factory, "E1012", Shift.Day, "AR04");   // scanned 09:00
+        await TestData.AddCleanerAsync(factory, "E1013", Shift.Day, "AR05");   // checked in 06:58
+        await TestData.AddCleanerAsync(factory, "E1014", Shift.Day, "AR06");   // checked in 06:40
+        await TestData.AddCleanerAsync(factory, "E1016", Shift.Day, "AR07");   // neither
+        await TestData.AddCleanerAsync(factory, "E1015", Shift.Day, "AR08");   // neither
+        await AddBlockedAtAr02Async(factory, "E1011", ThaiClock.At(8, 8, 0));
+        await AddBlockedAtAr02Async(factory, "E1012", ThaiClock.At(8, 9, 0));
+        await AddShiftInAsync(factory, "E1011", ThaiClock.At(8, 6, 30));
+        await AddShiftInAsync(factory, "E1013", ThaiClock.At(8, 6, 58));
+        await AddShiftInAsync(factory, "E1014", ThaiClock.At(8, 6, 40));
+        var query = $"?areaId={await AdminSetupApi.AreaIdAsync(factory, "AR02")}&shiftDate=2026-10-08&shift=Day";
+
+        var candidates = await CandidatesAsync(admin, query);
+
+        // E1001 is the seeded AR01 Cleaner with neither a scan nor a check-in
+        Assert.Equal(
+            new[] { "E1012", "E1011", "E1014", "E1013", "E1001", "E1015", "E1016" },
+            candidates.Select(c => c.EmployeeId));
     }
 
     [Theory]
