@@ -99,6 +99,7 @@ app.MapServicePointEndpoints();
 app.MapScanRecordEndpoints();
 app.MapCoverAssignmentEndpoints();
 app.MapMyWorkEndpoints();
+app.MapInspectionEndpoints();
 app.MapAdminAreaEndpoints();
 app.MapAdminPointEndpoints();
 app.MapAdminSignEndpoints();

@@ -74,7 +74,7 @@ public static class PointDtoMapper
 
     private static RoundWindowDto? ToDto(RoundWindow? round) => round is null ? null : new RoundWindowDto(round.Id, round.Start, round.End);
 
-    private static IReadOnlyList<string> SplitTags(string? tags) =>
+    public static IReadOnlyList<string> SplitTags(string? tags) =>
         string.IsNullOrEmpty(tags) ? [] : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     /// <summary>The database returns Unspecified; marking it UTC makes the JSON end in "Z" so browsers convert it to Thai time.</summary>

@@ -48,6 +48,14 @@ internal static class ThaiLabels
         _ => "นอกรอบ",
     };
 
+    /// <summary>What the phone says about a Blocked Scan (facility-0041, 0048).</summary>
+    public static string BlockedMessage(BlockReason reason) => reason switch
+    {
+        BlockReason.OtherBuilding => "จุดนี้ไม่ได้อยู่ในตึกของคุณ",
+        BlockReason.OutsideShift => "ตอนนี้ไม่ใช่กะของคุณ ตรวจได้เฉพาะในกะของตัวเอง",
+        _ => "ป้ายนี้ไม่ใช่ Area ของคุณ",
+    };
+
     /// <summary>facility-0053: distance and verdict only, never coordinates.</summary>
     public static string Gps(short? distanceM, bool? withinRadius) => withinRadius switch
     {

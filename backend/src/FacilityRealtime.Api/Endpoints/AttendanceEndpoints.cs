@@ -65,7 +65,7 @@ public static class AttendanceEndpoints
         // facility-0041: decided by the sign's QR Token; a Cleaner covering another Area still checks in at their own sign
         if (area.Id != user.AreaId)
         {
-            return await BlockedScans.BlockAsync(db, user, sign, area, gps, now);
+            return await BlockedScans.BlockAsync(db, user, sign, area, BlockReason.OtherArea, gps, now);
         }
 
         var slot = user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null;

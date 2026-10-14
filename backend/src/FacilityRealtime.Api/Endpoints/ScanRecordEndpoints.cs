@@ -86,7 +86,7 @@ public static class ScanRecordEndpoints
                     c.UserId == user.Id && c.AreaId == point.AreaId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null);
             if (cover is null)
             {
-                return await BlockedScans.BlockAsync(db, user, sign, point.Area!, gps, now);
+                return await BlockedScans.BlockAsync(db, user, sign, point.Area!, BlockReason.OtherArea, gps, now);
             }
         }
 

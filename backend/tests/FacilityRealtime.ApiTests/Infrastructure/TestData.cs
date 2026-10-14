@@ -1,8 +1,10 @@
+using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Application.Rounds;
 using FacilityRealtime.Application.Shifts;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FacilityRealtime.ApiTests.Infrastructure;
 
@@ -205,4 +207,91 @@ public static class TestData
             await db.PointRoundWindows.ExecuteUpdateAsync(s => s.SetProperty(w => w.CreatedAt, longAgo));
             await db.ServicePoints.ExecuteUpdateAsync(s => s.SetProperty(p => p.CreatedAt, longAgo));
         });
+
+    /// <summary>
+    /// A point in <paramref name="areaCode"/> whose sign stands at TestGps.Near (radius 50 m), with rounds Day 08:00-10:00
+    /// and Night 20:00-22:00, all created on 1 October so they existed on every test date.
+    /// </summary>
+    public static async Task<int> AddPointAsync(FacilityApiFactory factory, string areaCode, string signCode, string qrToken)
+    {
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var area = await db.Areas.SingleAsync(a => a.Code == areaCode);
+            var longAgo = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+            var point = new ServicePoint { AreaId = area.Id, Name = $"จุด {signCode}", SortOrder = 1, CreatedAt = longAgo };
+            db.Signs.Add(new Sign
+            {
+                AreaId = area.Id,
+                ServicePoint = point,
+                Code = signCode,
+                QrToken = qrToken,
+                QrIssuedAt = longAgo,
+                Latitude = 13.756300m,
+                Longitude = 100.501800m,
+                LocationAccuracyM = 10,
+                LocationSource = LocationSource.Site,
+                LocatedAt = longAgo,
+            });
+            db.PointRoundWindows.AddRange(
+                new PointRoundWindow { ServicePoint = point, Shift = Shift.Day, StartTime = new TimeOnly(8, 0), EndTime = new TimeOnly(10, 0), CreatedAt = longAgo },
+                new PointRoundWindow { ServicePoint = point, Shift = Shift.Night, StartTime = new TimeOnly(20, 0), EndTime = new TimeOnly(22, 0), CreatedAt = longAgo });
+            await db.SaveChangesAsync();
+            id = point.Id;
+        });
+        return id;
+    }
+
+    /// <summary>An active Supervisor of a building and shift who can log in with <paramref name="phone"/>.</summary>
+    public static async Task<int> AddSupervisorAsync(FacilityApiFactory factory, string employeeId, string phone, string buildingCode, Shift shift)
+    {
+        var hasher = factory.Services.GetRequiredService<IPasswordHasher>();
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var building = await db.Buildings.SingleAsync(b => b.Code == buildingCode);
+            var supervisor = new User
+            {
+                Role = UserRole.Supervisor,
+                EmployeeId = employeeId,
+                DisplayName = $"หัวหน้าทดสอบ {employeeId}",
+                SecretHash = hasher.Hash(PhoneNumber.Normalize(phone)),
+                BuildingId = building.Id,
+                Shift = shift,
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Users.Add(supervisor);
+            await db.SaveChangesAsync();
+            id = supervisor.Id;
+        });
+        return id;
+    }
+
+    /// <summary>A Supervisor's Cover Assignment for a building, written straight to the database, assigned by the seeded Admin.</summary>
+    public static async Task<int> AddSupervisorCoverAsync(
+        FacilityApiFactory factory, string employeeId, string buildingCode, DateOnly shiftDate, Shift shift, bool cancelled = false)
+    {
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
+            var building = await db.Buildings.SingleAsync(b => b.Code == buildingCode);
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            var cover = new CoverAssignment
+            {
+                UserId = supervisor.Id,
+                BuildingId = building.Id,
+                ShiftDate = shiftDate,
+                Shift = shift,
+                AssignedById = admin.Id,
+                AssignedAt = DateTime.UtcNow,
+                CancelledById = cancelled ? admin.Id : null,
+                CancelledAt = cancelled ? DateTime.UtcNow : null,
+            };
+            db.CoverAssignments.Add(cover);
+            await db.SaveChangesAsync();
+            id = cover.Id;
+        });
+        return id;
+    }
 }
