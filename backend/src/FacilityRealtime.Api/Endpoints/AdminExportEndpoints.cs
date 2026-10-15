@@ -3,6 +3,8 @@ using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
 using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Export;
+using FacilityRealtime.Application.Inspections;
+using FacilityRealtime.Application.Rounds;
 using FacilityRealtime.Infrastructure.Export;
 using FacilityRealtime.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace FacilityRealtime.Api.Endpoints;
 
 /// <summary>
-/// Wireframe D8, facility-0053: the Admin downloads attendance and submissions for up to 31 shift dates as one .xlsx.
+/// Wireframe D8, facility-0053: the Admin downloads attendance, submissions and inspections for up to 31 shift dates as one .xlsx.
 /// POST because each export is logged (facility-0051). The file holds no coordinates, phone, QR Token or password.
 /// </summary>
 public static class AdminExportEndpoints
@@ -63,23 +65,36 @@ public static class AdminExportEndpoints
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
-        var sheets = new List<ExcelSheet>();
+        var chosen = new List<(ExportSet Set, ExcelSheet Sheet)>();
         if (sets.Contains(ExportSet.Attendance))
         {
-            sheets.Add(ExportSheets.Attendance(await ExportQuery.LoadAttendanceAsync(db, first, last, request.BuildingId)));
+            chosen.Add((ExportSet.Attendance, ExportSheets.Attendance(await ExportQuery.LoadAttendanceAsync(db, first, last, request.BuildingId))));
         }
 
         if (sets.Contains(ExportSet.Submissions))
         {
-            sheets.Add(ExportSheets.Submissions(
+            chosen.Add((ExportSet.Submissions, ExportSheets.Submissions(
                 await ExportQuery.LoadSubmissionsAsync(db, first, last, request.BuildingId),
                 await ExportQuery.LoadPointsAsync(db, request.BuildingId),
                 first,
                 last,
                 now,
-                settings.ClosesMinutesAfterShift));
+                settings.ClosesMinutesAfterShift)));
         }
 
+        if (sets.Contains(ExportSet.Inspections))
+        {
+            var inspections = await InspectionHistoryQuery.LoadInspectionsAsync(db, first, last, request.BuildingId);
+            var rounds = InspectionHistory.FinishedRounds(
+                await InspectionHistoryQuery.LoadRoundSubmissionsAsync(db, first, last, request.BuildingId),
+                inspections.Select(i => new InspectionFact(i.ScanRecordId, i.Result, i.InspectedAtUtc)).ToList(),
+                now,
+                settings.ClosesMinutesAfterShift);
+            chosen.Add((ExportSet.Inspections, ExportSheets.Inspections(
+                inspections, await InspectionHistoryQuery.LoadPointPlacesAsync(db, request.BuildingId), rounds)));
+        }
+
+        var sheets = chosen.Select(c => c.Sheet).ToList();
         var file = ExcelWorkbook.Write(sheets);
         var from = ThaiLabels.Date(first);
         var to = ThaiLabels.Date(last);
@@ -92,7 +107,7 @@ public static class AdminExportEndpoints
                 From = from,
                 To = to,
                 BuildingId = request.BuildingId,
-                Sets = sheets.Select(s => s.Name == ExportSheets.AttendanceName ? nameof(ExportSet.Attendance) : nameof(ExportSet.Submissions)).ToList(),
+                Sets = chosen.Select(c => c.Set.ToString()).ToList(),
                 Rows = sheets.Select(s => s.Rows.Count).ToList(),
             });
         await db.SaveChangesAsync();

@@ -3,11 +3,12 @@ using FacilityRealtime.Application.Shifts;
 
 namespace FacilityRealtime.Application.Export;
 
-/// <summary>The sets the Admin ticks on wireframe D8. The inspection set comes with the Supervisor plan.</summary>
+/// <summary>The sets the Admin ticks on wireframe D8 (facility-0053).</summary>
 public enum ExportSet
 {
     Attendance,
     Submissions,
+    Inspections,
 }
 
 /// <summary>facility-0053: Excel by date range instead of report pages.</summary>

@@ -1,6 +1,7 @@
 using System.Globalization;
 using FacilityRealtime.Application.Alerts;
 using FacilityRealtime.Application.Common;
+using FacilityRealtime.Application.Rounds;
 using FacilityRealtime.Domain.Enums;
 
 namespace FacilityRealtime.Api.Endpoints;
@@ -55,6 +56,17 @@ internal static class ThaiLabels
         BlockReason.OtherBuilding => "จุดนี้ไม่ได้อยู่ในตึกของคุณ",
         BlockReason.OutsideShift => "ตอนนี้ไม่ใช่กะของคุณ ตรวจได้เฉพาะในกะของตัวเอง",
         _ => "ป้ายนี้ไม่ใช่ Area ของคุณ",
+    };
+
+    /// <summary>facility-0029: ผล of an inspection on the export, as the Supervisor's buttons say it.</summary>
+    public static string InspectionResultName(InspectionResult result) => result == InspectionResult.Passed ? "สะอาด" : "ต้องแก้ไข";
+
+    /// <summary>facility-0047 rule 5: a finished round's line on the inspection sheet.</summary>
+    public static string RoundOutcomeName(RoundOutcome outcome) => outcome switch
+    {
+        RoundOutcome.NotInspected => "ไม่ได้ตรวจ",
+        RoundOutcome.NotReworked => "ไม่ได้แก้",
+        _ => "ตรวจผ่าน",
     };
 
     /// <summary>facility-0053: distance and verdict only, never coordinates.</summary>

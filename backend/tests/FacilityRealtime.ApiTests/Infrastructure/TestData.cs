@@ -57,12 +57,20 @@ public static class TestData
         return id;
     }
 
-    /// <summary>An Inspection Record by Supervisor S2001.</summary>
-    public static Task AddInspectionAsync(FacilityApiFactory factory, long scanRecordId, InspectionResult result, DateTimeOffset at) =>
+    /// <summary>An Inspection Record, by Supervisor S2001 unless another is named. GPS and cover stay empty unless given.</summary>
+    public static Task AddInspectionAsync(
+        FacilityApiFactory factory,
+        long scanRecordId,
+        InspectionResult result,
+        DateTimeOffset at,
+        string supervisorEmployeeId = "S2001",
+        bool? withinRadius = null,
+        short? distanceM = null,
+        int? coverAssignmentId = null) =>
         factory.WithDbAsync(async db =>
         {
             var scan = await db.ScanRecords.SingleAsync(s => s.Id == scanRecordId);
-            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "S2001");
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == supervisorEmployeeId);
             db.InspectionRecords.Add(new InspectionRecord
             {
                 ScanRecordId = scan.Id,
@@ -71,6 +79,9 @@ public static class TestData
                 Result = result,
                 Defect = result == InspectionResult.Rework ? "พื้นยังเปียก" : null,
                 InspectedAt = at.UtcDateTime,
+                WithinRadius = withinRadius,
+                DistanceM = distanceM,
+                CoverAssignmentId = coverAssignmentId,
             });
             await db.SaveChangesAsync();
         });
