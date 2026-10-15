@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { area, cleanerSession, myWork, notCheckedIn, outsideShift, point } from '../../test/cleanerFixtures';
 import { fakeServer } from '../../test/fakeServer';
@@ -112,6 +112,18 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: 'อัปเดต' }));
+
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2));
+  });
+
+  it('asks the server again each time the page opens (facility-0052)', async () => {
+    const server = serveMyWork(myWork());
+    const { router } = await renderApp('/my-work');
+    await screen.findByRole('region', { name: 'Area ทดลอง (Area ของฉัน)' });
+    expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(1);
+
+    await act(() => router.navigate('/nowhere'));
+    await act(() => router.navigate('/my-work'));
 
     await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2));
   });

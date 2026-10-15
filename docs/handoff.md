@@ -101,7 +101,7 @@ Plan 4 test results at merge:
 
 ## Task log (plan 8)
 
-- 2026-10-15 · Task 1 done: My Work (M9, M14): own Area then covered Areas, most urgent first, summary tiles, rework defect, issue tag, no link to the scan page; asks the server on open and on "อัปเดต". Shared Cleaner types, GET /api/my-work query, Thai time helpers, status chip and colour tokens. Frontend tests 60 passed. Next: Task 2 (check-in page).
+- 2026-10-15 · Task 1 done: My Work (M9, M14): own Area then covered Areas, most urgent first, summary tiles, rework defect, issue tag, no link to the scan page; asks the server on open and on "อัปเดต". Shared Cleaner types, GET /api/my-work query, Thai time helpers, status chip and colour tokens. Frontend tests 61 passed. Next: Task 2 (check-in page).
 
 ## Pending work (ask the owner before starting)
 
