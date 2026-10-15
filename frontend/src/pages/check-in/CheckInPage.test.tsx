@@ -232,4 +232,35 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(router.state.location.pathname).toBe('/login');
     expect(router.state.location.state).toMatchObject({ from: { pathname: SIGN } });
   });
+
+  it('no fix from the phone says so and "ลองอีกครั้ง" records (M2, facility-0036)', async () => {
+    fakeGps('unavailable', nearSign);
+    serve({
+      'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['BreakOut', 'ShiftOut'], 'Recorded') }),
+    });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
+
+    expect(await screen.findByRole('heading', { name: 'อ่านตำแหน่งไม่ได้' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByText('บันทึกเวลาเข้างานแล้ว 06:52')).toBeInTheDocument();
+  });
+
+  it('one send at a time: while a press waits for the GPS, every button is disabled', async () => {
+    const gps = fakeGps('pending');
+    const server = serve({}, myWork(onDuty));
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'ออกพัก' }));
+
+    expect(await screen.findByRole('button', { name: 'กำลังบันทึก...' })).toBeDisabled();
+    const other = screen.getByRole('button', { name: 'เลิกงาน' });
+    expect(other).toBeDisabled();
+    await user.click(other);
+
+    expect(gps.calls).toBe(1);
+    expect(server.calls.some((c) => c.path === '/api/attendance')).toBe(false);
+  });
 });

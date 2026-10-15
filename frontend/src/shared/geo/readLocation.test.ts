@@ -26,4 +26,12 @@ describe('readLocation (facility-0036, 0037)', () => {
     await expect(readLocation()).resolves.toEqual({ kind: 'insecure' });
     expect(gps.calls).toBe(0);
   });
+
+  it('every reading is fresh and high-accuracy (facility-0037)', async () => {
+    const gps = fakeGps(nearSign);
+
+    await readLocation();
+
+    expect(gps.lastOptions).toEqual({ enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 });
+  });
 });

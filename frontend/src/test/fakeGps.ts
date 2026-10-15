@@ -2,19 +2,23 @@
 export const nearSign = { latitude: 13.7563, longitude: 100.5018, accuracy: 12 };
 export const farFromSign = { latitude: 13.757, longitude: 100.5018, accuracy: 40 };
 
-export type FakeGpsAnswer = typeof nearSign | 'denied' | 'unavailable';
+export type FakeGpsAnswer = typeof nearSign | 'denied' | 'unavailable' | 'pending';
 
 /**
  * Gives the page a navigator.geolocation (jsdom has none). Each getCurrentPosition takes the next answer; the last
- * one repeats. Like fetch, it is a browser API, not our code (regression-net #32). test/setup.ts removes it after
+ * one repeats. 'pending' never answers. `lastOptions` is the options of the latest reading. Like fetch, it is a browser API, not our code (regression-net #32). test/setup.ts removes it after
  * each test. `calls` counts the readings asked for.
  */
 export function fakeGps(...answers: FakeGpsAnswer[]) {
-  const state = { calls: 0 };
+  const state: { calls: number; lastOptions?: PositionOptions } = { calls: 0 };
   const geolocation = {
-    getCurrentPosition(onFix: PositionCallback, onError?: PositionErrorCallback | null) {
+    getCurrentPosition(onFix: PositionCallback, onError?: PositionErrorCallback | null, options?: PositionOptions) {
       const answer = answers[Math.min(state.calls, answers.length - 1)];
       state.calls += 1;
+      state.lastOptions = options;
+      if (answer === 'pending') {
+        return;
+      }
       setTimeout(() => {
         if (answer === 'denied' || answer === 'unavailable') {
           const code = answer === 'denied' ? 1 : 2;
