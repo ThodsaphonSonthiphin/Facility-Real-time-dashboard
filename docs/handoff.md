@@ -99,6 +99,10 @@ Plan 4 test results at merge:
 
 - 2026-10-15 · Task 6 Step 9 done (real run): the API on a throwaway database `facility_frontend_test` served the built app; curl checks passed (health, `/login`, `/scan/<x>` gets the app, unknown `/api` is 404); a script logged in as the seed Cleaner, Supervisor and Admin, with refresh and logout behaving as expected and a wrong phone refused. The owner checked the pages on a phone and reports everything works. Build output and the throwaway database were removed. Plan 7 is complete on branch `feat/frontend-foundation` (not pushed, no PR). Frontend tests 47 passed; unit 299; API 531 + 5 skipped. Next: the owner's OK for the push and PR, then frontend plan 8 (Cleaner phone).
 
+## Task log (plan 8)
+
+- 2026-10-15 · Task 1 done: My Work (M9, M14): own Area then covered Areas, most urgent first, summary tiles, rework defect, issue tag, no link to the scan page; asks the server on open and on "อัปเดต". Shared Cleaner types, GET /api/my-work query, Thai time helpers, status chip and colour tokens. Frontend tests 60 passed. Next: Task 2 (check-in page).
+
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).

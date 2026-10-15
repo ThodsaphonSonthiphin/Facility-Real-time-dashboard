@@ -17,6 +17,14 @@
   --color-error-bg: #fdecea;
   --color-error-border: #e2a39b;
   --color-error-text: #8a1c12;
+  --color-warn-bg: #fff4e5;
+  --color-warn-border: #e3b776;
+  --color-warn-text: #7a4300;
+  --color-status-rework: #b42318;
+  --color-status-overdue: #a85a00;
+  --color-status-pending: #4a6378;
+  --color-status-passed: #2e6e4a;
+  --color-status-idle: #5f696b;
 
   --radius-sm: 8px;
   --radius-md: 10px;

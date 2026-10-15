@@ -23,3 +23,113 @@ export interface AuthResponse {
 
 /** facility-0054: Cleaners and Supervisors send employeeId + phone; the Admin sends username + password. */
 export type LoginRequest = { employeeId: string; phone: string } | { username: string; password: string };
+
+/** facility-0040: Day 07:00–19:00, Night 19:00–07:00 (Asia/Bangkok). */
+export type Shift = 'Day' | 'Night';
+
+/** facility-0031: the four attendance scans of a shift. */
+export type AttendanceEvent = 'ShiftIn' | 'BreakOut' | 'BreakIn' | 'ShiftOut';
+
+/** AttendanceEntryDto. withinRadius false is a Geofence Flag; null means the sign has no coordinates yet. */
+export interface AttendanceEntry {
+  eventType: AttendanceEvent;
+  occurredAt: string;
+  source: 'Scan' | 'AdminAdd' | 'AdminEdit';
+  withinRadius: boolean | null;
+}
+
+/**
+ * AttendanceStateDto. shiftDate and shift are null, and the lists empty, outside every attendance window of the
+ * Cleaner's own shift (facility-0069). outcome is set only on the answer of POST /api/attendance.
+ */
+export interface AttendanceState {
+  shiftDate: string | null;
+  shift: Shift | null;
+  events: AttendanceEntry[];
+  nextEvents: AttendanceEvent[];
+  outcome: 'Recorded' | 'AlreadyRecorded' | 'TooSoon' | null;
+}
+
+/** facility-0047 rule 4 (PointStatusCalculator). */
+export type PointStatus =
+  | 'Rework'
+  | 'Overdue'
+  | 'PendingInspection'
+  | 'Passed'
+  | 'NotYetDone'
+  | 'BeforeFirstRound'
+  | 'OffHours';
+
+/** facility-0046: Issue is a tag on the card, never a Point Status. */
+export type CleaningStatus = 'Normal' | 'Issue';
+
+/** facility-0047 rule 3: which round a submission counts for, decided once by the server. */
+export type Placement = 'OnTime' | 'Late' | 'Rework' | 'OffRound';
+
+/** RoundWindowDto. start and end are Thai wall-clock "HH:mm:ss", as the Admin entered them. */
+export interface RoundWindow {
+  id: number;
+  start: string;
+  end: string;
+}
+
+/** LastScanDto. */
+export interface LastScan {
+  submittedAt: string;
+  cleanerName: string;
+  placement: Placement;
+  status: CleaningStatus;
+}
+
+/** IssueDto (facility-0046): shown while the latest submission reported an issue. */
+export interface ReportedIssue {
+  tags: string[];
+  note: string | null;
+  reportedAt: string;
+}
+
+/** ReworkDto (facility-0029): what the Supervisor asked to fix, while the card is ต้องแก้ไข. */
+export interface Rework {
+  defect: string;
+  requestedAt: string;
+}
+
+/** PointStatusDto: one point's card. It never carries the QR Token (facility-0059, 0060). */
+export interface PointCard {
+  id: number;
+  name: string;
+  areaId: number;
+  areaCode: string;
+  areaName: string;
+  buildingCode: string;
+  status: PointStatus;
+  currentRound: RoundWindow | null;
+  nextRound: RoundWindow | null;
+  lastScan: LastScan | null;
+  issue: ReportedIssue | null;
+  rework: Rework | null;
+}
+
+/** MyWorkAreaDto. isCover: an Area the Cleaner covers this shift (facility-0041). */
+export interface MyWorkArea {
+  areaId: number;
+  areaCode: string;
+  areaName: string;
+  isCover: boolean;
+  points: PointCard[];
+}
+
+/** MyWorkDto (facility-0052): the attendance, then the own Area, then covered Areas. */
+export interface MyWork {
+  attendance: AttendanceState;
+  areas: MyWorkArea[];
+}
+
+/** BlockedScanResponse (403): the scanned sign belongs elsewhere and nothing was recorded (facility-0041, 0048). */
+export interface BlockedScan {
+  message: string;
+  areaCode: string;
+  areaName: string;
+  reason: 'OtherArea' | 'OtherBuilding' | 'OutsideShift';
+  buildingCode: string;
+}
