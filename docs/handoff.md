@@ -71,9 +71,10 @@ Plan 4 test results at merge:
 
 - 2026-10-14 · Task 9 done: GET /api/admin/inspection-summary (per active Supervisor: beat points inspected of total, submissions and how many were inspected, ไม่ได้ตรวจ rounds, own inspections, reworks and GPS flags; 7 shift dates by default, at most 31). All tests pass. Next: Task 10 (MySQL check and docs).
 
+- 2026-10-15 · Task 10 (part) done: MySqlSupervisorTests (compiles, skipped without FACILITY_MYSQL_TEST); README and architecture docs for inspections, My Building, Supervisor covers, alerts, export sheet and summary; frontend notes. Next: the controller's real-MySQL run (migration on a throwaway database, the whole suite with FACILITY_MYSQL_TEST, the smoke script), then the whole-branch review.
+
 ## Pending work (ask the owner before starting)
 
-- Supervisor plan: inspection, block reasons `OUTSIDE_SHIFT` / `OTHER_BUILDING`, Supervisor covers, the `INSPECTION_GPS` alert, and the inspection sheet of the Excel export.
 - Excel import of accounts (ADR 0056; before rollout to every building).
 - Frontend.
 
@@ -145,6 +146,13 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 
 ## Notes for the frontend plan
 
+- Supervisor scan: call `POST /api/inspections/scan` when the page opens. Send `submission.id` back as `scanRecordId`, and on 409 scan again.
+- `CoverAssignmentDto.cleanerName` is now `personName`. A cover has either `areaId`/`areaCode` or `buildingId`/`buildingCode`. `CoverSuggestionDto` likewise has `areaId` or `buildingId`.
+- Alerts carry `blockReason` (`OtherArea`, `OtherBuilding`, `OutsideShift`) and the new kind `InspectionGps`.
+- Cards in ต้องแก้ไข carry `rework { defect, requestedAt }`.
+- Cleaners still get no hub events. My Work reloads on open.
+- Disable the inspect button while POST /api/inspections is in flight: a retried Passed writes a second Inspection Record, and a retried Rework gets 409.
+- A Blocked Scan alert of a Supervisor still says 'สแกนนอก Area' in the history summary; show the alert's `blockReason` on the page instead.
 - Key alerts by kind **and** id: the "far from sign" and "no Shift-Out" alerts of one attendance share an id.
 - Leave out unused filters entirely; an empty value gets 400. The same holds for unused account fields in plan 5.
 - `PUT /api/admin/accounts/{id}` replaces every place field: leaving `areaId` out clears a Cleaner's Area, so the client sends the current `areaId` to keep it.

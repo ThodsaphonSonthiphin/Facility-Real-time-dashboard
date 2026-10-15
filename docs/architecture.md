@@ -118,9 +118,9 @@ flowchart TB
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
         subgraph ApiP["FacilityRealtime.Api"]
-            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)"]
+            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>/api/inspections/scan | /api/inspections | /api/my-building<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)<br/>/api/admin/inspection-summary"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
-            Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, AttendanceRecorded → Admins"]
+            Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, InspectionRecorded → Admins + the building's Supervisors; AttendanceRecorded → Admins"]
             Jwt["Auth/AuthSetup.cs<br/>JWT bearer validation"]
         end
         subgraph AppP["FacilityRealtime.Application"]
@@ -158,6 +158,7 @@ flowchart TB
     Ep -->|"export sheets"| Xlsx
     Reads --> Ctx
     Ep -->|"Clients.Group(admins)"| Hub
+    Ep -->|"Clients.Users(building Supervisors)"| Hub
     AuthEp --> Rules
     AuthEp --> Ctx
     Jwt -.->|validates| Ep & Hub
@@ -172,7 +173,7 @@ flowchart TB
 
 Project references follow Clean Architecture: `Api → Application, Infrastructure`; `Infrastructure → Application, Domain`; `Application → Domain`; `Domain` depends on nothing.
 
-> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers live in `Endpoints/` (AuthEndpoints, MeEndpoints, ServicePointEndpoints, ScanRecordEndpoints, AttendanceEndpoints, CoverAssignmentEndpoints, MyWorkEndpoints), use `AppDbContext` directly, and `Program.cs` only composes them. The Admin pages add `AdminAccountEndpoints` (accounts, plan 5) and `AdminExportEndpoints` (Excel export, plan 5) beside the earlier Admin endpoints.
+> Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers live in `Endpoints/` (AuthEndpoints, MeEndpoints, ServicePointEndpoints, ScanRecordEndpoints, AttendanceEndpoints, CoverAssignmentEndpoints, MyWorkEndpoints), use `AppDbContext` directly, and `Program.cs` only composes them. The Admin pages add `AdminAccountEndpoints` (accounts, plan 5) and `AdminExportEndpoints` (Excel export, plan 5) beside the earlier Admin endpoints. Plan 6 adds `InspectionEndpoints`, `MyBuildingEndpoints` and `AdminInspectionSummaryEndpoints`. `PointNotifications` sends point changes to the Admins and to the building's Supervisors, addressed by account id (`Hubs/SubjectUserIdProvider`).
 
 **Excel export (facility-0053).** `POST /api/admin/export` reads rows through `ExportQuery` (attendance, submissions, and the active points with their Round Windows, from which the "ไม่ได้ทำ" rows are computed by `ExportRules`). `ExportSheets` turns them into sheets and `Infrastructure/Export/ExcelWorkbook` writes the `.xlsx` with ClosedXML 0.104.2 (MIT licence, the only package plan 5 added). Every cell is written as text (dates `yyyy-MM-dd`, times `HH:mm`), so a name such as `=1+1` can never become a formula when the Admin opens the file. Column widths are fixed, because auto-fit needs fonts that the server may not have. Each export writes one `EXPORT_EXCEL` audit row with the range, building, sets and row counts, and no row content.
 
@@ -380,6 +381,12 @@ classDiagram
         +InspectionResult Result
         +string? Defect
         +DateTime InspectedAt
+        +int? CoverAssignmentId
+        +decimal? Latitude
+        +decimal? Longitude
+        +short? AccuracyM
+        +short? DistanceM
+        +bool? WithinRadius
     }
     class ShiftAttendance {
         <<shift_attendances>>
@@ -416,7 +423,8 @@ classDiagram
         <<cover_assignments>>
         +int Id
         +int UserId
-        +int AreaId
+        +int? AreaId «or BuildingId»
+        +int? BuildingId «or AreaId»
         +DateOnly ShiftDate
         +Shift Shift
         +int AssignedById
@@ -468,13 +476,15 @@ classDiagram
     Sign "1" <-- "0..*" BlockedScan
     User "1" <-- "0..*" CoverAssignment : covering Cleaner
     Area "1" <-- "0..*" CoverAssignment : covered Area
+    Building "0..1" <-- "0..*" CoverAssignment : Supervisor cover
     User "1" <-- "0..*" CoverAssignment : assigned by, cancelled by
     CoverAssignment "0..1" <-- "0..*" ScanRecord : cover used
+    CoverAssignment "0..1" <-- "0..*" InspectionRecord : under cover
     User "1" <-- "0..*" AuditEntry : actor
     User "1" <-- "0..*" AlertReview : reviewed by
 ```
 
-The full target schema, including the tables later plans add, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`). A Cover Assignment lets one Cleaner work another Area for one shift; it lapses when that Cleaner's attendance window for the shift closes ([facility-0069](adr/facility-0069-attendance-scan-window-60-minutes-around-the-shift.md)). Blocked Scans and Audit Log rows are history the Admin reads on the alert and history pages and that no one edits (facility-0041, facility-0051). An Alert Review records that the Admin closed one alert ("คุยแล้ว ปิดเตือน") on a Blocked Scan or a scan outside its sign's radius, one per alert; a missing Shift-Out is never reviewed, it closes when the Admin fills the time (facility-0051).
+The full target schema, including the tables later plans add, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`). A Cover Assignment lets one Cleaner work another Area for one shift; it lapses when that Cleaner's attendance window for the shift closes ([facility-0069](adr/facility-0069-attendance-scan-window-60-minutes-around-the-shift.md)). A Supervisor's Cover Assignment names a building instead of an Area, for one shift by the clock (facility-0048); a CHECK keeps exactly one of the two. An Inspection Record keeps the GPS of the inspection; outside the sign's radius it is the `INSPECTION_GPS` alert. Blocked Scans and Audit Log rows are history the Admin reads on the alert and history pages and that no one edits (facility-0041, facility-0051). An Alert Review records that the Admin closed one alert ("คุยแล้ว ปิดเตือน") on a Blocked Scan or a scan outside its sign's radius, one per alert; a missing Shift-Out is never reviewed, it closes when the Admin fills the time (facility-0051).
 
 ---
 

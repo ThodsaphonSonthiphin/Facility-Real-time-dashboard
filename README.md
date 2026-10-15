@@ -74,6 +74,13 @@ npm --prefix frontend test
 
 ลองใน Swagger (`/swagger`): แม่บ้านต้องลงเวลาเข้างานก่อนส่งงาน — `POST /api/attendance` ด้วย `qrToken` = `token-checkin-ar01`, `eventType` = `ShiftIn` และพิกัด เช่น `latitude` 13.7563, `longitude` 100.5018, `accuracyM` 10 (ป้ายของ AR01 มีพิกัดตัวอย่าง ป้ายของ AR02 ยังไม่มี) จากนั้นจึง `POST /api/scan-records` ได้ ลงเวลาได้ตั้งแต่ 60 นาทีก่อนกะถึง 60 นาทีหลังกะ (ADR facility-0069)
 
+หัวหน้าตรวจงานใน Swagger (login ด้วย `S2001` / `0820000001` หัวหน้าตึก A กะเช้า, ADR facility-0029, 0047, 0048, 0057):
+
+- `POST /api/inspections/scan` สแกนป้ายจุด เช่น `{ "qrToken": "token-restroom-m1", "latitude": 13.7563, "longitude": 100.5018, "accuracyM": 10 }` ได้การ์ดของจุด งานที่ส่งล่าสุดของรอบปัจจุบัน (`submission`) หรือเหตุผลที่ยังตรวจไม่ได้ (`refusal`) จุดในตึกอื่นหรือสแกนนอกกะของตัวเอง (ตามนาฬิกา เช้า 07:00–19:00 ดึก 19:00–07:00) ถูกบล็อกและลงรายการที่ขึ้นเตือน เว้นแต่ Admin มอบหมายตรวจแทนไว้
+- `POST /api/inspections` บันทึกผล `{ "qrToken": …, "scanRecordId": <submission.id>, "result": "Passed" | "Rework", "defect": "…", "latitude": …, "longitude": …, "accuracyM": … }` เลือก `Rework` (ไม่สะอาด) ต้องมี `defect` เลือก `Passed` ห้ามส่ง `defect` ถ้าแม่บ้านส่งงานใหม่หลังสแกน ได้ 409 ให้สแกนใหม่
+- `GET /api/my-building` ทุกจุดในตึกของตัวเอง (และตึกที่ได้รับมอบหมายกะนี้) จุดรอตรวจขึ้นก่อน เปิดนอกกะได้แต่ `canInspect` เป็น false
+- Hub `/hubs/scan` ส่ง `ScanRecorded` และ `InspectionRecorded` ให้ Admin และหัวหน้าของตึกนั้น
+
 ตั้งค่า Area ใน Swagger (login เป็น `admin`, ADR facility-0045):
 
 - `GET /api/admin/areas/{id}` ดูป้ายทุกป้ายพร้อม QR Token, พิกัด และช่วงรอบ
@@ -90,7 +97,7 @@ npm --prefix frontend test
 - `GET /api/admin/attendance` การเข้างานของกะที่กำลังเดินอยู่ หรือส่ง `shiftDate=2026-10-08&shift=Day` เพื่อดูกะอื่น (ADR facility-0050)
 - `PUT /api/admin/attendance` เพิ่มหรือแก้เวลา เช่น `{ "userId": 3, "shiftDate": "2026-10-08", "shift": "Day", "eventType": "ShiftOut", "time": "18:58", "reason": "ลืมสแกน" }` ต้องมีเหตุผลทุกครั้ง (ADR facility-0051)
 - `GET /api/admin/alerts` รายการที่ขึ้นเตือนของเมื่อวานและวันนี้ และ `POST /api/admin/alerts/review` ปิดเตือน
-- `POST /api/admin/cover-assignments` ใส่ `blockedScanId` เพื่อมอบหมายทำแทนจากการสแกนที่ถูกบล็อก (ADR facility-0041)
+- `POST /api/admin/cover-assignments` มอบหมายแม่บ้านทำแทน Area (`areaId`) หรือหัวหน้าตรวจแทนตึก (`buildingId`, กะไหนก็ได้ยกเว้นตึกและกะของตัวเอง) ใส่ `blockedScanId` เพื่อมอบหมายจากการสแกนที่ถูกบล็อก (ADR facility-0041, 0048)
 - `GET /api/admin/cover-assignments/candidates?areaId=&shiftDate=&shift=` รายชื่อคนที่ทำแทนได้ของ Area และกะนั้น
 - `GET /api/admin/audit-log/actors` รายชื่อผู้ทำสำหรับตัวกรอง
 - `GET /api/admin/audit-log` ประวัติ Admin อ่านอย่างเดียว กรองได้ด้วย `from`, `to` (yyyy-MM-dd), `actorId`, `category` (Attendance, Cover, AlertReview, Setup, QrToken, Account, Export), `beforeId` และ `limit` (1–500 ค่าเริ่ม 100) (ADR facility-0057)
@@ -101,7 +108,8 @@ npm --prefix frontend test
 - `PUT /api/admin/accounts/{id}` แก้ชื่อที่แสดง Area ตึก หรือกะ (บทบาท รหัสพนักงาน และ username แก้ไม่ได้) PUT แทนที่ทุกช่อง: ถ้าไม่ส่ง `areaId` แม่บ้านจะหลุดจาก Area จึงต้องส่ง `areaId` เดิมกลับไปถ้าจะให้อยู่ Area เดิม
 - `POST /api/admin/accounts/{id}/deactivate` ปิดบัญชี (ให้ออกจากระบบทุกเครื่อง และแม่บ้านจะหลุดจาก Area) และ `POST /api/admin/accounts/{id}/activate` เปิดบัญชีอีกครั้ง ปิดบัญชีตัวเองไม่ได้ ไม่มีการลบบัญชี
 - `PUT /api/admin/accounts/{id}/phone` เปลี่ยนเบอร์โทรของแม่บ้านหรือหัวหน้า และ `PUT /api/admin/accounts/{id}/password` รีเซ็ตรหัสผ่านของ Admin ทั้งสองอย่างทำให้คนนั้นต้อง login ใหม่ทุกเครื่อง และประวัติไม่เก็บเบอร์หรือรหัส (ADR facility-0057)
-- `POST /api/admin/export` ได้ไฟล์ `.xlsx` เช่น `{ "from": "2026-10-01", "to": "2026-10-07", "buildingId": 1, "sets": ["Attendance", "Submissions"] }` เลือกได้ 1–31 วัน ไม่ใส่ `buildingId` คือทุกตึก ชีต "การส่งงาน" มีแถว "ไม่ได้ทำ" ของรอบที่ไม่มีใครทำ ทุกการส่งออกลงตาราง `audit_log`
+- `POST /api/admin/export` ได้ไฟล์ `.xlsx` เช่น `{ "from": "2026-10-01", "to": "2026-10-07", "buildingId": 1, "sets": ["Attendance", "Submissions", "Inspections"] }` เลือกได้ 1–31 วัน ไม่ใส่ `buildingId` คือทุกตึก ชีต "การส่งงาน" มีแถว "ไม่ได้ทำ" ชีต "การตรวจงาน" มีแถว "ไม่ได้ตรวจ" และ "ไม่ได้แก้" ของกะที่ปิดแล้ว ทุกการส่งออกลงตาราง `audit_log`
+- `GET /api/admin/inspection-summary?from=&to=&buildingId=` สรุปการตรวจของหัวหน้าแต่ละคน (ค่าเริ่ม 7 วันล่าสุด เลือกได้ไม่เกิน 31 วัน) อ่านอย่างเดียว (ADR facility-0048)
 
 ### หมายเหตุด้านความปลอดภัยของ POC
 - cookie ของ refresh token ไม่ได้ตั้ง `Secure` เพราะมือถือเข้าผ่าน HTTP ในวง WiFi (ADR facility-0013) ถ้าติดตั้งบน HTTPS ให้ตั้งค่า `Jwt:RefreshCookieSecure` เป็น `true`
