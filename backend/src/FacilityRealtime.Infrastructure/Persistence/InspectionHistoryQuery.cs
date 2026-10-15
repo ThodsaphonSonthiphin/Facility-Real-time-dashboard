@@ -110,7 +110,7 @@ public static class InspectionHistoryQuery
 
         return points
             .Select(p => new PointPlace(
-                p.Id, p.BuildingId, p.BuildingCode, p.AreaCode, p.Name, signCodes[p.Id], p.Counted, p.ShiftPattern == ShiftPattern.DayAndNight))
+                p.Id, p.BuildingId, p.BuildingCode, p.AreaCode, p.Name, signCodes.GetValueOrDefault(p.Id, string.Empty), p.Counted, p.ShiftPattern == ShiftPattern.DayAndNight))
             .ToList();
     }
 }

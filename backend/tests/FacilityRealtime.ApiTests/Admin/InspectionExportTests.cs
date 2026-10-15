@@ -5,6 +5,7 @@ using ClosedXML.Excel;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.ApiTests.Inspections;
 using FacilityRealtime.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.ApiTests.Admin;
 
@@ -115,6 +116,41 @@ public class InspectionExportTests
         using var workbook = await WorkbookAsync(await ExportAsync(admin, ["Inspections"], await AdminSetupApi.BuildingIdAsync(factory, "A")));
 
         Assert.Empty(Rows(workbook.Worksheet(1)));
+    }
+
+    [Fact]
+    public async Task One_building_keeps_only_its_own_uninspected_rounds()
+    {
+        var (factory, admin) = await StartAsync(ThaiClock.At(9, 12, 0));
+        using var _ = factory;
+        await InspectionApi.AddBuildingBAsync(factory);
+        await TestData.AddScanAsync(factory, InspectionApi.BuildingBPoint, ThaiClock.At(8, 8, 30));
+
+        using var forA = await WorkbookAsync(await ExportAsync(admin, ["Inspections"], await AdminSetupApi.BuildingIdAsync(factory, "A")));
+        using var forB = await WorkbookAsync(await ExportAsync(admin, ["Inspections"], await AdminSetupApi.BuildingIdAsync(factory, "B")));
+
+        Assert.Empty(Rows(forA.Worksheet(1)));
+        var row = Assert.Single(Rows(forB.Worksheet(1)));
+        Assert.Equal(new[] { "ไม่ได้ตรวจ", "BR01" }, new[] { row[8], row[3] });
+    }
+
+    [Fact]
+    public async Task A_deactivated_point_still_names_its_uninspected_round()
+    {
+        var (factory, admin) = await StartAsync(ThaiClock.At(9, 12, 0));
+        using var _ = factory;
+        await TestData.AddScanAsync(factory, "token-restroom-f1", ThaiClock.At(8, 8, 10));
+        await factory.WithDbAsync(async db =>
+        {
+            var point = await db.ServicePoints.SingleAsync(p => p.Name == "ห้องน้ำหญิง ชั้น 1");
+            point.IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        using var workbook = await WorkbookAsync(await ExportAsync(admin, ["Inspections"]));
+
+        var row = Assert.Single(Rows(workbook.Worksheet(1)));
+        Assert.Equal(new[] { "ห้องน้ำหญิง ชั้น 1", "AR01-02", "ไม่ได้ตรวจ" }, new[] { row[4], row[5], row[8] });
     }
 
     [Fact]
