@@ -24,7 +24,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 3 | Admin setup: Areas, points, round windows, sign location, radius, new QR | merged (PR #52) |
 | 4 | Attendance page (D2), alert list (D3), Admin history (D9) | merged (PR #53, `7cd8ba4`) |
 | 5 | Accounts page (D6) + Excel export (D8) | done, merged (PR #54, `c530c84`) (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
-| 6 | Supervisor inspection, covers, My Building, alerts, export sheet, summary | done, not merged (branch `feat/supervisor-inspection`): `docs/superpowers/plans/2026-10-14-supervisor-inspection-backend.md` |
+| 6 | Supervisor inspection, covers, My Building, alerts, export sheet, summary | done, merged (PR #55, `d9b4374`) (branch `feat/supervisor-inspection`): `docs/superpowers/plans/2026-10-14-supervisor-inspection-backend.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -76,6 +76,8 @@ Plan 4 test results at merge:
 - 2026-10-15 · Final-review fix wave done: Inspection Summary leaves out post-shift work (decision 17); a failed live push is logged, not a 500; My Building IsCover follows the cover; docs updated. Unit 299, API 519 + 5 skipped. Next: the controller's MySQL run.
 
 - 2026-10-15 · MySQL check on the Mac (Homebrew MySQL 26.7): the migration SupervisorInspection applied to an empty throwaway database (the one-place CHECK on the FK columns is accepted); the whole suite with `FACILITY_MYSQL_TEST` set passed, 823 passed, 0 skipped (299 unit, 524 API including the 5 MySQL tests); a smoke script against the real API on a throwaway database passed (check-in, submission with live push, My Building, scan, inspection with GPS, building cover create and cancel, alerts, summary, export) with no warnings in the API log. Both throwaway databases were dropped; `facility_dashboard` is untouched. Next: push the branch and open the PR, with the owner's OK.
+
+- 2026-10-15 · Owner approved push and merge: PR #55 opened and merged (`d9b4374`). Plan 6 is done. Next: the owner chooses the next work (see Pending work).
 
 ## Decisions made while building plan 6 (report them to the owner in the PR)
 
