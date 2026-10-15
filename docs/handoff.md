@@ -97,6 +97,8 @@ Plan 4 test results at merge:
 - 2026-10-15 · Task 6 done: ADR amendments (0004 frontend section #37, 0025 rebuild not move, 0026 routes, 0062 measured size, 0063 tokens, 0065 boundaries 7), plans 2B/2C marked superseded, README, frontend README, architecture diagram. Frontend 44 tests; unit 299; API 531 + 5 skipped. Next: the controller's real run, then the whole-branch review.
 - 2026-10-15 · Final-review fix wave: a session that ends for any reason (logout or a refused refresh) empties the API cache (store listener); logout forgets the session at once, then waits for any refresh in flight and ignores its result, then logs out on the server; the refresh gives up after 15 s. Frontend tests 47 passed. Next: the controller's real run (MySQL), then the PR.
 
+- 2026-10-15 · Task 6 Step 9 done (real run): the API on a throwaway database `facility_frontend_test` served the built app; curl checks passed (health, `/login`, `/scan/<x>` gets the app, unknown `/api` is 404); a script logged in as the seed Cleaner, Supervisor and Admin, with refresh and logout behaving as expected and a wrong phone refused. The owner checked the pages on a phone and reports everything works. Build output and the throwaway database were removed. Plan 7 is complete on branch `feat/frontend-foundation` (not pushed, no PR). Frontend tests 47 passed; unit 299; API 531 + 5 skipped. Next: the owner's OK for the push and PR, then frontend plan 8 (Cleaner phone).
+
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
