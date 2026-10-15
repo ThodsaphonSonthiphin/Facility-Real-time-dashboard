@@ -30,6 +30,7 @@ public static class ScanRecordEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         IHubContext<ScanHub> hub,
+        ILogger<ScanHub> logger,
         TimeProvider clock,
         AttendanceSettings settings)
     {
@@ -86,7 +87,7 @@ public static class ScanRecordEndpoints
                     c.UserId == user.Id && c.AreaId == point.AreaId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null);
             if (cover is null)
             {
-                return await BlockedScans.BlockAsync(db, user, sign, point.Area!, gps, now);
+                return await BlockedScans.BlockAsync(db, user, sign, point.Area!, BlockReason.OtherArea, gps, now);
             }
         }
 
@@ -133,7 +134,7 @@ public static class ScanRecordEndpoints
         // in the hour before or after the Cleaner's shift)
         var mine = (await PointBoardQuery.LoadAsync(db, now, slot, areaIds: null, point.Id)).Single();
         var board = slot == ShiftCalendar.SlotAt(now) ? mine : (await PointBoardQuery.LoadAsync(db, now, point.Id)).Single();
-        await hub.Clients.Group(ScanHub.AdminGroup).SendAsync("ScanRecorded", PointDtoMapper.ToDto(board));
+        await PointNotifications.SendAsync(hub, db, logger, "ScanRecorded", board, now);
 
         return Results.Created(
             $"/api/scan-records/{record.Id}",

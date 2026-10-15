@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.Api.Endpoints;
 
-/// <summary>The alert list (wireframe D3): Blocked Scans, scans far from their sign and missing Shift-Outs. Closing one is logged (facility-0051).</summary>
+/// <summary>The alert list (wireframe D3): Blocked Scans, scans and inspections far from their sign, and missing Shift-Outs. Closing one is logged (facility-0051).</summary>
 public static class AdminAlertEndpoints
 {
     public const int MaxNoteLength = 500;
@@ -127,6 +127,10 @@ public static class AdminAlertEndpoints
             .Where(s => s.Id == id && s.WithinRadius == false)
             .Select(s => new AlertTarget("scan_records", s.User!.DisplayName, s.SubmittedAt))
             .FirstOrDefaultAsync(),
+        AlertType.InspectionGps => await db.InspectionRecords
+            .Where(i => i.Id == id && i.WithinRadius == false)
+            .Select(i => new AlertTarget("inspections", i.Supervisor!.DisplayName, i.InspectedAt))
+            .FirstOrDefaultAsync(),
         _ => await db.BlockedScans
             .Where(b => b.Id == id)
             .Join(db.Users, b => b.UserId, u => u.Id, (b, u) => new AlertTarget("blocked_scans", u.DisplayName, b.ScannedAt))
@@ -148,7 +152,12 @@ public static class AdminAlertEndpoints
         row.MissingEvents,
         row.Review is not null,
         row.Review is { } review ? Utc(review.ReviewedAt) : (DateTime?)null,
-        row.CoverSlot is { } slot ? new CoverSuggestionDto(row.Person.Id, row.Area.Id, slot.ShiftDate, slot.Shift) : null);
+        row.CoverSlot is { } slot
+            ? row.Person.Role == UserRole.Supervisor
+                ? new CoverSuggestionDto(row.Person.Id, null, row.Area.BuildingId, slot.ShiftDate, slot.Shift)
+                : new CoverSuggestionDto(row.Person.Id, row.Area.Id, null, slot.ShiftDate, slot.Shift)
+            : null,
+        row.BlockReason);
 
     /// <summary>The database returns Unspecified; marking it UTC makes the JSON end in "Z".</summary>
     private static DateTime Utc(DateTime stored) => DateTime.SpecifyKind(stored, DateTimeKind.Utc);

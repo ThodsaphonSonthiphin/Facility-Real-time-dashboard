@@ -147,4 +147,29 @@ public class PointStatusCalculatorTests
     {
         Assert.Equal(PointStatus.NotYetDone, Status(Thai(16, 30), [Sent(12, null, 15, 30)]).Status);
     }
+
+    [Fact]
+    public void Rework_carries_the_inspection_that_asked_for_it()
+    {
+        var result = Status(
+            Thai(9, 0),
+            [Sent(1, 1, 8, 10)],
+            [new InspectionFact(1, InspectionResult.Rework, Thai(8, 20), "พื้นยังเปียก")]);
+
+        Assert.Equal(PointStatus.Rework, result.Status);
+        Assert.Equal("พื้นยังเปียก", result.Rework!.Defect);
+        Assert.Equal(Thai(8, 20), result.Rework.InspectedAt);
+    }
+
+    [Fact]
+    public void Only_a_card_in_rework_carries_one()
+    {
+        var result = Status(
+            Thai(9, 0),
+            [Sent(1, 1, 8, 10), Sent(2, 1, 8, 40)],
+            [new InspectionFact(1, InspectionResult.Rework, Thai(8, 20), "พื้นยังเปียก")]);
+
+        Assert.Equal(PointStatus.PendingInspection, result.Status);
+        Assert.Null(result.Rework);
+    }
 }

@@ -30,7 +30,7 @@ public static class RoundFactsQuery
         var scanIds = scans.Select(s => s.Id).ToList();
         var inspections = await db.InspectionRecords.AsNoTracking()
             .Where(i => scanIds.Contains(i.ScanRecordId))
-            .Select(i => new { i.ScanRecordId, i.ServicePointId, i.Result, i.InspectedAt })
+            .Select(i => new { i.ScanRecordId, i.ServicePointId, i.Result, i.InspectedAt, i.Defect })
             .ToListAsync();
 
         return ids.ToDictionary(id => id, id => new PointShiftFacts(
@@ -41,7 +41,7 @@ public static class RoundFactsQuery
                 .Select(s => new SubmissionFact(s.Id, s.RoundWindowId, s.SubmittedAt))
                 .ToList(),
             inspections.Where(i => i.ServicePointId == id)
-                .Select(i => new InspectionFact(i.ScanRecordId, i.Result, i.InspectedAt))
+                .Select(i => new InspectionFact(i.ScanRecordId, i.Result, i.InspectedAt, i.Defect))
                 .ToList()));
     }
 }

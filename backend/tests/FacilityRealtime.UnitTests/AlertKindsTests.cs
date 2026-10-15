@@ -10,6 +10,7 @@ public class AlertKindsTests
     [InlineData(AlertKind.BlockedScan, AlertType.BlockedScan)]
     [InlineData(AlertKind.AttendanceGps, AlertType.AttendanceGps)]
     [InlineData(AlertKind.SubmissionGps, AlertType.SubmissionGps)]
+    [InlineData(AlertKind.InspectionGps, AlertType.InspectionGps)]
     public void Reviewable_kinds_map_to_their_alert_reviews_type(AlertKind kind, AlertType type) =>
         Assert.Equal((AlertType?)type, AlertKinds.ReviewType(kind));
 

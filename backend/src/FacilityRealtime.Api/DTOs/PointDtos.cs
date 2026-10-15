@@ -12,6 +12,9 @@ public record LastScanDto(DateTime SubmittedAt, string CleanerName, Placement Pl
 /// <summary>facility-0046: shown beside the status while the latest Scan Record is an Issue.</summary>
 public record IssueDto(IReadOnlyList<string> Tags, string? Note, DateTime ReportedAt);
 
+/// <summary>facility-0029: what the Supervisor asked to fix, shown while the card is ต้องแก้ไข.</summary>
+public record ReworkDto(string Defect, DateTime RequestedAt);
+
 /// <summary>One Dashboard card. No QR Token (facility-0060).</summary>
 public record PointStatusDto(
     int Id,
@@ -24,7 +27,8 @@ public record PointStatusDto(
     RoundWindowDto? CurrentRound,
     RoundWindowDto? NextRound,
     LastScanDto? LastScan,
-    IssueDto? Issue);
+    IssueDto? Issue,
+    ReworkDto? Rework);
 
 /// <summary>
 /// facility-0017: no UserId, the scanner is the account in the access token. "Notes" keeps the phase-1 field name.
@@ -69,12 +73,13 @@ public static class PointDtoMapper
             ToDto(row.Status.CurrentRound),
             ToDto(row.Status.NextRound),
             last is null ? null : new LastScanDto(Utc(last.SubmittedAt), last.User?.DisplayName ?? string.Empty, last.Placement, last.Status),
-            last is { Status: CleaningStatus.Issue } ? new IssueDto(SplitTags(last.IssueTags), last.Note, Utc(last.SubmittedAt)) : null);
+            last is { Status: CleaningStatus.Issue } ? new IssueDto(SplitTags(last.IssueTags), last.Note, Utc(last.SubmittedAt)) : null,
+            row.Status.Rework is { } rework ? new ReworkDto(rework.Defect ?? string.Empty, Utc(rework.InspectedAt)) : null);
     }
 
     private static RoundWindowDto? ToDto(RoundWindow? round) => round is null ? null : new RoundWindowDto(round.Id, round.Start, round.End);
 
-    private static IReadOnlyList<string> SplitTags(string? tags) =>
+    public static IReadOnlyList<string> SplitTags(string? tags) =>
         string.IsNullOrEmpty(tags) ? [] : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     /// <summary>The database returns Unspecified; marking it UTC makes the JSON end in "Z" so browsers convert it to Thai time.</summary>

@@ -152,11 +152,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 "ck_inspections_rework_has_defect", "result <> 'REWORK' OR defect IS NOT NULL"));
             e.Property(x => x.Result).HasConversion(new UpperSnakeEnumConverter<InspectionResult>()).HasMaxLength(10);
             e.Property(x => x.Defect).HasMaxLength(1000);
+            MapGps(e);
             e.HasIndex(x => new { x.ServicePointId, x.InspectedAt });
             e.HasIndex(x => new { x.SupervisorId, x.InspectedAt });
+            // The alert list reads flagged inspections by time, as it reads scan_records by submitted_at
+            e.HasIndex(x => x.InspectedAt);
             e.HasOne(x => x.ScanRecord).WithMany().HasForeignKey(x => x.ScanRecordId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<ServicePoint>().WithMany().HasForeignKey(x => x.ServicePointId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.Supervisor).WithMany().HasForeignKey(x => x.SupervisorId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.CoverAssignment).WithMany().HasForeignKey(x => x.CoverAssignmentId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ShiftAttendance>(e =>
@@ -187,12 +191,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<CoverAssignment>(e =>
         {
-            e.ToTable("cover_assignments");
+            // database.html: a Cleaner covers an Area, a Supervisor a building; never both, never neither
+            e.ToTable("cover_assignments", t => t.HasCheckConstraint(
+                "ck_cover_assignments_one_place",
+                "(area_id IS NOT NULL AND building_id IS NULL) OR (area_id IS NULL AND building_id IS NOT NULL)"));
             e.Property(x => x.Shift).HasConversion(new UpperSnakeEnumConverter<Shift>()).HasMaxLength(10);
             e.HasIndex(x => new { x.UserId, x.ShiftDate, x.Shift });
             e.HasIndex(x => new { x.AreaId, x.ShiftDate, x.Shift });
+            e.HasIndex(x => new { x.BuildingId, x.ShiftDate, x.Shift });
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.Area).WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Building).WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.AssignedById).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.CancelledById).OnDelete(DeleteBehavior.Restrict);
         });

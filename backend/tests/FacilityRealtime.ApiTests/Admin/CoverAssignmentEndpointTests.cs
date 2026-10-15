@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.ApiTests.Admin;
 
-public record CoverModel(int Id, int UserId, string CleanerName, int AreaId, string AreaCode, DateOnly ShiftDate, string Shift, DateTime AssignedAt);
+public record CoverModel(
+    int Id, int UserId, string PersonName, int? AreaId, string? AreaCode, int? BuildingId, string? BuildingCode, DateOnly ShiftDate, string Shift, DateTime AssignedAt);
 
 /// <summary>facility-0041 + owner decision 2026-10-09: covers are per shift, only in the covering Cleaner's own regular shift.</summary>
 public class CoverAssignmentEndpointTests
@@ -56,7 +57,7 @@ public class CoverAssignmentEndpointTests
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var cover = (await response.Content.ReadFromJsonAsync<CoverModel>())!;
-        Assert.Equal("สมชาย ใจดี", cover.CleanerName);
+        Assert.Equal("สมชาย ใจดี", cover.PersonName);
         Assert.Equal("AR02", cover.AreaCode);
         var entry = Assert.Single(await AuditAsync(factory));
         Assert.Equal("COVER_ASSIGN", entry.Action);

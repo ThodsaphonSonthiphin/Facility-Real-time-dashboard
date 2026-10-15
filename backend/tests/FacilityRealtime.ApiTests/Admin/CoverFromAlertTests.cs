@@ -81,7 +81,7 @@ public class CoverFromAlertTests
         factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 30));
         var suggestion = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin)).Cover!;
 
-        var response = await AssignAsync(admin, suggestion.UserId, suggestion.AreaId, blockedId);
+        var response = await AssignAsync(admin, suggestion.UserId, suggestion.AreaId!.Value, blockedId);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var alert = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin));

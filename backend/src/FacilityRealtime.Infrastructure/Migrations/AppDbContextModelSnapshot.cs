@@ -262,7 +262,7 @@ namespace FacilityRealtime.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("id");
 
-                    b.Property<int>("AreaId")
+                    b.Property<int?>("AreaId")
                         .HasColumnType("int")
                         .HasColumnName("area_id");
 
@@ -273,6 +273,10 @@ namespace FacilityRealtime.Infrastructure.Migrations
                     b.Property<int>("AssignedById")
                         .HasColumnType("int")
                         .HasColumnName("assigned_by_id");
+
+                    b.Property<int?>("BuildingId")
+                        .HasColumnType("int")
+                        .HasColumnName("building_id");
 
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("datetime(6)")
@@ -304,9 +308,14 @@ namespace FacilityRealtime.Infrastructure.Migrations
 
                     b.HasIndex("AreaId", "ShiftDate", "Shift");
 
+                    b.HasIndex("BuildingId", "ShiftDate", "Shift");
+
                     b.HasIndex("UserId", "ShiftDate", "Shift");
 
-                    b.ToTable("cover_assignments", (string)null);
+                    b.ToTable("cover_assignments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_cover_assignments_one_place", "(area_id IS NOT NULL AND building_id IS NULL) OR (area_id IS NULL AND building_id IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.InspectionRecord", b =>
@@ -316,14 +325,36 @@ namespace FacilityRealtime.Infrastructure.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
+                    b.Property<short?>("AccuracyM")
+                        .HasColumnType("smallint")
+                        .HasColumnName("accuracy_m");
+
+                    b.Property<int?>("CoverAssignmentId")
+                        .HasColumnType("int")
+                        .HasColumnName("cover_assignment_id");
+
                     b.Property<string>("Defect")
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)")
                         .HasColumnName("defect");
 
+                    b.Property<short?>("DistanceM")
+                        .HasColumnType("smallint")
+                        .HasColumnName("distance_m");
+
                     b.Property<DateTime>("InspectedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("inspected_at");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)")
+                        .HasColumnName("latitude");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)")
+                        .HasColumnName("longitude");
 
                     b.Property<string>("Result")
                         .IsRequired()
@@ -343,7 +374,15 @@ namespace FacilityRealtime.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("supervisor_id");
 
+                    b.Property<bool?>("WithinRadius")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("within_radius");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CoverAssignmentId");
+
+                    b.HasIndex("InspectedAt");
 
                     b.HasIndex("ScanRecordId");
 
@@ -903,14 +942,18 @@ namespace FacilityRealtime.Infrastructure.Migrations
                     b.HasOne("FacilityRealtime.Domain.Entities.Area", "Area")
                         .WithMany()
                         .HasForeignKey("AreaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("FacilityRealtime.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("AssignedById")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("FacilityRealtime.Domain.Entities.Building", "Building")
+                        .WithMany()
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("FacilityRealtime.Domain.Entities.User", null)
                         .WithMany()
@@ -925,11 +968,18 @@ namespace FacilityRealtime.Infrastructure.Migrations
 
                     b.Navigation("Area");
 
+                    b.Navigation("Building");
+
                     b.Navigation("User");
                 });
 
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.InspectionRecord", b =>
                 {
+                    b.HasOne("FacilityRealtime.Domain.Entities.CoverAssignment", "CoverAssignment")
+                        .WithMany()
+                        .HasForeignKey("CoverAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("FacilityRealtime.Domain.Entities.ScanRecord", "ScanRecord")
                         .WithMany()
                         .HasForeignKey("ScanRecordId")
@@ -947,6 +997,8 @@ namespace FacilityRealtime.Infrastructure.Migrations
                         .HasForeignKey("SupervisorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CoverAssignment");
 
                     b.Navigation("ScanRecord");
 

@@ -14,7 +14,9 @@ public record IssueModel(List<string> Tags, string? Note, DateTime ReportedAt);
 
 public record PointModel(
     int Id, string Name, string AreaCode, string BuildingCode, string Status,
-    RoundModel? CurrentRound, RoundModel? NextRound, LastScanModel? LastScan, IssueModel? Issue);
+    RoundModel? CurrentRound, RoundModel? NextRound, LastScanModel? LastScan, IssueModel? Issue, ReworkModel? Rework);
+
+public record ReworkModel(string Defect, DateTime RequestedAt);
 
 /// <summary>
 /// Seeded rounds: both restrooms Day 07-09 and 16-18, Night 20-22 and 03-05; the meeting room (day-only Area AR02) Day 08-10.

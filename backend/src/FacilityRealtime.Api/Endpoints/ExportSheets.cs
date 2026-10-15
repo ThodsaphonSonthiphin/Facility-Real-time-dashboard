@@ -1,4 +1,5 @@
 using FacilityRealtime.Application.Export;
+using FacilityRealtime.Application.Inspections;
 using FacilityRealtime.Application.Rounds;
 using FacilityRealtime.Application.Shifts;
 using FacilityRealtime.Domain.Enums;
@@ -12,6 +13,7 @@ internal static class ExportSheets
 {
     public const string AttendanceName = "การลงเวลา";
     public const string SubmissionsName = "การส่งงาน";
+    public const string InspectionsName = "การตรวจงาน";
 
     private static readonly AttendanceEvent[] Events =
         [AttendanceEvent.ShiftIn, AttendanceEvent.BreakOut, AttendanceEvent.BreakIn, AttendanceEvent.ShiftOut];
@@ -125,6 +127,68 @@ internal static class ExportSheets
         return new ExcelSheet(
             SubmissionsName,
             ["วันที่กะ", "กะ", "ตึก", "Area", "จุด", "ป้าย", "รอบ", "เวลาส่ง", "ผล", "Issue", "ทำแทน", "รหัสพนักงาน", "ชื่อ", "GPS"],
+            Sort(rows));
+    }
+
+    /// <summary>
+    /// Every inspection, plus one row for each finished round left "ไม่ได้ตรวจ" or "ไม่ได้แก้" (facility-0047 rule 5,
+    /// decision 13). A round that ended ตรวจผ่าน already shows as its inspections.
+    /// </summary>
+    public static ExcelSheet Inspections(
+        IReadOnlyList<InspectionExportRow> inspections, IReadOnlyList<PointPlace> places, IReadOnlyList<FinishedRound> rounds)
+    {
+        var rows = inspections.Select(i => new SortedRow(
+            i.ShiftDate,
+            i.Shift,
+            i.InspectedAtUtc,
+            i.AreaCode + "|" + i.SignCode,
+            [
+                ThaiLabels.Date(i.ShiftDate),
+                ThaiLabels.ShiftName(i.Shift),
+                i.BuildingCode,
+                i.AreaCode,
+                i.PointName,
+                i.SignCode,
+                Round(i.RoundStart, i.RoundEnd),
+                ThaiLabels.Clock(i.InspectedAtUtc),
+                ThaiLabels.InspectionResultName(i.Result),
+                i.Defect ?? string.Empty,
+                i.IsCover ? "ตรวจแทน" : string.Empty,
+                i.EmployeeId,
+                i.DisplayName,
+                ThaiLabels.Gps(i.DistanceM, i.WithinRadius),
+            ])).ToList();
+
+        var placeOf = places.ToDictionary(p => p.Id);
+        foreach (var round in rounds.Where(r => r.Outcome != RoundOutcome.Passed))
+        {
+            var place = placeOf[round.PointId];
+            rows.Add(new SortedRow(
+                round.Slot.ShiftDate,
+                round.Slot.Shift,
+                ShiftCalendar.ToUtc(round.Slot, round.RoundEnd),
+                place.AreaCode + "|" + place.SignCode,
+                [
+                    ThaiLabels.Date(round.Slot.ShiftDate),
+                    ThaiLabels.ShiftName(round.Slot.Shift),
+                    place.BuildingCode,
+                    place.AreaCode,
+                    place.PointName,
+                    place.SignCode,
+                    Round(round.RoundStart, round.RoundEnd),
+                    string.Empty,
+                    ThaiLabels.RoundOutcomeName(round.Outcome),
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                ]));
+        }
+
+        return new ExcelSheet(
+            InspectionsName,
+            ["วันที่กะ", "กะ", "ตึก", "Area", "จุด", "ป้าย", "รอบ", "เวลาตรวจ", "ผล", "ข้อบกพร่อง", "ตรวจแทน", "รหัสพนักงาน", "ชื่อ", "GPS"],
             Sort(rows));
     }
 

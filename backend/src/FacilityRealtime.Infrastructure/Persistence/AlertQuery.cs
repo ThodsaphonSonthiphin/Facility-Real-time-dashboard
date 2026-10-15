@@ -1,6 +1,7 @@
 using FacilityRealtime.Application.Alerts;
 using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Common;
+using FacilityRealtime.Application.Inspections;
 using FacilityRealtime.Application.Shifts;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
@@ -10,7 +11,8 @@ namespace FacilityRealtime.Infrastructure.Persistence;
 
 /// <summary>
 /// One line of the alert list (wireframe D3). Area is where it happened: the scanned sign's Area, or for a missing
-/// event the Area the Cleaner checked in to. CoverSlot is set when the Admin can still let this Cleaner cover that Area.
+/// event the Area the Cleaner checked in to. CoverSlot is set when the Admin can still give this person a cover there —
+/// that Area for a Cleaner, that Area's building for a Supervisor. BlockReason is set on a Blocked Scan.
 /// </summary>
 public sealed record AlertRow(
     AlertKind Kind,
@@ -23,11 +25,15 @@ public sealed record AlertRow(
     short? AccuracyM,
     IReadOnlyList<AttendanceEvent> MissingEvents,
     AlertReview? Review,
-    ShiftSlot? CoverSlot);
+    ShiftSlot? CoverSlot,
+    BlockReason? BlockReason = null);
 
 public static class AlertQuery
 {
-    /// <summary>Every alert whose time falls in [fromUtc, toUtc), newest first. Sign comes with its Area and point; Person with their Area.</summary>
+    /// <summary>
+    /// Every alert whose time falls in [fromUtc, toUtc), newest first. Sign comes with its Area (and building) and point;
+    /// Person with their Area.
+    /// </summary>
     public static async Task<IReadOnlyList<AlertRow>> LoadAsync(
         AppDbContext db, DateTime fromUtc, DateTime toUtc, DateTime nowUtc, AttendanceSettings settings)
     {
@@ -37,6 +43,9 @@ public static class AlertQuery
             .ToListAsync();
         var submissionFlags = await db.ScanRecords.AsNoTracking()
             .Where(s => s.WithinRadius == false && s.SubmittedAt >= fromUtc && s.SubmittedAt < toUtc)
+            .ToListAsync();
+        var inspectionFlags = await db.InspectionRecords.AsNoTracking()
+            .Where(i => i.WithinRadius == false && i.InspectedAt >= fromUtc && i.InspectedAt < toUtc)
             .ToListAsync();
         var blocked = await db.BlockedScans.AsNoTracking()
             .Where(b => b.ScannedAt >= fromUtc && b.ScannedAt < toUtc)
@@ -59,18 +68,24 @@ public static class AlertQuery
             .Where(s => s.End <= nowUtc && s.End >= fromUtc && s.End < toUtc && s.ShiftIn is not null && s.Missing.Count > 0)
             .ToList();
 
+        // An inspection names its point, not its sign; each point has exactly one sign
+        var flaggedPointIds = inspectionFlags.Select(i => i.ServicePointId).Distinct().ToList();
         var signIds = attendanceFlags.Select(a => a.SignId!.Value)
             .Concat(submissionFlags.Select(s => s.SignId))
             .Concat(blocked.Select(b => b.SignId))
             .Distinct()
             .ToList();
-        var signs = await db.Signs.AsNoTracking()
-            .Include(s => s.Area)
+        var loadedSigns = await db.Signs.AsNoTracking()
+            .Include(s => s.Area!).ThenInclude(a => a.Building)
             .Include(s => s.ServicePoint)
-            .Where(s => signIds.Contains(s.Id))
-            .ToDictionaryAsync(s => s.Id);
+            .Where(s => signIds.Contains(s.Id) || (s.ServicePointId != null && flaggedPointIds.Contains(s.ServicePointId.Value)))
+            .ToListAsync();
+        var signs = loadedSigns.ToDictionary(s => s.Id);
+        var signOfPoint = loadedSigns.Where(s => s.ServicePointId != null).ToDictionary(s => s.ServicePointId!.Value);
+
         var userIds = attendanceFlags.Select(a => a.UserId)
             .Concat(submissionFlags.Select(s => s.UserId))
+            .Concat(inspectionFlags.Select(i => i.SupervisorId))
             .Concat(blocked.Select(b => b.UserId))
             .Concat(missing.Select(m => m.UserId))
             .Distinct()
@@ -84,6 +99,7 @@ public static class AlertQuery
 
         var recordIds = attendanceFlags.Select(a => a.Id)
             .Concat(submissionFlags.Select(s => s.Id))
+            .Concat(inspectionFlags.Select(i => i.Id))
             .Concat(blocked.Select(b => b.Id))
             .Distinct()
             .ToList();
@@ -95,12 +111,17 @@ public static class AlertQuery
 
         AlertReview? ReviewOf(AlertType type, long id) => reviews.FirstOrDefault(r => r.AlertType == type && r.RecordId == id);
 
-        // facility-0041 rule 4: offer a cover for the scan's own shift while that shift has not ended and none exists yet.
-        // Not for a Cleaner without an Area (no sign to check in at, decision 10); HasShift is false for a deactivated Area.
+        // facility-0041 rule 4, 0048 rule 2: offer a cover for the scan's own shift while that shift has not ended and none exists yet
         ShiftSlot? CoverSlotFor(BlockedScan scan)
         {
             var user = users[scan.UserId];
             var area = signs[scan.SignId].Area!;
+            return user.Role == UserRole.Supervisor ? SupervisorCoverSlot(user, area, scan) : CleanerCoverSlot(user, area, scan);
+        }
+
+        // Not for a Cleaner without an Area (no sign to check in at, decision 10); HasShift is false for a deactivated Area.
+        ShiftSlot? CleanerCoverSlot(User user, Area area, BlockedScan scan)
+        {
             if (user is not { Role: UserRole.Cleaner, IsActive: true, Shift: { } shift } || user.AreaId is not int ownAreaId || ownAreaId == area.Id || !area.HasShift(shift))
             {
                 return null;
@@ -114,6 +135,22 @@ public static class AlertQuery
                     : null;
         }
 
+        // A Supervisor's shift is the clock's at the scan; the cover is for the sign's building (plan 6 decision 7)
+        ShiftSlot? SupervisorCoverSlot(User user, Area area, BlockedScan scan)
+        {
+            if (!user.IsActive || area.Building is not { IsActive: true })
+            {
+                return null;
+            }
+
+            var slot = ShiftCalendar.SlotAt(scan.ScannedAt);
+            return ShiftCalendar.EndUtc(slot) > nowUtc
+                && SupervisorScope.WithoutCover(user.BuildingId, user.Shift, area.BuildingId, slot.Shift) is not null
+                && !activeCovers.Any(c => c.UserId == user.Id && c.BuildingId == area.BuildingId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift)
+                    ? slot
+                    : null;
+        }
+
         var rows = new List<AlertRow>();
         rows.AddRange(attendanceFlags.Select(a => new AlertRow(
             AlertKind.AttendanceGps, a.Id, a.OccurredAt, users[a.UserId], signs[a.SignId!.Value].Area!, signs[a.SignId!.Value],
@@ -121,9 +158,12 @@ public static class AlertQuery
         rows.AddRange(submissionFlags.Select(s => new AlertRow(
             AlertKind.SubmissionGps, s.Id, s.SubmittedAt, users[s.UserId], signs[s.SignId].Area!, signs[s.SignId],
             s.DistanceM, s.AccuracyM, [], ReviewOf(AlertType.SubmissionGps, s.Id), null)));
+        rows.AddRange(inspectionFlags.Select(i => new AlertRow(
+            AlertKind.InspectionGps, i.Id, i.InspectedAt, users[i.SupervisorId], signOfPoint[i.ServicePointId].Area!, signOfPoint[i.ServicePointId],
+            i.DistanceM, i.AccuracyM, [], ReviewOf(AlertType.InspectionGps, i.Id), null)));
         rows.AddRange(blocked.Select(b => new AlertRow(
             AlertKind.BlockedScan, b.Id, b.ScannedAt, users[b.UserId], signs[b.SignId].Area!, signs[b.SignId],
-            b.DistanceM, b.AccuracyM, [], ReviewOf(AlertType.BlockedScan, b.Id), CoverSlotFor(b))));
+            b.DistanceM, b.AccuracyM, [], ReviewOf(AlertType.BlockedScan, b.Id), CoverSlotFor(b), b.Reason)));
         rows.AddRange(missing.Select(m => new AlertRow(
             AlertKind.MissingAttendance, m.ShiftIn!.Id, m.End, users[m.UserId], areas[m.ShiftIn.AreaId], null,
             null, null, m.Missing, null, null)));

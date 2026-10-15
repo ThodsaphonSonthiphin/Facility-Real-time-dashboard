@@ -27,7 +27,8 @@ public enum PointStatus
     OffHours,
 }
 
-public sealed record PointStatusResult(PointStatus Status, RoundWindow? CurrentRound, RoundWindow? NextRound);
+/// <summary>Rework is the inspection that asked for it, set only when Status is Rework.</summary>
+public sealed record PointStatusResult(PointStatus Status, RoundWindow? CurrentRound, RoundWindow? NextRound, InspectionFact? Rework = null);
 
 /// <summary>ADR facility-0047 rules 2, 4 and 5. Issue is not a status (facility-0046); callers show it as a separate tag.</summary>
 public static class PointStatusCalculator
@@ -55,13 +56,15 @@ public static class PointStatusCalculator
         var roundSubmissions = RoundRules.SubmissionsOf(current, submissions);
         var latest = RoundRules.LatestInspection(roundSubmissions, inspections);
 
+        var needsRework = RoundRules.NeedsRework(roundSubmissions, latest);
+
         var status =
-            RoundRules.NeedsRework(roundSubmissions, latest) ? PointStatus.Rework
+            needsRework ? PointStatus.Rework
             : roundSubmissions.Count == 0 && nowUtc > current.EndUtc ? PointStatus.Overdue
             : roundSubmissions.Any(s => latest is null || s.SubmittedAt > latest.InspectedAt) ? PointStatus.PendingInspection
             : latest is { Result: InspectionResult.Passed } ? PointStatus.Passed
             : PointStatus.NotYetDone;
 
-        return new PointStatusResult(status, current, next);
+        return new PointStatusResult(status, current, next, needsRework ? latest : null);
     }
 }

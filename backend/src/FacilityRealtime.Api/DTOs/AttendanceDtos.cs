@@ -28,5 +28,5 @@ public record AttendanceStateDto(
 
 public record AttendanceRefusedDto(string Message, IReadOnlyList<AttendanceEvent> NextEvents);
 
-/// <summary>facility-0041: tells the phone which Area the scanned sign belongs to.</summary>
-public record BlockedScanResponse(string Message, string AreaCode, string AreaName);
+/// <summary>facility-0041, 0048: tells the phone why the scan was refused and where the scanned sign is.</summary>
+public record BlockedScanResponse(string Message, string AreaCode, string AreaName, BlockReason Reason, string BuildingCode);

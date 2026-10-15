@@ -268,4 +268,91 @@ public class SchemaRuleTests
             await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
         });
     }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task A_cover_is_for_an_area_or_a_building_never_both_or_neither(bool withArea, bool withBuilding)
+    {
+        using var factory = new FacilityApiFactory();
+
+        await factory.WithDbAsync(async db =>
+        {
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "S2001");
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            db.CoverAssignments.Add(new CoverAssignment
+            {
+                UserId = supervisor.Id,
+                AreaId = withArea ? (await db.Areas.FirstAsync()).Id : null,
+                BuildingId = withBuilding ? (await db.Buildings.FirstAsync()).Id : null,
+                ShiftDate = new DateOnly(2026, 10, 8),
+                Shift = Shift.Night,
+                AssignedById = admin.Id,
+                AssignedAt = DateTime.UtcNow,
+            });
+
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        });
+    }
+
+    [Fact]
+    public async Task A_supervisor_cover_names_a_building_and_an_inspection_keeps_its_gps_and_cover()
+    {
+        using var factory = new FacilityApiFactory();
+
+        await factory.WithDbAsync(async db =>
+        {
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "S2001");
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            var building = await db.Buildings.SingleAsync(b => b.Code == "A");
+            var sign = await db.Signs.SingleAsync(s => s.QrToken == "token-restroom-m1");
+            var cover = new CoverAssignment
+            {
+                UserId = supervisor.Id,
+                BuildingId = building.Id,
+                ShiftDate = new DateOnly(2026, 10, 8),
+                Shift = Shift.Night,
+                AssignedById = admin.Id,
+                AssignedAt = DateTime.UtcNow,
+            };
+            var scan = new ScanRecord
+            {
+                ServicePointId = sign.ServicePointId!.Value,
+                SignId = sign.Id,
+                UserId = cleaner.Id,
+                ShiftDate = new DateOnly(2026, 10, 8),
+                Shift = Shift.Night,
+                Placement = Placement.OnTime,
+                SubmittedAt = DateTime.UtcNow,
+            };
+            db.CoverAssignments.Add(cover);
+            db.ScanRecords.Add(scan);
+            await db.SaveChangesAsync();
+            db.InspectionRecords.Add(new InspectionRecord
+            {
+                ScanRecordId = scan.Id,
+                ServicePointId = scan.ServicePointId,
+                SupervisorId = supervisor.Id,
+                Result = InspectionResult.Passed,
+                InspectedAt = DateTime.UtcNow,
+                CoverAssignmentId = cover.Id,
+                Latitude = 13.800000m,
+                Longitude = 100.600000m,
+                AccuracyM = 10,
+                DistanceM = 12000,
+                WithinRadius = false,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        await factory.WithDbAsync(async db =>
+        {
+            var inspection = await db.InspectionRecords.Include(i => i.CoverAssignment).SingleAsync();
+            Assert.False(inspection.WithinRadius);
+            Assert.Equal((short)12000, inspection.DistanceM);
+            Assert.Null(inspection.CoverAssignment!.AreaId);
+            Assert.NotNull(inspection.CoverAssignment.BuildingId);
+        });
+    }
 }
