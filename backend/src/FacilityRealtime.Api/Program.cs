@@ -111,6 +111,7 @@ app.MapAdminAlertEndpoints();
 app.MapAdminAuditLogEndpoints();
 app.MapAdminAccountEndpoints();
 app.MapAdminExportEndpoints();
+app.MapAdminInspectionSummaryEndpoints();
 
 app.Run();
 

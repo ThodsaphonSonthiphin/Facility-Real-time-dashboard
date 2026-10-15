@@ -69,6 +69,8 @@ Plan 4 test results at merge:
 
 - 2026-10-14 · Task 8 done: RoundOutcomes and InspectionHistory (ไม่ได้ตรวจ / ไม่ได้แก้ for closed shifts); export set Inspections writes sheet "การตรวจงาน" (inspections, outcome rows, ตรวจแทน, GPS verdict only). All tests pass. Next: Task 9 (Inspection Summary).
 
+- 2026-10-14 · Task 9 done: GET /api/admin/inspection-summary (per active Supervisor: beat points inspected of total, submissions and how many were inspected, ไม่ได้ตรวจ rounds, own inspections, reworks and GPS flags; 7 shift dates by default, at most 31). All tests pass. Next: Task 10 (MySQL check and docs).
+
 ## Pending work (ask the owner before starting)
 
 - Supervisor plan: inspection, block reasons `OUTSIDE_SHIFT` / `OTHER_BUILDING`, Supervisor covers, the `INSPECTION_GPS` alert, and the inspection sheet of the Excel export.
