@@ -73,4 +73,20 @@ public class InspectionSummaryTests
         Assert.Equal(0, tallies[0].PointsInspected);
         Assert.Equal(1, tallies[0].Inspections);
     }
+
+    [Fact]
+    public void Points_inspected_counts_points_not_inspections()
+    {
+        var day9 = new ShiftSlot(new DateOnly(2026, 10, 9), Shift.Day);
+
+        var tallies = InspectionSummary.Tally(
+            Supervisors,
+            Points,
+            [],
+            [Inspected(1, 10, 1, Day8, InspectionResult.Passed), Inspected(2, 10, 1, day9, InspectionResult.Passed)],
+            []);
+
+        Assert.Equal(1, tallies[0].PointsInspected);
+        Assert.Equal(2, tallies[0].Inspections);
+    }
 }

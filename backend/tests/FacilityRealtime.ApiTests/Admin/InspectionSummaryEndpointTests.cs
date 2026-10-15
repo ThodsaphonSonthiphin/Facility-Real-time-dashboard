@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.ApiTests.Inspections;
 using FacilityRealtime.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.ApiTests.Admin;
 
@@ -92,6 +93,54 @@ public class InspectionSummaryEndpointTests
 
         var row = Assert.Single(summary.Rows);
         Assert.Equal(("S2003", "B", 1), (row.EmployeeId, row.BuildingCode, row.PointsTotal));
+    }
+
+    [Fact]
+    public async Task A_deactivated_supervisor_is_not_listed()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        await TestData.AddSupervisorAsync(factory, "S2002", "0820000002", "A", Shift.Night);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.EmployeeId == "S2002")).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var summary = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08"))!;
+
+        Assert.Contains("S2001", summary.Rows.Select(r => r.EmployeeId));
+        Assert.DoesNotContain("S2002", summary.Rows.Select(r => r.EmployeeId));
+    }
+
+    [Fact]
+    public async Task The_date_range_counts_only_its_own_shift_dates()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        var earlier = await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(7, 8, 10));
+        await TestData.AddInspectionAsync(factory, earlier, InspectionResult.Passed, ThaiClock.At(7, 8, 20), withinRadius: true);
+
+        var one = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08"))!;
+        var two = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-07&to=2026-10-08"))!;
+
+        Assert.Equal(0, one.Rows.Single(r => r.EmployeeId == "S2001").Inspections);
+        Assert.Equal(1, two.Rows.Single(r => r.EmployeeId == "S2001").Inspections);
+    }
+
+    [Fact]
+    public async Task A_cover_inspection_in_another_building_counts_under_a_building_filter()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        await InspectionApi.AddBuildingBAsync(factory);
+        var scan = await TestData.AddScanAsync(factory, InspectionApi.BuildingBPoint, ThaiClock.At(8, 8, 30));
+        await TestData.AddInspectionAsync(factory, scan, InspectionResult.Passed, ThaiClock.At(8, 8, 40), supervisorEmployeeId: "S2001");
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory, "A");
+
+        var summary = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08&buildingId={buildingA}"))!;
+
+        Assert.Equal(1, summary.Rows.Single(r => r.EmployeeId == "S2001").Inspections);
     }
 
     [Theory]

@@ -101,6 +101,7 @@ public static class AdminInspectionSummaryEndpoints
             })
             .OrderBy(r => r.BuildingCode, StringComparer.Ordinal)
             .ThenBy(r => r.Shift)
+            .ThenBy(r => r.EmployeeId, StringComparer.Ordinal)
             .ToList();
 
         return Results.Ok(new InspectionSummaryDto(first, last, rows));
