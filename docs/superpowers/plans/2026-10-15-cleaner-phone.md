@@ -150,14 +150,14 @@ The Cleaner's home stops saying "หน้านี้กำลังสร้�
   - CSS classes `app-note`, `app-note--info|warn|error`, `app-chip`, `app-panel`.
   - Test fixtures in `test/cleanerFixtures.ts`: `cleanerSession`, `point(overrides?)`, `entry(eventType, occurredAt, withinRadius?)`, `attendance(events, nextEvents, outcome?)`, `notCheckedIn`, `onDuty`, `checkedOut`, `outsideShift`, `area(points?, overrides?)`, `myWork(attendance?, areas?)`, `otherAreaBlocked`.
 
-- [ ] **Step 1: Create the branch**
+- [x] **Step 1: Create the branch**
 
 ```bash
 git checkout master && git pull --ff-only && git checkout -b feat/cleaner-phone
 git log --oneline -1   # expect 43f10a3 (or a later docs-only commit)
 ```
 
-- [ ] **Step 2: Colour tokens**
+- [x] **Step 2: Colour tokens**
 
 In `frontend/src/index.css`, inside `:root`, right after the line `--color-error-text: #8a1c12;`, add (colours from `MyWork.dc.html`):
 
@@ -172,7 +172,7 @@ In `frontend/src/index.css`, inside `:root`, right after the line `--color-error
   --color-status-idle: #5f696b;
 ```
 
-- [ ] **Step 3: Server types**
+- [x] **Step 3: Server types**
 
 Append to `frontend/src/shared/api/types.ts`:
 
@@ -288,7 +288,7 @@ export interface BlockedScan {
 }
 ```
 
-- [ ] **Step 4: Write the failing time test**
+- [x] **Step 4: Write the failing time test**
 
 `frontend/src/shared/utils/thaiTime.test.ts`:
 
@@ -321,7 +321,7 @@ describe('thaiTime', () => {
 Run: `npm test -- src/shared/utils/thaiTime.test.ts`
 Expected: FAIL, `Failed to resolve import "./thaiTime"`.
 
-- [ ] **Step 5: Write `thaiTime.ts` and `labels.ts`**
+- [x] **Step 5: Write `thaiTime.ts` and `labels.ts`**
 
 `frontend/src/shared/utils/thaiTime.ts`:
 
@@ -395,7 +395,7 @@ export const pointStatusLabel: Record<PointStatus, string> = {
 Run: `npm test -- src/shared/utils/thaiTime.test.ts`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 6: The shared query, the chip and the shared CSS**
+- [x] **Step 6: The shared query, the chip and the shared CSS**
 
 `frontend/src/shared/api/myWorkApi.ts`:
 
@@ -512,7 +512,7 @@ Append to `frontend/src/shared/components/shared.css`:
 }
 ```
 
-- [ ] **Step 7: Test fixtures**
+- [x] **Step 7: Test fixtures**
 
 `frontend/src/test/cleanerFixtures.ts`:
 
@@ -589,7 +589,7 @@ export const otherAreaBlocked: BlockedScan = {
 };
 ```
 
-- [ ] **Step 8: Write the failing My Work tests**
+- [x] **Step 8: Write the failing My Work tests**
 
 `frontend/src/pages/my-work/MyWorkPage.test.tsx`:
 
@@ -734,7 +734,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
 Run: `npm test -- src/pages/my-work`
 Expected: FAIL. The page still says "หน้านี้กำลังสร้าง", so `findByRole('region', ...)` times out.
 
-- [ ] **Step 9: Write the page**
+- [x] **Step 9: Write the page**
 
 `frontend/src/pages/my-work/WorkCard.tsx`:
 
@@ -1055,7 +1055,7 @@ Mind the JSX of the summary: `<strong>{count('Rework')}</strong> ต้องแ
 }
 ```
 
-- [ ] **Step 10: Run the tests, the typecheck and the lint**
+- [x] **Step 10: Run the tests, the typecheck and the lint**
 
 ```bash
 npm test          # expect: 60 passed (47 + 4 time + 9 My Work), including the old router and login tests
@@ -1065,7 +1065,7 @@ npm run lint      # expect: no output
 
 If an old test now fails with "Found multiple elements with the text: แม่บ้านทดสอบ", the page prints the name; remove it (Global Constraints).
 
-- [ ] **Step 11: Handoff entry**
+- [x] **Step 11: Handoff entry**
 
 Add `## Task log (plan 8)` above `## Pending work` in `docs/handoff.md`, with this first entry (fill in the date):
 
@@ -1073,7 +1073,7 @@ Add `## Task log (plan 8)` above `## Pending work` in `docs/handoff.md`, with th
 - <date> · Task 1 done: My Work (M9, M14): own Area then covered Areas, most urgent first, summary tiles, rework defect, issue tag, no link to the scan page; asks the server on open and on "อัปเดต". Shared Cleaner types, GET /api/my-work query, Thai time helpers, status chip and colour tokens. Frontend tests 60 passed. Next: Task 2 (check-in page).
 ```
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add frontend/src docs/handoff.md docs/superpowers/plans/2026-10-15-cleaner-phone.md
@@ -1103,7 +1103,7 @@ The Area's check-in sign opens `/check-in/<token>`. The page shows the shift's f
   - Test helper `fakeGps(...answers): { calls: number }`, with `nearSign` and `farFromSign` (`test/fakeGps.ts`). `test/setup.ts` removes the fake after each test.
   - Route `/check-in/:token` (Cleaner only).
 
-- [ ] **Step 1: The fake GPS and the setup cleanup**
+- [x] **Step 1: The fake GPS and the setup cleanup**
 
 `frontend/src/test/fakeGps.ts`:
 
@@ -1154,7 +1154,7 @@ afterEach(() => {
 });
 ```
 
-- [ ] **Step 2: Write the failing GPS test**
+- [x] **Step 2: Write the failing GPS test**
 
 `frontend/src/shared/geo/readLocation.test.ts`:
 
@@ -1193,7 +1193,7 @@ describe('readLocation (facility-0036, 0037)', () => {
 Run: `npm test -- src/shared/geo`
 Expected: FAIL, `Failed to resolve import "./readLocation"`.
 
-- [ ] **Step 3: Write `readLocation.ts`**
+- [x] **Step 3: Write `readLocation.ts`**
 
 `frontend/src/shared/geo/readLocation.ts`:
 
@@ -1244,7 +1244,7 @@ export function readLocation(): Promise<LocationReading> {
 Run: `npm test -- src/shared/geo`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 4: Answers shared by both scan pages, and the send timeout**
+- [x] **Step 4: Answers shared by both scan pages, and the send timeout**
 
 `frontend/src/shared/api/scanAnswers.ts`:
 
@@ -1287,7 +1287,7 @@ In `frontend/src/shared/api/baseApi.ts`, add after the imports:
 export const SEND_TIMEOUT_MS = 20_000;
 ```
 
-- [ ] **Step 5: The two shared screens**
+- [x] **Step 5: The two shared screens**
 
 `frontend/src/shared/components/LocationHelp.tsx`:
 
@@ -1445,7 +1445,7 @@ Append to `frontend/src/shared/components/shared.css`:
 }
 ```
 
-- [ ] **Step 6: Write the failing check-in tests**
+- [x] **Step 6: Write the failing check-in tests**
 
 `frontend/src/pages/check-in/CheckInPage.test.tsx`:
 
@@ -1690,7 +1690,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
 Run: `npm test -- src/pages/check-in`
 Expected: FAIL, `Failed to resolve import` of the page through the route, or "ไม่พบหน้านี้" instead of the buttons (the route does not exist yet).
 
-- [ ] **Step 7: The attendance call**
+- [x] **Step 7: The attendance call**
 
 `frontend/src/pages/check-in/checkInApi.ts`:
 
@@ -1730,7 +1730,7 @@ const checkInApi = baseApi.injectEndpoints({
 export const { useRecordAttendanceMutation } = checkInApi;
 ```
 
-- [ ] **Step 8: The page**
+- [x] **Step 8: The page**
 
 `frontend/src/pages/check-in/AttendanceTimeline.tsx`:
 
@@ -2068,7 +2068,7 @@ function AnsweredNote({ eventType, state, accuracyM }: AnsweredNoteProps) {
 export { CheckInPage } from './CheckInPage';
 ```
 
-- [ ] **Step 9: The route**
+- [x] **Step 9: The route**
 
 In `frontend/src/router.tsx`, add the import below `import { AdminLoginPage, LoginPage } from './pages/auth';`:
 
@@ -2103,7 +2103,7 @@ with:
       },
 ```
 
-- [ ] **Step 10: Run the tests, the typecheck and the lint**
+- [x] **Step 10: Run the tests, the typecheck and the lint**
 
 ```bash
 npm test          # expect: 76 passed (60 + 3 GPS + 13 check-in)
@@ -2111,13 +2111,13 @@ npx tsc -b        # expect: no output
 npm run lint      # expect: no output
 ```
 
-- [ ] **Step 11: Handoff entry**
+- [x] **Step 11: Handoff entry**
 
 ```markdown
 - <date> · Task 2 done: check-in sign page /check-in/:token (M1, M3, M10): the shift's four events, buttons for what the server allows next, a fresh GPS reading per press, flag with the phone accuracy, already recorded and too-soon answers; Location off (M2), plain http, blocked sign (M8), outside the window, out of order (reloads the buttons), no signal. Shared readLocation, fakeGps, LocationHelp, BlockedScanScreen, scan answers. Frontend tests 76 passed. Next: Task 3 (scan page).
 ```
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add frontend/src docs/handoff.md
@@ -2146,7 +2146,7 @@ A point's sign opens `/scan/<token>`. The page shows the point, refuses early wh
   - Route `/scan/:token` (Cleaner only).
   - In `ScanPage.test.tsx`: `SIGN`, `serve(routes?, card?, work?)` and `saved(overrides?)` (Task 4 appends a `describe` that uses them).
 
-- [ ] **Step 1: Write the failing scan tests**
+- [x] **Step 1: Write the failing scan tests**
 
 `frontend/src/pages/scan/ScanPage.test.tsx`:
 
@@ -2386,7 +2386,7 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
 Run: `npm test -- src/pages/scan`
 Expected: FAIL, `Failed to resolve import "./scanApi"`.
 
-- [ ] **Step 2: The calls and the rules**
+- [x] **Step 2: The calls and the rules**
 
 `frontend/src/pages/scan/scanApi.ts`:
 
@@ -2489,7 +2489,7 @@ export function offDutyReason(attendance: AttendanceState): OffDutyReason | null
 }
 ```
 
-- [ ] **Step 3: The four views**
+- [x] **Step 3: The four views**
 
 `frontend/src/pages/scan/PointHeading.tsx`:
 
@@ -2740,7 +2740,7 @@ export function OffDuty({ reason, point }: { reason: OffDutyReason; point: Point
 }
 ```
 
-- [ ] **Step 4: The page, its CSS, its index and its route**
+- [x] **Step 4: The page, its CSS, its index and its route**
 
 `frontend/src/pages/scan/ScanPage.tsx`:
 
@@ -3010,7 +3010,7 @@ and in the Cleaner block's `children`, after the `check-in/:token` line, add:
               { path: 'scan/:token', element: <ScanPage /> },
 ```
 
-- [ ] **Step 5: Run the tests, the typecheck and the lint**
+- [x] **Step 5: Run the tests, the typecheck and the lint**
 
 ```bash
 npm test          # expect: 90 passed (76 + 14 scan)
@@ -3018,13 +3018,13 @@ npx tsc -b        # expect: no output
 npm run lint      # expect: no output
 ```
 
-- [ ] **Step 6: Handoff entry**
+- [x] **Step 6: Handoff entry**
 
 ```markdown
 - <date> · Task 3 done: point sign page /scan/:token (M4, M5, M11, M13): the point with its round hint and rework defect, เรียบร้อย chosen (two taps), พบปัญหา with tags and note (a tag or a note required), result by placement (on time, late with minutes, rework, off-round) with distance or flag; not checked in, checked out and outside the shift refused before the form; unknown sign; Location help (M2). Supervisors get no-permission until plan 9. Frontend tests 90 passed. Next: Task 4 (send failures and blocked point).
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add frontend/src docs/handoff.md
@@ -3045,7 +3045,7 @@ No signal or a server fault keeps the choices and offers "ส่งใหม่"
 - Consumes: Task 3's `PointHeading`, `describeDraft`, `ScanDraft`, `outcomeOf`, `Outcome`, test helpers `SIGN`, `serve`, `saved`; Task 2's `blockedScanOf`, `isNotSent`, `BlockedScanScreen`; Task 1's `otherAreaBlocked` fixture.
 - Produces: `<SendFailed point draft triedAt sending onResend />`; `Outcome` gains `{ kind: 'blocked'; blocked: BlockedScan }` and `{ kind: 'not-sent'; triedAt: Date }`; `outcomeOf(answer, triedAt)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `frontend/src/pages/scan/ScanPage.test.tsx`, add `otherAreaBlocked` to the import from `'../../test/cleanerFixtures'`, then append at the end of the file:
 
@@ -3155,7 +3155,7 @@ describe('ScanPage when the send does not go through (M8, M12)', () => {
 Run: `npm test -- src/pages/scan`
 Expected: FAIL. The no-signal and 503 tests find the form's alert instead of "ยังไม่ได้บันทึก"; the blocked test finds the form's alert "ป้ายนี้ไม่ใช่ Area ของคุณ" but no heading. The refusal and double-press tests already pass (Task 3 built them).
 
-- [ ] **Step 2: Write `SendFailed.tsx`**
+- [x] **Step 2: Write `SendFailed.tsx`**
 
 `frontend/src/pages/scan/SendFailed.tsx`:
 
@@ -3207,7 +3207,7 @@ export function SendFailed({ point, draft, triedAt, sending, onResend }: SendFai
 }
 ```
 
-- [ ] **Step 3: Widen `ScanPage.tsx`**
+- [x] **Step 3: Widen `ScanPage.tsx`**
 
 Replace the whole of `frontend/src/pages/scan/ScanPage.tsx` with:
 
@@ -3332,7 +3332,7 @@ function outcomeOf(answer: { data?: ScanRecordCreated; error?: unknown }, triedA
 }
 ```
 
-- [ ] **Step 4: Run the tests, the typecheck and the lint**
+- [x] **Step 4: Run the tests, the typecheck and the lint**
 
 ```bash
 npm test          # expect: 95 passed (90 + 5)
@@ -3340,13 +3340,13 @@ npx tsc -b        # expect: no output
 npm run lint      # expect: no output
 ```
 
-- [ ] **Step 5: Handoff entry**
+- [x] **Step 5: Handoff entry**
 
 ```markdown
 - <date> · Task 4 done: the scan page's failures: no signal, timeout or 5xx show "ยังไม่ได้บันทึก" (M12) with the choices kept and "ส่งใหม่" that reads GPS again; another Area's point shows the blocked screen (M8) with the cover advice; a server refusal stays on the form; one send at a time. Frontend tests 95 passed. Next: Task 5 (docs, final checks, the controller's real run).
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src docs/handoff.md
@@ -3363,7 +3363,7 @@ git commit -m "feat(frontend): send failed keeps the choices for resend, blocked
 
 **Interfaces:** none. Docs only, plus a full check.
 
-- [ ] **Step 1: Measure the bundle**
+- [x] **Step 1: Measure the bundle**
 
 ```bash
 cd frontend && npm run build && cd ..
@@ -3371,7 +3371,7 @@ cd frontend && npm run build && cd ..
 
 Note the gzip size of `dist/assets/index-*.js` from Vite's output. It must be ≤ 200 kB. You put it in the 0062 amendment.
 
-- [ ] **Step 2: ADR amendments**
+- [x] **Step 2: ADR amendments**
 
 Append each block to the end of its ADR, after a blank line. The ADRs are in Thai, so the amendments are too. Use the editor tools.
 
@@ -3411,7 +3411,7 @@ Append each block to the end of its ADR, after a blank line. The ADRs are in Tha
 > **วัด 2026-10-15 (แผน 8):** JavaScript ไฟล์เดียว <N> kB gzip หลังเพิ่มหน้างานของฉัน หน้าลงเวลา และหน้าสแกนของแม่บ้าน (ยังไม่มี Base UI และยังไม่ได้ import SignalR) ยังอยู่ในงบ 200 kB
 ```
 
-- [ ] **Step 3: `README.md`**
+- [x] **Step 3: `README.md`**
 
 In the section `## 📱 การเข้าใช้งานระบบบนอุปกรณ์จริง`:
 
@@ -3423,7 +3423,7 @@ In the section `## 📱 การเข้าใช้งานระบบบ�
   - ลงเวลาและส่งงานต้องอ่าน GPS ได้ browser ให้อ่านเฉพาะหน้า https หรือ `localhost` มือถือที่เปิด `http://<IP>` จะขึ้น "อ่านตำแหน่งไม่ได้" จนกว่าจะมี HTTPS (facility-0049) ระหว่างนี้ทดสอบบน Mac ที่ `http://localhost:5173` หรือ `:5001` แล้วตั้งตำแหน่งใน Chrome DevTools › More tools › Sensors › Location
 ```
 
-- [ ] **Step 4: `frontend/README.md`**
+- [x] **Step 4: `frontend/README.md`**
 
 1. In the code block under `## Where things go (facility-0025)`, replace the line that starts `src/shared/api/` with these two lines, and add the `geo` line below the `src/shared/auth/` line:
 
@@ -3438,13 +3438,13 @@ src/shared/geo/                          readLocation: one fresh GPS reading per
 The Cleaner pages also need a location: `fakeGps(nearSign)` from `src/test/fakeGps.ts` gives jsdom a `navigator.geolocation` (`'denied'` and `'unavailable'` answers too). Made-up My Work, attendance and point answers are in `src/test/cleanerFixtures.ts`.
 ```
 
-- [ ] **Step 5: `docs/architecture.md`**
+- [x] **Step 5: `docs/architecture.md`**
 
 1. In section 2, in the `Pages[...]` node, replace `auth (M0, D0) · my-work · my-building · dashboard` with `auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · my-building · dashboard`.
 2. In section 3, replace `participant Phone as Phone browser<br/>(ScanRecordPage)` with `participant Phone as Phone browser<br/>(pages/scan ScanPage)`.
 3. In section 3, replace the note `Before any scan the Cleaner records Shift-In: POST /api/attendance<br/>at the Area's check-in sign (the same QR flow, with the phone's GPS fix)` with `Before any scan the Cleaner records Shift-In at the Area's check-in sign:<br/>it opens /check-in/{qrToken}, and the press sends POST /api/attendance with a fresh GPS fix`.
 
-- [ ] **Step 6: `docs/handoff.md`**
+- [x] **Step 6: `docs/handoff.md`**
 
 1. Add a row to the Status table:
 
@@ -3465,7 +3465,7 @@ The Cleaner pages also need a location: `fakeGps(nearSign)` from `src/test/fakeG
 - Shared for later pages: `shared/geo/readLocation.ts`, `shared/api/scanAnswers.ts` (`blockedScanOf`, `isNotSent`), `LocationHelp`, `BlockedScanScreen` (`sign="point"` text speaks to a Cleaner; plan 9 adds the Supervisor's wording), `StatusChip`, `test/fakeGps.ts`.
 ```
 
-- [ ] **Step 7: Final full check**
+- [x] **Step 7: Final full check**
 
 ```bash
 cd frontend && npm test && npx tsc -b && npm run lint && npm run build && cd ..
@@ -3482,7 +3482,7 @@ Expected:
 - Backend: 299 unit tests pass; API 531 pass and 5 are skipped (nothing in `backend/` changed).
 - Each grep prints its "no ..." line, and the `backend` diff is empty.
 
-- [ ] **Step 8: Handoff entry and commit**
+- [x] **Step 8: Handoff entry and commit**
 
 ```markdown
 - <date> · Task 5 done: ADR amendments (0025 shared Cleaner pieces, 0026 sign URLs, 0036 GPS reading and plain http, 0041 blocked on press, 0052 refresh and resend, 0062 measured size), README device notes, frontend README, architecture diagrams, handoff notes for plans 9 and 10. Frontend 95 tests; unit 299; API 531 + 5 skipped. Next: the controller's real run, then the whole-branch review.

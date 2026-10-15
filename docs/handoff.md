@@ -25,7 +25,8 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 4 | Attendance page (D2), alert list (D3), Admin history (D9) | merged (PR #53, `7cd8ba4`) |
 | 5 | Accounts page (D6) + Excel export (D8) | done, merged (PR #54, `c530c84`) (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
 | 6 | Supervisor inspection, covers, My Building, alerts, export sheet, summary | done, merged (PR #55, `d9b4374`) (branch `feat/supervisor-inspection`): `docs/superpowers/plans/2026-10-14-supervisor-inspection-backend.md` |
-| 7 | Frontend foundation: tree, store, API layer, session, router and guard, login pages, served by the API | done (branch `feat/frontend-foundation`): `docs/superpowers/plans/2026-10-15-frontend-foundation.md` |
+| 7 | Frontend foundation: tree, store, API layer, session, router and guard, login pages, served by the API | done, merged (PR #56, `43f10a3`) (branch `feat/frontend-foundation`): `docs/superpowers/plans/2026-10-15-frontend-foundation.md` |
+| 8 | Cleaner phone: My Work, check-in sign page, point sign page with send failures and blocked scans | done (branch `feat/cleaner-phone`): `docs/superpowers/plans/2026-10-15-cleaner-phone.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -105,11 +106,12 @@ Plan 4 test results at merge:
 - 2026-10-15 · Task 2 done: check-in sign page /check-in/:token (M1, M3, M10): the shift's four events, buttons for what the server allows next, a fresh GPS reading per press, flag with the phone accuracy, already recorded and too-soon answers; Location off (M2), plain http, blocked sign (M8), outside the window, out of order (reloads the buttons), no signal. Shared readLocation, fakeGps, LocationHelp, BlockedScanScreen, scan answers. Frontend tests 82 passed. Next: Task 3 (scan page).
 - 2026-10-15 · Task 3 done: point sign page /scan/:token (M4, M5, M11, M13): the point with its round hint and rework defect, เรียบร้อย chosen (two taps), พบปัญหา with tags and note (a tag or a note required), result by placement (on time, late with minutes, rework, off-round) with distance or flag; not checked in, checked out and outside the shift refused before the form; unknown sign; Location help (M2). Supervisors get no-permission until plan 9. Frontend tests 98 passed. Next: Task 4 (send failures and blocked point).
 - 2026-10-15 · Task 4 done: the scan page's failures: no signal, timeout or 5xx show "ยังไม่ได้บันทึก" (M12) with the choices kept and "ส่งใหม่" that reads GPS again; another Area's point shows the blocked screen (M8) with the cover advice; a server refusal stays on the form; one send at a time. Frontend tests 103 passed. Next: Task 5 (docs, final checks, the controller's real run).
+- 2026-10-15 · Task 5 done: ADR amendments (0025 shared Cleaner pieces, 0026 sign URLs, 0036 GPS reading and plain http, 0041 blocked on press, 0052 refresh and resend, 0062 measured size 135.53 kB gzip), README device notes, frontend README, architecture diagrams (and the plan-7 note above section 3), handoff notes for plans 9 and 10; plan 7 marked merged in the Status table. Frontend 103 tests (the plan expected 95; Tasks 3 and 4 added more); unit 299; API 531 + 5 skipped; no inline styles, web storage, ad-hoc time formatting or links to the sign pages; nothing under `backend/` changed. Next: the controller's real run, then the whole-branch review.
 
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
-- Frontend plans 8–11 (scopes in the plan-7 file): 8 Cleaner phone, 9 Supervisor phone, 10 Admin setup, 11 Admin live board.
+- Frontend plans 9–11 (scopes in the plan-7 file): 9 Supervisor phone, 10 Admin setup, 11 Admin live board.
 
 ## Owner's rules (still in force)
 
@@ -183,7 +185,9 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 ## Notes for the frontend plan
 
 - Plan 7 built the base: add a page as `src/pages/<page>/` with `<page>Api.ts` (`baseApi.injectEndpoints`), a `.css` with the page prefix and an `index.ts`; add its route in `router.tsx` under the right `ProtectedRoute`; test with `renderApp` + `fakeServer`.
-- The QR Sign URLs are not decided yet: plan 8 decides the check-in sign's path (`by-token` answers 404 for a check-in sign) and plan 10 prints whatever plan 8 chose.
+- QR Sign URLs (plan 8): a check-in sign prints `<origin>/check-in/<token>`, a point sign `<origin>/scan/<token>`. Plan 10 prints these.
+- `/scan/:token` is Cleaner-only after plan 8 (a test pins the Supervisor's no-permission screen). Plan 9 makes it show the inspection page for a Supervisor: a page may not import another page, so the role switch lives in `router.tsx` or a new app-level file classified in `eslint.config.js`.
+- Shared for later pages: `shared/geo/readLocation.ts`, `shared/api/scanAnswers.ts` (`blockedScanOf`, `isNotSent`), `LocationHelp`, `BlockedScanScreen` (`sign="point"` text speaks to a Cleaner; plan 9 adds the Supervisor's wording), `StatusChip`, `test/fakeGps.ts`.
 - Supervisor scan: call `POST /api/inspections/scan` when the page opens. Send `submission.id` back as `scanRecordId`, and on 409 scan again.
 - `CoverAssignmentDto.cleanerName` is now `personName`. A cover has either `areaId`/`areaCode` or `buildingId`/`buildingCode`. `CoverSuggestionDto` likewise has `areaId` or `buildingId`.
 - Alerts carry `blockReason` (`OtherArea`, `OtherBuilding`, `OutsideShift`) and the new kind `InspectionGps`.
