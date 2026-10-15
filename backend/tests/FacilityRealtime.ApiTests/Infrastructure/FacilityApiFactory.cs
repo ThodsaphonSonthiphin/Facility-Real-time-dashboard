@@ -26,11 +26,18 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
     /// <summary>Set before the first request: a test-only hook to add or replace services (e.g. an EF interceptor).</summary>
     public Action<IServiceCollection>? ConfigureTestServices { get; init; }
 
+    /// <summary>Set to serve a built frontend from this folder instead of the project's wwwroot (facility-0067 tests).</summary>
+    public string? WebRoot { get; init; }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         // UseSetting reaches Program before builder.Build(), unlike ConfigureAppConfiguration
         builder.UseSetting("Jwt:SigningKey", signingKey);
+        if (WebRoot is not null)
+        {
+            builder.UseWebRoot(WebRoot);
+        }
 
         builder.ConfigureServices(services =>
         {

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:api": "tsc -b && vite build --outDir ../backend/src/FacilityRealtime.Api/wwwroot --emptyOutDir",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

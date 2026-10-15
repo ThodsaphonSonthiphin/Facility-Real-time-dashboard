@@ -5,3 +5,6 @@ __pycache__/
 node_modules/
 bin/
 obj/
+
+# facility-0067: the built frontend, made by `npm --prefix frontend run build:api`
+backend/src/FacilityRealtime.Api/wwwroot/

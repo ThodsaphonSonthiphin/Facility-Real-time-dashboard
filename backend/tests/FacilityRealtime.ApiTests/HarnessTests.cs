@@ -11,7 +11,7 @@ public class HarnessTests
     {
         using var factory = new FacilityApiFactory();
 
-        var response = await factory.CreateClient().GetAsync("/");
+        var response = await factory.CreateClient().GetAsync("/api/health");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
