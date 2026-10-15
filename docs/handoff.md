@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-14
+Last updated: 2026-10-15
 
 ## Project
 
@@ -24,7 +24,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 3 | Admin setup: Areas, points, round windows, sign location, radius, new QR | merged (PR #52) |
 | 4 | Attendance page (D2), alert list (D3), Admin history (D9) | merged (PR #53, `7cd8ba4`) |
 | 5 | Accounts page (D6) + Excel export (D8) | done, merged (PR #54, `c530c84`) (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
-| 6 | Supervisor inspection, covers, My Building, alerts, export sheet, summary | in progress (branch `feat/supervisor-inspection`): `docs/superpowers/plans/2026-10-14-supervisor-inspection-backend.md` |
+| 6 | Supervisor inspection, covers, My Building, alerts, export sheet, summary | done, not merged (branch `feat/supervisor-inspection`): `docs/superpowers/plans/2026-10-14-supervisor-inspection-backend.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -75,9 +75,11 @@ Plan 4 test results at merge:
 
 - 2026-10-15 · Final-review fix wave done: Inspection Summary leaves out post-shift work (decision 17); a failed live push is logged, not a 500; My Building IsCover follows the cover; docs updated. Unit 299, API 519 + 5 skipped. Next: the controller's MySQL run.
 
+- 2026-10-15 · MySQL check on the Mac (Homebrew MySQL 26.7): the migration SupervisorInspection applied to an empty throwaway database (the one-place CHECK on the FK columns is accepted); the whole suite with `FACILITY_MYSQL_TEST` set passed, 823 passed, 0 skipped (299 unit, 524 API including the 5 MySQL tests); a smoke script against the real API on a throwaway database passed (check-in, submission with live push, My Building, scan, inspection with GPS, building cover create and cancel, alerts, summary, export) with no warnings in the API log. Both throwaway databases were dropped; `facility_dashboard` is untouched. Next: push the branch and open the PR, with the owner's OK.
+
 ## Decisions made while building plan 6 (report them to the owner in the PR)
 
-- 17. Work a Cleaner submits after the clock's shift end (Late or a rework fix, inside the attendance window) cannot be inspected: Supervisors inspect only in their clock shift and a cover for an ended shift is refused. The Inspection Summary leaves it out of the beat's submitted / inspected / ไม่ได้ตรวจ numbers; the export still lists the round. Owner to confirm, or to choose letting Supervisors inspect the last round's late work after the shift instead.
+- 17. Work a Cleaner submits after the clock's shift end (Late or a rework fix, inside the attendance window) cannot be inspected: Supervisors inspect only in their clock shift and a cover for an ended shift is refused. The Inspection Summary leaves it out of the beat's submitted / inspected / ไม่ได้ตรวจ numbers; the export still lists the round. Confirmed by the owner on 2026-10-15.
 - 18. A blank defect sent with สะอาด counts as left out (201), like blank Notes on a submission.
 - 19. The live feed goes only to active Supervisors, covering ones included; a live-update failure is logged and never fails the saved submission or inspection.
 - 20. Migration SupervisorInspection is forward-only once a Supervisor (building) cover exists: Down() cannot make cover_assignments.area_id NOT NULL again.
@@ -144,6 +146,7 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 
 ## Parked; not needed before merging
 
+- The AttendanceRecorded live pushes (check-in/out, Admin corrections) are not wrapped like PointNotifications: a hub failure there still answers 500 after the attendance row is saved (pre-existing since plan 4).
 - A Cleaner who forgot Shift-Out and is later deactivated or moved to another shift: that alert can no longer be filled or closed. Normal date ranges do not show it.
 - A wildly wrong date (e.g. year 9999) gives 500 instead of 400.
 - Two Admins closing an alert or assigning a cover at the same moment: assigning may give 500 (nothing is left half-saved).
