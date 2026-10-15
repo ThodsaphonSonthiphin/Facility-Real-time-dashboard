@@ -29,6 +29,7 @@ internal static class PointNotifications
             .ToListAsync();
         var covering = await db.CoverAssignments
             .Where(c => c.BuildingId == buildingId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
+            .Where(c => db.Users.Any(u => u.Id == c.UserId && u.IsActive && u.Role == UserRole.Supervisor))
             .Select(c => c.UserId)
             .ToListAsync();
         var userIds = own.Concat(covering).Distinct().Select(id => id.ToString(CultureInfo.InvariantCulture)).ToList();

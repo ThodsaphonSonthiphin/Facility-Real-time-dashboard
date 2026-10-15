@@ -45,8 +45,8 @@ public class MyBuildingEndpointTests
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var womens = await TestData.AddScanAsync(factory, "token-restroom-f1", ThaiClock.At(8, 8, 5));
         await TestData.AddInspectionAsync(factory, womens, InspectionResult.Rework, ThaiClock.At(8, 8, 15));
-        await TestData.AddScanAsync(factory, "token-meeting-room", ThaiClock.At(8, 8, 20));
-        await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
+        await TestData.AddScanAsync(factory, "token-meeting-room", ThaiClock.At(8, 8, 8));
+        await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 20));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
         var page = (await supervisor.GetFromJsonAsync<MyBuildingModel>(Path))!;
@@ -57,7 +57,7 @@ public class MyBuildingEndpointTests
         Assert.Equal("A", building.BuildingCode);
         Assert.False(building.IsCover);
         Assert.True(building.CanInspect);
-        Assert.Equal(new[] { "ห้องน้ำชาย ชั้น 1", "ห้องประชุม", "ห้องน้ำหญิง ชั้น 1" }, building.Points.Select(p => p.Name));
+        Assert.Equal(new[] { "ห้องประชุม", "ห้องน้ำชาย ชั้น 1", "ห้องน้ำหญิง ชั้น 1" }, building.Points.Select(p => p.Name));
         Assert.Equal(new[] { "PendingInspection", "PendingInspection", "Rework" }, building.Points.Select(p => p.Status));
         Assert.Equal("พื้นยังเปียก", building.Points[2].Rework!.Defect);
     }
