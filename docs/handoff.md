@@ -86,10 +86,14 @@ Plan 4 test results at merge:
 - 19. The live feed goes only to active Supervisors, covering ones included; a live-update failure is logged and never fails the saved submission or inspection.
 - 20. Migration SupervisorInspection is forward-only once a Supervisor (building) cover exists: Down() cannot make cover_assignments.area_id NOT NULL again.
 
+## Task log (plan 7)
+
+- 2026-10-15 · Task 1 done: old frontend deleted (it targeted the phase-1 API); toolchain is eslint 9 + boundaries, Vitest on jsdom with a fake fetch, husky pre-commit (frontend lint, tsc, tests); wireframe CSS tokens and IBM Plex Sans Thai bundled. Frontend tests 3 passed; boundary rules shown to catch page→page, shared→pages, unknown files and raw HTML. Next: Task 2 (store, API layer and session).
+
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
-- Frontend.
+- Frontend: plan 7 (foundation) is written, not started: `docs/superpowers/plans/2026-10-15-frontend-foundation.md`. Plans 8–11 follow it (scopes in that file). Branch `feat/frontend-foundation` is created by its Task 1.
 
 ## Owner's rules (still in force)
 

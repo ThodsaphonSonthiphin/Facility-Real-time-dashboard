@@ -1,0 +1,70 @@
+/* facility-0063: tokens and base rules only. Each page keeps its own plain .css file with a page prefix. */
+/* Colours are the wireframes' (docs/design/wireframe). */
+:root {
+  --color-bg: #f4f5f4;
+  --color-surface: #ffffff;
+  --color-text: #1d2324;
+  --color-text-soft: #3b4446;
+  --color-muted: #5f696b;
+  --color-border: #d5dada;
+  --color-input-border: #aeb6b7;
+  --color-primary: #0e6b66;
+  --color-primary-dark: #0a4f4b;
+  --color-on-primary: #ffffff;
+  --color-info-bg: #e3f1ef;
+  --color-info-border: #9ccbc6;
+  --color-info-text: #0a4f4b;
+  --color-error-bg: #fdecea;
+  --color-error-border: #e2a39b;
+  --color-error-text: #8a1c12;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --gap: 16px;
+  --phone-width: 480px;
+  --desk-width: 1216px;
+
+  font-family: 'IBM Plex Sans Thai', system-ui, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

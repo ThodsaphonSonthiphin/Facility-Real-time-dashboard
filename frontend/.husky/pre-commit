@@ -1,0 +1,4 @@
+cd frontend
+npm run lint
+npx tsc -b
+npm test
