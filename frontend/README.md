@@ -19,8 +19,9 @@ The pre-commit hook (husky) runs lint, `tsc -b` and the tests.
 ```
 src/main.tsx · App.tsx · router.tsx     app: store, page-load refresh, route table
 src/store/                               the store, authSlice, typed hooks
-src/shared/api/                          baseApi (RTK Query) and server types
+src/shared/api/                          baseApi (RTK Query), server types, myWorkApi (shared by the Cleaner pages)
 src/shared/auth/                         session refresh, logout, role homes
+src/shared/geo/                          readLocation: one fresh GPS reading per press
 src/shared/components/                   guard, layout, status and crash screens (class prefix app-)
 src/pages/<page>/                        one folder per page: Page.tsx, <page>Api.ts, <page>.css, index.ts
 src/test/                                fakeServer (fake fetch) and renderApp (the whole app at a URL)
@@ -38,3 +39,5 @@ The access token lives only in the Redux store. The refresh token is an HttpOnly
 ## Tests
 
 Tests render the whole app at a URL with `renderApp` and fake only `fetch` with `fakeServer`. Find elements the way a person would: by role, label or text.
+
+The Cleaner pages also need a location: `fakeGps(nearSign)` from `src/test/fakeGps.ts` gives jsdom a `navigator.geolocation` (`'denied'` and `'unavailable'` answers too). Made-up My Work, attendance and point answers are in `src/test/cleanerFixtures.ts`.

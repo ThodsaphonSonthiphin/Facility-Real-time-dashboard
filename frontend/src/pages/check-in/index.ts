@@ -1,0 +1,1 @@
+export { CheckInPage } from './CheckInPage';

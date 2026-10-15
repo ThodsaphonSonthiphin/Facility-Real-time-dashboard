@@ -110,7 +110,7 @@ flowchart LR
 flowchart TB
     subgraph FE["Frontend — frontend/src (React 19 + TypeScript, tree of facility-0025)"]
         AppF["main.tsx · App.tsx · router.tsx<br/>store, page-load refresh, createBrowserRouter"]
-        Pages["pages/*<br/>auth (M0, D0) · my-work · my-building · dashboard<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css"]
+        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · my-building · dashboard<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css"]
         Store["store/<br/>authSlice: user + access token in memory"]
         BaseApi["shared/api/baseApi.ts<br/>RTK Query, Bearer header,<br/>401 → one shared refresh → retry"]
         Session["shared/auth<br/>session.ts (refresh, single-flight)<br/>endSession.ts (logout)"]
@@ -179,7 +179,7 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
-> Note (plan 7): sections 3 and 4 still draw the phase-1 frontend files (`ScanRecordPage`, `DashboardView`, `authSession.ts`, `services/signalr.ts`), which plan 7 replaced. Login and refresh now live in `shared/auth/session.ts` and `pages/auth/`; plans 8, 9 and 11 redraw the scan and live-update flows.
+> Note (plan 7, updated in plan 8): the phone side of section 3 is plan 8's `pages/scan`. Sections 3 and 4 still draw the phase-1 frontend files `DashboardView`, `authSession.ts` and `services/signalr.ts`, which plan 7 replaced. Login and refresh now live in `shared/auth/session.ts` and `pages/auth/`; plans 9 and 11 redraw the inspection and live-update flows.
 
 This is the main flow: a Cleaner submits a Scan Record and the Admin Dashboard updates.
 
@@ -187,7 +187,7 @@ This is the main flow: a Cleaner submits a Scan Record and the Admin Dashboard u
 sequenceDiagram
     autonumber
     actor Cleaner
-    participant Phone as Phone browser<br/>(ScanRecordPage)
+    participant Phone as Phone browser<br/>(pages/scan ScanPage)
     participant Vite as Vite :5173<br/>(proxy)
     participant Api as API :5001<br/>(Endpoints/*)
     participant DB as MySQL
@@ -203,7 +203,7 @@ sequenceDiagram
     DB-->>Api: rows
     Api-->>Phone: 200 PointStatusDto (no QR Token)
 
-    Note over Cleaner,Phone: Before any scan the Cleaner records Shift-In: POST /api/attendance<br/>at the Area's check-in sign (the same QR flow, with the phone's GPS fix)
+    Note over Cleaner,Phone: Before any scan the Cleaner records Shift-In at the Area's check-in sign:<br/>it opens /check-in/{qrToken}, and the press sends POST /api/attendance with a fresh GPS fix
 
     Cleaner->>Phone: Choose Normal / Issue (+ tags, notes), tap submit
     Phone->>Vite: POST /api/scan-records { qrToken, status, issueTags, notes,<br/>latitude, longitude, accuracyM }

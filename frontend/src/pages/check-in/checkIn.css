@@ -1,0 +1,113 @@
+/* Check-in sign page, wireframes M1, M3 and M10. Class prefix: checkin- */
+
+.checkin-page {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.checkin-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkin-heading h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.checkin-kicker {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.checkin-sub {
+  font-size: 15px;
+  color: var(--color-muted);
+}
+
+.checkin-area {
+  font-size: 14px;
+  color: var(--color-text-soft);
+}
+
+.checkin-timeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 14px 16px;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: 12px;
+}
+
+.checkin-step {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 2px;
+  border: 1px dashed var(--color-input-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+}
+
+.checkin-step--done {
+  border-style: solid;
+  border-color: var(--color-border);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.checkin-step--next {
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.checkin-flag {
+  color: var(--color-warn-text);
+  font-weight: 700;
+}
+
+.checkin-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.checkin-press {
+  min-height: 56px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.checkin-press--main {
+  min-height: 72px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 22px;
+}
+
+.checkin-press:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.checkin-hint {
+  font-size: 13px;
+  color: var(--color-muted);
+  text-align: center;
+}
