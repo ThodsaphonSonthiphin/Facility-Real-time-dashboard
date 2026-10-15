@@ -107,6 +107,20 @@ public class MyBuildingEndpointTests
     }
 
     [Fact]
+    public async Task A_cover_of_the_own_building_in_the_other_shift_reads_as_a_cover()
+    {
+        using var factory = new FacilityApiFactory();
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        await TestData.AddSupervisorCoverAsync(factory, "S2001", "A", new DateOnly(2026, 10, 8), Shift.Night);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
+
+        var page = (await supervisor.GetFromJsonAsync<MyBuildingModel>(Path))!;
+
+        var section = Assert.Single(page.Buildings);
+        Assert.Equal(("A", true, true), (section.BuildingCode, section.IsCover, section.CanInspect));
+    }
+
+    [Fact]
     public async Task The_page_carries_no_qr_tokens()
     {
         using var factory = new FacilityApiFactory();

@@ -73,6 +73,15 @@ Plan 4 test results at merge:
 
 - 2026-10-15 · Task 10 (part) done: MySqlSupervisorTests (compiles, skipped without FACILITY_MYSQL_TEST); README and architecture docs for inspections, My Building, Supervisor covers, alerts, export sheet and summary; frontend notes. Next: the controller's real-MySQL run (migration on a throwaway database, the whole suite with FACILITY_MYSQL_TEST, the smoke script), then the whole-branch review.
 
+- 2026-10-15 · Final-review fix wave done: Inspection Summary leaves out post-shift work (decision 17); a failed live push is logged, not a 500; My Building IsCover follows the cover; docs updated. Unit 299, API 519 + 5 skipped. Next: the controller's MySQL run.
+
+## Decisions made while building plan 6 (report them to the owner in the PR)
+
+- 17. Work a Cleaner submits after the clock's shift end (Late or a rework fix, inside the attendance window) cannot be inspected: Supervisors inspect only in their clock shift and a cover for an ended shift is refused. The Inspection Summary leaves it out of the beat's submitted / inspected / ไม่ได้ตรวจ numbers; the export still lists the round. Owner to confirm, or to choose letting Supervisors inspect the last round's late work after the shift instead.
+- 18. A blank defect sent with สะอาด counts as left out (201), like blank Notes on a submission.
+- 19. The live feed goes only to active Supervisors, covering ones included; a live-update failure is logged and never fails the saved submission or inspection.
+- 20. Migration SupervisorInspection is forward-only once a Supervisor (building) cover exists: Down() cannot make cover_assignments.area_id NOT NULL again.
+
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
@@ -142,6 +151,8 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - `AuditLogQuery` runs 2 queries; one join would do.
 - History paging: `NextBeforeId` offers an empty next page when the rows exactly fill the limit.
 - No test yet that every timestamp in every response ends in `Z`.
+- ThaiLabels.AlertName(BlockedScan) is still 'สแกนนอก Area', so the permanent audit summary for closing a Supervisor's Blocked Scan says 'สแกนนอก Area'; change the wording before rollout.
+- Retrying POST /api/inspections writes a second Inspection Record (Passed) or gets 409 (Rework); the page must disable the button while posting.
 - From plan 3: a point can be added to a deactivated Area; two Admins editing one point at once get 500 instead of 409; the 404 tests of the sign routes are missing; removing a round window loads its Scan Records into memory.
 
 ## Notes for the frontend plan
@@ -150,6 +161,7 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - `CoverAssignmentDto.cleanerName` is now `personName`. A cover has either `areaId`/`areaCode` or `buildingId`/`buildingCode`. `CoverSuggestionDto` likewise has `areaId` or `buildingId`.
 - Alerts carry `blockReason` (`OtherArea`, `OtherBuilding`, `OutsideShift`) and the new kind `InspectionGps`.
 - Cards in ต้องแก้ไข carry `rework { defect, requestedAt }`.
+- Inspection Summary `notInspected` counts finished rounds left ไม่ได้ตรวจ in closed shifts, not submitted minus inspected; work a Cleaner submits after the shift end (inside the 60-minute window) cannot be inspected by anyone and is left out of the beat's numbers (plan 6 decision 17).
 - Cleaners still get no hub events. My Work reloads on open.
 - Disable the inspect button while POST /api/inspections is in flight: a retried Passed writes a second Inspection Record, and a retried Rework gets 409.
 - A Blocked Scan alert of a Supervisor still says 'สแกนนอก Area' in the history summary; show the alert's `blockReason` on the page instead.

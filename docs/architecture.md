@@ -118,7 +118,7 @@ flowchart TB
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
         subgraph ApiP["FacilityRealtime.Api"]
-            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>/api/inspections/scan | /api/inspections | /api/my-building<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)<br/>/api/admin/inspection-summary"]
+            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>/api/inspections/scan | /api/inspections | /api/my-building<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)<br/>AdminInspectionSummaryEndpoints: /api/admin/inspection-summary"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
             Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, InspectionRecorded → Admins + the building's Supervisors; AttendanceRecorded → Admins"]
             Jwt["Auth/AuthSetup.cs<br/>JWT bearer validation"]
@@ -175,7 +175,7 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 > Note: [facility-0004](adr/facility-0004-app-architecture.md) plans Mediator handlers in `Application`. The code does not use Mediator yet. The endpoint handlers live in `Endpoints/` (AuthEndpoints, MeEndpoints, ServicePointEndpoints, ScanRecordEndpoints, AttendanceEndpoints, CoverAssignmentEndpoints, MyWorkEndpoints), use `AppDbContext` directly, and `Program.cs` only composes them. The Admin pages add `AdminAccountEndpoints` (accounts, plan 5) and `AdminExportEndpoints` (Excel export, plan 5) beside the earlier Admin endpoints. Plan 6 adds `InspectionEndpoints`, `MyBuildingEndpoints` and `AdminInspectionSummaryEndpoints`. `PointNotifications` sends point changes to the Admins and to the building's Supervisors, addressed by account id (`Hubs/SubjectUserIdProvider`).
 
-**Excel export (facility-0053).** `POST /api/admin/export` reads rows through `ExportQuery` (attendance, submissions, and the active points with their Round Windows, from which the "ไม่ได้ทำ" rows are computed by `ExportRules`). `ExportSheets` turns them into sheets and `Infrastructure/Export/ExcelWorkbook` writes the `.xlsx` with ClosedXML 0.104.2 (MIT licence, the only package plan 5 added). Every cell is written as text (dates `yyyy-MM-dd`, times `HH:mm`), so a name such as `=1+1` can never become a formula when the Admin opens the file. Column widths are fixed, because auto-fit needs fonts that the server may not have. Each export writes one `EXPORT_EXCEL` audit row with the range, building, sets and row counts, and no row content.
+**Excel export (facility-0053).** `POST /api/admin/export` reads rows through `ExportQuery` (attendance, submissions, and the active points with their Round Windows, from which the "ไม่ได้ทำ" rows are computed by `ExportRules`). `ExportSheets` turns them into sheets and `Infrastructure/Export/ExcelWorkbook` writes the `.xlsx` with ClosedXML 0.104.2 (MIT licence, the only package plan 5 added). Every cell is written as text (dates `yyyy-MM-dd`, times `HH:mm`), so a name such as `=1+1` can never become a formula when the Admin opens the file. Column widths are fixed, because auto-fit needs fonts that the server may not have. The inspection set adds the "การตรวจงาน" sheet (`InspectionHistoryQuery`, `InspectionHistory.FinishedRounds`): the Inspection Records plus ไม่ได้ตรวจ / ไม่ได้แก้ rows for closed shifts. Each export writes one `EXPORT_EXCEL` audit row with the range, building, sets and row counts, and no row content.
 
 ---
 
@@ -226,6 +226,7 @@ sequenceDiagram
     Api->>Api: PointStatusCalculator.Calculate(...)
     Api->>Hub: Clients.Group("admins").SendAsync("ScanRecorded", dto)
     Note right of Hub: Sent for the Dashboard's running shift (ShiftCalendar), not the Cleaner's attendance slot
+    Note right of Hub: PointNotifications also sends the same event to the building's Supervisors by account id (Clients.Users)
     Hub-->>Dash: "ScanRecorded" (WebSocket push)
     Dash->>Dash: Update the card and KPI bar, no page reload
     Api-->>Phone: 201 Created { scanRecordId, placement, lateMinutes, newPointStatus, submittedAt,<br/>distanceM, withinRadius }

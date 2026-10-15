@@ -89,4 +89,21 @@ public class InspectionSummaryTests
         Assert.Equal(1, tallies[0].PointsInspected);
         Assert.Equal(2, tallies[0].Inspections);
     }
+
+    [Fact]
+    public void Work_submitted_after_the_shift_end_can_never_be_inspected_so_it_is_left_out_of_the_beat()
+    {
+        var late = new RoundSubmission(5, 10, Day8, new TimeOnly(16, 0), new TimeOnly(18, 0), ShiftCalendar.EndUtc(Day8).AddMinutes(30));
+
+        var tallies = InspectionSummary.Tally(
+            [Supervisors[0]],
+            Points,
+            [Sent(1, 11, Day8), late],
+            [Inspected(1, 11, 1, Day8, InspectionResult.Passed)],
+            [Round(11, Day8, RoundOutcome.Passed), new FinishedRound(10, Day8, new TimeOnly(16, 0), new TimeOnly(18, 0), RoundOutcome.NotInspected)]);
+
+        Assert.Equal(1, tallies[0].Submitted);          // the in-shift control still counts
+        Assert.Equal(1, tallies[0].SubmittedInspected);
+        Assert.Equal(0, tallies[0].NotInspected);       // the late work is what made the round ไม่ได้ตรวจ
+    }
 }

@@ -143,6 +143,26 @@ public class InspectionSummaryEndpointTests
         Assert.Equal(1, summary.Rows.Single(r => r.EmployeeId == "S2001").Inspections);
     }
 
+    [Fact]
+    public async Task Work_submitted_after_the_shift_end_is_left_out_of_the_beat()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory); // log in before the clock moves
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.BackdateSetupAsync(factory);
+        await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 7, 0));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 19, 20));
+        var submit = new { qrToken = InspectionApi.MenRestroom, status = "Normal", latitude = TestGps.NearLatitude, longitude = TestGps.NearLongitude, accuracyM = 10 };
+        var created = await cleaner.PostAsJsonAsync("/api/scan-records", submit);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        factory.Clock.SetUtcNow(ThaiClock.At(9, 12, 0));
+
+        var summary = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08"))!;
+
+        var row = summary.Rows.Single(r => r.EmployeeId == "S2001");
+        Assert.Equal((0, 0, 0), (row.Submitted, row.SubmittedInspected, row.NotInspected));
+    }
+
     [Theory]
     [InlineData("cleaner")]
     [InlineData("supervisor")]

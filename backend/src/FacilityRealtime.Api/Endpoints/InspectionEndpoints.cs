@@ -130,7 +130,7 @@ public static class InspectionEndpoints
 
     /// <summary>The verdict. Every check of the scan runs again, so a direct call is blocked the same way.</summary>
     private static async Task<IResult> CreateAsync(
-        CreateInspectionRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, IHubContext<ScanHub> hub)
+        CreateInspectionRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, IHubContext<ScanHub> hub, ILogger<ScanHub> logger)
     {
         var (visit, stop) = await VisitAsync(principal, db, clock, request.QrToken, request.Latitude, request.Longitude, request.AccuracyM);
         if (visit is null)
@@ -192,7 +192,7 @@ public static class InspectionEndpoints
 
         // The Supervisor's shift is the clock's, which is also the Dashboard's
         var board = (await PointBoardQuery.LoadAsync(db, visit.Now, visit.Point.Id)).Single();
-        await PointNotifications.SendAsync(hub, db, "InspectionRecorded", board, visit.Now);
+        await PointNotifications.SendAsync(hub, db, logger, "InspectionRecorded", board, visit.Now);
 
         return Results.Created(
             $"/api/inspections/{inspection.Id}",

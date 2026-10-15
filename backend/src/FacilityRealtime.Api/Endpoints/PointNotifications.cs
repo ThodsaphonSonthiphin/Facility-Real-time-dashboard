@@ -15,27 +15,38 @@ namespace FacilityRealtime.Api.Endpoints;
 /// </summary>
 internal static class PointNotifications
 {
-    /// <summary><paramref name="board"/> is the point as the clock's shift sees it: the Dashboard's view and the Supervisor's.</summary>
-    public static async Task SendAsync(IHubContext<ScanHub> hub, AppDbContext db, string eventName, PointBoardRow board, DateTime nowUtc)
+    /// <summary>
+    /// <paramref name="board"/> is the point as the clock's shift sees it: the Dashboard's view and the Supervisor's.
+    /// The record is already saved, so a failed push is logged and never thrown; the 30 s poll and the page reload recover a
+    /// missed push (facility-0061).
+    /// </summary>
+    public static async Task SendAsync(IHubContext<ScanHub> hub, AppDbContext db, ILogger logger, string eventName, PointBoardRow board, DateTime nowUtc)
     {
-        var dto = PointDtoMapper.ToDto(board);
-        await hub.Clients.Group(ScanHub.AdminGroup).SendAsync(eventName, dto);
-
-        var buildingId = board.Point.Area!.BuildingId;
-        var slot = ShiftCalendar.SlotAt(nowUtc);
-        var own = await db.Users
-            .Where(u => u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == buildingId)
-            .Select(u => u.Id)
-            .ToListAsync();
-        var covering = await db.CoverAssignments
-            .Where(c => c.BuildingId == buildingId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
-            .Where(c => db.Users.Any(u => u.Id == c.UserId && u.IsActive && u.Role == UserRole.Supervisor))
-            .Select(c => c.UserId)
-            .ToListAsync();
-        var userIds = own.Concat(covering).Distinct().Select(id => id.ToString(CultureInfo.InvariantCulture)).ToList();
-        if (userIds.Count > 0)
+        try
         {
-            await hub.Clients.Users(userIds).SendAsync(eventName, dto);
+            var dto = PointDtoMapper.ToDto(board);
+            await hub.Clients.Group(ScanHub.AdminGroup).SendAsync(eventName, dto);
+
+            var buildingId = board.Point.Area!.BuildingId;
+            var slot = ShiftCalendar.SlotAt(nowUtc);
+            var own = await db.Users
+                .Where(u => u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == buildingId)
+                .Select(u => u.Id)
+                .ToListAsync();
+            var covering = await db.CoverAssignments
+                .Where(c => c.BuildingId == buildingId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
+                .Where(c => db.Users.Any(u => u.Id == c.UserId && u.IsActive && u.Role == UserRole.Supervisor))
+                .Select(c => c.UserId)
+                .ToListAsync();
+            var userIds = own.Concat(covering).Distinct().Select(id => id.ToString(CultureInfo.InvariantCulture)).ToList();
+            if (userIds.Count > 0)
+            {
+                await hub.Clients.Users(userIds).SendAsync(eventName, dto);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Live update {EventName} for point {PointId} failed; the record is saved", eventName, board.Point.Id);
         }
     }
 }

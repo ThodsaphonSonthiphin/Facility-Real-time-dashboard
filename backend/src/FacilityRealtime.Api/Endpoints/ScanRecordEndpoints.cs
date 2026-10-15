@@ -30,6 +30,7 @@ public static class ScanRecordEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         IHubContext<ScanHub> hub,
+        ILogger<ScanHub> logger,
         TimeProvider clock,
         AttendanceSettings settings)
     {
@@ -133,7 +134,7 @@ public static class ScanRecordEndpoints
         // in the hour before or after the Cleaner's shift)
         var mine = (await PointBoardQuery.LoadAsync(db, now, slot, areaIds: null, point.Id)).Single();
         var board = slot == ShiftCalendar.SlotAt(now) ? mine : (await PointBoardQuery.LoadAsync(db, now, point.Id)).Single();
-        await PointNotifications.SendAsync(hub, db, "ScanRecorded", board, now);
+        await PointNotifications.SendAsync(hub, db, logger, "ScanRecorded", board, now);
 
         return Results.Created(
             $"/api/scan-records/{record.Id}",

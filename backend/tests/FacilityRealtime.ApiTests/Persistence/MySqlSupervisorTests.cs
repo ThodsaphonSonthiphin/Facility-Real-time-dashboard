@@ -104,6 +104,7 @@ public class MySqlSupervisorTests
 
                 var places = await InspectionHistoryQuery.LoadPointPlacesAsync(read, buildingAId);
                 Assert.Equal(3, places.Count);
+                Assert.True(places.All(p => p.Counted)); // the seed has no deactivated point or Area
                 Assert.True(places.Single(p => p.SignCode == "AR01-01").WorksNight);
 
                 var facts = (await RoundFactsQuery.LoadAsync(read, [pointId], new ShiftSlot(oct8, Shift.Day)))[pointId];

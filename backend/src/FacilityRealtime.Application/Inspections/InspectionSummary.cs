@@ -31,6 +31,10 @@ public static class InspectionSummary
     /// <summary>
     /// Plan 6 decision 15. Beat numbers (points, submissions, ไม่ได้ตรวจ) are about the Supervisor's own building in their
     /// own shift, whoever inspected; the inspection counts are the Supervisor's own, anywhere, covers included.
+    /// Plan 6 decision 17: a submission made after the shift's end (a Cleaner's 60-minute window, filed Late or as a rework
+    /// fix) can never be inspected, because a Supervisor inspects only in the clock's shift. It is left out of the beat's
+    /// Submitted and SubmittedInspected, and a NotInspected round whose latest submission is such work is left out of
+    /// NotInspected. PointsInspected, Inspections, Reworks and GpsFlagged are unchanged; the export still lists the round.
     /// </summary>
     public static IReadOnlyList<SupervisorTally> Tally(
         IReadOnlyList<SummarySupervisor> supervisors,
@@ -41,6 +45,12 @@ public static class InspectionSummary
     {
         var pointOf = points.ToDictionary(p => p.Id);
         var inspectedIds = inspections.Select(i => i.ScanRecordId).ToHashSet();
+        static bool AfterShift(RoundSubmission s) => s.SubmittedAtUtc > ShiftCalendar.EndUtc(s.Slot);
+        bool LatestAfterShift(FinishedRound r) =>
+            submissions
+                .Where(s => s.PointId == r.PointId && s.Slot == r.Slot && s.RoundStart == r.RoundStart && s.RoundEnd == r.RoundEnd)
+                .OrderByDescending(s => s.SubmittedAtUtc)
+                .FirstOrDefault() is { } latest && AfterShift(latest);
 
         return supervisors.Select(supervisor =>
         {
@@ -52,7 +62,7 @@ public static class InspectionSummary
                 .Select(p => p.Id)
                 .ToHashSet();
             var own = inspections.Where(i => i.SupervisorId == supervisor.Id).ToList();
-            var beatSubmissions = submissions.Where(s => InBeat(s.PointId, s.Slot.Shift)).ToList();
+            var beatSubmissions = submissions.Where(s => InBeat(s.PointId, s.Slot.Shift) && !AfterShift(s)).ToList();
 
             return new SupervisorTally(
                 supervisor.Id,
@@ -60,7 +70,7 @@ public static class InspectionSummary
                 beatPoints.Count,
                 beatSubmissions.Count,
                 beatSubmissions.Count(s => inspectedIds.Contains(s.Id)),
-                rounds.Count(r => r.Outcome == RoundOutcome.NotInspected && InBeat(r.PointId, r.Slot.Shift)),
+                rounds.Count(r => r.Outcome == RoundOutcome.NotInspected && InBeat(r.PointId, r.Slot.Shift) && !LatestAfterShift(r)),
                 own.Count,
                 own.Count(i => i.Result == InspectionResult.Rework),
                 own.Count(i => i.WithinRadius == false));

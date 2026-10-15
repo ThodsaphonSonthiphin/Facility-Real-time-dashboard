@@ -53,7 +53,7 @@ public static class MyBuildingEndpoints
                 id,
                 buildings[id].Code,
                 buildings[id].Name,
-                id != user.BuildingId,
+                coveredIds.Contains(id),
                 coveredIds.Contains(id) || (id == user.BuildingId && user.Shift == slot.Shift),
                 Sorted(rows.Where(r => r.Point.Area!.BuildingId == id)).Select(PointDtoMapper.ToDto).ToList()))
             .ToList();
