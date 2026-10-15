@@ -1,0 +1,230 @@
+import { screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { checkedOut, cleanerSession, myWork, notCheckedIn, onDuty, outsideShift, point } from '../../test/cleanerFixtures';
+import { fakeGps, nearSign } from '../../test/fakeGps';
+import { authAnswer, fakeServer, type FakeRoutes } from '../../test/fakeServer';
+import { renderApp } from '../../test/renderApp';
+import type { ScanRecordCreated } from './scanApi';
+
+const SIGN = '/scan/token-restroom-m1';
+
+function serve(routes: FakeRoutes = {}, card = point(), work = myWork(onDuty)) {
+  return fakeServer({
+    ...cleanerSession,
+    'GET /api/service-points/by-token/token-restroom-m1': () => ({ status: 200, body: card }),
+    'GET /api/my-work': () => ({ status: 200, body: work }),
+    ...routes,
+  });
+}
+
+/** A 201 answer of POST /api/scan-records; 03:05Z is 10:05 Thai time. */
+function saved(overrides: Partial<ScanRecordCreated> = {}): ScanRecordCreated {
+  return {
+    scanRecordId: 501,
+    servicePointId: 11,
+    placement: 'OnTime',
+    lateMinutes: null,
+    newPointStatus: 'PendingInspection',
+    distanceM: 6,
+    withinRadius: true,
+    submittedAt: '2026-10-15T03:05:00Z',
+    ...overrides,
+  };
+}
+
+describe('ScanPage (M2, M4, M5, M11, M13)', () => {
+  it('opens the point with เรียบร้อย chosen and sends in two taps (M4 → M5, facility-0007)', async () => {
+    fakeGps(nearSign);
+    const server = serve({ 'POST /api/scan-records': () => ({ status: 201, body: saved() }) });
+    const { user } = await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'ห้องน้ำชาย' })).toBeInTheDocument();
+    expect(screen.getByText('Area ทดลอง · ตึก A')).toBeInTheDocument();
+    expect(screen.getByText('รอบ 10:00–12:00 · ส่งหลัง 12:00 นับเป็นส่งช้า')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'เรียบร้อย' })).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
+
+    expect(await screen.findByRole('heading', { name: 'ส่งงานแล้ว 10:05' })).toBeInTheDocument();
+    expect(server.calls.find((c) => c.path === '/api/scan-records')?.body).toEqual({
+      qrToken: 'token-restroom-m1',
+      status: 'Normal',
+      latitude: 13.7563,
+      longitude: 100.5018,
+      accuracyM: 12,
+    });
+    expect(screen.getByText('ห้องน้ำชาย · เรียบร้อย')).toBeInTheDocument();
+    expect(screen.getByText('รอตรวจ')).toBeInTheDocument();
+    expect(screen.getByText('ห่างป้าย 6 ม. · อยู่ในรัศมี')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ดูงานของฉัน' })).toHaveAttribute('href', '/my-work');
+  });
+
+  it('พบปัญหา sends the chosen tags and the note (facility-0046)', async () => {
+    fakeGps(nearSign);
+    const server = serve({ 'POST /api/scan-records': () => ({ status: 201, body: saved() }) });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'พบปัญหา' }));
+    await user.click(screen.getByRole('checkbox', { name: 'น้ำยาหมด' }));
+    await user.click(screen.getByRole('checkbox', { name: 'ของชำรุด' }));
+    await user.type(screen.getByLabelText('หมายเหตุ'), ' ก๊อกรั่ว ');
+    await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
+
+    await screen.findByRole('heading', { name: 'ส่งงานแล้ว 10:05' });
+    expect(server.calls.find((c) => c.path === '/api/scan-records')?.body).toEqual({
+      qrToken: 'token-restroom-m1',
+      status: 'Issue',
+      issueTags: ['น้ำยาหมด', 'ของชำรุด'],
+      notes: 'ก๊อกรั่ว',
+      latitude: 13.7563,
+      longitude: 100.5018,
+      accuracyM: 12,
+    });
+    expect(screen.getByText('ห้องน้ำชาย · พบปัญหา: น้ำยาหมด · ของชำรุด · ก๊อกรั่ว')).toBeInTheDocument();
+  });
+
+  it('พบปัญหา needs a tag or a note before anything is sent', async () => {
+    fakeGps(nearSign);
+    const server = serve();
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'พบปัญหา' }));
+    await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('เลือกปัญหาที่พบอย่างน้อย 1 อย่าง หรือเขียนหมายเหตุ');
+    expect(server.calls.some((c) => c.path === '/api/scan-records')).toBe(false);
+  });
+
+  it('a point the Supervisor sent back shows the defect, and the fix counts as rework (M4, facility-0029)', async () => {
+    fakeGps(nearSign);
+    serve(
+      { 'POST /api/scan-records': () => ({ status: 201, body: saved({ placement: 'Rework', submittedAt: '2026-10-15T03:30:00Z' }) }) },
+      point({ status: 'Rework', rework: { defect: 'พื้นใต้อ่างล้างมือยังเปียก', requestedAt: '2026-10-15T03:15:00Z' } }),
+    );
+    const { user } = await renderApp(SIGN);
+
+    expect(await screen.findByText('หัวหน้าให้แก้ไข · 10:15')).toBeInTheDocument();
+    expect(screen.getByText('“พื้นใต้อ่างล้างมือยังเปียก”')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
+
+    expect(await screen.findByRole('heading', { name: 'ส่งงานแก้แล้ว 10:30' })).toBeInTheDocument();
+    expect(screen.getByText('นับเป็นงานแก้ของรอบนี้ หัวหน้าจะตรวจอีกครั้ง')).toBeInTheDocument();
+  });
+
+  it('a late submission says how late (M13, facility-0047)', async () => {
+    fakeGps(nearSign);
+    serve(
+      {
+        'POST /api/scan-records': () => ({
+          status: 201,
+          body: saved({ placement: 'Late', lateMinutes: 25, submittedAt: '2026-10-15T05:25:00Z' }),
+        }),
+      },
+      point({ status: 'Overdue' }),
+    );
+    const { user } = await renderApp(SIGN);
+
+    expect(await screen.findByText('รอบ 10:00–12:00 · เลยเวลารอบแล้ว ส่งตอนนี้นับเป็นส่งช้า')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
+
+    expect(await screen.findByRole('heading', { name: 'ส่งงานแล้ว 12:25' })).toBeInTheDocument();
+    expect(screen.getByText('ส่งช้า 25 นาที')).toBeInTheDocument();
+  });
+
+  it('an off-round submission is kept but changes no card (M13, facility-0047)', async () => {
+    fakeGps(nearSign);
+    serve({
+      'POST /api/scan-records': () => ({
+        status: 201,
+        body: saved({ placement: 'OffRound', newPointStatus: 'Passed', submittedAt: '2026-10-15T06:20:00Z' }),
+      }),
+    });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
+
+    expect(await screen.findByRole('heading', { name: 'บันทึกเป็นงานนอกรอบ 13:20' })).toBeInTheDocument();
+    expect(
+      screen.getByText('ตอนนี้ไม่มีรอบไหนรับงานนี้ ระบบบันทึกไว้แล้ว แต่ไม่นับเป็นรอบใด และสถานะของจุดไม่เปลี่ยน'),
+    ).toBeInTheDocument();
+  });
+
+  it('far from the sign: saved but flagged, with the distance (facility-0037)', async () => {
+    fakeGps(nearSign);
+    serve({ 'POST /api/scan-records': () => ({ status: 201, body: saved({ distanceM: 85, withinRadius: false }) }) });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
+
+    expect(
+      await screen.findByText('ติดธง: ห่างป้าย 85 ม. Admin จะเห็นรายการนี้ ถ้าคุณอยู่ที่จุดนี้จริง แจ้ง Admin ได้เลย'),
+    ).toBeInTheDocument();
+  });
+
+  it('before Shift-In the point cannot be submitted, and nothing is sent (M11)', async () => {
+    const server = serve({}, point(), myWork(notCheckedIn));
+    await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'ยังไม่ได้ลงเวลาเข้างาน' })).toBeInTheDocument();
+    expect(screen.getByText('ป้ายจุดทำความสะอาด · ห้องน้ำชาย · Area ทดลอง')).toBeInTheDocument();
+    expect(screen.getByText('ไม่ได้บันทึกงาน')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ส่งงาน' })).not.toBeInTheDocument();
+    expect(server.calls.some((c) => c.path === '/api/scan-records')).toBe(false);
+  });
+
+  it('after Shift-Out the point cannot be submitted', async () => {
+    serve({}, point(), myWork(checkedOut));
+    await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'ลงเวลาเลิกงานแล้ว' })).toBeInTheDocument();
+  });
+
+  it('outside the own shift the point cannot be submitted (facility-0069)', async () => {
+    serve({}, point(), myWork(outsideShift));
+    await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'ตอนนี้ไม่อยู่ในกะของคุณ' })).toBeInTheDocument();
+  });
+
+  it('an unknown or closed sign shows the server message', async () => {
+    serve({
+      'GET /api/service-points/by-token/token-restroom-m1': () => ({
+        status: 404,
+        body: { message: 'ไม่พบป้ายนี้ หรือจุดนี้ปิดใช้งานแล้ว' },
+      }),
+    });
+    await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'ไม่พบป้ายนี้ หรือจุดนี้ปิดใช้งานแล้ว' })).toBeInTheDocument();
+  });
+
+  it('Location off shows how to turn it on, then sends (M2, facility-0036)', async () => {
+    fakeGps('denied', nearSign);
+    serve({ 'POST /api/scan-records': () => ({ status: 201, body: saved() }) });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
+    expect(await screen.findByRole('heading', { name: 'เปิด Location ก่อนส่งงาน' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('heading', { name: 'ส่งงานแล้ว 10:05' })).toBeInTheDocument();
+  });
+
+  it('a logged-out Cleaner who scans the sign returns to it after login (facility-0017, 0026)', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => ({ status: 401 }) });
+    const { router } = await renderApp(SIGN);
+
+    expect(router.state.location.pathname).toBe('/login');
+    expect(router.state.location.state).toMatchObject({ from: { pathname: SIGN } });
+  });
+
+  it('a Supervisor sees no-permission until plan 9 adds inspection here (plan 8 decision 2)', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('supervisor') });
+    await renderApp(SIGN);
+
+    expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
+    expect(screen.getByText('หน้านี้สำหรับแม่บ้าน บัญชีนี้เป็นหัวหน้างาน')).toBeInTheDocument();
+  });
+});
