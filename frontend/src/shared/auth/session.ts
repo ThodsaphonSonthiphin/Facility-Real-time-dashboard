@@ -22,18 +22,30 @@ async function runRefresh(dispatch: Dispatch): Promise<RefreshOutcome> {
   try {
     response = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' });
   } catch {
-    return 'offline'; // keep the session: a phone losing signal for a moment must not log the person out
+    return 'offline'; // no network or a server fault: keep the session, a phone losing signal must not log the person out
   }
-  if (!response.ok) {
+  if (response.status === 401 || response.status === 403) {
     dispatch(sessionExpired());
     return 'rejected';
   }
-  dispatch(setCredentials((await response.json()) as AuthResponse));
+  if (!response.ok) {
+    return 'offline'; // no network or a server fault (5xx, proxy during a deploy): keep the session
+  }
+  let answer: AuthResponse;
+  try {
+    answer = (await response.json()) as AuthResponse;
+  } catch {
+    return 'offline'; // a 200 that is not our JSON (captive portal, cut body): keep the session
+  }
+  dispatch(setCredentials(answer));
   return 'refreshed';
 }
 
 /** Page load (facility-0023 item 4): one refresh decides whether the cookie still holds a session. */
 export async function startSession(dispatch: Dispatch): Promise<void> {
-  await refreshSession(dispatch);
-  dispatch(bootstrapFinished());
+  try {
+    await refreshSession(dispatch);
+  } finally {
+    dispatch(bootstrapFinished());
+  }
 }

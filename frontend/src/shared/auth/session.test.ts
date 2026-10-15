@@ -38,9 +38,47 @@ describe('startSession', () => {
 
     expect(store.getState().auth.isBootstrapping).toBe(false);
   });
+
+  it('a refresh answer that is not JSON still ends bootstrapping', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response('<html>portal</html>', { status: 200, headers: { 'Content-Type': 'text/html' } }),
+        ),
+    );
+    const store = makeStore();
+
+    await startSession(store.dispatch);
+
+    expect(store.getState().auth.isBootstrapping).toBe(false);
+  });
 });
 
 describe('refreshSession', () => {
+  it('a server fault (503) keeps the session', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => ({ status: 503 }) });
+    const store = makeStore();
+    store.dispatch(setCredentials(authAnswer('cleaner').body));
+
+    const outcome = await refreshSession(store.dispatch);
+
+    expect(outcome).toBe('offline');
+    expect(store.getState().auth.currentUser?.role).toBe('cleaner');
+  });
+
+  it('403 ends the session like 401', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => ({ status: 403 }) });
+    const store = makeStore();
+    store.dispatch(setCredentials(authAnswer('cleaner').body));
+
+    const outcome = await refreshSession(store.dispatch);
+
+    expect(outcome).toBe('rejected');
+    expect(store.getState().auth.currentUser).toBeNull();
+  });
+
   it('keeps the session when the network drops for a moment', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
     const store = makeStore();
