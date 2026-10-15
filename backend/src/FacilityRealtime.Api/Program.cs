@@ -56,14 +56,14 @@ builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecu
 var app = builder.Build();
 
 // facility-0067: the built frontend (frontend/dist, copied into wwwroot by `npm run build:api`) is served from this origin.
-// index.html is revalidated on every load so a phone picks up a new build at once; the hashed assets/ files never change.
+// Hashed files under assets/ never change; everything else, index.html included, is revalidated on every load.
 var appFiles = new StaticFileOptions
 {
     OnPrepareResponse = context =>
     {
-        context.Context.Response.Headers.CacheControl = context.File.Name == "index.html"
-            ? "no-cache"
-            : "public, max-age=31536000, immutable";
+        context.Context.Response.Headers.CacheControl = context.Context.Request.Path.StartsWithSegments("/assets")
+            ? "public, max-age=31536000, immutable"
+            : "no-cache";
     },
 };
 app.UseDefaultFiles();

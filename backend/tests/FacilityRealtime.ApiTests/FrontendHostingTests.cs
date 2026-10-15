@@ -13,6 +13,7 @@ public sealed class FrontendHostingTests : IDisposable
     public FrontendHostingTests()
     {
         File.WriteAllText(Path.Combine(_webRoot, "index.html"), $"<!doctype html>{IndexMarker}<div id=\"root\"></div>");
+        File.WriteAllText(Path.Combine(_webRoot, "favicon.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\"/>");
         Directory.CreateDirectory(Path.Combine(_webRoot, "assets"));
         File.WriteAllText(Path.Combine(_webRoot, "assets", "index-abc123.js"), "console.log('app');");
     }
@@ -44,6 +45,17 @@ public sealed class FrontendHostingTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("public, max-age=31536000, immutable", response.Headers.CacheControl?.ToString());
+    }
+
+    [Fact]
+    public async Task A_file_outside_assets_is_revalidated_not_cached_for_good()
+    {
+        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+
+        var response = await factory.CreateClient().GetAsync("/favicon.svg");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("no-cache", response.Headers.CacheControl?.ToString());
     }
 
     [Theory]
