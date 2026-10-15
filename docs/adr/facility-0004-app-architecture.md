@@ -35,3 +35,5 @@ flowchart TD
 - EF Core migrations อยู่ใน `Infrastructure` และรันกับ MySQL ที่ติดตั้งผ่าน Homebrew
 - Clean Architecture ทำให้แต่ละฟีเจอร์มีหลายไฟล์ข้ามโปรเจกต์ เป็นต้นทุนที่ยอมรับเพื่อซ้อมโครงสร้างแบบองค์กร
 - Repo เป็น public จึงห้าม commit connection string หรือ secret ให้ใช้ `dotnet user-secrets`
+
+> **แก้ไข 2026-10-15 (แผน 7, #37):** ข้อ 3 ไม่ตรงกับของจริง frontend ไม่ใช้ MUI และไม่ใช้ skill `react-structure` โครงจริงเป็นแบบ MenuNest: `pages/` + `shared/` + `store/` (facility-0025), Redux Toolkit + RTK Query (facility-0022 ถึง 0024), React Router 7 (facility-0026), CSS ธรรมดาต่อหน้า (facility-0063) และ Base UI เมื่อหน้าแรกต้องใช้ Dialog หรือ Toast ข้อ 5 (Vite proxy) ยังใช้ตอนพัฒนา ส่วนระบบจริง API เสิร์ฟ frontend เองจาก origin เดียว (facility-0067)

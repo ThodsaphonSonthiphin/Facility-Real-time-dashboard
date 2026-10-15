@@ -25,6 +25,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 4 | Attendance page (D2), alert list (D3), Admin history (D9) | merged (PR #53, `7cd8ba4`) |
 | 5 | Accounts page (D6) + Excel export (D8) | done, merged (PR #54, `c530c84`) (branch `feat/accounts-export`): `docs/superpowers/plans/2026-10-14-accounts-and-excel-export-backend.md` |
 | 6 | Supervisor inspection, covers, My Building, alerts, export sheet, summary | done, merged (PR #55, `d9b4374`) (branch `feat/supervisor-inspection`): `docs/superpowers/plans/2026-10-14-supervisor-inspection-backend.md` |
+| 7 | Frontend foundation: tree, store, API layer, session, router and guard, login pages, served by the API | done (branch `feat/frontend-foundation`): `docs/superpowers/plans/2026-10-15-frontend-foundation.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -93,11 +94,12 @@ Plan 4 test results at merge:
 - 2026-10-15 · Task 3 done: route table (createBrowserRouter), ProtectedRoute by role, role homes /my-work, /my-building, /dashboard (placeholders), not-found, no-permission, crash screen, session gate, bar with logout. Frontend tests 34 passed. Next: Task 4 (login pages M0 and D0).
 - 2026-10-15 · Task 4 done: login pages /login (employee ID + phone, M0) and /login/admin (username + password, D0); wrong secret, throttle and server messages; return to the page opened before login; build commit shown. Frontend tests 44 passed; JS bundle 127.18 kB gzip. Next: Task 5 (the API serves the built frontend).
 - 2026-10-15 · Task 5 done: the API serves the built frontend from wwwroot (npm run build:api), index.html for every page path but never for /api or /hubs (they keep 404/405), index.html no-cache and hashed assets immutable; CORS AllowAll removed; health check moved to /api/health. Unit 299, API 530 + 5 skipped. Next: Task 6 (docs, ADR amendments, final checks).
+- 2026-10-15 · Task 6 done: ADR amendments (0004 frontend section #37, 0025 rebuild not move, 0026 routes, 0062 measured size, 0063 tokens, 0065 boundaries 7), plans 2B/2C marked superseded, README, frontend README, architecture diagram. Frontend 44 tests; unit 299; API 531 + 5 skipped. Next: the controller's real run, then the whole-branch review.
 
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
-- Frontend: plan 7 (foundation) is written, not started: `docs/superpowers/plans/2026-10-15-frontend-foundation.md`. Plans 8–11 follow it (scopes in that file). Branch `feat/frontend-foundation` is created by its Task 1.
+- Frontend plans 8–11 (scopes in the plan-7 file): 8 Cleaner phone, 9 Supervisor phone, 10 Admin setup, 11 Admin live board.
 
 ## Owner's rules (still in force)
 
@@ -170,6 +172,8 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 
 ## Notes for the frontend plan
 
+- Plan 7 built the base: add a page as `src/pages/<page>/` with `<page>Api.ts` (`baseApi.injectEndpoints`), a `.css` with the page prefix and an `index.ts`; add its route in `router.tsx` under the right `ProtectedRoute`; test with `renderApp` + `fakeServer`.
+- The QR Sign URLs are not decided yet: plan 8 decides the check-in sign's path (`by-token` answers 404 for a check-in sign) and plan 10 prints whatever plan 8 chose.
 - Supervisor scan: call `POST /api/inspections/scan` when the page opens. Send `submission.id` back as `scanRecordId`, and on 409 scan again.
 - `CoverAssignmentDto.cleanerName` is now `personName`. A cover has either `areaId`/`areaCode` or `buildingId`/`buildingCode`. `CoverSuggestionDto` likewise has `areaId` or `buildingId`.
 - Alerts carry `blockReason` (`OtherArea`, `OtherBuilding`, `OutsideShift`) and the new kind `InspectionGps`.

@@ -48,6 +48,8 @@ flowchart LR
 Why the proxy matters: the browser only ever talks to one origin (`:5173`).
 So the refresh-token cookie works without CORS settings, and the URL inside the QR code is the Vite URL ([facility-0004](adr/facility-0004-app-architecture.md) item 5).
 
+In production the Vite server is not used: `npm run build:api` puts the built app in the API's `wwwroot`, and the API serves it from the same origin, with `index.html` for every page path outside `/api` and `/hubs` ([facility-0067](adr/facility-0067-api-serves-frontend-from-one-origin.md)). No page opens the SignalR hub yet; the Supervisor and Admin plans (9, 11) add it.
+
 ---
 
 ## 1b. Network diagram — servers, ports and firewalls
@@ -106,14 +108,13 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph FE["Frontend — frontend/src (React 19 + TypeScript)"]
-        App["App.tsx<br/>path routing + AuthProvider"]
-        Dash["features/dashboard<br/>DashboardView, useDashboard"]
-        Scan["features/scan<br/>ScanRecordPage, useScanRecord"]
-        Login["features/auth<br/>LoginPage, AuthContext"]
-        ApiSvc["services/api.ts<br/>REST calls"]
-        AuthSess["services/authSession.ts<br/>access token in memory,<br/>single-flight refresh"]
-        SR["services/signalr.ts<br/>HubConnection"]
+    subgraph FE["Frontend — frontend/src (React 19 + TypeScript, tree of facility-0025)"]
+        AppF["main.tsx · App.tsx · router.tsx<br/>store, page-load refresh, createBrowserRouter"]
+        Pages["pages/*<br/>auth (M0, D0) · my-work · my-building · dashboard<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css"]
+        Store["store/<br/>authSlice: user + access token in memory"]
+        BaseApi["shared/api/baseApi.ts<br/>RTK Query, Bearer header,<br/>401 → one shared refresh → retry"]
+        Session["shared/auth<br/>session.ts (refresh, single-flight)<br/>endSession.ts (logout)"]
+        Guard["shared/components<br/>ProtectedRoute (role), AppLayout,<br/>StatusScreen, CrashScreen"]
     end
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
@@ -140,17 +141,14 @@ flowchart TB
 
     DB[("MySQL<br/>facility_dashboard")]
 
-    App --> Dash & Scan & Login
-    Dash --> ApiSvc
-    Dash --> SR
-    Scan --> ApiSvc
-    Login --> AuthSess
-    ApiSvc --> AuthSess
-    SR --> AuthSess
-
-    AuthSess -->|"POST /api/auth/*<br/>(cookie facility_refresh)"| AuthEp
-    ApiSvc -->|"GET/POST /api/*<br/>Authorization: Bearer"| Ep
-    SR -->|"WebSocket /hubs/scan?access_token=…"| Hub
+    AppF --> Pages & Guard & Store
+    Pages --> BaseApi
+    Pages --> Store
+    Guard --> Store
+    BaseApi --> Session
+    Session --> Store
+    Session -->|"POST /api/auth/refresh | logout<br/>(cookie facility_refresh)"| AuthEp
+    BaseApi -->|"/api/auth/login and /api/*<br/>Authorization: Bearer"| Ep
 
     Ep --> Status
     Ep --> Ctx

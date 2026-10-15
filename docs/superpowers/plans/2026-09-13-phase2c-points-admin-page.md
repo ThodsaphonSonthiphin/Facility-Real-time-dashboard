@@ -1,5 +1,7 @@
 # Phase 2C: Service Points Admin Page Implementation Plan
 
+> **Superseded (2026-10-15, plan 7):** written for the phase-2 frontend and API, both since replaced. The accounts and points pages are rebuilt in frontend plan 10 against the facility-0025 tree and the plan-3 and plan-5 endpoints. Kept as history only; do not execute it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use sp-subagent-driven-development (recommended) or sp-executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let an Admin add, edit and deactivate service points, regenerate a point's QR Token behind one confirmation, and print QR Signs one at a time or all at once, from a paginated table.

@@ -51,3 +51,5 @@ flowchart TD
 - router จริงแปลว่า **ตัวเสิร์ฟไฟล์ต้องตอบ `/scan/:token` ด้วยแอป** ไม่ใช่ 404 — dev server ของ Vite ทำให้แล้ว ของ production เป็นเรื่องของตั๋ว #34 deploy-origin
 - `/scan` เปล่า ๆ ที่ตกไปที่ `token-restroom-m1` หายไป ถ้ามีใครจำที่อยู่นี้ไว้จะเจอจอ not-found แทน — ซึ่งถูกกว่าการพาไปสแกน Service Point ที่ไม่ได้ยืนอยู่ตรงนั้น
 - `selectedScanToken` กับ `navigateTo` ใน `App.tsx` หายไปทั้งคู่ การเลือก Service Point ตอน dev ทำโดยพิมพ์ URL
+
+> **แก้ไข 2026-10-15 (แผน 7):** ตาราง route ตอนนี้: `/` พาไปหน้าแรกของบทบาท (แม่บ้าน `/my-work`, หัวหน้า `/my-building`, Admin `/dashboard` ตาม facility-0058) หรือไป `/login` ถ้ายังไม่ login; `/login` คือ M0 (รหัสพนักงาน + เบอร์โทร) และ `/login/admin` คือ D0 (ชื่อผู้ใช้ + รหัสผ่าน) แยกสองหน้าตาม wireframe และอยู่นอก `/admin/*` เพราะ guard คุม `/admin/*` ทั้งหมด; คนที่ยังไม่ login เปิดหน้า Admin ถูกพาไป `/login/admin`; ถ้ากด "ออกจากระบบ" เอง login ครั้งถัดไปไปหน้าแรกของบทบาท ไม่กลับหน้าเดิม (มือถืออาจใช้ร่วมกัน) แต่ถ้า session หมดอายุยังจำหน้าเดิมตามข้อ 4; `/scan/:token` และ route ของหน้า Admin มากับแผน 8–11

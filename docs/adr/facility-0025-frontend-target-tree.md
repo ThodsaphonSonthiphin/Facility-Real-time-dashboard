@@ -59,3 +59,5 @@ src/
 - ทุก commit ต้อง build ผ่านและ test ผ่าน ไม่มี commit ที่ "ย้ายครึ่งทาง"
 - Dashboard ย้ายก่อน แปลว่าถ้ารูปแบบผิด จะเจอตั้งแต่หน้าแรก ไม่ใช่หลังจากหน้าอื่นลอกไปแล้ว
 - `router.tsx` และการแตก `index.css` ยังเป็นของตั๋ว #23 และ #31 — tree นี้แค่จองที่ให้
+
+> **แก้ไข 2026-10-15 (แผน 7):** ไม่ได้ย้ายตามลำดับในข้อ 2 เพราะหลังแผน backend 1–6 หน้าจอเดิมเรียก API ที่ไม่มีแล้ว (เช่น `currentStatus` และการ login ด้วย username อย่างเดียว) จึงไม่มีพฤติกรรมให้ตาข่าย #32 รักษา แผน 7 ลบ `features/`, `services/`, `types/`, `styles/` แล้วสร้าง tree ตามข้อ 1 ใหม่ทั้งหมด ส่วนที่เพิ่มจากข้อ 1: `store/slices/authSlice.ts` กับ `store/hooks.ts` (facility-0023), `shared/version/buildInfo.ts` (facility-0068), `shared/auth/roles.ts`, `src/test/` (ตัวช่วย test ที่ fake แค่ `fetch`) และหน้า `my-work`, `my-building` ตาม facility-0052 และ 0057 หน้า `scan`, `accounts` และ `points` มากับแผน 8 และ 10

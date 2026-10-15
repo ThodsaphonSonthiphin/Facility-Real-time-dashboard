@@ -34,3 +34,5 @@ flowchart TD
 - โฟลเดอร์เดิม `features/` และ `services/` ยังไม่อยู่ใน element ใดระหว่างการย้าย จึงต้องปิด `boundaries/no-unknown` ไว้จนขั้นสุดท้าย "ลบของเก่า" แล้วเปิดเป็น error
 - pre-commit ไม่ build หรือ test backend การแก้ backend ต้องรัน `dotnet build` และ `dotnet test` เอง จนกว่าจะมี CI
 - การตรวจก่อน commit ข้ามได้ด้วย `git commit --no-verify` เป็นตาข่าย ไม่ใช่ประตูบังคับ ถ้าต้องการประตูจริงต้องตัดสินเรื่อง CI แยก
+
+> **แก้ไข 2026-10-15 (แผน 7):** eslint-plugin-boundaries 7 ประกาศ element ได้แค่โฟลเดอร์ ไฟล์ `main.tsx`, `App.tsx`, `router.tsx` จึงจัดเป็นไฟล์กลุ่ม `app` ผ่าน `boundaries/files` แทน element ทิศที่อนุญาตเหมือนข้อ 2 ทุกข้อ `boundaries/no-unknown-files` เป็น error ตั้งแต่แรกเพราะไม่มีโฟลเดอร์เก่าเหลือ ไฟล์ test และ `src/test/` อยู่นอกกติกานี้

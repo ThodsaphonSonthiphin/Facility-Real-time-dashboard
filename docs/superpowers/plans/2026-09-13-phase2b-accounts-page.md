@@ -1,5 +1,7 @@
 # Phase 2B: Accounts Page Implementation Plan
 
+> **Superseded (2026-10-15, plan 7):** written for the phase-2 frontend and API, both since replaced. The accounts and points pages are rebuilt in frontend plan 10 against the facility-0025 tree and the plan-3 and plan-5 endpoints. Kept as history only; do not execute it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use sp-subagent-driven-development (recommended) or sp-executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let an Admin create cleaner and admin accounts, edit display names and roles, reset a temporary password, and deactivate or reactivate accounts from a web page, without touching code or SQL.
