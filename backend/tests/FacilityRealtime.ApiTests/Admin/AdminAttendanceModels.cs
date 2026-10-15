@@ -16,12 +16,12 @@ public record AttendanceBoardModel(DateOnly ShiftDate, string Shift, bool ShiftE
 
 public record AlertPersonModel(int Id, string EmployeeId, string DisplayName, string Role, string? AreaCode);
 
-public record CoverSuggestionModel(int UserId, int AreaId, DateOnly ShiftDate, string Shift);
+public record CoverSuggestionModel(int UserId, int? AreaId, int? BuildingId, DateOnly ShiftDate, string Shift);
 
 public record AlertModel(
     string Kind, long RecordId, DateTime At, AlertPersonModel Person, string AreaCode, string AreaName,
     string? SignCode, string? PointName, short? DistanceM, short? RadiusM, short? AccuracyM,
-    List<string> MissingEvents, bool Reviewed, DateTime? ReviewedAt, CoverSuggestionModel? Cover);
+    List<string> MissingEvents, bool Reviewed, DateTime? ReviewedAt, CoverSuggestionModel? Cover, string? BlockReason);
 
 public record CoverCandidateModel(int Id, string EmployeeId, string DisplayName, string AreaCode, DateTime? ShiftInAt, DateTime? ScannedThisAreaAt);
 

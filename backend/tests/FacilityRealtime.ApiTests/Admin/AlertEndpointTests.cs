@@ -64,7 +64,7 @@ public class AlertEndpointTests
         Assert.Equal("AR02-IN", alert.SignCode);
         Assert.False(alert.Reviewed);
         Assert.Equal(
-            new CoverSuggestionModel(alert.Person.Id, await AdminSetupApi.AreaIdAsync(factory, "AR02"), Oct8, "Day"),
+            new CoverSuggestionModel(alert.Person.Id, await AdminSetupApi.AreaIdAsync(factory, "AR02"), null, Oct8, "Day"),
             alert.Cover);
     }
 

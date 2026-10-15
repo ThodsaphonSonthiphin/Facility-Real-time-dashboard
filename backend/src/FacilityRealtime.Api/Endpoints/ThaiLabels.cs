@@ -36,6 +36,7 @@ internal static class ThaiLabels
         AlertKind.BlockedScan => "สแกนนอก Area",
         AlertKind.AttendanceGps => "ลงเวลาไกลจากป้าย",
         AlertKind.SubmissionGps => "ส่งงานไกลจากป้าย",
+        AlertKind.InspectionGps => "ตรวจงานไกลจากป้าย",
         _ => "ไม่ได้ลงเวลาเลิกงาน",
     };
 
