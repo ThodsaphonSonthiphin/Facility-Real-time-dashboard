@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.ApiTests.Inspections;
+using FacilityRealtime.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.ApiTests.Admin;
 
@@ -120,6 +122,26 @@ public class InspectionAlertTests
 
         var alert = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin));
 
+        Assert.Null(alert.Cover);
+    }
+
+    [Fact]
+    public async Task No_cover_is_offered_for_the_supervisors_own_building_and_shift()
+    {
+        using var factory = new FacilityApiFactory();
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
+        await InspectionApi.ScanAsync(supervisor);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.EmployeeId == "S2001")).Shift = Shift.Night;
+            await db.SaveChangesAsync();
+        });
+
+        var alert = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin));
+
+        Assert.Equal("OutsideShift", alert.BlockReason);
         Assert.Null(alert.Cover);
     }
 }
