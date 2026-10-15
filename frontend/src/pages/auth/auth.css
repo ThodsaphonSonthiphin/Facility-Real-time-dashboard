@@ -1,0 +1,136 @@
+/* Login pages, wireframes M0 and D0. Class prefix: auth- */
+
+.auth-page {
+  max-width: var(--phone-width);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.auth-page--desk {
+  max-width: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.auth-heading h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.auth-kicker {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.auth-form {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.auth-card {
+  flex-grow: 0;
+  width: 100%;
+  max-width: 400px;
+  gap: 12px;
+  padding: 28px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.auth-form label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.auth-form input {
+  min-height: 48px;
+  padding: 0 12px;
+  font-size: 17px;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.auth-hint {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.auth-note {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+
+.auth-note--info {
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
+  color: var(--color-info-text);
+}
+
+.auth-note--error {
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error-text);
+  font-weight: 600;
+}
+
+.auth-submit {
+  margin-top: auto;
+  min-height: 72px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-card .auth-submit {
+  margin-top: 4px;
+  min-height: 48px;
+  font-size: 17px;
+}
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.auth-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.auth-build {
+  font-size: 11px;
+}

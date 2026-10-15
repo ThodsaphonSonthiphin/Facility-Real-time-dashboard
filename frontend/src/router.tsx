@@ -1,4 +1,5 @@
 import type { RouteObject } from 'react-router';
+import { AdminLoginPage, LoginPage } from './pages/auth';
 import { DashboardPage } from './pages/dashboard';
 import { MyBuildingPage } from './pages/my-building';
 import { MyWorkPage } from './pages/my-work';
@@ -18,6 +19,8 @@ export const routes: RouteObject[] = [
     errorElement: <CrashScreen />,
     children: [
       { index: true, element: <HomeRedirect /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'login/admin', element: <AdminLoginPage /> },
       {
         element: <ProtectedRoute roles={['cleaner']} />,
         children: [{ element: <AppLayout />, children: [{ path: 'my-work', element: <MyWorkPage /> }] }],

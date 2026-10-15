@@ -91,6 +91,7 @@ Plan 4 test results at merge:
 - 2026-10-15 · Task 1 done: old frontend deleted (it targeted the phase-1 API); toolchain is eslint 9 + boundaries, Vitest on jsdom with a fake fetch, husky pre-commit (frontend lint, tsc, tests); wireframe CSS tokens and IBM Plex Sans Thai bundled. Frontend tests 3 passed; boundary rules shown to catch page→page, shared→pages, unknown files and raw HTML. Next: Task 2 (store, API layer and session).
 - 2026-10-15 · Task 2 done: authSlice (memory only), store, RTK Query baseApi with Bearer header and one shared refresh on 401 (never for /auth/ calls), page-load startSession, endSession (logout + cache reset), getErrorMessage. Frontend tests 23 passed; each guard shown to fail when its rule is removed. Next: Task 3 (router, guard and role homes).
 - 2026-10-15 · Task 3 done: route table (createBrowserRouter), ProtectedRoute by role, role homes /my-work, /my-building, /dashboard (placeholders), not-found, no-permission, crash screen, session gate, bar with logout. Frontend tests 34 passed. Next: Task 4 (login pages M0 and D0).
+- 2026-10-15 · Task 4 done: login pages /login (employee ID + phone, M0) and /login/admin (username + password, D0); wrong secret, throttle and server messages; return to the page opened before login; build commit shown. Frontend tests 44 passed; JS bundle 127.18 kB gzip. Next: Task 5 (the API serves the built frontend).
 
 ## Pending work (ask the owner before starting)
 
