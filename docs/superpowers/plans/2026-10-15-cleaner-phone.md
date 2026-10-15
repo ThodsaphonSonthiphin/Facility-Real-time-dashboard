@@ -3493,7 +3493,7 @@ git add docs README.md frontend/README.md
 git commit -m "docs: Cleaner phone in README, architecture and handoff; ADR amendments for sign URLs, GPS, blocked scans and resend"
 ```
 
-- [ ] **Step 9 (controller only, not a subagent): real run on a throwaway database**
+- [x] **Step 9 (controller only, not a subagent): real run on a throwaway database**
 
 Ask the owner for the MySQL root password. Use it only in the commands below, and never write it to a file.
 
