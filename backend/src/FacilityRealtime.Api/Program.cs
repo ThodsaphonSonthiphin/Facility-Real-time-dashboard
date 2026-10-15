@@ -43,30 +43,31 @@ builder.Services.AddSignalR()
     });
 builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 
-// 3. CORS (Allow local network devices & dev servers)
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.SetIsOriginAllowed(_ => true)
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});
-
-// 4. JSON Serialization with String Enum Converter
+// 3. JSON Serialization with String Enum Converter
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
     options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
-// 5. OpenAPI document (served only in Development, below)
+// 4. OpenAPI document (served only in Development, below)
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
 var app = builder.Build();
 
-app.UseCors("AllowAll");
+// facility-0067: the built frontend (frontend/dist, copied into wwwroot by `npm run build:api`) is served from this origin.
+// Hashed files under assets/ never change; everything else, index.html included, is revalidated on every load.
+var appFiles = new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        context.Context.Response.Headers.CacheControl = context.Context.Request.Path.StartsWithSegments("/assets")
+            ? "public, max-age=31536000, immutable"
+            : "no-cache";
+    },
+};
+app.UseDefaultFiles();
+app.UseStaticFiles(appFiles);
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -93,7 +94,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 app.MapHub<ScanHub>("/hubs/scan");
 
 // 8. Endpoints
-app.MapGet("/", () => Results.Ok(new { status = "healthy", service = "Facility Real-time Dashboard API" }));
+app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", service = "Facility Real-time Dashboard API" }));
 app.MapAuthEndpoints();
 app.MapMeEndpoints();
 app.MapAttendanceEndpoints();
@@ -112,6 +113,10 @@ app.MapAdminAuditLogEndpoints();
 app.MapAdminAccountEndpoints();
 app.MapAdminExportEndpoints();
 app.MapAdminInspectionSummaryEndpoints();
+
+// 9. Every other page path (/login, /scan/<token>, ...) gets the app, so a printed QR Sign opens it (facility-0026, 0067).
+// Paths under /api and /hubs never do: they keep their own 404 and 405. A path with a file extension is a missing file, 404.
+app.MapFallbackToFile("{*path:regex(^(?!(api|hubs)(/|$)).*$):nonfile}", "index.html", appFiles);
 
 app.Run();
 

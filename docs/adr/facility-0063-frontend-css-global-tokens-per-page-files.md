@@ -32,3 +32,5 @@ MenuNest มี `src/index.css` global สำหรับ token และไฟ�
 - ช่วงหนึ่งโค้ดจะมีสไตล์สองแบบอยู่ด้วยกัน (inline กับ CSS file) ตามที่ #30 เตือนไว้ ADR นี้ยอมรับแบบ hybrid ต่อ component ไม่ใช่ต่อหน้า
 - หน้าต่าง QR บนการ์ดจะถูกลบตาม facility-0060 จึงไม่ต้องย้ายสไตล์ของมัน
 - หน้าใหม่ (My Work, หน้าตึกของฉัน, Audit Log และหน้าของแผน 2B, 2C) เขียนสไตล์ใน CSS file ของหน้าตั้งแต่แรก ไม่ใช้ `style={...}`
+
+> **แก้ไข 2026-10-15 (แผน 7):** ไม่มี component ไหนถูกย้าย (ดู facility-0025 แก้ไข 2026-10-15) จึงไม่มีช่วงสไตล์สองแบบตามข้อ 5 ทุกหน้าเขียนสไตล์ใน CSS file ตั้งแต่แรก token ใน `index.css` มาจาก wireframe (พื้นสว่าง สีหลัก `#0E6B66` ฟอนต์ IBM Plex Sans Thai จาก `@fontsource` บน origin เดียวกัน ไม่โหลดจาก Google Fonts) class ของ component ใน `shared/components` ขึ้นต้นด้วย `app-`

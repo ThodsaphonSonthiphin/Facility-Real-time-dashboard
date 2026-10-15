@@ -1,0 +1,90 @@
+import { screen } from '@testing-library/react';
+import type { RouteObject } from 'react-router';
+import { describe, expect, it, vi } from 'vitest';
+import { routes } from './router';
+import { authAnswer, fakeServer } from './test/fakeServer';
+import { renderApp } from './test/renderApp';
+
+const noSession = { 'POST /api/auth/refresh': () => ({ status: 401 }) };
+
+describe('routing (facility-0026, 0058)', () => {
+  it('a live session opens the role home without showing the login page', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('supervisor') });
+    const { router } = await renderApp('/');
+
+    expect(await screen.findByRole('heading', { name: 'ตึกของฉัน' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/my-building');
+  });
+
+  it('without a session, "/" goes to the login page', async () => {
+    fakeServer(noSession);
+    const { router } = await renderApp('/');
+
+    expect(router.state.location.pathname).toBe('/login');
+  });
+
+  it('a page behind login remembers itself for after the login', async () => {
+    fakeServer(noSession);
+    const { router } = await renderApp('/my-work?from=sign');
+
+    expect(router.state.location.pathname).toBe('/login');
+    expect(router.state.location.state).toMatchObject({ from: { pathname: '/my-work', search: '?from=sign' } });
+  });
+
+  it('an Admin page sends a logged-out visitor to the Admin login', async () => {
+    fakeServer(noSession);
+    const { router } = await renderApp('/dashboard');
+
+    expect(router.state.location.pathname).toBe('/login/admin');
+    expect(router.state.location.state).toMatchObject({ from: { pathname: '/dashboard' } });
+  });
+
+  it('a Cleaner opening the Dashboard sees the no-permission screen (facility-0058)', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('cleaner') });
+    await renderApp('/dashboard');
+
+    expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
+    expect(screen.getByText('หน้านี้สำหรับAdmin บัญชีนี้เป็นแม่บ้าน')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'กลับหน้าของฉัน' })).toHaveAttribute('href', '/my-work');
+  });
+
+  it('an unknown address shows not-found', async () => {
+    fakeServer(noSession);
+    await renderApp('/no-such-page');
+
+    expect(screen.getByRole('heading', { name: 'ไม่พบหน้านี้' })).toBeInTheDocument();
+  });
+
+  it('logout ends the session on the server and the next login starts at the own home', async () => {
+    const server = fakeServer({
+      'POST /api/auth/refresh': () => authAnswer('cleaner'),
+      'POST /api/auth/logout': () => ({ status: 204 }),
+    });
+    const { user, router, store } = await renderApp('/my-work');
+    expect(screen.getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'ออกจากระบบ' }));
+
+    expect(router.state.location.pathname).toBe('/login');
+    expect(router.state.location.state).toBeNull();
+    expect(store.getState().auth.accessToken).toBeNull();
+    expect(server.calls.some((c) => c.path === '/api/auth/logout')).toBe(true);
+  });
+
+  it('a page that throws shows the crash screen with a reload button (facility-0068)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    fakeServer(noSession);
+    const Broken = () => {
+      throw new Error('boom');
+    };
+    const [root] = routes;
+    const withBrokenPage: RouteObject[] = [
+      { path: root.path, errorElement: root.errorElement, children: [...(root.children ?? []), { path: 'broken', element: <Broken /> }] },
+    ];
+
+    await renderApp('/broken', withBrokenPage);
+
+    expect(screen.getByRole('heading', { name: 'เกิดข้อผิดพลาด' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'โหลดใหม่' })).toBeInTheDocument();
+  });
+});
