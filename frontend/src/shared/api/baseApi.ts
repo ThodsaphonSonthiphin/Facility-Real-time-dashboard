@@ -8,6 +8,9 @@ import {
 import type { RootState } from '../../store';
 import { refreshSession } from '../auth/session';
 
+/** facility-0052: a scan or attendance send with no answer in 20 s counts as not sent; the page offers to send again. */
+export const SEND_TIMEOUT_MS = 20_000;
+
 const rawBaseQuery = fetchBaseQuery({
   // Absolute, on this page's own origin (facility-0067): RTK Query builds a Request, and a relative URL fails outside a browser (tests)
   baseUrl: `${window.location.origin}/api`,

@@ -6,4 +6,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  // test/fakeGps.ts and the "plain http" tests define these on the browser objects
+  Reflect.deleteProperty(navigator, 'geolocation');
+  Reflect.deleteProperty(window, 'isSecureContext');
 });
