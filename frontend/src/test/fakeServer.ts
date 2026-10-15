@@ -19,7 +19,9 @@ export type FakeRoutes = Record<string, (request: FakeRequest) => FakeResponse |
 /**
  * Replaces the global fetch for one test (the only thing faked besides SignalR, per regression-net #32).
  * Every call is recorded in `calls`. A route with no handler answers 404 with a message naming it, so a missing
- * fake shows up in the test output instead of hanging. test/setup.ts restores the real fetch after each test.
+ * fake shows up in the test output instead of hanging. A handler that never answers stands for a server that never
+ * answers: like a browser, the request then ends only when its signal aborts (a send timeout, facility-0052).
+ * test/setup.ts restores the real fetch after each test.
  */
 export function fakeServer(routes: FakeRoutes) {
   const calls: FakeRequest[] = [];
@@ -36,7 +38,9 @@ export function fakeServer(routes: FakeRoutes) {
     };
     calls.push(fake);
     const handler = routes[`${fake.method} ${fake.path}`];
-    const answer = handler ? await handler(fake) : { status: 404, body: { message: `no fake for ${fake.method} ${fake.path}` } };
+    const answer = handler
+      ? await unlessAborted(request.signal, handler(fake))
+      : { status: 404, body: { message: `no fake for ${fake.method} ${fake.path}` } };
     const hasBody = answer.body !== undefined && answer.status !== 204;
     return new Response(hasBody ? JSON.stringify(answer.body) : null, {
       status: answer.status,
@@ -45,6 +49,18 @@ export function fakeServer(routes: FakeRoutes) {
   });
   vi.stubGlobal('fetch', fetchMock);
   return { calls };
+}
+
+/** A browser's fetch rejects with the signal's reason when the request is aborted, answer or not. */
+function unlessAborted(signal: AbortSignal, answer: FakeResponse | Promise<FakeResponse>): Promise<FakeResponse> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+    Promise.resolve(answer).then(resolve, reject);
+  });
 }
 
 /** A login or refresh answer for a made-up account (public repo: no real names). */

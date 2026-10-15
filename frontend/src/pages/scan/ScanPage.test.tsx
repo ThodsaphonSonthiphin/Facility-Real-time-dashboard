@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { SEND_TIMEOUT_MS } from '../../shared/api/baseApi';
 import { checkedOut, cleanerSession, myWork, notCheckedIn, onDuty, otherAreaBlocked, outsideShift, point } from '../../test/cleanerFixtures';
 import { fakeGps, nearSign } from '../../test/fakeGps';
 import { authAnswer, fakeServer, type FakeRoutes } from '../../test/fakeServer';
@@ -304,6 +305,28 @@ describe('ScanPage when the send does not go through (M8, M12)', () => {
 
     expect(await screen.findByRole('heading', { name: 'ยังไม่ได้บันทึก' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ส่งใหม่' })).toBeEnabled();
+  });
+
+  it('no answer in 20 s is ยังไม่ได้บันทึก too (plan 8 decision 8)', async () => {
+    fakeGps(nearSign);
+    const server = serve({ 'POST /api/scan-records': () => new Promise<never>(() => {}) });
+    const { user } = await renderApp(SIGN);
+    const send = await screen.findByRole('button', { name: 'ส่งงาน' });
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await user.click(send);
+      await vi.waitFor(() => expect(server.calls.some((c) => c.path === '/api/scan-records')).toBe(true));
+      await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS - 1_000);
+      expect(screen.getByRole('button', { name: 'กำลังส่ง...' })).toBeDisabled();
+
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(await screen.findByRole('heading', { name: 'ยังไม่ได้บันทึก' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'ส่งใหม่' })).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('a point of another Area is blocked, and the Admin sees it (M8, facility-0041)', async () => {

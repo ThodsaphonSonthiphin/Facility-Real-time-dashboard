@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { SEND_TIMEOUT_MS } from '../../shared/api/baseApi';
 import {
   attendance,
   cleanerSession,
@@ -223,6 +224,30 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
       'ยังไม่ได้บันทึกเวลา เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
     );
     expect(screen.getByRole('button', { name: 'เข้างาน' })).toBeEnabled();
+  });
+
+  it('no answer in 20 s also says the time was not recorded, and the buttons come back (plan 8 decision 8)', async () => {
+    fakeGps(nearSign);
+    const server = serve({ 'POST /api/attendance': () => new Promise<never>(() => {}) });
+    const { user } = await renderApp(SIGN);
+    const shiftIn = await screen.findByRole('button', { name: 'เข้างาน' });
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await user.click(shiftIn);
+      await vi.waitFor(() => expect(server.calls.some((c) => c.path === '/api/attendance')).toBe(true));
+      await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS - 1_000);
+      expect(screen.getByRole('button', { name: 'กำลังบันทึก...' })).toBeDisabled();
+
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'ยังไม่ได้บันทึกเวลา เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+      );
+      expect(screen.getByRole('button', { name: 'เข้างาน' })).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('a logged-out Cleaner who scans the sign returns to it after login (facility-0026)', async () => {
