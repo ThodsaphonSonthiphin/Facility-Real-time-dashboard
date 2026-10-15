@@ -83,6 +83,40 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
     expect(screen.getByText('ห้องน้ำชาย · พบปัญหา: น้ำยาหมด · ของชำรุด · ก๊อกรั่ว')).toBeInTheDocument();
   });
 
+  it('the form is locked while sending, so the result shows what was sent', async () => {
+    fakeGps('pending');
+    serve();
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
+
+    expect(await screen.findByRole('button', { name: 'กำลังส่ง...' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'เรียบร้อย' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'พบปัญหา' })).toBeDisabled();
+  });
+
+  it('tags and the note go only with พบปัญหา: switching back to เรียบร้อย sends neither', async () => {
+    fakeGps(nearSign);
+    const server = serve({ 'POST /api/scan-records': () => ({ status: 201, body: saved() }) });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'พบปัญหา' }));
+    await user.click(screen.getByRole('checkbox', { name: 'ขยะล้น' }));
+    await user.type(screen.getByLabelText('หมายเหตุ'), 'ถังเต็ม');
+    await user.click(screen.getByRole('radio', { name: 'เรียบร้อย' }));
+    await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
+
+    await screen.findByRole('heading', { name: 'ส่งงานแล้ว 10:05' });
+    expect(server.calls.find((c) => c.path === '/api/scan-records')?.body).toEqual({
+      qrToken: 'token-restroom-m1',
+      status: 'Normal',
+      latitude: 13.7563,
+      longitude: 100.5018,
+      accuracyM: 12,
+    });
+    expect(screen.getByText('ห้องน้ำชาย · เรียบร้อย')).toBeInTheDocument();
+  });
+
   it('พบปัญหา needs a tag or a note before anything is sent', async () => {
     fakeGps(nearSign);
     const server = serve();

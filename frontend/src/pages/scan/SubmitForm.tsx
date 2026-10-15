@@ -47,6 +47,7 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
             <input
               type="radio"
               name="scan-status"
+              disabled={sending}
               checked={draft.status === 'Normal'}
               onChange={() => onChange({ ...draft, status: 'Normal' })}
             />{' '}
@@ -56,6 +57,7 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
             <input
               type="radio"
               name="scan-status"
+              disabled={sending}
               checked={draft.status === 'Issue'}
               onChange={() => onChange({ ...draft, status: 'Issue' })}
             />{' '}
@@ -68,7 +70,12 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
             <div className="scan-tags">
               {issueTags.map((tag) => (
                 <label key={tag}>
-                  <input type="checkbox" checked={draft.tags.includes(tag)} onChange={() => toggleTag(tag)} /> {tag}
+                  <input
+                    type="checkbox"
+                    disabled={sending}
+                    checked={draft.tags.includes(tag)}
+                    onChange={() => toggleTag(tag)}
+                  /> {tag}
                 </label>
               ))}
             </div>
@@ -77,6 +84,7 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
               id="scan-note"
               rows={3}
               maxLength={1000}
+              disabled={sending}
               value={draft.note}
               onChange={(event) => onChange({ ...draft, note: event.target.value })}
             />
