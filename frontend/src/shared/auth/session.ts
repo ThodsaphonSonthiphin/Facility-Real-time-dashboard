@@ -10,6 +10,21 @@ export type RefreshOutcome = 'refreshed' | 'rejected' | 'offline';
  */
 let inflight: Promise<RefreshOutcome> | null = null;
 
+/** Counts sessions ended on purpose; a refresh that started before the bump must not log the tab back in. */
+let sessionEpoch = 0;
+
+/** A stalled connection must not keep the page-load splash up forever (ADR 0068). */
+const REFRESH_TIMEOUT_MS = 15_000;
+
+/**
+ * Called by endSession so a refresh already running cannot log the tab back in (its result is ignored), and so the
+ * logout request can wait for that refresh's cookie. Resolves when no refresh is in flight.
+ */
+export function abandonSession(): Promise<unknown> {
+  sessionEpoch += 1;
+  return inflight ?? Promise.resolve();
+}
+
 export function refreshSession(dispatch: Dispatch): Promise<RefreshOutcome> {
   inflight ??= runRefresh(dispatch).finally(() => {
     inflight = null;
@@ -18,11 +33,31 @@ export function refreshSession(dispatch: Dispatch): Promise<RefreshOutcome> {
 }
 
 async function runRefresh(dispatch: Dispatch): Promise<RefreshOutcome> {
+  const epoch = sessionEpoch;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
   let response: Response;
+  let answer: AuthResponse | null = null;
   try {
-    response = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' });
+    response = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'same-origin',
+      signal: controller.signal,
+    });
+    if (response.ok) {
+      try {
+        answer = (await response.json()) as AuthResponse;
+      } catch {
+        return 'offline'; // a 200 that is not our JSON (captive portal, cut body): keep the session
+      }
+    }
   } catch {
-    return 'offline'; // no network or a server fault: keep the session, a phone losing signal must not log the person out
+    return 'offline'; // no network, a timeout or a server fault: keep the session, a phone losing signal must not log the person out
+  } finally {
+    clearTimeout(timer);
+  }
+  if (epoch !== sessionEpoch) {
+    return 'rejected'; // the session was ended on purpose while this refresh ran: do not touch the store
   }
   if (response.status === 401 || response.status === 403) {
     dispatch(sessionExpired());
@@ -31,11 +66,8 @@ async function runRefresh(dispatch: Dispatch): Promise<RefreshOutcome> {
   if (!response.ok) {
     return 'offline'; // no network or a server fault (5xx, proxy during a deploy): keep the session
   }
-  let answer: AuthResponse;
-  try {
-    answer = (await response.json()) as AuthResponse;
-  } catch {
-    return 'offline'; // a 200 that is not our JSON (captive portal, cut body): keep the session
+  if (!answer) {
+    return 'offline';
   }
   dispatch(setCredentials(answer));
   return 'refreshed';

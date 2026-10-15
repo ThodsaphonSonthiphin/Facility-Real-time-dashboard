@@ -75,10 +75,11 @@ describe('baseQueryWithReauth', () => {
     });
     const store = loggedInStore();
 
-    const result = await store.dispatch(probeApi.endpoints.probe.initiate());
+    await store.dispatch(probeApi.endpoints.probe.initiate());
 
-    expect(result.error).toMatchObject({ status: 401 });
+    // the refused refresh ends the session and empties the cache, including the request that triggered it
     expect(store.getState().auth.currentUser).toBeNull();
+    expect(store.getState().api.queries).toEqual({});
     expect(server.calls.filter((c) => c.path === '/api/probe')).toHaveLength(1);
   });
 

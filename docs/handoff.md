@@ -95,6 +95,7 @@ Plan 4 test results at merge:
 - 2026-10-15 · Task 4 done: login pages /login (employee ID + phone, M0) and /login/admin (username + password, D0); wrong secret, throttle and server messages; return to the page opened before login; build commit shown. Frontend tests 44 passed; JS bundle 127.18 kB gzip. Next: Task 5 (the API serves the built frontend).
 - 2026-10-15 · Task 5 done: the API serves the built frontend from wwwroot (npm run build:api), index.html for every page path but never for /api or /hubs (they keep 404/405), index.html no-cache and hashed assets immutable; CORS AllowAll removed; health check moved to /api/health. Unit 299, API 530 + 5 skipped. Next: Task 6 (docs, ADR amendments, final checks).
 - 2026-10-15 · Task 6 done: ADR amendments (0004 frontend section #37, 0025 rebuild not move, 0026 routes, 0062 measured size, 0063 tokens, 0065 boundaries 7), plans 2B/2C marked superseded, README, frontend README, architecture diagram. Frontend 44 tests; unit 299; API 531 + 5 skipped. Next: the controller's real run, then the whole-branch review.
+- 2026-10-15 · Final-review fix wave: a session that ends for any reason (logout or a refused refresh) empties the API cache (store listener); logout forgets the session at once, then waits for any refresh in flight and ignores its result, then logs out on the server; the refresh gives up after 15 s. Frontend tests 47 passed. Next: the controller's real run (MySQL), then the PR.
 
 ## Pending work (ask the owner before starting)
 

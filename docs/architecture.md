@@ -179,6 +179,8 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
+> Note (plan 7): sections 3 and 4 still draw the phase-1 frontend files (`ScanRecordPage`, `DashboardView`, `authSession.ts`, `services/signalr.ts`), which plan 7 replaced. Login and refresh now live in `shared/auth/session.ts` and `pages/auth/`; plans 8, 9 and 11 redraw the scan and live-update flows.
+
 This is the main flow: a Cleaner submits a Scan Record and the Admin Dashboard updates.
 
 ```mermaid

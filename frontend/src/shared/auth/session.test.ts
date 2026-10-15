@@ -54,9 +54,49 @@ describe('startSession', () => {
 
     expect(store.getState().auth.isBootstrapping).toBe(false);
   });
+
+  it('a refresh that never answers gives up after 15 s and ends bootstrapping', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          (_input: RequestInfo | URL, init?: RequestInit) =>
+            new Promise<Response>((_resolve, reject) => {
+              init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+            }),
+        ),
+      );
+      const store = makeStore();
+
+      const started = startSession(store.dispatch);
+      await vi.advanceTimersByTimeAsync(15_000);
+      await started;
+
+      expect(store.getState().auth.isBootstrapping).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('refreshSession', () => {
+  it('a refused refresh also drops every cached answer of the account', async () => {
+    fakeServer({
+      'GET /api/session-probe': () => ({ status: 200, body: { ok: true } }),
+      'POST /api/auth/refresh': () => ({ status: 401 }),
+    });
+    const store = makeStore();
+    store.dispatch(setCredentials(authAnswer('cleaner').body));
+    await store.dispatch(probeApi.endpoints.sessionProbe.initiate());
+    expect(Object.keys(store.getState().api.queries)).toHaveLength(1);
+
+    await refreshSession(store.dispatch);
+
+    expect(store.getState().api.queries).toEqual({});
+    expect(store.getState().auth.currentUser).toBeNull();
+  });
+
   it('a server fault (503) keeps the session', async () => {
     fakeServer({ 'POST /api/auth/refresh': () => ({ status: 503 }) });
     const store = makeStore();
@@ -107,6 +147,32 @@ describe('endSession', () => {
     expect(server.calls.some((c) => c.method === 'POST' && c.path === '/api/auth/logout')).toBe(true);
     expect(store.getState().auth).toMatchObject({ currentUser: null, accessToken: null, signedOutByUser: true });
     expect(store.getState().api.queries).toEqual({});
+  });
+
+  it('a refresh that finishes after logout does not log the tab back in', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const server = fakeServer({
+      'POST /api/auth/refresh': async () => {
+        await held;
+        return authAnswer('cleaner', 'token-late');
+      },
+      'POST /api/auth/logout': () => ({ status: 204 }),
+    });
+    const store = makeStore();
+    store.dispatch(setCredentials(authAnswer('cleaner').body));
+
+    const refreshing = refreshSession(store.dispatch);
+    const ending = endSession(store.dispatch);
+    expect(store.getState().auth.currentUser).toBeNull();
+    release();
+    await Promise.all([refreshing, ending]);
+
+    expect(store.getState().auth).toMatchObject({ currentUser: null, accessToken: null, signedOutByUser: true });
+    const paths = server.calls.map((c) => c.path);
+    expect(paths.indexOf('/api/auth/logout')).toBeGreaterThan(paths.indexOf('/api/auth/refresh'));
   });
 
   it('still forgets the session here when the logout call cannot reach the server', async () => {
