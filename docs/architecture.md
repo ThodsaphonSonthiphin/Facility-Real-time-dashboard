@@ -183,7 +183,7 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
-> Note (plan 7, updated in plan 8): the phone side of section 3 is plan 8's `pages/scan`. Sections 3 and 4 still draw the phase-1 frontend files `DashboardView`, `authSession.ts` and `services/signalr.ts`, which plan 7 replaced. Login and refresh now live in `shared/auth/session.ts` and `pages/auth/`; plans 9 and 11 redraw the inspection and live-update flows.
+> Note (plan 7, updated in plan 8): the phone side of section 3 is plan 8's `pages/scan`. Sections 3 and 4 still draw the phase-1 frontend files `DashboardView`, `authSession.ts` and `services/signalr.ts`, which plan 7 replaced. Login and refresh now live in `shared/auth/session.ts` and `pages/auth/`; plan 11 redraws the live-update flow (sections 3 and 4 still show the phase-1 client). Plan 9's Supervisor live updates are in the section 2 diagram.
 
 This is the main flow: a Cleaner submits a Scan Record and the Admin Dashboard updates.
 
@@ -499,7 +499,7 @@ The full target schema, including the tables later plans add, is `docs/design/da
 |---|---|---|---|---|
 | Browser | Vite `:5173` | HTTP | — | `frontend/vite.config.ts` |
 | Vite proxy | API `:5001` `/api/*` | HTTP/JSON | `Authorization: Bearer <JWT>` | `frontend/vite.config.ts` |
-| Vite proxy | API `:5001` `/hubs/scan` | WebSocket (SignalR) | `?access_token=<JWT>` (hub paths only) | `Auth/AuthSetup.cs`, `services/signalr.ts` |
+| Vite proxy | API `:5001` `/hubs/scan` | WebSocket (SignalR) | `?access_token=<JWT>` (hub paths only) | `Auth/AuthSetup.cs`, `frontend/src/shared/api/scanHub.ts` (`followScanHub`) |
 | Browser | API `/api/auth/*` | HTTP/JSON | HttpOnly cookie `facility_refresh` | `Endpoints/AuthEndpoints.cs` |
 | API | MySQL `:3306` | MySQL protocol via EF Core | `ConnectionStrings:DefaultConnection` | `appsettings.json` / user-secrets |
 | API | itself on startup | — | — | `Program.cs` runs `MigrateAsync()` and seeds data |
