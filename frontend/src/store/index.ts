@@ -1,9 +1,11 @@
 import { combineReducers, configureStore, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
 import { baseApi } from '../shared/api/baseApi';
 import { authReducer, sessionExpired, signedOut } from './slices/authSlice';
+import { hubReducer } from './slices/hubSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  hub: hubReducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });
 

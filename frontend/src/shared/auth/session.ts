@@ -1,4 +1,5 @@
 import type { Dispatch } from '@reduxjs/toolkit';
+import type { RootState } from '../../store';
 import type { AuthResponse } from '../api/types';
 import { bootstrapFinished, sessionExpired, setCredentials } from '../../store/slices/authSlice';
 
@@ -80,4 +81,21 @@ export async function startSession(dispatch: Dispatch): Promise<void> {
   } finally {
     dispatch(bootstrapFinished());
   }
+}
+
+/** facility-0023 item 3: a token with this little left is refreshed before SignalR uses it. */
+const REFRESH_MARGIN_MS = 30_000;
+
+/**
+ * SignalR's accessTokenFactory, asked on every connect and reconnect. It shares the one refresh in flight
+ * (facility-0015). A refused refresh ends the session: the answer is '' and the store listener empties the cache, which
+ * stops the hub.
+ */
+export async function getValidAccessToken(getState: () => RootState, dispatch: Dispatch): Promise<string> {
+  const { accessToken, expiresAt } = getState().auth;
+  if (accessToken && expiresAt && Date.parse(expiresAt) - Date.now() > REFRESH_MARGIN_MS) {
+    return accessToken;
+  }
+  await refreshSession(dispatch);
+  return getState().auth.accessToken ?? '';
 }

@@ -114,6 +114,7 @@ Plan 4 test results at merge:
 ## Task log (plan 9)
 
 - 2026-10-16 · Task 1 done: the server leaves out null fields, so outside the shift the attendance has no `shift`; My Work, the check-in page and the scan page now test it by truthiness (plan-8 bug: My Work printed "undefined", the scan page said "not checked in"). The `outsideShift` fixture matches the server. Frontend tests 105 passed. Next: Task 2 (hub follower and token).
+- 2026-10-16 · Task 2 done: `followScanHub` (shared/api/scanHub.ts) opens one SignalR connection per cache entry after its first answer, hands ScanRecorded and InspectionRecorded cards to the page, asks again after a reconnect or a restart (every 3 s after the connection closes), and stops when the entry goes; `hubSlice` holds connecting / live / reconnecting; `getValidAccessToken` refreshes first when 30 s or less is left. Tests fake @microsoft/signalr through `test.alias` (src/test/fakeSignalR.ts). Frontend tests 115 passed. Next: Task 3 (My Building).
 
 ## Pending work (ask the owner before starting)
 
