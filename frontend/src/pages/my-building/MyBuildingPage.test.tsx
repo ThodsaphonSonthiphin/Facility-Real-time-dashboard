@@ -133,6 +133,34 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     expect(tiles()).toEqual(['2 รอตรวจ', '1 รอแม่บ้านแก้', '1 ตรวจแล้ว']);
   });
 
+  it('a push that lands while an older answer is still on its way is not overwritten by it', async () => {
+    const old = myBuilding([section(fourPoints)]);
+    const pushed = { ...fourPoints[0], status: 'PendingInspection' as const, lastScan: lastScanAt('2026-10-15T03:20:00Z') };
+    const afterPush = myBuilding([section([pushed, ...fourPoints.slice(1)])]); // what the server says once the push is committed
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let gets = 0;
+    const server = serve(old, {
+      'GET /api/my-building': async () => {
+        gets += 1;
+        if (gets === 2) {
+          await held; // the catch-up answer, read from the database before the push below
+        }
+        return { status: 200, body: gets > 2 ? afterPush : old };
+      },
+    });
+    await renderApp('/my-building');
+    await screen.findByText(LIVE);
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-building')).toHaveLength(2));
+
+    act(() => hub.latest().push('ScanRecorded', pushed));
+    release();
+
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-building')).toHaveLength(3));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'อัปเดต' })).toBeEnabled());
+    expect(screen.getByText('ส่ง 10:20 · แม่บ้านทดสอบ')).toBeInTheDocument();
+  });
+
   it('a dropped hub says so, and coming back asks the server again (facility-0064)', async () => {
     const server = serve();
     await renderApp('/my-building');

@@ -28,13 +28,20 @@ const myBuildingApi = baseApi.injectEndpoints({
       query: () => '/my-building',
       providesTags: ['MyBuilding'],
       // facility-0057 item 1 "อัปเดตเอง": pushed cards patch this entry; a reconnect asks again (#26, facility-0064)
-      async onCacheEntryAdded(_arg, { cacheDataLoaded, cacheEntryRemoved, updateCachedData, dispatch, getState }) {
+      async onCacheEntryAdded(_arg, { cacheDataLoaded, cacheEntryRemoved, updateCachedData, getCacheEntry, dispatch, getState }) {
         await followScanHub({
           cacheDataLoaded,
           cacheEntryRemoved,
           dispatch,
           accessToken: () => getValidAccessToken(() => getState() as RootState, dispatch),
-          onPoint: (card) => updateCachedData((draft) => patchPoint(draft, card)),
+          onPoint: (card) => {
+            updateCachedData((draft) => patchPoint(draft, card));
+            // A GET still in flight read the database before this push and would overwrite the patch when it lands:
+            // ask once more after it settles (invalidation is delayed while a query is pending)
+            if (getCacheEntry().status === 'pending') {
+              dispatch(baseApi.util.invalidateTags(['MyBuilding']));
+            }
+          },
           onMissed: () => dispatch(baseApi.util.invalidateTags(['MyBuilding'])),
         });
       },
