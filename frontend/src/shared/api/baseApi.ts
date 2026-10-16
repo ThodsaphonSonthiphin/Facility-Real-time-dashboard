@@ -46,5 +46,7 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, Fetch
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
+  // Refetched by tag only where a live push may have been missed (facility-0064 item 2)
+  tagTypes: ['MyBuilding'],
   endpoints: () => ({}),
 });
