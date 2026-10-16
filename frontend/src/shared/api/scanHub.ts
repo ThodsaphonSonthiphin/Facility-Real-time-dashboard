@@ -45,7 +45,6 @@ export async function followScanHub({
     .configureLogging('warn')
     .build();
   let removed = false;
-  let attempts = 0;
   let restartTimer: ReturnType<typeof setTimeout> | undefined;
 
   const restartLater = () => {
@@ -55,7 +54,9 @@ export async function followScanHub({
     }
   };
   const start = async () => {
-    attempts += 1;
+    if (removed) {
+      return;
+    }
     try {
       await connection.start();
     } catch {
@@ -63,12 +64,11 @@ export async function followScanHub({
       return;
     }
     if (removed) {
+      void connection.stop(); // the entry went while this start was in flight: do not leave the connection open
       return;
     }
     dispatch(hubStatusChanged('live'));
-    if (attempts > 1) {
-      onMissed(); // a late first start or a restart: pushes before it were missed
-    }
+    onMissed(); // every start, the first included: pushes sent between the first answer and the connection going live were missed
   };
 
   for (const event of POINT_EVENTS) {
