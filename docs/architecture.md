@@ -48,7 +48,7 @@ flowchart LR
 Why the proxy matters: the browser only ever talks to one origin (`:5173`).
 So the refresh-token cookie works without CORS settings, and the URL inside the QR code is the Vite URL ([facility-0004](adr/facility-0004-app-architecture.md) item 5).
 
-In production the Vite server is not used: `npm run build:api` puts the built app in the API's `wwwroot`, and the API serves it from the same origin, with `index.html` for every page path outside `/api` and `/hubs` ([facility-0067](adr/facility-0067-api-serves-frontend-from-one-origin.md)). No page opens the SignalR hub yet; the Supervisor and Admin plans (9, 11) add it.
+In production the Vite server is not used: `npm run build:api` puts the built app in the API's `wwwroot`, and the API serves it from the same origin, with `index.html` for every page path outside `/api` and `/hubs` ([facility-0067](adr/facility-0067-api-serves-frontend-from-one-origin.md)). The Supervisor's My Building page opens the SignalR hub (plan 9, `shared/api/scanHub.ts`); the Admin Dashboard adds it in plan 11.
 
 ---
 
