@@ -1,5 +1,6 @@
 import { act, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { SEND_TIMEOUT_MS } from '../../shared/api/baseApi';
 import { point } from '../../test/cleanerFixtures';
 import { farFromSign, fakeGps, nearSign } from '../../test/fakeGps';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
@@ -8,6 +9,8 @@ import {
   inspectionScan,
   myBuilding,
   nothingToInspect,
+  otherBuildingBlocked,
+  outsideShiftBlocked,
   recorded,
   submission,
   supervisorSession,
@@ -303,5 +306,168 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
 
     expect(await screen.findByText('กำลังอ่านตำแหน่งและเปิดงานตรวจ...')).toBeInTheDocument();
     expect(screen.queryByText('10:05 · แม่บ้านทดสอบ · รอบ 10:00–12:00 · เรียบร้อย')).not.toBeInTheDocument();
+  });
+});
+
+describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
+  it('Location off when the sign opens: the help, and the retry scans with a new fix (M2, facility-0036)', async () => {
+    const gps = fakeGps('denied', nearSign);
+    const server = serve();
+    const { user } = await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'เปิด Location ก่อนตรวจงาน' })).toBeInTheDocument();
+    expect(server.calls.some((c) => c.path === '/api/inspections/scan')).toBe(false);
+
+    await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('heading', { name: 'ห้องน้ำชาย' })).toBeInTheDocument();
+    expect(gps.calls).toBe(2);
+    expect(server.calls.filter((c) => c.path === '/api/inspections/scan')).toHaveLength(1);
+  });
+
+  it('a page on plain http cannot read a location, and there is nothing to retry (facility-0049)', async () => {
+    Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true });
+    serve();
+    await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'อ่านตำแหน่งไม่ได้' })).toBeInTheDocument();
+    expect(
+      screen.getByText('หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง ยังไม่ได้ตรวจงาน แจ้ง Admin'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ลองอีกครั้ง' })).not.toBeInTheDocument();
+  });
+
+  it('another building is blocked as the sign opens, with the cover advice (M8, facility-0048)', async () => {
+    fakeGps(nearSign);
+    serve({ 'POST /api/inspections/scan': () => ({ status: 403, body: otherBuildingBlocked }) });
+    await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'จุดนี้ไม่ได้อยู่ในตึกของคุณ' })).toBeInTheDocument();
+    expect(screen.getByText('ไม่ได้ตรวจงาน')).toBeInTheDocument();
+    expect(screen.getByText('Area ตึกอื่น (BR01) · ตึก B')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Admin เห็นการสแกนครั้งนี้แล้ว ให้แจ้ง Admin ว่าคุณตรวจแทนตึก B ในกะนี้ เมื่อ Admin กดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'กลับไปตึกของฉัน' })).toHaveAttribute('href', '/my-building');
+  });
+
+  it('the own shift ending before the press blocks the press (M8)', async () => {
+    fakeGps(nearSign);
+    serve({ 'POST /api/inspections': () => ({ status: 403, body: outsideShiftBlocked }) });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'สะอาด' }));
+    await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'ตอนนี้ไม่ใช่กะของคุณ ตรวจได้เฉพาะในกะของตัวเอง' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('ไม่ได้ตรวจงาน')).toBeInTheDocument();
+  });
+
+  it('no signal when the sign opens: ลองอีกครั้ง scans again', async () => {
+    fakeGps(nearSign);
+    let scans = 0;
+    serve({
+      'POST /api/inspections/scan': () => {
+        scans += 1;
+        if (scans === 1) {
+          throw new TypeError('Failed to fetch');
+        }
+        return { status: 200, body: inspectionScan() };
+      },
+    });
+    const { user } = await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'เปิดงานตรวจไม่ได้' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('heading', { name: 'ห้องน้ำชาย' })).toBeInTheDocument();
+    expect(scans).toBe(2);
+  });
+
+  it('no signal on บันทึกผลตรวจ keeps the verdict, and ส่งใหม่ sends it again with a fresh location (facility-0052)', async () => {
+    const gps = fakeGps(nearSign);
+    let tries = 0;
+    const server = serve({
+      'POST /api/inspections': () => {
+        tries += 1;
+        if (tries === 1) {
+          throw new TypeError('Failed to fetch');
+        }
+        return { status: 201, body: recorded({ result: 'Rework', newPointStatus: 'Rework' }) };
+      },
+    });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'ไม่สะอาด' }));
+    await user.type(screen.getByLabelText('ข้อบกพร่อง'), 'พื้นเปียก');
+    await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
+
+    expect(await screen.findByRole('heading', { name: 'ยังไม่ได้บันทึกผลตรวจ' })).toBeInTheDocument();
+    expect(screen.getByText('ไม่สะอาด: พื้นเปียก')).toBeInTheDocument();
+    expect(gps.calls).toBe(2);
+
+    await user.click(screen.getByRole('button', { name: 'ส่งใหม่' }));
+
+    expect(await screen.findByRole('heading', { name: 'บันทึกผลตรวจแล้ว 10:15' })).toBeInTheDocument();
+    expect(gps.calls).toBe(3);
+    const sends = server.calls.filter((c) => c.path === '/api/inspections');
+    expect(sends).toHaveLength(2);
+    expect(sends[1].body).toEqual(sends[0].body);
+  });
+
+  it('a server fault (503) is not saved either', async () => {
+    fakeGps(nearSign);
+    serve({ 'POST /api/inspections': () => ({ status: 503 }) });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'สะอาด' }));
+    await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
+
+    expect(await screen.findByRole('heading', { name: 'ยังไม่ได้บันทึกผลตรวจ' })).toBeInTheDocument();
+    expect(screen.getByText('สะอาด')).toBeInTheDocument();
+  });
+
+  it('a press with no answer ends at 20 s as not saved (facility-0052)', async () => {
+    fakeGps(nearSign);
+    const server = serve({ 'POST /api/inspections': () => new Promise<never>(() => {}) });
+    const { user } = await renderApp(SIGN);
+    await user.click(await screen.findByRole('radio', { name: 'สะอาด' }));
+    const send = screen.getByRole('button', { name: 'บันทึกผลตรวจ' });
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await user.click(send);
+      await vi.waitFor(() => expect(server.calls.some((c) => c.path === '/api/inspections')).toBe(true));
+      await vi.advanceTimersByTimeAsync(SEND_TIMEOUT_MS - 1_000);
+      expect(screen.getByRole('button', { name: 'กำลังบันทึก...' })).toBeDisabled();
+
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(await screen.findByRole('heading', { name: 'ยังไม่ได้บันทึกผลตรวจ' })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('Location off on บันทึกผลตรวจ: the help, and the retry records the same verdict (M2)', async () => {
+    fakeGps(nearSign, 'denied', nearSign);
+    const server = serve({ 'POST /api/inspections': () => ({ status: 201, body: recorded() }) });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'สะอาด' }));
+    await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
+
+    expect(await screen.findByRole('heading', { name: 'เปิด Location ก่อนบันทึกผลตรวจ' })).toBeInTheDocument();
+    expect(server.calls.some((c) => c.path === '/api/inspections')).toBe(false);
+
+    await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('heading', { name: 'บันทึกผลตรวจแล้ว 10:15' })).toBeInTheDocument();
+    expect((server.calls.find((c) => c.path === '/api/inspections')?.body as { result: string }).result).toBe('Passed');
   });
 });

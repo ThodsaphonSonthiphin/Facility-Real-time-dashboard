@@ -1,6 +1,6 @@
 import type { MyBuilding, MyBuildingSection } from '../pages/my-building/myBuildingApi';
 import type { InspectionRecorded, InspectionScan, InspectionSubmission } from '../pages/inspect/inspectApi';
-import type { LastScan, PointCard } from '../shared/api/types';
+import type { BlockedScan, LastScan, PointCard } from '../shared/api/types';
 import { point } from './cleanerFixtures';
 import { authAnswer } from './fakeServer';
 
@@ -69,3 +69,21 @@ export function recorded(overrides: Partial<InspectionRecorded> = {}): Inspectio
     ...overrides,
   };
 }
+
+/** 403 from either inspection call: the sign is in another building (facility-0048). */
+export const otherBuildingBlocked: BlockedScan = {
+  message: 'จุดนี้ไม่ได้อยู่ในตึกของคุณ',
+  areaCode: 'BR01',
+  areaName: 'Area ตึกอื่น',
+  reason: 'OtherBuilding',
+  buildingCode: 'B',
+};
+
+/** 403 from either inspection call: the own building, but not the own shift by the clock (facility-0048 amendment). */
+export const outsideShiftBlocked: BlockedScan = {
+  message: 'ตอนนี้ไม่ใช่กะของคุณ ตรวจได้เฉพาะในกะของตัวเอง',
+  areaCode: 'AR01',
+  areaName: 'Area ทดลอง',
+  reason: 'OutsideShift',
+  buildingCode: 'A',
+};
