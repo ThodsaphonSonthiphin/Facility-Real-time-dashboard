@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-15
+Last updated: 2026-10-16
 
 ## Project
 
@@ -27,6 +27,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 6 | Supervisor inspection, covers, My Building, alerts, export sheet, summary | done, merged (PR #55, `d9b4374`) (branch `feat/supervisor-inspection`): `docs/superpowers/plans/2026-10-14-supervisor-inspection-backend.md` |
 | 7 | Frontend foundation: tree, store, API layer, session, router and guard, login pages, served by the API | done, merged (PR #56, `43f10a3`) (branch `feat/frontend-foundation`): `docs/superpowers/plans/2026-10-15-frontend-foundation.md` |
 | 8 | Cleaner phone: My Work, check-in sign page, point sign page with send failures and blocked scans | done, merged (PR #57, `96895d8`) (branch `feat/cleaner-phone`): `docs/superpowers/plans/2026-10-15-cleaner-phone.md` |
+| 9 | Supervisor phone: My Building with live updates, inspection at the point's sign, nothing to inspect, blocked and send failures | done (branch `feat/supervisor-phone`): `docs/superpowers/plans/2026-10-15-supervisor-phone.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -118,11 +119,12 @@ Plan 4 test results at merge:
 - 2026-10-16 · Task 3 done: My Building (M15, /my-building): the own building then covered ones, รอตรวจ by submit time, ต้องแก้ไข, then the rest; summary tiles; "not your shift" note; no links to the sign. Live: ScanRecorded and InspectionRecorded patch the card and it moves; a reconnect, "อัปเดต" and every visit ask the server; the footer says whether the hub is live; logout closes it. baseApi has tag `MyBuilding`. Frontend tests 130 passed (a push that lands during a GET asks again after it). Next: Task 4 (inspection page).
 - 2026-10-16 · Task 4 done: /scan/:token opens by role (shared ByRole): the Cleaner's form, the Supervisor's inspection, no-permission for an Admin. Inspection (M6, M7, M16): opening reads a fresh fix and scans; the latest submission with distance; no verdict chosen; ไม่สะอาด needs a defect (sent trimmed, only with ไม่สะอาด); saved result with what the Cleaner sees; nothing to inspect or rework owed with the server's reason; 409 opens the newest work and clears the verdict; one send at a time. Frontend tests 146 passed (two pin the fresh scan on every visit and the splash during the rescan after a 409). Next: Task 5 (inspection failures).
 - 2026-10-16 · Task 5 done: the inspection page's failures: Location off or plain http, on opening ("ตรวจงาน") and on the press ("บันทึกผลตรวจ"), with the retry repeating the same step; another building or the wrong shift shows the blocked screen in the Supervisor's wording (building cover advice, back to My Building), on opening or on the press; no signal, 20 s with no answer or a 5xx: "เปิดงานตรวจไม่ได้" with ลองอีกครั้ง on opening, "ยังไม่ได้บันทึกผลตรวจ" with the verdict kept and ส่งใหม่ (fresh fix) on the press. Frontend tests 157 passed. Next: Task 6 (docs, final checks, the controller's real run).
+- 2026-10-16 · Task 6 done: ADR amendments (0023 token for SignalR, 0025 tree, 0026 sign URL by role, 0029 inspection page, 0048 blocked on opening, 0057 My Building live, 0062 measured size 154.83 kB gzip, 0064 hub follower and hub slice), README device notes, frontend README, architecture diagram, handoff notes for plans 10 and 11. Two behaviours the docs now state: `followScanHub` asks the server after every successful start (the first included) and every reconnect, and My Building asks once more after a GET that was in flight when a push landed. Frontend 157 tests; unit 299; API 531 + 5 skipped. Next: the controller's real run, then the whole-branch review.
 
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
-- Frontend plans 9–11 (scopes in the plan-7 file): 9 Supervisor phone, 10 Admin setup, 11 Admin live board.
+- Frontend plans 10–11 (scopes in the plan-7 file): 10 Admin setup, 11 Admin live board.
 
 ## Owner's rules (still in force)
 
@@ -197,8 +199,10 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 
 - Plan 7 built the base: add a page as `src/pages/<page>/` with `<page>Api.ts` (`baseApi.injectEndpoints`), a `.css` with the page prefix and an `index.ts`; add its route in `router.tsx` under the right `ProtectedRoute`; test with `renderApp` + `fakeServer`.
 - QR Sign URLs (plan 8): a check-in sign prints `<origin>/check-in/<token>`, a point sign `<origin>/scan/<token>`. Plan 10 prints these.
-- `/scan/:token` is Cleaner-only after plan 8 (a test pins the Supervisor's no-permission screen). Plan 9 makes it show the inspection page for a Supervisor: a page may not import another page, so the role switch lives in `router.tsx` or a new app-level file classified in `eslint.config.js`.
+- `/scan/:token` opens the Cleaner's ScanPage or the Supervisor's InspectPage by role (`shared/components/ByRole`, plan 9); an Admin gets no-permission. `/check-in/:token` is Cleaner-only.
 - Shared for later pages: `shared/geo/readLocation.ts`, `shared/api/scanAnswers.ts` (`blockedScanOf`, `isNotSent`), `LocationHelp`, `BlockedScanScreen` (`sign="point"` text speaks to a Cleaner; plan 9 adds the Supervisor's wording), `StatusChip`, `test/fakeGps.ts`.
+- Live updates (plan 9): open the hub with `followScanHub` (`shared/api/scanHub.ts`) in the query's `onCacheEntryAdded`; `onPoint` patches the cache, `onMissed` refetches (a tag). Plan 11's `getServicePoints` does the same, upserting cards, and reads its badge from `state.hub.status` (`store/slices/hubSlice.ts`). Tests drive the fake hub with `hub.latest()` from `src/test/fakeSignalR.ts`.
+- The server leaves out null fields in REST and hub JSON. Test them by truthiness; plan 9 Task 1 fixed the three `shift === null` checks of plan 8.
 - Supervisor scan: call `POST /api/inspections/scan` when the page opens. Send `submission.id` back as `scanRecordId`, and on 409 scan again.
 - `CoverAssignmentDto.cleanerName` is now `personName`. A cover has either `areaId`/`areaCode` or `buildingId`/`buildingCode`. `CoverSuggestionDto` likewise has `areaId` or `buildingId`.
 - Alerts carry `blockReason` (`OtherArea`, `OtherBuilding`, `OutsideShift`) and the new kind `InspectionGps`.
