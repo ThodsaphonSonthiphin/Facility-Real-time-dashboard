@@ -255,12 +255,12 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
     expect(router.state.location.state).toMatchObject({ from: { pathname: SIGN } });
   });
 
-  it('a Supervisor sees no-permission until plan 9 adds inspection here (plan 8 decision 2)', async () => {
-    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('supervisor') });
+  it('an Admin opening a point sign sees no-permission; Cleaners and Supervisors use it (plan 9 decision 2)', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('admin') });
     await renderApp(SIGN);
 
     expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
-    expect(screen.getByText('หน้านี้สำหรับแม่บ้าน บัญชีนี้เป็นหัวหน้างาน')).toBeInTheDocument();
+    expect(screen.getByText('หน้านี้สำหรับแม่บ้าน หรือ หัวหน้างาน บัญชีนี้เป็นAdmin')).toBeInTheDocument();
   });
 });
 

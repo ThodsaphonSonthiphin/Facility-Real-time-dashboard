@@ -15,5 +15,5 @@ export const myWorkApi = baseApi.injectEndpoints({
 
 export const { useGetMyWorkQuery } = myWorkApi;
 
-/** Hook options for every Cleaner page: never act on an answer from an earlier visit. */
+/** Hook options for every phone page (Cleaner and Supervisor): never act on an answer from an earlier visit. */
 export const freshOnOpen = { refetchOnMountOrArgChange: true } as const;

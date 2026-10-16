@@ -1,0 +1,153 @@
+/* Inspection at a point's sign, wireframes M6, M7 and M16. Class prefix: inspect- */
+
+.inspect-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.inspect-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inspect-heading h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.inspect-kicker {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.inspect-sub {
+  font-size: 15px;
+  color: var(--color-muted);
+}
+
+.inspect-strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.inspect-muted {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.inspect-distance {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.inspect-radius {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-status-passed);
+  color: var(--color-on-primary);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.inspect-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.inspect-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.inspect-choice legend {
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.inspect-choice label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 56px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.inspect-choice label:has(input:checked) {
+  border: 2px solid var(--color-primary);
+  background: var(--color-info-bg);
+  color: var(--color-primary);
+}
+
+.inspect-choice .inspect-choice__rework:has(input:checked) {
+  border-color: var(--color-status-rework);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.inspect-defect {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspect-defect label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.inspect-defect textarea {
+  font: inherit;
+  font-size: 15px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  resize: none;
+}
+
+.inspect-submit {
+  min-height: 72px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inspect-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.inspect-status,
+.inspect-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
