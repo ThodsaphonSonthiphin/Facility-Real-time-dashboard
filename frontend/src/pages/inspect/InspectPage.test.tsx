@@ -470,4 +470,51 @@ describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
     expect(await screen.findByRole('heading', { name: 'บันทึกผลตรวจแล้ว 10:15' })).toBeInTheDocument();
     expect((server.calls.find((c) => c.path === '/api/inspections')?.body as { result: string }).result).toBe('Passed');
   });
+
+  it('ส่งใหม่ cannot be pressed again while the resend is in flight (one send at a time)', async () => {
+    fakeGps(nearSign);
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let tries = 0;
+    const server = serve({
+      'POST /api/inspections': async () => {
+        tries += 1;
+        if (tries === 1) {
+          throw new TypeError('Failed to fetch');
+        }
+        await gate;
+        return { status: 201, body: recorded() };
+      },
+    });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'สะอาด' }));
+    await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
+    await screen.findByRole('heading', { name: 'ยังไม่ได้บันทึกผลตรวจ' });
+    await user.click(screen.getByRole('button', { name: 'ส่งใหม่' }));
+
+    const busy = await screen.findByRole('button', { name: 'กำลังส่ง...' });
+    expect(busy).toBeDisabled();
+    await user.click(busy);
+    release();
+
+    expect(await screen.findByRole('heading', { name: 'บันทึกผลตรวจแล้ว 10:15' })).toBeInTheDocument();
+    expect(server.calls.filter((c) => c.path === '/api/inspections')).toHaveLength(2);
+  });
+
+  it('the Location retry after a press is disabled while the new reading is pending (one send at a time)', async () => {
+    fakeGps(nearSign, 'denied', 'pending');
+    const server = serve();
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'สะอาด' }));
+    await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
+    await screen.findByRole('heading', { name: 'เปิด Location ก่อนบันทึกผลตรวจ' });
+    await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' })).toBeDisabled());
+    expect(server.calls.some((c) => c.path === '/api/inspections')).toBe(false);
+  });
 });
