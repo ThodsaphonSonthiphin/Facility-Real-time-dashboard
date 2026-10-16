@@ -111,6 +111,10 @@ Plan 4 test results at merge:
 - 2026-10-15 · Whole-branch review: no Critical; one Important, fixed: no test pinned the 20 s send timeout (removing it left every test green). `fakeServer` now ends a request when its signal aborts, as a browser does, and each sign page has a test where the server never answers: still sending at 19 s, "ยังไม่ได้บันทึก" / "ยังไม่ได้บันทึกเวลา" at 20 s. Both fail with no timeout, 10 s or 30 s. Minor, left as is: the scan page does not reload My Work after a 409 (the check-in page does); the server still refuses. Frontend 105 tests; unit 299; API 531 + 5 skipped. Next: the owner's OK for the push and PR.
 - 2026-10-15 · Owner approved push and merge: PR #57 opened and merged (`96895d8`); GitGuardian passed. Plan 8 is done. Still open: the plain-http message on a real phone. Next: the owner chooses the next work (plan 9, Supervisor phone, see Pending work).
 
+## Task log (plan 9)
+
+- 2026-10-16 · Task 1 done: the server leaves out null fields, so outside the shift the attendance has no `shift`; My Work, the check-in page and the scan page now test it by truthiness (plan-8 bug: My Work printed "undefined", the scan page said "not checked in"). The `outsideShift` fixture matches the server. Frontend tests 105 passed. Next: Task 2 (hub follower and token).
+
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).

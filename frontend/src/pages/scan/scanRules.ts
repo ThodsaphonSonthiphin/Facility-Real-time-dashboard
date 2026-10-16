@@ -43,7 +43,7 @@ export type OffDutyReason = 'outside-shift' | 'not-checked-in' | 'checked-out';
  * their own shift's window; a break does not stop it (AttendanceRules.IsOnDuty, facility-0069).
  */
 export function offDutyReason(attendance: AttendanceState): OffDutyReason | null {
-  if (attendance.shift === null) {
+  if (!attendance.shift) {
     return 'outside-shift';
   }
   const recorded = attendance.events.map((entry) => entry.eventType);
