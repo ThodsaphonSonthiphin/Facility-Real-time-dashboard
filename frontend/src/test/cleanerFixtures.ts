@@ -51,7 +51,8 @@ export const checkedOut = attendance(
   [entry('ShiftIn', '2026-10-14T23:52:00Z'), entry('ShiftOut', '2026-10-15T11:55:00Z')], // 06:52, 18:55
   [],
 );
-export const outsideShift: AttendanceState = { shiftDate: null, shift: null, events: [], nextEvents: [], outcome: null };
+/** Outside the attendance window, as the server sends it: it leaves out the null shiftDate, shift and outcome. */
+export const outsideShift: AttendanceState = { events: [], nextEvents: [] };
 
 export function area(points: PointCard[] = [point()], overrides: Partial<MyWorkArea> = {}): MyWorkArea {
   return { areaId: 1, areaCode: 'AR01', areaName: 'Area ทดลอง', isCover: false, points, ...overrides };

@@ -18,13 +18,13 @@ The pre-commit hook (husky) runs lint, `tsc -b` and the tests.
 
 ```
 src/main.tsx · App.tsx · router.tsx     app: store, page-load refresh, route table
-src/store/                               the store, authSlice, typed hooks
-src/shared/api/                          baseApi (RTK Query), server types, myWorkApi (shared by the Cleaner pages)
+src/store/                               the store, authSlice, hubSlice (scan hub live or not), typed hooks
+src/shared/api/                          baseApi (RTK Query), server types, myWorkApi, scanHub (SignalR into the cache)
 src/shared/auth/                         session refresh, logout, role homes
 src/shared/geo/                          readLocation: one fresh GPS reading per press
 src/shared/components/                   guard, layout, status and crash screens (class prefix app-)
 src/pages/<page>/                        one folder per page: Page.tsx, <page>Api.ts, <page>.css, index.ts
-src/test/                                fakeServer (fake fetch) and renderApp (the whole app at a URL)
+src/test/                                fakeServer (fake fetch), fakeGps, fakeSignalR, fixtures, renderApp
 ```
 
 - A page imports from `shared` and `store` only, never from another page. `shared` never imports a page. Lint enforces both.
@@ -36,8 +36,12 @@ src/test/                                fakeServer (fake fetch) and renderApp (
 
 The access token lives only in the Redux store. The refresh token is an HttpOnly cookie the page never sees. On page load one refresh restores the session; on a 401 every request shares one refresh and retries once. A refresh answered with 401 or 403 ends the session; any other failure (no network, a server fault, a non-JSON body) keeps it, and page-load bootstrapping always finishes. "ออกจากระบบ" logs out on the server and empties the cache.
 
+SignalR gets its token from `getValidAccessToken`, which refreshes first when 30 s or less is left, on every connect and reconnect. A page that wants live updates opens the hub with `followScanHub` inside its query's `onCacheEntryAdded` (one connection per cache entry; see `pages/my-building/myBuildingApi.ts`).
+
 ## Tests
 
 Tests render the whole app at a URL with `renderApp` and fake only `fetch` with `fakeServer`. Find elements the way a person would: by role, label or text.
 
 The Cleaner pages also need a location: `fakeGps(nearSign)` from `src/test/fakeGps.ts` gives jsdom a `navigator.geolocation` (`'denied'` and `'unavailable'` answers too). Made-up My Work, attendance and point answers are in `src/test/cleanerFixtures.ts`.
+
+The `@microsoft/signalr` package is replaced in every test by `src/test/fakeSignalR.ts` (`test.alias` in `vite.config.ts`). Use `hub.latest()` to see the connection the app built and to play the server: `push('ScanRecorded', card)`, `reconnecting()`, `reconnected()`, `close()`; wrap pushes in `act(...)`. Made-up Supervisor answers are in `src/test/supervisorFixtures.ts`. The server leaves out null fields, so fixtures leave them out too.

@@ -4,7 +4,7 @@ import { setCredentials } from '../../store/slices/authSlice';
 import { authAnswer, fakeServer } from '../../test/fakeServer';
 import { baseApi } from '../api/baseApi';
 import { endSession } from './endSession';
-import { refreshSession, startSession } from './session';
+import { getValidAccessToken, refreshSession, startSession } from './session';
 
 const probeApi = baseApi.injectEndpoints({
   endpoints: (build) => ({ sessionProbe: build.query<{ ok: boolean }, void>({ query: () => '/session-probe' }) }),
@@ -182,6 +182,44 @@ describe('endSession', () => {
 
     await endSession(store.dispatch);
 
+    expect(store.getState().auth.currentUser).toBeNull();
+  });
+});
+
+describe('getValidAccessToken (facility-0023 item 3)', () => {
+  function signedIn(token: string, msLeft: number) {
+    const store = makeStore();
+    const { body } = authAnswer('supervisor', token);
+    store.dispatch(setCredentials({ ...body, expiresAt: new Date(Date.now() + msLeft).toISOString() }));
+    return store;
+  }
+
+  it('a token with more than 30 s left is given as it is', async () => {
+    const server = fakeServer({});
+    const store = signedIn('token-live', 120_000);
+
+    expect(await getValidAccessToken(store.getState, store.dispatch)).toBe('token-live');
+    expect(server.calls).toHaveLength(0);
+  });
+
+  it('a token with 30 s or less left is refreshed first, once for every caller (facility-0015)', async () => {
+    const server = fakeServer({ 'POST /api/auth/refresh': () => authAnswer('supervisor', 'token-new') });
+    const store = signedIn('token-old', 20_000);
+
+    const tokens = await Promise.all([
+      getValidAccessToken(store.getState, store.dispatch),
+      getValidAccessToken(store.getState, store.dispatch),
+    ]);
+
+    expect(tokens).toEqual(['token-new', 'token-new']);
+    expect(server.calls.filter((c) => c.path === '/api/auth/refresh')).toHaveLength(1);
+  });
+
+  it('a refused refresh gives no token, and the session is over', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => ({ status: 401 }) });
+    const store = signedIn('token-old', 1_000);
+
+    expect(await getValidAccessToken(store.getState, store.dispatch)).toBe('');
     expect(store.getState().auth.currentUser).toBeNull();
   });
 });

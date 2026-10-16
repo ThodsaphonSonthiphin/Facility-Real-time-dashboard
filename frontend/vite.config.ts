@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -36,5 +37,7 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['src/test/setup.ts'],
+    // regression-net #32: tests fake the SignalR package the way fakeServer fakes fetch
+    alias: { '@microsoft/signalr': fileURLToPath(new URL('./src/test/fakeSignalR.ts', import.meta.url)) },
   },
 });

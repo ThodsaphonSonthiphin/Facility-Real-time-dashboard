@@ -48,7 +48,7 @@ flowchart LR
 Why the proxy matters: the browser only ever talks to one origin (`:5173`).
 So the refresh-token cookie works without CORS settings, and the URL inside the QR code is the Vite URL ([facility-0004](adr/facility-0004-app-architecture.md) item 5).
 
-In production the Vite server is not used: `npm run build:api` puts the built app in the API's `wwwroot`, and the API serves it from the same origin, with `index.html` for every page path outside `/api` and `/hubs` ([facility-0067](adr/facility-0067-api-serves-frontend-from-one-origin.md)). No page opens the SignalR hub yet; the Supervisor and Admin plans (9, 11) add it.
+In production the Vite server is not used: `npm run build:api` puts the built app in the API's `wwwroot`, and the API serves it from the same origin, with `index.html` for every page path outside `/api` and `/hubs` ([facility-0067](adr/facility-0067-api-serves-frontend-from-one-origin.md)). The Supervisor's My Building page opens the SignalR hub (plan 9, `shared/api/scanHub.ts`); the Admin Dashboard adds it in plan 11.
 
 ---
 
@@ -110,11 +110,12 @@ flowchart LR
 flowchart TB
     subgraph FE["Frontend — frontend/src (React 19 + TypeScript, tree of facility-0025)"]
         AppF["main.tsx · App.tsx · router.tsx<br/>store, page-load refresh, createBrowserRouter"]
-        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · my-building · dashboard<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css"]
-        Store["store/<br/>authSlice: user + access token in memory"]
+        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · inspect (M6, M7, M16) · my-building (M15) · dashboard<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css"]
+        Store["store/<br/>authSlice: user + access token in memory<br/>hubSlice: scan hub live or not"]
         BaseApi["shared/api/baseApi.ts<br/>RTK Query, Bearer header,<br/>401 → one shared refresh → retry"]
         Session["shared/auth<br/>session.ts (refresh, single-flight)<br/>endSession.ts (logout)"]
         Guard["shared/components<br/>ProtectedRoute (role), AppLayout,<br/>StatusScreen, CrashScreen"]
+        HubF["shared/api/scanHub.ts<br/>followScanHub: one SignalR connection per cache entry<br/>token from getValidAccessToken"]
     end
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
@@ -149,6 +150,9 @@ flowchart TB
     Session --> Store
     Session -->|"POST /api/auth/refresh | logout<br/>(cookie facility_refresh)"| AuthEp
     BaseApi -->|"/api/auth/login and /api/*<br/>Authorization: Bearer"| Ep
+    Pages -->|"my-building: onCacheEntryAdded"| HubF
+    HubF --> Session
+    HubF -->|"/hubs/scan?access_token=<br/>ScanRecorded, InspectionRecorded"| Hub
 
     Ep --> Status
     Ep --> Ctx
@@ -179,7 +183,7 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
-> Note (plan 7, updated in plan 8): the phone side of section 3 is plan 8's `pages/scan`. Sections 3 and 4 still draw the phase-1 frontend files `DashboardView`, `authSession.ts` and `services/signalr.ts`, which plan 7 replaced. Login and refresh now live in `shared/auth/session.ts` and `pages/auth/`; plans 9 and 11 redraw the inspection and live-update flows.
+> Note (plan 7, updated in plan 8): the phone side of section 3 is plan 8's `pages/scan`. Sections 3 and 4 still draw the phase-1 frontend files `DashboardView`, `authSession.ts` and `services/signalr.ts`, which plan 7 replaced. Login and refresh now live in `shared/auth/session.ts` and `pages/auth/`; plan 11 redraws the live-update flow (sections 3 and 4 still show the phase-1 client). Plan 9's Supervisor live updates are in the section 2 diagram.
 
 This is the main flow: a Cleaner submits a Scan Record and the Admin Dashboard updates.
 
@@ -495,7 +499,7 @@ The full target schema, including the tables later plans add, is `docs/design/da
 |---|---|---|---|---|
 | Browser | Vite `:5173` | HTTP | — | `frontend/vite.config.ts` |
 | Vite proxy | API `:5001` `/api/*` | HTTP/JSON | `Authorization: Bearer <JWT>` | `frontend/vite.config.ts` |
-| Vite proxy | API `:5001` `/hubs/scan` | WebSocket (SignalR) | `?access_token=<JWT>` (hub paths only) | `Auth/AuthSetup.cs`, `services/signalr.ts` |
+| Vite proxy | API `:5001` `/hubs/scan` | WebSocket (SignalR) | `?access_token=<JWT>` (hub paths only) | `Auth/AuthSetup.cs`, `frontend/src/shared/api/scanHub.ts` (`followScanHub`) |
 | Browser | API `/api/auth/*` | HTTP/JSON | HttpOnly cookie `facility_refresh` | `Endpoints/AuthEndpoints.cs` |
 | API | MySQL `:3306` | MySQL protocol via EF Core | `ConnectionStrings:DefaultConnection` | `appsettings.json` / user-secrets |
 | API | itself on startup | — | — | `Program.cs` runs `MigrateAsync()` and seeds data |

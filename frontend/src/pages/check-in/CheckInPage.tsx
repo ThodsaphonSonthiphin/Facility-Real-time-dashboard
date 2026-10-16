@@ -91,7 +91,7 @@ export function CheckInPage() {
           {getErrorMessage(workQuery.error)}
         </p>
       )}
-      {attendance && attendance.shift === null && (
+      {attendance && !attendance.shift && (
         <p className="app-note app-note--warn">
           ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ ลงเวลาได้ตั้งแต่ 60 นาทีก่อนกะเริ่มจนถึง 60 นาทีหลังกะจบ
         </p>

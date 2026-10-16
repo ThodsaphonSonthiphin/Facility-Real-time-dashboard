@@ -49,7 +49,7 @@ export function MyWorkPage() {
 }
 
 function attendanceLine(attendance: AttendanceState): string {
-  if (attendance.shift === null) {
+  if (!attendance.shift) {
     return 'ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ';
   }
   const shiftIn = attendance.events.find((e) => e.eventType === 'ShiftIn');

@@ -49,3 +49,5 @@ flowchart TD
 - สอดคล้องกับ Redux Toolkit Architecture แบบ Single Source of Truth สามารถดูความเคลื่อนไหวของ Session ผ่าน Redux DevTools ได้ครบถ้วน
 - ไม่มีไฟล์ `services/authSession.ts` และ `AuthContext.tsx` แบบเดิมในระบบ โค้ด Auth รวมเป็นอันหนึ่งอันเดียวกับ Store และ API Layer
 - ปลอดภัยตามมาตรฐานความปลอดภัยเดิมของระบบ (In-memory Access Token + Single-flight HttpOnly Refresh Token)
+
+> **แก้ไข 2026-10-16 (แผน 9):** `getValidAccessToken(getState, dispatch)` อยู่ใน `shared/auth/session.ts` ใช้ refresh ตัวเดียวกับ REST (single-flight ตาม facility-0015) ถ้า token เหลือไม่เกิน 30 วินาทีจะ refresh ก่อนแล้วคืน token ใหม่ ถ้า refresh ถูกปฏิเสธจะคืนค่าว่าง session จบ cache ถูกล้าง และ hub หยุดเอง SignalR เรียกฟังก์ชันนี้ทุกครั้งที่ต่อและต่อใหม่ ผ่าน `followScanHub` ใน `shared/api/scanHub.ts`

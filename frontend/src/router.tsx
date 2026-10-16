@@ -2,10 +2,12 @@ import type { RouteObject } from 'react-router';
 import { AdminLoginPage, LoginPage } from './pages/auth';
 import { CheckInPage } from './pages/check-in';
 import { DashboardPage } from './pages/dashboard';
+import { InspectPage } from './pages/inspect';
 import { MyBuildingPage } from './pages/my-building';
 import { MyWorkPage } from './pages/my-work';
 import { ScanPage } from './pages/scan';
 import { AppLayout } from './shared/components/AppLayout';
+import { ByRole } from './shared/components/ByRole';
 import { CrashScreen } from './shared/components/CrashScreen';
 import { HomeRedirect } from './shared/components/HomeRedirect';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
@@ -32,8 +34,21 @@ export const routes: RouteObject[] = [
               { path: 'my-work', element: <MyWorkPage /> },
               // Printed on each Area's check-in sign (plan 8 decision 1); only the sign carries the token (facility-0059)
               { path: 'check-in/:token', element: <CheckInPage /> },
-              // Printed on each point's sign (facility-0026). Cleaner only until plan 9 adds the Supervisor's inspection
-              { path: 'scan/:token', element: <ScanPage /> },
+            ],
+          },
+        ],
+      },
+      {
+        element: <ProtectedRoute roles={['cleaner', 'supervisor']} />,
+        children: [
+          {
+            element: <AppLayout />,
+            children: [
+              // Printed on each point's sign (facility-0026): the Cleaner submits, the Supervisor inspects (facility-0029)
+              {
+                path: 'scan/:token',
+                element: <ByRole pages={{ cleaner: <ScanPage />, supervisor: <InspectPage /> }} />,
+              },
             ],
           },
         ],

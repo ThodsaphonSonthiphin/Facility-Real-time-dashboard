@@ -1,6 +1,8 @@
 /**
  * Shapes the server sends and accepts (facility-0022). Enums arrive as strings (JsonStringEnumConverter),
  * times as UTC ISO strings ending in "Z". Types used by one page only live in that page's folder.
+ * The server leaves out every null field (JsonIgnoreCondition.WhenWritingNull, REST and hub alike): a field typed
+ * `| null` or `?` arrives missing, so code tests it with truthiness or `== null`, never `=== null`.
  */
 
 /** The "role" of a login or refresh answer (AuthClaims.ToClaimValue on the server). */
@@ -39,15 +41,15 @@ export interface AttendanceEntry {
 }
 
 /**
- * AttendanceStateDto. shiftDate and shift are null, and the lists empty, outside every attendance window of the
- * Cleaner's own shift (facility-0069). outcome is set only on the answer of POST /api/attendance.
+ * AttendanceStateDto. Outside every attendance window of the Cleaner's own shift (facility-0069) shiftDate and shift
+ * are left out and the lists are empty. outcome comes only on the answer of POST /api/attendance.
  */
 export interface AttendanceState {
-  shiftDate: string | null;
-  shift: Shift | null;
+  shiftDate?: string | null;
+  shift?: Shift | null;
   events: AttendanceEntry[];
   nextEvents: AttendanceEvent[];
-  outcome: 'Recorded' | 'AlreadyRecorded' | 'TooSoon' | null;
+  outcome?: 'Recorded' | 'AlreadyRecorded' | 'TooSoon' | null;
 }
 
 /** facility-0047 rule 4 (PointStatusCalculator). */
