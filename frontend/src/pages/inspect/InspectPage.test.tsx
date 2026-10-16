@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { point } from '../../test/cleanerFixtures';
 import { farFromSign, fakeGps, nearSign } from '../../test/fakeGps';
@@ -6,6 +6,7 @@ import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
 import {
   inspectionScan,
+  myBuilding,
   nothingToInspect,
   recorded,
   submission,
@@ -273,5 +274,34 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
 
     expect(await screen.findByRole('heading', { name: 'ไม่พบป้ายนี้ หรือจุดนี้ปิดใช้งานแล้ว' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'กลับไปตึกของฉัน' })).toHaveAttribute('href', '/my-building');
+  });
+
+  it('every visit to the sign scans again with a fresh location (decision 3)', async () => {
+    const gps = fakeGps(nearSign);
+    const server = serve({ 'GET /api/my-building': () => ({ status: 200, body: myBuilding() }) });
+    const { router } = await renderApp(SIGN);
+    await screen.findByRole('heading', { name: 'ห้องน้ำชาย' });
+
+    await act(() => router.navigate('/my-building'));
+    await screen.findByRole('heading', { name: 'ตึกของฉัน' });
+    await act(() => router.navigate(SIGN));
+    await screen.findByRole('heading', { name: 'ห้องน้ำชาย' });
+
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/inspections/scan')).toHaveLength(2));
+    expect(gps.calls).toBe(2);
+  });
+
+  it('after a 409 the old submission is not shown while the page scans again (decision 5)', async () => {
+    fakeGps(nearSign, nearSign, 'pending');
+    serve({
+      'POST /api/inspections': () => ({ status: 409, body: { message: 'มีการส่งงานใหม่หลังจากที่คุณสแกน ให้สแกนป้ายอีกครั้ง' } }),
+    });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'สะอาด' }));
+    await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
+
+    expect(await screen.findByText('กำลังอ่านตำแหน่งและเปิดงานตรวจ...')).toBeInTheDocument();
+    expect(screen.queryByText('10:05 · แม่บ้านทดสอบ · รอบ 10:00–12:00 · เรียบร้อย')).not.toBeInTheDocument();
   });
 });
