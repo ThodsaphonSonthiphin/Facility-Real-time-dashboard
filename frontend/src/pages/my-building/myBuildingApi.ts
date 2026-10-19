@@ -22,6 +22,9 @@ export interface MyBuilding {
   buildings: MyBuildingSection[];
 }
 
+/** My Building's hub connection in hubSlice (plan 11 decision 4); the page's footer reads the same key. */
+export const MY_BUILDING_HUB = 'my-building';
+
 const myBuildingApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getMyBuilding: build.query<MyBuilding, void>({
@@ -30,6 +33,7 @@ const myBuildingApi = baseApi.injectEndpoints({
       // facility-0057 item 1 "อัปเดตเอง": pushed cards patch this entry; a reconnect asks again (#26, facility-0064)
       async onCacheEntryAdded(_arg, { cacheDataLoaded, cacheEntryRemoved, updateCachedData, getCacheEntry, dispatch, getState }) {
         await followScanHub({
+          key: MY_BUILDING_HUB,
           cacheDataLoaded,
           cacheEntryRemoved,
           dispatch,

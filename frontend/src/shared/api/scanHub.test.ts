@@ -1,13 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
 import { makeStore } from '../../store';
+import { selectHubStatus } from '../../store/slices/hubSlice';
 import { point } from '../../test/cleanerFixtures';
 import { hub } from '../../test/fakeSignalR';
 import { followScanHub } from './scanHub';
-import type { PointCard } from './types';
+import type { AttendanceChanged, PointCard } from './types';
+
+interface FollowOptions {
+  /** The connection's key in hubSlice. */
+  key?: string;
+  /** Whether the page takes point cards (ScanRecorded, InspectionRecorded). */
+  points?: boolean;
+  /** Whether the page takes AttendanceRecorded. */
+  attendance?: boolean;
+}
 
 /** One cache entry's life, driven by hand: `loaded` is its first answer, `remove` its end. */
-function follow() {
-  const store = makeStore();
+function follow({ key = 'test', points: withPoints = true, attendance: withAttendance = false }: FollowOptions = {}, store = makeStore()) {
   let loaded: (value?: unknown) => void = () => {};
   let failLoad: (reason: unknown) => void = () => {};
   let remove: () => void = () => {};
@@ -19,18 +28,31 @@ function follow() {
     remove = resolve;
   });
   const points: PointCard[] = [];
+  const changes: AttendanceChanged[] = [];
   const counts = { missed: 0 };
   const done = followScanHub({
+    key,
     cacheDataLoaded,
     cacheEntryRemoved,
     dispatch: store.dispatch,
     accessToken: async () => 'token-supervisor',
-    onPoint: (card) => points.push(card),
+    onPoint: withPoints ? (card) => points.push(card) : undefined,
+    onAttendance: withAttendance ? (change) => changes.push(change) : undefined,
     onMissed: () => {
       counts.missed += 1;
     },
   });
-  return { loaded, failLoad, remove, points, counts, done, status: () => store.getState().hub.status };
+  return {
+    loaded,
+    failLoad,
+    remove,
+    points,
+    changes,
+    counts,
+    done,
+    status: () => selectHubStatus(key)(store.getState()),
+    connections: () => store.getState().hub.connections,
+  };
 }
 
 describe('followScanHub (#26 hub-cache-bridge, facility-0064)', () => {
@@ -59,6 +81,38 @@ describe('followScanHub (#26 hub-cache-bridge, facility-0064)', () => {
     hub.latest().push('AttendanceRecorded', { id: 99 });
 
     expect(f.points.map((card) => card.status)).toEqual(['PendingInspection', 'Passed']);
+  });
+
+  it('hands AttendanceRecorded to a page that asked for it, and no card to a page that did not (facility-0027 rule 5)', async () => {
+    const f = follow({ points: false, attendance: true });
+    f.loaded();
+    await vi.waitFor(() => expect(f.status()).toBe('live'));
+
+    hub.latest().push('ScanRecorded', point());
+    hub.latest().push('AttendanceRecorded', { areaId: 1, shiftDate: '2026-10-15', shift: 'Day' });
+
+    expect(f.points).toEqual([]);
+    expect(f.changes).toEqual([{ areaId: 1, shiftDate: '2026-10-15', shift: 'Day' }]);
+  });
+
+  it('each connection keeps its own status, and an ended one leaves no status behind (plan 11 decision 4)', async () => {
+    const store = makeStore();
+    const a = follow({ key: 'a' }, store);
+    a.loaded();
+    await vi.waitFor(() => expect(a.status()).toBe('live'));
+    hub.failNextStarts = 1;
+    const b = follow({ key: 'b' }, store);
+    b.loaded();
+    await vi.waitFor(() => expect(b.status()).toBe('reconnecting'));
+
+    expect(a.status()).toBe('live');
+    a.remove();
+    await a.done;
+    expect(store.getState().hub.connections).toEqual({ b: 'reconnecting' });
+
+    b.remove();
+    await b.done;
+    expect(store.getState().hub.connections).toEqual({});
   });
 
   it('after an automatic reconnect it asks once for what it missed', async () => {
@@ -130,7 +184,7 @@ describe('followScanHub (#26 hub-cache-bridge, facility-0064)', () => {
     }
   });
 
-  it('when the entry goes, the connection stops, the status is connecting again, and nothing restarts', async () => {
+  it('when the entry goes, the connection stops, its status goes, and nothing restarts', async () => {
     const f = follow();
     f.loaded();
     await vi.waitFor(() => expect(f.status()).toBe('live'));
@@ -140,7 +194,7 @@ describe('followScanHub (#26 hub-cache-bridge, facility-0064)', () => {
       await f.done;
 
       expect(hub.latest().stops).toBe(1);
-      expect(f.status()).toBe('connecting');
+      expect(f.connections()).toEqual({}); // the ended connection leaves no status behind
       expect(vi.getTimerCount()).toBe(0);
     } finally {
       vi.useRealTimers();
@@ -167,7 +221,7 @@ describe('followScanHub (#26 hub-cache-bridge, facility-0064)', () => {
 
       expect(hub.latest().starts).toBe(2);
       expect(vi.getTimerCount()).toBe(0);
-      expect(f.status()).toBe('connecting');
+      expect(f.connections()).toEqual({}); // the ended connection leaves no status behind
     } finally {
       vi.useRealTimers();
     }

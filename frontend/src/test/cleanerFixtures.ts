@@ -26,9 +26,6 @@ export function point(overrides: Partial<PointCard> = {}): PointCard {
     status: 'NotYetDone',
     currentRound: { id: 101, start: '10:00:00', end: '12:00:00' },
     nextRound: { id: 102, start: '13:00:00', end: '15:00:00' },
-    lastScan: null,
-    issue: null,
-    rework: null,
     ...overrides,
   };
 }

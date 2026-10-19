@@ -147,6 +147,7 @@ Plan 4 test results at merge:
 ## Task log (plan 11)
 
 - 2026-10-19 · Task 1 done: Admin pages are lazy routes (facility-0062 item 3, owner 2026-10-19); the root route shows "กำลังโหลด..." while the first page's file loads; renderApp waits for router.state.initialized. Main JS 156.21 kB gzip (was 173.53 kB in one file; a rebuild at the branch start measured 173.78 kB). Frontend tests 250 passed. Next: Task 2 (hub status per connection, AttendanceRecorded, optional PointCard fields).
+- 2026-10-19 · Task 2 done: hubSlice keeps one status per connection key (selectHubStatus, hubFollowEnded), followScanHub takes a key and an optional onPoint and onAttendance (AttendanceRecorded), My Building uses key 'my-building'; PointCard's nullable fields are optional and point() leaves them out (both deferred from plan 9). Frontend tests 252 passed. Next: Task 3 (Dashboard cards with live updates).
 
 ## Pending work (ask the owner before starting)
 

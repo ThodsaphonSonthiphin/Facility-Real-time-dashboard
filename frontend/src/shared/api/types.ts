@@ -83,10 +83,10 @@ export interface LastScan {
   status: CleaningStatus;
 }
 
-/** IssueDto (facility-0046): shown while the latest submission reported an issue. */
+/** IssueDto (facility-0046): shown while the latest submission reported an issue. note is missing when none was typed. */
 export interface ReportedIssue {
   tags: string[];
-  note: string | null;
+  note?: string;
   reportedAt: string;
 }
 
@@ -96,7 +96,7 @@ export interface Rework {
   requestedAt: string;
 }
 
-/** PointStatusDto: one point's card. It never carries the QR Token (facility-0059, 0060). */
+/** PointStatusDto: one point's card. It never carries the QR Token (facility-0059, 0060). Fields the server sends as null arrive missing. */
 export interface PointCard {
   id: number;
   name: string;
@@ -105,11 +105,11 @@ export interface PointCard {
   areaName: string;
   buildingCode: string;
   status: PointStatus;
-  currentRound: RoundWindow | null;
-  nextRound: RoundWindow | null;
-  lastScan: LastScan | null;
-  issue: ReportedIssue | null;
-  rework: Rework | null;
+  currentRound?: RoundWindow;
+  nextRound?: RoundWindow;
+  lastScan?: LastScan;
+  issue?: ReportedIssue;
+  rework?: Rework;
 }
 
 /** MyWorkAreaDto. isCover: an Area the Cleaner covers this shift (facility-0041). */
@@ -134,4 +134,11 @@ export interface BlockedScan {
   areaName: string;
   reason: 'OtherArea' | 'OtherBuilding' | 'OutsideShift';
   buildingCode: string;
+}
+
+/** AttendanceChangedDto: ScanHub's "AttendanceRecorded", to Admins only (facility-0027 rule 5): that shift's board changed. */
+export interface AttendanceChanged {
+  areaId: number;
+  shiftDate: string;
+  shift: Shift;
 }
