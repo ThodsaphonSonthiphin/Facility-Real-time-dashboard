@@ -140,6 +140,8 @@ Plan 4 test results at merge:
 
 - 2026-10-19 · Owner's real run (plan 10), preliminary pass on the API at `facility_admin_test` and the Vite dev server: Areas, points, signs, print, accounts and the QR checks passed. An old check-in QR gets 404 "ไม่พบป้ายลงเวลานี้" and the new one records ShiftIn (tested with `POST /api/attendance`). The capture page (M17) on a real phone passed over https: the dev server runs with a mkcert certificate for the Mac's LAN IP (`FACILITY_DEV_CERT_DIR` in `frontend/vite.config.ts`, certificate kept outside the repo), the CA was installed on the phone, and the 30 s GPS capture saved. QR codes printed over plain http do not carry GPS, so signs are printed from the https origin.
 
+- 2026-10-19 · PR #59 merged to master (merge commit `a6dc170`), branch `feat/admin-setup` deleted. Plan 10 is done. The GitGuardian check on #59 stayed red on six test-fixture values (fake UUIDs and `temporary-123`, not secrets); the incidents are still open in the GitGuardian dashboard to mark as false positives. Next: plan 11, after the owner's OK.
+
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
