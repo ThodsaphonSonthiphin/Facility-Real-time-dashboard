@@ -106,9 +106,13 @@ export function supervisorShiftBlock(
   return holder ? `มีหัวหน้าแล้ว (${holder.displayName})` : null;
 }
 
-/** PhoneNumber.Normalize + IsComplete: 10 Arabic digits starting with 0; spaces and dashes are ignored. */
+/**
+ * PhoneNumber.Normalize + IsComplete: keep only Arabic digits (so Thai digits vanish), turn a leading country code 66
+ * of an 11-digit number into 0, then require 10 digits starting with 0.
+ */
 export function normalizePhone(text: string): string | null {
-  const digits = text.replace(/[\s-]/g, '');
+  const typed = text.replace(/[^0-9]/g, '');
+  const digits = typed.length === 11 && typed.startsWith('66') ? `0${typed.slice(2)}` : typed;
   return /^0\d{9}$/.test(digits) ? digits : null;
 }
 

@@ -7,6 +7,13 @@ import { useCreatePointMutation, useSetPointActiveMutation, useUpdatePointMutati
 import { isClock, sameWindow, sortWindows, type WindowDraft } from './pointRules';
 import { SignPanel } from './SignPanel';
 
+interface Typed {
+  start: string;
+  end: string;
+}
+
+const noTyped: Typed = { start: '', end: '' };
+
 interface PointEditorProps {
   area: AreaSummary;
   /** Missing: a new point. */
@@ -25,6 +32,8 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
   const [windows, setWindows] = useState<WindowDraft[]>(() =>
     (point?.roundWindows ?? []).map(({ shift, start, end }) => ({ shift, start, end })),
   );
+  // What is typed in เริ่ม / ถึง but not yet added, per shift: a save must not drop it silently
+  const [pending, setPending] = useState<Record<Shift, Typed>>({ Day: noTyped, Night: noTyped });
   const [problem, setProblem] = useState<string | null>(null);
   const [createPoint, created] = useCreatePointMutation();
   const [updatePoint, updated] = useUpdatePointMutation();
@@ -38,6 +47,10 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
     const trimmed = name.trim();
     if (trimmed === '') {
       setProblem('ใส่ชื่อจุดก่อน');
+      return;
+    }
+    if (shifts.some((shift) => pending[shift].start.trim() !== '' || pending[shift].end.trim() !== '')) {
+      setProblem('มีเวลาที่พิมพ์ไว้แต่ยังไม่ได้กด "เพิ่ม" กด "เพิ่ม" หรือลบเวลานั้นก่อนบันทึก');
       return;
     }
     setProblem(null);
@@ -88,6 +101,8 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
               shift={shift}
               windows={windows}
               disabled={sending}
+              typed={pending[shift]}
+              onTyped={(typed) => setPending((all) => ({ ...all, [shift]: typed }))}
               onAdd={(draft) => setWindows((all) => [...all, draft])}
               onRemove={(draft) => setWindows((all) => all.filter((w) => !sameWindow(w, draft)))}
             />
@@ -146,14 +161,15 @@ interface ShiftWindowsProps {
   shift: Shift;
   windows: WindowDraft[];
   disabled: boolean;
+  typed: Typed;
+  onTyped: (typed: Typed) => void;
   onAdd: (draft: WindowDraft) => void;
   onRemove: (draft: WindowDraft) => void;
 }
 
 /** One shift's windows (D4: "07:00–09:00 ×", then เริ่ม / ถึง / เพิ่ม). Enter in the times adds, not saves. */
-function ShiftWindows({ shift, windows, disabled, onAdd, onRemove }: ShiftWindowsProps) {
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemove }: ShiftWindowsProps) {
+  const { start, end } = typed;
   const [problem, setProblem] = useState<string | null>(null);
   const label = shiftShortLabel[shift];
   const mine = sortWindows(windows.filter((w) => w.shift === shift));
@@ -170,8 +186,7 @@ function ShiftWindows({ shift, windows, disabled, onAdd, onRemove }: ShiftWindow
     }
     setProblem(null);
     onAdd(draft);
-    setStart('');
-    setEnd('');
+    onTyped(noTyped);
   };
 
   const addOnEnter = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -206,10 +221,9 @@ function ShiftWindows({ shift, windows, disabled, onAdd, onRemove }: ShiftWindow
           <input
             className="app-input areas-shift__time"
             placeholder="07:00"
-            inputMode="numeric"
             maxLength={5}
             value={start}
-            onChange={(event) => setStart(event.target.value)}
+            onChange={(event) => onTyped({ start: event.target.value, end })}
             onKeyDown={addOnEnter}
           />
         </label>
@@ -218,10 +232,9 @@ function ShiftWindows({ shift, windows, disabled, onAdd, onRemove }: ShiftWindow
           <input
             className="app-input areas-shift__time"
             placeholder="09:00"
-            inputMode="numeric"
             maxLength={5}
             value={end}
-            onChange={(event) => setEnd(event.target.value)}
+            onChange={(event) => onTyped({ start, end: event.target.value })}
             onKeyDown={addOnEnter}
           />
         </label>

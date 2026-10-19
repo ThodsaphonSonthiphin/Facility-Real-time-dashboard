@@ -1,4 +1,5 @@
-import { freshOnOpen, useGetMyWorkQuery } from '../../shared/api/myWorkApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
+import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import type { AttendanceState, MyWork, PointStatus } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';

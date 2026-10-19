@@ -29,8 +29,10 @@ describe('account rules (facility-0020, 0054)', () => {
     expect(createRequest(emptyDraft())).toEqual({ problem: 'ใส่ชื่อที่แสดงก่อน' });
   });
 
-  it('accepts a phone of 10 Arabic digits starting with 0, ignoring spaces and dashes', () => {
+  it('reads a phone as the server does: digits only, +66 becomes 0, then 10 digits starting with 0', () => {
     expect(normalizePhone('081-000 0009')).toBe('0810000009');
+    expect(normalizePhone('+66 81 000 0009')).toBe('0810000009');
+    expect(normalizePhone('(081) 000-0009')).toBe('0810000009');
     expect(normalizePhone('810000009')).toBeNull();
     expect(normalizePhone('08100000099')).toBeNull();
     expect(normalizePhone('๐๘๑๐๐๐๐๐๐๙')).toBeNull();

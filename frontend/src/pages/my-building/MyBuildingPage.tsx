@@ -1,4 +1,4 @@
-import { freshOnOpen } from '../../shared/api/myWorkApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
 import type { PointStatus } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGetAreasQuery, useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { useAppSelector } from '../../store/hooks';
 import { accountFilters, filterAccounts, filterCounts, filterLabel, type AccountFilter } from './accountRules';
@@ -20,9 +21,9 @@ type Notice = { kind: 'ok' | 'error'; text: string } | null;
  * or holds the action of the row pressed; when that action is done it goes back to "เพิ่มบัญชี".
  */
 export function AccountsPage() {
-  const accounts = useGetAccountsQuery();
-  const areas = useGetAreasQuery();
-  const buildings = useGetBuildingsQuery();
+  const accounts = useGetAccountsQuery(undefined, freshOnOpen);
+  const areas = useGetAreasQuery(undefined, freshOnOpen);
+  const buildings = useGetBuildingsQuery(undefined, freshOnOpen);
   const me = useAppSelector((state) => state.auth.currentUser?.id);
   const [filter, setFilter] = useState<AccountFilter>('all');
   const [search, setSearch] = useState('');

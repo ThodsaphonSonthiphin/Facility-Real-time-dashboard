@@ -114,7 +114,9 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     expect(
       await screen.findByText('เปลี่ยนเบอร์โทรของ แม่บ้านทดสอบ แล้ว ทุกเครื่องของคนนี้ต้องเข้าสู่ระบบใหม่'),
     ).toBeInTheDocument();
-    expect(sent(server, 'PUT', '/api/admin/accounts/21/phone')).toEqual({ phone: '0810000099' });
+    const puts = server.calls.filter((call) => call.method === 'PUT' && call.path === '/api/admin/accounts/21/phone');
+    expect(puts).toHaveLength(1);
+    expect(puts[0].body).toEqual({ phone: '0810000099' });
     expect(screen.queryByDisplayValue('0810000099')).not.toBeInTheDocument();
   });
 

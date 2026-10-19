@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useGetAreasQuery } from '../../shared/api/adminSetupApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { nothingToPrint, perSheet, printableSigns, sheetsOf, summaryLine, type SignSize } from './printRules';
 import { useGetPrintAreasQuery } from './printSignsApi';
@@ -17,11 +18,16 @@ export function PrintSignsPage() {
   const signParam = params.get('sign');
   const signId = signParam ? Number(signParam) : undefined;
   const [size, setSize] = useState<SignSize>('small');
-  const areas = useGetAreasQuery();
-  const print = useGetPrintAreasQuery(which, { skip: which === '' });
+  const areas = useGetAreasQuery(undefined, freshOnOpen);
+  const print = useGetPrintAreasQuery(which, { ...freshOnOpen, skip: which === '' });
   const details = print.currentData;
   const signs = details ? printableSigns(details, signId) : [];
   const activeAreas = areas.data?.filter((area) => area.isActive) ?? [];
+  // A tab open for a while may hold a revoked token: ask the server again, then print what it answered
+  const printNow = async () => {
+    await print.refetch();
+    window.print();
+  };
   const heading =
     which === 'all' ? 'ทุก Area' : details?.[0] ? `${details[0].area.code} ${details[0].area.name}` : undefined;
 
@@ -66,8 +72,8 @@ export function PrintSignsPage() {
           <button
             type="button"
             className="app-button app-button--primary"
-            disabled={signs.length === 0}
-            onClick={() => window.print()}
+            disabled={signs.length === 0 || print.isFetching}
+            onClick={() => void printNow()}
           >
             พิมพ์
           </button>

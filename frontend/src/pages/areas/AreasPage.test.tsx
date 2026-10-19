@@ -1,6 +1,14 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { adminSession, areaDetail, areaSummary, officeDetail, officeSummary } from '../../test/adminFixtures';
+import {
+  adminPoint,
+  adminSession,
+  areaDetail,
+  areaSummary,
+  officeDetail,
+  officeSummary,
+  sign,
+} from '../../test/adminFixtures';
 import { authAnswer, fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
 
@@ -46,6 +54,35 @@ describe('AreasPage (D4, facility-0045)', () => {
     const women = row(/AR01-02/);
     expect(within(women).getByText('เช้า 08:00–10:00')).toBeInTheDocument();
     expect(within(women).getByText('ยังไม่มีพิกัด · รัศมี 50 ม.')).toBeInTheDocument();
+  });
+
+  it('asks the server again each time an Area is opened (another device may have changed it)', async () => {
+    let newer = false;
+    const server = serve({
+      'GET /api/admin/areas/1': () => {
+        const detail = areaDetail();
+        if (newer) {
+          detail.points[1] = adminPoint({
+            id: 12,
+            name: 'ห้องน้ำหญิง',
+            sortOrder: 2,
+            sign: sign({ id: 102, code: 'AR01-02', locationAccuracyM: 9 }),
+            roundWindows: [{ id: 5, shift: 'Day', start: '08:00', end: '10:00' }],
+          });
+        }
+        return { status: 200, body: detail };
+      },
+    });
+    const { user } = await renderApp('/admin/areas/1');
+    expect(await screen.findByText('ยังไม่มีพิกัด · รัศมี 50 ม.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: /^AR02 Office ทดลอง/ }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'AR02 Office ทดลอง' })).toBeInTheDocument();
+    newer = true;
+    await user.click(screen.getByRole('link', { name: /^AR01 Area ทดลอง/ }));
+
+    expect(await within(row(/AR01-02/)).findByText('หน้างาน ±9 ม. · รัศมี 50 ม.')).toBeInTheDocument();
+    expect(server.calls.filter((call) => call.method === 'GET' && call.path === '/api/admin/areas/1')).toHaveLength(2);
   });
 
   it('opens the Area in the address: a day-only Area with no Cleaner and no point', async () => {

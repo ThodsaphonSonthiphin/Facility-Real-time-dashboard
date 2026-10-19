@@ -47,12 +47,12 @@ export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
           inputMode="numeric"
           className="app-input"
           autoComplete="off"
-          maxLength={12}
+          maxLength={16}
           value={phone}
           disabled={isLoading}
           onChange={(event) => setPhone(event.target.value)}
         />
-        <span className="app-field__help">ใช้แทนรหัสผ่าน ระบบเก็บเบอร์แบบที่เปิดดูไม่ได้ · บันทึกแล้วทุกเครื่องของคนนี้ต้องเข้าสู่ระบบใหม่</span>
+        <span className="app-field__help">ใช้แทนรหัสผ่าน ระบบเก็บเบอร์แบบที่เปิดดูไม่ได้ · บันทึกแล้วทุกเครื่องของคนนี้ต้องเข้าสู่ระบบใหม่ · ถ้าใส่เบอร์เดิม ระบบไม่เปลี่ยนอะไรและเครื่องเดิมยังใช้งานได้</span>
       </div>
       {problem && (
         <p className="app-note app-note--error" role="alert">
@@ -112,7 +112,7 @@ export function PasswordForm({ account, isSelf, onDone, onCancel }: SecretFormPr
           disabled={isLoading}
           onChange={(event) => setPassword(event.target.value)}
         />
-        <span className="app-field__help">8–100 ตัวอักษร บอกเองด้วยวาจาหรือกระดาษ</span>
+        <span className="app-field__help">8–100 ตัวอักษร บอกเองด้วยวาจาหรือกระดาษ · ถ้าใส่รหัสเดิม ระบบไม่เปลี่ยนอะไร</span>
       </div>
       {problem && (
         <p className="app-note app-note--error" role="alert">

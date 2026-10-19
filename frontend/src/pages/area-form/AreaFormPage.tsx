@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router';
 import { useGetAreaQuery, useGetBuildingsQuery, useGetCleanersQuery } from '../../shared/api/adminSetupApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { AreaActiveSection } from './AreaActiveSection';
 import { AreaForm } from './AreaForm';
@@ -9,9 +10,9 @@ import './areaForm.css';
 export function AreaFormPage() {
   const { areaId } = useParams();
   const id = areaId === undefined ? undefined : Number(areaId);
-  const buildings = useGetBuildingsQuery();
-  const cleaners = useGetCleanersQuery();
-  const area = useGetAreaQuery(id ?? 0, { skip: id === undefined });
+  const buildings = useGetBuildingsQuery(undefined, freshOnOpen);
+  const cleaners = useGetCleanersQuery(undefined, freshOnOpen);
+  const area = useGetAreaQuery(id ?? 0, { ...freshOnOpen, skip: id === undefined });
   const detail = id === undefined ? undefined : area.currentData;
   const error = buildings.error ?? cleaners.error ?? area.error;
   const title =

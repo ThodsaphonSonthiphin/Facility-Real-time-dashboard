@@ -23,6 +23,23 @@ function serve(routes: FakeRoutes = {}) {
 }
 
 describe('PointEditor (D4, facility-0045, 0047)', () => {
+  it('refuses to save while times are typed but not added, and sends nothing', async () => {
+    const server = serve();
+    const { user } = await renderApp('/admin/areas/1');
+    await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-01' }));
+    const editor = screen.getByRole('region', { name: 'แก้ไขจุด · AR01 Area ทดลอง' });
+    const day = within(editor).getByRole('group', { name: 'กะเช้า' });
+
+    await user.type(within(day).getByLabelText('เริ่ม'), '08:00');
+    await user.type(within(day).getByLabelText('ถึง'), '10:00');
+    await user.click(within(editor).getByRole('button', { name: 'บันทึกจุด' }));
+
+    expect(await within(editor).findByRole('alert')).toHaveTextContent(
+      'มีเวลาที่พิมพ์ไว้แต่ยังไม่ได้กด "เพิ่ม" กด "เพิ่ม" หรือลบเวลานั้นก่อนบันทึก',
+    );
+    expect(server.calls.some((call) => call.path.startsWith('/api/admin') && call.method !== 'GET')).toBe(false);
+  });
+
   it('edits a point’s name and windows and sends the full list in shift order', async () => {
     let detailCalls = 0;
     const server = serve({

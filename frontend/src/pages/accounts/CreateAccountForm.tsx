@@ -149,7 +149,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
               inputMode="numeric"
               className="app-input"
               autoComplete="off"
-              maxLength={12}
+              maxLength={16}
               value={draft.phone}
               disabled={isLoading}
               onChange={(event) => set({ phone: event.target.value })}

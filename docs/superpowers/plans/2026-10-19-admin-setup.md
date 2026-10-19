@@ -143,7 +143,7 @@ JSON is camelCase. Enums are strings: `Cleaner`, `Supervisor`, `Admin`, `DayAndN
     - "นำเข้าจาก Excel" is left out until its backend exists (ADR 0056, D11).
 11. **D10 gains "รหัส Area"** on the add form. The server requires a code (2–20 letters or digits, printed on every sign) and fixes it once created. The edit form shows it read-only.
 12. **Round times are typed as text "07:00"**, checked with `HH:mm` before sending, instead of `<input type="time">`. That input looks different in every browser and cannot be typed into reliably in jsdom. The server checks overlap and shift bounds, and its message is shown as it is.
-13. **Admin pages use the cache with invalidation, and do not refetch every time they open.** Only Admins change this data, and every save invalidates it. The Dashboard's 30 s poll (facility-0061) is plan 11's.
+13. **Admin pages use the cache with invalidation, and do not refetch every time they open.** Only Admins change this data, and every save invalidates it. The Dashboard's 30 s poll (facility-0061) is plan 11's. *Overruled in the final review (2026-10-19): Admin reads now ask the server on every open (`freshOnOpen`), and the print page refetches before printing, because M17 runs on a second device.*
 
 ---
 

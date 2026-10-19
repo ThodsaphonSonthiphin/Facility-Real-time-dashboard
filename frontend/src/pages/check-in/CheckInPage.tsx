@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { freshOnOpen, useGetMyWorkQuery } from '../../shared/api/myWorkApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
+import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import { blockedScanOf, isNotSent, statusOf } from '../../shared/api/scanAnswers';
 import type { AttendanceEvent, AttendanceState, BlockedScan } from '../../shared/api/types';
 import { BlockedScanScreen } from '../../shared/components/BlockedScanScreen';

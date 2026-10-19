@@ -51,3 +51,9 @@ export const baseApi = createApi({
   tagTypes: ['MyBuilding', 'AdminSetup'],
   endpoints: () => ({}),
 });
+
+/**
+ * Hook options for every page whose data another device may change (phone pages, and Admin setup, since M17 runs on a
+ * second device): ask the server on every open, never act on an answer from an earlier visit.
+ */
+export const freshOnOpen = { refetchOnMountOrArgChange: true } as const;

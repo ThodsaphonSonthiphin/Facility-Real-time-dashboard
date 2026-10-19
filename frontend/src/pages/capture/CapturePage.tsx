@@ -6,6 +6,7 @@ import {
   type AdminSign,
   type AreaDetail,
 } from '../../shared/api/adminSetupApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
 import type { GpsFix } from '../../shared/geo/readLocation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { formatCoordinates, signPlaceLabel } from '../../shared/utils/labels';
@@ -47,7 +48,7 @@ function captureSigns(detail: AreaDetail): CaptureSign[] {
 export function CapturePage() {
   const { areaId } = useParams();
   const [params, setParams] = useSearchParams();
-  const area = useGetAreaQuery(Number(areaId));
+  const area = useGetAreaQuery(Number(areaId), freshOnOpen);
   const detail = area.currentData;
   const signs = detail ? captureSigns(detail) : [];
   const selected = signs.find((target) => String(target.sign.id) === params.get('sign'));

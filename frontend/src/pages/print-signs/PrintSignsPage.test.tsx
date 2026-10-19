@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { adminSession, areaDetail, areaSummary, officeDetail, officeSummary } from '../../test/adminFixtures';
+import { adminSession, areaDetail, checkInSign, areaSummary, officeDetail, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
 import { qrPath } from './qr';
@@ -135,7 +135,32 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     expect(router.state.location.search).toBe('?area=2');
     expect(await screen.findByRole('article', { name: 'ป้าย AR02-IN' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'พิมพ์' }));
-    expect(print).toHaveBeenCalledOnce();
+    await waitFor(() => expect(print).toHaveBeenCalledOnce());
+  });
+
+  it('"พิมพ์" asks the server first, so a QR renewed meanwhile is the one printed', async () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    let renewed = false;
+    serve({
+      'GET /api/admin/areas/1': () => ({
+        status: 200,
+        body: areaDetail({
+          checkInSign: checkInSign(renewed ? { qrToken: '11111111-2222-4333-8444-555555555555' } : {}),
+        }),
+      }),
+    });
+    const { user } = await renderApp('/admin/print?area=1&sign=100');
+    expect(
+      await screen.findByText(`${window.location.origin}/check-in/9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d`),
+    ).toBeInTheDocument();
+
+    renewed = true;
+    await user.click(screen.getByRole('button', { name: 'พิมพ์' }));
+
+    await waitFor(() => expect(print).toHaveBeenCalledOnce());
+    expect(
+      await screen.findByText(`${window.location.origin}/check-in/11111111-2222-4333-8444-555555555555`),
+    ).toBeInTheDocument();
   });
 
   it('a deactivated Area has nothing to print', async () => {

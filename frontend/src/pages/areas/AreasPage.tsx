@@ -1,5 +1,6 @@
 import { useParams } from 'react-router';
 import { useGetAreaQuery, useGetAreasQuery } from '../../shared/api/adminSetupApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { AreaDetailPanel } from './AreaDetailPanel';
 import { AreaList } from './AreaList';
@@ -11,10 +12,10 @@ import './areas.css';
  */
 export function AreasPage() {
   const { areaId } = useParams();
-  const areas = useGetAreasQuery();
+  const areas = useGetAreasQuery(undefined, freshOnOpen);
   const parsed = areaId === undefined ? areas.data?.[0]?.id : Number(areaId);
   const selectedId = parsed !== undefined && Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
-  const detail = useGetAreaQuery(selectedId ?? 0, { skip: selectedId === undefined });
+  const detail = useGetAreaQuery(selectedId ?? 0, { ...freshOnOpen, skip: selectedId === undefined });
   const error = areas.error ?? detail.error;
 
   return (

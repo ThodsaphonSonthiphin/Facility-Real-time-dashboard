@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router';
-import { freshOnOpen } from '../../shared/api/myWorkApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
 import { blockedScanOf, isNotSent, statusOf } from '../../shared/api/scanAnswers';
 import type { BlockedScan } from '../../shared/api/types';
 import { BlockedScanScreen } from '../../shared/components/BlockedScanScreen';
