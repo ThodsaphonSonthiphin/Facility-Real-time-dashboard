@@ -1,4 +1,4 @@
-import type { AdminPoint } from '../../shared/api/adminSetupApi';
+import type { AdminPoint, AdminSign } from '../../shared/api/adminSetupApi';
 import { baseApi } from '../../shared/api/baseApi';
 import type { WindowDraft } from './pointRules';
 
@@ -26,7 +26,23 @@ const areasApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['AdminSetup'],
     }),
+    /** facility-0038: applies to later scans; verdicts already stored stay. */
+    setSignRadius: build.mutation<AdminSign, { signId: number; radiusM: number }>({
+      query: ({ signId, radiusM }) => ({ url: `/admin/signs/${signId}/radius`, method: 'PUT', body: { radiusM } }),
+      invalidatesTags: ['AdminSetup'],
+    }),
+    /** facility-0006: the printed sign stops working at once; scan history is untouched. */
+    regenerateQr: build.mutation<AdminSign, number>({
+      query: (signId) => ({ url: `/admin/signs/${signId}/regenerate-token`, method: 'POST' }),
+      invalidatesTags: ['AdminSetup'],
+    }),
   }),
 });
 
-export const { useCreatePointMutation, useUpdatePointMutation, useSetPointActiveMutation } = areasApi;
+export const {
+  useCreatePointMutation,
+  useUpdatePointMutation,
+  useSetPointActiveMutation,
+  useSetSignRadiusMutation,
+  useRegenerateQrMutation,
+} = areasApi;

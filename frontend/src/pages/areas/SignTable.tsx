@@ -3,7 +3,7 @@ import type { AdminSign, AreaDetail } from '../../shared/api/adminSetupApi';
 import { roundsText, signPlaceLabel } from '../../shared/utils/labels';
 
 /** Which row's editor is open below the table. */
-export type EditTarget = { kind: 'point'; pointId: number } | { kind: 'new-point' };
+export type EditTarget = { kind: 'point'; pointId: number } | { kind: 'new-point' } | { kind: 'check-in' };
 
 const placeText = (sign: AdminSign) => `${signPlaceLabel(sign)} · รัศมี ${sign.radiusM} ม.`;
 
@@ -34,7 +34,17 @@ export function SignTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (tar
             </th>
             <td>เข้างาน ออกพัก กลับจากพัก เลิกงาน</td>
             <td>{placeText(checkInSign)}</td>
-            <td className="areas-actions">{area.isActive && <Link to={printLink(checkInSign)}>พิมพ์</Link>}</td>
+            <td className="areas-actions">
+              <button
+                type="button"
+                className="app-link-button"
+                aria-label={`แก้ไข ${checkInSign.code}`}
+                onClick={() => onEdit({ kind: 'check-in' })}
+              >
+                แก้ไข
+              </button>
+              {area.isActive && <Link to={printLink(checkInSign)}>พิมพ์</Link>}
+            </td>
           </tr>
           {detail.points.map((point) => (
             <tr key={point.id} className={point.isActive ? undefined : 'app-row--inactive'}>

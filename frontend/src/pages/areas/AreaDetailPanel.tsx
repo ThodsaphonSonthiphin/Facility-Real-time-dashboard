@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import type { AdminPoint, AreaDetail } from '../../shared/api/adminSetupApi';
 import { areaLine } from './areaText';
 import { PointEditor } from './PointEditor';
+import { SignPanel } from './SignPanel';
 import { SignTable, type EditTarget } from './SignTable';
 
 /**
@@ -59,6 +60,23 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
           onSaved={saved}
           onClose={() => setEditing(null)}
         />
+      )}
+      {editing?.kind === 'check-in' && (
+        <section className="areas-editor app-panel" aria-labelledby="checkin-editor">
+          <h3 id="checkin-editor">{`ป้ายลงเวลา · ${area.code} ${area.name}`}</h3>
+          <SignPanel
+            key={detail.checkInSign.id}
+            areaId={area.id}
+            sign={detail.checkInSign}
+            label="ป้ายลงเวลา"
+            canIssueQr={area.isActive}
+          />
+          <div className="areas-editor__buttons">
+            <button type="button" className="app-button" onClick={() => setEditing(null)}>
+              ปิด
+            </button>
+          </div>
+        </section>
       )}
     </section>
   );

@@ -198,3 +198,38 @@
 .areas-shift__time {
   width: 90px;
 }
+
+.areas-sign {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.areas-sign__part {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.areas-sign__part h4 {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.areas-sign__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.areas-sign__radius {
+  width: 90px;
+}
+
+.areas-sign__qr {
+  align-self: flex-start;
+}

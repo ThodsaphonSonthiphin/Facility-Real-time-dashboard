@@ -5,6 +5,7 @@ import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { useCreatePointMutation, useSetPointActiveMutation, useUpdatePointMutation } from './areasApi';
 import { isClock, sameWindow, sortWindows, type WindowDraft } from './pointRules';
+import { SignPanel } from './SignPanel';
 
 interface PointEditorProps {
   area: AreaSummary;
@@ -127,6 +128,15 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
             </>
           )}
         </div>
+      )}
+      {point && (
+        <SignPanel
+          key={point.sign.id}
+          areaId={area.id}
+          sign={point.sign}
+          label={point.name}
+          canIssueQr={area.isActive && point.isActive}
+        />
       )}
     </section>
   );
