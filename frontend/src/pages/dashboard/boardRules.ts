@@ -1,4 +1,5 @@
-import type { PointCard } from '../../shared/api/types';
+import type { PointCard, PointStatus } from '../../shared/api/types';
+import type { DashboardState } from '../../store/slices/dashboardSlice';
 
 /** A pushed card replaces the same point in place. False when the list does not have that point (#26). */
 export function replacePoint(points: PointCard[], card: PointCard): boolean {
@@ -37,4 +38,35 @@ export function groupByArea(points: readonly PointCard[]): AreaGroup[] {
     }
   }
   return groups;
+}
+
+/** Wireframe D1's legend order: not started, to do, waiting, done, then the ones that need someone, then off hours. */
+export const legendOrder: readonly PointStatus[] = [
+  'BeforeFirstRound',
+  'NotYetDone',
+  'PendingInspection',
+  'Passed',
+  'Rework',
+  'Overdue',
+  'OffHours',
+];
+
+/** The cards of one building; '' is every building. */
+export function inBuilding(points: readonly PointCard[], buildingCode: string): PointCard[] {
+  return buildingCode === '' ? [...points] : points.filter((point) => point.buildingCode === buildingCode);
+}
+
+export function statusCounts(points: readonly PointCard[]): Record<PointStatus, number> {
+  const counts = Object.fromEntries(legendOrder.map((status) => [status, 0])) as Record<PointStatus, number>;
+  for (const point of points) {
+    counts[point.status] += 1;
+  }
+  return counts;
+}
+
+/** The cards to show: the building, then the status and the issue tag (the legend counts inside the building). */
+export function filterPoints(points: readonly PointCard[], filters: DashboardState): PointCard[] {
+  return inBuilding(points, filters.buildingCode).filter(
+    (point) => (filters.status === 'all' || point.status === filters.status) && (!filters.issueOnly || Boolean(point.issue)),
+  );
 }

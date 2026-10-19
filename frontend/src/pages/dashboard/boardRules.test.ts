@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { point } from '../../test/cleanerFixtures';
 import { boardPoints } from '../../test/liveFixtures';
-import { groupByArea, replacePoint } from './boardRules';
+import { filterPoints, groupByArea, inBuilding, replacePoint, statusCounts } from './boardRules';
 
 describe('Dashboard rules (wireframe D1)', () => {
   it('groups the points by Area in the order the server sends them', () => {
@@ -24,5 +24,29 @@ describe('Dashboard rules (wireframe D1)', () => {
     ]);
     expect(replacePoint(points, point({ id: 9 }))).toBe(false);
     expect(points).toHaveLength(2);
+  });
+
+  it('counts each status, inside the chosen building', () => {
+    expect(statusCounts(boardPoints)).toEqual({
+      BeforeFirstRound: 1,
+      NotYetDone: 0,
+      PendingInspection: 2,
+      Passed: 1,
+      Rework: 1,
+      Overdue: 1,
+      OffHours: 1,
+    });
+    expect(statusCounts(inBuilding(boardPoints, 'B')).PendingInspection).toBe(1);
+    expect(inBuilding(boardPoints, '')).toHaveLength(7);
+  });
+
+  it('keeps the cards of the building, the status and the issue tag together', () => {
+    const names = (filters: Parameters<typeof filterPoints>[1]) => filterPoints(boardPoints, filters).map((p) => p.name);
+
+    expect(names({ buildingCode: '', status: 'all', issueOnly: false })).toHaveLength(7);
+    expect(names({ buildingCode: '', status: 'PendingInspection', issueOnly: false })).toEqual(['ห้องน้ำชาย', 'ห้องน้ำ Office']);
+    expect(names({ buildingCode: 'B', status: 'PendingInspection', issueOnly: false })).toEqual(['ห้องน้ำ Office']);
+    expect(names({ buildingCode: '', status: 'all', issueOnly: true })).toEqual(['ห้องน้ำหญิง']);
+    expect(names({ buildingCode: 'B', status: 'all', issueOnly: true })).toEqual([]);
   });
 });

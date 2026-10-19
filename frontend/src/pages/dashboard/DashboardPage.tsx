@@ -1,8 +1,10 @@
 import { livePoll } from '../../shared/api/baseApi';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { groupByArea, type AreaGroup } from './boardRules';
+import { useAppSelector } from '../../store/hooks';
+import { filterPoints, groupByArea, type AreaGroup } from './boardRules';
 import { DASHBOARD_HUB, useGetServicePointsQuery } from './dashboardApi';
+import { Filters } from './Filters';
 import { PointTile } from './PointTile';
 import './dashboard.css';
 
@@ -17,6 +19,8 @@ const RULES_NOTE =
  */
 export function DashboardPage() {
   const { data, error, isLoading } = useGetServicePointsQuery(undefined, livePoll);
+  const filters = useAppSelector((state) => state.dashboard);
+  const shown = data ? filterPoints(data, filters) : [];
 
   return (
     <main className="dashboard-page">
@@ -24,6 +28,7 @@ export function DashboardPage() {
         <h1>สถานะจุดทำความสะอาด</h1>
         <LiveBadge hubKey={DASHBOARD_HUB} />
       </header>
+      {data && <Filters points={data} />}
       <p className="app-muted">{RULES_NOTE}</p>
       {isLoading && <p className="app-muted">กำลังโหลดจุด...</p>}
       {error && (
@@ -34,7 +39,10 @@ export function DashboardPage() {
       {data && data.length === 0 && (
         <p className="app-note app-note--info">ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการ Area และป้าย</p>
       )}
-      {data && groupByArea(data).map((group) => <AreaSection key={group.areaId} group={group} />)}
+      {data && data.length > 0 && shown.length === 0 && <p className="app-note app-note--info">ไม่มีจุดตามตัวกรองนี้</p>}
+      {groupByArea(shown).map((group) => (
+        <AreaSection key={group.areaId} group={group} />
+      ))}
     </main>
   );
 }

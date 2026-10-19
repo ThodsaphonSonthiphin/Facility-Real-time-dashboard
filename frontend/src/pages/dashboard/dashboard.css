@@ -85,3 +85,86 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+.dashboard-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.dashboard-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard-legend__item,
+.dashboard-issue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dashboard-issue {
+  border-color: var(--color-error-border);
+  color: var(--color-error-text);
+}
+
+.dashboard-legend__item[aria-pressed='true'],
+.dashboard-issue[aria-pressed='true'] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+
+.dashboard-dot {
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--color-status-idle);
+}
+
+.dashboard-dot--Rework {
+  background: var(--color-status-rework);
+}
+
+.dashboard-dot--Overdue {
+  background: var(--color-status-overdue);
+}
+
+.dashboard-dot--PendingInspection {
+  background: var(--color-status-pending);
+}
+
+.dashboard-dot--Passed {
+  background: var(--color-status-passed);
+}
+
+.dashboard-dot--BeforeFirstRound {
+  border: 1px dashed var(--color-status-idle);
+  background: transparent;
+}
+
+.dashboard-dot--OffHours {
+  opacity: 0.5;
+}
