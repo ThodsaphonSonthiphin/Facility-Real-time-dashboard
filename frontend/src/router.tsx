@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 import { AdminLoginPage, LoginPage } from './pages/auth';
 import { AreasPage } from './pages/areas';
 import { AreaFormPage } from './pages/area-form';
+import { PrintSignsPage } from './pages/print-signs';
 import { CheckInPage } from './pages/check-in';
 import { DashboardPage } from './pages/dashboard';
 import { InspectPage } from './pages/inspect';
@@ -71,6 +72,8 @@ export const routes: RouteObject[] = [
               // facility-0045, wireframe D10 ("new" outranks the id above)
               { path: 'admin/areas/new', element: <AreaFormPage /> },
               { path: 'admin/areas/:areaId/edit', element: <AreaFormPage /> },
+              // facility-0021 item 6, wireframe D5: ?area=<id>[&sign=<id>] or ?area=all
+              { path: 'admin/print', element: <PrintSignsPage /> },
             ],
           },
         ],

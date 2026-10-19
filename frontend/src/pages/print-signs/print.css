@@ -1,0 +1,136 @@
+/* Wireframe D5 (facility-0021 item 6). Class prefix: print- */
+
+.print-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.print-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.print-controls h1 {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.print-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.print-size {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+
+.print-size legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+/* One A4 sheet: 210 × 297 mm with an 8 mm margin; signs are cut along the dashed lines */
+.print-sheet {
+  display: grid;
+  width: 210mm;
+  height: 297mm;
+  margin: 0 auto;
+  padding: 8mm;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 15%);
+}
+
+.print-sheet--small {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.print-sheet--A5 {
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(2, 1fr);
+}
+
+.print-sign {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2mm;
+  padding: 4mm;
+  overflow: hidden;
+  border: 1px dashed #9aa3a4;
+  color: #000;
+  text-align: center;
+}
+
+.print-sign__type,
+.print-sign__scan {
+  font-size: 11pt;
+  font-weight: 600;
+}
+
+.print-sign__name {
+  font-size: 16pt;
+  font-weight: 700;
+}
+
+.print-sheet--A5 .print-sign__name {
+  font-size: 24pt;
+}
+
+.print-sign__place,
+.print-sign__hint,
+.print-sign__code {
+  font-size: 9pt;
+}
+
+.print-sign__url {
+  font-size: 6.5pt;
+  color: #333;
+  word-break: break-all;
+}
+
+.print-qr {
+  width: 42mm;
+  height: 42mm;
+}
+
+.print-sheet--A5 .print-qr {
+  width: 80mm;
+  height: 80mm;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  .print-controls {
+    display: none;
+  }
+
+  .print-page {
+    gap: 0;
+  }
+
+  .print-sheet {
+    margin: 0;
+    box-shadow: none;
+    break-after: page;
+  }
+
+  .print-sheet:last-of-type {
+    break-after: auto;
+  }
+}
