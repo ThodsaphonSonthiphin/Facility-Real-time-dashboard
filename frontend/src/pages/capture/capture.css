@@ -1,0 +1,78 @@
+/* Wireframe M17 (facility-0045 item 2), the Admin's phone page. Class prefix: capture- */
+
+.capture-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.capture-page h1 {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.capture-kicker {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.capture-sign h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.capture-progress {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.capture-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.capture-signs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.capture-signs h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.capture-signs ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.capture-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.capture-row span {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.capture-row--selected {
+  border-color: var(--color-info-border);
+  background: var(--color-info-bg);
+}

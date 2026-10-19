@@ -46,7 +46,14 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, Fetch
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  // Refetched by tag only where a live push may have been missed (facility-0064 item 2)
-  tagTypes: ['MyBuilding'],
+  // MyBuilding: refetched where a live push may have been missed (facility-0064 item 2).
+  // AdminSetup: every Admin setup read; every save that changes what they show invalidates it (plan 10 decision 3)
+  tagTypes: ['MyBuilding', 'AdminSetup'],
   endpoints: () => ({}),
 });
+
+/**
+ * Hook options for every page whose data another device may change (phone pages, and Admin setup, since M17 runs on a
+ * second device): ask the server on every open, never act on an answer from an earlier visit.
+ */
+export const freshOnOpen = { refetchOnMountOrArgChange: true } as const;

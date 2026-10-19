@@ -1,5 +1,10 @@
 import type { RouteObject } from 'react-router';
 import { AdminLoginPage, LoginPage } from './pages/auth';
+import { AccountsPage } from './pages/accounts';
+import { AreasPage } from './pages/areas';
+import { AreaFormPage } from './pages/area-form';
+import { CapturePage } from './pages/capture';
+import { PrintSignsPage } from './pages/print-signs';
 import { CheckInPage } from './pages/check-in';
 import { DashboardPage } from './pages/dashboard';
 import { InspectPage } from './pages/inspect';
@@ -59,7 +64,25 @@ export const routes: RouteObject[] = [
       },
       {
         element: <ProtectedRoute roles={['admin']} />,
-        children: [{ element: <AppLayout wide />, children: [{ path: 'dashboard', element: <DashboardPage /> }] }],
+        children: [
+          {
+            element: <AppLayout wide />,
+            children: [
+              { path: 'dashboard', element: <DashboardPage /> },
+              // facility-0045, wireframe D4; without an id the first Area is open
+              { path: 'admin/areas/:areaId?', element: <AreasPage /> },
+              // facility-0045, wireframe D10 ("new" outranks the id above)
+              { path: 'admin/areas/new', element: <AreaFormPage /> },
+              { path: 'admin/areas/:areaId/edit', element: <AreaFormPage /> },
+              // facility-0021 item 6, wireframe D5: ?area=<id>[&sign=<id>] or ?area=all
+              { path: 'admin/print', element: <PrintSignsPage /> },
+              // facility-0020, 0056, wireframe D6
+              { path: 'admin/accounts', element: <AccountsPage /> },
+            ],
+          },
+          // M17: the Admin's phone page at the sign (facility-0045 item 2), in the phone column
+          { element: <AppLayout />, children: [{ path: 'admin/areas/:areaId/capture', element: <CapturePage /> }] },
+        ],
       },
       {
         path: '*',

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import type { RouteObject } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { routes } from './router';
@@ -46,6 +46,27 @@ describe('routing (facility-0026, 0058)', () => {
     expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
     expect(screen.getByText('หน้านี้สำหรับAdmin บัญชีนี้เป็นแม่บ้าน')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'กลับหน้าของฉัน' })).toHaveAttribute('href', '/my-work');
+  });
+
+  it('an Admin page shows the Admin menu with the open page marked', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('admin') });
+    await renderApp('/dashboard');
+
+    const menu = screen.getByRole('navigation', { name: 'เมนู Admin' });
+    expect(within(menu).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'สถานะจุด',
+      'จัดการ Area และป้าย',
+      'บัญชีผู้ใช้',
+    ]);
+    expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
+    expect(within(menu).getByRole('link', { name: 'จัดการ Area และป้าย' })).toHaveAttribute('href', '/admin/areas');
+  });
+
+  it('a phone page has no Admin menu', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('cleaner') });
+    await renderApp('/my-work');
+
+    expect(screen.queryByRole('navigation', { name: 'เมนู Admin' })).not.toBeInTheDocument();
   });
 
   it('an unknown address shows not-found', async () => {

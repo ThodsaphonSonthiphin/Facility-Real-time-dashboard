@@ -6,9 +6,22 @@ const thaiClock = new Intl.DateTimeFormat('en-GB', {
   hourCycle: 'h23',
 });
 
+/** Day/month/year with Arabic digits and the Gregorian year, in Thai time. */
+const thaiDate = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Bangkok',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+
 /** A moment from the server (UTC ISO ending in "Z") or from the phone, as Thai time. */
 export function formatTime(moment: string | Date): string {
   return thaiClock.format(typeof moment === 'string' ? new Date(moment) : moment);
+}
+
+/** A moment as the Thai calendar date "16/10/2026" (e.g. when a QR was issued, on the printed sign). */
+export function formatDate(moment: string | Date): string {
+  return thaiDate.format(typeof moment === 'string' ? new Date(moment) : moment);
 }
 
 /** A Round Window time ("HH:mm:ss") is already Thai wall-clock (RoundWindowDto); only the seconds go. */

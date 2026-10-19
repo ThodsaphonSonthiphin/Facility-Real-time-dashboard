@@ -1,0 +1,1 @@
+export { AreaFormPage } from './AreaFormPage';
