@@ -241,4 +241,65 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     answer();
     expect(await within(form).findByRole('status')).toHaveTextContent('สร้างบัญชี แม่บ้านใหม่ แล้ว');
   });
+
+  it('drops a chosen shift that the newly chosen Area does not allow', async () => {
+    const server = serve();
+    const { user } = await renderApp('/admin/accounts');
+    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านใหม่');
+    await user.type(within(form).getByLabelText('รหัสพนักงาน'), '650010');
+    await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0810000009');
+
+    // Day is ticked with no Area; AR01's Day is held, so choosing AR01 must drop it
+    await user.click(within(form).getByRole('radio', { name: /^กะเช้า/ }));
+    await user.selectOptions(await within(form).findByLabelText('Area ประจำ'), '1');
+    expect(within(form).getByRole('radio', { name: /^กะเช้า/ })).not.toBeChecked();
+    await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
+
+    expect(within(form).getByRole('alert')).toHaveTextContent('เลือกกะก่อน');
+    expect(created(server)).toBeUndefined();
+  });
+
+  it('drops a chosen shift that the newly chosen building does not allow', async () => {
+    const server = serve();
+    const { user } = await renderApp('/admin/accounts');
+    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    await user.click(within(form).getByRole('radio', { name: 'หัวหน้า' }));
+    await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'หัวหน้าใหม่');
+    await user.type(within(form).getByLabelText('รหัสพนักงาน'), '660002');
+    await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0820000002');
+
+    // Day is ticked with no building; ตึกทดลอง's Day is held by หัวหน้าทดสอบ, so choosing it must drop Day
+    await user.click(within(form).getByRole('radio', { name: /^กะเช้า/ }));
+    await user.selectOptions(await within(form).findByLabelText('ตึกที่ประจำ'), 'ตึกทดลอง');
+    expect(within(form).getByRole('radio', { name: /^กะเช้า/ })).not.toBeChecked();
+    await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
+
+    expect(within(form).getByRole('alert')).toHaveTextContent('เลือกกะก่อน');
+    expect(created(server)).toBeUndefined();
+  });
+
+  it('shows the new account in the table after it is created', async () => {
+    let afterCreate = false;
+    const newcomer = account({ id: 40, loginName: '650010', displayName: 'แม่บ้านใหม่', areaId: undefined, areaCode: undefined });
+    serve({
+      'GET /api/admin/accounts': () => ({ status: 200, body: afterCreate ? [...accounts, newcomer] : accounts }),
+      'POST /api/admin/accounts': () => {
+        afterCreate = true;
+        return { status: 201, body: newcomer };
+      },
+    });
+    const { user } = await renderApp('/admin/accounts');
+    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    expect(screen.queryByRole('rowheader', { name: 'แม่บ้านใหม่' })).not.toBeInTheDocument();
+
+    await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านใหม่');
+    await user.type(within(form).getByLabelText('รหัสพนักงาน'), '650010');
+    await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0810000009');
+    await user.click(within(form).getByRole('radio', { name: /^กะเช้า/ }));
+    await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
+
+    expect(await within(form).findByRole('status')).toHaveTextContent('สร้างบัญชี แม่บ้านใหม่ แล้ว');
+    expect(await screen.findByRole('rowheader', { name: 'แม่บ้านใหม่' })).toBeInTheDocument();
+  });
 });
