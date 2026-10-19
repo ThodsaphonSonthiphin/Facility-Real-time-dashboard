@@ -137,6 +137,10 @@ describe('AreaFormPage (D10, facility-0045)', () => {
         active = false;
         return { status: 200, body: areaDetail({ area: areaSummary({ isActive: false }) }) };
       },
+      'POST /api/admin/areas/1/activate': () => {
+        active = true;
+        return { status: 200, body: areaDetail({ area: areaSummary({ isActive: true }) }) };
+      },
     });
     const { user } = await renderApp('/admin/areas/1/edit');
 
@@ -148,6 +152,11 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     expect(await screen.findByRole('button', { name: 'เปิดใช้งาน Area นี้' })).toBeInTheDocument();
     expect(screen.getByText('Area นี้ปิดใช้งานอยู่ ป้ายทุกป้ายสแกนไม่ได้')).toBeInTheDocument();
     expect(server.calls.some((call) => call.path === '/api/admin/areas/1/deactivate')).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'เปิดใช้งาน Area นี้' }));
+    expect(await screen.findByText('เปิดใช้งาน AR01 แล้ว')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'ปิดใช้งาน Area นี้' })).toBeInTheDocument();
+    expect(server.calls.some((call) => call.path === '/api/admin/areas/1/activate')).toBe(true);
   });
 
   it('sends a new Area once: the save is disabled while it is in flight', async () => {
