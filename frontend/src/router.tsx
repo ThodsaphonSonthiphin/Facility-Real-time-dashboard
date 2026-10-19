@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router';
 import { AdminLoginPage, LoginPage } from './pages/auth';
+import { AccountsPage } from './pages/accounts';
 import { AreasPage } from './pages/areas';
 import { AreaFormPage } from './pages/area-form';
 import { CapturePage } from './pages/capture';
@@ -75,6 +76,8 @@ export const routes: RouteObject[] = [
               { path: 'admin/areas/:areaId/edit', element: <AreaFormPage /> },
               // facility-0021 item 6, wireframe D5: ?area=<id>[&sign=<id>] or ?area=all
               { path: 'admin/print', element: <PrintSignsPage /> },
+              // facility-0020, 0056, wireframe D6
+              { path: 'admin/accounts', element: <AccountsPage /> },
             ],
           },
           // M17: the Admin's phone page at the sign (facility-0045 item 2), in the phone column

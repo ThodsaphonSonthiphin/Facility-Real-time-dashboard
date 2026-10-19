@@ -6,6 +6,7 @@ import type {
   Building,
   CleanerOption,
 } from '../shared/api/adminSetupApi';
+import type { Account } from '../pages/accounts/accountsApi';
 import { authAnswer } from './fakeServer';
 
 /**
@@ -138,3 +139,51 @@ export function officeDetail(overrides: Partial<AreaDetail> = {}): AreaDetail {
     ...overrides,
   };
 }
+
+/** A Cleaner of AR01, Day shift (AccountDto). */
+export function account(overrides: Partial<Account> = {}): Account {
+  return {
+    id: 21,
+    role: 'Cleaner',
+    loginName: '650001',
+    displayName: 'แม่บ้านทดสอบ',
+    areaId: 1,
+    areaCode: 'AR01',
+    shift: 'Day',
+    isActive: true,
+    createdAt: '2026-10-01T02:00:00Z',
+    ...overrides,
+  };
+}
+
+const noPlace = { areaId: undefined, areaCode: undefined, shift: undefined };
+
+/**
+ * The server's order: Admins, Supervisors, Cleaners, each by login name. Account 7 is the logged-in Admin
+ * (authAnswer('admin')).
+ */
+export const accounts: Account[] = [
+  account({ id: 7, role: 'Admin', loginName: 'admin', displayName: 'ผู้ดูแลทดสอบ', ...noPlace }),
+  account({ id: 8, role: 'Admin', loginName: 'admin2', displayName: 'ผู้ดูแลคนที่สอง', ...noPlace }),
+  account({
+    id: 31,
+    role: 'Supervisor',
+    loginName: '660001',
+    displayName: 'หัวหน้าทดสอบ',
+    areaId: undefined,
+    areaCode: undefined,
+    buildingId: 1,
+    buildingCode: 'A',
+  }),
+  account(),
+  account({ id: 22, loginName: '650002', displayName: 'แม่บ้านกะดึก', shift: 'Night' }),
+  account({ id: 23, loginName: '650003', displayName: 'แม่บ้านว่าง', areaId: undefined, areaCode: undefined }),
+  account({
+    id: 26,
+    loginName: '650006',
+    displayName: 'แม่บ้านที่ลาออก',
+    areaId: undefined,
+    areaCode: undefined,
+    isActive: false,
+  }),
+];
