@@ -1,5 +1,7 @@
 /// <reference types="vitest/config" />
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -22,6 +24,12 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Allow access from mobile devices on local WiFi
     port: 5173,
+    https: process.env.FACILITY_DEV_CERT_DIR
+      ? {
+          key: readFileSync(join(process.env.FACILITY_DEV_CERT_DIR, 'dev-key.pem')),
+          cert: readFileSync(join(process.env.FACILITY_DEV_CERT_DIR, 'dev-cert.pem')),
+        }
+      : undefined,
     proxy: {
       '/api': {
         target: 'http://localhost:5001',

@@ -138,10 +138,15 @@ Plan 4 test results at merge:
 - 2026-10-19 · Task 10 done: ADR amendments (0020 accounts page, 0021 new QR and print, 0025 tree, 0026 Admin routes, 0038 radius, 0045 capture and map fallback, 0060 where the token goes, 0062 measured size 173.53 kB gzip), README device notes, frontend README, architecture diagram, handoff notes for plan 11. Frontend 244 tests; unit 299; API 531 + 5 skipped. Next: the controller's real run, then the whole-branch review.
 - 2026-10-19 · Final review fix wave: Admin reads ask the server on every open (`freshOnOpen` moved to shared/api/baseApi.ts) and "พิมพ์" refetches before printing; "บันทึกจุด" refuses times typed but not added; `normalizePhone` matches the server (+66 becomes 0, non-digits dropped, phone inputs allow 16 characters); phone and password help say re-entering the same secret changes nothing. Frontend tests 247 passed.
 
+- 2026-10-19 · Owner's real run (plan 10), preliminary pass on the API at `facility_admin_test` and the Vite dev server: Areas, points, signs, print, accounts and the QR checks passed. An old check-in QR gets 404 "ไม่พบป้ายลงเวลานี้" and the new one records ShiftIn (tested with `POST /api/attendance`). The capture page (M17) on a real phone passed over https: the dev server runs with a mkcert certificate for the Mac's LAN IP (`FACILITY_DEV_CERT_DIR` in `frontend/vite.config.ts`, certificate kept outside the repo), the CA was installed on the phone, and the 30 s GPS capture saved. QR codes printed over plain http do not carry GPS, so signs are printed from the https origin.
+
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
 - Frontend plan 11 (scope in the plan-7 file): Admin live board.
+- UX fixes from the owner's real run, after plans 10 and 11 are done:
+  - `/admin/accounts`, "แก้เบอร์โทร": show the current phone, then a field for the new phone.
+  - `/admin/areas/:areaId`, round windows: choose the time from a list instead of typing "HH:mm". A window already added to the point cannot be picked again.
 
 ## Owner's rules (still in force)
 
