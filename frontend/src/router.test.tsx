@@ -67,6 +67,7 @@ describe('routing (facility-0026, 0058)', () => {
     expect(within(menu).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'สถานะจุด',
       'การเข้างาน',
+      'รายการที่ขึ้นเตือน',
       'จัดการ Area และป้าย',
       'บัญชีผู้ใช้',
     ]);
@@ -87,6 +88,7 @@ describe('routing (facility-0026, 0058)', () => {
     expect(pages.map((page) => page.path)).toEqual([
       'dashboard',
       'admin/attendance',
+      'admin/alerts',
       'admin/areas/:areaId?',
       'admin/areas/new',
       'admin/areas/:areaId/edit',

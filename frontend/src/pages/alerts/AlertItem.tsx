@@ -1,0 +1,101 @@
+import { useState } from 'react';
+import { Link } from 'react-router';
+import type { Alert } from '../../shared/api/alertListApi';
+import { getErrorMessage } from '../../shared/utils/getErrorMessage';
+import { eventLabel } from '../../shared/utils/labels';
+import { formatDayTime } from '../../shared/utils/thaiTime';
+import { alertDetail, alertTitle, alertWho, fillLink } from './alertRules';
+import { useReviewAlertMutation } from './alertsApi';
+
+/** A line at the top of the alert page; an action's result outlives the item, which may move tabs. */
+export type Notice = { kind: 'ok' | 'error'; text: string };
+
+interface AlertItemProps {
+  alert: Alert;
+  onNotice: (notice: Notice) => void;
+}
+
+/** One alert of wireframe D3: when, who, what, where, and what the Admin can do about it. Server text is React text only. */
+export function AlertItem({ alert, onNotice }: AlertItemProps) {
+  const [reviewing, setReviewing] = useState(false);
+  const title = alertTitle(alert);
+
+  return (
+    <li className="alerts-item">
+      <article aria-label={`${title} · ${alertWho(alert)}`}>
+        <div className="alerts-item__top">
+          <span className="alerts-item__time">{formatDayTime(alert.at)}</span>
+          <strong>{alertWho(alert)}</strong>
+          <span className={`alerts-chip alerts-chip--${alert.kind}`}>{title}</span>
+        </div>
+        <span className="alerts-item__detail">{alertDetail(alert)}</span>
+        <div className="alerts-item__actions">
+          {alert.reviewed && (
+            <span className="app-muted">{alert.reviewedAt ? `คุยแล้ว ${formatDayTime(alert.reviewedAt)}` : 'คุยแล้ว'}</span>
+          )}
+          {alert.kind === 'MissingAttendance' && (
+            // facility-0051: it closes once the time is filled, on the attendance page
+            <Link className="app-button" to={fillLink(alert)}>
+              {`เติมเวลา${eventLabel[alert.missingEvents[0] ?? 'ShiftOut']}`}
+            </Link>
+          )}
+          {!alert.reviewed && alert.kind !== 'MissingAttendance' && !reviewing && (
+            <button type="button" className="app-button" onClick={() => setReviewing(true)}>
+              คุยแล้ว ปิดเตือน
+            </button>
+          )}
+        </div>
+        {reviewing && (
+          <ReviewForm
+            alert={alert}
+            onDone={() => {
+              setReviewing(false);
+              onNotice({ kind: 'ok', text: `ปิดเตือน${title}ของ ${alert.person.displayName} แล้ว` });
+            }}
+            onError={(text) => onNotice({ kind: 'error', text })}
+            onCancel={() => setReviewing(false)}
+          />
+        )}
+      </article>
+    </li>
+  );
+}
+
+interface ReviewFormProps {
+  alert: Alert;
+  onDone: () => void;
+  onError: (text: string) => void;
+  onCancel: () => void;
+}
+
+/** "คุยแล้ว ปิดเตือน" with an optional note (plan 11 decision 11). One send at a time. */
+function ReviewForm({ alert, onDone, onError, onCancel }: ReviewFormProps) {
+  const [note, setNote] = useState('');
+  const [review, { isLoading }] = useReviewAlertMutation();
+
+  const send = async () => {
+    try {
+      await review({ kind: alert.kind, recordId: alert.recordId, note: note.trim() === '' ? undefined : note.trim() }).unwrap();
+      onDone();
+    } catch (error) {
+      onError(getErrorMessage(error));
+    }
+  };
+
+  return (
+    <div className="alerts-review">
+      <label className="app-field">
+        หมายเหตุ (ไม่บังคับ)
+        <input className="app-input" value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} />
+      </label>
+      <div className="app-confirm__buttons">
+        <button type="button" className="app-button app-button--primary" disabled={isLoading} onClick={() => void send()}>
+          ยืนยันปิดเตือน
+        </button>
+        <button type="button" className="app-button" onClick={onCancel}>
+          ยกเลิก
+        </button>
+      </div>
+    </div>
+  );
+}

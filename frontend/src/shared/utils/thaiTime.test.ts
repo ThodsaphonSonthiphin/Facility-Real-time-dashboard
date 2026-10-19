@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatMinutes, formatRound, formatShiftDate, formatTime, parseShiftDate } from './thaiTime';
+import {
+  formatDate,
+  formatDayTime,
+  formatMinutes,
+  formatRound,
+  formatShiftDate,
+  formatTime,
+  parseShiftDate,
+} from './thaiTime';
 
 describe('thaiTime', () => {
+  it('formatDayTime gives the Thai day/month and time, for lists that cover more than one day', () => {
+    expect(formatDayTime('2026-10-15T02:10:00Z')).toBe('15/10 09:10');
+    expect(formatDayTime('2026-10-14T23:52:00Z')).toBe('15/10 06:52');
+  });
+
   it('formatShiftDate writes a shift date from the server (already Thai) as day/month/year', () => {
     expect(formatShiftDate('2026-10-05')).toBe('05/10/2026');
   });

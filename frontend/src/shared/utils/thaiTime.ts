@@ -30,6 +30,11 @@ export function formatShiftDate(date: string): string {
   return `${day}/${month}/${year}`;
 }
 
+/** A moment as Thai "15/10 09:10", for lists that cover more than one day (the alert list, wireframe D3). */
+export function formatDayTime(moment: string | Date): string {
+  return `${formatDate(moment).slice(0, 5)} ${formatTime(moment)}`;
+}
+
 /** A date typed as "15/10/2026", as the server's "2026-10-15"; null when it is not a real date in that form. */
 export function parseShiftDate(text: string): string | null {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim());

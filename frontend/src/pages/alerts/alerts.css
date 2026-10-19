@@ -1,0 +1,120 @@
+/* Alerts (D3). Class prefix: alerts- */
+
+.alerts-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.alerts-page h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.alerts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.alerts-section h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.alerts-filters,
+.alerts-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.alerts-tab {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.alerts-tab[aria-pressed='true'] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-weight: 600;
+}
+
+.alerts-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alerts-item article {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.alerts-item__top,
+.alerts-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.alerts-item__time {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.alerts-item__detail {
+  color: var(--color-text-soft);
+  font-size: 14px;
+}
+
+.alerts-chip {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-status-overdue);
+  color: var(--color-on-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.alerts-chip--BlockedScan {
+  background: var(--color-status-rework);
+}
+
+.alerts-chip--MissingAttendance {
+  background: var(--color-status-pending);
+}
+
+.alerts-review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 480px;
+}

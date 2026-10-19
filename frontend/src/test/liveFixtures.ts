@@ -6,6 +6,7 @@ import type {
   BoardEvent,
   BoardRow,
 } from '../shared/api/attendanceBoardApi';
+import type { Alert } from '../shared/api/alertListApi';
 import type { AttendanceEvent, PointCard } from '../shared/api/types';
 import type { AppStore } from '../store';
 import { point } from './cleanerFixtures';
@@ -187,3 +188,85 @@ export function attendanceBoard(rows: BoardRow[] = boardRows, overrides: Partial
     ...overrides,
   };
 }
+
+/** 09:10: แม่บ้านที่อื่น (AR03) scanned a point of AR12 and was refused; a cover can still be given (facility-0041). */
+export const blockedAlert: Alert = {
+  kind: 'BlockedScan',
+  recordId: 301,
+  at: '2026-10-15T02:10:00Z',
+  person: { id: 25, employeeId: '650005', displayName: 'แม่บ้านที่อื่น', role: 'Cleaner', areaCode: 'AR03' },
+  areaCode: 'AR12',
+  areaName: 'Area สิบสอง',
+  signCode: 'AR12-02',
+  pointName: 'ห้องน้ำหญิง',
+  missingEvents: [],
+  reviewed: false,
+  cover: { userId: 25, areaId: 12, shiftDate: '2026-10-15', shift: 'Day' },
+  blockReason: 'OtherArea',
+};
+
+/** 07:00 today, the end of last night's shift (14/10): แม่บ้านกะดึก checked in and has no Shift-Out (facility-0051). */
+export const missingAlert: Alert = {
+  kind: 'MissingAttendance',
+  recordId: 401,
+  at: '2026-10-15T00:00:00Z',
+  person: { id: 22, employeeId: '650002', displayName: 'แม่บ้านกะดึก', role: 'Cleaner', areaCode: 'AR01' },
+  areaCode: 'AR01',
+  areaName: 'Area ทดลอง',
+  missingEvents: ['ShiftOut'],
+  reviewed: false,
+};
+
+/** 06:52: checked in 85 m from AR01's check-in sign. Same record id as missingAlert: an alert is known by kind and id. */
+export const attendanceGpsAlert: Alert = {
+  kind: 'AttendanceGps',
+  recordId: 401,
+  at: '2026-10-14T23:52:00Z',
+  person: { id: 21, employeeId: '650001', displayName: 'แม่บ้านทดสอบ', role: 'Cleaner', areaCode: 'AR01' },
+  areaCode: 'AR01',
+  areaName: 'Area ทดลอง',
+  signCode: 'AR01-IN',
+  distanceM: 85,
+  radiusM: 50,
+  accuracyM: 40,
+  missingEvents: [],
+  reviewed: false,
+};
+
+/** 10:15: the Supervisor inspected 62 m from the sign (facility-0037). */
+export const inspectionGpsAlert: Alert = {
+  kind: 'InspectionGps',
+  recordId: 601,
+  at: '2026-10-15T03:15:00Z',
+  person: { id: 31, employeeId: '660001', displayName: 'หัวหน้าทดสอบ', role: 'Supervisor' },
+  areaCode: 'AR01',
+  areaName: 'Area ทดลอง',
+  signCode: 'AR01-03',
+  pointName: 'จุดทิ้งขยะ',
+  distanceM: 62,
+  radiusM: 50,
+  accuracyM: 25,
+  missingEvents: [],
+  reviewed: false,
+};
+
+/** Yesterday 15:00, a submission 70 m away; an Admin closed it at 16:30. */
+export const reviewedAlert: Alert = {
+  kind: 'SubmissionGps',
+  recordId: 701,
+  at: '2026-10-14T08:00:00Z',
+  person: { id: 21, employeeId: '650001', displayName: 'แม่บ้านทดสอบ', role: 'Cleaner', areaCode: 'AR01' },
+  areaCode: 'AR01',
+  areaName: 'Area ทดลอง',
+  signCode: 'AR01-01',
+  pointName: 'ห้องน้ำชาย',
+  distanceM: 70,
+  radiusM: 50,
+  accuracyM: 30,
+  missingEvents: [],
+  reviewed: true,
+  reviewedAt: '2026-10-14T09:30:00Z',
+};
+
+/** Newest first, as the server sends them. */
+export const alerts: Alert[] = [inspectionGpsAlert, blockedAlert, missingAlert, attendanceGpsAlert, reviewedAlert];
