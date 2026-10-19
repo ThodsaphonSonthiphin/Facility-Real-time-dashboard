@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router';
 import { AdminLoginPage, LoginPage } from './pages/auth';
+import { AreasPage } from './pages/areas';
 import { CheckInPage } from './pages/check-in';
 import { DashboardPage } from './pages/dashboard';
 import { InspectPage } from './pages/inspect';
@@ -59,7 +60,16 @@ export const routes: RouteObject[] = [
       },
       {
         element: <ProtectedRoute roles={['admin']} />,
-        children: [{ element: <AppLayout wide />, children: [{ path: 'dashboard', element: <DashboardPage /> }] }],
+        children: [
+          {
+            element: <AppLayout wide />,
+            children: [
+              { path: 'dashboard', element: <DashboardPage /> },
+              // facility-0045, wireframe D4; without an id the first Area is open
+              { path: 'admin/areas/:areaId?', element: <AreasPage /> },
+            ],
+          },
+        ],
       },
       {
         path: '*',
