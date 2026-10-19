@@ -1,6 +1,12 @@
 import { waitFor } from '@testing-library/react';
 import { expect } from 'vitest';
-import type { PointCard } from '../shared/api/types';
+import type {
+  AreaAttendanceState,
+  AttendanceBoard,
+  BoardEvent,
+  BoardRow,
+} from '../shared/api/attendanceBoardApi';
+import type { AttendanceEvent, PointCard } from '../shared/api/types';
 import type { AppStore } from '../store';
 import { point } from './cleanerFixtures';
 import { lastScanAt } from './supervisorFixtures';
@@ -69,3 +75,115 @@ export const boardPoints: PointCard[] = [
     nextRound: undefined,
   }),
 ];
+
+/** One attendance scan (BoardEventDto): by default scanned within 6 m of the sign. */
+export function boardEvent(
+  id: number,
+  eventType: AttendanceEvent,
+  occurredAt: string,
+  overrides: Partial<BoardEvent> = {},
+): BoardEvent {
+  return { id, eventType, occurredAt, source: 'Scan', withinRadius: true, distanceM: 6, ...overrides };
+}
+
+/** AR09 has no regular Cleaner for the shift (the server leaves `cleaner` out). */
+export const noCleanerRow: BoardRow = {
+  areaId: 9,
+  areaCode: 'AR09',
+  areaName: 'Area เก้า',
+  buildingCode: 'A',
+  state: 'Empty',
+  events: [],
+  covers: [],
+};
+
+/** AR12: its Cleaner has not come and nobody covers (wireframe D2's first row). */
+export const emptyRow: BoardRow = {
+  areaId: 12,
+  areaCode: 'AR12',
+  areaName: 'Area สิบสอง',
+  buildingCode: 'B',
+  cleaner: { id: 26, employeeId: '650006', displayName: 'แม่บ้านลา' },
+  state: 'Empty',
+  events: [],
+  covers: [],
+};
+
+/** AR01: checked in 06:52, 85 m from the sign (a flag, facility-0035). */
+export const workingRow: BoardRow = {
+  areaId: 1,
+  areaCode: 'AR01',
+  areaName: 'Area ทดลอง',
+  buildingCode: 'A',
+  cleaner: { id: 21, employeeId: '650001', displayName: 'แม่บ้านทดสอบ' },
+  state: 'Working',
+  events: [boardEvent(1001, 'ShiftIn', '2026-10-14T23:52:00Z', { withinRadius: false, distanceM: 85 })],
+  covers: [],
+};
+
+/** AR02: its Cleaner is away; แม่บ้านที่อื่น (AR03) covers since 07:10 and checked in at 06:50. */
+export const coveredRow: BoardRow = {
+  areaId: 2,
+  areaCode: 'AR02',
+  areaName: 'Office ทดลอง',
+  buildingCode: 'B',
+  cleaner: { id: 27, employeeId: '650007', displayName: 'แม่บ้านป่วย' },
+  state: 'Covered',
+  events: [],
+  covers: [
+    {
+      id: 71,
+      userId: 25,
+      employeeId: '650005',
+      displayName: 'แม่บ้านที่อื่น',
+      ownAreaCode: 'AR03',
+      assignedAt: '2026-10-15T00:10:00Z',
+      shiftInAt: '2026-10-14T23:50:00Z',
+    },
+  ],
+};
+
+/** AR05: Shift-In 07:02 added by an Admin (facility-0051), so it has no GPS verdict. */
+export const correctedRow: BoardRow = {
+  areaId: 5,
+  areaCode: 'AR05',
+  areaName: 'Area ห้า',
+  buildingCode: 'A',
+  cleaner: { id: 29, employeeId: '650009', displayName: 'แม่บ้านแบตหมด' },
+  state: 'Working',
+  events: [boardEvent(1004, 'ShiftIn', '2026-10-15T00:02:00Z', { source: 'AdminAdd', withinRadius: undefined, distanceM: undefined })],
+  covers: [],
+};
+
+/** AR07: in 06:55, on a break since 09:30. */
+export const breakRow: BoardRow = {
+  areaId: 7,
+  areaCode: 'AR07',
+  areaName: 'Area เจ็ด',
+  buildingCode: 'A',
+  cleaner: { id: 28, employeeId: '650008', displayName: 'แม่บ้านพัก' },
+  state: 'OnBreak',
+  events: [boardEvent(1002, 'ShiftIn', '2026-10-14T23:55:00Z'), boardEvent(1003, 'BreakOut', '2026-10-15T02:30:00Z')],
+  covers: [],
+};
+
+/** In the server's order: Areas with nobody first, then by Area code. */
+export const boardRows: BoardRow[] = [noCleanerRow, emptyRow, workingRow, coveredRow, correctedRow, breakRow];
+
+/** The Day shift of 15/10/2026 as the clock sees it, with the summary the server would count from these rows. */
+export function attendanceBoard(rows: BoardRow[] = boardRows, overrides: Partial<AttendanceBoard> = {}): AttendanceBoard {
+  const count = (...states: AreaAttendanceState[]) => rows.filter((row) => states.includes(row.state)).length;
+  return {
+    shiftDate: '2026-10-15',
+    shift: 'Day',
+    shiftEnded: false,
+    summary: {
+      required: rows.length,
+      present: count('Working', 'OnBreak', 'Done'),
+      empty: count('Empty'),
+      covered: count('Covered'),
+    },
+    rows,
+    ...overrides,
+  };
+}
