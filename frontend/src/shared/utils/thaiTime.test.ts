@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatMinutes, formatRound, formatTime } from './thaiTime';
+import { formatDate, formatMinutes, formatRound, formatTime } from './thaiTime';
 
 describe('thaiTime', () => {
+  it('formatDate gives the Thai calendar date, which may be a day after the UTC date', () => {
+    expect(formatDate('2026-10-15T18:30:00Z')).toBe('16/10/2026'); // 01:30 on the 16th in Thailand
+    expect(formatDate('2026-10-16T02:00:00Z')).toBe('16/10/2026');
+  });
+
   it('shows a UTC moment from the server as Thai time on a 24-hour clock', () => {
     expect(formatTime('2026-10-14T23:52:00Z')).toBe('06:52');
     expect(formatTime('2026-10-15T17:05:00Z')).toBe('00:05');

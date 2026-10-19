@@ -2,11 +2,12 @@ import { Outlet } from 'react-router';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { endSession } from '../auth/endSession';
 import { roleLabel } from '../auth/roles';
+import { AdminNav } from './AdminNav';
 import './shared.css';
 
 /**
  * The bar above every logged-in page: who is logged in, and "ออกจากระบบ". `wide` is the Admin's desktop width
- * (wireframes D1–D11); without it the page is a phone column (M0–M17).
+ * (wireframes D1–D11) and brings the Admin menu; without it the page is a phone column (M0–M17).
  */
 export function AppLayout({ wide = false }: { wide?: boolean }) {
   const user = useAppSelector((state) => state.auth.currentUser);
@@ -23,6 +24,7 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
           ออกจากระบบ
         </button>
       </header>
+      {wide && <AdminNav />}
       <Outlet />
     </div>
   );

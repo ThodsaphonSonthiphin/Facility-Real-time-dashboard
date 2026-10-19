@@ -46,7 +46,8 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, Fetch
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  // Refetched by tag only where a live push may have been missed (facility-0064 item 2)
-  tagTypes: ['MyBuilding'],
+  // MyBuilding: refetched where a live push may have been missed (facility-0064 item 2).
+  // AdminSetup: every Admin setup read; every Admin save invalidates it (plan 10 decision 3)
+  tagTypes: ['MyBuilding', 'AdminSetup'],
   endpoints: () => ({}),
 });
