@@ -1,11 +1,22 @@
 import { screen, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import type { RouteObject } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { routes } from './router';
+import type { Role } from './shared/api/types';
 import { authAnswer, fakeServer } from './test/fakeServer';
 import { renderApp } from './test/renderApp';
 
 const noSession = { 'POST /api/auth/refresh': () => ({ status: 401 }) };
+
+/** The page routes behind the guard of exactly this one role, through its layouts. */
+function pagesOf(role: Role): RouteObject[] {
+  const guard = routes[0].children?.find((route) => {
+    const roles = (route.element as ReactElement<{ roles?: Role[] }> | undefined)?.props.roles;
+    return roles?.length === 1 && roles[0] === role;
+  });
+  return (guard?.children ?? []).flatMap((layout) => layout.children ?? []);
+}
 
 describe('routing (facility-0026, 0058)', () => {
   it('a live session opens the role home without showing the login page', async () => {
@@ -67,6 +78,37 @@ describe('routing (facility-0026, 0058)', () => {
     await renderApp('/my-work');
 
     expect(screen.queryByRole('navigation', { name: 'เมนู Admin' })).not.toBeInTheDocument();
+  });
+
+  it('every Admin page is a lazy route, so a phone never downloads Admin code (facility-0062 item 3)', () => {
+    const pages = pagesOf('admin');
+
+    expect(pages.map((page) => page.path)).toEqual([
+      'dashboard',
+      'admin/areas/:areaId?',
+      'admin/areas/new',
+      'admin/areas/:areaId/edit',
+      'admin/print',
+      'admin/accounts',
+      'admin/areas/:areaId/capture',
+    ]);
+    expect(pages.every((page) => typeof page.lazy === 'function' && page.element === undefined)).toBe(true);
+  });
+
+  it('phone pages stay in the main file, so a scanned sign opens without a second download', () => {
+    const phonePages = [...pagesOf('cleaner'), ...pagesOf('supervisor')];
+
+    expect(phonePages.length).toBeGreaterThan(0);
+    expect(phonePages.every((page) => page.lazy === undefined)).toBe(true);
+  });
+
+  it('an Admin page opens from the menu once its file has loaded', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('admin') });
+    const { user } = await renderApp('/dashboard');
+
+    await user.click(screen.getByRole('link', { name: 'บัญชีผู้ใช้' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'บัญชีผู้ใช้' })).toBeInTheDocument();
   });
 
   it('an unknown address shows not-found', async () => {

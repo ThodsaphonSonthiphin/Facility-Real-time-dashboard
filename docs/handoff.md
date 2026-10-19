@@ -28,7 +28,9 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 7 | Frontend foundation: tree, store, API layer, session, router and guard, login pages, served by the API | done, merged (PR #56, `43f10a3`) (branch `feat/frontend-foundation`): `docs/superpowers/plans/2026-10-15-frontend-foundation.md` |
 | 8 | Cleaner phone: My Work, check-in sign page, point sign page with send failures and blocked scans | done, merged (PR #57, `96895d8`) (branch `feat/cleaner-phone`): `docs/superpowers/plans/2026-10-15-cleaner-phone.md` |
 | 9 | Supervisor phone: My Building with live updates, inspection at the point's sign, nothing to inspect, blocked and send failures | done, merged (PR #58, `84890df`) (branch `feat/supervisor-phone`): `docs/superpowers/plans/2026-10-15-supervisor-phone.md` |
-| 10 | Admin setup: Areas, points, round windows, signs, sign location capture, print signs, accounts | done (branch `feat/admin-setup`): `docs/superpowers/plans/2026-10-19-admin-setup.md` |
+| 10 | Admin setup: Areas, points, round windows, signs, sign location capture, print signs, accounts | done, merged (PR #59, `a6dc170`) (branch `feat/admin-setup`): `docs/superpowers/plans/2026-10-19-admin-setup.md` |
+| 11 | Admin live board: lazy Admin routes, point status with hub and 30 s poll (D1), attendance and corrections (D2), alerts and covers (D3) | in progress (branch `feat/admin-live-board`): `docs/superpowers/plans/2026-10-19-admin-live-board.md` |
+| 12 | Admin reports: inspection summary (D7), Excel export (D8), Admin history (D9) | not started (the owner split plan 11 on 2026-10-19) |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -142,10 +144,14 @@ Plan 4 test results at merge:
 
 - 2026-10-19 · PR #59 merged to master (merge commit `a6dc170`), branch `feat/admin-setup` deleted. Plan 10 is done. The GitGuardian check on #59 stayed red on six test-fixture values (fake UUIDs and `temporary-123`, not secrets); the incidents are still open in the GitGuardian dashboard to mark as false positives. Next: plan 11, after the owner's OK.
 
+## Task log (plan 11)
+
+- 2026-10-19 · Task 1 done: Admin pages are lazy routes (facility-0062 item 3, owner 2026-10-19); the root route shows "กำลังโหลด..." while the first page's file loads; renderApp waits for router.state.initialized. Main JS 156.21 kB gzip (was 173.53 kB in one file; a rebuild at the branch start measured 173.78 kB). Frontend tests 250 passed. Next: Task 2 (hub status per connection, AttendanceRecorded, optional PointCard fields).
+
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
-- Frontend plan 11 (scope in the plan-7 file): Admin live board.
+- Frontend plan 12: Admin reports, inspection summary (D7), Excel export (D8), Admin history (D9). Plan 11 was split in two on 2026-10-19.
 - UX fixes from the owner's real run, after plans 10 and 11 are done:
   - `/admin/accounts`, "แก้เบอร์โทร": show the current phone, then a field for the new phone.
   - `/admin/areas/:areaId`, round windows: choose the time from a list instead of typing "HH:mm". A window already added to the point cannot be picked again.
