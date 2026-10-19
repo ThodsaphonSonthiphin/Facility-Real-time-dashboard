@@ -3,13 +3,14 @@ import { describe, expect, it } from 'vitest';
 import type { Alert } from '../../shared/api/alertListApi';
 import { adminSession } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
-import { alerts, attendanceGpsAlert } from '../../test/liveFixtures';
+import { alerts, attendanceBoard, attendanceGpsAlert } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
 
 function serve(routes: FakeRoutes = {}, list: () => Alert[] = () => alerts) {
   return fakeServer({
     ...adminSession,
     'GET /api/admin/alerts': () => ({ status: 200, body: list() }),
+    'GET /api/admin/attendance': () => ({ status: 200, body: attendanceBoard() }),
     ...routes,
   });
 }

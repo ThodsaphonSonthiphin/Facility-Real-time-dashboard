@@ -1,25 +1,34 @@
 import { useState } from 'react';
 import { useGetAlertsQuery } from '../../shared/api/alertListApi';
+import { useGetAttendanceBoardQuery } from '../../shared/api/attendanceBoardApi';
 import { livePoll } from '../../shared/api/baseApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { AlertItem, type Notice } from './AlertItem';
 import { alertGroupLabel, filterAlerts, type AlertGroup, type ReviewTab } from './alertRules';
+import { CoverForm } from './CoverForm';
+import { CoversThisShift } from './CoversThisShift';
+import { EmptyAreas } from './EmptyAreas';
 import './alerts.css';
 
 const GROUPS: readonly AlertGroup[] = ['all', 'blocked', 'far', 'missing'];
 
 /**
- * Wireframe D3: the alerts of yesterday and today for the Admin to talk through (facility-0035, 0037, 0041, 0051).
- * No hub event carries alerts, so the list is asked on every open, every 30 s and after each action.
+ * Wireframe D3: the Areas with nobody this shift and their covers (facility-0041, 0048), and the alerts of yesterday and
+ * today for the Admin to talk through (facility-0035, 0037, 0051). The board follows the hub like the attendance page;
+ * no hub event carries alerts, so they are asked on every open, every 30 s and after each action.
  */
 export function AlertsPage() {
   const alerts = useGetAlertsQuery(undefined, livePoll);
+  const board = useGetAttendanceBoardQuery({}, livePoll);
   const [tab, setTab] = useState<ReviewTab>('open');
   const [group, setGroup] = useState<AlertGroup>('all');
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [coverAreaId, setCoverAreaId] = useState<number | null>(null);
   const list = alerts.data ?? [];
   const openCount = list.filter((alert) => !alert.reviewed).length;
   const shown = filterAlerts(list, tab, group);
+  // The form closes by itself once the Area has someone (a cover made here or elsewhere)
+  const coverRow = board.data?.rows.find((row) => row.areaId === coverAreaId && row.state === 'Empty');
   const tabs: { tab: ReviewTab; label: string }[] = [
     { tab: 'open', label: `ยังไม่ได้คุย (${openCount})` },
     { tab: 'reviewed', label: `คุยแล้ว (${list.length - openCount})` },
@@ -40,6 +49,28 @@ export function AlertsPage() {
           {notice.text}
         </p>
       )}
+      <EmptyAreas
+        board={board.data}
+        error={board.error}
+        chosen={coverRow ? coverRow.areaId : null}
+        onChoose={(areaId) => {
+          setNotice(null);
+          setCoverAreaId(areaId);
+        }}
+      >
+        {board.data && coverRow && (
+          <CoverForm
+            key={coverRow.areaId}
+            board={board.data}
+            row={coverRow}
+            onDone={(text) => {
+              setNotice({ kind: 'ok', text });
+              setCoverAreaId(null);
+            }}
+            onCancel={() => setCoverAreaId(null)}
+          />
+        )}
+      </EmptyAreas>
       <section className="alerts-section" aria-labelledby="alerts-list">
         <h2 id="alerts-list">เตือนจากการสแกน</h2>
         <div className="alerts-filters">
@@ -84,6 +115,7 @@ export function AlertsPage() {
           ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติของ Admin
         </p>
       </section>
+      {board.data && <CoversThisShift board={board.data} onNotice={setNotice} />}
     </main>
   );
 }

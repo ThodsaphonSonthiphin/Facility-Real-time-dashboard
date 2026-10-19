@@ -5,9 +5,19 @@ import {
   blockedAlert,
   inspectionGpsAlert,
   missingAlert,
+  candidates,
   reviewedAlert,
 } from '../../test/liveFixtures';
-import { alertDetail, alertTitle, alertWho, fillLink, filterAlerts, slotOfShiftEnd } from './alertRules';
+import {
+  alertDetail,
+  alertTitle,
+  alertWho,
+  candidateText,
+  coverNotice,
+  fillLink,
+  filterAlerts,
+  slotOfShiftEnd,
+} from './alertRules';
 
 describe('alert rules (wireframe D3)', () => {
   it('splits by talked-about or not, and puts the three GPS flags under one type', () => {
@@ -44,5 +54,18 @@ describe('alert rules (wireframe D3)', () => {
     expect(slotOfShiftEnd('2026-10-15T00:00:00Z')).toEqual({ shiftDate: '2026-10-14', shift: 'Night' }); // 07:00
     expect(slotOfShiftEnd('2026-11-01T00:00:00Z')).toEqual({ shiftDate: '2026-10-31', shift: 'Night' });
     expect(fillLink(missingAlert)).toBe('/admin/attendance?date=2026-10-14&shift=Night&fill=22&event=ShiftOut');
+  });
+
+  it('describes a cover candidate and a made cover in words', () => {
+    expect(candidates.map(candidateText)).toEqual([
+      'แม่บ้านที่อื่น · AR03 · เข้างานแล้ว 06:55 · สแกนป้าย Area นี้เมื่อ 09:10',
+      'แม่บ้านทดสอบ · AR01 · เข้างานแล้ว 06:52',
+      'แม่บ้านมาสาย · AR08 · ยังไม่ลงเวลา',
+    ]);
+    const made = { id: 72, userId: 21, personName: 'แม่บ้านทดสอบ', shiftDate: '2026-10-15', shift: 'Day' as const, assignedAt: '2026-10-15T03:20:00Z' };
+    expect(coverNotice({ ...made, areaId: 12, areaCode: 'AR12' })).toBe('มอบหมาย แม่บ้านทดสอบ ทำแทน AR12 แล้ว');
+    expect(coverNotice({ ...made, personName: 'หัวหน้าทดสอบ', buildingId: 2, buildingCode: 'B' })).toBe(
+      'มอบหมาย หัวหน้าทดสอบ ตรวจแทนตึก B แล้ว',
+    );
   });
 });

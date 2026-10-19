@@ -2,6 +2,7 @@ import type { Alert, AlertKind } from '../../shared/api/alertListApi';
 import type { Shift } from '../../shared/api/types';
 import { eventLabel, shiftShortLabel } from '../../shared/utils/labels';
 import { formatDate, formatShiftDate, formatTime } from '../../shared/utils/thaiTime';
+import type { CoverAssignment, CoverCandidate } from './alertsApi';
 
 /** Wireframe D3's tabs: "ยังไม่ได้คุย / คุยแล้ว / ทั้งหมด". */
 export type ReviewTab = 'open' | 'reviewed' | 'all';
@@ -105,4 +106,23 @@ export function fillLink(alert: Alert): string {
     event: alert.missingEvents[0] ?? 'ShiftOut',
   });
   return `/admin/attendance?${params.toString()}`;
+}
+
+/** One choice of "ให้ใครทำแทน": who, their own Area, their Shift-In, and whether they already scanned this Area's signs. */
+export function candidateText(candidate: CoverCandidate): string {
+  return [
+    candidate.displayName,
+    candidate.areaCode,
+    candidate.shiftInAt ? `เข้างานแล้ว ${formatTime(candidate.shiftInAt)}` : 'ยังไม่ลงเวลา',
+    candidate.scannedThisAreaAt ? `สแกนป้าย Area นี้เมื่อ ${formatTime(candidate.scannedThisAreaAt)}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** What the page says once a cover is made: an Area for a Cleaner, a building for a Supervisor. */
+export function coverNotice(cover: CoverAssignment): string {
+  return cover.areaCode
+    ? `มอบหมาย ${cover.personName} ทำแทน ${cover.areaCode} แล้ว`
+    : `มอบหมาย ${cover.personName} ตรวจแทนตึก ${cover.buildingCode ?? ''} แล้ว`;
 }

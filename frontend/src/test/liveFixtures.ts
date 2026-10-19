@@ -7,6 +7,7 @@ import type {
   BoardRow,
 } from '../shared/api/attendanceBoardApi';
 import type { Alert } from '../shared/api/alertListApi';
+import type { CoverCandidate } from '../pages/alerts/alertsApi';
 import type { AttendanceEvent, PointCard } from '../shared/api/types';
 import type { AppStore } from '../store';
 import { point } from './cleanerFixtures';
@@ -270,3 +271,33 @@ export const reviewedAlert: Alert = {
 
 /** Newest first, as the server sends them. */
 export const alerts: Alert[] = [inspectionGpsAlert, blockedAlert, missingAlert, attendanceGpsAlert, reviewedAlert];
+
+/** 11:00: the Supervisor scanned a point in building B; a building cover can still be given (facility-0048). */
+export const supervisorBlockedAlert: Alert = {
+  kind: 'BlockedScan',
+  recordId: 302,
+  at: '2026-10-15T04:00:00Z',
+  person: { id: 31, employeeId: '660001', displayName: 'หัวหน้าทดสอบ', role: 'Supervisor' },
+  areaCode: 'BR01',
+  areaName: 'Area ตึกอื่น',
+  signCode: 'BR01-01',
+  pointName: 'ห้องประชุม',
+  missingEvents: [],
+  reviewed: false,
+  cover: { userId: 31, buildingId: 2, shiftDate: '2026-10-15', shift: 'Day' },
+  blockReason: 'OtherBuilding',
+};
+
+/** Who could cover AR12 this Day shift, best first as the server orders them: whoever scanned its signs, then by Shift-In. */
+export const candidates: CoverCandidate[] = [
+  {
+    id: 25,
+    employeeId: '650005',
+    displayName: 'แม่บ้านที่อื่น',
+    areaCode: 'AR03',
+    shiftInAt: '2026-10-14T23:55:00Z',
+    scannedThisAreaAt: '2026-10-15T02:10:00Z',
+  },
+  { id: 21, employeeId: '650001', displayName: 'แม่บ้านทดสอบ', areaCode: 'AR01', shiftInAt: '2026-10-14T23:52:00Z' },
+  { id: 30, employeeId: '650010', displayName: 'แม่บ้านมาสาย', areaCode: 'AR08' },
+];

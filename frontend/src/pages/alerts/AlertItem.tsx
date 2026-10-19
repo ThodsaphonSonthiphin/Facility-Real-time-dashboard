@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import type { Alert } from '../../shared/api/alertListApi';
+import type { Alert, CoverSuggestion } from '../../shared/api/alertListApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { eventLabel } from '../../shared/utils/labels';
 import { formatDayTime } from '../../shared/utils/thaiTime';
-import { alertDetail, alertTitle, alertWho, fillLink } from './alertRules';
-import { useReviewAlertMutation } from './alertsApi';
+import { alertDetail, alertTitle, alertWho, coverNotice, fillLink } from './alertRules';
+import { useAssignCoverMutation, useReviewAlertMutation } from './alertsApi';
 
 /** A line at the top of the alert page; an action's result outlives the item, which may move tabs. */
 export type Notice = { kind: 'ok' | 'error'; text: string };
@@ -30,6 +30,7 @@ export function AlertItem({ alert, onNotice }: AlertItemProps) {
         </div>
         <span className="alerts-item__detail">{alertDetail(alert)}</span>
         <div className="alerts-item__actions">
+          {alert.cover && !alert.reviewed && <CoverButton alert={alert} cover={alert.cover} onNotice={onNotice} />}
           {alert.reviewed && (
             <span className="app-muted">{alert.reviewedAt ? `คุยแล้ว ${formatDayTime(alert.reviewedAt)}` : 'คุยแล้ว'}</span>
           )}
@@ -97,5 +98,41 @@ function ReviewForm({ alert, onDone, onError, onCancel }: ReviewFormProps) {
         </button>
       </div>
     </div>
+  );
+}
+
+interface CoverButtonProps {
+  alert: Alert;
+  cover: CoverSuggestion;
+  onNotice: (notice: Notice) => void;
+}
+
+/**
+ * facility-0041 rule 4, 0048: the person refused at a sign gets the cover the server suggests, for that shift only, in
+ * one press (undone by cancelling it). The server closes this alert with it. One send at a time.
+ */
+function CoverButton({ alert, cover, onNotice }: CoverButtonProps) {
+  const [assign, { isLoading }] = useAssignCoverMutation();
+
+  const give = async () => {
+    try {
+      const made = await assign({
+        userId: cover.userId,
+        areaId: cover.areaId,
+        buildingId: cover.buildingId,
+        shiftDate: cover.shiftDate,
+        shift: cover.shift,
+        blockedScanId: alert.recordId,
+      }).unwrap();
+      onNotice({ kind: 'ok', text: coverNotice(made) });
+    } catch (error) {
+      onNotice({ kind: 'error', text: getErrorMessage(error) });
+    }
+  };
+
+  return (
+    <button type="button" className="app-button app-button--primary" disabled={isLoading} onClick={() => void give()}>
+      {cover.areaId != null ? `ให้ทำแทน ${alert.areaCode} กะนี้` : 'ให้ตรวจแทนตึกนี้กะนี้'}
+    </button>
   );
 }
