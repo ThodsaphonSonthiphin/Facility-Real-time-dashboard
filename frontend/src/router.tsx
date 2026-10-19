@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 import { AdminLoginPage, LoginPage } from './pages/auth';
 import { AreasPage } from './pages/areas';
 import { AreaFormPage } from './pages/area-form';
+import { CapturePage } from './pages/capture';
 import { PrintSignsPage } from './pages/print-signs';
 import { CheckInPage } from './pages/check-in';
 import { DashboardPage } from './pages/dashboard';
@@ -76,6 +77,8 @@ export const routes: RouteObject[] = [
               { path: 'admin/print', element: <PrintSignsPage /> },
             ],
           },
+          // M17: the Admin's phone page at the sign (facility-0045 item 2), in the phone column
+          { element: <AppLayout />, children: [{ path: 'admin/areas/:areaId/capture', element: <CapturePage /> }] },
         ],
       },
       {

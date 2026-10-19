@@ -33,3 +33,45 @@ export function fakeGps(...answers: FakeGpsAnswer[]) {
   Object.defineProperty(navigator, 'geolocation', { value: geolocation, configurable: true });
   return state;
 }
+
+export type FakeTrackAnswer = typeof nearSign | 'denied';
+
+/**
+ * Gives the page a navigator.geolocation whose watchPosition sends one answer every `everyMs` (the first after
+ * `everyMs`), in order, then stays quiet. 'denied' fails the watch like a refused permission. `watches` counts
+ * watchPosition calls; `cleared` counts clearWatch calls. Use with fake timers. test/setup.ts removes it after each test.
+ */
+export function fakeGpsTrack(answers: FakeTrackAnswer[], everyMs = 1_000) {
+  const state = { watches: 0, cleared: 0 };
+  const timers = new Map<number, ReturnType<typeof setTimeout>[]>();
+  const geolocation = {
+    watchPosition(onFix: PositionCallback, onError?: PositionErrorCallback | null) {
+      state.watches += 1;
+      const id = state.watches;
+      timers.set(
+        id,
+        answers.map((answer, index) =>
+          setTimeout(
+            () => {
+              if (answer === 'denied') {
+                onError?.({ code: 1, message: 'denied', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as unknown as GeolocationPositionError);
+              } else {
+                const coords = { ...answer, altitude: null, altitudeAccuracy: null, heading: null, speed: null };
+                onFix({ coords, timestamp: Date.now() } as unknown as GeolocationPosition);
+              }
+            },
+            (index + 1) * everyMs,
+          ),
+        ),
+      );
+      return id;
+    },
+    clearWatch(id: number) {
+      state.cleared += 1;
+      timers.get(id)?.forEach(clearTimeout);
+      timers.delete(id);
+    },
+  };
+  Object.defineProperty(navigator, 'geolocation', { value: geolocation, configurable: true });
+  return state;
+}
