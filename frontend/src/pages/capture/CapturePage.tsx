@@ -41,12 +41,48 @@ function captureSigns(detail: AreaDetail): CaptureSign[] {
 
 /**
  * facility-0045 item 2, wireframe M17: the Admin stands at a sign with a phone, reads the GPS for 30 s and saves the
- * median as a site location. A reading runs while `runId` is set: choosing another sign or leaving the page stops it.
+ * median as a site location. The reading belongs to the sign in the URL: the workspace is keyed by that sign, so any
+ * change of `?sign=` (a choice, Back, navigate) unmounts it, which stops a running GPS and drops its result.
  */
 export function CapturePage() {
   const { areaId } = useParams();
   const [params, setParams] = useSearchParams();
   const area = useGetAreaQuery(Number(areaId));
+  const detail = area.currentData;
+  const signs = detail ? captureSigns(detail) : [];
+  const selected = signs.find((target) => String(target.sign.id) === params.get('sign'));
+
+  return (
+    <main className="capture-page">
+      <Link to={`/admin/areas/${areaId}`}>‹ กลับไปหน้าจัดการ Area และป้าย</Link>
+      {detail && <span className="capture-kicker">{`Admin · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>}
+      <h1>เก็บพิกัดป้าย</h1>
+      {area.error && (
+        <p className="app-note app-note--error" role="alert">
+          {getErrorMessage(area.error)}
+        </p>
+      )}
+      {detail && (
+        <CaptureWorkspace
+          key={selected?.sign.id ?? 'none'}
+          signs={signs}
+          selected={selected}
+          onChoose={(signId) => setParams({ sign: String(signId) })}
+        />
+      )}
+      <p className="app-muted">ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติ Admin</p>
+    </main>
+  );
+}
+
+interface CaptureWorkspaceProps {
+  signs: CaptureSign[];
+  selected: CaptureSign | undefined;
+  onChoose: (signId: number) => void;
+}
+
+/** Owns one sign's reading, its result and its save. Mounted per sign (see CapturePage), so its state never outlives it. */
+function CaptureWorkspace({ signs, selected, onChoose }: CaptureWorkspaceProps) {
   const [setLocation, saving] = useSetSignLocationMutation();
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [problem, setProblem] = useState<string | null>(null);
@@ -73,20 +109,10 @@ export function CapturePage() {
     };
   }, [runId]);
 
-  const detail = area.currentData;
-  const signs = detail ? captureSigns(detail) : [];
-  const selected = signs.find((target) => String(target.sign.id) === params.get('sign'));
-
   const start = () => {
     setProblem(null);
     setPhase({ kind: 'reading', progress: { seconds: 0, readings: 0, accuracyM: null } });
     setRunId((id) => id + 1);
-  };
-  const choose = (signId: number) => {
-    setRunId(0);
-    setPhase({ kind: 'idle' });
-    setProblem(null);
-    setParams({ sign: String(signId) });
   };
   const save = async (sign: AdminSign, fix: GpsFix) => {
     setProblem(null);
@@ -105,16 +131,8 @@ export function CapturePage() {
   };
 
   return (
-    <main className="capture-page">
-      <Link to={`/admin/areas/${areaId}`}>‹ กลับไปหน้าจัดการ Area และป้าย</Link>
-      {detail && <span className="capture-kicker">{`Admin · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>}
-      <h1>เก็บพิกัดป้าย</h1>
-      {area.error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(area.error)}
-        </p>
-      )}
-      {detail && !selected && <p className="app-note app-note--info">ยืนตรงที่ติดป้าย แล้วเลือกป้ายนั้นจากรายการข้างล่าง</p>}
+    <>
+      {!selected && <p className="app-note app-note--info">ยืนตรงที่ติดป้าย แล้วเลือกป้ายนั้นจากรายการข้างล่าง</p>}
       {selected && (
         <SignCapture
           target={selected}
@@ -125,31 +143,28 @@ export function CapturePage() {
           onSave={(fix) => void save(selected.sign, fix)}
         />
       )}
-      {detail && (
-        <section className="capture-signs" aria-labelledby="capture-signs-title">
-          <h2 id="capture-signs-title">ป้ายของ Area นี้</h2>
-          <ul aria-label="ป้ายของ Area นี้">
-            {signs.map((target) => {
-              const isSelected = target.sign.id === selected?.sign.id;
-              return (
-                <li key={target.sign.id}>
-                  <button
-                    type="button"
-                    className={isSelected ? 'capture-row capture-row--selected' : 'capture-row'}
-                    aria-pressed={isSelected}
-                    onClick={() => choose(target.sign.id)}
-                  >
-                    <strong>{`${target.sign.code} ${target.title}`}</strong>
-                    <span>{isSelected && phase.kind === 'reading' ? 'กำลังเก็บ' : signPlaceLabel(target.sign)}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-      <p className="app-muted">ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติ Admin</p>
-    </main>
+      <section className="capture-signs" aria-labelledby="capture-signs-title">
+        <h2 id="capture-signs-title">ป้ายของ Area นี้</h2>
+        <ul aria-label="ป้ายของ Area นี้">
+          {signs.map((target) => {
+            const isSelected = target.sign.id === selected?.sign.id;
+            return (
+              <li key={target.sign.id}>
+                <button
+                  type="button"
+                  className={isSelected ? 'capture-row capture-row--selected' : 'capture-row'}
+                  aria-pressed={isSelected}
+                  onClick={() => onChoose(target.sign.id)}
+                >
+                  <strong>{`${target.sign.code} ${target.title}`}</strong>
+                  <span>{isSelected && phase.kind === 'reading' ? 'กำลังเก็บ' : signPlaceLabel(target.sign)}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </>
   );
 }
 
