@@ -1,0 +1,87 @@
+/* Dashboard (D1). Class prefix: dashboard- */
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.dashboard-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-heading h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.dashboard-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dashboard-area__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.dashboard-area__head h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.dashboard-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.dashboard-tile__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.dashboard-tile__name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.dashboard-tile__round {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.dashboard-tile__detail {
+  font-size: 14px;
+}
+
+.dashboard-tile__issue {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  font-size: 13px;
+  font-weight: 600;
+}
