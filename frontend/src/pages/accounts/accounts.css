@@ -91,10 +91,11 @@
 }
 
 .accounts-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
   white-space: nowrap;
+}
+
+.accounts-actions > * + * {
+  margin-left: 10px;
 }
 
 .accounts-buttons {
