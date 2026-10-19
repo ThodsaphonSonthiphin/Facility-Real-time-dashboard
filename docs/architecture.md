@@ -110,11 +110,11 @@ flowchart LR
 flowchart TB
     subgraph FE["Frontend — frontend/src (React 19 + TypeScript, tree of facility-0025)"]
         AppF["main.tsx · App.tsx · router.tsx<br/>store, page-load refresh, createBrowserRouter"]
-        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · inspect (M6, M7, M16) · my-building (M15) · dashboard<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css"]
+        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · inspect (M6, M7, M16) · my-building (M15) · dashboard · areas (D4) · area-form (D10) · capture (M17) · print-signs (D5) · accounts (D6)<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css"]
         Store["store/<br/>authSlice: user + access token in memory<br/>hubSlice: scan hub live or not"]
         BaseApi["shared/api/baseApi.ts<br/>RTK Query, Bearer header,<br/>401 → one shared refresh → retry"]
         Session["shared/auth<br/>session.ts (refresh, single-flight)<br/>endSession.ts (logout)"]
-        Guard["shared/components<br/>ProtectedRoute (role), AppLayout,<br/>StatusScreen, CrashScreen"]
+        Guard["shared/components<br/>ProtectedRoute (role), AppLayout + AdminNav,<br/>StatusScreen, CrashScreen"]
         HubF["shared/api/scanHub.ts<br/>followScanHub: one SignalR connection per cache entry<br/>token from getValidAccessToken"]
     end
 

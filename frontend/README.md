@@ -19,16 +19,18 @@ The pre-commit hook (husky) runs lint, `tsc -b` and the tests.
 ```
 src/main.tsx · App.tsx · router.tsx     app: store, page-load refresh, route table
 src/store/                               the store, authSlice, hubSlice (scan hub live or not), typed hooks
-src/shared/api/                          baseApi (RTK Query), server types, myWorkApi, scanHub (SignalR into the cache)
+src/shared/api/                          baseApi (RTK Query), server types, myWorkApi, scanHub (SignalR into the cache), adminSetupApi (Admin reads)
 src/shared/auth/                         session refresh, logout, role homes
 src/shared/geo/                          readLocation: one fresh GPS reading per press
-src/shared/components/                   guard, layout, status and crash screens (class prefix app-)
+src/shared/components/                   guard, layout, Admin menu, status and crash screens (class prefix app-)
 src/pages/<page>/                        one folder per page: Page.tsx, <page>Api.ts, <page>.css, index.ts
 src/test/                                fakeServer (fake fetch), fakeGps, fakeSignalR, fixtures, renderApp
 ```
 
 - A page imports from `shared` and `store` only, never from another page. `shared` never imports a page. Lint enforces both.
 - A page adds its endpoints with `baseApi.injectEndpoints` in `pages/<page>/<page>Api.ts`.
+- Admin setup and accounts data provide the cache tag `AdminSetup`, and every Admin save invalidates it: Areas, signs, Cleaners and accounts depend on each other.
+- A new Admin page goes under the Admin `ProtectedRoute` in `router.tsx`, and into `shared/components/AdminNav.tsx` if it belongs in the menu.
 - Styles go in the page's `.css` with the page's class prefix; tokens are in `src/index.css`. No `style={...}`.
 - Text people type is rendered as React text only; never build `href` or `src` from it.
 
@@ -45,3 +47,5 @@ Tests render the whole app at a URL with `renderApp` and fake only `fetch` with 
 The Cleaner pages also need a location: `fakeGps(nearSign)` from `src/test/fakeGps.ts` gives jsdom a `navigator.geolocation` (`'denied'` and `'unavailable'` answers too). Made-up My Work, attendance and point answers are in `src/test/cleanerFixtures.ts`.
 
 The `@microsoft/signalr` package is replaced in every test by `src/test/fakeSignalR.ts` (`test.alias` in `vite.config.ts`). Use `hub.latest()` to see the connection the app built and to play the server: `push('ScanRecorded', card)`, `reconnecting()`, `reconnected()`, `close()`; wrap pushes in `act(...)`. Made-up Supervisor answers are in `src/test/supervisorFixtures.ts`. The server leaves out null fields, so fixtures leave them out too.
+
+Made-up Admin answers (Areas, signs, points, buildings, Cleaners, accounts) are in `src/test/adminFixtures.ts`; the logged-in Admin is account 7. The capture page reads the GPS for 30 s with `watchPosition`: `fakeGpsTrack([...])` sends one reading a second, and those tests use `vi.useFakeTimers({ shouldAdvanceTime: true })`, `fireEvent` for clicks, and restore real timers in `afterEach`. The print page's "พิมพ์" is checked with `vi.spyOn(window, 'print')`.

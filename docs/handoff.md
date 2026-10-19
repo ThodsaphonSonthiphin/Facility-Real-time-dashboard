@@ -28,7 +28,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 7 | Frontend foundation: tree, store, API layer, session, router and guard, login pages, served by the API | done, merged (PR #56, `43f10a3`) (branch `feat/frontend-foundation`): `docs/superpowers/plans/2026-10-15-frontend-foundation.md` |
 | 8 | Cleaner phone: My Work, check-in sign page, point sign page with send failures and blocked scans | done, merged (PR #57, `96895d8`) (branch `feat/cleaner-phone`): `docs/superpowers/plans/2026-10-15-cleaner-phone.md` |
 | 9 | Supervisor phone: My Building with live updates, inspection at the point's sign, nothing to inspect, blocked and send failures | done, merged (PR #58, `84890df`) (branch `feat/supervisor-phone`): `docs/superpowers/plans/2026-10-15-supervisor-phone.md` |
-| 10 | Admin setup: Areas, points, round windows, signs, sign location capture, print signs, accounts | in progress (branch `feat/admin-setup`): `docs/superpowers/plans/2026-10-19-admin-setup.md` |
+| 10 | Admin setup: Areas, points, round windows, signs, sign location capture, print signs, accounts | done (branch `feat/admin-setup`): `docs/superpowers/plans/2026-10-19-admin-setup.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -135,11 +135,12 @@ Plan 4 test results at merge:
 - 2026-10-19 · Task 7 done: capture page M17 (/admin/areas/:areaId/capture[?sign=<id>]), phone column: choose the sign you stand at, "ใช้ตำแหน่งตรงนี้" watches the GPS for 30 s (countdown, readings, latest accuracy), the median latitude, longitude and accuracy (rounded up) from at least 3 readings, the radius warning, "บันทึกพิกัด" only after 30 s, saved as Site; refused location, plain http and too few readings explained; choosing another sign or leaving stops the GPS; both buttons are disabled while a save is in flight. test/fakeGps.ts gained fakeGpsTrack. Frontend tests 220 passed. Next: Task 8 (accounts list and add).
 - 2026-10-19 · Task 8 done: accounts page D6 (/admin/accounts): filters ทั้งหมด / แม่บ้าน / หัวหน้า / Admin / ปิดใช้งาน with counts, search by name or login name, the table with role, place and active; the add form sends only the chosen role's fields (Cleaner: employee ID, phone, optional Area, shift; Supervisor: building and shift; Admin: username and temporary password), a held shift or a night in a day-only Area cannot be picked, the phone and password are cleared once sent; the save is disabled while in flight. Frontend tests 233 passed. Next: Task 9 (account actions).
 - 2026-10-19 · Task 9 done: account actions on D6: edit (name; a Cleaner's Area and shift, the current Area sent back to keep it, none for a deactivated Cleaner; a Supervisor's building and shift; an Admin's name only), แก้เบอร์โทร for Cleaners and Supervisors, รีเซ็ตรหัสผ่าน for Admins (own reset says this browser drops too), deactivate asks first and names the Area slot that goes, no self-deactivate button, activate in one press with the server's 409 shown; secrets are cleared once sent; one send at a time (the edit's save is disabled in flight, tested). Frontend tests 244 passed. Next: Task 10 (docs, final checks, real run).
+- 2026-10-19 · Task 10 done: ADR amendments (0020 accounts page, 0021 new QR and print, 0025 tree, 0026 Admin routes, 0038 radius, 0045 capture and map fallback, 0060 where the token goes, 0062 measured size 173.53 kB gzip), README device notes, frontend README, architecture diagram, handoff notes for plan 11. Frontend 244 tests; unit 299; API 531 + 5 skipped. Next: the controller's real run, then the whole-branch review.
 
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
-- Frontend plans 10–11 (scopes in the plan-7 file): 10 Admin setup, 11 Admin live board.
+- Frontend plan 11 (scope in the plan-7 file): Admin live board.
 
 ## Owner's rules (still in force)
 
@@ -213,7 +214,7 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 ## Notes for the frontend plan
 
 - Plan 7 built the base: add a page as `src/pages/<page>/` with `<page>Api.ts` (`baseApi.injectEndpoints`), a `.css` with the page prefix and an `index.ts`; add its route in `router.tsx` under the right `ProtectedRoute`; test with `renderApp` + `fakeServer`.
-- QR Sign URLs (plan 8): a check-in sign prints `<origin>/check-in/<token>`, a point sign `<origin>/scan/<token>`. Plan 10 prints these.
+- QR Sign URLs (plan 8): a check-in sign prints `<origin>/check-in/<token>`, a point sign `<origin>/scan/<token>`. Plan 10's print page (`/admin/print`) prints them with the printing page's origin, so print from the server's https address.
 - `/scan/:token` opens the Cleaner's ScanPage or the Supervisor's InspectPage by role (`shared/components/ByRole`, plan 9); an Admin gets no-permission. `/check-in/:token` is Cleaner-only.
 - Shared for later pages: `shared/geo/readLocation.ts`, `shared/api/scanAnswers.ts` (`blockedScanOf`, `isNotSent`), `LocationHelp`, `BlockedScanScreen` (`sign` is `check-in`, `point` or `inspect`; `inspect` is the Supervisor's wording, plan 9), `StatusChip`, `test/fakeGps.ts`.
 - Live updates (plan 9): open the hub with `followScanHub` (`shared/api/scanHub.ts`) in the query's `onCacheEntryAdded`; `onPoint` patches the cache, `onMissed` refetches (a tag). Plan 11's `getServicePoints` does the same, upserting cards, and reads its badge from `state.hub.status` (`store/slices/hubSlice.ts`). Tests drive the fake hub with `hub.latest()` from `src/test/fakeSignalR.ts`. The hub status is one global value written by every follower; before plan 11 follows more than one cache entry at a time (e.g. getServicePoints with changing arguments), make it per connection or ref-counted.
@@ -231,6 +232,9 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - `PUT /api/admin/accounts/{id}` replaces every place field: leaving `areaId` out clears a Cleaner's Area, so the client sends the current `areaId` to keep it.
 - The "no Shift-Out" alert has no shift or check-in time yet for the D3 layout.
 - The attendance page does not yet return the Admin's reason to show beside "แก้โดย Admin" (D2).
+- Admin pages (plan 10): add a plan-11 page under the Admin guard in `router.tsx` and its link to `shared/components/AdminNav.tsx` (the menu lists only pages that exist; รายการที่ขึ้นเตือน gets its count there). Admin data uses the `AdminSetup` tag; plan 11's live data keeps its own tags. `src/test/adminFixtures.ts` has made-up Admin answers.
+- The print page's `@page` rule (A4, no margin) is in the one CSS bundle, so it applies to anything the browser prints.
+- M17 on a real phone over https is still to be checked: a desktop browser with a fixed simulated location may report one reading only (the real run nudges it), while phones report about once a second.
 
 ## Before plan 5
 
