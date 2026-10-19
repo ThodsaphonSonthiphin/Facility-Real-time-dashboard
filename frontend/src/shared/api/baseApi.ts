@@ -47,7 +47,7 @@ export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
   // MyBuilding: refetched where a live push may have been missed (facility-0064 item 2).
-  // AdminSetup: every Admin setup read; every Admin save invalidates it (plan 10 decision 3)
+  // AdminSetup: every Admin setup read; every save that changes what they show invalidates it (plan 10 decision 3)
   tagTypes: ['MyBuilding', 'AdminSetup'],
   endpoints: () => ({}),
 });

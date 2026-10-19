@@ -29,7 +29,7 @@ src/test/                                fakeServer (fake fetch), fakeGps, fakeS
 
 - A page imports from `shared` and `store` only, never from another page. `shared` never imports a page. Lint enforces both.
 - A page adds its endpoints with `baseApi.injectEndpoints` in `pages/<page>/<page>Api.ts`.
-- Admin setup and accounts data provide the cache tag `AdminSetup`, and every Admin save invalidates it: Areas, signs, Cleaners and accounts depend on each other.
+- Admin setup and accounts data provide the cache tag `AdminSetup`, and every save that changes Areas, signs, Cleaners or accounts invalidates it (a phone change or password reset changes nothing shown, so it does not): Areas, signs, Cleaners and accounts depend on each other.
 - A new Admin page goes under the Admin `ProtectedRoute` in `router.tsx`, and into `shared/components/AdminNav.tsx` if it belongs in the menu.
 - Styles go in the page's `.css` with the page's class prefix; tokens are in `src/index.css`. No `style={...}`.
 - Text people type is rendered as React text only; never build `href` or `src` from it.

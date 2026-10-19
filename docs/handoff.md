@@ -235,6 +235,7 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - Admin pages (plan 10): add a plan-11 page under the Admin guard in `router.tsx` and its link to `shared/components/AdminNav.tsx` (the menu lists only pages that exist; รายการที่ขึ้นเตือน gets its count there). Admin data uses the `AdminSetup` tag; plan 11's live data keeps its own tags. `src/test/adminFixtures.ts` has made-up Admin answers.
 - The print page's `@page` rule (A4, no margin) is in the one CSS bundle, so it applies to anything the browser prints.
 - M17 on a real phone over https is still to be checked: a desktop browser with a fixed simulated location may report one reading only (the real run nudges it), while phones report about once a second.
+- Bundle headroom after plan 10: 173.53 kB gzip of 200 kB (26.47 kB left). Plans 8, 9 and 10 added about 9, 19 and 19 kB; if plan 11 is as large, split the Admin pages into lazy routes (facility-0062 item 3).
 
 ## Before plan 5
 
