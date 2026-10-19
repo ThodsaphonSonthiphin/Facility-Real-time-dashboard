@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { adminSession, areaDetail, areaSummary, officeDetail, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
+import { qrPath } from './qr';
 
 const closedArea = areaSummary({ id: 3, code: 'AR03', name: 'Area ปิด', isActive: false });
 
@@ -17,6 +18,10 @@ function serve(routes: FakeRoutes = {}) {
 }
 
 const cardNames = () => screen.getAllByRole('article').map((card) => card.getAttribute('aria-label'));
+
+/** The path data drawn inside one card's QR, found by the QR's own label. */
+const qrDrawing = (card: HTMLElement, label: string) =>
+  within(card).getByRole('img', { name: label }).querySelector('path')?.getAttribute('d');
 
 describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
   it('prints one Area: the check-in sign and the active points, each with its QR and URL', async () => {
@@ -39,6 +44,10 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
       within(checkIn).getByText(`${window.location.origin}/check-in/9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d`),
     ).toBeInTheDocument();
     expect(within(checkIn).getByRole('img', { name: 'QR AR01-IN' })).toBeInTheDocument();
+    // The QR encodes this sign's own URL, not another card's or the code
+    expect(qrDrawing(checkIn, 'QR AR01-IN')).toBe(
+      qrPath(`${window.location.origin}/check-in/9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d`).d,
+    );
 
     const men = screen.getByRole('article', { name: 'ป้าย AR01-01' });
     expect(within(men).getByText('จุดทำความสะอาด')).toBeInTheDocument();
@@ -52,6 +61,9 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     expect(
       within(men).getByText(`${window.location.origin}/scan/0b6f3c3e-2f7d-4c55-9d7e-1a2b3c4d5e6f`),
     ).toBeInTheDocument();
+    expect(qrDrawing(men, 'QR AR01-01')).toBe(
+      qrPath(`${window.location.origin}/scan/0b6f3c3e-2f7d-4c55-9d7e-1a2b3c4d5e6f`).d,
+    );
     // facility-0060: the token is shown only inside the sign's URL
     expect(screen.queryByText('0b6f3c3e-2f7d-4c55-9d7e-1a2b3c4d5e6f')).not.toBeInTheDocument();
     // The test page is plain http, where a phone at the sign cannot read its location
@@ -59,6 +71,14 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     expect(
       screen.getByText('ที่อยู่นี้ไม่ใช่ https มือถือจะอ่านตำแหน่งไม่ได้ตอนสแกน พิมพ์จากที่อยู่ https ของเซิร์ฟเวอร์'),
     ).toBeInTheDocument();
+  });
+
+  it('prints the check-in sign alone after "พิมพ์" on its new QR', async () => {
+    serve();
+    await renderApp('/admin/print?area=1&sign=100');
+
+    expect(await screen.findByRole('article', { name: 'ป้าย AR01-IN' })).toBeInTheDocument();
+    expect(cardNames()).toEqual(['ป้าย AR01-IN']);
   });
 
   it('A5 puts 2 signs on a sheet', async () => {

@@ -65,11 +65,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2mm;
+  gap: 1.5mm;
   padding: 4mm;
   overflow: hidden;
   border: 1px dashed #9aa3a4;
   color: #000;
+  line-height: 1.25;
   text-align: center;
 }
 
@@ -101,8 +102,9 @@
 }
 
 .print-qr {
-  width: 42mm;
-  height: 42mm;
+  flex-shrink: 0;
+  width: 36mm;
+  height: 36mm;
 }
 
 .print-sheet--A5 .print-qr {
