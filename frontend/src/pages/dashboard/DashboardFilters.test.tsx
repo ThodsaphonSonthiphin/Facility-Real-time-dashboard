@@ -1,9 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { adminSession, buildings } from '../../test/adminFixtures';
 import { fakeServer } from '../../test/fakeServer';
 import { boardPoints } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
+import { sessionExpired } from '../../store/slices/authSlice';
 
 function serve() {
   return fakeServer({
@@ -93,5 +94,19 @@ describe('Dashboard filters (D1, facility-0024)', () => {
 
     await user.click(screen.getByRole('button', { name: 'ออกจากระบบ' }));
     await waitFor(() => expect(store.getState().dashboard).toEqual({ buildingCode: '', status: 'all', issueOnly: false }));
+  });
+
+  it('an expired session also clears the filters (facility-0024)', async () => {
+    serve();
+    const { user, store } = await renderApp('/dashboard');
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
+    await user.click(legend().getByRole('button', { name: 'รอตรวจ 2' }));
+    expect(store.getState().dashboard.status).toBe('PendingInspection');
+
+    act(() => {
+      store.dispatch(sessionExpired());
+    });
+
+    expect(store.getState().dashboard).toEqual({ buildingCode: '', status: 'all', issueOnly: false });
   });
 });
