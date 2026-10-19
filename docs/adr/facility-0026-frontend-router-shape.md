@@ -59,3 +59,5 @@ flowchart TD
 > **แก้ไข 2026-10-16 (แผน 9):** `/scan/:token` เปิดได้ทั้งแม่บ้านและหัวหน้า `ByRole` เลือกหน้าตามบทบาท แม่บ้านได้หน้าส่งงาน หัวหน้าได้หน้าตรวจงาน (facility-0029 ข้อ 1) Admin เห็นจอไม่มีสิทธิ์ หน้าห้าม import หน้าอื่น ตาราง route จึงระบุทั้งสองหน้าและ `ByRole` เลือก `/check-in/:token` ยังเปิดได้เฉพาะแม่บ้าน
 
 > **แก้ไข 2026-10-19 (แผน 10):** route ของหน้า Admin อยู่ใต้ `ProtectedRoute roles={['admin']}`: `/admin/areas/:areaId?` (D4 ไม่มี id เปิด Area แรก), `/admin/areas/new` และ `/admin/areas/:areaId/edit` (D10), `/admin/print?area=<id>[&sign=<id>]` หรือ `?area=all` (D5), `/admin/accounts` (D6) ใน `AppLayout wide` ที่มีเมนู Admin และ `/admin/areas/:areaId/capture[?sign=<id>]` (M17) ใน `AppLayout` คอลัมน์มือถือ เพราะ Admin ถือมือถือยืนที่ป้าย Dashboard ยังอยู่ที่ `/dashboard`
+
+> **แก้ไข 2026-10-19 (แผน 11):** เพิ่ม `/admin/attendance` (D2) และ `/admin/alerts` (D3) ใต้ guard ของ Admin หน้า Admin ทุกหน้าเป็น `lazy` route (facility-0062) และ route ราก (`/`) มี `hydrateFallbackElement` "กำลังโหลด..." ระหว่างโหลดไฟล์ของหน้าแรก

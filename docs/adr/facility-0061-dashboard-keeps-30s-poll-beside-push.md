@@ -30,3 +30,5 @@ SignalR บอกได้แค่ว่า "มีคนสแกน" แต�
 - การ์ดเปลี่ยนสีตามเวลาภายใน 30 วินาทีหลังถึงเวลา เหมือนวันนี้
 - request ทุก 30 วินาทีมาจากจอ Admin เท่านั้น เพราะ Dashboard เป็นของ Admin (facility-0058) มือถือแม่บ้านไม่ poll
 - `refetchOnReconnect` และสิ่งที่ Dashboard แสดงตอน hub หลุด ยังไม่ตัดสินในนี้ — เป็นของ #28 hub-reconnect-catchup
+
+> **แก้ไข 2026-10-19 (แผน 11):** ทำตามข้อ 1–4 แล้ว: `livePoll` ใน `shared/api/baseApi.ts` คือถามเซิร์ฟเวอร์ทุกครั้งที่เปิดหน้า ทุก 30 วินาที และเมื่อหน้าต่างได้ focus ใช้กับ Dashboard (`/dashboard`) หน้าการเข้างาน (`/admin/attendance`) และหน้ารายการที่ขึ้นเตือน (`/admin/alerts`) ซึ่งเป็นจอ Admin ทั้งหมด `setupListeners(store.dispatch)` อยู่ใน `main.tsx` จำนวนเตือนในเมนู Admin ก็ถามทุก 30 วินาที

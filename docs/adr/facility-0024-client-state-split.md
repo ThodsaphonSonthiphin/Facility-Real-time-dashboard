@@ -53,3 +53,5 @@ flowchart TD
 - ประสบการณ์ใช้งาน Dashboard ดีขึ้นจากการคงตัวกรองข้ามการนำทาง
 
 > **แก้ไข 2026-10-07:** ค่า `selectedStatusFilter` (Normal/Overdue/Issue/OffHours) ต้องเปลี่ยนตามสถานะใน facility-0047 และตัวกรอง "มีปัญหาที่แจ้ง" แยกตาม facility-0046 การแบ่ง state 3 ระดับยังใช้
+
+> **แก้ไข 2026-10-19 (แผน 11):** `dashboardSlice` เก็บ `buildingCode` (ตึก), `status` (สถานะเดียวหรือทั้งหมด) และ `issueOnly` (มีปัญหาที่แจ้ง) ไม่มี `searchQuery` และ `lastUpdatedPointId` เพราะ D1 ไม่มีช่องค้นหาและไม่มีการไฮไลต์การ์ด ค่าถูกล้างเมื่อ session จบ ส่วนวันที่ กะ และตึกของหน้าการเข้างานอยู่ใน URL
