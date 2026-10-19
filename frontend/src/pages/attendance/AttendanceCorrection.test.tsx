@@ -61,7 +61,8 @@ describe('attendance corrections (D2, facility-0051)', () => {
 
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' });
-    const event = within(form).getByRole('combobox', { name: 'รายการ' });
+    expect(within(form).getByRole('heading', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' })).toHaveFocus();
+    const event= within(form).getByRole('combobox', { name: 'รายการ' });
     const time = within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' });
 
     expect(event).toHaveValue('BreakOut');
