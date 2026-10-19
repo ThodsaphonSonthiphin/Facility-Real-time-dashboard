@@ -174,4 +174,37 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
       server.calls.filter((call) => call.path.startsWith('/api/admin/points/12/')).map((call) => call.path),
     ).toEqual(['/api/admin/points/12/deactivate', '/api/admin/points/12/activate']);
   });
+
+  it('sends a new point once: the save is disabled while it is in flight', async () => {
+    let answer: (value: { status: number; body: unknown }) => void = () => {};
+    const newPoint = adminPoint({
+      id: 31,
+      name: 'โถงทางเดิน',
+      sign: unlocatedSign({ id: 301, code: 'AR02-01' }),
+      roundWindows: [{ id: 9, shift: 'Day', start: '08:00', end: '10:00' }],
+    });
+    const server = serve({
+      'POST /api/admin/areas/2/points': () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const { user } = await renderApp('/admin/areas/2');
+    await user.click(await screen.findByRole('button', { name: '+ เพิ่มจุดทำความสะอาดใน Area นี้' }));
+
+    const editor = screen.getByRole('region', { name: 'เพิ่มจุด · AR02 Office ทดลอง' });
+    await user.type(within(editor).getByLabelText('ชื่อจุด'), 'โถงทางเดิน');
+    await user.click(within(editor).getByRole('button', { name: 'บันทึกจุด' }));
+
+    const saving = await within(editor).findByRole('button', { name: 'กำลังบันทึก...' });
+    expect(saving).toBeDisabled();
+    expect(within(editor).getByLabelText('ชื่อจุด')).toBeDisabled();
+    const pointPosts = () => server.calls.filter((call) => call.method === 'POST' && call.path === '/api/admin/areas/2/points');
+    await user.click(saving);
+    expect(pointPosts()).toHaveLength(1);
+
+    answer({ status: 201, body: newPoint });
+    expect(await screen.findByText('บันทึกจุด โถงทางเดิน แล้ว')).toBeInTheDocument();
+    expect(pointPosts()).toHaveLength(1);
+  });
 });
