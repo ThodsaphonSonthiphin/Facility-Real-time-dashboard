@@ -116,7 +116,9 @@
 }
 
 .areas-actions {
-  display: flex;
-  gap: 12px;
   white-space: nowrap;
+}
+
+.areas-actions > * + * {
+  margin-left: 12px;
 }

@@ -111,4 +111,39 @@ describe('AreasPage (D4, facility-0045)', () => {
 
     expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
   });
+
+  it('switching Areas shows the new Area only, never the previous one’s signs', async () => {
+    let answerAreaTwo: () => void = () => {};
+    const areaTwoAnswer = new Promise<void>((resolve) => {
+      answerAreaTwo = resolve;
+    });
+    serve({
+      'GET /api/admin/areas/2': async () => {
+        await areaTwoAnswer;
+        return { status: 200, body: officeDetail() };
+      },
+    });
+    const { user } = await renderApp('/admin/areas/1');
+
+    expect(await screen.findByRole('row', { name: /AR01-01/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: /^AR02 Office ทดลอง/ }));
+
+    // While AR02 is still loading, AR01's signs must not be shown under AR02's address.
+    expect(await screen.findByText('กำลังโหลด Area...')).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /AR01-01/ })).not.toBeInTheDocument();
+
+    answerAreaTwo();
+    expect(await screen.findByRole('heading', { level: 2, name: 'AR02 Office ทดลอง' })).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /AR01-01/ })).not.toBeInTheDocument();
+  });
+
+  it('an id that is not a number says so and asks the server for no Area', async () => {
+    const { calls } = serve();
+    await renderApp('/admin/areas/abc');
+
+    const alerts = await screen.findAllByRole('alert');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent('ไม่พบ Area นี้');
+    expect(calls.some((call) => /^\/api\/admin\/areas\/./.test(call.path))).toBe(false);
+  });
 });
