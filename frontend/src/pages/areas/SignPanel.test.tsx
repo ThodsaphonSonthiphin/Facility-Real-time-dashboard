@@ -136,4 +136,41 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     expect(within(qr).queryByRole('button', { name: 'ออก QR ใหม่' })).not.toBeInTheDocument();
     expect(within(qr).getByText('ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงออก QR ใหม่ได้')).toBeInTheDocument();
   });
+
+  it('no new QR for any sign of a deactivated Area (facility-0021 rule 4)', async () => {
+    const inactive = areaSummary({ isActive: false });
+    serve({
+      'GET /api/admin/areas': () => ({ status: 200, body: [inactive, officeSummary] }),
+      'GET /api/admin/areas/1': () => ({ status: 200, body: areaDetail({ area: inactive }) }),
+    });
+    const { user } = await renderApp('/admin/areas/1');
+    await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-IN' }));
+
+    const checkInQr = screen.getByRole('region', { name: 'QR ของป้าย' });
+    expect(within(checkInQr).queryByRole('button', { name: 'ออก QR ใหม่' })).not.toBeInTheDocument();
+    expect(within(checkInQr).getByText('ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงออก QR ใหม่ได้')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'แก้ไข AR01-01' }));
+    const pointQr = screen.getByRole('region', { name: 'QR ของป้าย' });
+    expect(within(pointQr).queryByRole('button', { name: 'ออก QR ใหม่' })).not.toBeInTheDocument();
+    expect(within(pointQr).getByText('ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงออก QR ใหม่ได้')).toBeInTheDocument();
+  });
+
+  it('the check-in sign gets a new QR on an active Area, then offers to print it', async () => {
+    const server = serve({
+      'POST /api/admin/signs/100/regenerate-token': () => ({ status: 200, body: checkInSign() }),
+    });
+    const { user } = await renderApp('/admin/areas/1');
+    await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-IN' }));
+
+    const qr = screen.getByRole('region', { name: 'QR ของป้าย' });
+    await user.click(within(qr).getByRole('button', { name: 'ออก QR ใหม่' }));
+    await user.click(within(qr).getByRole('button', { name: 'ยืนยัน ออก QR ใหม่' }));
+    expect(await within(qr).findByText('ออก QR ใหม่แล้ว ป้ายเดิมสแกนไม่ได้แล้ว')).toBeInTheDocument();
+    expect(within(qr).getByRole('link', { name: 'พิมพ์ป้ายใหม่ ›' })).toHaveAttribute(
+      'href',
+      '/admin/print?area=1&sign=100',
+    );
+    expect(server.calls.filter((call) => call.path === '/api/admin/signs/100/regenerate-token')).toHaveLength(1);
+  });
 });
