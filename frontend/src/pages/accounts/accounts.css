@@ -89,3 +89,15 @@
   padding: 0 4px;
   font-weight: 600;
 }
+
+.accounts-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.accounts-buttons {
+  display: flex;
+  gap: 8px;
+}

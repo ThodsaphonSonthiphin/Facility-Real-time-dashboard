@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { account } from '../../test/adminFixtures';
-import { createRequest, emptyDraft, normalizePhone, placeText } from './accountRules';
+import { createRequest, editDraftOf, emptyDraft, normalizePhone, placeText, updateRequest } from './accountRules';
 
 describe('account rules (facility-0020, 0054)', () => {
   it('builds a request with only the role’s own fields (the server refuses the others)', () => {
@@ -43,5 +43,23 @@ describe('account rules (facility-0020, 0054)', () => {
       'ตึก B · กะดึก',
     );
     expect(placeText(account({ role: 'Admin', areaCode: undefined, shift: undefined }))).toBe('—');
+  });
+
+  it('an edit sends the role’s place fields, and a Cleaner’s current Area to keep it (the PUT replaces it)', () => {
+    const cleaner = account();
+    expect(updateRequest(cleaner, editDraftOf(cleaner))).toEqual({
+      body: { displayName: 'แม่บ้านทดสอบ', shift: 'Day', areaId: 1 },
+    });
+    const away = account({ isActive: false, areaId: undefined, areaCode: undefined });
+    expect(updateRequest(away, { ...editDraftOf(away), areaId: '2' })).toEqual({
+      body: { displayName: 'แม่บ้านทดสอบ', shift: 'Day' },
+    });
+    const supervisor = account({ role: 'Supervisor', areaId: undefined, buildingId: 2, shift: 'Night' });
+    expect(updateRequest(supervisor, editDraftOf(supervisor))).toEqual({
+      body: { displayName: 'แม่บ้านทดสอบ', buildingId: 2, shift: 'Night' },
+    });
+    const admin = account({ role: 'Admin', areaId: undefined, shift: undefined });
+    expect(updateRequest(admin, editDraftOf(admin))).toEqual({ body: { displayName: 'แม่บ้านทดสอบ' } });
+    expect(updateRequest(cleaner, { ...editDraftOf(cleaner), displayName: ' ' })).toEqual({ problem: 'ใส่ชื่อที่แสดงก่อน' });
   });
 });

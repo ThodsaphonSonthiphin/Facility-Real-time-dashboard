@@ -1,7 +1,7 @@
 import type { AreaSummary } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
 import { shiftShortLabel } from '../../shared/utils/labels';
-import type { Account, AccountRole, CreateAccountRequest } from './accountsApi';
+import type { Account, AccountRole, CreateAccountRequest, UpdateAccountBody } from './accountsApi';
 
 export type AccountFilter = 'all' | AccountRole | 'inactive';
 
@@ -177,6 +177,53 @@ export function createRequest(draft: CreateDraft): { request: CreateAccountReque
       phone,
       shift: draft.shift,
       ...(draft.areaId ? { areaId: Number(draft.areaId) } : {}),
+    },
+  };
+}
+
+/** The edit form as typed. */
+export interface EditDraft {
+  displayName: string;
+  areaId: string;
+  buildingId: string;
+  shift: Shift | '';
+}
+
+export function editDraftOf(account: Account): EditDraft {
+  return {
+    displayName: account.displayName,
+    areaId: account.areaId ? String(account.areaId) : '',
+    buildingId: account.buildingId ? String(account.buildingId) : '',
+    shift: account.shift ?? '',
+  };
+}
+
+/**
+ * The PUT replaces every place field, so a Cleaner's current Area is sent back to keep it (handoff note). A
+ * deactivated Cleaner holds no Area (plan 5 decision 4), so none is sent for one.
+ */
+export function updateRequest(account: Account, draft: EditDraft): { body: UpdateAccountBody } | { problem: string } {
+  const displayName = draft.displayName.trim();
+  if (displayName === '') {
+    return { problem: 'ใส่ชื่อที่แสดงก่อน' };
+  }
+  if (account.role === 'Admin') {
+    return { body: { displayName } };
+  }
+  if (account.role === 'Supervisor' && draft.buildingId === '') {
+    return { problem: 'เลือกตึกก่อน' };
+  }
+  if (draft.shift === '') {
+    return { problem: 'เลือกกะก่อน' };
+  }
+  if (account.role === 'Supervisor') {
+    return { body: { displayName, buildingId: Number(draft.buildingId), shift: draft.shift } };
+  }
+  return {
+    body: {
+      displayName,
+      shift: draft.shift,
+      ...(account.isActive && draft.areaId ? { areaId: Number(draft.areaId) } : {}),
     },
   };
 }
