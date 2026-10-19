@@ -80,6 +80,41 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     await waitFor(() => expect(pointGets(server)).toHaveLength(3));
   });
 
+  it('a push that lands while an older answer is still on its way is not overwritten by it', async () => {
+    const pushed = { ...boardPoints[0], status: 'Passed' as const };
+    const afterPush = [pushed, ...boardPoints.slice(1)]; // what the server says once the push is committed
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let gets = 0;
+    const server = serve(boardPoints, {
+      'GET /api/service-points': async () => {
+        gets += 1;
+        if (gets === 2) {
+          await held; // the catch-up answer, read from the database before the push below
+        }
+        return { status: 200, body: gets > 2 ? afterPush : boardPoints };
+      },
+    });
+    const { store } = await renderApp('/dashboard');
+    await screen.findByText('SignalR Live');
+    await waitFor(() => expect(pointGets(server)).toHaveLength(2));
+
+    act(() => hub.latest().push('InspectionRecorded', pushed));
+    release();
+
+    await waitFor(() => expect(pointGets(server)).toHaveLength(3));
+    await apiIdle(store);
+    expect(screen.getByText('ตรวจผ่าน · ส่งงาน 10:05 · แม่บ้านทดสอบ')).toBeInTheDocument();
+  });
+
+  it('a point not yet done shows the round it can still be sent in', async () => {
+    serve([point({ id: 9, name: 'ห้องพัก', status: 'NotYetDone' })]);
+    await renderApp('/dashboard');
+
+    expect(await screen.findByText('ยังไม่ส่งงาน · ส่งได้ถึง 12:00')).toBeInTheDocument();
+    expect(screen.getByText('รอบ 10:00–12:00')).toBeInTheDocument();
+  });
+
   it('asks the server every 30 s, for the changes nobody pushes (facility-0061)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
