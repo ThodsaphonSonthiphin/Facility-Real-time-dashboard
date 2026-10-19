@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { boardRows, coveredRow, correctedRow, emptyRow, workingRow } from '../../test/liveFixtures';
-import { coverLine, flagText, readBoardArgs, searchRows, toBoardParams } from './attendanceRules';
+import { boardRows, breakRow, coveredRow, correctedRow, emptyRow, workingRow } from '../../test/liveFixtures';
+import {
+  correctionProblem,
+  coverLine,
+  firstEvent,
+  flagText,
+  readBoardArgs,
+  readFill,
+  searchRows,
+  toBoardParams,
+} from './attendanceRules';
 
 describe('attendance rules (wireframe D2)', () => {
   it('reads the shift from the URL only when the date and the shift come together, as the server wants', () => {
@@ -37,5 +46,28 @@ describe('attendance rules (wireframe D2)', () => {
     expect(coverLine({ ...coveredRow.covers[0], ownAreaCode: undefined, shiftInAt: undefined })).toBe(
       'ทำแทน: แม่บ้านที่อื่น · Admin มอบหมาย 07:10 · ยังไม่ลงเวลา',
     );
+  });
+
+  it('checks a correction before sending: a time "HH:mm" and a reason (facility-0051)', () => {
+    expect(correctionProblem({ time: '07:05', reason: 'มือถือแบตหมด' })).toBeNull();
+    expect(correctionProblem({ time: ' 23:59 ', reason: 'ลืม' })).toBeNull();
+    expect(correctionProblem({ time: '7:05', reason: 'ลืม' })).toBe('เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05');
+    expect(correctionProblem({ time: '24:00', reason: 'ลืม' })).toBe('เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05');
+    expect(correctionProblem({ time: '07:05', reason: '   ' })).toBe('ต้องกรอกเหตุผล');
+    expect(correctionProblem({ time: '07:05', reason: 'ก'.repeat(501) })).toBe('เหตุผลยาวได้ไม่เกิน 500 ตัวอักษร');
+  });
+
+  it('the form opens on the event asked for, else the first one not scanned', () => {
+    expect(firstEvent(emptyRow)).toBe('ShiftIn');
+    expect(firstEvent(workingRow)).toBe('BreakOut');
+    expect(firstEvent(breakRow)).toBe('BreakIn');
+    expect(firstEvent(workingRow, 'ShiftIn')).toBe('ShiftIn');
+  });
+
+  it('reads the Cleaner and event an alert link asks to fill', () => {
+    expect(readFill(new URLSearchParams('fill=22&event=ShiftOut'))).toEqual({ userId: 22, event: 'ShiftOut' });
+    expect(readFill(new URLSearchParams('fill=22&event=Lunch'))).toEqual({ userId: 22, event: undefined });
+    expect(readFill(new URLSearchParams('fill=x'))).toBeUndefined();
+    expect(readFill(new URLSearchParams(''))).toBeUndefined();
   });
 });

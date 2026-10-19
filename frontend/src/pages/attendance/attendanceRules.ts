@@ -6,7 +6,7 @@ import type {
   BoardRow,
 } from '../../shared/api/attendanceBoardApi';
 import type { AttendanceEvent, Shift } from '../../shared/api/types';
-import { eventLabel } from '../../shared/utils/labels';
+import { attendanceEvents, eventLabel } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
 
 /** Wireframe D2's status column (facility-0050). */
@@ -85,4 +85,34 @@ export function coverLine(cover: BoardCover): string {
     `Admin มอบหมาย ${formatTime(cover.assignedAt)}`,
     cover.shiftInAt ? `เข้างาน ${formatTime(cover.shiftInAt)}` : 'ยังไม่ลงเวลา',
   ].join(' · ');
+}
+
+/** facility-0051: AdminAttendanceEndpoints.MaxReasonLength. */
+export const MAX_REASON = 500;
+
+/** Checked before sending; the server checks the window, the order and the future, and its message is shown as is. */
+export function correctionProblem({ time, reason }: { time: string; reason: string }): string | null {
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time.trim())) {
+    return 'เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05';
+  }
+  const text = reason.trim();
+  if (text === '') {
+    return 'ต้องกรอกเหตุผล';
+  }
+  return text.length > MAX_REASON ? `เหตุผลยาวได้ไม่เกิน ${MAX_REASON} ตัวอักษร` : null;
+}
+
+/** The event the form opens on: the one asked for, else the first one the Cleaner has not scanned, else Shift-In. */
+export function firstEvent(row: BoardRow, asked?: AttendanceEvent): AttendanceEvent {
+  return asked ?? attendanceEvents.find((type) => !eventOf(row, type)) ?? 'ShiftIn';
+}
+
+/** From an alert's "เติมเวลา…" link (plan 11 decision 9): ?fill=<Cleaner's account id>&event=<AttendanceEvent>. */
+export function readFill(params: URLSearchParams): { userId: number; event?: AttendanceEvent } | undefined {
+  const userId = Number(params.get('fill'));
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return undefined;
+  }
+  const event = params.get('event');
+  return { userId, event: attendanceEvents.find((type) => type === event) };
 }

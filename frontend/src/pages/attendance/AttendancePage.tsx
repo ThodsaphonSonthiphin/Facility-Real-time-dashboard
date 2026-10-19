@@ -8,26 +8,48 @@ import {
   type BoardSummary,
 } from '../../shared/api/attendanceBoardApi';
 import { livePoll } from '../../shared/api/baseApi';
+import type { AttendanceEvent } from '../../shared/api/types';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { formatShiftDate } from '../../shared/utils/thaiTime';
 import { AttendanceTable } from './AttendanceTable';
 import { BoardControls } from './BoardControls';
-import { readBoardArgs, searchRows, toBoardParams } from './attendanceRules';
+import { CorrectionForm } from './CorrectionForm';
+import { readBoardArgs, readFill, searchRows, toBoardParams } from './attendanceRules';
 import './attendance.css';
+
+/** The row whose form is open, and the event it opens on. */
+type Editing = { areaId: number; event?: AttendanceEvent };
+
+type Notice = { kind: 'ok' | 'error'; text: string } | null;
 
 /**
  * facility-0027, 0050, wireframe D2: whether each Area that works the shift has someone in it, never late or early.
  * The shift on the clock by default; the address keeps another date, shift or building. Live on AttendanceRecorded,
- * every open, every 30 s and on focus (facility-0061).
+ * every open, every 30 s and on focus (facility-0061). facility-0051: the Admin adds or moves a time with a reason.
  */
 export function AttendancePage() {
   const [params, setParams] = useSearchParams();
   const args = readBoardArgs(params);
+  const fill = readFill(params);
   const { data: board, error, isLoading } = useGetAttendanceBoardQuery(args, livePoll);
   const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<Editing | null>(null);
+  const [notice, setNotice] = useState<Notice>(null);
   const go = (next: BoardArgs) => setParams(toBoardParams(next));
+
+  // From an alert's "เติมเวลา…" link (plan 11 decision 9): the form opens on that Cleaner once the board is in
+  const fillRow = fill && board ? board.rows.find((row) => row.cleaner?.id === fill.userId) : undefined;
+  const open: Editing | null = editing ?? (fillRow ? { areaId: fillRow.areaId, event: fill?.event } : null);
+  const openRow = open && board ? board.rows.find((row) => row.areaId === open.areaId) : undefined;
+
+  const closeForm = () => {
+    setEditing(null);
+    if (fill) {
+      go(args); // the link's fill and event go, so the form does not open again
+    }
+  };
 
   return (
     <main className="attendance-page">
@@ -47,16 +69,47 @@ export function AttendancePage() {
         onNow={() => go({ buildingId: args.buildingId })}
         onBuilding={(buildingId) => go({ ...args, buildingId })}
       />
+      {notice && (
+        <p
+          className={notice.kind === 'ok' ? 'app-note app-note--info' : 'app-note app-note--error'}
+          role={notice.kind === 'ok' ? 'status' : 'alert'}
+        >
+          {notice.text}
+        </p>
+      )}
       {isLoading && <p className="app-muted">กำลังโหลด...</p>}
       {error && (
         <p className="app-note app-note--error" role="alert">
           {getErrorMessage(error)}
         </p>
       )}
+      {board && fill && !fillRow && !editing && (
+        <p className="app-note app-note--info">ไม่พบแม่บ้านคนนี้ในกะนี้ อาจย้าย Area หรือปิดใช้งานแล้ว</p>
+      )}
       {board && (
         <>
           <Tiles summary={board.summary} />
-          <AttendanceTable rows={searchRows(board.rows, search)} />
+          {openRow?.cleaner && (
+            <CorrectionForm
+              key={`${openRow.areaId}:${open?.event ?? ''}`}
+              board={board}
+              row={openRow}
+              cleaner={openRow.cleaner}
+              initialEvent={open?.event}
+              onDone={(text) => {
+                setNotice({ kind: 'ok', text });
+                closeForm();
+              }}
+              onCancel={closeForm}
+            />
+          )}
+          <AttendanceTable
+            rows={searchRows(board.rows, search)}
+            onCorrect={(row) => {
+              setNotice(null);
+              setEditing({ areaId: row.areaId });
+            }}
+          />
         </>
       )}
       <BoardNotes />

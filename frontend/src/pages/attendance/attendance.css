@@ -149,3 +149,13 @@
   color: var(--color-muted);
   font-size: 13px;
 }
+
+.attendance-form {
+  max-width: 640px;
+}
+
+.attendance-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
