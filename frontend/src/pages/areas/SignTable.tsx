@@ -2,13 +2,16 @@ import { Link } from 'react-router';
 import type { AdminSign, AreaDetail } from '../../shared/api/adminSetupApi';
 import { roundsText, signPlaceLabel } from '../../shared/utils/labels';
 
+/** Which row's editor is open below the table. */
+export type EditTarget = { kind: 'point'; pointId: number } | { kind: 'new-point' };
+
 const placeText = (sign: AdminSign) => `${signPlaceLabel(sign)} · รัศมี ${sign.radiusM} ม.`;
 
 /**
  * Wireframe D4's table: the Area's check-in sign first, then its points in the server's order, deactivated ones
  * marked. Signs of a deactivated point or Area cannot be scanned, so they are not offered for printing.
  */
-export function SignTable({ detail }: { detail: AreaDetail }) {
+export function SignTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (target: EditTarget) => void }) {
   const { area, checkInSign } = detail;
   const printLink = (sign: AdminSign) => `/admin/print?area=${area.id}&sign=${sign.id}`;
 
@@ -44,6 +47,14 @@ export function SignTable({ detail }: { detail: AreaDetail }) {
               <td>{roundsText(point.roundWindows)}</td>
               <td>{placeText(point.sign)}</td>
               <td className="areas-actions">
+                <button
+                  type="button"
+                  className="app-link-button"
+                  aria-label={`แก้ไข ${point.sign.code}`}
+                  onClick={() => onEdit({ kind: 'point', pointId: point.id })}
+                >
+                  แก้ไข
+                </button>
                 {area.isActive && point.isActive && <Link to={printLink(point.sign)}>พิมพ์</Link>}
               </td>
             </tr>
@@ -51,6 +62,11 @@ export function SignTable({ detail }: { detail: AreaDetail }) {
         </tbody>
       </table>
       {detail.points.length === 0 && <p className="app-muted">Area นี้ยังไม่มีจุดทำความสะอาด</p>}
+      {area.isActive && (
+        <button type="button" className="app-button areas-add-point" onClick={() => onEdit({ kind: 'new-point' })}>
+          + เพิ่มจุดทำความสะอาดใน Area นี้
+        </button>
+      )}
     </>
   );
 }

@@ -128,6 +128,7 @@ Plan 4 test results at merge:
 
 - 2026-10-19 · Task 1 done: Admin menu (สถานะจุด, จัดการ Area และป้าย, บัญชีผู้ใช้) shown by AppLayout wide and hidden in print; cache tag AdminSetup; shared/api/adminSetupApi.ts (Area, sign, building and Cleaner types and reads, setSignLocation); labels for shift pattern, sign location, rounds and coordinates; formatDate; shared form, table and confirm styles; test/adminFixtures.ts. Plan 9 marked merged in the Status table. Frontend tests 163 passed. Next: Task 2 (Areas page).
 - 2026-10-19 · Task 2 done: Areas page D4 (/admin/areas/:areaId?): every Area with its meta line, the open Area (first one by default) with shifts, Cleaners and sign count, its check-in sign and points with rounds, location and radius, print links for active signs, links to edit, print and capture; deactivated Areas and points marked. Frontend tests 172 passed (fix round 1 added the switch and bad-id tests; the action cells stay table cells). Next: Task 3 (point editor).
+- 2026-10-19 · Task 3 done: point editor on D4: name, Round Windows per shift (typed "HH:mm", checked before adding, Enter adds), the full list sent in shift order on save, day-only Areas have no night shift, the server's refusal shown with the draft kept, deactivate / activate a point; "+ เพิ่มจุดทำความสะอาดใน Area นี้" opens the same editor and a new point stays open for editing. Frontend tests 179 passed. Next: Task 4 (sign settings).
 
 ## Pending work (ask the owner before starting)
 
