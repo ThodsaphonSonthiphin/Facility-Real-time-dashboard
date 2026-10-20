@@ -79,13 +79,19 @@ export async function followScanHub({
     onMissed(); // every start, the first included: pushes sent between the first answer and the connection going live were missed
   };
 
+  // Block bodies: a push expects no answer, and the client logs an Error when a handler returns one (a page's
+  // `(change) => dispatch(...)` returns the action)
   if (onPoint) {
     for (const event of POINT_EVENTS) {
-      connection.on(event, (point: PointCard) => onPoint(point));
+      connection.on(event, (point: PointCard) => {
+        onPoint(point);
+      });
     }
   }
   if (onAttendance) {
-    connection.on('AttendanceRecorded', (change: AttendanceChanged) => onAttendance(change));
+    connection.on('AttendanceRecorded', (change: AttendanceChanged) => {
+      onAttendance(change);
+    });
   }
   // A handler for each event this follower does not take: the admins group sends all three, and the client logs a
   // warning for every message with no handler

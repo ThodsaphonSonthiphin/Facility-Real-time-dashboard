@@ -95,6 +95,25 @@ describe('followScanHub (#26 hub-cache-bridge, facility-0064)', () => {
     expect(f.changes).toEqual([{ areaId: 1, shiftDate: '2026-10-15', shift: 'Day' }]);
   });
 
+  it('gives the server no answer even when the page handler returns one (plan 11 real run: D2 logged an Error per push)', async () => {
+    const store = makeStore();
+    followScanHub({
+      key: 'answers',
+      cacheDataLoaded: Promise.resolve(),
+      cacheEntryRemoved: new Promise<void>(() => {}),
+      dispatch: store.dispatch,
+      accessToken: async () => 'token-admin',
+      // Like attendanceBoardApi's `(change) => dispatch(...)`, which returns the action
+      onPoint: (card) => ({ type: 'returned', card }) as unknown as void,
+      onAttendance: (change) => ({ type: 'returned', change }) as unknown as void,
+      onMissed: () => {},
+    });
+    await vi.waitFor(() => expect(selectHubStatus('answers')(store.getState())).toBe('live'));
+
+    expect(() => hub.latest().push('ScanRecorded', point())).not.toThrow();
+    expect(() => hub.latest().push('AttendanceRecorded', { areaId: 1, shiftDate: '2026-10-15', shift: 'Day' })).not.toThrow();
+  });
+
   it('each connection keeps its own status, and an ended one leaves no status behind (plan 11 decision 4)', async () => {
     const store = makeStore();
     const a = follow({ key: 'a' }, store);
