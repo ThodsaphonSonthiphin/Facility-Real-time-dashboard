@@ -1,8 +1,9 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { adminSession } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
-import { alerts, attendanceBoard, candidates, supervisorBlockedAlert } from '../../test/liveFixtures';
+import { hub } from '../../test/fakeSignalR';
+import { alerts, apiIdle, attendanceBoard, candidates, supervisorBlockedAlert } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
 
 function serve(routes: FakeRoutes = {}) {
@@ -136,5 +137,43 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     expect(server.calls.filter((call) => call.method === 'DELETE').map((call) => call.path)).toEqual([
       '/api/admin/cover-assignments/71',
     ]);
+  });
+
+  it('ยกเลิก waits for the answer: the cover form stays while the assignment is in flight', async () => {
+    const server = serve({ 'POST /api/admin/cover-assignments': () => new Promise(() => {}) });
+    const { user } = await renderApp('/admin/alerts');
+    const empty = await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' });
+    await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
+    const form = screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' });
+    await within(form).findByRole('combobox', { name: 'ให้ใครทำแทน' });
+
+    await user.click(within(form).getByRole('button', { name: 'ยืนยันมอบหมาย' }));
+
+    const cancel = within(form).getByRole('button', { name: 'ยกเลิก' });
+    await waitFor(() => expect(cancel).toBeDisabled());
+    await user.click(cancel);
+    expect(screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' })).toBeInTheDocument();
+    expect(posts(server)).toHaveLength(1);
+  });
+
+  it('a board of another shift closes an open cover form', async () => {
+    let night = false;
+    serve({
+      'GET /api/admin/attendance': () => ({
+        status: 200,
+        body: night ? attendanceBoard(undefined, { shift: 'Night' }) : attendanceBoard(),
+      }),
+    });
+    const { user, store } = await renderApp('/admin/alerts');
+    await waitFor(() => expect(() => hub.latest()).not.toThrow());
+    await apiIdle(store);
+    const empty = await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' });
+    await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
+    expect(screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' })).toBeInTheDocument();
+
+    night = true;
+    act(() => hub.latest().push('AttendanceRecorded', { areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }));
+
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'มอบหมายคนทำแทน · AR12' })).not.toBeInTheDocument());
   });
 });

@@ -87,6 +87,16 @@ export async function followScanHub({
   if (onAttendance) {
     connection.on('AttendanceRecorded', (change: AttendanceChanged) => onAttendance(change));
   }
+  // A handler for each event this follower does not take: the admins group sends all three, and the client logs a
+  // warning for every message with no handler
+  if (!onPoint) {
+    for (const event of POINT_EVENTS) {
+      connection.on(event, () => {});
+    }
+  }
+  if (!onAttendance) {
+    connection.on('AttendanceRecorded', () => {});
+  }
   connection.onreconnecting(() => setStatus('reconnecting'));
   connection.onreconnected(() => {
     setStatus('live');

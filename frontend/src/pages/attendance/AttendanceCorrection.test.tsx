@@ -1,9 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
 import { adminSession, buildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
-import { attendanceBoard, boardEvent } from '../../test/liveFixtures';
+import { hub } from '../../test/fakeSignalR';
+import { apiIdle, attendanceBoard, boardEvent, workingRow } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
 
 function serve(routes: FakeRoutes = {}, board: AttendanceBoard = attendanceBoard()) {
@@ -155,5 +156,70 @@ describe('attendance corrections (D2, facility-0051)', () => {
     await renderApp('/admin/attendance?date=2026-10-14&shift=Night&fill=99&event=ShiftOut');
 
     expect(await screen.findByText('ไม่พบแม่บ้านคนนี้ในกะนี้ อาจย้าย Area หรือปิดใช้งานแล้ว')).toBeInTheDocument();
+  });
+
+  it('ยกเลิก waits for the answer: it is disabled while the save is in flight', async () => {
+    const server = serve({ 'PUT /api/admin/attendance': () => new Promise(() => {}) });
+    const { user } = await renderApp('/admin/attendance');
+    await user.click(await screen.findByRole('button', { name: 'เพิ่มเวลา แม่บ้านลา' }));
+    const form = screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
+    await user.type(within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' }), '07:05');
+    await user.type(within(form).getByRole('textbox', { name: 'เหตุผล (ต้องกรอก)' }), 'มือถือแบตหมด');
+
+    await user.click(within(form).getByRole('button', { name: 'บันทึก' }));
+
+    const cancel = within(form).getByRole('button', { name: 'ยกเลิก' });
+    await waitFor(() => expect(cancel).toBeDisabled());
+    await user.click(cancel);
+    expect(screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' })).toBeInTheDocument();
+    expect(puts(server)).toHaveLength(1);
+  });
+
+  it('a board that flips under an open form closes it: the draft cannot be saved to the next shift\'s Cleaner', async () => {
+    const dayBoard = attendanceBoard([workingRow]);
+    const nightFlip = attendanceBoard(
+      [{ ...workingRow, cleaner: { id: 22, employeeId: '650002', displayName: 'แม่บ้านกะดึก' }, events: [] }],
+      { shift: 'Night' },
+    );
+    let night = false;
+    const server = serve(
+      {
+        'GET /api/admin/attendance': () => ({ status: 200, body: night ? nightFlip : dayBoard }),
+        'PUT /api/admin/attendance': () => savedEvent,
+      },
+      dayBoard,
+    );
+    const { user, store } = await renderApp('/admin/attendance');
+    await screen.findByText('SignalR Live');
+    await apiIdle(store);
+    await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
+    const form = screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' });
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'รายการ' }), 'ShiftOut');
+    await user.type(within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' }), '18:55');
+    await user.type(within(form).getByRole('textbox', { name: 'เหตุผล (ต้องกรอก)' }), 'ลืมสแกนออก');
+
+    night = true;
+    act(() => hub.latest().push('AttendanceRecorded', { areaId: 1, shiftDate: '2026-10-15', shift: 'Day' }));
+
+    expect(await screen.findByText('กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน')).toHaveAttribute('role', 'status');
+    expect(screen.queryByRole('region', { name: /^เพิ่ม\/แก้เวลา/ })).not.toBeInTheDocument();
+    expect(puts(server)).toHaveLength(0);
+  });
+
+  it('pressing กะดึก with a form open closes it with the notice', async () => {
+    serve({
+      'GET /api/admin/attendance': (request) => ({
+        status: 200,
+        body: request.search.includes('Night') ? nightBoard : attendanceBoard(),
+      }),
+    });
+    const { user } = await renderApp('/admin/attendance');
+    await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
+    expect(screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'กะดึก' }));
+
+    expect(await screen.findByText('กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /^เพิ่ม\/แก้เวลา/ })).not.toBeInTheDocument();
   });
 });

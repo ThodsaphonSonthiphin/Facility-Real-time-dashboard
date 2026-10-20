@@ -93,7 +93,7 @@ function ReviewForm({ alert, onDone, onError, onCancel }: ReviewFormProps) {
         <button type="button" className="app-button app-button--primary" disabled={isLoading} onClick={() => void send()}>
           ยืนยันปิดเตือน
         </button>
-        <button type="button" className="app-button" onClick={onCancel}>
+        <button type="button" className="app-button" disabled={isLoading} onClick={onCancel}>
           ยกเลิก
         </button>
       </div>

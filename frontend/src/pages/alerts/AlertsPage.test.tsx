@@ -150,4 +150,20 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
 
     expect(server.calls.filter((call) => call.path === '/api/admin/alerts/review')).toHaveLength(1);
   });
+
+  it('ยกเลิก waits for the answer: one request even after pressing it and opening the form again', async () => {
+    const server = serve({ 'POST /api/admin/alerts/review': () => new Promise(() => {}) });
+    const { user } = await renderApp('/admin/alerts');
+    const item = await screen.findByRole('article', { name: 'ลงเวลาไกลจากป้าย · แม่บ้านทดสอบ' });
+    await user.click(within(item).getByRole('button', { name: 'คุยแล้ว ปิดเตือน' }));
+
+    await user.click(within(item).getByRole('button', { name: 'ยืนยันปิดเตือน' }));
+
+    const cancel = within(item).getByRole('button', { name: 'ยกเลิก' });
+    await waitFor(() => expect(cancel).toBeDisabled());
+    await user.click(cancel);
+    expect(within(item).getByRole('button', { name: 'ยืนยันปิดเตือน' })).toBeDisabled();
+    expect(within(item).queryByRole('button', { name: 'คุยแล้ว ปิดเตือน' })).not.toBeInTheDocument();
+    expect(server.calls.filter((call) => call.path === '/api/admin/alerts/review')).toHaveLength(1);
+  });
 });

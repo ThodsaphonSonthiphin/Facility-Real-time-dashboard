@@ -115,7 +115,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
         <button type="button" className="app-button app-button--primary" disabled={isLoading} onClick={() => void save()}>
           {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
         </button>
-        <button type="button" className="app-button" onClick={onCancel}>
+        <button type="button" className="app-button" disabled={isLoading} onClick={onCancel}>
           ยกเลิก
         </button>
       </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGetAlertsQuery } from '../../shared/api/alertListApi';
 import { useGetAttendanceBoardQuery } from '../../shared/api/attendanceBoardApi';
 import { livePoll } from '../../shared/api/baseApi';
+import type { Shift } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { AlertItem, type Notice } from './AlertItem';
 import { alertGroupLabel, filterAlerts, type AlertGroup, type ReviewTab } from './alertRules';
@@ -23,12 +24,20 @@ export function AlertsPage() {
   const [tab, setTab] = useState<ReviewTab>('open');
   const [group, setGroup] = useState<AlertGroup>('all');
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [coverAreaId, setCoverAreaId] = useState<number | null>(null);
+  // The Area and the slot the cover form was opened for: a board of another shift closes it
+  const [cover, setCover] = useState<{ areaId: number; shiftDate: string; shift: Shift } | null>(null);
+  const boardNow = board.data;
   const list = alerts.data ?? [];
   const openCount = list.filter((alert) => !alert.reviewed).length;
   const shown = filterAlerts(list, tab, group);
   // The form closes by itself once the Area has someone (a cover made here or elsewhere)
-  const coverRow = board.data?.rows.find((row) => row.areaId === coverAreaId && row.state === 'Empty');
+  if (cover && board.data && (board.data.shiftDate !== cover.shiftDate || board.data.shift !== cover.shift)) {
+    setCover(null);
+  }
+  const coverRow = cover ? board.data?.rows.find((row) => row.areaId === cover.areaId && row.state === 'Empty') : undefined;
+  // Closes only the form the send belongs to: the Admin may have opened another since
+  const closeCover = (areaId: number, shiftDate: string, shift: Shift) =>
+    setCover((current) => (current && current.areaId === areaId && current.shiftDate === shiftDate && current.shift === shift ? null : current));
   const tabs: { tab: ReviewTab; label: string }[] = [
     { tab: 'open', label: `ยังไม่ได้คุย (${openCount})` },
     { tab: 'reviewed', label: `คุยแล้ว (${list.length - openCount})` },
@@ -55,19 +64,21 @@ export function AlertsPage() {
         chosen={coverRow ? coverRow.areaId : null}
         onChoose={(areaId) => {
           setNotice(null);
-          setCoverAreaId(areaId);
+          if (board.data) {
+            setCover({ areaId, shiftDate: board.data.shiftDate, shift: board.data.shift });
+          }
         }}
       >
-        {board.data && coverRow && (
+        {boardNow && coverRow && (
           <CoverForm
-            key={coverRow.areaId}
-            board={board.data}
+            key={`${boardNow.shiftDate}:${boardNow.shift}:${coverRow.areaId}`}
+            board={boardNow}
             row={coverRow}
             onDone={(text) => {
               setNotice({ kind: 'ok', text });
-              setCoverAreaId(null);
+              closeCover(coverRow.areaId, boardNow.shiftDate, boardNow.shift);
             }}
-            onCancel={() => setCoverAreaId(null)}
+            onCancel={() => closeCover(coverRow.areaId, boardNow.shiftDate, boardNow.shift)}
           />
         )}
       </EmptyAreas>

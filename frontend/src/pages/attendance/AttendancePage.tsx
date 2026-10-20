@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
   attendanceHubKey,
@@ -8,7 +8,7 @@ import {
   type BoardSummary,
 } from '../../shared/api/attendanceBoardApi';
 import { livePoll } from '../../shared/api/baseApi';
-import type { AttendanceEvent } from '../../shared/api/types';
+import type { AttendanceEvent, Shift } from '../../shared/api/types';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
@@ -19,8 +19,10 @@ import { CorrectionForm } from './CorrectionForm';
 import { readBoardArgs, readFill, searchRows, toBoardParams } from './attendanceRules';
 import './attendance.css';
 
-/** The row whose form is open, and the event it opens on. */
-type Editing = { areaId: number; event?: AttendanceEvent };
+/** The row whose form is open, the event it opens on, and the slot and Cleaner it was opened for. */
+type Editing = { areaId: number; event?: AttendanceEvent; shiftDate: string; shift: Shift; userId: number };
+
+const formKey = (form: Editing) => `${form.areaId}:${form.event ?? ''}:${form.shiftDate}:${form.shift}:${form.userId}`;
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
 
@@ -41,12 +43,33 @@ export function AttendancePage() {
 
   // From an alert's "เติมเวลา…" link (plan 11 decision 9): the form opens on that Cleaner once the board is in
   const fillRow = fill && board ? board.rows.find((row) => row.cleaner?.id === fill.userId) : undefined;
-  const open: Editing | null = editing ?? (fillRow ? { areaId: fillRow.areaId, event: fill?.event } : null);
-  const openRow = open && board ? board.rows.find((row) => row.areaId === open.areaId) : undefined;
 
-  const closeForm = () => {
+  // A form opened by hand belongs to the slot and Cleaner it was opened for: when the board under it changes, it closes
+  const openRow = editing && board ? board.rows.find((row) => row.areaId === editing.areaId) : undefined;
+  if (
+    editing &&
+    board &&
+    (board.shiftDate !== editing.shiftDate || board.shift !== editing.shift || openRow?.cleaner?.id !== editing.userId)
+  ) {
     setEditing(null);
-    if (fill) {
+    setNotice({ kind: 'ok', text: 'กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน' });
+  }
+  const open: Editing | null =
+    editing ??
+    (fillRow?.cleaner && board
+      ? { areaId: fillRow.areaId, event: fill?.event, shiftDate: board.shiftDate, shift: board.shift, userId: fillRow.cleaner.id }
+      : null);
+  const formRow = open && board ? board.rows.find((row) => row.areaId === open.areaId) : undefined;
+  const openKey = open ? formKey(open) : null;
+  const openKeyRef = useRef(openKey);
+  useEffect(() => {
+    openKeyRef.current = openKey;
+  }, [openKey]);
+
+  // Closes only the form the send belongs to: the Admin may have opened another since
+  const closeForm = (key: string) => {
+    setEditing((current) => (current && formKey(current) === key ? null : current));
+    if (fill && openKeyRef.current === key) {
       go(args); // the link's fill and event go, so the form does not open again
     }
   };
@@ -89,25 +112,27 @@ export function AttendancePage() {
       {board && (
         <>
           <Tiles summary={board.summary} />
-          {openRow?.cleaner && (
+          {open && openKey && formRow?.cleaner && (
             <CorrectionForm
-              key={`${openRow.areaId}:${open?.event ?? ''}`}
+              key={openKey}
               board={board}
-              row={openRow}
-              cleaner={openRow.cleaner}
-              initialEvent={open?.event}
+              row={formRow}
+              cleaner={formRow.cleaner}
+              initialEvent={open.event}
               onDone={(text) => {
                 setNotice({ kind: 'ok', text });
-                closeForm();
+                closeForm(openKey);
               }}
-              onCancel={closeForm}
+              onCancel={() => closeForm(openKey)}
             />
           )}
           <AttendanceTable
             rows={searchRows(board.rows, search)}
             onCorrect={(row) => {
               setNotice(null);
-              setEditing({ areaId: row.areaId });
+              if (board && row.cleaner) {
+                setEditing({ areaId: row.areaId, shiftDate: board.shiftDate, shift: board.shift, userId: row.cleaner.id });
+              }
             }}
           />
         </>

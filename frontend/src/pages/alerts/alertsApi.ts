@@ -1,4 +1,5 @@
 import type { AlertKind } from '../../shared/api/alertListApi';
+import { boardTag } from '../../shared/api/attendanceBoardApi';
 import { baseApi } from '../../shared/api/baseApi';
 import type { Shift } from '../../shared/api/types';
 
@@ -54,13 +55,13 @@ const alertsApi = baseApi.injectEndpoints({
       query: (body) => ({ url: '/admin/alerts/review', method: 'POST', body }),
       invalidatesTags: ['Alerts'],
     }),
-    /** Changes with every check-in and cover, so it follows the board's tag. */
+    /** Changes with every check-in and cover, so it follows the board's tag for its shift: the hub invalidates that one. */
     getCoverCandidates: build.query<CoverCandidate[], { areaId: number; shiftDate: string; shift: Shift }>({
       query: ({ areaId, shiftDate, shift }) => ({
         url: '/admin/cover-assignments/candidates',
         params: { areaId, shiftDate, shift },
       }),
-      providesTags: ['AttendanceBoard'],
+      providesTags: (_result, _error, { shiftDate, shift }) => [boardTag(shiftDate, shift)],
     }),
     assignCover: build.mutation<CoverAssignment, AssignCoverRequest>({
       query: (body) => ({ url: '/admin/cover-assignments', method: 'POST', body }),

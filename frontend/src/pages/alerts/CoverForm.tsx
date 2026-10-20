@@ -86,7 +86,7 @@ export function CoverForm({ board, row, onDone, onCancel }: CoverFormProps) {
         >
           ยืนยันมอบหมาย
         </button>
-        <button type="button" className="app-button" onClick={onCancel}>
+        <button type="button" className="app-button" disabled={isLoading} onClick={onCancel}>
           ยกเลิก
         </button>
       </div>
