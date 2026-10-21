@@ -6,7 +6,7 @@ import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { thaiToday } from '../../shared/utils/thaiTime';
 import { HistoryControls } from './HistoryControls';
 import { useGetAuditActorsQuery, useGetAuditLogInfiniteQuery, type HistoryArgs } from './historyApi';
-import { HISTORY_MAX_DAYS, readHistoryArgs, toHistoryParams } from './historyRules';
+import { HISTORY_MAX_DAYS, readHistoryArgs, searchEntries, toHistoryParams } from './historyRules';
 import { HistoryTable } from './HistoryTable';
 import './history.css';
 
@@ -23,6 +23,7 @@ export function HistoryPage() {
   const asked = args.from && args.to ? { from: args.from, to: args.to } : undefined;
   const [texts, setTexts] = useState(() => rangeTexts(asked ?? lastSevenDays(thaiToday())));
   const [problem, setProblem] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   // the fields follow the address when it changes under the open page (menu link, Back)
   const rangeKey = asked ? `${asked.from}_${asked.to}` : '';
   const [seenRange, setSeenRange] = useState(rangeKey);
@@ -32,6 +33,7 @@ export function HistoryPage() {
     setProblem(null);
   }
   const entries = log.currentData?.pages.flatMap((page) => page.entries) ?? [];
+  const shown = searchEntries(entries, search);
   const go = (next: HistoryArgs) => setParams(toHistoryParams(next));
 
   const show = () => {
@@ -50,7 +52,16 @@ export function HistoryPage() {
         <span className="app-muted">Admin เท่านั้น · อ่านอย่างเดียว</span>
         <h1>ประวัติการเปลี่ยนแปลงของ Admin</h1>
       </header>
-      <HistoryControls args={args} actors={actors} texts={texts} onTexts={setTexts} onShow={show} onArgs={go} />
+      <HistoryControls
+        args={args}
+        actors={actors}
+        texts={texts}
+        onTexts={setTexts}
+        onShow={show}
+        onArgs={go}
+        search={search}
+        onSearch={setSearch}
+      />
       {problem && (
         <p className="app-note app-note--error" role="alert">
           {problem}
@@ -64,9 +75,16 @@ export function HistoryPage() {
       )}
       {log.currentData && (
         <>
-          <HistoryTable entries={entries} emptyText="ไม่มีประวัติในช่วงนี้" />
+          <HistoryTable
+            entries={shown}
+            emptyText={entries.length > 0 ? 'ไม่พบรายการที่ตรงกับที่ค้นหา' : 'ไม่มีประวัติในช่วงนี้'}
+          />
           <div className="history-more">
-            <span className="app-muted">{`แสดง ${entries.length} รายการ`}</span>
+            <span className="app-muted">
+              {shown.length === entries.length
+                ? `แสดง ${entries.length} รายการ`
+                : `แสดง ${shown.length} จาก ${entries.length} รายการที่โหลดแล้ว`}
+            </span>
             {log.hasNextPage && (
               <button
                 type="button"

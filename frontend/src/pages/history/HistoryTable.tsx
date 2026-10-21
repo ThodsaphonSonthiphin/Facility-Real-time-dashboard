@@ -1,6 +1,6 @@
 import { formatDayTime } from '../../shared/utils/thaiTime';
 import type { AuditEntry } from './historyApi';
-import { actionText } from './historyRules';
+import { actionText, changeLines } from './historyRules';
 
 interface HistoryTableProps {
   entries: AuditEntry[];
@@ -22,6 +22,7 @@ export function HistoryTable({ entries, emptyText }: HistoryTableProps) {
             <th scope="col">ผู้ทำ</th>
             <th scope="col">ประเภท</th>
             <th scope="col">รายการที่ถูกแก้</th>
+            <th scope="col">ก่อน → หลัง</th>
             <th scope="col">เหตุผล</th>
           </tr>
         </thead>
@@ -34,11 +35,28 @@ export function HistoryTable({ entries, emptyText }: HistoryTableProps) {
                 <strong>{actionText(entry.action)}</strong>
               </td>
               <td>{entry.summary}</td>
+              <td>
+                <Changes entry={entry} />
+              </td>
               <td className="history-reason">{entry.reason ?? '–'}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function Changes({ entry }: { entry: AuditEntry }) {
+  const lines = changeLines(entry);
+  if (lines.length === 0) {
+    return <>–</>;
+  }
+  return (
+    <ul className="history-changes">
+      {lines.map((line) => (
+        <li key={line}>{line}</li>
+      ))}
+    </ul>
   );
 }

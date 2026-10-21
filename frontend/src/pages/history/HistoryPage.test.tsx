@@ -74,7 +74,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
   });
 
   it('an empty last page (rows exactly filled the page before) adds nothing and the button goes', async () => {
-    serve({
+    const server = serve({
       'GET /api/admin/audit-log': (request) => ({
         status: 200,
         body: query(request.search).beforeId === '46' ? { entries: [] } : firstPage,
@@ -85,6 +85,8 @@ describe('HistoryPage (D9, facility-0057)', () => {
 
     await user.click(screen.getByRole('button', { name: 'โหลดรายการเก่ากว่านี้' }));
 
+    await waitFor(() => expect(logGets(server)).toHaveLength(2));
+    await waitFor(() => expect(screen.queryByText('กำลังโหลด...')).not.toBeInTheDocument());
     await waitFor(() => expect(screen.queryByRole('button', { name: 'โหลดรายการเก่ากว่านี้' })).not.toBeInTheDocument());
     expect(screen.getByText('แสดง 5 รายการ')).toBeInTheDocument();
   });
@@ -95,6 +97,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
     await screen.findByRole('option', { name: 'ผู้ดูแลคนที่สอง' });
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'ประเภท' }), 'แก้การลงเวลา');
+    await waitFor(() => expect(router.state.location.search).toBe('?category=Attendance'));
     await user.selectOptions(screen.getByRole('combobox', { name: 'ผู้ทำ' }), 'ผู้ดูแลคนที่สอง');
 
     await waitFor(() => expect(router.state.location.search).toBe('?actor=8&category=Attendance'));
@@ -166,5 +169,40 @@ describe('HistoryPage (D9, facility-0057)', () => {
 
     await waitFor(() => expect(fromField()).toHaveValue(formatShiftDate(addDays(thaiToday(), -6))));
     expect(toField()).toHaveValue(formatShiftDate(thaiToday()));
+  });
+
+  it('"ก่อน → หลัง" lists each change, and never a phone number (facility-0057)', async () => {
+    serve();
+    await renderApp('/admin/history');
+    await screen.findByText('แสดง 5 รายการ');
+
+    expect(screen.getByRole('columnheader', { name: 'ก่อน → หลัง' })).toBeInTheDocument();
+    const changes = rows().map((cells) => cells[4]);
+    expect(within(changes[0]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'รายการ: – → เข้างาน',
+      'เวลา: – → 15/10 06:58',
+      'ที่มา: – → Admin เพิ่ม',
+    ]);
+    expect(within(changes[2]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'คุยแล้ว: ไม่ใช่ → ใช่',
+      'ประเภทเตือน: – → ลงเวลาไกลจากป้าย',
+    ]);
+    expect(changes[3]).toHaveTextContent('เบอร์เดิม → เบอร์ใหม่ (ไม่แสดงเบอร์)');
+  });
+
+  it('search narrows the rows already loaded, and says when none match', async () => {
+    serve();
+    const { user } = await renderApp('/admin/history');
+    await screen.findByText('แสดง 5 รายการ');
+    const search = screen.getByRole('searchbox', { name: 'ค้นหา' });
+
+    await user.type(search, 'แม่บ้านที่อื่น');
+    expect(mainCells().map((cells) => cells[2])).toEqual(['มอบหมายทำแทน']);
+    expect(screen.getByText('แสดง 1 จาก 5 รายการที่โหลดแล้ว')).toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, 'ไม่มีคำนี้');
+    expect(screen.getByText('ไม่พบรายการที่ตรงกับที่ค้นหา')).toBeInTheDocument();
+    expect(screen.getByText('ค้นหาเฉพาะรายการที่โหลดแล้ว')).toBeInTheDocument();
   });
 });

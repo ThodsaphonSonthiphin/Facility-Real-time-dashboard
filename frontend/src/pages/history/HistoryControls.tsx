@@ -12,10 +12,12 @@ interface HistoryControlsProps {
   onShow: () => void;
   /** The actor or type changed: ask at once. */
   onArgs: (next: HistoryArgs) => void;
+  search: string;
+  onSearch: (text: string) => void;
 }
 
 /** Wireframe D9's filters: the range (typed), ผู้ทำ and ประเภท (facility-0057 rule 2). */
-export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs }: HistoryControlsProps) {
+export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, search, onSearch }: HistoryControlsProps) {
   return (
     <div className="history-controls">
       <RangeFields value={texts} onChange={onTexts} onEnter={onShow} />
@@ -54,6 +56,19 @@ export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs }
           ))}
         </select>
       </label>
+      <div className="history-search-field">
+        <label className="app-field">
+          ค้นหา
+          <input
+            className="app-input history-search"
+            type="search"
+            value={search}
+            placeholder="ค้นหาชื่อคน จุด หรือรหัส"
+            onChange={(event) => onSearch(event.target.value)}
+          />
+        </label>
+        <span className="app-field__help">ค้นหาเฉพาะรายการที่โหลดแล้ว</span>
+      </div>
     </div>
   );
 }

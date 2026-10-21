@@ -1,5 +1,7 @@
 import { readRange, toRangeParams } from '../../shared/utils/dateRange';
-import type { AuditCategory, HistoryArgs } from './historyApi';
+import { eventLabel, shiftPatternLabel, shiftShortLabel } from '../../shared/utils/labels';
+import { formatDayTime, formatShiftDate } from '../../shared/utils/thaiTime';
+import type { AuditCategory, AuditEntry, HistoryArgs } from './historyApi';
 
 /** AdminAuditLogEndpoints: maxDays 92. */
 export const HISTORY_MAX_DAYS = 92;
@@ -80,4 +82,140 @@ export function toHistoryParams({ from, to, actorId, category }: HistoryArgs): U
     params.set('category', category);
   }
   return params;
+}
+
+/** facility-0057: these actions store nothing about the secret; the line says what changed without it. */
+const secretChange: Record<string, string> = {
+  ACCOUNT_PHONE: 'เบอร์เดิม → เบอร์ใหม่ (ไม่แสดงเบอร์)',
+  ACCOUNT_PASSWORD: 'รหัสผ่านเดิม → รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)',
+};
+
+/** Snapshot fields in Thai (the AuditTrail.Add calls). Ids stay numbers: snapshots keep ids, not names, on purpose. */
+const fieldLabel: Record<string, string> = {
+  EventType: 'รายการ',
+  OccurredAt: 'เวลา',
+  Source: 'ที่มา',
+  Reviewed: 'คุยแล้ว',
+  AlertType: 'ประเภทเตือน',
+  IsActive: 'เปิดใช้งาน',
+  Name: 'ชื่อ',
+  RoundWindows: 'ช่วงรอบ',
+  RadiusM: 'รัศมี (ม.)',
+  QrIssuedAt: 'ออก QR',
+  Latitude: 'ละติจูด',
+  Longitude: 'ลองจิจูด',
+  LocationAccuracyM: 'ความแม่นยำ (ม.)',
+  LocationSource: 'ที่มาของพิกัด',
+  Role: 'บทบาท',
+  LoginName: 'ชื่อเข้าระบบ',
+  DisplayName: 'ชื่อที่แสดง',
+  AreaId: 'Area (รหัสในระบบ)',
+  BuildingId: 'ตึก (รหัสในระบบ)',
+  Shift: 'กะ',
+  Code: 'รหัส',
+  ShiftPattern: 'กะของ Area',
+  DayCleanerId: 'แม่บ้านกะเช้า (รหัสในระบบ)',
+  NightCleanerId: 'แม่บ้านกะดึก (รหัสในระบบ)',
+  RemovedNightWindows: 'รอบกะดึกที่ถูกลบ',
+  UserId: 'คนทำแทน (รหัสในระบบ)',
+  ShiftDate: 'วันที่ของกะ',
+  BlockedScanId: 'สแกนที่ถูกบล็อก (รหัสในระบบ)',
+  cancelled: 'ยกเลิกแล้ว',
+  alsoCancelled: 'ยกเลิกพร้อมกัน (รหัสในระบบ)',
+  From: 'ตั้งแต่',
+  To: 'ถึง',
+  Sets: 'ชุดข้อมูล',
+  Rows: 'จำนวนแถว',
+};
+
+/** Enum values in Thai, by field. */
+const valueLabel: Record<string, Record<string, string>> = {
+  EventType: eventLabel,
+  Source: { Scan: 'สแกนเอง', AdminAdd: 'Admin เพิ่ม', AdminEdit: 'แก้โดย Admin' },
+  Shift: shiftShortLabel,
+  Role: { Cleaner: 'แม่บ้าน', Supervisor: 'หัวหน้า', Admin: 'Admin' },
+  LocationSource: { Site: 'หน้างาน', Map: 'แผนที่' },
+  ShiftPattern: shiftPatternLabel,
+  AlertType: {
+    AttendanceGps: 'ลงเวลาไกลจากป้าย',
+    SubmissionGps: 'ส่งงานไกลจากป้าย',
+    BlockedScan: 'สแกนที่ถูกบล็อก',
+    InspectionGps: 'ตรวจงานไกลจากป้าย',
+  },
+  Sets: { Attendance: 'การลงเวลา', Submissions: 'การส่งงาน', Inspections: 'การตรวจงาน' },
+};
+
+/** AREA_UPDATE always stores how many night windows went; 0 is "none", like the null before it. */
+const ZERO_IS_NONE = new Set(['RemovedNightWindows']);
+
+const MOMENT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?Z$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function valueText(field: string, value: unknown): string {
+  if (value == null) {
+    return '–';
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0 ? '–' : value.map((item) => valueText(field, item)).join(', ');
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'ใช่' : 'ไม่ใช่';
+  }
+  if (typeof value === 'number') {
+    return value === 0 && ZERO_IS_NONE.has(field) ? '–' : String(value);
+  }
+  if (typeof value === 'string') {
+    const labels = valueLabel[field];
+    if (labels && Object.hasOwn(labels, value)) {
+      return labels[value];
+    }
+    if (field === 'RoundWindows') {
+      return value.replace(/^DAY /, 'เช้า ').replace(/^NIGHT /, 'ดึก ');
+    }
+    if (MOMENT.test(value)) {
+      return formatDayTime(value);
+    }
+    return DATE.test(value) ? formatShiftDate(value) : value;
+  }
+  return JSON.stringify(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Wireframe D9's "ก่อน → หลัง" (plan 12 decision 8): one "label: before → after" line per field that shows
+ * differently on the two sides, in the order the snapshots list them. An unknown field shows its key.
+ */
+export function changeLines({ action, before, after }: Pick<AuditEntry, 'action' | 'before' | 'after'>): string[] {
+  if (Object.hasOwn(secretChange, action)) {
+    return [secretChange[action]];
+  }
+  if (before == null && after == null) {
+    return [];
+  }
+  const was = before ?? {};
+  const now = after ?? {};
+  if (!isRecord(was) || !isRecord(now)) {
+    return [`${valueText('', before)} → ${valueText('', after)}`];
+  }
+  const fields = [...new Set([...Object.keys(was), ...Object.keys(now)])];
+  return fields
+    .map((field) => ({ field, from: valueText(field, was[field]), to: valueText(field, now[field]) }))
+    .filter((change) => change.from !== change.to)
+    .map((change) => `${Object.hasOwn(fieldLabel, change.field) ? fieldLabel[change.field] : change.field}: ${change.from} → ${change.to}`);
+}
+
+/** The search box (plan 12 decision 7): the rows already loaded whose summary, actor, reason or type matches. */
+export function searchEntries(entries: readonly AuditEntry[], search: string): AuditEntry[] {
+  const text = search.trim().toLowerCase();
+  if (text === '') {
+    return [...entries];
+  }
+  return entries.filter((entry) =>
+    [entry.summary, entry.actorName, entry.reason, actionText(entry.action)].some((value) =>
+      value?.toLowerCase().includes(text),
+    ),
+  );
 }

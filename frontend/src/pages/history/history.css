@@ -28,6 +28,21 @@
   color: var(--color-text-soft);
 }
 
+.history-changes {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.history-search {
+  width: 240px;
+}
+
+.history-search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .history-more {
   display: flex;
   flex-wrap: wrap;
