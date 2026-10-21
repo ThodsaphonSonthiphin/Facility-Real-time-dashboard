@@ -48,7 +48,7 @@ flowchart LR
 Why the proxy matters: the browser only ever talks to one origin (`:5173`).
 So the refresh-token cookie works without CORS settings, and the URL inside the QR code is the Vite URL ([facility-0004](adr/facility-0004-app-architecture.md) item 5).
 
-In production the Vite server is not used: `npm run build:api` puts the built app in the API's `wwwroot`, and the API serves it from the same origin, with `index.html` for every page path outside `/api` and `/hubs` ([facility-0067](adr/facility-0067-api-serves-frontend-from-one-origin.md)). The Supervisor's My Building page opens the SignalR hub (plan 9, `shared/api/scanHub.ts`); the Admin Dashboard adds it in plan 11.
+In production the Vite server is not used: `npm run build:api` puts the built app in the API's `wwwroot`, and the API serves it from the same origin, with `index.html` for every page path outside `/api` and `/hubs` ([facility-0067](adr/facility-0067-api-serves-frontend-from-one-origin.md)). The Supervisor's My Building page opens the SignalR hub (plan 9, `shared/api/scanHub.ts`); the Admin's Dashboard and attendance board open it too (plan 11). Admin pages are separate files, loaded the first time an Admin opens them (lazy routes, [facility-0062](adr/facility-0062-phone-bundle-budget-200kb-gzip.md)), so phones never download them.
 
 ---
 
@@ -110,8 +110,8 @@ flowchart LR
 flowchart TB
     subgraph FE["Frontend — frontend/src (React 19 + TypeScript, tree of facility-0025)"]
         AppF["main.tsx · App.tsx · router.tsx<br/>store, page-load refresh, createBrowserRouter"]
-        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · inspect (M6, M7, M16) · my-building (M15) · dashboard · areas (D4) · area-form (D10) · capture (M17) · print-signs (D5) · accounts (D6)<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css"]
-        Store["store/<br/>authSlice: user + access token in memory<br/>hubSlice: scan hub live or not"]
+        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · inspect (M6, M7, M16) · my-building (M15) · dashboard (D1) · attendance (D2) · alerts (D3) · areas (D4) · area-form (D10) · capture (M17) · print-signs (D5) · accounts (D6)<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css<br/>Admin pages are lazy routes (own files)"]
+        Store["store/<br/>authSlice: user + access token in memory<br/>hubSlice: each hub connection live or not<br/>dashboardSlice: Dashboard filters"]
         BaseApi["shared/api/baseApi.ts<br/>RTK Query, Bearer header,<br/>401 → one shared refresh → retry"]
         Session["shared/auth<br/>session.ts (refresh, single-flight)<br/>endSession.ts (logout)"]
         Guard["shared/components<br/>ProtectedRoute (role), AppLayout + AdminNav,<br/>StatusScreen, CrashScreen"]
@@ -150,9 +150,9 @@ flowchart TB
     Session --> Store
     Session -->|"POST /api/auth/refresh | logout<br/>(cookie facility_refresh)"| AuthEp
     BaseApi -->|"/api/auth/login and /api/*<br/>Authorization: Bearer"| Ep
-    Pages -->|"my-building: onCacheEntryAdded"| HubF
+    Pages -->|"my-building, dashboard, attendance board: onCacheEntryAdded"| HubF
     HubF --> Session
-    HubF -->|"/hubs/scan?access_token=<br/>ScanRecorded, InspectionRecorded"| Hub
+    HubF -->|"/hubs/scan?access_token=<br/>ScanRecorded, InspectionRecorded<br/>AttendanceRecorded (Admins)"| Hub
 
     Ep --> Status
     Ep --> Ctx
@@ -183,7 +183,7 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
-> Note (plan 7, updated in plan 8): the phone side of section 3 is plan 8's `pages/scan`. Sections 3 and 4 still draw the phase-1 frontend files `DashboardView`, `authSession.ts` and `services/signalr.ts`, which plan 7 replaced. Login and refresh now live in `shared/auth/session.ts` and `pages/auth/`; plan 11 redraws the live-update flow (sections 3 and 4 still show the phase-1 client). Plan 9's Supervisor live updates are in the section 2 diagram.
+> Note (plan 11): the phone side is plan 8's `pages/scan`; the Admin side is `pages/dashboard`, whose `getServicePoints` cache entry follows the hub with `followScanHub`. Plan 9's Supervisor live updates and plan 11's attendance board are in the section 2 diagram.
 
 This is the main flow: a Cleaner submits a Scan Record and the Admin Dashboard updates.
 
@@ -196,7 +196,7 @@ sequenceDiagram
     participant Api as API :5001<br/>(Endpoints/*)
     participant DB as MySQL
     participant Hub as ScanHub<br/>/hubs/scan
-    participant Dash as Dashboard browser<br/>(DashboardView)
+    participant Dash as Admin browser<br/>(pages/dashboard, getServicePoints cache)
 
     Note over Dash,Hub: Earlier: an Admin opened the Dashboard; its WebSocket to /hubs/scan<br/>(?access_token=<JWT>) joined the "admins" group (facility-0058)
 
@@ -232,7 +232,8 @@ sequenceDiagram
     Note right of Hub: Sent for the Dashboard's running shift (ShiftCalendar), not the Cleaner's attendance slot
     Note right of Hub: PointNotifications also sends the same event to the building's Supervisors by account id (Clients.Users)
     Hub-->>Dash: "ScanRecorded" (WebSocket push)
-    Dash->>Dash: Update the card and KPI bar, no page reload
+    Dash->>Dash: followScanHub hands the card to the cache entry, updateCachedData replaces that point's card, no page reload (a point not on the page: GET /api/service-points again)
+    Note over Dash: Every open, every 30 s and on window focus the Dashboard asks GET /api/service-points again (facility-0061), and after every hub start or reconnect (facility-0064)
     Api-->>Phone: 201 Created { scanRecordId, placement, lateMinutes, newPointStatus, submittedAt,<br/>distanceM, withinRadius }
 ```
 
@@ -247,7 +248,7 @@ that the browser sends only to `/api/auth` ([facility-0011](adr/facility-0011-jw
 sequenceDiagram
     autonumber
     actor User
-    participant FE as Browser<br/>(authSession.ts)
+    participant FE as Browser<br/>(shared/auth/session.ts, baseApi)
     participant Auth as API /api/auth
     participant DB as MySQL
     participant Api as API /api/* or /hubs/scan

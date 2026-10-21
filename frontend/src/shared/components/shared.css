@@ -257,6 +257,16 @@
   font-size: 15px;
 }
 
+/* A wide table scrolls sideways inside this box on a narrow screen instead of pushing the page wider */
+.app-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.app-table-scroll .app-table {
+  min-width: 720px;
+}
+
 .app-table {
   width: 100%;
   border-collapse: collapse;
@@ -319,6 +329,38 @@
 .app-confirm__buttons {
   display: flex;
   gap: 8px;
+}
+
+.app-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-warn-border);
+  border-radius: 999px;
+  background: var(--color-warn-bg);
+  color: var(--color-warn-text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.app-live::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-status-overdue);
+}
+
+.app-live--on {
+  border-color: var(--color-info-border);
+  background: var(--color-info-bg);
+  color: var(--color-status-passed);
+}
+
+.app-live--on::before {
+  background: var(--color-status-passed);
 }
 
 @media print {

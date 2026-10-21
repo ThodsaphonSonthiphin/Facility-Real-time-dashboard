@@ -24,6 +24,29 @@ export function formatDate(moment: string | Date): string {
   return thaiDate.format(typeof moment === 'string' ? new Date(moment) : moment);
 }
 
+/** A shift date from the server ("2026-10-15", already a Thai calendar date) as "15/10/2026". */
+export function formatShiftDate(date: string): string {
+  const [year, month, day] = date.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+/** A moment as Thai "15/10 09:10", for lists that cover more than one day (the alert list, wireframe D3). */
+export function formatDayTime(moment: string | Date): string {
+  return `${formatDate(moment).slice(0, 5)} ${formatTime(moment)}`;
+}
+
+/** A date typed as "15/10/2026", as the server's "2026-10-15"; null when it is not a real date in that form. */
+export function parseShiftDate(text: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim());
+  if (!match) {
+    return null;
+  }
+  const [, day, month, year] = match;
+  const iso = `${year}-${month}-${day}`;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return date.toISOString().slice(0, 10) === iso ? iso : null;
+}
+
 /** A Round Window time ("HH:mm:ss") is already Thai wall-clock (RoundWindowDto); only the seconds go. */
 export function formatClock(time: string): string {
   return time.slice(0, 5);

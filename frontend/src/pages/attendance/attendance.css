@@ -1,0 +1,161 @@
+/* Attendance (D2). Class prefix: attendance- */
+
+.attendance-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.attendance-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.attendance-heading h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.attendance-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.attendance-control {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.attendance-shifts {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.attendance-shift {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.attendance-shift[aria-pressed='true'] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-weight: 600;
+}
+
+.attendance-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attendance-tile {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+
+.attendance-tile strong {
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.attendance-tile--warn {
+  border: 2px solid var(--color-status-rework);
+  background: var(--color-error-bg);
+}
+
+.attendance-tile--warn strong {
+  color: var(--color-status-rework);
+}
+
+.attendance-row--empty th,
+.attendance-row--empty td {
+  background: var(--color-error-bg);
+}
+
+.attendance-sub {
+  display: block;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.attendance-who {
+  display: flex;
+  flex-direction: column;
+}
+
+.attendance-state {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-status-idle);
+  color: var(--color-on-primary);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.attendance-state--Empty {
+  background: var(--color-status-rework);
+}
+
+.attendance-state--Working {
+  background: var(--color-status-passed);
+}
+
+.attendance-state--Covered {
+  background: var(--color-status-pending);
+}
+
+.attendance-state--OnBreak {
+  background: var(--color-status-break);
+}
+
+.attendance-badge {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warn-bg);
+  color: var(--color-warn-text);
+  font-size: 12px;
+}
+
+.attendance-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.attendance-form {
+  max-width: 640px;
+}
+
+.attendance-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}

@@ -1,7 +1,7 @@
 import { HubConnectionBuilder } from '@microsoft/signalr';
 import type { Dispatch } from '@reduxjs/toolkit';
-import { hubStatusChanged } from '../../store/slices/hubSlice';
-import type { PointCard } from './types';
+import { hubFollowEnded, hubStatusChanged, type HubStatus } from '../../store/slices/hubSlice';
+import type { AttendanceChanged, PointCard } from './types';
 
 /** facility-0064: the automatic reconnect's waits; after it gives up, a fresh start every 3 s. */
 export const HUB_RETRY_DELAYS_MS = [0, 2_000, 5_000, 10_000, 30_000];
@@ -11,13 +11,18 @@ export const HUB_RESTART_MS = 3_000;
 const POINT_EVENTS = ['ScanRecorded', 'InspectionRecorded'] as const;
 
 export interface ScanHubFollow {
+  /** This connection's name in hubSlice (plan 11 decision 4); the page's badge or footer reads the same key. */
+  key: string;
   /** From onCacheEntryAdded: connect once the first answer is in, stop when the entry goes. */
   cacheDataLoaded: Promise<unknown>;
   cacheEntryRemoved: Promise<unknown>;
   dispatch: Dispatch;
   /** Asked on every connect and reconnect (facility-0023 item 3). */
   accessToken: () => Promise<string>;
-  onPoint: (point: PointCard) => void;
+  /** ScanRecorded and InspectionRecorded; left out by a page that shows no point cards. */
+  onPoint?: (point: PointCard) => void;
+  /** AttendanceRecorded, sent to Admins only (facility-0027 rule 5); left out by a page that shows no attendance. */
+  onAttendance?: (change: AttendanceChanged) => void;
   /** Pushes may have been missed while the connection was down: ask the server again (facility-0064 item 2). */
   onMissed: () => void;
 }
@@ -27,11 +32,13 @@ export interface ScanHubFollow {
  * open a second one. The hub sends a point's whole card, so the page patches its cache instead of asking again.
  */
 export async function followScanHub({
+  key,
   cacheDataLoaded,
   cacheEntryRemoved,
   dispatch,
   accessToken,
   onPoint,
+  onAttendance,
   onMissed,
 }: ScanHubFollow): Promise<void> {
   try {
@@ -46,10 +53,11 @@ export async function followScanHub({
     .build();
   let removed = false;
   let restartTimer: ReturnType<typeof setTimeout> | undefined;
+  const setStatus = (status: HubStatus) => dispatch(hubStatusChanged({ key, status }));
 
   const restartLater = () => {
     if (!removed) {
-      dispatch(hubStatusChanged('reconnecting'));
+      setStatus('reconnecting');
       restartTimer = setTimeout(() => void start(), HUB_RESTART_MS);
     }
   };
@@ -67,25 +75,46 @@ export async function followScanHub({
       void connection.stop(); // the entry went while this start was in flight: do not leave the connection open
       return;
     }
-    dispatch(hubStatusChanged('live'));
+    setStatus('live');
     onMissed(); // every start, the first included: pushes sent between the first answer and the connection going live were missed
   };
 
-  for (const event of POINT_EVENTS) {
-    connection.on(event, (point: PointCard) => onPoint(point));
+  // Block bodies: a push expects no answer, and the client logs an Error when a handler returns one (a page's
+  // `(change) => dispatch(...)` returns the action)
+  if (onPoint) {
+    for (const event of POINT_EVENTS) {
+      connection.on(event, (point: PointCard) => {
+        onPoint(point);
+      });
+    }
   }
-  connection.onreconnecting(() => dispatch(hubStatusChanged('reconnecting')));
+  if (onAttendance) {
+    connection.on('AttendanceRecorded', (change: AttendanceChanged) => {
+      onAttendance(change);
+    });
+  }
+  // A handler for each event this follower does not take: the admins group sends all three, and the client logs a
+  // warning for every message with no handler
+  if (!onPoint) {
+    for (const event of POINT_EVENTS) {
+      connection.on(event, () => {});
+    }
+  }
+  if (!onAttendance) {
+    connection.on('AttendanceRecorded', () => {});
+  }
+  connection.onreconnecting(() => setStatus('reconnecting'));
   connection.onreconnected(() => {
-    dispatch(hubStatusChanged('live'));
+    setStatus('live');
     onMissed();
   });
   connection.onclose(restartLater);
 
-  dispatch(hubStatusChanged('connecting'));
+  setStatus('connecting');
   void start();
   await cacheEntryRemoved;
   removed = true;
   clearTimeout(restartTimer);
-  dispatch(hubStatusChanged('connecting'));
+  dispatch(hubFollowEnded(key));
   await connection.stop();
 }

@@ -1,11 +1,13 @@
 import { combineReducers, configureStore, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
 import { baseApi } from '../shared/api/baseApi';
 import { authReducer, sessionExpired, signedOut } from './slices/authSlice';
+import { dashboardReducer } from './slices/dashboardSlice';
 import { hubReducer } from './slices/hubSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
   hub: hubReducer,
+  dashboard: dashboardReducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });
 

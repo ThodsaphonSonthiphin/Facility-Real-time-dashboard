@@ -68,9 +68,18 @@ export class FakeHubConnection {
     }
   }
 
-  /** The server sends `name` with `payload` to this connection. */
+  /**
+   * The server sends `name` with `payload` to this connection. A push expects no answer: the real client logs
+   * "Result given for '<name>' method but server is not expecting a result" at Error level when a handler returns
+   * one, so here that fails the test.
+   */
   push(name: string, payload: unknown): void {
-    (this.listeners.get(name) ?? []).forEach((listener) => listener(payload));
+    (this.listeners.get(name) ?? []).forEach((listener) => {
+      const result: unknown = listener(payload);
+      if (result) {
+        throw new Error(`fake hub: the handler for ${name} returned a result; a push expects none`);
+      }
+    });
   }
 
   /** The socket dropped and the automatic reconnect began. */

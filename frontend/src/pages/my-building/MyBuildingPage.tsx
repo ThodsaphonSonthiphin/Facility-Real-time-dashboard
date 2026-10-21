@@ -3,10 +3,10 @@ import type { PointStatus } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { useAppSelector } from '../../store/hooks';
-import type { HubStatus } from '../../store/slices/hubSlice';
+import { selectHubStatus, type HubStatus } from '../../store/slices/hubSlice';
 import { BuildingCard } from './BuildingCard';
 import { inspectionOrder } from './buildingRules';
-import { useGetMyBuildingQuery, type MyBuilding } from './myBuildingApi';
+import { MY_BUILDING_HUB, useGetMyBuildingQuery, type MyBuilding } from './myBuildingApi';
 import './myBuilding.css';
 
 /** Wireframe M15's footnote "หน้านี้อัปเดตเองเมื่อแม่บ้านส่งงาน", by the hub's state (plan 9 decision 9). */
@@ -23,7 +23,7 @@ const liveLine: Record<HubStatus, string> = {
  */
 export function MyBuildingPage() {
   const { data, error, isLoading, isFetching, refetch } = useGetMyBuildingQuery(undefined, freshOnOpen);
-  const hubStatus = useAppSelector((state) => state.hub.status);
+  const hubStatus = useAppSelector(selectHubStatus(MY_BUILDING_HUB));
 
   return (
     <main className="building-page">
