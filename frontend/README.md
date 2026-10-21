@@ -23,7 +23,8 @@ src/shared/api/                          baseApi (RTK Query, livePoll), server t
                                          attendanceBoardApi (D2 and D3), alertListApi (alerts and the menu count)
 src/shared/auth/                         session refresh, logout, role homes
 src/shared/geo/                          readLocation: one fresh GPS reading per press
-src/shared/components/                   guard, layout, Admin menu, status and crash screens (class prefix app-)
+src/shared/components/                   guard, layout, Admin menu, status and crash screens, RangeFields, BuildingSelect (class prefix app-)
+src/shared/utils/                        Thai time, labels, error wording, dateRange (the report pages' date ranges)
 src/pages/<page>/                        one folder per page: Page.tsx, <page>Api.ts, <page>.css, index.ts
 src/test/                                fakeServer (fake fetch), fakeGps, fakeSignalR, fixtures, renderApp
 ```
@@ -53,3 +54,5 @@ The `@microsoft/signalr` package is replaced in every test by `src/test/fakeSign
 Made-up Admin answers (Areas, signs, points, buildings, Cleaners, accounts) are in `src/test/adminFixtures.ts`; the logged-in Admin is account 7. The capture page reads the GPS for 30 s with `watchPosition`: `fakeGpsTrack([...])` sends one reading a second, and those tests use `vi.useFakeTimers({ shouldAdvanceTime: true })`, `fireEvent` for clicks, and restore real timers in `afterEach`. The print page's "พิมพ์" is checked with `vi.spyOn(window, 'print')`.
 
 Made-up live board answers (Dashboard points, the attendance board, alerts, cover candidates) are in `src/test/liveFixtures.ts`, with `apiIdle(store)`, which waits until no request is on its way. The 30 s poll is tested with `vi.useFakeTimers({ shouldAdvanceTime: true })` started before `renderApp` and restored in `finally`, and a window focus with `setupListeners(store.dispatch)` in the test. `renderApp` waits until the router has loaded a lazy page, so the page is there when it returns.
+
+Made-up report answers (inspection summary, audit log pages, actors) are in `src/test/reportFixtures.ts`. A file answer is `{ status: 200, file: { content, type, disposition } }` in `fakeServer`. The export's download is checked with `fakeDownload()` from `src/test/fakeDownload.ts`, which records each file the page saves (`saved[i].fileName`, `saved[i].blob`). Pages that start on today's date are tested with `thaiToday()` rather than fake timers.

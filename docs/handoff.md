@@ -172,6 +172,7 @@ Plan 4 test results at merge:
 - 2026-10-21 · Task 3 done: Excel export D8 (`/admin/export`, lazy, in the menu as ส่งออก Excel): the three sets (การลงเวลา and การส่งงาน ticked by default, sent in the file's order), range typed dd/mm/yyyy with the shortcuts (1–31 dates, checked before sending), building; the file name and sheets before the download; "ดาวน์โหลด .xlsx" posts through the refresh-on-401 base query, saves the server's file under its Content-Disposition name (`exportApi`'s `queryFn` hands the Blob to `saveFile`, so it never enters the store), and is disabled while in flight. "ส่งออก Excel" links on D1, on D2 (shift date and building) and on D7 (range and building); D8 reads `?from&to&building` and re-seeds its range and building (and clears the notice) when the address changes under the open page, keeping the chosen sets. `fakeServer` answers files; `test/fakeDownload.ts` records saved files. Frontend tests 356 passed; main JS 157.25 kB gzip. Next: Task 4 (Admin history D9).
 - 2026-10-21 · Task 4 done: Admin history D9 (`/admin/history`, lazy, last in the menu as ประวัติ Admin): newest first with time, actor, the action's Thai name, the summary and the reason ("–" when none); range typed dd/mm/yyyy (92 dates at most, checked before asking), ผู้ทำ from `/audit-log/actors` and ประเภท with the wireframe's seven labels, all in the address; the typed range re-seeds from the address (and the notice clears) when it changes under the open page, as on D7 and D8; older pages with "โหลดรายการเก่ากว่านี้" (RTK Query infinite query by `beforeId`; an empty last page adds nothing and the button goes). Frontend tests 369 passed; main JS 157.35 kB gzip. Next: Task 5 (before → after, search).
 - 2026-10-21 · Task 5 done: D9's "ก่อน → หลัง": one Thai line per changed field from the stored snapshots (events, sources, shifts, roles, Area shift patterns, alert types, sets, ใช่/ไม่ใช่; times via `formatDayTime`, dates via `formatShiftDate`, round windows "เช้า 07:00-09:00"; ids stay numbers; unknown fields show their key; `RemovedNightWindows` 0 counts as none); phone and password changes say so without the value. Search over the loaded rows (summary, actor, reason, type) with "แสดง n จาก m รายการที่โหลดแล้ว". Frontend tests 375 passed. Next: Task 6 (docs, final checks, the controller's real run).
+- 2026-10-21 · Task 6 done: ADR amendments (0025 tree, 0026 routes, 0048 summary page, 0053 export page, 0057 history page, 0062 measured size 157.35 kB gzip), architecture, README, frontend README, handoff notes. Frontend 375 tests; unit 299; API 531 + 5 skipped. Next: the controller's real run, then the whole-branch review.
 
 ## Sharing a test build (colleagues on other networks)
 
@@ -190,6 +191,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 - UX fixes from the owner's real run, after plans 10 and 11 are done:
   - `/admin/accounts`, "แก้เบอร์โทร": show the current phone, then a field for the new phone.
   - `/admin/areas/:areaId`, round windows: choose the time from a list instead of typing "HH:mm". A window already added to the point cannot be picked again.
+- Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
 
 ## Owner's rules (still in force)
 
@@ -260,6 +262,7 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - Retrying POST /api/inspections writes a second Inspection Record (Passed) or gets 409 (Rework); the page must disable the button while posting.
 - Supervisors' building covers (facility-0048) can be assigned from a Blocked Scan on D3, but no endpoint lists them, so the alert page cannot show or cancel them (plan 11 decision 10).
 - From plan 3: a point can be added to a deactivated Area; two Admins editing one point at once get 500 instead of 409; the 404 tests of the sign routes are missing; removing a round window loads its Scan Records into memory.
+- D8 shows no row counts before the download; the API would need a dry-run endpoint (plan 12 decision 5).
 
 ## Notes for the frontend plan
 
@@ -283,11 +286,11 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - `PUT /api/admin/accounts/{id}` replaces every place field: leaving `areaId` out clears a Cleaner's Area, so the client sends the current `areaId` to keep it.
 - The "no Shift-Out" alert has no shift or check-in time yet for the D3 layout.
 - The attendance page does not yet return the Admin's reason to show beside "แก้โดย Admin" (D2).
-- Admin pages (plans 10 and 11): add a plan-12 page as a `lazy` route under the Admin guard in `router.tsx`, its path to the lazy-route list in `router.test.tsx`, and its link to `shared/components/AdminNav.tsx` (plan 12: สรุปการตรวจ, ส่งออก Excel, ประวัติ Admin). Admin setup data uses the `AdminSetup` tag; the live board uses `ServicePoints`, `AttendanceBoard` (one per shift) and `Alerts`. `src/test/adminFixtures.ts` and `src/test/liveFixtures.ts` have made-up Admin answers.
-- Dates for plan 12: `formatShiftDate`, `parseShiftDate` (typed dd/mm/yyyy, checked before sending) and `formatDayTime` are in `shared/utils/thaiTime.ts`. D1 and D2 have no "ส่งออก Excel" link yet; add it with D8.
+- Admin pages (plans 10–12): add a page as a `lazy` route under the Admin guard in `router.tsx`, its path to the lazy-route list in `router.test.tsx`, and its link to `shared/components/AdminNav.tsx` if it belongs in the menu. Admin setup data uses the `AdminSetup` tag; the live board uses `ServicePoints`, `AttendanceBoard` (one per shift) and `Alerts`; the report pages (plan 12) use no tag and ask on every open. `src/test/adminFixtures.ts`, `src/test/liveFixtures.ts` and `src/test/reportFixtures.ts` have made-up Admin answers.
+- Date ranges (plan 12): `shared/utils/dateRange.ts` (`checkRange` with the server's limits, `readRange`, `toRangeParams`, `exportLink`) and `shared/components/RangeFields.tsx` (typed dd/mm/yyyy with the shortcuts). `thaiToday` is in `shared/utils/thaiTime.ts`.
 - The print page's `@page` rule (A4, no margin) is in the one CSS bundle, so it applies to anything the browser prints.
 - M17 on a real phone over https is still to be checked: a desktop browser with a fixed simulated location may report one reading only (the real run nudges it), while phones report about once a second.
-- Bundle after plan 11: Admin pages are lazy routes (owner, 2026-10-19). All the JavaScript a phone loads from `index.html` is 156.97 kB gzip (one file; no preloaded chunk in the final build) of 200 kB. Plan 12's pages go into their own files.
+- Bundle after plan 12: all the JavaScript a phone loads from `index.html` is 157.35 kB gzip of 200 kB. Admin pages, the three report pages included, are their own files.
 
 ## Before plan 5
 
