@@ -140,6 +140,20 @@ describe('HistoryPage (D9, facility-0057)', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'ผู้ทำ' })).toHaveDisplayValue('ผู้ดูแลทดสอบ'));
   });
 
+  it('"แสดง" on the range already in the address asks again, and adds no history entry', async () => {
+    const server = serve();
+    const { user, router } = await renderApp('/admin/history?from=2026-10-01&to=2026-10-07');
+    await screen.findByText('แสดง 5 รายการ');
+    const before = logGets(server).length;
+    const entries = window.history.length;
+
+    await user.click(screen.getByRole('button', { name: 'แสดง' }));
+
+    await waitFor(() => expect(logGets(server)).toHaveLength(before + 1));
+    expect(router.state.location.search).toBe('?from=2026-10-01&to=2026-10-07');
+    expect(window.history.length).toBe(entries);
+  });
+
   it("shows the server's refusal", async () => {
     serve({ 'GET /api/admin/audit-log': () => ({ status: 400, body: { message: 'ไม่มีประเภทนี้ในประวัติ' } }) });
     await renderApp('/admin/history');

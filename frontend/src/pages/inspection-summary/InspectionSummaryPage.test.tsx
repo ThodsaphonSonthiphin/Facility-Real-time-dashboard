@@ -143,6 +143,20 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('A'));
   });
 
+  it('"แสดง" on the range already in the address asks again, and adds no history entry', async () => {
+    const server = serve();
+    const { user, router } = await renderApp('/admin/inspection-summary?from=2026-10-01&to=2026-10-07');
+    await screen.findByText('Admin เท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)');
+    const before = summaryGets(server).length;
+    const entries = window.history.length;
+
+    await user.click(screen.getByRole('button', { name: 'แสดง' }));
+
+    await waitFor(() => expect(summaryGets(server)).toHaveLength(before + 1));
+    expect(router.state.location.search).toBe('?from=2026-10-01&to=2026-10-07');
+    expect(window.history.length).toBe(entries);
+  });
+
   it("shows the server's refusal", async () => {
     serve({ 'GET /api/admin/inspection-summary': () => ({ status: 400, body: { message: 'เลือกได้ไม่เกิน 31 วัน' } }) });
     await renderApp('/admin/inspection-summary?from=2026-01-01&to=2026-10-07');

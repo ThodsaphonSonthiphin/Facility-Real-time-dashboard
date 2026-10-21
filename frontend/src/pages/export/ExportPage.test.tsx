@@ -27,12 +27,6 @@ function serve(routes: FakeRoutes = {}) {
 }
 
 const exportPosts = (server: ReturnType<typeof serve>) => server.calls.filter((call) => call.path === '/api/admin/export');
-/** The page is a lazy route and may paint a moment after the router is ready, so wait for its button. */
-async function open(url: string) {
-  const app = await renderApp(url);
-  await screen.findByRole('button', { name: 'ดาวน์โหลด .xlsx' });
-  return app;
-}
 const download = () => screen.getByRole('button', { name: 'ดาวน์โหลด .xlsx' });
 const fromField = () => screen.getByRole('textbox', { name: 'ตั้งแต่' });
 const toField = () => screen.getByRole('textbox', { name: 'ถึง' });
@@ -41,7 +35,7 @@ describe('ExportPage (D8, facility-0053)', () => {
   it('starts on the last 7 days with attendance and submissions, and downloads the file the server sends', async () => {
     const { saved } = fakeDownload();
     const server = serve();
-    const { user } = await open('/admin/export');
+    const { user } = await renderApp('/admin/export');
     const today = thaiToday();
     const weekAgo = addDays(today, -6);
 
@@ -68,7 +62,7 @@ describe('ExportPage (D8, facility-0053)', () => {
   it('sends the typed range, the building and the sets in the file’s order', async () => {
     fakeDownload();
     const server = serve();
-    const { user } = await open('/admin/export');
+    const { user } = await renderApp('/admin/export');
 
     await user.click(screen.getByRole('checkbox', { name: /^การตรวจงาน/ }));
     await user.click(screen.getByRole('checkbox', { name: /^การลงเวลา/ }));
@@ -93,7 +87,7 @@ describe('ExportPage (D8, facility-0053)', () => {
   it('refuses before sending when no set is chosen or the range is wrong or too long', async () => {
     const { saved } = fakeDownload();
     const server = serve();
-    const { user } = await open('/admin/export');
+    const { user } = await renderApp('/admin/export');
 
     await user.click(screen.getByRole('checkbox', { name: /^การลงเวลา/ }));
     await user.click(screen.getByRole('checkbox', { name: /^การส่งงาน/ }));
@@ -121,7 +115,7 @@ describe('ExportPage (D8, facility-0053)', () => {
   it("shows the server's refusal, and saves nothing", async () => {
     const { saved } = fakeDownload();
     serve({ 'POST /api/admin/export': () => ({ status: 400, body: { message: 'ไม่พบตึกนี้' } }) });
-    const { user } = await open('/admin/export?building=9');
+    const { user } = await renderApp('/admin/export?building=9');
 
     await user.click(download());
 
@@ -138,7 +132,7 @@ describe('ExportPage (D8, facility-0053)', () => {
           answer = resolve;
         }),
     });
-    const { user } = await open('/admin/export');
+    const { user } = await renderApp('/admin/export');
 
     await user.click(download());
     const busy = await screen.findByRole('button', { name: 'กำลังสร้างไฟล์...' });
@@ -161,7 +155,7 @@ describe('ExportPage (D8, facility-0053)', () => {
         return posts === 1 ? { status: 401 } : xlsx();
       },
     });
-    const { user } = await open('/admin/export');
+    const { user } = await renderApp('/admin/export');
 
     await user.click(download());
 
@@ -174,7 +168,7 @@ describe('ExportPage (D8, facility-0053)', () => {
   it('opens with the range and building of the link that brought the Admin here', async () => {
     fakeDownload();
     const server = serve();
-    const { user } = await open('/admin/export?from=2026-10-15&to=2026-10-15&building=2');
+    const { user } = await renderApp('/admin/export?from=2026-10-15&to=2026-10-15&building=2');
 
     expect(fromField()).toHaveValue('15/10/2026');
     expect(toField()).toHaveValue('15/10/2026');
@@ -192,7 +186,7 @@ describe('ExportPage (D8, facility-0053)', () => {
 
   it('the form follows the address when the menu link is clicked on the open page', async () => {
     serve();
-    const { user } = await open('/admin/export?from=2026-10-15&to=2026-10-15&building=2');
+    const { user } = await renderApp('/admin/export?from=2026-10-15&to=2026-10-15&building=2');
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B'));
 
     await user.click(within(screen.getByRole('navigation', { name: 'เมนู Admin' })).getByRole('link', { name: 'ส่งออก Excel' }));
@@ -204,7 +198,7 @@ describe('ExportPage (D8, facility-0053)', () => {
 
   it('is in the Admin menu as ส่งออก Excel, and links back to the Dashboard', async () => {
     serve();
-    await open('/admin/export');
+    await renderApp('/admin/export');
     const menu = screen.getByRole('navigation', { name: 'เมนู Admin' });
     expect(within(menu).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('aria-current', 'page');
     expect(within(screen.getByRole('main')).getByRole('link', { name: '‹ กลับไป Dashboard' })).toHaveAttribute(

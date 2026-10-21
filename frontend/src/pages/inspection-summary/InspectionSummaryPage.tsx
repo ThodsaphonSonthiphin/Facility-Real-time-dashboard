@@ -29,7 +29,7 @@ export function InspectionSummaryPage() {
   const [params, setParams] = useSearchParams();
   const asked = readRange(params);
   const buildingId = readBuildingId(params);
-  const { currentData: summary, error, isFetching } = useGetInspectionSummaryQuery({ ...asked, buildingId }, freshOnOpen);
+  const { currentData: summary, error, isFetching, refetch } = useGetInspectionSummaryQuery({ ...asked, buildingId }, freshOnOpen);
   const [texts, setTexts] = useState(() => rangeTexts(asked ?? lastSevenDays(thaiToday())));
   const [problem, setProblem] = useState<string | null>(null);
   // the fields follow the address when it changes under the open page (menu link, Back)
@@ -48,6 +48,11 @@ export function InspectionSummaryPage() {
       return;
     }
     setProblem(null);
+    if (asked && rangeKey(asked) === rangeKey(range)) {
+      // the same address would send no request and add a history entry
+      void refetch();
+      return;
+    }
     go(range, buildingId);
   };
 

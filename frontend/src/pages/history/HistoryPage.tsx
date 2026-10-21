@@ -43,6 +43,11 @@ export function HistoryPage() {
       return;
     }
     setProblem(null);
+    if (asked && `${asked.from}_${asked.to}` === `${range.from}_${range.to}`) {
+      // the same address would send no request and add a history entry
+      void log.refetch();
+      return;
+    }
     go({ ...args, ...range });
   };
 

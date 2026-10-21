@@ -96,4 +96,25 @@ describe('historyRules (D9)', () => {
     expect(searchEntries(entries, 'gps').map((entry) => entry.id)).toEqual([48]);
     expect(searchEntries(entries, 'แก้เบอร์').map((entry) => entry.id)).toEqual([47]);
   });
+
+  it('changeLines: typed text that looks like a time or date shows as stored, and never throws', () => {
+    expect(
+      changeLines({ action: 'ACCOUNT_UPDATE', before: { DisplayName: 'แม่บ้านทดสอบ' }, after: { DisplayName: '2026-13-45T25:61Z' } }),
+    ).toEqual(['ชื่อที่แสดง: แม่บ้านทดสอบ → 2026-13-45T25:61Z']);
+    expect(changeLines({ action: 'POINT_UPDATE', before: { Name: 'ห้องน้ำชาย' }, after: { Name: '2026-10-15' } })).toEqual([
+      'ชื่อ: ห้องน้ำชาย → 2026-10-15',
+    ]);
+  });
+
+  it('changeLines: a time field that does not parse shows as stored', () => {
+    expect(
+      changeLines({ action: 'QR_REGENERATE', before: { QrIssuedAt: 'not-a-time' }, after: { QrIssuedAt: '2026-10-13T07:40:00Z' } }),
+    ).toEqual(['ออก QR: not-a-time → 13/10 14:40']);
+  });
+
+  it('changeLines: a phone change never shows the number, whatever the snapshot holds', () => {
+    expect(changeLines({ action: 'ACCOUNT_PHONE', before: { Phone: '0812345678' }, after: { Phone: '0899999999' } })).toEqual([
+      'เบอร์เดิม → เบอร์ใหม่ (ไม่แสดงเบอร์)',
+    ]);
+  });
 });

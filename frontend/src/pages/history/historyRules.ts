@@ -148,8 +148,9 @@ const valueLabel: Record<string, Record<string, string>> = {
 /** AREA_UPDATE always stores how many night windows went; 0 is "none", like the null before it. */
 const ZERO_IS_NONE = new Set(['RemovedNightWindows']);
 
-const MOMENT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?Z$/;
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** Format by field, never by shape: Admin-typed text (names, login names) is shown exactly as stored. */
+const MOMENT_FIELDS = new Set(['OccurredAt', 'QrIssuedAt']);
+const DATE_FIELDS = new Set(['ShiftDate', 'From', 'To']);
 
 function valueText(field: string, value: unknown): string {
   if (value == null) {
@@ -172,10 +173,13 @@ function valueText(field: string, value: unknown): string {
     if (field === 'RoundWindows') {
       return value.replace(/^DAY /, 'เช้า ').replace(/^NIGHT /, 'ดึก ');
     }
-    if (MOMENT.test(value)) {
+    if (Number.isNaN(Date.parse(value))) {
+      return value;
+    }
+    if (MOMENT_FIELDS.has(field)) {
       return formatDayTime(value);
     }
-    return DATE.test(value) ? formatShiftDate(value) : value;
+    return DATE_FIELDS.has(field) ? formatShiftDate(value) : value;
   }
   return JSON.stringify(value);
 }
