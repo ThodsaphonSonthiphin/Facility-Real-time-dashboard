@@ -15,6 +15,7 @@ const adminLinks = [
   { to: '/admin/export', label: 'ส่งออก Excel', counted: false },
   { to: '/admin/areas', label: 'จัดการ Area และป้าย', counted: false },
   { to: '/admin/accounts', label: 'บัญชีผู้ใช้', counted: false },
+  { to: '/admin/history', label: 'ประวัติ Admin', counted: false },
 ] as const;
 
 export function AdminNav() {

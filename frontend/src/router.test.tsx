@@ -72,6 +72,7 @@ describe('routing (facility-0026, 0058)', () => {
       'ส่งออก Excel',
       'จัดการ Area และป้าย',
       'บัญชีผู้ใช้',
+      'ประวัติ Admin',
     ]);
     expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
     expect(within(menu).getByRole('link', { name: 'จัดการ Area และป้าย' })).toHaveAttribute('href', '/admin/areas');
@@ -98,6 +99,7 @@ describe('routing (facility-0026, 0058)', () => {
       'admin/areas/:areaId/edit',
       'admin/print',
       'admin/accounts',
+      'admin/history',
       'admin/areas/:areaId/capture',
     ]);
     expect(pages.every((page) => typeof page.lazy === 'function' && page.element === undefined)).toBe(true);

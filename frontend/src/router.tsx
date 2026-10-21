@@ -95,6 +95,8 @@ export const routes: RouteObject[] = [
               { path: 'admin/print', lazy: async () => ({ Component: (await import('./pages/print-signs')).PrintSignsPage }) },
               // facility-0020, 0056, wireframe D6
               { path: 'admin/accounts', lazy: async () => ({ Component: (await import('./pages/accounts')).AccountsPage }) },
+              // facility-0057, wireframe D9: ?from&to&actor=<id>&category=<AuditCategory>
+              { path: 'admin/history', lazy: async () => ({ Component: (await import('./pages/history')).HistoryPage }) },
             ],
           },
           // M17: the Admin's phone page at the sign (facility-0045 item 2), in the phone column

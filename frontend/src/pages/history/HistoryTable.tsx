@@ -1,0 +1,44 @@
+import { formatDayTime } from '../../shared/utils/thaiTime';
+import type { AuditEntry } from './historyApi';
+import { actionText } from './historyRules';
+
+interface HistoryTableProps {
+  entries: AuditEntry[];
+  /** What to say when there is no row. */
+  emptyText: string;
+}
+
+/** Wireframe D9's table, newest first. Summaries, names and reasons are React text only (facility-0066). */
+export function HistoryTable({ entries, emptyText }: HistoryTableProps) {
+  if (entries.length === 0) {
+    return <p className="app-note app-note--info">{emptyText}</p>;
+  }
+  return (
+    <div className="app-table-scroll">
+      <table className="app-table history-table" aria-label="ประวัติของ Admin">
+        <thead>
+          <tr>
+            <th scope="col">เวลา</th>
+            <th scope="col">ผู้ทำ</th>
+            <th scope="col">ประเภท</th>
+            <th scope="col">รายการที่ถูกแก้</th>
+            <th scope="col">เหตุผล</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr key={entry.id}>
+              <td className="history-time">{formatDayTime(entry.occurredAt)}</td>
+              <td>{entry.actorName}</td>
+              <td>
+                <strong>{actionText(entry.action)}</strong>
+              </td>
+              <td>{entry.summary}</td>
+              <td className="history-reason">{entry.reason ?? '–'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
