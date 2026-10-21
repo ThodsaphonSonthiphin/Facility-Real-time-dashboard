@@ -380,6 +380,13 @@
   gap: 4px;
 }
 
+.app-range__presets .app-button[aria-pressed='true'] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-weight: 600;
+}
+
 @media print {
   .app-bar,
   .app-nav {

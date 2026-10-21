@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react';
-import { presetLabel, presetRange, rangePresets, rangeTexts, type RangeTexts } from '../utils/dateRange';
+import { matchesPreset, presetLabel, presetRange, rangePresets, rangeTexts, type RangeTexts } from '../utils/dateRange';
 import { thaiToday } from '../utils/thaiTime';
 import './shared.css';
 
@@ -20,6 +20,7 @@ export function RangeFields({ value, onChange, onEnter }: RangeFieldsProps) {
       onEnter?.();
     }
   };
+  const today = thaiToday();
   return (
     <div className="app-range">
       <label className="app-field">
@@ -50,7 +51,8 @@ export function RangeFields({ value, onChange, onEnter }: RangeFieldsProps) {
             key={preset}
             type="button"
             className="app-button"
-            onClick={() => onChange(rangeTexts(presetRange(preset, thaiToday())))}
+            aria-pressed={matchesPreset(value, preset, today)}
+            onClick={() => onChange(rangeTexts(presetRange(preset, today)))}
           >
             {presetLabel[preset]}
           </button>

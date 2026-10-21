@@ -56,19 +56,16 @@ export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, 
           ))}
         </select>
       </label>
-      <div className="history-search-field">
-        <label className="app-field">
-          ค้นหา
-          <input
-            className="app-input history-search"
-            type="search"
-            value={search}
-            placeholder="ค้นหาชื่อคน จุด หรือรหัส"
-            onChange={(event) => onSearch(event.target.value)}
-          />
-        </label>
-        <span className="app-field__help">ค้นหาเฉพาะรายการที่โหลดแล้ว</span>
-      </div>
+      <label className="app-field">
+        ค้นหา
+        <input
+          className="app-input history-search"
+          type="search"
+          value={search}
+          placeholder="ค้นหาชื่อคน จุด หรือรหัส"
+          onChange={(event) => onSearch(event.target.value)}
+        />
+      </label>
     </div>
   );
 }

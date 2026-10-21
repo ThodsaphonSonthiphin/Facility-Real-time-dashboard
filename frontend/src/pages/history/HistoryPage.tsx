@@ -86,9 +86,11 @@ export function HistoryPage() {
           />
           <div className="history-more">
             <span className="app-muted">
-              {shown.length === entries.length
+              {search.trim() === ''
                 ? `แสดง ${entries.length} รายการ`
-                : `แสดง ${shown.length} จาก ${entries.length} รายการที่โหลดแล้ว`}
+                : `พบ ${shown.length} จาก ${entries.length} รายการที่แสดงอยู่${
+                    log.hasNextPage ? ' · กด "โหลดรายการเก่ากว่านี้" เพื่อค้นรายการที่เก่ากว่า' : ''
+                  }`}
             </span>
             {log.hasNextPage && (
               <button

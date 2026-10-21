@@ -4,7 +4,9 @@ import {
   checkRange,
   exportLink,
   lastSevenDays,
+  matchesPreset,
   presetRange,
+  rangePresets,
   rangeDays,
   rangeTexts,
   readBuildingId,
@@ -64,5 +66,15 @@ describe('dateRange', () => {
     expect(exportLink({ from: '2026-10-15', to: '2026-10-15' }, undefined)).toBe('/admin/export?from=2026-10-15&to=2026-10-15');
     expect(exportLink(undefined, 1)).toBe('/admin/export?building=1');
     expect(exportLink(undefined, undefined)).toBe('/admin/export');
+  });
+
+  it('matchesPreset marks every shortcut whose range the typed fields hold exactly', () => {
+    const marked = (fromText: string, toText: string, today: string) =>
+      rangePresets.filter((preset) => matchesPreset({ fromText, toText }, preset, today));
+    expect(marked('09/10/2026', '15/10/2026', '2026-10-15')).toEqual(['week']);
+    expect(marked(' 01/10/2026 ', '15/10/2026', '2026-10-15')).toEqual(['month']);
+    expect(marked('15/10/2026', '15/10/2026', '2026-10-15')).toEqual(['today']);
+    expect(marked('02/10/2026', '15/10/2026', '2026-10-15')).toEqual([]);
+    expect(marked('01/10/2026', '07/10/2026', '2026-10-07')).toEqual(['week', 'month']);
   });
 });

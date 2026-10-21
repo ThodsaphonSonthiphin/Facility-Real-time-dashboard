@@ -54,6 +54,12 @@ export function rangeTexts({ from, to }: DateRange): RangeTexts {
   return { fromText: formatShiftDate(from), toText: formatShiftDate(to) };
 }
 
+/** Whether the typed fields hold exactly this shortcut's range today (RangeFields marks that button). */
+export function matchesPreset(texts: RangeTexts, preset: RangePreset, today: string): boolean {
+  const expected = rangeTexts(presetRange(preset, today));
+  return texts.fromText.trim() === expected.fromText && texts.toText.trim() === expected.toText;
+}
+
 /**
  * The typed range, checked before asking (facility-0022 item 4), or the message to show. The server makes the same
  * checks (31 dates for the summary and the export, 92 for the history), and its message is shown if it still refuses.

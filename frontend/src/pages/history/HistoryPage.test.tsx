@@ -204,7 +204,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
     expect(changes[3]).toHaveTextContent('เบอร์เดิม → เบอร์ใหม่ (ไม่แสดงเบอร์)');
   });
 
-  it('search narrows the rows already loaded, and says when none match', async () => {
+  it('search narrows the rows already loaded, and says how many of the shown rows match', async () => {
     serve();
     const { user } = await renderApp('/admin/history');
     await screen.findByText('แสดง 5 รายการ');
@@ -212,11 +212,19 @@ describe('HistoryPage (D9, facility-0057)', () => {
 
     await user.type(search, 'แม่บ้านที่อื่น');
     expect(mainCells().map((cells) => cells[2])).toEqual(['มอบหมายทำแทน']);
-    expect(screen.getByText('แสดง 1 จาก 5 รายการที่โหลดแล้ว')).toBeInTheDocument();
+    expect(
+      screen.getByText('พบ 1 จาก 5 รายการที่แสดงอยู่ · กด "โหลดรายการเก่ากว่านี้" เพื่อค้นรายการที่เก่ากว่า'),
+    ).toBeInTheDocument();
 
     await user.clear(search);
     await user.type(search, 'ไม่มีคำนี้');
     expect(screen.getByText('ไม่พบรายการที่ตรงกับที่ค้นหา')).toBeInTheDocument();
-    expect(screen.getByText('ค้นหาเฉพาะรายการที่โหลดแล้ว')).toBeInTheDocument();
+
+    await user.clear(search);
+    await user.click(screen.getByRole('button', { name: 'โหลดรายการเก่ากว่านี้' }));
+    await screen.findByText('แสดง 6 รายการ');
+    await user.type(search, 'ออก QR');
+    expect(screen.getByText('พบ 1 จาก 6 รายการที่แสดงอยู่')).toBeInTheDocument();
+    expect(screen.queryByText(/ค้นหาเฉพาะรายการที่โหลดแล้ว|รายการที่โหลดแล้ว/)).not.toBeInTheDocument();
   });
 });

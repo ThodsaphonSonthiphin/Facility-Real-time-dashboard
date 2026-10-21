@@ -76,6 +76,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
 
     expect(fromField()).toHaveValue(formatShiftDate(addDays(today, -6)));
     expect(toField()).toHaveValue(formatShiftDate(today));
+    expect(screen.getByRole('button', { name: '7 วัน' })).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(screen.getByRole('button', { name: 'เดือนนี้' }));
     expect(fromField()).toHaveValue(formatShiftDate(`${today.slice(0, 8)}01`));
@@ -83,6 +84,15 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
 
     await user.click(screen.getByRole('button', { name: 'วันนี้' }));
     expect(fromField()).toHaveValue(formatShiftDate(today));
+    expect(screen.getByRole('button', { name: 'วันนี้' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.clear(fromField());
+    await user.type(fromField(), '02/01/2020');
+    await user.clear(toField());
+    await user.type(toField(), '03/01/2020');
+    for (const name of ['วันนี้', '7 วัน', 'เดือนนี้']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');
+    }
   });
 
   it('shows a typed range; the address keeps it with the building', async () => {
