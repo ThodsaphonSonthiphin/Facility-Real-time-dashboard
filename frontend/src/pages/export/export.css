@@ -1,0 +1,82 @@
+/* Excel export (D8, facility-0053). Class prefix: export- */
+
+.export-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.export-page h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.export-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .export-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.export-panel {
+  gap: 14px;
+}
+
+.export-panel h2 {
+  font-size: 18px;
+}
+
+.export-set {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.export-set input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--color-primary);
+}
+
+.export-set__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.export-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.export-file {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.export-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-text-soft);
+  font-size: 13px;
+}

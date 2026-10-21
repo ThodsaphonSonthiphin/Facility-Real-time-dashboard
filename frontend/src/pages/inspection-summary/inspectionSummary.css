@@ -19,6 +19,10 @@
   font-size: 14px;
 }
 
+.summary-export {
+  margin-left: auto;
+}
+
 .summary-sub {
   display: block;
   color: var(--color-muted);

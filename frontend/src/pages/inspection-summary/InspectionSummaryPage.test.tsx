@@ -173,4 +173,15 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     const menu = screen.getByRole('navigation', { name: 'เมนู Admin' });
     expect(within(menu).getByRole('link', { name: 'สรุปการตรวจ' })).toHaveAttribute('aria-current', 'page');
   });
+
+  it('"ส่งออก Excel" opens the export of the range and building on screen', async () => {
+    serve();
+    await renderApp('/admin/inspection-summary?building=1');
+    await screen.findByText('Admin เท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
+
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute(
+      'href',
+      '/admin/export?from=2026-10-09&to=2026-10-15&building=1',
+    );
+  });
 });

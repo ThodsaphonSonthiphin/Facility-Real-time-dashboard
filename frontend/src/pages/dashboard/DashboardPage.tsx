@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { livePoll } from '../../shared/api/baseApi';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -26,7 +27,12 @@ export function DashboardPage() {
     <main className="dashboard-page">
       <header className="dashboard-heading">
         <h1>สถานะจุดทำความสะอาด</h1>
-        <LiveBadge hubKey={DASHBOARD_HUB} />
+        <div className="dashboard-heading__side">
+          <Link className="app-button" to="/admin/export">
+            ส่งออก Excel
+          </Link>
+          <LiveBadge hubKey={DASHBOARD_HUB} />
+        </div>
       </header>
       {data && <Filters points={data} />}
       <p className="app-muted">{RULES_NOTE}</p>

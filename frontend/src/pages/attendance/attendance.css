@@ -18,6 +18,12 @@
   font-weight: 700;
 }
 
+.attendance-heading__side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .attendance-controls {
   display: flex;
   flex-wrap: wrap;

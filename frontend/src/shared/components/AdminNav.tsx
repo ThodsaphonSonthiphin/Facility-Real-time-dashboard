@@ -12,6 +12,7 @@ const adminLinks = [
   { to: '/admin/attendance', label: 'การเข้างาน', counted: false },
   { to: '/admin/alerts', label: 'รายการที่ขึ้นเตือน', counted: true },
   { to: '/admin/inspection-summary', label: 'สรุปการตรวจ', counted: false },
+  { to: '/admin/export', label: 'ส่งออก Excel', counted: false },
   { to: '/admin/areas', label: 'จัดการ Area และป้าย', counted: false },
   { to: '/admin/accounts', label: 'บัญชีผู้ใช้', counted: false },
 ] as const;

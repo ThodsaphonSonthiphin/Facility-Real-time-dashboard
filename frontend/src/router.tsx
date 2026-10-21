@@ -81,6 +81,8 @@ export const routes: RouteObject[] = [
                 path: 'admin/inspection-summary',
                 lazy: async () => ({ Component: (await import('./pages/inspection-summary')).InspectionSummaryPage }),
               },
+              // facility-0053, wireframe D8: ?from=yyyy-MM-dd&to=yyyy-MM-dd&building=<id> fill the form
+              { path: 'admin/export', lazy: async () => ({ Component: (await import('./pages/export')).ExportPage }) },
               // facility-0045, wireframe D4; without an id the first Area is open
               { path: 'admin/areas/:areaId?', lazy: async () => ({ Component: (await import('./pages/areas')).AreasPage }) },
               // facility-0045, wireframe D10 ("new" outranks the id above)

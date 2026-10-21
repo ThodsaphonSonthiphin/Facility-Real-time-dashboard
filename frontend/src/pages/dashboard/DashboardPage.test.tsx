@@ -51,8 +51,8 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     expect(screen.getByText('รอบแรกของกะเริ่ม 11:00')).toBeInTheDocument();
     expect(screen.getByText('ส่งงาน 09:20 · แม่บ้านทดสอบ · ส่งช้า')).toBeInTheDocument();
     expect(screen.getByText('จุดนี้ไม่มีรอบในกะนี้')).toBeInTheDocument();
-    // facility-0059: only the sign's QR opens a point
-    expect(within(screen.getByRole('main')).queryAllByRole('link')).toHaveLength(0);
+    // facility-0059: only the sign's QR opens a point, so the one link on the board is the export (D8)
+    expect(within(screen.getByRole('main')).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin/export']);
   });
 
   it('a pushed submission or inspection changes its card at once, without asking the server (#26)', async () => {
@@ -174,5 +174,13 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     await renderApp('/dashboard');
 
     expect(await screen.findByText('ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการ Area และป้าย')).toBeInTheDocument();
+  });
+
+  it('links to the Excel export (D8)', async () => {
+    const server = serve();
+    const { store } = await renderApp('/dashboard');
+    await settled(server, store);
+
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('href', '/admin/export');
   });
 });

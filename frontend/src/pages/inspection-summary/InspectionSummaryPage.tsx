@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { BuildingSelect } from '../../shared/components/BuildingSelect';
 import { RangeFields } from '../../shared/components/RangeFields';
 import {
   checkRange,
+  exportLink,
   lastSevenDays,
   rangeTexts,
   readBuildingId,
@@ -62,6 +63,12 @@ export function InspectionSummaryPage() {
           แสดง
         </button>
         <BuildingSelect value={buildingId} onChange={(building) => go(asked, building)} />
+        <Link
+          className="app-button summary-export"
+          to={exportLink(summary ? { from: summary.from, to: summary.to } : asked, buildingId)}
+        >
+          ส่งออก Excel
+        </Link>
       </div>
       {problem && (
         <p className="app-note app-note--error" role="alert">

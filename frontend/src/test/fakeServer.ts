@@ -11,6 +11,8 @@ export interface FakeRequest {
 export interface FakeResponse {
   status: number;
   body?: unknown;
+  /** A file answer (the export, D8): sent as is with these headers instead of a JSON body. */
+  file?: { content: string; type: string; disposition?: string };
 }
 
 /** Key is "METHOD /path", e.g. "POST /api/auth/login". The handler may answer differently on each call. */
@@ -41,6 +43,13 @@ export function fakeServer(routes: FakeRoutes) {
     const answer = handler
       ? await unlessAborted(request.signal, handler(fake))
       : { status: 404, body: { message: `no fake for ${fake.method} ${fake.path}` } };
+    if (answer.file) {
+      const headers: Record<string, string> = { 'Content-Type': answer.file.type };
+      if (answer.file.disposition) {
+        headers['Content-Disposition'] = answer.file.disposition;
+      }
+      return new Response(answer.file.content, { status: answer.status, headers });
+    }
     const hasBody = answer.body !== undefined && answer.status !== 204;
     return new Response(hasBody ? JSON.stringify(answer.body) : null, {
       status: answer.status,

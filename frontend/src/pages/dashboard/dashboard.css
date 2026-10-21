@@ -19,6 +19,12 @@
   font-weight: 700;
 }
 
+.dashboard-heading__side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .dashboard-area {
   display: flex;
   flex-direction: column;

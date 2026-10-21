@@ -12,6 +12,7 @@ import type { AttendanceEvent, Shift } from '../../shared/api/types';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
+import { exportLink } from '../../shared/utils/dateRange';
 import { formatShiftDate } from '../../shared/utils/thaiTime';
 import { AttendanceTable } from './AttendanceTable';
 import { BoardControls } from './BoardControls';
@@ -81,7 +82,14 @@ export function AttendancePage() {
           {board && <span className="app-muted">{slotLine(board)}</span>}
           <h1>การเข้างาน</h1>
         </div>
-        <LiveBadge hubKey={attendanceHubKey(args)} />
+        <div className="attendance-heading__side">
+          {board && (
+            <Link className="app-button" to={exportLink({ from: board.shiftDate, to: board.shiftDate }, args.buildingId)}>
+              ส่งออก Excel
+            </Link>
+          )}
+          <LiveBadge hubKey={attendanceHubKey(args)} />
+        </div>
       </header>
       <BoardControls
         board={board}
