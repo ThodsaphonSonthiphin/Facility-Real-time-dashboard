@@ -52,7 +52,7 @@ export function RangeFields({ value, onChange, onEnter }: RangeFieldsProps) {
             type="button"
             className="app-button"
             aria-pressed={matchesPreset(value, preset, today)}
-            onClick={() => onChange(rangeTexts(presetRange(preset, today)))}
+            onClick={() => onChange(rangeTexts(presetRange(preset, thaiToday())))}
           >
             {presetLabel[preset]}
           </button>
