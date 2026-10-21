@@ -198,7 +198,26 @@ Test data only. The Development seed has an Admin whose password is public in th
   - `/admin/accounts`, "แก้เบอร์โทร": show the current phone, then a field for the new phone.
   - `/admin/areas/:areaId`, round windows: choose the time from a list instead of typing "HH:mm". A window already added to the point cannot be picked again.
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
-- UX/UI pass over every page (owner, 2026-10-21, after plan 12): first list the problems page by page (the owner's notes, or screenshots of each page reviewed with the owner), then plan the fixes as one piece of work. Fold in the two UX items listed above (the phone change showing the current phone; round times picked from a list).
+- UX/UI pass over every page (owner, 2026-10-21, after plan 12): the owner starts it in a new session. How to start is in `## Next: the UX/UI pass` below.
+
+## Next: the UX/UI pass
+
+Owner's call, 2026-10-21: after plan 12, all wireframe pages exist, so fix UX/UI once across the whole system instead of page by page. The owner opens a new session and uses `sp-writing-plans`. The first step is **not** the plan: it is the list of problems.
+
+1. **List the problems, page by page** (no code yet). Either the owner's notes, or the agent opens every page and writes the list for the owner to cut and add to. Pages: phone (M0 login, M9/M14 My Work, M1/M3/M10 check-in, M4/M5/M8/M11-M13 scan, M6/M7/M16 inspect, M15 My Building, M17 capture) at 390 px wide, and Admin (D0 login, D1 Dashboard, D2 attendance, D3 alerts, D4/D10 Areas, D5 print, D6 accounts, D7 summary, D8 export, D9 history) at 1280 px and 390 px (the owner uses Admin pages on a phone too). Order the list by impact on a person at work: a cleaner at a sign, a supervisor walking, the Admin at a desk.
+2. The owner cuts and adds. Then write the plan with `sp-writing-plans` (spec = the list the owner approved plus the ADRs), and run it with `sp-subagent-driven-development`, as for plans 5-12.
+
+What is already known (do not rediscover):
+- From the owner's browser walkthroughs: pressing a button must be felt at once. Done for every `.app-button` by a tap animation (`shared/utils/tapFeedback.ts`). Still open: a button that starts a fetch ("แสดง" on D7/D9) gives no sign that the data was fetched when nothing changes. Offered, not chosen: the button reading "กำลังโหลด..." then "✓ แสดงแล้ว", and a line over the table saying which range is shown and when it was fetched.
+- Two items from earlier real runs: `/admin/accounts` "แก้เบอร์โทร" should show the current phone, then a field for the new one; `/admin/areas/:areaId` round windows should be picked from a list instead of typed "HH:mm" (a window already added cannot be picked again).
+- Deferred minors from plan 12 that are UX: `BuildingSelect` ignores a failed buildings load and shows "ทุกตึก" for an unknown `?building=` id; an `?actor=` id missing from the actors list shows "ทุกคน" while the list is filtered; the same "fields follow the address" block is in D7, D8 and D9 (a shared hook would remove the copies).
+
+Rules that bind the pass (ADRs, so a change to one is its own decision):
+- Styling is plain CSS, no UI library (facility-0063): tokens in `frontend/src/index.css`, shared pieces in `shared/components/shared.css` (class prefix `app-`), one CSS file per page with its own prefix, never `style={...}`. Switching to MUI, Bootstrap or Tailwind would be a new ADR: the main JS is 157.35 kB gzip of a 200 kB budget (facility-0062), and all 25 or so pages would be rewritten.
+- Thai UI text comes from the wireframes in `docs/design/wireframe/` (the ADR wins where they differ). User-typed and server text is React text only (facility-0066). No link from an Admin page to a sign page (facility-0059). Nothing stored on the device (facility-0068).
+- Tests find elements by role, label or text, so renaming a visible string or label changes tests: change them together.
+
+To see the app while working: "Sharing a test build" below (build with `npm run build:api`, a throwaway database `facility_*_test`; on this Mac MySQL has no root password; the Development seed in `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs` has one Admin, Cleaner and Supervisor to log in as). The seed is nearly empty, so pages with tables need a few records made first. Afterwards stop the API, drop the database and delete `wwwroot`.
 
 ## Owner's rules (still in force)
 
