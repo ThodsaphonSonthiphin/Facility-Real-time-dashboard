@@ -30,6 +30,12 @@ export function formatShiftDate(date: string): string {
   return `${day}/${month}/${year}`;
 }
 
+/** Today's Thai calendar date as the server writes a shift date, "2026-10-15" (to fill a date range). */
+export function thaiToday(now: Date = new Date()): string {
+  const [day, month, year] = formatDate(now).split('/');
+  return `${year}-${month}-${day}`;
+}
+
 /** A moment as Thai "15/10 09:10", for lists that cover more than one day (the alert list, wireframe D3). */
 export function formatDayTime(moment: string | Date): string {
   return `${formatDate(moment).slice(0, 5)} ${formatTime(moment)}`;

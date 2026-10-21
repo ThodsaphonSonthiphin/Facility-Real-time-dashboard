@@ -157,4 +157,15 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
       vi.useRealTimers();
     }
   });
+
+  it('"ส่งออก Excel" opens the export of the shift date and building on screen', async () => {
+    serve();
+    await renderApp('/admin/attendance?building=2');
+    await screen.findByText('15/10/2026 · กะเช้า 07:00–19:00');
+
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute(
+      'href',
+      '/admin/export?from=2026-10-15&to=2026-10-15&building=2',
+    );
+  });
 });

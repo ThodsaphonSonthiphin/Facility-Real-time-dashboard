@@ -68,6 +68,42 @@
   font-size: 17px;
 }
 
+/*
+ * A press shows at once, before any answer comes back (owner, 2026-10-21). A quick tap ends before :active can be
+ * seen, so shared/utils/tapFeedback.ts adds app-button--tapped on every press and the animation plays to its end.
+ */
+@keyframes app-tap {
+  from {
+    transform: scale(0.94);
+    filter: brightness(0.85);
+  }
+
+  to {
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes app-tap-still {
+  from {
+    filter: brightness(0.85);
+  }
+
+  to {
+    filter: none;
+  }
+}
+
+.app-button--tapped {
+  animation: app-tap 300ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-button--tapped {
+    animation-name: app-tap-still;
+  }
+}
+
 .app-button--primary:hover {
   color: var(--color-on-primary);
   background: var(--color-primary-dark);
@@ -361,6 +397,30 @@
 
 .app-live--on::before {
   background: var(--color-status-passed);
+}
+
+/* RangeFields: two typed dates and the shortcuts (D7, D8, D9) */
+.app-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.app-range__date {
+  width: 150px;
+}
+
+.app-range__presets {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.app-range__presets .app-button[aria-pressed='true'] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-weight: 600;
 }
 
 @media print {

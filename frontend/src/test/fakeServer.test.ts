@@ -35,4 +35,19 @@ describe('fakeServer', () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ message: 'no fake for GET /api/missing' });
   });
+
+  it('a file answer is sent as is, with its type and its name', async () => {
+    fakeServer({
+      'POST /api/files': () => ({
+        status: 200,
+        file: { content: 'file-bytes', type: 'application/octet-stream', disposition: 'attachment; filename=a.bin' },
+      }),
+    });
+
+    const response = await fetch('/api/files', { method: 'POST' });
+
+    expect(response.headers.get('Content-Type')).toBe('application/octet-stream');
+    expect(response.headers.get('Content-Disposition')).toBe('attachment; filename=a.bin');
+    expect(await response.text()).toBe('file-bytes');
+  });
 });

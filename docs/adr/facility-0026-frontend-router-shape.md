@@ -61,3 +61,5 @@ flowchart TD
 > **แก้ไข 2026-10-19 (แผน 10):** route ของหน้า Admin อยู่ใต้ `ProtectedRoute roles={['admin']}`: `/admin/areas/:areaId?` (D4 ไม่มี id เปิด Area แรก), `/admin/areas/new` และ `/admin/areas/:areaId/edit` (D10), `/admin/print?area=<id>[&sign=<id>]` หรือ `?area=all` (D5), `/admin/accounts` (D6) ใน `AppLayout wide` ที่มีเมนู Admin และ `/admin/areas/:areaId/capture[?sign=<id>]` (M17) ใน `AppLayout` คอลัมน์มือถือ เพราะ Admin ถือมือถือยืนที่ป้าย Dashboard ยังอยู่ที่ `/dashboard`
 
 > **แก้ไข 2026-10-19 (แผน 11):** เพิ่ม `/admin/attendance` (D2) และ `/admin/alerts` (D3) ใต้ guard ของ Admin หน้า Admin ทุกหน้าเป็น `lazy` route (facility-0062) และ route ราก (`/`) มี `hydrateFallbackElement` "กำลังโหลด..." ระหว่างโหลดไฟล์ของหน้าแรก
+
+> **แก้ไข 2026-10-21 (แผน 12):** เพิ่ม `/admin/inspection-summary` (D7, `?from=yyyy-MM-dd&to=yyyy-MM-dd&building=<id>`), `/admin/export` (D8, รับ `?from&to&building` มาเติมฟอร์ม) และ `/admin/history` (D9, `?from&to&actor=<id>&category=<AuditCategory>`) ใต้ guard ของ Admin เป็น `lazy` route ทั้งสามหน้า

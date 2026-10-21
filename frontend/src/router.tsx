@@ -76,6 +76,13 @@ export const routes: RouteObject[] = [
               },
               // facility-0035, 0041, 0048, 0051, wireframe D3
               { path: 'admin/alerts', lazy: async () => ({ Component: (await import('./pages/alerts')).AlertsPage }) },
+              // facility-0048 rule 5, wireframe D7: ?from=yyyy-MM-dd&to=yyyy-MM-dd&building=<id>
+              {
+                path: 'admin/inspection-summary',
+                lazy: async () => ({ Component: (await import('./pages/inspection-summary')).InspectionSummaryPage }),
+              },
+              // facility-0053, wireframe D8: ?from=yyyy-MM-dd&to=yyyy-MM-dd&building=<id> fill the form
+              { path: 'admin/export', lazy: async () => ({ Component: (await import('./pages/export')).ExportPage }) },
               // facility-0045, wireframe D4; without an id the first Area is open
               { path: 'admin/areas/:areaId?', lazy: async () => ({ Component: (await import('./pages/areas')).AreasPage }) },
               // facility-0045, wireframe D10 ("new" outranks the id above)
@@ -88,6 +95,8 @@ export const routes: RouteObject[] = [
               { path: 'admin/print', lazy: async () => ({ Component: (await import('./pages/print-signs')).PrintSignsPage }) },
               // facility-0020, 0056, wireframe D6
               { path: 'admin/accounts', lazy: async () => ({ Component: (await import('./pages/accounts')).AccountsPage }) },
+              // facility-0057, wireframe D9: ?from&to&actor=<id>&category=<AuditCategory>
+              { path: 'admin/history', lazy: async () => ({ Component: (await import('./pages/history')).HistoryPage }) },
             ],
           },
           // M17: the Admin's phone page at the sign (facility-0045 item 2), in the phone column
