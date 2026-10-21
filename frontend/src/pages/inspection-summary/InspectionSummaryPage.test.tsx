@@ -155,6 +155,18 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     expect(await screen.findByText('ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก')).toBeInTheDocument();
   });
 
+  it('the fields follow the address when it changes while the page stays open', async () => {
+    serve();
+    const { user } = await renderApp('/admin/inspection-summary?from=2026-10-01&to=2026-10-07');
+    await screen.findByText('Admin เท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)');
+
+    await user.click(within(screen.getByRole('navigation', { name: 'เมนู Admin' })).getByRole('link', { name: 'สรุปการตรวจ' }));
+
+    await screen.findByText('Admin เท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
+    expect(fromField()).toHaveValue(formatShiftDate(addDays(thaiToday(), -6)));
+    expect(toField()).toHaveValue(formatShiftDate(thaiToday()));
+  });
+
   it('is in the Admin menu as สรุปการตรวจ', async () => {
     serve();
     await renderApp('/admin/inspection-summary');

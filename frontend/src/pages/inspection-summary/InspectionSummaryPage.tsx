@@ -31,6 +31,13 @@ export function InspectionSummaryPage() {
   const { currentData: summary, error, isFetching } = useGetInspectionSummaryQuery({ ...asked, buildingId }, freshOnOpen);
   const [texts, setTexts] = useState(() => rangeTexts(asked ?? lastSevenDays(thaiToday())));
   const [problem, setProblem] = useState<string | null>(null);
+  // the fields follow the address when it changes under the open page (menu link, Back)
+  const [seenRange, setSeenRange] = useState(rangeKey(asked));
+  if (seenRange !== rangeKey(asked)) {
+    setSeenRange(rangeKey(asked));
+    setTexts(rangeTexts(asked ?? lastSevenDays(thaiToday())));
+    setProblem(null);
+  }
   const go = (range: DateRange | undefined, building: number | undefined) => setParams(toRangeParams(range, building));
 
   const show = () => {
@@ -71,6 +78,10 @@ export function InspectionSummaryPage() {
       <SummaryNotes />
     </main>
   );
+}
+
+function rangeKey(range: DateRange | undefined): string {
+  return range ? `${range.from}_${range.to}` : '';
 }
 
 /** The range the server counted, which is the one asked for, or its default. */

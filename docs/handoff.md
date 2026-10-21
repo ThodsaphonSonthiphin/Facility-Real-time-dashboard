@@ -168,7 +168,7 @@ Plan 4 test results at merge:
 ## Task log (plan 12)
 
 - 2026-10-21 · Task 1 done: branch `feat/admin-reports` from `ca59320`; `thaiToday` and `shared/utils/dateRange.ts` (shortcuts วันนี้ / 7 วัน / เดือนนี้, `checkRange` with the server's limits, `readRange`, `readBuildingId`, `toRangeParams`, `exportLink`). Frontend tests 329 passed. Next: Task 2 (inspection summary D7).
-- 2026-10-21 · Task 2 done: inspection summary D7 (`/admin/inspection-summary`, lazy, in the menu as สรุปการตรวจ): each active Supervisor with building and shift, points inspected of the beat ("ไม่ได้ตรวจ n จุด"), ตรวจทั้งหมด (facility-0048 rule 5), submitted, inspected, the share as a progress bar ("–" when nothing was submitted), ไม่ได้ตรวจ, ให้แก้ไข, GPS flags; no thresholds; range typed dd/mm/yyyy with the shortcuts, checked before asking (31 dates), building picker, both in the address. Shared `RangeFields` and `BuildingSelect`. Frontend tests 340 passed; main JS 157.13 kB gzip. Next: Task 3 (Excel export D8).
+- 2026-10-21 · Task 2 done: inspection summary D7 (`/admin/inspection-summary`, lazy, in the menu as สรุปการตรวจ): each active Supervisor with building and shift, points inspected of the beat ("ไม่ได้ตรวจ n จุด"), ตรวจทั้งหมด (facility-0048 rule 5), submitted, inspected, the share as a progress bar ("–" when nothing was submitted), ไม่ได้ตรวจ, ให้แก้ไข, GPS flags; no thresholds; range typed dd/mm/yyyy with the shortcuts, checked before asking (31 dates), building picker, both in the address. Shared `RangeFields` and `BuildingSelect`. Frontend tests 341 passed; main JS 157.13 kB gzip. Next: Task 3 (Excel export D8).
 
 ## Sharing a test build (colleagues on other networks)
 
