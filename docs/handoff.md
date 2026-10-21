@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-16
+Last updated: 2026-10-21
 
 ## Project
 
@@ -30,7 +30,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 9 | Supervisor phone: My Building with live updates, inspection at the point's sign, nothing to inspect, blocked and send failures | done, merged (PR #58, `84890df`) (branch `feat/supervisor-phone`): `docs/superpowers/plans/2026-10-15-supervisor-phone.md` |
 | 10 | Admin setup: Areas, points, round windows, signs, sign location capture, print signs, accounts | done, merged (PR #59, `a6dc170`) (branch `feat/admin-setup`): `docs/superpowers/plans/2026-10-19-admin-setup.md` |
 | 11 | Admin live board: lazy Admin routes, point status with hub and 30 s poll (D1), attendance and corrections (D2), alerts and covers (D3) | done, merged (PR #60, `f897548`) (branch `feat/admin-live-board`): `docs/superpowers/plans/2026-10-19-admin-live-board.md` |
-| 12 | Admin reports: inspection summary (D7), Excel export (D8), Admin history (D9) | in progress (branch `feat/admin-reports`): `docs/superpowers/plans/2026-10-21-admin-reports.md` |
+| 12 | Admin reports: inspection summary (D7), Excel export (D8), Admin history (D9) | done, merged (PR #62, `d9ac984`) (branch `feat/admin-reports`): `docs/superpowers/plans/2026-10-21-admin-reports.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -178,6 +178,7 @@ Plan 4 test results at merge:
 - 2026-10-21 · Owner's browser walkthrough of the plan 12 pages found two issues, both fixed. (1) The shortcut buttons วันนี้ / 7 วัน / เดือนนี้ did not show which one was chosen: `matchesPreset` (shared/utils/dateRange.ts) compares the trimmed fields with each shortcut's range today, and RangeFields sets `aria-pressed` on every matching button (more than one can match), styled like D2's pressed shift button; this covers D7, D8 and D9. (2) D9's note "ค้นหาเฉพาะรายการที่โหลดแล้ว" sat under the search box and read as "downloaded": the note and its wrapper are gone, the search is a plain field, and the count line under the table now says `พบ N จาก M รายการที่แสดงอยู่`, with ` · กด "โหลดรายการเก่ากว่านี้" เพื่อค้นรายการที่เก่ากว่า` while older pages remain. Frontend tests 381 passed. Next: the owner checks the two fixes in the browser, then the OK for the push and PR.
 - 2026-10-21 · Owner: pressing "แสดง" gave no sign the press landed when the data did not change. Of the options offered (a press effect, a button that reads "กำลังโหลด..." then "✓ แสดงแล้ว", both), the owner chose the press effect only: every `.app-button` (buttons and button-styled links, the whole app) shrinks to 96 % and darkens while pressed, with no motion under `prefers-reduced-motion`. CSS only (shared.css); jsdom cannot show `:active`, so it is checked by eye. Frontend tests 381 passed. Next: the owner checks it in the browser, then the OK for the push and PR.
 - 2026-10-21 · Owner: a real tap is too short to see `:active`. Replaced it with a tap animation: `shared/utils/tapFeedback.ts` (installed once in `main.tsx`, one capture listener on the document) adds `app-button--tapped` on every `pointerdown` on an enabled `.app-button` and removes it on `animationend`, so a 300 ms press (scale 0.94 and darker, back to normal) plays to its end however short the tap; a second tap restarts it; under `prefers-reduced-motion` only the darkening plays. Frontend tests 385 passed (4 new). Next: the owner checks it in the browser, then the OK for the push and PR.
+- 2026-10-21 · PR #62 merged to master (`d9ac984`), branch deleted. Plan 12 is done, and it was the last of the six frontend plans: every wireframe page now exists. Cleanup: API stopped, throwaway database `facility_reports_test` dropped, `wwwroot` deleted. GitGuardian passed. Next: the owner chooses (see Pending work): the UX/UI pass over every page, the server-side search for the Admin history, or the Excel import of accounts.
 
 ## Sharing a test build (colleagues on other networks)
 
@@ -193,7 +194,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
-- UX fixes from the owner's real run, after plans 10 and 11 are done:
+- UX fixes from the owner's real run (plans 10 and 11 are done; fold into the UX/UI pass below):
   - `/admin/accounts`, "แก้เบอร์โทร": show the current phone, then a field for the new phone.
   - `/admin/areas/:areaId`, round windows: choose the time from a list instead of typing "HH:mm". A window already added to the point cannot be picked again.
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
