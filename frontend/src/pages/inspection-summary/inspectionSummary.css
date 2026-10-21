@@ -1,0 +1,61 @@
+/* Inspection summary (D7, facility-0048 rule 5). Class prefix: summary- */
+
+.summary-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.summary-page h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.summary-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.summary-sub {
+  display: block;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.summary-table .summary-number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-missed {
+  color: var(--color-warn-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.summary-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-share progress {
+  width: 120px;
+  height: 8px;
+  accent-color: var(--color-primary);
+}
+
+.summary-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 80ch;
+  color: var(--color-text-soft);
+  font-size: 14px;
+}

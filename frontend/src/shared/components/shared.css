@@ -363,6 +363,23 @@
   background: var(--color-status-passed);
 }
 
+/* RangeFields: two typed dates and the shortcuts (D7, D8, D9) */
+.app-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.app-range__date {
+  width: 150px;
+}
+
+.app-range__presets {
+  display: inline-flex;
+  gap: 4px;
+}
+
 @media print {
   .app-bar,
   .app-nav {

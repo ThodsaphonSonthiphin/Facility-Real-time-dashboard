@@ -1,0 +1,97 @@
+import { useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { freshOnOpen } from '../../shared/api/baseApi';
+import { BuildingSelect } from '../../shared/components/BuildingSelect';
+import { RangeFields } from '../../shared/components/RangeFields';
+import {
+  checkRange,
+  lastSevenDays,
+  rangeTexts,
+  readBuildingId,
+  readRange,
+  toRangeParams,
+  type DateRange,
+} from '../../shared/utils/dateRange';
+import { getErrorMessage } from '../../shared/utils/getErrorMessage';
+import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
+import { useGetInspectionSummaryQuery, type InspectionSummary } from './summaryApi';
+import { SUMMARY_MAX_DAYS } from './summaryRules';
+import { SummaryTable } from './SummaryTable';
+import './inspectionSummary.css';
+
+/**
+ * facility-0048 rule 5, wireframe D7: each active Supervisor's inspections over a range, as the server counts them.
+ * The page judges nothing (plan 12 decision 4). With no range in the address the server's last 7 dates apply; the
+ * address keeps a chosen range and building.
+ */
+export function InspectionSummaryPage() {
+  const [params, setParams] = useSearchParams();
+  const asked = readRange(params);
+  const buildingId = readBuildingId(params);
+  const { currentData: summary, error, isFetching } = useGetInspectionSummaryQuery({ ...asked, buildingId }, freshOnOpen);
+  const [texts, setTexts] = useState(() => rangeTexts(asked ?? lastSevenDays(thaiToday())));
+  const [problem, setProblem] = useState<string | null>(null);
+  const go = (range: DateRange | undefined, building: number | undefined) => setParams(toRangeParams(range, building));
+
+  const show = () => {
+    const range = checkRange(texts, SUMMARY_MAX_DAYS);
+    if (typeof range === 'string') {
+      setProblem(range);
+      return;
+    }
+    setProblem(null);
+    go(range, buildingId);
+  };
+
+  return (
+    <main className="summary-page">
+      <header>
+        <span className="app-muted">{summary ? rangeLine(summary, Boolean(asked)) : 'Admin เท่านั้น'}</span>
+        <h1>สรุปการตรวจของหัวหน้า</h1>
+      </header>
+      <div className="summary-controls">
+        <RangeFields value={texts} onChange={setTexts} onEnter={show} />
+        <button type="button" className="app-button" onClick={show}>
+          แสดง
+        </button>
+        <BuildingSelect value={buildingId} onChange={(building) => go(asked, building)} />
+      </div>
+      {problem && (
+        <p className="app-note app-note--error" role="alert">
+          {problem}
+        </p>
+      )}
+      {isFetching && !summary && <p className="app-muted">กำลังโหลด...</p>}
+      {error && (
+        <p className="app-note app-note--error" role="alert">
+          {getErrorMessage(error)}
+        </p>
+      )}
+      {summary && <SummaryTable rows={summary.rows} />}
+      <SummaryNotes />
+    </main>
+  );
+}
+
+/** The range the server counted, which is the one asked for, or its default. */
+function rangeLine(summary: InspectionSummary, asked: boolean): string {
+  return `Admin เท่านั้น · ${asked ? 'ช่วงที่เลือก' : '7 วันล่าสุด'} (${formatShiftDate(summary.from)}–${formatShiftDate(summary.to)})`;
+}
+
+/** Wireframe D7's notes, with "ตรวจทั้งหมด" and plan 6 decision 17 added. */
+function SummaryNotes() {
+  return (
+    <div className="summary-notes">
+      <span>
+        หน้านี้แสดงข้อมูลให้ Admin เห็น ระบบไม่ประเมินผลเอง และไม่มีขั้นต่ำว่าหัวหน้าต้องตรวจกี่ครั้ง · "จุดที่ตรวจแล้ว"
+        นับจุดในตึกและกะของหัวหน้าที่ถูกตรวจอย่างน้อย 1 ครั้งในช่วงที่เลือก
+      </span>
+      <span>
+        "ไม่ได้ตรวจ" คืองานที่แม่บ้านส่งแล้ว แต่รอบจบก่อนหัวหน้ามาตรวจ · "ตรวจที่ติดธง GPS"
+        คือตรวจตอนที่มือถืออยู่นอกรัศมีของป้าย · "ตรวจทั้งหมด" นับทุกครั้งที่หัวหน้าคนนั้นตรวจ รวมตอนตรวจแทนตึกอื่น
+      </span>
+      <span>งานที่แม่บ้านส่งหลังจบกะไม่นับในตัวเลขของหัวหน้า เพราะไม่มีใครตรวจได้แล้ว</span>
+      <span>ดูรายละเอียดรายครั้งได้จากไฟล์ Excel</span>
+    </div>
+  );
+}

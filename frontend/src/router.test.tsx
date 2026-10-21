@@ -68,6 +68,7 @@ describe('routing (facility-0026, 0058)', () => {
       'สถานะจุด',
       'การเข้างาน',
       'รายการที่ขึ้นเตือน',
+      'สรุปการตรวจ',
       'จัดการ Area และป้าย',
       'บัญชีผู้ใช้',
     ]);
@@ -89,6 +90,7 @@ describe('routing (facility-0026, 0058)', () => {
       'dashboard',
       'admin/attendance',
       'admin/alerts',
+      'admin/inspection-summary',
       'admin/areas/:areaId?',
       'admin/areas/new',
       'admin/areas/:areaId/edit',

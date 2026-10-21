@@ -4,13 +4,14 @@ import { livePoll } from '../api/baseApi';
 import './shared.css';
 
 /**
- * The Admin menu of wireframes D1–D10, listing only the pages that exist (plan 10 decision 2). Plan 12 adds
- * สรุปการตรวจ, ส่งออก Excel and ประวัติ Admin with their pages.
+ * The Admin menu of wireframes D1–D10, listing only the pages that exist (plan 10 decision 2). The order follows
+ * the wireframes; plan 12 added ส่งออก Excel, which they reach only from page links.
  */
 const adminLinks = [
   { to: '/dashboard', label: 'สถานะจุด', counted: false },
   { to: '/admin/attendance', label: 'การเข้างาน', counted: false },
   { to: '/admin/alerts', label: 'รายการที่ขึ้นเตือน', counted: true },
+  { to: '/admin/inspection-summary', label: 'สรุปการตรวจ', counted: false },
   { to: '/admin/areas', label: 'จัดการ Area และป้าย', counted: false },
   { to: '/admin/accounts', label: 'บัญชีผู้ใช้', counted: false },
 ] as const;
