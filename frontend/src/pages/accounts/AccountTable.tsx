@@ -21,6 +21,7 @@ export function AccountTable({ accounts, me, busy, onAction }: AccountTableProps
     return <p className="app-note app-note--info">ไม่พบบัญชีที่ตรงกับที่ค้นหา</p>;
   }
   return (
+    <div className="app-table-scroll">
     <table className="app-table" aria-label="บัญชีผู้ใช้">
       <thead>
         <tr>
@@ -95,5 +96,6 @@ export function AccountTable({ accounts, me, busy, onAction }: AccountTableProps
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

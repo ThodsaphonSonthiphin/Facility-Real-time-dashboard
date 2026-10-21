@@ -15,6 +15,7 @@ export function AttendanceTable({ rows, onCorrect }: AttendanceTableProps) {
     return <p className="app-note app-note--info">ไม่พบ Area ที่ตรงกับที่ค้นหา</p>;
   }
   return (
+    <div className="app-table-scroll">
     <table className="app-table attendance-table" aria-label="การเข้างานราย Area">
       <thead>
         <tr>
@@ -67,6 +68,7 @@ export function AttendanceTable({ rows, onCorrect }: AttendanceTableProps) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 

@@ -257,6 +257,16 @@
   font-size: 15px;
 }
 
+/* A wide table scrolls sideways inside this box on a narrow screen instead of pushing the page wider */
+.app-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.app-table-scroll .app-table {
+  min-width: 720px;
+}
+
 .app-table {
   width: 100%;
   border-collapse: collapse;

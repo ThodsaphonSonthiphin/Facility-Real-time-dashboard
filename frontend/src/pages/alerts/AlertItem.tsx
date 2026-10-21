@@ -26,8 +26,8 @@ export function AlertItem({ alert, onNotice }: AlertItemProps) {
         <div className="alerts-item__top">
           <span className="alerts-item__time">{formatDayTime(alert.at)}</span>
           <strong>{alertWho(alert)}</strong>
-          <span className={`alerts-chip alerts-chip--${alert.kind}`}>{title}</span>
         </div>
+        <span className={`alerts-chip alerts-chip--${alert.kind}`}>{title}</span>
         <span className="alerts-item__detail">{alertDetail(alert)}</span>
         <div className="alerts-item__actions">
           {alert.cover && !alert.reviewed && <CoverButton alert={alert} cover={alert.cover} onNotice={onNotice} />}
