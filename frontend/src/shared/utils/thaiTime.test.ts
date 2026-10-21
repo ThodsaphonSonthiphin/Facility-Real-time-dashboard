@@ -7,6 +7,7 @@ import {
   formatShiftDate,
   formatTime,
   parseShiftDate,
+  thaiToday,
 } from './thaiTime';
 
 describe('thaiTime', () => {
@@ -31,6 +32,12 @@ describe('thaiTime', () => {
   it('formatDate gives the Thai calendar date, which may be a day after the UTC date', () => {
     expect(formatDate('2026-10-15T18:30:00Z')).toBe('16/10/2026'); // 01:30 on the 16th in Thailand
     expect(formatDate('2026-10-16T02:00:00Z')).toBe('16/10/2026');
+  });
+
+  it('thaiToday is the Thai calendar date, which turns over at 17:00 UTC', () => {
+    expect(thaiToday(new Date('2026-10-15T16:59:00Z'))).toBe('2026-10-15');
+    expect(thaiToday(new Date('2026-10-15T17:00:00Z'))).toBe('2026-10-16');
+    expect(thaiToday(new Date('2026-12-31T17:30:00Z'))).toBe('2027-01-01');
   });
 
   it('shows a UTC moment from the server as Thai time on a 24-hour clock', () => {

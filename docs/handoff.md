@@ -30,7 +30,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 9 | Supervisor phone: My Building with live updates, inspection at the point's sign, nothing to inspect, blocked and send failures | done, merged (PR #58, `84890df`) (branch `feat/supervisor-phone`): `docs/superpowers/plans/2026-10-15-supervisor-phone.md` |
 | 10 | Admin setup: Areas, points, round windows, signs, sign location capture, print signs, accounts | done, merged (PR #59, `a6dc170`) (branch `feat/admin-setup`): `docs/superpowers/plans/2026-10-19-admin-setup.md` |
 | 11 | Admin live board: lazy Admin routes, point status with hub and 30 s poll (D1), attendance and corrections (D2), alerts and covers (D3) | done, merged (PR #60, `f897548`) (branch `feat/admin-live-board`): `docs/superpowers/plans/2026-10-19-admin-live-board.md` |
-| 12 | Admin reports: inspection summary (D7), Excel export (D8), Admin history (D9) | not started (the owner split plan 11 on 2026-10-19) |
+| 12 | Admin reports: inspection summary (D7), Excel export (D8), Admin history (D9) | in progress (branch `feat/admin-reports`): `docs/superpowers/plans/2026-10-21-admin-reports.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -165,6 +165,10 @@ Plan 4 test results at merge:
 - 2026-10-21 · Fix for that finding (owner opened the pages on a phone): the wide tables of D2 (`/admin/attendance`) and D6 (`/admin/accounts`) sit in `.app-table-scroll` (shared.css), which scrolls sideways with a 720 px minimum table width; on D3 (`/admin/alerts`) the status chip is on its own line in every card (it wrapped only when the name was long). `/admin/areas` tables were not checked. Frontend 320 tests, lint and tsc clean. Checked by tests only, not by eye, until the owner looks. Next: the owner's OK to push and merge PR #60.
 - 2026-10-21 · PR #60 merged to master (`f897548`), branch deleted. Plan 11 is done. Cleanup: no API or tunnel running, throwaway database `facility_live_test` dropped, `wwwroot` deleted. Next: plan 12 (Admin reports), after the owner's OK.
 
+## Task log (plan 12)
+
+- 2026-10-21 · Task 1 done: branch `feat/admin-reports` from `ca59320`; `thaiToday` and `shared/utils/dateRange.ts` (shortcuts วันนี้ / 7 วัน / เดือนนี้, `checkRange` with the server's limits, `readRange`, `readBuildingId`, `toRangeParams`, `exportLink`). Frontend tests 329 passed. Next: Task 2 (inspection summary D7).
+
 ## Sharing a test build (colleagues on other networks)
 
 Test data only. The Development seed has an Admin whose password is public in this repo (facility-0049), so a shared link must never point at a database with real data, and never at a long-lived server.
@@ -179,7 +183,6 @@ Test data only. The Development seed has an Admin whose password is public in th
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
-- Frontend plan 12: Admin reports, inspection summary (D7), Excel export (D8), Admin history (D9). Plan 11 was split in two on 2026-10-19.
 - UX fixes from the owner's real run, after plans 10 and 11 are done:
   - `/admin/accounts`, "แก้เบอร์โทร": show the current phone, then a field for the new phone.
   - `/admin/areas/:areaId`, round windows: choose the time from a list instead of typing "HH:mm". A window already added to the point cannot be picked again.
