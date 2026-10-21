@@ -68,23 +68,39 @@
   font-size: 17px;
 }
 
-/* A press shows at once, before any answer comes back (owner, 2026-10-21) */
-.app-button {
-  transition: transform 80ms ease-out, filter 80ms ease-out;
+/*
+ * A press shows at once, before any answer comes back (owner, 2026-10-21). A quick tap ends before :active can be
+ * seen, so shared/utils/tapFeedback.ts adds app-button--tapped on every press and the animation plays to its end.
+ */
+@keyframes app-tap {
+  from {
+    transform: scale(0.94);
+    filter: brightness(0.85);
+  }
+
+  to {
+    transform: none;
+    filter: none;
+  }
 }
 
-.app-button:active:not(:disabled) {
-  transform: scale(0.96);
-  filter: brightness(0.88);
+@keyframes app-tap-still {
+  from {
+    filter: brightness(0.85);
+  }
+
+  to {
+    filter: none;
+  }
+}
+
+.app-button--tapped {
+  animation: app-tap 300ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-button {
-    transition: none;
-  }
-
-  .app-button:active:not(:disabled) {
-    transform: none;
+  .app-button--tapped {
+    animation-name: app-tap-still;
   }
 }
 
