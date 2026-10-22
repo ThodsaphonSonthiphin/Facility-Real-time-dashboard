@@ -18,7 +18,10 @@ interface SubmitResultProps {
   result: ScanRecordCreated;
 }
 
-/** Wireframes M5 and M13: the server placed the submission (facility-0047 rule 3) and judged the distance (facility-0037). */
+/**
+ * Wireframes M5 and M13: the server placed the submission (facility-0047 rule 3) and judged the distance
+ * (facility-0037). The point's status is one line under the heading, not a card (facility-0079).
+ */
 export function SubmitResult({ point, draft, result }: SubmitResultProps) {
   return (
     <main className="scan-page">
@@ -26,6 +29,9 @@ export function SubmitResult({ point, draft, result }: SubmitResultProps) {
         <span className="scan-kicker">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
         <h1>{`${title[result.placement]} ${formatTime(result.submittedAt)}`}</h1>
         <p className="scan-sub">{`${point.name} · ${describeDraft(draft)}`}</p>
+        <p className="scan-status">
+          สถานะของจุดนี้ <StatusChip status={result.newPointStatus} />
+        </p>
       </header>
       {result.placement === 'Late' && (
         <p className="app-note app-note--warn">
@@ -45,12 +51,6 @@ export function SubmitResult({ point, draft, result }: SubmitResultProps) {
         </p>
       )}
       {result.withinRadius === true && <p className="scan-muted">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
-      <section className="app-panel">
-        <h2>สถานะของจุดนี้</h2>
-        <p>
-          <StatusChip status={result.newPointStatus} />
-        </p>
-      </section>
       <Link className="app-button app-button--primary" to="/my-work">
         ดูงานของฉัน
       </Link>

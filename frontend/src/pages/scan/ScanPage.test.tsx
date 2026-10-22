@@ -130,6 +130,40 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
     expect(server.calls.some((c) => c.path === '/api/scan-records')).toBe(false);
   });
 
+  it('the warning shows only after ส่งงาน, goes once a tag or a note is given, and comes back when emptied (facility-0076)', async () => {
+    fakeGps(nearSign);
+    serve();
+    const { user } = await renderApp(SIGN);
+    const warning = 'เลือกปัญหาที่พบอย่างน้อย 1 อย่าง หรือเขียนหมายเหตุ';
+
+    await user.click(await screen.findByRole('radio', { name: 'พบปัญหา' }));
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(warning);
+
+    await user.click(screen.getByRole('checkbox', { name: 'ขยะล้น' }));
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'ขยะล้น' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(warning);
+
+    await user.type(screen.getByLabelText('หมายเหตุ'), 'ก๊อกรั่ว');
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ส่งงาน' })).toBeEnabled();
+  });
+
+  it('the result shows the point status as one line under the heading, with no card (facility-0079)', async () => {
+    fakeGps(nearSign);
+    serve({ 'POST /api/scan-records': () => ({ status: 201, body: saved() }) });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
+    await screen.findByRole('heading', { name: 'ส่งงานแล้ว 10:05' });
+
+    expect(screen.getByText('สถานะของจุดนี้')).toHaveTextContent('สถานะของจุดนี้ รอตรวจ');
+    expect(screen.queryByRole('heading', { name: 'สถานะของจุดนี้' })).not.toBeInTheDocument();
+  });
+
   it('a point the Supervisor sent back shows the defect, and the fix counts as rework (M4, facility-0029)', async () => {
     fakeGps(nearSign);
     serve(
