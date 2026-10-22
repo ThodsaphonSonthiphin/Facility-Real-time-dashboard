@@ -3,7 +3,7 @@
 .inspect-page {
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
 }
 
 .inspect-heading {
@@ -20,12 +20,12 @@
 .inspect-kicker {
   font-size: 13px;
   letter-spacing: 0.04em;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .inspect-sub {
   font-size: 15px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .inspect-strong {
@@ -35,7 +35,7 @@
 
 .inspect-muted {
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .inspect-distance {
@@ -44,18 +44,18 @@
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-md);
   font-size: 14px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .inspect-radius {
   padding: 2px 10px;
   border-radius: 999px;
-  background: var(--color-status-passed);
-  color: var(--color-on-primary);
+  background: var(--old-color-status-passed);
+  color: var(--old-color-on-primary);
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -64,7 +64,7 @@
 .inspect-form {
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
 }
 
 .inspect-choice {
@@ -88,23 +88,23 @@
   justify-content: center;
   gap: 8px;
   min-height: 56px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-input-border);
-  border-radius: var(--radius-md);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-input-border);
+  border-radius: var(--old-radius-md);
   font-size: 17px;
   font-weight: 600;
 }
 
 .inspect-choice label:has(input:checked) {
-  border: 2px solid var(--color-primary);
-  background: var(--color-info-bg);
-  color: var(--color-primary);
+  border: 2px solid var(--old-color-primary);
+  background: var(--old-color-info-bg);
+  color: var(--old-color-primary);
 }
 
 .inspect-choice .inspect-choice__rework:has(input:checked) {
-  border-color: var(--color-status-rework);
-  background: var(--color-error-bg);
-  color: var(--color-error-text);
+  border-color: var(--old-color-status-rework);
+  background: var(--old-color-error-bg);
+  color: var(--old-color-error-text);
 }
 
 .inspect-defect {
@@ -122,17 +122,17 @@
   font: inherit;
   font-size: 15px;
   padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-sm);
   resize: none;
 }
 
 .inspect-submit {
   min-height: 72px;
   border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  border-radius: var(--old-radius-lg);
+  background: var(--old-color-primary);
+  color: var(--old-color-on-primary);
   font: inherit;
   font-size: 22px;
   font-weight: 700;

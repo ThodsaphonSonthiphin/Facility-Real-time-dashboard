@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (plan 13 merged, PR #66; next: Tailwind migration, see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#70 Tailwind set-up done, PR open; next: merge it, then #71; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -294,7 +294,15 @@ Where `ui-ux-pro-max` fits:
 
 - 2026-10-22 · Docs committed on branch `docs/tailwind-grill-and-spec`, PR #69 opened, not merged (waits for the owner). The pre-commit hook ran lint and the frontend tests: 403 passed. Next: the owner merges #69, then runs `/to-tickets` on #68.
 
-Next session: the owner merges PR #69, then runs `/to-tickets` on #68.
+- 2026-10-22 · Owner: merge. PR #69 merged to master (`7492117`); the files #68 points at are now on master. Next: the owner runs `/to-tickets` on #68.
+
+- 2026-10-22 · `/to-tickets` on #68: 13 tickets (#70–#82), sub-issues of #68, each `ready-for-agent`, with GitHub's native blocked-by edges. The split is expand–contract: #70 Tailwind + tokens + lucide-react (nothing visibly changes) → #71 shared components → page moves #72 login, #73 My Work B, #74 scan A + outcome screens, #75 check-in, #76 Supervisor pages, #77 D1 A, #78 D2 + D3, #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print (each blocked only by #71, so they can run in parallel) → #82 contract (preflight on, old CSS deleted, final eye check and UX pass; blocked by #72–#81). Every ticket shares the acceptance checks: suite green, lint/tsc clean, JS ≤200 kB gzip, CSS size noted, MASTER.md check, the owner's eye check. Next: `implement` #70.
+
+- 2026-10-22 · #70 done on branch `feat/tailwind-setup`: Tailwind 4.3.3 through `@tailwindcss/vite` (dev dependencies), preflight off (only `theme.css` and `utilities.css` are imported); `@theme` holds MASTER.md's tokens and clears Tailwind's own colours, text sizes, radii and fonts, so `bg-blue-600` and the like do not exist; the type scale is `text-xs` 13, `text-sm` 14, `text-md` 15, `text-base` 17, `text-lg` 19, `text-xl` 22, `text-2xl` 28 (written into MASTER.md). The old `:root` variables are renamed `--old-*` in all 19 CSS files (checked to be a pure rename) because they had the same names as the new tokens; they go in #82. `lucide-react` 1.53.0 (the newest release at least two weeks old). Measured: main JS 157.94 kB gzip (no icon used yet); a temporary probe showed `bg-primary` resolving to `#2563eb` and the first icon costing +1.38 kB, later ones about 0.15 kB (facility-0062, 0088 notes); main CSS 22.07 kB raw / 3.88 kB gzip (was 18.75 / 3.26). Tailwind also emits a few utilities from words in the source (`fixed`, `hidden`, `border`, `table`, …); no element uses those as class names. Lint, tsc clean; 403 tests pass. Code review (Standards + Spec) fixes: ADR 0088 keeps its estimate with a dated note; the `:root` comment says the base rules stay; MASTER.md names the icon sizes (`size-5` phone, `size-4` Admin); Tailwind moved to devDependencies. Not done: the owner's eye check of a phone page and an Admin page (nothing should look different). Next: the eye check, push and PR (with the CSS size), then #71.
+
+- 2026-10-22 · Owner's eye check of #70: both login pages (`/login` on a phone, `/login/admin` on the computer) served from this branch and from master side by side; the owner saw no difference. Dev servers stopped, comparison worktree removed. Pushed and PR opened. Next: the owner merges the PR, then `implement` #71.
+
+Next session: the owner merges the #70 PR, then `implement` #71.
 
 ## Owner's rules (still in force)
 

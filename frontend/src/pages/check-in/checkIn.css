@@ -4,7 +4,7 @@
   min-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
 }
 
 .checkin-heading {
@@ -21,17 +21,17 @@
 .checkin-kicker {
   font-size: 13px;
   letter-spacing: 0.04em;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .checkin-sub {
   font-size: 15px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .checkin-area {
   font-size: 14px;
-  color: var(--color-text-soft);
+  color: var(--old-color-text-soft);
 }
 
 .checkin-timeline {
@@ -41,9 +41,9 @@
   margin: 0;
   padding: 14px 16px;
   list-style: none;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-md);
   text-align: center;
   font-size: 12px;
 }
@@ -53,20 +53,20 @@
   flex-direction: column;
   gap: 2px;
   padding: 8px 2px;
-  border: 1px dashed var(--color-input-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-muted);
+  border: 1px dashed var(--old-color-input-border);
+  border-radius: var(--old-radius-sm);
+  color: var(--old-color-muted);
 }
 
 .checkin-step--done {
   border-style: solid;
-  border-color: var(--color-border);
-  color: var(--color-text);
+  border-color: var(--old-color-border);
+  color: var(--old-color-text);
   font-weight: 600;
 }
 
 .checkin-flag {
-  color: var(--color-warn-text);
+  color: var(--old-color-warn-text);
   font-weight: 700;
 }
 
@@ -79,10 +79,10 @@
 
 .checkin-press {
   min-height: 56px;
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  color: var(--color-primary);
+  border: 1px solid var(--old-color-primary);
+  border-radius: var(--old-radius-lg);
+  background: var(--old-color-surface);
+  color: var(--old-color-primary);
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
@@ -90,8 +90,8 @@
 
 .checkin-press--main {
   min-height: 72px;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--old-color-primary);
+  color: var(--old-color-on-primary);
   font-size: 22px;
 }
 
@@ -102,6 +102,6 @@
 
 .checkin-hint {
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
   text-align: center;
 }

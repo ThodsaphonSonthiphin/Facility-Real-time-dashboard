@@ -1,13 +1,13 @@
 /* Login pages, wireframes M0 and D0. Class prefix: auth- */
 
 .auth-page {
-  max-width: var(--phone-width);
+  max-width: var(--old-phone-width);
   min-height: 100vh;
   margin: 0 auto;
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
 }
 
 .auth-page--desk {
@@ -30,14 +30,14 @@
 .auth-kicker {
   font-size: 13px;
   letter-spacing: 0.04em;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .auth-form {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
 }
 
 .auth-card {
@@ -46,8 +46,8 @@
   max-width: 400px;
   gap: 12px;
   padding: 28px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
   border-radius: 12px;
 }
 
@@ -56,9 +56,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-md);
 }
 
 .auth-form label {
@@ -70,32 +70,32 @@
   min-height: 48px;
   padding: 0 12px;
   font-size: 17px;
-  border: 1px solid var(--color-input-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  border: 1px solid var(--old-color-input-border);
+  border-radius: var(--old-radius-md);
+  background: var(--old-color-surface);
 }
 
 .auth-hint {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .auth-note {
   padding: 10px 14px;
-  border-radius: var(--radius-md);
+  border-radius: var(--old-radius-md);
   font-size: 14px;
 }
 
 .auth-note--info {
-  background: var(--color-info-bg);
-  border: 1px solid var(--color-info-border);
-  color: var(--color-info-text);
+  background: var(--old-color-info-bg);
+  border: 1px solid var(--old-color-info-border);
+  color: var(--old-color-info-text);
 }
 
 .auth-note--error {
-  background: var(--color-error-bg);
-  border: 1px solid var(--color-error-border);
-  color: var(--color-error-text);
+  background: var(--old-color-error-bg);
+  border: 1px solid var(--old-color-error-border);
+  color: var(--old-color-error-text);
   font-weight: 600;
 }
 
@@ -103,9 +103,9 @@
   margin-top: auto;
   min-height: 72px;
   border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  border-radius: var(--old-radius-lg);
+  background: var(--old-color-primary);
+  color: var(--old-color-on-primary);
   font-size: 22px;
   font-weight: 700;
   cursor: pointer;
@@ -127,7 +127,7 @@
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
   text-align: center;
 }
 

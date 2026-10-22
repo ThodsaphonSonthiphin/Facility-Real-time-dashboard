@@ -3,7 +3,7 @@
 .building-page {
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
 }
 
 .building-heading {
@@ -20,13 +20,13 @@
 .building-kicker {
   font-size: 13px;
   letter-spacing: 0.04em;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .building-sub,
 .building-muted {
   font-size: 15px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .building-summary {
@@ -45,9 +45,9 @@
   flex-direction: column;
   gap: 2px;
   padding: 8px 4px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-md);
 }
 
 .building-summary strong {
@@ -56,15 +56,15 @@
 }
 
 .building-summary .building-summary__pending {
-  background: var(--color-info-bg);
-  border-color: var(--color-info-border);
-  color: var(--color-status-pending);
+  background: var(--old-color-info-bg);
+  border-color: var(--old-color-info-border);
+  color: var(--old-color-status-pending);
 }
 
 .building-summary .building-summary__rework {
-  background: var(--color-error-bg);
-  border-color: var(--color-error-border);
-  color: var(--color-error-text);
+  background: var(--old-color-error-bg);
+  border-color: var(--old-color-error-border);
+  color: var(--old-color-error-text);
 }
 
 .building-section {
@@ -76,7 +76,7 @@
 .building-section h2 {
   font-size: 14px;
   font-weight: 700;
-  color: var(--color-text-soft);
+  color: var(--old-color-text-soft);
 }
 
 .building-cards {
@@ -93,19 +93,19 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 14px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-md);
 }
 
 .building-card--PendingInspection {
   padding: 11px 13px;
-  border: 2px solid var(--color-primary);
+  border: 2px solid var(--old-color-primary);
 }
 
 .building-card--Rework {
   padding: 11px 13px;
-  border: 2px solid var(--color-status-rework);
+  border: 2px solid var(--old-color-status-rework);
 }
 
 .building-card__top {
@@ -122,7 +122,7 @@
 
 .building-card__where {
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -133,12 +133,12 @@
 .building-card__todo {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--old-color-primary);
 }
 
 .building-card__issue {
   font-size: 13px;
-  color: var(--color-error-text);
+  color: var(--old-color-error-text);
 }
 
 .building-footer {
@@ -147,9 +147,9 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-sm);
   font-size: 13px;
-  color: var(--color-text-soft);
+  color: var(--old-color-text-soft);
 }

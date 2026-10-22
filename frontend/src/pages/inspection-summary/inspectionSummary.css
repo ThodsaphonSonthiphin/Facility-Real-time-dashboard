@@ -3,7 +3,7 @@
 .summary-page {
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
 }
 
 .summary-page h1 {
@@ -25,7 +25,7 @@
 
 .summary-sub {
   display: block;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
   font-size: 13px;
   font-weight: 400;
 }
@@ -36,7 +36,7 @@
 }
 
 .summary-missed {
-  color: var(--color-warn-text);
+  color: var(--old-color-warn-text);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -52,7 +52,7 @@
 .summary-share progress {
   width: 120px;
   height: 8px;
-  accent-color: var(--color-primary);
+  accent-color: var(--old-color-primary);
 }
 
 .summary-notes {
@@ -60,6 +60,6 @@
   flex-direction: column;
   gap: 6px;
   max-width: 80ch;
-  color: var(--color-text-soft);
+  color: var(--old-color-text-soft);
   font-size: 14px;
 }

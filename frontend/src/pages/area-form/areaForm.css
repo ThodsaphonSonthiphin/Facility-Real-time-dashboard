@@ -3,7 +3,7 @@
 .areaform-page {
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
   max-width: 720px;
 }
 
@@ -26,8 +26,8 @@
   gap: 16px;
   margin: 0;
   padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-sm);
   font-size: 14px;
 }
 

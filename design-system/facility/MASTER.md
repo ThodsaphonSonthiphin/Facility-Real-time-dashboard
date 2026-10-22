@@ -47,6 +47,8 @@ All pass 4.5:1 with white text. The three idle statuses share one grey on purpos
 
 ### Notes (messages in a box)
 
+Tokens `--color-<kind>-bg`, `--color-<kind>-border`, `--color-<kind>-text` (utilities such as `bg-info-bg`, `text-error-text`).
+
 | Kind | Background | Border | Text |
 |---|---|---|---|
 | Info | `#EFF6FF` | `#BFDBFE` | `#1E40AF` (8.01:1) |
@@ -56,20 +58,32 @@ All pass 4.5:1 with white text. The three idle statuses share one grey on purpos
 ## Type
 
 - Font: the device's own, `system-ui, sans-serif` (facility-0072). Never load a web font.
-- A fixed scale of about six sizes; no size outside it.
+- A fixed scale of seven sizes; no size outside it. Tailwind's own sizes are cleared, so only these exist:
+
+  | Token | Utility | Size | Line height | Use |
+  |---|---|---|---|---|
+  | `--text-xs` | `text-xs` | 13 px | 1.5 | Admin table meta, the floor everywhere |
+  | `--text-sm` | `text-sm` | 14 px | 1.5 | Admin body, chips |
+  | `--text-md` | `text-md` | 15 px | 1.5 | Phone secondary lines |
+  | `--text-base` | `text-base` | 17 px | 1.5 | Phone body |
+  | `--text-lg` | `text-lg` | 19 px | 1.4 | Phone card names, buttons |
+  | `--text-xl` | `text-xl` | 22 px | 1.3 | Admin page headings |
+  | `--text-2xl` | `text-2xl` | 28 px | 1.25 | Phone page headings |
+
 - Phone body text at least **17 px**; Admin body text at least **14 px**; nothing anywhere below **13 px** (chips included).
 - Line height 1.5 for body text; Thai marks above and below need the room.
 
 ## Size and spacing
 
 - Spacing on a 4/8 px rhythm.
-- Corners 8 px (`--radius`); chips may be fully round.
+- Corners 8 px (`--radius`, utility `rounded`); chips may be fully round (`rounded-full`).
+- Widths: phone column `--container-phone` 480 px (`max-w-phone`), Admin page `--container-desk` 1216 px (`max-w-desk`).
 - Phone targets at least **48 px** high; primary actions (ส่งงาน, ลงเวลา) **56 px**, full width.
 - Admin targets at least **36 px** high.
 
 ## Icons (facility-0088)
 
-`lucide-react`, imported one at a time, one stroke width, sizes from a token. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons. No emoji as icons.
+`lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons. No emoji as icons.
 
 ## States every page shows
 
