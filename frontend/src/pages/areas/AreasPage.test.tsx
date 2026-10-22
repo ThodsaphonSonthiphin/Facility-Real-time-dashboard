@@ -136,10 +136,10 @@ describe('AreasPage (D4, facility-0045)', () => {
   });
 
   it('an Area that does not exist shows the server’s message', async () => {
-    serve({ 'GET /api/admin/areas/9': () => ({ status: 404, body: { message: 'ไม่พบ Area นี้' } }) });
+    serve({ 'GET /api/admin/areas/9': () => ({ status: 404, body: { message: 'ไม่พบพื้นที่นี้' } }) });
     await renderApp('/admin/areas/9');
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('ไม่พบ Area นี้');
+    expect(await screen.findByRole('alert')).toHaveTextContent('ไม่พบพื้นที่นี้');
   });
 
   it('is for Admins only (facility-0010)', async () => {

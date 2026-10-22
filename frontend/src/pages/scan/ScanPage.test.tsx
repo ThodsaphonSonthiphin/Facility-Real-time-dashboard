@@ -387,12 +387,12 @@ describe('ScanPage when the send does not go through (M8, M12)', () => {
 
   it('a refusal from the server stays on the form, word for word', async () => {
     fakeGps(nearSign);
-    serve({ 'POST /api/scan-records': () => ({ status: 409, body: { message: 'ลงเวลาเข้างานที่ป้ายของ Area คุณก่อน' } }) });
+    serve({ 'POST /api/scan-records': () => ({ status: 409, body: { message: 'ลงเวลาเข้างานที่ป้ายของพื้นที่คุณก่อน' } }) });
     const { user } = await renderApp(SIGN);
 
     await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('ลงเวลาเข้างานที่ป้ายของ Area คุณก่อน');
+    expect(await screen.findByRole('alert')).toHaveTextContent('ลงเวลาเข้างานที่ป้ายของพื้นที่คุณก่อน');
     expect(screen.getByRole('button', { name: 'ส่งงาน' })).toBeEnabled();
   });
 

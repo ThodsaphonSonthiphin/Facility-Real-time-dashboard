@@ -197,6 +197,7 @@ Plan 4 test results at merge:
 - 2026-10-22 · Task 8 done: approved words (facility-0085) on the phone pages, the login pages and the shared pieces: พื้นที่, แอดมิน, ตำแหน่ง, ไกลป้าย, เลยเวลา, ส่งเพิ่ม (ไม่นับรอบ), สิ่งที่ต้องแก้; tests changed with them. Frontend 401 tests; main JS 157.92 kB gzip. Next: Task 9 (words on the Admin live and report pages).
 - 2026-10-22 · Task 9 done: approved words (facility-0085) on D1, D2, D3, D7, D8, D9 and the menu (จัดการพื้นที่และป้าย, ประวัติการแก้ไขของแอดมิน; blocked scans named สแกนผิดพื้นที่ / ผิดตึก / นอกกะ; ไกลป้าย for flags; ตรวจตอนอยู่ไกลป้าย on D7); tests changed with them. Frontend 401 tests. Next: Task 10 (words on the Admin setup pages).
 - 2026-10-22 · Task 10 done: approved words (facility-0085) on D4, D5 (printed signs: "พื้นที่ AR01 · ตึก A", "สร้าง QR"), D6, D10 and M17 (วัดที่ป้ายจริง / ปักจากแผนที่, สร้าง QR ใหม่, แอดมิน); tests changed with them. Frontend 401 tests. Next: Task 11 (server words).
+- 2026-10-22 · Task 11 done: approved words (facility-0085) in server messages, new audit summaries and the Excel file (headers พื้นที่, ตำแหน่ง, แจ้งปัญหา, สิ่งที่ต้องแก้; "ส่งเพิ่ม (ไม่นับรอบ)"; "แก้โดยแอดมิน"); a Blocked Scan's alert name in summaries follows its reason (`ThaiLabels.BlockedName`), which closes the parked "สแกนนอก Area" item; old audit rows keep their words. Unit 302; API 540 + 5 skipped. Next: Task 12 (docs, final checks, real run).
 
 ## Sharing a test build (colleagues on other networks)
 

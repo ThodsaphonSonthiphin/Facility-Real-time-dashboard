@@ -112,7 +112,7 @@ public static class AdminAttendanceEndpoints
         var existing = events.FirstOrDefault(a => a.EventType == eventType);
         if (existing is null && cleaner.AreaId is null)
         {
-            return Bad("แม่บ้านคนนี้ยังไม่มี Area");
+            return Bad("แม่บ้านคนนี้ยังไม่มีพื้นที่");
         }
 
         var proposed = events.ToDictionary(a => a.EventType, a => a.OccurredAt);

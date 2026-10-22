@@ -89,7 +89,7 @@ public class AccountSecretEndpointTests
         var password = await PasswordAsync(admin, e1001, "new-password-1");
 
         Assert.Equal(HttpStatusCode.BadRequest, phone.StatusCode);
-        Assert.Equal("บัญชี Admin ไม่มีเบอร์โทร ใช้ปุ่มรีเซ็ตรหัสผ่าน", await AdminSetupApi.MessageAsync(phone));
+        Assert.Equal("บัญชีแอดมินไม่มีเบอร์โทร ใช้ปุ่มรีเซ็ตรหัสผ่าน", await AdminSetupApi.MessageAsync(phone));
         Assert.Equal(HttpStatusCode.BadRequest, password.StatusCode);
         Assert.Equal("แม่บ้านและหัวหน้าไม่มีรหัสผ่าน ใช้ปุ่มแก้เบอร์โทร", await AdminSetupApi.MessageAsync(password));
     }

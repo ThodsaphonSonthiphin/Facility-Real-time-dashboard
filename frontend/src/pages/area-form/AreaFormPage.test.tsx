@@ -117,7 +117,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
   });
 
   it('shows the server’s refusal and stays on the form', async () => {
-    serve({ 'POST /api/admin/areas': () => ({ status: 409, body: { message: 'รหัส Area นี้มีแล้ว' } }) });
+    serve({ 'POST /api/admin/areas': () => ({ status: 409, body: { message: 'รหัสพื้นที่นี้มีแล้ว' } }) });
     const { user, router } = await renderApp('/admin/areas/new');
 
     await user.type(await screen.findByLabelText('รหัสพื้นที่'), 'AR01');
@@ -125,7 +125,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('รหัส Area นี้มีแล้ว');
+    expect(await screen.findByRole('alert')).toHaveTextContent('รหัสพื้นที่นี้มีแล้ว');
     expect(router.state.location.pathname).toBe('/admin/areas/new');
   });
 

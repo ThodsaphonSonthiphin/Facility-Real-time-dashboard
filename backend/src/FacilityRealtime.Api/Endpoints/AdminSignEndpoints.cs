@@ -36,7 +36,7 @@ public static class AdminSignEndpoints
 
         if (request.Source is not { } source || !Enum.IsDefined(source))
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "ต้องระบุว่าพิกัดมาจากหน้างาน (Site) หรือแผนที่ (Map)");
+            return ApiResults.Message(StatusCodes.Status400BadRequest, "ต้องระบุว่าพิกัดวัดที่ป้ายจริง (Site) หรือปักจากแผนที่ (Map)");
         }
 
         // A map pick has no accuracy; only a capture at the sign has one
@@ -45,7 +45,7 @@ public static class AdminSignEndpoints
         {
             // GpsInput's wording is for scanning; the Admin is capturing a sign's location
             var message = gpsError == GpsInput.Required
-                ? "ต้องส่งพิกัด (ละติจูด ลองจิจูด) และความแม่นยำเมื่อเก็บที่หน้างาน"
+                ? "ต้องส่งพิกัด (ละติจูด ลองจิจูด) และความแม่นยำเมื่อวัดที่ป้ายจริง"
                 : gpsError == GpsInput.Invalid
                     ? "พิกัดที่ส่งมาไม่ถูกต้อง ลองเก็บพิกัดใหม่อีกครั้ง"
                     : gpsError;
@@ -61,7 +61,7 @@ public static class AdminSignEndpoints
         // facility-0045 rule 3: the map is the fallback before going on site, not a correction of a site capture
         if (source == LocationSource.Map && sign.LocationSource == LocationSource.Site)
         {
-            return ApiResults.Message(StatusCodes.Status409Conflict, "ป้ายนี้ยืนยันพิกัดที่หน้างานแล้ว ถ้าจะแก้ให้เก็บใหม่ที่หน้างาน");
+            return ApiResults.Message(StatusCodes.Status409Conflict, "ป้ายนี้วัดพิกัดที่ป้ายจริงแล้ว ถ้าจะแก้ให้ไปวัดใหม่ที่ป้าย");
         }
 
         var latitude = Math.Round((decimal)gps.Latitude, 6);
@@ -83,8 +83,8 @@ public static class AdminSignEndpoints
         AuditTrail.Add(
             db, admin.Id, now, "SIGN_LOCATION", "signs", sign.Id,
             source == LocationSource.Site
-                ? $"เก็บพิกัดป้าย {sign.Code} ที่หน้างาน ±{sign.LocationAccuracyM} ม."
-                : $"ปักพิกัดป้าย {sign.Code} จากแผนที่ (ยังไม่ยืนยันหน้างาน)",
+                ? $"วัดพิกัดป้าย {sign.Code} ที่ป้ายจริง ±{sign.LocationAccuracyM} ม."
+                : $"ปักพิกัดป้าย {sign.Code} จากแผนที่ (ยังไม่ได้วัดที่ป้ายจริง)",
             before, after: LocationSnapshot(sign));
         await db.SaveChangesAsync();
 
@@ -143,7 +143,7 @@ public static class AdminSignEndpoints
         // facility-0021 rule 4: no new QR for a deactivated point (or Area)
         if (sign.Area is not { IsActive: true } || sign.ServicePoint is { IsActive: false })
         {
-            return ApiResults.Message(StatusCodes.Status409Conflict, "ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงออก QR ใหม่ได้");
+            return ApiResults.Message(StatusCodes.Status409Conflict, "ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้");
         }
 
         var issuedBefore = DateTime.SpecifyKind(sign.QrIssuedAt, DateTimeKind.Utc);
@@ -153,7 +153,7 @@ public static class AdminSignEndpoints
         // The token itself never enters the log (facility-0060: tokens come only from the points and print pages)
         AuditTrail.Add(
             db, admin.Id, now, "QR_REGENERATE", "signs", sign.Id,
-            $"ออก QR ใหม่ของป้าย {sign.Code} ป้ายเดิมสแกนไม่ได้แล้ว",
+            $"สร้าง QR ใหม่ของป้าย {sign.Code} ป้ายเดิมสแกนไม่ได้แล้ว",
             before: new { QrIssuedAt = issuedBefore }, after: new { QrIssuedAt = now });
         await db.SaveChangesAsync();
 

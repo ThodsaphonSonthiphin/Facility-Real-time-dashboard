@@ -58,7 +58,7 @@ public static class AdminAlertEndpoints
 
         if (AlertKinds.ReviewType(kind) is not { } type)
         {
-            return Bad("เตือนนี้ปิดเองเมื่อ Admin เติมเวลาที่ขาด");
+            return Bad("เตือนนี้ปิดเองเมื่อแอดมินเติมเวลาที่ขาด");
         }
 
         var note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
@@ -81,7 +81,7 @@ public static class AdminAlertEndpoints
         var now = clock.GetUtcNow().UtcDateTime;
         AddReview(
             db, type, request.RecordId, target.Table, admin.Id, now,
-            $"ปิดเตือน{ThaiLabels.AlertName(kind)} ของ {target.Name} เวลา {ThaiLabels.Clock(target.At)}",
+            $"ปิดเตือน{ThaiLabels.AlertName(kind, target.Reason)} ของ {target.Name} เวลา {ThaiLabels.Clock(target.At)}",
             note);
         try
         {
@@ -114,7 +114,7 @@ public static class AdminAlertEndpoints
             reason: note);
     }
 
-    private sealed record AlertTarget(string Table, string Name, DateTime At);
+    private sealed record AlertTarget(string Table, string Name, DateTime At, BlockReason? Reason = null);
 
     /// <summary>The row behind the alert, only while it is one: a GPS flag must still be outside the radius.</summary>
     private static async Task<AlertTarget?> FindAsync(AppDbContext db, AlertType type, long id) => type switch
@@ -133,7 +133,7 @@ public static class AdminAlertEndpoints
             .FirstOrDefaultAsync(),
         _ => await db.BlockedScans
             .Where(b => b.Id == id)
-            .Join(db.Users, b => b.UserId, u => u.Id, (b, u) => new AlertTarget("blocked_scans", u.DisplayName, b.ScannedAt))
+            .Join(db.Users, b => b.UserId, u => u.Id, (b, u) => new AlertTarget("blocked_scans", u.DisplayName, b.ScannedAt, b.Reason))
             .FirstOrDefaultAsync(),
     };
 

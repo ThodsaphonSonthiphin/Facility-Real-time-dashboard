@@ -119,7 +119,7 @@ public class AreaAdminEndpointTests
         var response = await admin.GetAsync($"{Areas}/9999");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("ไม่พบ Area นี้", await AdminSetupApi.MessageAsync(response));
+        Assert.Equal("ไม่พบพื้นที่นี้", await AdminSetupApi.MessageAsync(response));
     }
 
     [Fact]

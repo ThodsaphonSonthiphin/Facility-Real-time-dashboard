@@ -41,7 +41,7 @@ internal static class ExportSheets
                     first.EmployeeId,
                     first.DisplayName,
                     .. Events.Select(t => byEvent.TryGetValue(t, out var e) ? ThaiLabels.Clock(e.OccurredAtUtc) : string.Empty),
-                    edited.Count == 0 ? "สแกนเอง" : "แก้โดย Admin: " + string.Join(", ", edited.Select(ThaiLabels.EventName)),
+                    edited.Count == 0 ? "สแกนเอง" : "แก้โดยแอดมิน: " + string.Join(", ", edited.Select(ThaiLabels.EventName)),
                     outside.Count > 0
                         ? "นอกรัศมี: " + string.Join(", ", outside.Select(t => $"{ThaiLabels.EventName(t)} {byEvent[t].DistanceM} ม."))
                         : group.Any(e => e.WithinRadius == true) ? "ในรัศมี" : "-",
@@ -51,7 +51,7 @@ internal static class ExportSheets
 
         return new ExcelSheet(
             AttendanceName,
-            ["วันที่กะ", "กะ", "ตึก", "Area", "รหัสพนักงาน", "ชื่อ", "เข้างาน", "ออกพัก", "กลับจากพัก", "เลิกงาน", "ที่มา", "GPS"],
+            ["วันที่กะ", "กะ", "ตึก", "พื้นที่", "รหัสพนักงาน", "ชื่อ", "เข้างาน", "ออกพัก", "กลับจากพัก", "เลิกงาน", "ที่มา", "ตำแหน่ง"],
             Sort(rows));
     }
 
@@ -75,7 +75,7 @@ internal static class ExportSheets
                 Round(s.RoundStart, s.RoundEnd),
                 ThaiLabels.Clock(s.SubmittedAtUtc),
                 ThaiLabels.SubmissionResult(s.Placement, s.LateMinutes),
-                s.Status == CleaningStatus.Issue ? s.IssueTags ?? "มี Issue" : string.Empty,
+                s.Status == CleaningStatus.Issue ? s.IssueTags ?? "แจ้งปัญหา" : string.Empty,
                 s.IsCover ? "ทำแทน" : string.Empty,
                 s.EmployeeId,
                 s.DisplayName,
@@ -126,7 +126,7 @@ internal static class ExportSheets
 
         return new ExcelSheet(
             SubmissionsName,
-            ["วันที่กะ", "กะ", "ตึก", "Area", "จุด", "ป้าย", "รอบ", "เวลาส่ง", "ผล", "Issue", "ทำแทน", "รหัสพนักงาน", "ชื่อ", "GPS"],
+            ["วันที่กะ", "กะ", "ตึก", "พื้นที่", "จุด", "ป้าย", "รอบ", "เวลาส่ง", "ผล", "แจ้งปัญหา", "ทำแทน", "รหัสพนักงาน", "ชื่อ", "ตำแหน่ง"],
             Sort(rows));
     }
 
@@ -188,7 +188,7 @@ internal static class ExportSheets
 
         return new ExcelSheet(
             InspectionsName,
-            ["วันที่กะ", "กะ", "ตึก", "Area", "จุด", "ป้าย", "รอบ", "เวลาตรวจ", "ผล", "ข้อบกพร่อง", "ตรวจแทน", "รหัสพนักงาน", "ชื่อ", "GPS"],
+            ["วันที่กะ", "กะ", "ตึก", "พื้นที่", "จุด", "ป้าย", "รอบ", "เวลาตรวจ", "ผล", "สิ่งที่ต้องแก้", "ตรวจแทน", "รหัสพนักงาน", "ชื่อ", "ตำแหน่ง"],
             Sort(rows));
     }
 

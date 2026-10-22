@@ -94,7 +94,7 @@ public class SignAdminEndpointTests
         var missing = await LocateAsync(factory, admin, "AR02-IN", null, 100.502, 10.0, "Site");
         var impossible = await LocateAsync(factory, admin, "AR02-IN", 200.0, 100.502, 10.0, "Site");
 
-        Assert.Equal("ต้องส่งพิกัด (ละติจูด ลองจิจูด) และความแม่นยำเมื่อเก็บที่หน้างาน", await AdminSetupApi.MessageAsync(missing));
+        Assert.Equal("ต้องส่งพิกัด (ละติจูด ลองจิจูด) และความแม่นยำเมื่อวัดที่ป้ายจริง", await AdminSetupApi.MessageAsync(missing));
         Assert.Equal("พิกัดที่ส่งมาไม่ถูกต้อง ลองเก็บพิกัดใหม่อีกครั้ง", await AdminSetupApi.MessageAsync(impossible));
     }
 

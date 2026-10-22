@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Alerts;
 using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Inspections;
 using FacilityRealtime.Application.Shifts;
@@ -59,18 +58,18 @@ public static class CoverAssignmentEndpoints
     {
         if (request.BuildingId is not null)
         {
-            return Bad("แม่บ้านทำแทนเป็น Area ไม่ต้องระบุตึก");
+            return Bad("แม่บ้านทำแทนเป็นพื้นที่ ไม่ต้องระบุตึก");
         }
 
         var area = request.AreaId is int areaId ? await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive) : null;
         if (area is null)
         {
-            return Bad("ไม่พบ Area นี้ หรือปิดใช้งานแล้ว");
+            return Bad("ไม่พบพื้นที่นี้ หรือปิดใช้งานแล้ว");
         }
 
         if (area.Id == cleaner.AreaId)
         {
-            return Bad("Area นี้เป็น Area ประจำของแม่บ้านคนนี้อยู่แล้ว");
+            return Bad("พื้นที่นี้เป็นพื้นที่ประจำของแม่บ้านคนนี้อยู่แล้ว");
         }
 
         if (slot.Shift != cleaner.Shift)
@@ -80,7 +79,7 @@ public static class CoverAssignmentEndpoints
 
         if (!area.HasShift(slot.Shift))
         {
-            return Bad("Area นี้ไม่มีกะนี้");
+            return Bad("พื้นที่นี้ไม่มีกะนี้");
         }
 
         if (ShiftCalendar.EndUtc(slot) <= now)
@@ -100,20 +99,20 @@ public static class CoverAssignmentEndpoints
             blocked = await db.BlockedScans.FirstOrDefaultAsync(b => b.Id == blockedScanId);
             if (blocked is null)
             {
-                return Bad("ไม่พบการสแกนที่ถูกบล็อกนี้");
+                return Bad("ไม่พบการสแกนนี้");
             }
 
             var signId = blocked.SignId;
             var signAreaId = await db.Signs.Where(s => s.Id == signId).Select(s => s.AreaId).SingleAsync();
             if (blocked.UserId != cleaner.Id || signAreaId != area.Id)
             {
-                return Bad("การสแกนที่ถูกบล็อกนี้ไม่ใช่ของแม่บ้านคนนี้ที่ Area นี้");
+                return Bad("การสแกนนี้ไม่ใช่ของแม่บ้านคนนี้ที่พื้นที่นี้");
             }
 
             // A scan from another shift is no reason to cover this one
             if (AttendanceCalendar.SlotFor(slot.Shift, blocked.ScannedAt, settings) != slot)
             {
-                return Bad("การสแกนที่ถูกบล็อกนี้ไม่ได้อยู่ในกะนี้");
+                return Bad("การสแกนนี้ไม่ได้อยู่ในกะนี้");
             }
         }
 
@@ -143,7 +142,7 @@ public static class CoverAssignmentEndpoints
     {
         if (request.AreaId is not null)
         {
-            return Bad("หัวหน้าตรวจแทนเป็นตึก ไม่ต้องระบุ Area");
+            return Bad("หัวหน้าตรวจแทนเป็นตึก ไม่ต้องระบุพื้นที่");
         }
 
         var building = request.BuildingId is int buildingId ? await db.Buildings.FirstOrDefaultAsync(b => b.Id == buildingId && b.IsActive) : null;
@@ -173,19 +172,19 @@ public static class CoverAssignmentEndpoints
             blocked = await db.BlockedScans.FirstOrDefaultAsync(b => b.Id == blockedScanId);
             if (blocked is null)
             {
-                return Bad("ไม่พบการสแกนที่ถูกบล็อกนี้");
+                return Bad("ไม่พบการสแกนนี้");
             }
 
             var signId = blocked.SignId;
             var signBuildingId = await db.Signs.Where(s => s.Id == signId).Select(s => s.Area!.BuildingId).SingleAsync();
             if (blocked.UserId != supervisor.Id || signBuildingId != building.Id)
             {
-                return Bad("การสแกนที่ถูกบล็อกนี้ไม่ใช่ของหัวหน้าคนนี้ที่ตึกนี้");
+                return Bad("การสแกนนี้ไม่ใช่ของหัวหน้าคนนี้ที่ตึกนี้");
             }
 
             if (ShiftCalendar.SlotAt(blocked.ScannedAt) != slot)
             {
-                return Bad("การสแกนที่ถูกบล็อกนี้ไม่ได้อยู่ในกะนี้");
+                return Bad("การสแกนนี้ไม่ได้อยู่ในกะนี้");
             }
         }
 
@@ -237,7 +236,7 @@ public static class CoverAssignmentEndpoints
         {
             AdminAlertEndpoints.AddReview(
                 db, AlertType.BlockedScan, scan.Id, "blocked_scans", admin.Id, now,
-                $"ปิดเตือน{ThaiLabels.AlertName(AlertKind.BlockedScan)} ของ {person.DisplayName} เวลา {ThaiLabels.Clock(scan.ScannedAt)}: {alertOutcome}",
+                $"ปิดเตือน{ThaiLabels.BlockedName(scan.Reason)} ของ {person.DisplayName} เวลา {ThaiLabels.Clock(scan.ScannedAt)}: {alertOutcome}",
                 note: null);
         }
 
@@ -309,18 +308,18 @@ public static class CoverAssignmentEndpoints
 
         if (areaId is null || !AdminQuery.TryReadDate(shiftDate, out var date) || !AdminQuery.TryReadEnum<Shift>(shift, out var parsedShift))
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "ต้องระบุ Area วันที่ (yyyy-MM-dd) และกะ (Day หรือ Night)");
+            return ApiResults.Message(StatusCodes.Status400BadRequest, "ต้องระบุพื้นที่ วันที่ (yyyy-MM-dd) และกะ (Day หรือ Night)");
         }
 
         var area = await db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive);
         if (area is null)
         {
-            return ApiResults.Message(StatusCodes.Status404NotFound, "ไม่พบ Area นี้ หรือปิดใช้งานแล้ว");
+            return ApiResults.Message(StatusCodes.Status404NotFound, "ไม่พบพื้นที่นี้ หรือปิดใช้งานแล้ว");
         }
 
         if (!area.HasShift(parsedShift))
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "Area นี้ไม่มีกะนี้");
+            return ApiResults.Message(StatusCodes.Status400BadRequest, "พื้นที่นี้ไม่มีกะนี้");
         }
 
         var slot = new ShiftSlot(date, parsedShift);
