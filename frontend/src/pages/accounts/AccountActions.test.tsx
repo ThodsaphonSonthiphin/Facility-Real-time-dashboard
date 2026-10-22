@@ -103,12 +103,16 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     expect(screen.queryByRole('button', { name: 'แก้เบอร์โทร ผู้ดูแลคนที่สอง' })).not.toBeInTheDocument();
 
     const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · แม่บ้านทดสอบ' });
-    await user.type(within(form).getByLabelText('เบอร์โทรใหม่'), '123');
+    // facility-0081: who is being edited, and that the old number is not needed (it is stored as a hash)
+    expect(within(form).getByText('650001')).toBeInTheDocument();
+    expect(within(form).getByText('AR01 · กะเช้า')).toBeInTheDocument();
+    expect(within(form).getByText(/^ไม่ต้องรู้เบอร์เดิม ใส่เบอร์ที่คนนี้ใช้ตอนนี้แล้วกดบันทึก/)).toBeInTheDocument();
+    await user.type(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้'), '123');
     await user.click(within(form).getByRole('button', { name: 'บันทึกเบอร์ใหม่' }));
     expect(within(form).getByRole('alert')).toHaveTextContent('เบอร์โทรต้องเป็นเลข 10 หลัก ขึ้นต้นด้วย 0');
 
-    await user.clear(within(form).getByLabelText('เบอร์โทรใหม่'));
-    await user.type(within(form).getByLabelText('เบอร์โทรใหม่'), '0810000099');
+    await user.clear(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้'));
+    await user.type(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้'), '0810000099');
     await user.click(within(form).getByRole('button', { name: 'บันทึกเบอร์ใหม่' }));
 
     expect(

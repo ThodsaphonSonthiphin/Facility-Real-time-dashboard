@@ -1,6 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { MAX_PASSWORD, MIN_PASSWORD, normalizePhone, PASSWORD_PROBLEM, PHONE_PROBLEM } from './accountRules';
+import {
+  accountRoleLabel,
+  MAX_PASSWORD,
+  MIN_PASSWORD,
+  normalizePhone,
+  PASSWORD_PROBLEM,
+  PHONE_PROBLEM,
+  placeText,
+} from './accountRules';
 import { useChangePhoneMutation, useResetPasswordMutation, type Account } from './accountsApi';
 
 interface SecretFormProps {
@@ -11,7 +19,8 @@ interface SecretFormProps {
 
 /**
  * facility-0054 rule 4: the Admin types a Cleaner's or Supervisor's new phone. It is sent once, then cleared; every
- * device of the person must log in again.
+ * device of the person must log in again. The old number cannot be shown, because it is stored as a hash, and it is
+ * not needed. So the form says so and shows who is being edited (facility-0081).
  */
 export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
   const [phone, setPhone] = useState('');
@@ -39,8 +48,18 @@ export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
   return (
     <form className="accounts-form app-panel" aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
       <h2 id={titleId}>{`แก้เบอร์โทร · ${account.displayName}`}</h2>
+      <dl className="app-facts accounts-who">
+        <dt>ชื่อ</dt>
+        <dd>{account.displayName}</dd>
+        <dt>รหัสพนักงาน</dt>
+        <dd>{account.loginName}</dd>
+        <dt>บทบาท</dt>
+        <dd>{accountRoleLabel[account.role]}</dd>
+        <dt>ประจำที่</dt>
+        <dd>{placeText(account)}</dd>
+      </dl>
       <div className="app-field">
-        <label htmlFor={`${titleId}-input`}>เบอร์โทรใหม่</label>
+        <label htmlFor={`${titleId}-input`}>เบอร์โทรที่คนนี้ใช้ตอนนี้</label>
         <input
           id={`${titleId}-input`}
           type="tel"
@@ -52,7 +71,10 @@ export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
           disabled={isLoading}
           onChange={(event) => setPhone(event.target.value)}
         />
-        <span className="app-field__help">ใช้แทนรหัสผ่าน ระบบเก็บเบอร์แบบที่เปิดดูไม่ได้ · บันทึกแล้วทุกเครื่องของคนนี้ต้องเข้าสู่ระบบใหม่ · ถ้าใส่เบอร์เดิม ระบบไม่เปลี่ยนอะไรและเครื่องเดิมยังใช้งานได้</span>
+        <span className="app-field__help">
+          ไม่ต้องรู้เบอร์เดิม ใส่เบอร์ที่คนนี้ใช้ตอนนี้แล้วกดบันทึก · เบอร์ใช้แทนรหัสผ่าน ระบบจึงเก็บแบบที่เปิดดูไม่ได้ ·
+          บันทึกแล้วทุกเครื่องของคนนี้ต้องเข้าสู่ระบบใหม่ · ถ้าใส่เบอร์เดิม ระบบไม่เปลี่ยนอะไรและเครื่องเดิมยังใช้งานได้
+        </span>
       </div>
       {problem && (
         <p className="app-note app-note--error" role="alert">
