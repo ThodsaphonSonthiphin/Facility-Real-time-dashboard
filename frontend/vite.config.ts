@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 /** facility-0068 item 3: the short commit shown on the login pages; "dev" outside a git checkout. */
 function buildCommit(): string {
@@ -17,7 +18,7 @@ function buildCommit(): string {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()], // facility-0086
   define: {
     __BUILD_COMMIT__: JSON.stringify(buildCommit()),
   },

@@ -13,7 +13,8 @@ The rules `code-review` checks on any frontend change (its Standards axis). The 
 - Shared pieces (button, field, note, chip, table, bar) are React components in `frontend/src/shared/components`. No `@apply`. No UI library.
 - No `clsx` or `tailwind-merge` until a real class clash needs one.
 - Print rules use the `print:` variant; only `@page` stays as plain CSS in `index.css`.
-- Until the last page moves, Tailwind's preflight stays off.
+- Until the last page moves (#82), Tailwind's preflight stays off, and the old look's variables are named `--old-*`. A moved page uses only the `@theme` tokens; never use an `--old-*` variable in new code.
+- The old plain CSS is not in a cascade layer, so it beats any utility. A moved page must drop its old classes entirely: mixing an old class and utilities on one element lets the old rule win.
 
 ## Look and accessibility (facility-0087)
 

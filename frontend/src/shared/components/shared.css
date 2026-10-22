@@ -1,16 +1,16 @@
 /* Shared components. Class prefix: app- */
 
 .app-shell {
-  max-width: var(--phone-width);
+  max-width: var(--old-phone-width);
   margin: 0 auto;
   padding: 12px 16px 24px;
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
 }
 
 .app-shell--wide {
-  max-width: var(--desk-width);
+  max-width: var(--old-desk-width);
   padding: 16px 32px 32px;
 }
 
@@ -20,17 +20,17 @@
   align-items: center;
   gap: 12px;
   font-size: 14px;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .app-bar__who {
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--old-color-text);
 }
 
 .app-bar__role {
   font-weight: 400;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .app-page {
@@ -50,10 +50,10 @@
   justify-content: center;
   min-height: 40px;
   padding: 0 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-sm);
+  background: var(--old-color-surface);
+  color: var(--old-color-text);
   font-size: 14px;
   text-decoration: none;
   cursor: pointer;
@@ -61,9 +61,9 @@
 
 .app-button--primary {
   min-height: 48px;
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  border-color: var(--old-color-primary);
+  background: var(--old-color-primary);
+  color: var(--old-color-on-primary);
   font-weight: 700;
   font-size: 17px;
 }
@@ -105,12 +105,12 @@
 }
 
 .app-button--primary:hover {
-  color: var(--color-on-primary);
-  background: var(--color-primary-dark);
+  color: var(--old-color-on-primary);
+  background: var(--old-color-primary-dark);
 }
 
 .app-status {
-  max-width: var(--phone-width);
+  max-width: var(--old-phone-width);
   margin: 0 auto;
   padding: 48px 20px;
   display: flex;
@@ -125,13 +125,13 @@
 }
 
 .app-status__detail {
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .app-splash {
   padding: 48px 20px;
   text-align: center;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .app-note {
@@ -139,26 +139,26 @@
   flex-direction: column;
   gap: 4px;
   padding: 10px 14px;
-  border-radius: var(--radius-md);
+  border-radius: var(--old-radius-md);
   font-size: 14px;
 }
 
 .app-note--info {
-  background: var(--color-info-bg);
-  border: 1px solid var(--color-info-border);
-  color: var(--color-info-text);
+  background: var(--old-color-info-bg);
+  border: 1px solid var(--old-color-info-border);
+  color: var(--old-color-info-text);
 }
 
 .app-note--warn {
-  background: var(--color-warn-bg);
-  border: 1px solid var(--color-warn-border);
-  color: var(--color-warn-text);
+  background: var(--old-color-warn-bg);
+  border: 1px solid var(--old-color-warn-border);
+  color: var(--old-color-warn-text);
 }
 
 .app-note--error {
-  background: var(--color-error-bg);
-  border: 1px solid var(--color-error-border);
-  color: var(--color-error-text);
+  background: var(--old-color-error-bg);
+  border: 1px solid var(--old-color-error-border);
+  color: var(--old-color-error-text);
 }
 
 .app-chip {
@@ -168,24 +168,24 @@
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
-  color: var(--color-on-primary);
-  background: var(--color-status-idle);
+  color: var(--old-color-on-primary);
+  background: var(--old-color-status-idle);
 }
 
 .app-chip--Rework {
-  background: var(--color-status-rework);
+  background: var(--old-color-status-rework);
 }
 
 .app-chip--Overdue {
-  background: var(--color-status-overdue);
+  background: var(--old-color-status-overdue);
 }
 
 .app-chip--PendingInspection {
-  background: var(--color-status-pending);
+  background: var(--old-color-status-pending);
 }
 
 .app-chip--Passed {
-  background: var(--color-status-passed);
+  background: var(--old-color-status-passed);
 }
 
 .app-panel {
@@ -193,9 +193,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 14px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-md);
 }
 
 .app-panel h2 {
@@ -211,13 +211,13 @@
 .app-help {
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: var(--old-gap);
 }
 
 .app-help__kicker {
   font-size: 13px;
   letter-spacing: 0.04em;
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .app-help__title {
@@ -231,13 +231,13 @@
   gap: 6px 12px;
   margin: 0;
   padding: 14px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
+  border-radius: var(--old-radius-md);
 }
 
 .app-facts dt {
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .app-facts dd {
@@ -252,21 +252,21 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--old-color-border);
 }
 
 .app-nav__link {
   display: inline-block;
   padding: 8px 12px;
   border-bottom: 3px solid transparent;
-  color: var(--color-text-soft);
+  color: var(--old-color-text-soft);
   text-decoration: none;
   font-size: 14px;
 }
 
 .app-nav__link--active {
-  border-bottom-color: var(--color-primary);
-  color: var(--color-primary);
+  border-bottom-color: var(--old-color-primary);
+  color: var(--old-color-primary);
   font-weight: 600;
 }
 
@@ -279,17 +279,17 @@
 
 .app-field__help,
 .app-muted {
-  color: var(--color-muted);
+  color: var(--old-color-muted);
   font-size: 13px;
 }
 
 .app-input {
   min-height: 40px;
   padding: 0 10px;
-  border: 1px solid var(--color-input-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
+  border: 1px solid var(--old-color-input-border);
+  border-radius: var(--old-radius-sm);
+  background: var(--old-color-surface);
+  color: var(--old-color-text);
   font-size: 15px;
 }
 
@@ -306,34 +306,34 @@
 .app-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--old-color-surface);
+  border: 1px solid var(--old-color-border);
   font-size: 14px;
 }
 
 .app-table th,
 .app-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--old-color-border);
   text-align: left;
   vertical-align: top;
 }
 
 .app-table thead th {
-  color: var(--color-muted);
+  color: var(--old-color-muted);
   font-size: 13px;
   font-weight: 600;
 }
 
 .app-row--inactive td,
 .app-row--inactive th {
-  color: var(--color-muted);
+  color: var(--old-color-muted);
 }
 
 .app-button--warn {
-  border-color: var(--color-status-overdue);
-  background: var(--color-status-overdue);
-  color: var(--color-on-primary);
+  border-color: var(--old-color-status-overdue);
+  background: var(--old-color-status-overdue);
+  color: var(--old-color-on-primary);
   font-weight: 700;
 }
 
@@ -341,7 +341,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--color-primary);
+  color: var(--old-color-primary);
   font-size: 14px;
   text-decoration: underline;
   cursor: pointer;
@@ -352,10 +352,10 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 14px;
-  border: 1px solid var(--color-warn-border);
-  border-radius: var(--radius-md);
-  background: var(--color-warn-bg);
-  color: var(--color-warn-text);
+  border: 1px solid var(--old-color-warn-border);
+  border-radius: var(--old-radius-md);
+  background: var(--old-color-warn-bg);
+  color: var(--old-color-warn-text);
 }
 
 .app-confirm__title {
@@ -372,10 +372,10 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border: 1px solid var(--color-warn-border);
+  border: 1px solid var(--old-color-warn-border);
   border-radius: 999px;
-  background: var(--color-warn-bg);
-  color: var(--color-warn-text);
+  background: var(--old-color-warn-bg);
+  color: var(--old-color-warn-text);
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -386,17 +386,17 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-status-overdue);
+  background: var(--old-color-status-overdue);
 }
 
 .app-live--on {
-  border-color: var(--color-info-border);
-  background: var(--color-info-bg);
-  color: var(--color-status-passed);
+  border-color: var(--old-color-info-border);
+  background: var(--old-color-info-bg);
+  color: var(--old-color-status-passed);
 }
 
 .app-live--on::before {
-  background: var(--color-status-passed);
+  background: var(--old-color-status-passed);
 }
 
 /* RangeFields: two typed dates and the shortcuts (D7, D8, D9) */
@@ -417,9 +417,9 @@
 }
 
 .app-range__presets .app-button[aria-pressed='true'] {
-  border-color: var(--color-text);
-  background: var(--color-text);
-  color: var(--color-surface);
+  border-color: var(--old-color-text);
+  background: var(--old-color-text);
+  color: var(--old-color-surface);
   font-weight: 600;
 }
 
