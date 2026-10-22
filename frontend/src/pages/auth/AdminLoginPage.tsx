@@ -1,8 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
 import { buildCommit } from '../../shared/version/buildInfo';
+import { Button } from '../../shared/components/Button';
+import { Field, TextInput } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
+import { linkClass } from '../../shared/components/styles';
 import { useLogin } from './useLogin';
-import './auth.css';
 
 /** Wireframe D0: the Admin logs in with username + password (facility-0054). */
 export function AdminLoginPage() {
@@ -21,50 +24,50 @@ export function AdminLoginPage() {
   };
 
   return (
-    <main className="auth-page auth-page--desk">
-      <form className="auth-form auth-card" onSubmit={onSubmit}>
-        <header className="auth-heading">
-          <span className="auth-kicker">ระบบลงเวลาและตรวจงานแม่บ้าน</span>
-          <h1>แอดมินเข้าสู่ระบบ</h1>
+    // An Admin page (facility-0087): body text-sm, 36 px controls, one card in the middle of the screen
+    <main className="flex min-h-screen items-center justify-center p-6 text-sm text-text">
+      <form
+        className="flex w-full max-w-100 flex-col gap-3 rounded border border-border bg-surface p-7"
+        onSubmit={onSubmit}
+      >
+        <header className="flex flex-col gap-0.5">
+          <span className="text-xs tracking-wide text-muted">ระบบลงเวลาและตรวจงานแม่บ้าน</span>
+          <h1 className="text-xl font-bold">แอดมินเข้าสู่ระบบ</h1>
         </header>
-        {returnsToPage && (
-          <p className="auth-note auth-note--info">เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที</p>
-        )}
-        <label htmlFor="admin-username">ชื่อผู้ใช้</label>
-        <input
-          id="admin-username"
-          type="text"
-          autoComplete="username"
-          required
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-        />
-        <label htmlFor="admin-password">รหัสผ่าน</label>
-        <input
-          id="admin-password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-        {errorText && (
-          <p className="auth-note auth-note--error" role="alert">
-            {errorText}
-          </p>
-        )}
-        <button type="submit" className="auth-submit" disabled={isLoading}>
+        {returnsToPage && <Note tone="info">เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที</Note>}
+        <Field label="ชื่อผู้ใช้">
+          <TextInput
+            size="desk"
+            type="text"
+            autoComplete="username"
+            required
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+          />
+        </Field>
+        <Field label="รหัสผ่าน">
+          <TextInput
+            size="desk"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </Field>
+        {errorText && <Note tone="error">{errorText}</Note>}
+        <Button type="submit" variant="primary" size="desk" className="mt-1 w-full" disabled={isLoading}>
           {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
-        </button>
-        <footer className="auth-footer">
+        </Button>
+        <footer className="flex flex-col gap-1 text-center text-xs text-muted">
           <span>
             แม่บ้านและหัวหน้าเข้าด้วยรหัสพนักงาน + เบอร์โทรบนมือถือ ·{' '}
-            <Link to="/login" state={location.state}>
+            <Link className={linkClass} to="/login" state={location.state}>
               หน้าเข้าสู่ระบบของพนักงาน
             </Link>
           </span>
           <span>ลืมรหัสผ่าน: ให้แอดมินอีกคนรีเซ็ต</span>
-          <span className="auth-build">เวอร์ชัน {buildCommit}</span>
+          <span>เวอร์ชัน {buildCommit}</span>
         </footer>
       </form>
     </main>

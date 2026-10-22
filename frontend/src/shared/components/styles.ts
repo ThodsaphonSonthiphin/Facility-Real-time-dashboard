@@ -55,6 +55,9 @@ export function textAreaClass(size: InputSize = 'phone'): string {
   return `${inputBase} resize-y ${textAreaSizes[size]}`;
 }
 
+/** A text link (the base layer still colours `a` with the old look until #82). */
+export const linkClass = `text-primary underline hover:text-primary-strong ${focusRing}`;
+
 /** The white box with a thin border that Panel and Facts share. */
 export const boxClass = 'rounded border border-border bg-surface px-4 py-3.5';
 
