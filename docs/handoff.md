@@ -180,6 +180,7 @@ Plan 4 test results at merge:
 - 2026-10-21 · Owner: a real tap is too short to see `:active`. Replaced it with a tap animation: `shared/utils/tapFeedback.ts` (installed once in `main.tsx`, one capture listener on the document) adds `app-button--tapped` on every `pointerdown` on an enabled `.app-button` and removes it on `animationend`, so a 300 ms press (scale 0.94 and darker, back to normal) plays to its end however short the tap; a second tap restarts it; under `prefers-reduced-motion` only the darkening plays. Frontend tests 385 passed (4 new). Next: the owner checks it in the browser, then the OK for the push and PR.
 - 2026-10-21 · PR #62 merged to master (`d9ac984`), branch deleted. Plan 12 is done, and it was the last of the six frontend plans: every wireframe page now exists. Cleanup: API stopped, throwaway database `facility_reports_test` dropped, `wwwroot` deleted. GitGuardian passed. Next: the owner chooses (see Pending work): the UX/UI pass over every page, the server-side search for the Admin history, or the Excel import of accounts.
 - 2026-10-22 · Owner: only the device's font now, the rest of facility-0074 stays (D3 covers ahead, D6 phone, D4 round windows, the five Cleaner phone problems; facility-0074 amended). Font done (branch `feat/system-font`, PR #65): `@fontsource/ibm-plex-sans-thai` imports removed from `main.tsx` and the package uninstalled, `index.css` is `font-family: system-ui, sans-serif` (facility-0072); the build has no font files, main JS 157.53 kB gzip. Lint and tsc clean, frontend tests 385 passed. Next: the plan for the rest of facility-0074 (see `## Next`).
+- 2026-10-22 · Requirements session (`sp-grill-with-doc`) over mockups of the rest of facility-0074: ADRs facility-0076 to 0085 settle how each item is fixed (0085 adds a fifth group: UI words, list approved by the owner); the owner dropped telling a wrong-Area sign on open (facility-0080: the cover flow already goes scan, blocked, Admin approves), and changed D6 (show the old phone: impossible, it is a hash; facility-0081) and D4 (typed in split hour and minute boxes, not a list; facility-0083). No code changed. Next: write the plan.
 
 ## Sharing a test build (colleagues on other networks)
 
@@ -196,17 +197,18 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
-- UX fix list (facility-0074, font done 2026-10-22): write the plan. See `## Next: the UX fix list` below.
+- UX fix list (facility-0074, font done; every item settled 2026-10-22 in facility-0076 to 0085): write the plan. See `## Next: the UX fix list` below.
 
 ## Next: the UX fix list
 
-Owner, 2026-10-21 and 2026-10-22: no page-by-page UX/UI pass; the owner finds the app OK, and Admin pages are for a computer only (facility-0073). What to fix is fixed in **facility-0074**; item 3 (the device's font, facility-0072) is done. Left:
+Owner, 2026-10-21 and 2026-10-22: no page-by-page UX/UI pass; the owner finds the app OK, and Admin pages are for a computer only (facility-0073). The list is **facility-0074**; item 3 (the device's font, facility-0072) is done. On 2026-10-22 each item was settled with the owner over mockups (a private claude.ai canvas "Mockup รายการแก้ UX"). Left, with the ADR that says how:
 
-1. D3: pick the date and shift, up to 7 days ahead, so night and weekend covers can be assigned before the Admin leaves (Mon–Fri until 17:00; facility-0075). The API already takes a shift that has not started.
-2. D6 "แก้เบอร์โทร" shows the current phone, then the new one; D4 round windows picked from a list, a window already on the point cannot be picked again.
-4. Five Cleaner phone problems found on 2026-10-21 (listed in facility-0074).
+1. D3 covers up to 7 days ahead: facility-0075, 0084 (the same Area list with a date and shift choice and a search box; a shift not started lists every Area with its regular Cleaner).
+2. D6 "แก้เบอร์โทร": facility-0081 (the old number cannot be shown, it is a hash; the form says it is not needed and shows who is being edited). D4 round windows: facility-0083 (typed, hour and minute in separate boxes).
+3. Cleaner phone: facility-0076 (the warning clears once a tag or note is given), 0077 (off shift: My Work and the check-in page say the Cleaner's own shift time; My Work shows no counts or cards), 0078 (the "วันนี้" row shows only recorded times), 0079 (the result page shows the status as one line, no card), 0082 (an unusable check-in QR is told on open). Not changed: a sign of another Area still blocks on press (facility-0080).
+4. UI words (facility-0085, added 2026-10-22): text the users see says what people on site say, not the team's glossary (Area → พื้นที่, Admin → แอดมิน, ติดธง → ไกลป้าย, and the rest of the approved list in that ADR). Pages, server messages, Excel headers and printed signs; code, API and database names stay.
 
-Other ADRs from the session: facility-0070 (the work is for the real pilot; order: phone, then the Admin pages that run the pilot, then reports), facility-0071 (keep the current look). Next step: write the plan with `sp-writing-plans` (spec = facility-0074 plus the ADRs it cites), then run it with `sp-subagent-driven-development`.
+Other ADRs from the session: facility-0070 (the work is for the real pilot; order: phone, then the Admin pages that run the pilot, then reports), facility-0071 (keep the current look). Next step: write the plan with `sp-writing-plans` (spec = facility-0074 as amended 2026-10-22, plus facility-0075 to 0085), then run it with `sp-subagent-driven-development`.
 
 Not in scope (facility-0074 Consequences): the "แสดง" fetch sign on D7/D9, the deferred plan 12 minors (`BuildingSelect` on a failed load, an `?actor=` id missing from the list, a shared hook for D7–D9), Admin pages on a phone.
 
