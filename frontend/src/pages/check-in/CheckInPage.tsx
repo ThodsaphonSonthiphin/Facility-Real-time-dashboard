@@ -104,7 +104,7 @@ export function CheckInPage() {
         {attendance?.shift && <p className="checkin-sub">{shiftLabel[attendance.shift]}</p>}
         {ownArea && <p className="checkin-area">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
       </header>
-      {workQuery.isLoading && <p className="checkin-hint">กำลังโหลด...</p>}
+      {(workQuery.isLoading || signQuery.isLoading) && <p className="checkin-hint">กำลังโหลด...</p>}
       {loadError != null && (
         <p className="app-note app-note--error" role="alert">
           {getErrorMessage(loadError)}

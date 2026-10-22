@@ -40,7 +40,7 @@ internal static class ThaiLabels
         _ => "สแกนผิดพื้นที่",
     };
 
-    public static string AlertName(AlertKind kind, BlockReason? reason = null) => kind switch
+    public static string AlertName(AlertKind kind, BlockReason? reason) => kind switch
     {
         AlertKind.BlockedScan => BlockedName(reason ?? BlockReason.OtherArea),
         AlertKind.AttendanceGps => "ลงเวลาไกลจากป้าย",

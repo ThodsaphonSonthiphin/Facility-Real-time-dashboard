@@ -280,6 +280,7 @@ function TimeBoxes({ label, hour, minute, hint, onChange, onEnter }: TimeBoxesPr
           onChange(digits, minute);
           if (digits.length === 2) {
             minuteBox.current?.focus();
+            minuteBox.current?.select();
           }
         }}
         onKeyDown={enterAdds}

@@ -1,6 +1,6 @@
 import type { AttendanceBoard } from '../../shared/api/attendanceBoardApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { formatTime } from '../../shared/utils/thaiTime';
+import { formatDayTime, formatTime } from '../../shared/utils/thaiTime';
 import type { Notice } from './AlertItem';
 import { slotText } from './alertRules';
 import { useCancelCoverMutation } from './alertsApi';
@@ -33,7 +33,7 @@ export function CoversThisShift({ board, ahead, onNotice }: CoversThisShiftProps
   return (
     <section className="alerts-section" aria-labelledby="alerts-covers">
       <h2 id="alerts-covers">{`${ahead ? `คนทำแทน${slotText(board)}` : 'คนทำแทนกะนี้'} (${covers.length})`}</h2>
-      {covers.length === 0 && <p className="app-muted">ยังไม่มีคนทำแทนกะนี้</p>}
+      {covers.length === 0 && <p className="app-muted">{ahead ? `ยังไม่มีคนทำแทน${slotText(board)}` : 'ยังไม่มีคนทำแทนกะนี้'}</p>}
       <ul className="alerts-rows">
         {covers.map(({ row, cover }) => (
           <li key={cover.id} className="alerts-row">
@@ -41,7 +41,7 @@ export function CoversThisShift({ board, ahead, onNotice }: CoversThisShiftProps
               <strong>{cover.displayName}</strong>
               {` ทำแทน ${row.areaCode}`}
               <span className="app-muted">
-                {` · แทน ${row.cleaner ? row.cleaner.displayName : 'ไม่มีแม่บ้านประจำ'} · แอดมินมอบหมาย ${formatTime(cover.assignedAt)}`}
+                {` · แทน ${row.cleaner ? row.cleaner.displayName : 'ไม่มีแม่บ้านประจำ'} · แอดมินมอบหมาย ${ahead ? formatDayTime(cover.assignedAt) : formatTime(cover.assignedAt)}`}
               </span>
             </span>
             <span className="app-muted">หมดสิทธิ์เมื่อจบกะ</span>

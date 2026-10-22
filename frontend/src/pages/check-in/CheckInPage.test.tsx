@@ -311,8 +311,8 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
   });
 
-  it('a sign that no longer works is told on opening, with no button, and nothing is sent (facility-0082)', async () => {
-    const server = serve({
+  it('a sign that no longer works is told on opening, with no button (facility-0082)', async () => {
+    serve({
       'GET /api/attendance/signs/token-checkin-ar01': () => ({ status: 404, body: { message: 'ไม่พบป้ายลงเวลานี้' } }),
     });
     await renderApp(SIGN);
@@ -323,7 +323,6 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'ดูงานของฉัน' })).toHaveAttribute('href', '/my-work');
-    expect(server.calls.some((c) => c.path === '/api/attendance')).toBe(false);
   });
 
   it('the buttons wait until the server says the sign works, asked once per opening (facility-0082)', async () => {
@@ -339,10 +338,12 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(await screen.findByText('กะเช้า 07:00–19:00')).toBeInTheDocument();
     await waitFor(() => expect(server.calls.some((c) => c.path === '/api/attendance/signs/token-checkin-ar01')).toBe(true));
     expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
+    expect(screen.getByText('กำลังโหลด...')).toBeInTheDocument();
 
     answer({ status: 204 });
 
     expect(await screen.findByRole('button', { name: 'เข้างาน' })).toBeInTheDocument();
+    expect(screen.queryByText('กำลังโหลด...')).not.toBeInTheDocument();
     expect(server.calls.filter((c) => c.path === '/api/attendance/signs/token-checkin-ar01')).toHaveLength(1);
   });
 

@@ -301,12 +301,23 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'วันและกะ' }), 'กะเช้า ศ. 16/10/2026');
 
     const covers = await screen.findByRole('region', { name: 'คนทำแทนกะเช้า ศ. 16/10/2026 (1)' });
+    expect(within(covers).getByText(/แอดมินมอบหมาย 15\/10 07:10/)).toBeInTheDocument();
     const cancel = within(covers).getByRole('button', { name: 'ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR12' });
     expect(cancel.textContent).toBe('ยกเลิก'); // not "ยกเลิกก่อนหมดกะ": the shift has not started
     await user.click(cancel);
 
     expect(await screen.findByText('ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR12 แล้ว')).toBeInTheDocument();
     expect(server.calls.some((call) => call.method === 'DELETE' && call.path === '/api/admin/cover-assignments/81')).toBe(true);
+  });
+
+  it('an ahead shift with no covers says which shift has none', async () => {
+    const ahead = attendanceBoard([emptyRow], { shiftDate: '2026-10-16', shift: 'Day' });
+    serveAhead({}, ahead);
+    const { user } = await renderApp('/admin/alerts');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'วันและกะ' }), 'กะเช้า ศ. 16/10/2026');
+
+    const covers = await screen.findByRole('region', { name: 'คนทำแทนกะเช้า ศ. 16/10/2026 (0)' });
+    expect(within(covers).getByText('ยังไม่มีคนทำแทนกะเช้า ศ. 16/10/2026')).toBeInTheDocument();
   });
 
   it('goes back to the box of this shift once the clock reaches the shift that was picked', async () => {
