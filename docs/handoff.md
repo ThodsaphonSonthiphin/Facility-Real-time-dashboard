@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#71–#74 passed the owner's eye check; PRs #84–#87 to merge; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#70–#74 merged, last PR #87; next: `implement` #75; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -223,6 +223,43 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 ## Next: Tailwind migration
 
+### Start here (new session, 2026-10-22)
+
+**Where it stands.** Spec #68 is split into tickets #70–#82, which are sub-issues of #68 with GitHub blocked-by edges.
+- **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A). Master is `47b49e9`; 410 frontend tests pass.
+- **Next:** #75 check-in, #76 Supervisor pages, #77 D1 A, #78 D2 + D3, #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
+
+**Read first:**
+- `design-system/facility/MASTER.md`: tokens, the shared component table, the pre-delivery check.
+- `design-system/facility/pages/phone.md` or `admin.md`.
+- `docs/agents/frontend-standards.md`.
+- facility-0086, 0087 and 0088, including their notes.
+
+**How each ticket has gone (keep doing it):**
+1. Run `/mattpocock-skills:implement #N`. Branch from master as `feat/<slug>`.
+2. Rebuild the page from the shared components (`Button`, `buttonClass` + `data-tap` for a Link, `Note`, `StatusChip`, `Field` / `TextInput` / `Select` / `TextArea`, `ChoiceTile`, `ToggleChip`, `Table`, `Panel`, `Facts`, `Splash`, `styles.ts` helpers).
+   - Set `text-base text-text` (phone) or `text-sm text-text` (Admin) on the page's root.
+   - Colour links with `linkClass`.
+   - Delete the page's CSS file.
+3. Keep every text, accessible name and role. A red box that was not an alert takes `Note alert={false}`. Tests should pass unchanged; use TDD only where behaviour changes, at the page-test seam.
+4. Run `tsc`, `eslint` and the suite, then `npm run build` (main JS was 162.53 kB gzip after #74; budget 200).
+5. Review with one sub-agent covering both axes (Standards and Spec) as two separate sections, and fix what it finds.
+6. Commit; the pre-commit hook runs lint and the tests. Push and open a PR with the sizes and checks.
+7. Update this file.
+8. The owner's eye check can be batched over several tickets. Stack the branches (`--base` the previous branch), then merge in order and retarget each PR to master before merging it. The owner says when to merge.
+
+**Eye check on a real phone:**
+1. `npm run build:api`.
+2. Create a throwaway DB `facility_ui_test`. On this Mac, MySQL root has no password, so nothing has to be asked.
+3. Start the API on it (see "Sharing a test build"). The Development seed has E1001 / 0810000001 (Cleaner), S2001 / 0820000001 (Supervisor), admin / admin1234, and signs `token-checkin-ar01` and `token-restroom-m1`.
+4. **The owner runs `cloudflared tunnel --url http://localhost:5001` in their own terminal.** Inside the agent sandbox, cloudflared cannot get a quick tunnel, and running it outside the sandbox is refused.
+5. Afterwards: stop the API, drop the DB, delete `wwwroot`.
+
+**Known leftovers:**
+- An empty, untracked `package-lock.json` at the repo root. Never commit it.
+- `facility_uxpass_test` in MySQL, not from this session; ask before dropping it.
+- `roundText` and `issueText` repeat in my-work, dashboard and my-building. Move them to `shared/` when #76/#77 touch those pages.
+
 Plan 13 (the UX fix list) is merged (PR #66). Still to check by eye on real phones: the device's font (facility-0072), the plain-http message, and the check-in page's sign check over the tunnel.
 
 **The owner's answers (2026-10-22), the input for the grill:**
@@ -365,7 +402,9 @@ Where `ui-ux-pro-max` fits:
 
 - 2026-10-22 · Owner's eye check of #71–#74: **passed**. The run used the app from `feat/scan-a` (#71–#74 stacked), served by the API in Development on throwaway database `facility_ui_test`. The owner opened the link from a `cloudflared` quick tunnel, which the owner ran in their own terminal: inside this session's sandbox, cloudflared could not get a quick tunnel, and running outside the sandbox was refused. Cleanup is done: API stopped, `facility_ui_test` dropped, `wwwroot` deleted. `facility_uxpass_test` (not from this session) is still there, untouched. Next: merge #84 → #85 → #86 → #87 in order, with the owner's OK.
 
-Next session: merge PRs #84–#87 in order (owner's OK), then `implement` #75.
+- 2026-10-22 · Owner: merge all four. PRs #84 → #85 → #86 → #87 merged to master in order (each retargeted to master first); #71–#74 closed; master `47b49e9` has the same tree as `feat/scan-a`; 410 tests pass. Next: `implement` #75 (check-in page), then #76–#81.
+
+Next session: `implement` #75.
 
 ## Owner's rules (still in force)
 
