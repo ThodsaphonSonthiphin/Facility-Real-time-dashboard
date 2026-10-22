@@ -4,3 +4,21 @@
 - ADR Directory: `docs/adr/`
 - ADR Sequence Prefix: `facility-` (e.g. `facility-0001-<slug>.md`, zero-padded to 4 digits)
 - Map slug: `facility-poc` (GitHub Issues tracker: `ThodsaphonSonthiphin/Facility-Real-time-dashboard#1`)
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues of `ThodsaphonSonthiphin/Facility-Real-time-dashboard`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: the glossary is `CONTEXT.md`, and ADRs are `docs/adr/facility-NNNN-<slug>.md`. See `docs/agents/domain.md`.
+
+### Frontend standards
+
+Tailwind, look and accessibility rules that `code-review` checks. See `docs/agents/frontend-standards.md`; the look is in `design-system/facility/MASTER.md` (page overrides in `design-system/facility/pages/`).

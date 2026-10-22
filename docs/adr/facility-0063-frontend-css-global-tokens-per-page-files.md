@@ -36,3 +36,5 @@ MenuNest มี `src/index.css` global สำหรับ token และไฟ�
 > **แก้ไข 2026-10-15 (แผน 7):** ไม่มี component ไหนถูกย้าย (ดู facility-0025 แก้ไข 2026-10-15) จึงไม่มีช่วงสไตล์สองแบบตามข้อ 5 ทุกหน้าเขียนสไตล์ใน CSS file ตั้งแต่แรก token ใน `index.css` มาจาก wireframe (พื้นสว่าง สีหลัก `#0E6B66` ฟอนต์ IBM Plex Sans Thai จาก `@fontsource` บน origin เดียวกัน ไม่โหลดจาก Google Fonts) class ของ component ใน `shared/components` ขึ้นต้นด้วย `app-`
 
 > **แก้ไข 2026-10-21 (รอบปรับ UX/UI):** เลิกโหลด IBM Plex Sans Thai จาก `@fontsource` และใช้ฟอนต์ของเครื่องแทน (facility-0072) token อื่นใน `index.css` ยังมาจาก wireframe เหมือนเดิม
+
+> **ถูกแทนที่ 2026-10-22:** เจ้าของโปรเจกต์ให้ย้าย frontend ไป Tailwind CSS (facility-0086) ไฟล์ CSS ต่อหน้าและคลาส `app-*` จะหายไปทีละหน้า ปลายทางเหลือ `index.css` ไฟล์เดียวที่มี `@theme`
