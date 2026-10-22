@@ -1,50 +1,41 @@
+import { RefreshCw } from 'lucide-react';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
-import type { AttendanceState, MyWork, OwnShift, PointStatus, Shift } from '../../shared/api/types';
+import type { AttendanceState, MyWork, OwnShift, Shift } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
+import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { formatClock, formatTime } from '../../shared/utils/thaiTime';
-import { WorkCard } from './WorkCard';
-import './myWork.css';
-
-/** What needs the Cleaner comes first (plan 8 decision 6), then what is done or not due yet. */
-const urgency: readonly PointStatus[] = [
-  'Rework',
-  'Overdue',
-  'NotYetDone',
-  'PendingInspection',
-  'Passed',
-  'BeforeFirstRound',
-  'OffHours',
-];
+import { NextJob } from './NextJob';
+import { WorkGroup } from './WorkGroup';
+import { byUrgency, laterStatuses, sentStatuses, toDo } from './workRules';
 
 /**
  * facility-0052, wireframes M9 and M14: every point of the Cleaner's own Area, then of the Areas they cover this
  * shift. No push and no hub: the page asks the server each time it opens and on "อัปเดต". No card links to the scan
  * page; the only way there is the sign's QR (facility-0059). The name is not shown: the bar above already shows it.
+ * The layout is variant B of the mockups (#73, `design-system/facility/pages/phone.md`): the next job first.
  */
 export function MyWorkPage() {
   const { data, error, isLoading, isFetching, refetch } = useGetMyWorkQuery(undefined, freshOnOpen);
   const shift = data?.attendance.shift;
 
   return (
-    <main className="mywork-page">
-      <header className="mywork-heading">
-        <h1>งานของฉัน</h1>
-        {data && shift && <p className="mywork-sub">{attendanceLine(shift, data.attendance)}</p>}
+    <main className="flex flex-col gap-4 text-base text-text">
+      <header className="flex flex-col gap-0.5">
+        <h1 className="text-2xl font-bold">งานของฉัน</h1>
+        {data && shift && <p className="text-md text-muted">{attendanceLine(shift, data.attendance)}</p>}
       </header>
-      {isLoading && <p className="mywork-muted">กำลังโหลดงาน...</p>}
-      {error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(error)}
-        </p>
-      )}
+      {isLoading && <p className="text-muted">กำลังโหลดงาน...</p>}
+      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
-      <footer className="mywork-footer">
-        <span>ไม่มีแจ้งเตือนเด้งขึ้น เปิดหน้านี้หรือกด "อัปเดต" เพื่อดูงานล่าสุด</span>
-        <button type="button" className="app-button" disabled={isFetching} onClick={() => void refetch()}>
+      <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
+        <span className="text-md text-muted">ไม่มีแจ้งเตือนเด้งขึ้น เปิดหน้านี้หรือกด "อัปเดต" เพื่อดูงานล่าสุด</span>
+        <Button className="w-full" disabled={isFetching} onClick={() => void refetch()}>
+          <RefreshCw aria-hidden="true" className="size-5" />
           {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
-        </button>
+        </Button>
       </footer>
     </main>
   );
@@ -68,61 +59,58 @@ function attendanceLine(shift: Shift, attendance: AttendanceState): string {
  */
 function OffShift({ ownShift }: { ownShift?: OwnShift }) {
   return (
-    <div className="app-note app-note--info">
-      <strong>ตอนนี้ไม่อยู่ในกะของคุณ</strong>
+    <Note tone="info" title="ตอนนี้ไม่อยู่ในกะของคุณ">
       {ownShift && <span>{shiftLabel[ownShift.shift]}</span>}
       {ownShift && <span>{`ลงเวลาเข้างานได้ตั้งแต่ ${formatClock(ownShift.opensAt)}`}</span>}
-    </div>
+    </Note>
   );
 }
 
 function WorkList({ work }: { work: MyWork }) {
   if (work.areas.length === 0) {
     return (
-      <p className="app-note app-note--info">
-        ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับพื้นที่ หรือพื้นที่ยังไม่มีจุด แจ้งแอดมิน
-      </p>
+      <Note tone="info">ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับพื้นที่ หรือพื้นที่ยังไม่มีจุด แจ้งแอดมิน</Note>
     );
   }
-  const points = work.areas.flatMap((area) => area.points);
-  const count = (...statuses: PointStatus[]) => points.filter((p) => statuses.includes(p.status)).length;
   const covered = work.areas.filter((area) => area.isCover);
+  const ordered = byUrgency(work.areas);
+  const next = ordered.find((item) => toDo.includes(item.point.status));
+  const rest = ordered.filter((item) => item !== next);
 
   return (
     <>
-      <ul className="mywork-summary" aria-label="สรุปงาน">
-        <li className="mywork-summary__rework">
-          <strong>{count('Rework')}</strong> ต้องแก้
-        </li>
-        <li className="mywork-summary__overdue">
-          <strong>{count('Overdue')}</strong> เลยเวลา
-        </li>
-        <li>
-          <strong>{count('PendingInspection', 'Passed')}</strong> ส่งแล้ว
-        </li>
-      </ul>
       {covered.length > 0 && (
-        <p className="app-note app-note--info">
+        <Note tone="info">
           {`วันนี้ทำแทน ${covered.map((area) => area.areaName).join(', ')} ด้วย · สิทธิ์หมดเองเมื่อหมดกะ`}
-        </p>
+        </Note>
       )}
-      {work.areas.map((area) => {
-        const headingId = `mywork-area-${area.areaId}`;
-        const title = area.isCover
-          ? `${area.areaName} · ตึก ${area.points[0]?.buildingCode ?? ''} (ทำแทน)`
-          : `${area.areaName} (พื้นที่ของฉัน)`;
-        const sorted = [...area.points].sort((a, b) => urgency.indexOf(a.status) - urgency.indexOf(b.status));
-        return (
-          <section key={area.areaId} className="mywork-area" aria-labelledby={headingId}>
-            <h2 id={headingId}>{title}</h2>
-            <ul className="mywork-cards">
-              {sorted.map((point) => (
-                <WorkCard key={point.id} point={point} />
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+      {next ? <NextJob item={next} /> : <Note tone="info">ส่งครบทุกจุดที่ต้องทำตอนนี้แล้ว</Note>}
+      <Progress
+        passed={ordered.filter((item) => item.point.status === 'Passed').length}
+        pending={ordered.filter((item) => item.point.status === 'PendingInspection').length}
+        total={ordered.length}
+      />
+      <WorkGroup title="ต้องทำต่อ" items={rest.filter((item) => toDo.includes(item.point.status))} />
+      <WorkGroup title="ส่งแล้ว" items={rest.filter((item) => sentStatuses.includes(item.point.status))} />
+      <WorkGroup title="ยังไม่ต้องทำ" items={rest.filter((item) => laterStatuses.includes(item.point.status))} />
     </>
+  );
+}
+
+/**
+ * "x จาก y จุด ส่งแล้ว", where ส่งแล้ว is รอตรวจ and ตรวจผ่าน, and a bar of the same shares in their status colours;
+ * the words carry it, the bar is for the eye only.
+ */
+function Progress({ passed, pending, total }: { passed: number; pending: number; total: number }) {
+  const share = (n: number) => `${(100 * n) / total}%`;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-md">{`${passed + pending} จาก ${total} จุด ส่งแล้ว`}</span>
+      {/* The shares are data, not tokens, so the widths are inline styles */}
+      <div aria-hidden="true" className="flex h-2.5 overflow-hidden rounded-full bg-border">
+        <div className="h-full bg-status-passed" style={{ width: share(passed) }} />
+        <div className="h-full bg-status-pending" style={{ width: share(pending) }} />
+      </div>
+    </div>
   );
 }

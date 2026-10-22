@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#71 PR #84 and #72 held for the eye check with #73–#74; next: `implement` #73; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#71–#73 PRs held for the eye check with #74; next: `implement` #74; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -339,7 +339,20 @@ Where `ui-ux-pro-max` fits:
 
   Next: PR (based on `feat/shared-components`), then `implement` #73.
 
-Next session: `implement` #73 (branch from `feat/login-new-look`); PRs #84 and #72's wait for the eye check with #73–#74.
+- 2026-10-22 · #73 on branch `feat/my-work-b` (stacked on `feat/login-new-look`). My Work is variant B.
+  - **Order of the page:** the cover note; the "ทำอันนี้ก่อน" card; the progress line "x จาก y จุด ส่งแล้ว", with a bar in the ตรวจผ่าน and รอตรวจ colours; then the rows grouped ต้องทำต่อ / ส่งแล้ว / ยังไม่ต้องทำ.
+  - **The card:** the most urgent ต้องแก้ไข / เลยเวลา / ยังไม่ทำ point across the own and covered Areas. Its frame takes the status colour, and it shows the defect and the instruction for the status. With nothing left to do, an info note "ส่งครบทุกจุดที่ต้องทำตอนนี้แล้ว" takes its place.
+  - **The rows:** empty groups are hidden, and a covered Area says "(ทำแทน)".
+  - **Owner's call while building:** a ต้องแก้ไข row also shows its defect (pages/phone.md).
+  - **Files:** new `workRules.ts`, `NextJob.tsx` and `WorkGroup.tsx`; `WorkCard.tsx` and `myWork.css` deleted; two icons (QrCode, RefreshCw).
+  - **Tests (TDD, at the page seam):** 6 new; the 4 variant-A tests rewritten for B (order, cover, off shift, refetch); the overdue/issue test is folded into the group test. The page now has 16 tests; 410 in the frontend.
+  - **Code review:** no hard violations. Fixes: the test gaps, `useId` for the card heading, exports narrowed, the two-colour bar.
+  - **Left as is (reported):** the group headings are small eyebrow labels as in the mockup; `roundText` and `issueText` repeat the dashboard's and My Building's versions, so they could move to `shared/` when those pages move (#76, #77).
+  - **Checks:** lint and tsc clean; main JS 161.71 kB gzip (first icons); CSS 5.84 kB.
+
+  Next: PR, then `implement` #74.
+
+Next session: `implement` #74 (branch from `feat/my-work-b`); PRs #84, #85 and #73's wait for the eye check with #74.
 
 ## Owner's rules (still in force)
 

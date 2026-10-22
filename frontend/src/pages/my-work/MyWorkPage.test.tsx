@@ -34,25 +34,122 @@ const fourPoints = [
 ];
 
 describe('MyWorkPage (M9, M14, facility-0052)', () => {
-  it('lists the own Area most urgent first, with the summary and the shift line', async () => {
+  it('shows every point most urgent first, whatever order the server sends, under the shift line', async () => {
     serveMyWork(myWork(undefined, [area(fourPoints)]));
     await renderApp('/my-work');
 
-    const ownArea = await screen.findByRole('region', { name: 'Area ทดลอง (พื้นที่ของฉัน)' });
-    expect(within(ownArea).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
       'จุดทิ้งขยะ',
       'โถงทางเดิน',
       'ห้องน้ำชาย',
       'ห้องน้ำหญิง',
     ]);
-    const summary = screen.getByRole('list', { name: 'สรุปงาน' });
-    expect(within(summary).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      '1 ต้องแก้',
-      '1 เลยเวลา',
-      '2 ส่งแล้ว',
-    ]);
     expect(screen.getByText('กะเช้า 07:00–19:00 · เข้างาน 06:52')).toBeInTheDocument();
-    expect(screen.getByText('ส่งงาน 10:05 · รอบถัดไป 13:00–15:00')).toBeInTheDocument();
+  });
+
+  it('puts the most urgent point first in "ทำอันนี้ก่อน", with its defect and what to do (variant B, #73)', async () => {
+    serveMyWork(myWork(undefined, [area(fourPoints)]));
+    await renderApp('/my-work');
+
+    const next = await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
+    expect(within(next).getByRole('heading', { level: 3 })).toHaveTextContent('จุดทิ้งขยะ');
+    expect(within(next).getByText('ต้องแก้ไข')).toBeInTheDocument();
+    expect(within(next).getByText('Area ทดลอง · รอบ 08:00–10:00')).toBeInTheDocument();
+    expect(within(next).getByText('หัวหน้าให้แก้ 09:40: “รอบถังขยะยังมีคราบ”')).toBeInTheDocument();
+    expect(within(next).getByText('แก้แล้วสแกน QR ที่จุดนี้เพื่อส่งงานใหม่')).toBeInTheDocument();
+  });
+
+  it('picks the next job across the own and the covered Areas, with the words for its status (#73)', async () => {
+    const covered = area(
+      [
+        point({
+          id: 9,
+          name: 'ห้องพักพนักงาน',
+          areaId: 12,
+          areaName: 'Area 12',
+          buildingCode: 'B',
+          status: 'Overdue',
+          currentRound: { id: 91, start: '08:00:00', end: '09:30:00' },
+        }),
+      ],
+      { areaId: 12, areaCode: 'AR12', areaName: 'Area 12', isCover: true },
+    );
+    serveMyWork(myWork(undefined, [area([point({ status: 'NotYetDone' })]), covered]));
+    await renderApp('/my-work');
+
+    const next = await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
+    expect(within(next).getByRole('heading', { level: 3 })).toHaveTextContent('ห้องพักพนักงาน');
+    expect(within(next).getByText('Area 12 · ตึก B (ทำแทน) · รอบ 08:00–09:30')).toBeInTheDocument();
+    expect(screen.getByText('0 จาก 2 จุด ส่งแล้ว')).toBeInTheDocument();
+    expect(within(next).getByText('ยังไม่ส่งงาน · เลยเวลารอบแล้ว')).toBeInTheDocument();
+    expect(within(next).getByText('สแกน QR ที่จุดนี้เพื่อส่งงาน')).toBeInTheDocument();
+  });
+
+  it('lists the rest in ต้องทำต่อ / ส่งแล้ว / ยังไม่ต้องทำ, with their chips and any reported issue (#73)', async () => {
+    const later = [
+      point({ id: 5, name: 'ห้องเก็บของ', status: 'BeforeFirstRound', currentRound: undefined }),
+      point({ id: 6, name: 'ห้องประชุม', status: 'OffHours', currentRound: undefined, nextRound: undefined }),
+    ];
+    serveMyWork(myWork(undefined, [area([...later, ...fourPoints])]));
+    await renderApp('/my-work');
+
+    const names = (group: string) =>
+      within(screen.getByRole('region', { name: group }))
+        .getAllByRole('heading', { level: 3 })
+        .map((h) => h.textContent);
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+      'ทำอันนี้ก่อน',
+      'ต้องทำต่อ',
+      'ส่งแล้ว',
+      'ยังไม่ต้องทำ',
+    ]);
+    expect(names('ต้องทำต่อ')).toEqual(['โถงทางเดิน']);
+    expect(names('ส่งแล้ว')).toEqual(['ห้องน้ำชาย', 'ห้องน้ำหญิง']);
+    expect(names('ยังไม่ต้องทำ')).toEqual(['ห้องเก็บของ', 'ห้องประชุม']);
+    const notYet = screen.getByRole('region', { name: 'ยังไม่ต้องทำ' });
+    expect(within(notYet).getByText('ยังไม่ถึงรอบ')).toBeInTheDocument();
+    expect(within(notYet).getByText('นอกเวลา')).toBeInTheDocument();
+    const sent = screen.getByRole('region', { name: 'ส่งแล้ว' });
+    expect(within(sent).getByText('แจ้งปัญหา: ของชำรุด · ก๊อกอ่างที่ 2 รั่ว')).toBeInTheDocument();
+    expect(within(sent).getAllByText('Area ทดลอง · รอบ 10:00–12:00')).toHaveLength(2);
+  });
+
+  it('a second ต้องแก้ไข point shows its defect on its row too (owner, 2026-10-22)', async () => {
+    const rework = (id: number, name: string, defect: string) =>
+      point({ id, name, status: 'Rework', rework: { defect, requestedAt: '2026-10-15T02:40:00Z' } }); // 09:40
+    serveMyWork(myWork(undefined, [area([rework(1, 'ห้องน้ำหญิง', 'พื้นเปียก'), rework(2, 'ห้องน้ำชาย', 'กระจกมีคราบ')])]));
+    await renderApp('/my-work');
+
+    const later = await screen.findByRole('region', { name: 'ต้องทำต่อ' });
+    expect(within(later).getByText('หัวหน้าให้แก้ 09:40: “กระจกมีคราบ”')).toBeInTheDocument();
+  });
+
+  it('hides a group with nothing in it (#73)', async () => {
+    serveMyWork(myWork(undefined, [area([point({ status: 'Rework', rework: { defect: 'พื้นเปียก', requestedAt: '2026-10-15T02:40:00Z' } })])]));
+    await renderApp('/my-work');
+
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
+    for (const group of ['ต้องทำต่อ', 'ส่งแล้ว', 'ยังไม่ต้องทำ']) {
+      expect(screen.queryByRole('region', { name: group })).not.toBeInTheDocument();
+    }
+    expect(screen.getByText('0 จาก 1 จุด ส่งแล้ว')).toBeInTheDocument();
+  });
+
+  it('counts the sent points out of all of them, รอตรวจ and ตรวจผ่าน both counting as sent (#73)', async () => {
+    serveMyWork(myWork(undefined, [area(fourPoints)]));
+    await renderApp('/my-work');
+
+    expect(await screen.findByText('2 จาก 4 จุด ส่งแล้ว')).toBeInTheDocument();
+  });
+
+  it('with nothing left to do now, a note takes the large card\'s place (#73)', async () => {
+    serveMyWork(myWork(undefined, [area([point({ status: 'PendingInspection' }), point({ id: 12, status: 'BeforeFirstRound' })])]));
+    await renderApp('/my-work');
+
+    expect(await screen.findByText('ส่งครบทุกจุดที่ต้องทำตอนนี้แล้ว')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'ทำอันนี้ก่อน' })).not.toBeInTheDocument();
   });
 
   it('a card sent back shows the defect and says to scan the point again, with no link to the scan page (facility-0059)', async () => {
@@ -64,16 +161,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     expect(within(screen.getByRole('main')).queryAllByRole('link')).toHaveLength(0);
   });
 
-  it('shows the reported issue as a tag and what an overdue point still needs (facility-0046)', async () => {
-    serveMyWork(myWork(undefined, [area(fourPoints)]));
-    await renderApp('/my-work');
-
-    expect(await screen.findByText('แจ้งปัญหา: ของชำรุด · ก๊อกอ่างที่ 2 รั่ว')).toBeInTheDocument();
-    expect(screen.getByText('ยังไม่ส่งงาน · เลยเวลารอบแล้ว')).toBeInTheDocument();
-    expect(screen.getByText('ตรวจผ่าน · ส่งงาน 10:10 · รอบถัดไป 13:00–15:00')).toBeInTheDocument();
-  });
-
-  it('covered Areas come after the own Area, marked ทำแทน (M14)', async () => {
+  it('a covered Area\'s points join the same groups, marked ทำแทน, under the cover line (M14)', async () => {
     const covered = area([point({ id: 9, name: 'ห้องพักพนักงาน', areaId: 12, areaName: 'Area 12', buildingCode: 'B' })], {
       areaId: 12,
       areaCode: 'AR12',
@@ -84,10 +172,11 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     await renderApp('/my-work');
 
     expect(await screen.findByText('วันนี้ทำแทน Area 12 ด้วย · สิทธิ์หมดเองเมื่อหมดกะ')).toBeInTheDocument();
-    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
-      'Area ทดลอง (พื้นที่ของฉัน)',
-      'Area 12 · ตึก B (ทำแทน)',
-    ]);
+    // both points are ยังไม่ทำ: the own Area's comes first (the server's order), the covered one is the next row
+    const next = screen.getByRole('region', { name: 'ทำอันนี้ก่อน' });
+    expect(within(next).getByText('Area ทดลอง · รอบ 10:00–12:00')).toBeInTheDocument();
+    const later = screen.getByRole('region', { name: 'ต้องทำต่อ' });
+    expect(within(later).getByText('Area 12 · ตึก B (ทำแทน) · รอบ 10:00–12:00')).toBeInTheDocument();
   });
 
   it('before Shift-In the shift line says so', async () => {
@@ -95,7 +184,9 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     await renderApp('/my-work');
 
     expect(await screen.findByText('กะเช้า 07:00–19:00 · ยังไม่ได้ลงเวลาเข้างาน')).toBeInTheDocument();
-    expect(screen.getByText('ยังไม่ส่ง · ส่งได้ถึง 12:00')).toBeInTheDocument();
+    const next = screen.getByRole('region', { name: 'ทำอันนี้ก่อน' });
+    expect(within(next).getByText('ยังไม่ส่ง · ส่งได้ถึง 12:00')).toBeInTheDocument();
+    expect(within(next).getByText('สแกน QR ที่จุดนี้เพื่อส่งงาน')).toBeInTheDocument();
   });
 
   it('outside the own shift: the shift and when check-in opens, with no counts and no cards (facility-0077)', async () => {
@@ -105,8 +196,9 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     expect(await screen.findByText('ตอนนี้ไม่อยู่ในกะของคุณ')).toBeInTheDocument();
     expect(screen.getByText('กะดึก 19:00–07:00')).toBeInTheDocument();
     expect(screen.getByText('ลงเวลาเข้างานได้ตั้งแต่ 18:00')).toBeInTheDocument();
-    // another shift's work is not this Cleaner's: no "ส่งแล้ว" count and no card
-    expect(screen.queryByRole('list', { name: 'สรุปงาน' })).not.toBeInTheDocument();
+    // another shift's work is not this Cleaner's: no progress line, no large card and no rows
+    expect(screen.queryByText(/จุด ส่งแล้ว$/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'ทำอันนี้ก่อน' })).not.toBeInTheDocument();
     expect(screen.queryByText('ห้องน้ำชาย')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'อัปเดต' })).toBeEnabled();
   });
@@ -114,7 +206,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
   it('asks the server again on "อัปเดต" (no push for Cleaners, facility-0052)', async () => {
     const server = serveMyWork(myWork());
     const { user } = await renderApp('/my-work');
-    await screen.findByRole('region', { name: 'Area ทดลอง (พื้นที่ของฉัน)' });
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: 'อัปเดต' }));
@@ -125,7 +217,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
   it('asks the server again each time the page opens (facility-0052)', async () => {
     const server = serveMyWork(myWork());
     const { router } = await renderApp('/my-work');
-    await screen.findByRole('region', { name: 'Area ทดลอง (พื้นที่ของฉัน)' });
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(1);
 
     await act(() => router.navigate('/nowhere'));
