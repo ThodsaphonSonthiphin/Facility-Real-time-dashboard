@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (system font)
+Last updated: 2026-10-22 (plan 13 written, branch feat/ux-fix-list)
 
 ## Project
 
@@ -181,6 +181,8 @@ Plan 4 test results at merge:
 - 2026-10-21 · PR #62 merged to master (`d9ac984`), branch deleted. Plan 12 is done, and it was the last of the six frontend plans: every wireframe page now exists. Cleanup: API stopped, throwaway database `facility_reports_test` dropped, `wwwroot` deleted. GitGuardian passed. Next: the owner chooses (see Pending work): the UX/UI pass over every page, the server-side search for the Admin history, or the Excel import of accounts.
 - 2026-10-22 · Owner: only the device's font now, the rest of facility-0074 stays (D3 covers ahead, D6 phone, D4 round windows, the five Cleaner phone problems; facility-0074 amended). Font done (branch `feat/system-font`, PR #65): `@fontsource/ibm-plex-sans-thai` imports removed from `main.tsx` and the package uninstalled, `index.css` is `font-family: system-ui, sans-serif` (facility-0072); the build has no font files, main JS 157.53 kB gzip. Lint and tsc clean, frontend tests 385 passed. Next: the plan for the rest of facility-0074 (see `## Next`).
 - 2026-10-22 · Requirements session (`sp-grill-with-doc`) over mockups of the rest of facility-0074: ADRs facility-0076 to 0085 settle how each item is fixed (0085 adds a fifth group: UI words, list approved by the owner); the owner dropped telling a wrong-Area sign on open (facility-0080: the cover flow already goes scan, blocked, Admin approves), and changed D6 (show the old phone: impossible, it is a hash; facility-0081) and D4 (typed in split hour and minute boxes, not a list; facility-0083). No code changed. Next: write the plan.
+- 2026-10-22 · PR #65 merged to master (`7ced464`), branch deleted: the device's font (facility-0072) and ADRs facility-0070 to 0085. GitGuardian passed. Still to check by eye: the font on a real iPhone and a real Android phone. Next: write the plan for facility-0074 as amended (facility-0075 to 0085) with `sp-writing-plans`.
+- 2026-10-22 · Plan 13 written and committed on the new branch `feat/ux-fix-list` (from `7ced464`; not pushed): `docs/superpowers/plans/2026-10-22-ux-fix-list.md`, 12 tasks. The server changes in 3 places: `ownShift` on `GET /api/my-work`, a new `GET /api/attendance/signs/{token}`, and the words in messages, summaries and Excel. Tasks 2–7 fix the Cleaner phone, D6, D4 and D3 (ahead via the existing board API). Tasks 8–11 sweep the words. Task 12 covers docs and the real run. Six planning decisions are at the top of the plan, for the PR. Next (new session): `git checkout feat/ux-fix-list`; the owner picks how to run the plan (subagent-driven with `sp-subagent-driven-development` recommended, or `sp-executing-plans`); then Task 1. No code has changed yet.
 
 ## Sharing a test build (colleagues on other networks)
 
