@@ -106,6 +106,8 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     // facility-0081: who is being edited, and that the old number is not needed (it is stored as a hash)
     expect(within(form).getByText('650001')).toBeInTheDocument();
     expect(within(form).getByText('AR01 · กะเช้า')).toBeInTheDocument();
+    expect(within(form).getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
+    expect(within(form).getByText('แม่บ้าน')).toBeInTheDocument();
     expect(within(form).getByText(/^ไม่ต้องรู้เบอร์เดิม ใส่เบอร์ที่คนนี้ใช้ตอนนี้แล้วกดบันทึก/)).toBeInTheDocument();
     await user.type(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้'), '123');
     await user.click(within(form).getByRole('button', { name: 'บันทึกเบอร์ใหม่' }));
