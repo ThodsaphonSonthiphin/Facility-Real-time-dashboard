@@ -55,7 +55,7 @@ describe('routing (facility-0026, 0058)', () => {
     await renderApp('/dashboard');
 
     expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
-    expect(screen.getByText('หน้านี้สำหรับAdmin บัญชีนี้เป็นแม่บ้าน')).toBeInTheDocument();
+    expect(screen.getByText('หน้านี้สำหรับแอดมิน บัญชีนี้เป็นแม่บ้าน')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'กลับหน้าของฉัน' })).toHaveAttribute('href', '/my-work');
   });
 

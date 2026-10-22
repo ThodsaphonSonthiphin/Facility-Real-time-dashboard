@@ -69,7 +69,7 @@ export function myWork(
 }
 
 export const otherAreaBlocked: BlockedScan = {
-  message: 'ป้ายนี้ไม่ใช่ Area ของคุณ',
+  message: 'ป้ายนี้ไม่ใช่พื้นที่ของคุณ',
   areaCode: 'AR02',
   areaName: 'Area ถัดไป',
   reason: 'OtherArea',

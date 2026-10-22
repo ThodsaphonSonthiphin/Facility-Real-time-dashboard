@@ -21,7 +21,7 @@ export const attendanceEvents: readonly AttendanceEvent[] = ['ShiftIn', 'BreakOu
 /** facility-0047 rule 4: the card statuses as everyone sees them. */
 export const pointStatusLabel: Record<PointStatus, string> = {
   Rework: 'ต้องแก้ไข',
-  Overdue: 'เลยรอบ',
+  Overdue: 'เลยเวลา',
   PendingInspection: 'รอตรวจ',
   Passed: 'ตรวจผ่าน',
   NotYetDone: 'ยังไม่ทำ',

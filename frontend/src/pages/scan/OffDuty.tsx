@@ -3,7 +3,7 @@ import type { PointCard } from '../../shared/api/types';
 import type { OffDutyReason } from './scanRules';
 
 const text: Record<OffDutyReason, { title: string; detail: string }> = {
-  'not-checked-in': { title: 'ยังไม่ได้ลงเวลาเข้างาน', detail: 'ต้องสแกนป้ายลงเวลาของ Area ก่อน แล้วค่อยสแกนจุดนี้' },
+  'not-checked-in': { title: 'ยังไม่ได้ลงเวลาเข้างาน', detail: 'ต้องสแกนป้ายลงเวลาของพื้นที่ก่อน แล้วค่อยสแกนจุดนี้' },
   'checked-out': { title: 'ลงเวลาเลิกงานแล้ว', detail: 'ส่งงานได้ตั้งแต่ลงเวลาเข้างานจนถึงลงเวลาเลิกงาน' },
   'outside-shift': { title: 'ตอนนี้ไม่อยู่ในกะของคุณ', detail: 'ส่งงานได้เฉพาะในกะของตัวเอง หลังลงเวลาเข้างาน' },
 };
@@ -24,7 +24,7 @@ export function OffDuty({ reason, point }: { reason: OffDutyReason; point: Point
         <>
           <p>เดินไปที่ป้ายลงเวลา สแกนด้วยกล้องมือถือ กด "เข้างาน" แล้วกลับมาสแกนจุดนี้ใหม่</p>
           <p className="scan-muted">
-            ถ้าลงเวลาไม่ได้ (มือถือแบตหมด ไม่มีเน็ต) แจ้ง Admin ให้เพิ่มเวลาเข้างานให้ Admin ต้องใส่เหตุผลทุกครั้ง
+            ถ้าลงเวลาไม่ได้ (มือถือแบตหมด ไม่มีเน็ต) แจ้งแอดมินให้เพิ่มเวลาเข้างานให้ แอดมินต้องใส่เหตุผลทุกครั้ง
           </p>
         </>
       )}

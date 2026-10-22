@@ -38,7 +38,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     serveMyWork(myWork(undefined, [area(fourPoints)]));
     await renderApp('/my-work');
 
-    const ownArea = await screen.findByRole('region', { name: 'Area ทดลอง (Area ของฉัน)' });
+    const ownArea = await screen.findByRole('region', { name: 'Area ทดลอง (พื้นที่ของฉัน)' });
     expect(within(ownArea).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
       'จุดทิ้งขยะ',
       'โถงทางเดิน',
@@ -48,7 +48,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     const summary = screen.getByRole('list', { name: 'สรุปงาน' });
     expect(within(summary).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       '1 ต้องแก้',
-      '1 เลยรอบ',
+      '1 เลยเวลา',
       '2 ส่งแล้ว',
     ]);
     expect(screen.getByText('กะเช้า 07:00–19:00 · เข้างาน 06:52')).toBeInTheDocument();
@@ -85,7 +85,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
 
     expect(await screen.findByText('วันนี้ทำแทน Area 12 ด้วย · สิทธิ์หมดเองเมื่อหมดกะ')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
-      'Area ทดลอง (Area ของฉัน)',
+      'Area ทดลอง (พื้นที่ของฉัน)',
       'Area 12 · ตึก B (ทำแทน)',
     ]);
   });
@@ -114,7 +114,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
   it('asks the server again on "อัปเดต" (no push for Cleaners, facility-0052)', async () => {
     const server = serveMyWork(myWork());
     const { user } = await renderApp('/my-work');
-    await screen.findByRole('region', { name: 'Area ทดลอง (Area ของฉัน)' });
+    await screen.findByRole('region', { name: 'Area ทดลอง (พื้นที่ของฉัน)' });
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: 'อัปเดต' }));
@@ -125,7 +125,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
   it('asks the server again each time the page opens (facility-0052)', async () => {
     const server = serveMyWork(myWork());
     const { router } = await renderApp('/my-work');
-    await screen.findByRole('region', { name: 'Area ทดลอง (Area ของฉัน)' });
+    await screen.findByRole('region', { name: 'Area ทดลอง (พื้นที่ของฉัน)' });
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(1);
 
     await act(() => router.navigate('/nowhere'));
@@ -139,7 +139,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     await renderApp('/my-work');
 
     expect(
-      await screen.findByText('ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับ Area หรือ Area ยังไม่มีจุด แจ้ง Admin'),
+      await screen.findByText('ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับพื้นที่ หรือพื้นที่ยังไม่มีจุด แจ้งแอดมิน'),
     ).toBeInTheDocument();
   });
 

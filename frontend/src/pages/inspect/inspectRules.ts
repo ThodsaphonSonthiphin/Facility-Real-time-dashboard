@@ -20,7 +20,7 @@ export function draftProblem(draft: InspectDraft): string | null {
   if (draft.result === null) {
     return 'เลือกผลการตรวจก่อน';
   }
-  return draft.result === 'Rework' && draft.defect.trim() === '' ? 'ใส่ข้อบกพร่องก่อนบันทึก' : null;
+  return draft.result === 'Rework' && draft.defect.trim() === '' ? 'ใส่สิ่งที่ต้องแก้ก่อนบันทึก' : null;
 }
 
 export function describeDraft(draft: InspectDraft): string {

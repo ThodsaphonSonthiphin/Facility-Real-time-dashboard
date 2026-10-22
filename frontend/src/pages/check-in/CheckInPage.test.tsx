@@ -44,7 +44,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(await screen.findByRole('button', { name: 'เข้างาน' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'ลงเวลา' })).toBeInTheDocument();
     expect(screen.getByText('กะเช้า 07:00–19:00')).toBeInTheDocument();
-    expect(screen.getByText('Area ของคุณ: Area ทดลอง · 1 จุด')).toBeInTheDocument();
+    expect(screen.getByText('พื้นที่ของคุณ: Area ทดลอง · 1 จุด')).toBeInTheDocument();
     expect(steps()).toEqual(['เข้างาน –', 'ออกพัก –', 'กลับจากพัก –', 'เลิกงาน –']);
   });
 
@@ -86,9 +86,9 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
 
     await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
 
-    expect(await screen.findByText('บันทึกเวลาเข้างานแล้ว 06:52 แต่อยู่ไกลจากป้าย · ติดธง')).toBeInTheDocument();
+    expect(await screen.findByText('บันทึกเวลาเข้างานแล้ว 06:52 แต่อยู่ไกลป้าย')).toBeInTheDocument();
     expect(screen.getByText('ความแม่นยำของตำแหน่ง ±40 ม.')).toBeInTheDocument();
-    expect(steps()[0]).toBe('เข้างาน 06:52 ติดธง');
+    expect(steps()[0]).toBe('เข้างาน 06:52 ไกลป้าย');
   });
 
   it('after the break only เลิกงาน is offered, and then the shift is complete (M10)', async () => {
@@ -155,7 +155,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
 
     await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
 
-    expect(await screen.findByRole('heading', { name: 'เปิด Location ก่อนลงเวลา' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'เปิดตำแหน่งก่อนลงเวลา' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Android' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'iPhone' })).toBeInTheDocument();
     expect(server.calls.some((c) => c.path === '/api/attendance')).toBe(false);
@@ -186,7 +186,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
 
     await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
 
-    expect(await screen.findByRole('heading', { name: 'ป้ายนี้ไม่ใช่ Area ของคุณ' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'ป้ายนี้ไม่ใช่พื้นที่ของคุณ' })).toBeInTheDocument();
     expect(screen.getByText('ไม่ได้บันทึกเวลา')).toBeInTheDocument();
     expect(screen.getByText('Area ถัดไป (AR02) · ตึก B')).toBeInTheDocument();
     expect(screen.getByText('Area ทดลอง')).toBeInTheDocument();

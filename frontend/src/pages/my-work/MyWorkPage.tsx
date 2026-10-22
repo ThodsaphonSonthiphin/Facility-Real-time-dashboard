@@ -80,7 +80,7 @@ function WorkList({ work }: { work: MyWork }) {
   if (work.areas.length === 0) {
     return (
       <p className="app-note app-note--info">
-        ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับ Area หรือ Area ยังไม่มีจุด แจ้ง Admin
+        ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับพื้นที่ หรือพื้นที่ยังไม่มีจุด แจ้งแอดมิน
       </p>
     );
   }
@@ -95,7 +95,7 @@ function WorkList({ work }: { work: MyWork }) {
           <strong>{count('Rework')}</strong> ต้องแก้
         </li>
         <li className="mywork-summary__overdue">
-          <strong>{count('Overdue')}</strong> เลยรอบ
+          <strong>{count('Overdue')}</strong> เลยเวลา
         </li>
         <li>
           <strong>{count('PendingInspection', 'Passed')}</strong> ส่งแล้ว
@@ -110,7 +110,7 @@ function WorkList({ work }: { work: MyWork }) {
         const headingId = `mywork-area-${area.areaId}`;
         const title = area.isCover
           ? `${area.areaName} · ตึก ${area.points[0]?.buildingCode ?? ''} (ทำแทน)`
-          : `${area.areaName} (Area ของฉัน)`;
+          : `${area.areaName} (พื้นที่ของฉัน)`;
         const sorted = [...area.points].sort((a, b) => urgency.indexOf(a.status) - urgency.indexOf(b.status));
         return (
           <section key={area.areaId} className="mywork-area" aria-labelledby={headingId}>

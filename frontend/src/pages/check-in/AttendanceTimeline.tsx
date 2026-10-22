@@ -17,7 +17,7 @@ export function AttendanceTimeline({ attendance }: { attendance: AttendanceState
             {recorded?.withinRadius === false && (
               <>
                 {' '}
-                <span className="checkin-flag">ติดธง</span>
+                <span className="checkin-flag">ไกลป้าย</span>
               </>
             )}
           </li>

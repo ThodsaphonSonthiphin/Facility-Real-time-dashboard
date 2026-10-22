@@ -51,7 +51,7 @@ export function LoginPage() {
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
           />
-          <span className="auth-hint">เบอร์ที่แจ้ง Admin ไว้ตอนสร้างบัญชี</span>
+          <span className="auth-hint">เบอร์ที่แจ้งแอดมินไว้ตอนสร้างบัญชี</span>
         </div>
         {errorText && (
           <p className="auth-note auth-note--error" role="alert">
@@ -63,11 +63,11 @@ export function LoginPage() {
         </button>
       </form>
       <footer className="auth-footer">
-        <span>เปลี่ยนเบอร์โทร: แจ้ง Admin ให้แก้ · ไม่มีการสมัครเอง</span>
+        <span>เปลี่ยนเบอร์โทร: แจ้งแอดมินให้แก้ · ไม่มีการสมัครเอง</span>
         <span>
-          Admin เข้าด้วยชื่อผู้ใช้และรหัสผ่าน ·{' '}
+          แอดมินเข้าด้วยชื่อผู้ใช้และรหัสผ่าน ·{' '}
           <Link to="/login/admin" state={location.state}>
-            หน้า Admin
+            หน้าแอดมิน
           </Link>
         </span>
         <span className="auth-build">เวอร์ชัน {buildCommit}</span>

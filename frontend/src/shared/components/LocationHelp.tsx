@@ -19,7 +19,7 @@ export function LocationHelp({ problem, action, busy, onRetry }: LocationHelpPro
       <main className="app-help">
         <h1 className="app-help__title">อ่านตำแหน่งไม่ได้</h1>
         <p className="app-note app-note--error">
-          {`หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง ยังไม่ได้${action} แจ้ง Admin`}
+          {`หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง ยังไม่ได้${action} แจ้งแอดมิน`}
         </p>
       </main>
     );
@@ -28,7 +28,7 @@ export function LocationHelp({ problem, action, busy, onRetry }: LocationHelpPro
     <main className="app-help">
       {problem === 'denied' ? (
         <>
-          <h1 className="app-help__title">{`เปิด Location ก่อน${action}`}</h1>
+          <h1 className="app-help__title">{`เปิดตำแหน่งก่อน${action}`}</h1>
           <p>ระบบต้องรู้ตำแหน่งตอนสแกน ถ้าปิดไว้จะยังไม่บันทึก</p>
           <section className="app-panel">
             <h2>Android</h2>

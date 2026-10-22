@@ -9,7 +9,7 @@ const title: Record<Placement, string> = {
   OnTime: 'ส่งงานแล้ว',
   Late: 'ส่งงานแล้ว',
   Rework: 'ส่งงานแก้แล้ว',
-  OffRound: 'บันทึกเป็นงานนอกรอบ',
+  OffRound: 'ส่งเพิ่มแล้ว (ไม่นับรอบ)',
 };
 
 interface SubmitResultProps {
@@ -47,7 +47,7 @@ export function SubmitResult({ point, draft, result }: SubmitResultProps) {
       )}
       {result.withinRadius === false && (
         <p className="app-note app-note--warn">
-          {`ติดธง: ห่างป้าย ${result.distanceM} ม. Admin จะเห็นรายการนี้ ถ้าคุณอยู่ที่จุดนี้จริง แจ้ง Admin ได้เลย`}
+          {`ไกลป้าย: ห่างป้าย ${result.distanceM} ม. แอดมินจะเห็นรายการนี้ ถ้าคุณอยู่ที่จุดนี้จริง แจ้งแอดมินได้เลย`}
         </p>
       )}
       {result.withinRadius === true && <p className="scan-muted">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}

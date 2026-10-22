@@ -37,14 +37,14 @@ export function InspectResult({ visit, draft, result }: InspectResultProps) {
             <StatusChip status={result.newPointStatus} />
           </p>
           <span>{`“${draft.defect.trim()}”`}</span>
-          <span>{`${cleaner}เห็นข้อบกพร่องนี้ทันทีในหน้างานของฉัน และเมื่อสแกนจุดนี้ แก้แล้วส่งงานใหม่ จากนั้นหัวหน้าตรวจอีกรอบ`}</span>
+          <span>{`${cleaner}เห็นสิ่งที่ต้องแก้นี้ทันทีในหน้างานของฉัน และเมื่อสแกนจุดนี้ แก้แล้วส่งงานใหม่ จากนั้นหัวหน้าตรวจอีกรอบ`}</span>
           {point.nextRound && (
             <span>{`ถ้าไม่ได้แก้จนรอบ ${formatRound(point.nextRound)} เริ่ม การ์ดขึ้นรอบใหม่ และรอบนี้บันทึกว่า "ไม่ได้แก้"`}</span>
           )}
         </section>
       )}
       {result.withinRadius === false && (
-        <p className="app-note app-note--warn">{`ติดธง: ห่างป้าย ${result.distanceM} ม. Admin จะเห็นรายการนี้`}</p>
+        <p className="app-note app-note--warn">{`ไกลป้าย: ห่างป้าย ${result.distanceM} ม. แอดมินจะเห็นรายการนี้`}</p>
       )}
       {result.withinRadius === true && <p className="inspect-muted">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
       <Link className="app-button app-button--primary" to="/my-building">

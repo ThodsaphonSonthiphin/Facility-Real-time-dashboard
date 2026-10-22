@@ -102,7 +102,7 @@ export function CheckInPage() {
         <span className="checkin-kicker">ป้ายลงเวลา</span>
         <h1>ลงเวลา</h1>
         {attendance?.shift && <p className="checkin-sub">{shiftLabel[attendance.shift]}</p>}
-        {ownArea && <p className="checkin-area">{`Area ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
+        {ownArea && <p className="checkin-area">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
       </header>
       {workQuery.isLoading && <p className="checkin-hint">กำลังโหลด...</p>}
       {loadError != null && (
@@ -188,9 +188,9 @@ function AnsweredNote({ eventType, state, accuracyM }: AnsweredNoteProps) {
   if (recorded?.withinRadius === false) {
     return (
       <div className="app-note app-note--warn" role="status">
-        <strong>{`บันทึกเวลา${label}แล้ว ${time} แต่อยู่ไกลจากป้าย · ติดธง`}</strong>
+        <strong>{`บันทึกเวลา${label}แล้ว ${time} แต่อยู่ไกลป้าย`}</strong>
         <span>{`ความแม่นยำของตำแหน่ง ±${Math.round(accuracyM)} ม.`}</span>
-        <span>Admin จะเห็นรายการนี้ ถ้าคุณยืนอยู่หน้าป้ายจริง แจ้ง Admin ได้เลย</span>
+        <span>แอดมินจะเห็นรายการนี้ ถ้าคุณยืนอยู่หน้าป้ายจริง แจ้งแอดมินได้เลย</span>
       </div>
     );
   }

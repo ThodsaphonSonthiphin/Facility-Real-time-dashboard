@@ -57,7 +57,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     expect(cardNames(own)).toEqual(['ห้องน้ำชาย', 'ห้องน้ำหญิง', 'จุดทิ้งขยะ', 'โถงทางเดิน']);
     expect(screen.getByRole('heading', { level: 1, name: 'ตึกของฉัน' })).toBeInTheDocument();
     expect(screen.getByText('ตอนนี้ กะเช้า 07:00–19:00')).toBeInTheDocument();
-    expect(screen.getByText('2 Area · 4 จุด')).toBeInTheDocument();
+    expect(screen.getByText('2 พื้นที่ · 4 จุด')).toBeInTheDocument();
     expect(tiles()).toEqual(['2 รอตรวจ', '1 รอแม่บ้านแก้', '0 ตรวจแล้ว']);
     expect(screen.getByText('ส่ง 10:05 · แม่บ้านทดสอบ')).toBeInTheDocument();
     expect(screen.getByText('Area ถัดไป · รอบ 09:00–11:00')).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     serve(myBuilding([]));
     await renderApp('/my-building');
 
-    expect(await screen.findByText('บัญชีนี้ยังไม่ได้ผูกกับตึก หรือตึกปิดใช้งาน แจ้ง Admin')).toBeInTheDocument();
+    expect(await screen.findByText('บัญชีนี้ยังไม่ได้ผูกกับตึก หรือตึกปิดใช้งาน แจ้งแอดมิน')).toBeInTheDocument();
   });
 
   it('a building with no points says so', async () => {
