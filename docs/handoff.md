@@ -31,6 +31,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 10 | Admin setup: Areas, points, round windows, signs, sign location capture, print signs, accounts | done, merged (PR #59, `a6dc170`) (branch `feat/admin-setup`): `docs/superpowers/plans/2026-10-19-admin-setup.md` |
 | 11 | Admin live board: lazy Admin routes, point status with hub and 30 s poll (D1), attendance and corrections (D2), alerts and covers (D3) | done, merged (PR #60, `f897548`) (branch `feat/admin-live-board`): `docs/superpowers/plans/2026-10-19-admin-live-board.md` |
 | 12 | Admin reports: inspection summary (D7), Excel export (D8), Admin history (D9) | done, merged (PR #62, `d9ac984`) (branch `feat/admin-reports`): `docs/superpowers/plans/2026-10-21-admin-reports.md` |
+| 13 | UX fix list: facility-0074 as amended (facility-0075 to 0085) | in progress (branch `feat/ux-fix-list`): `docs/superpowers/plans/2026-10-22-ux-fix-list.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -184,6 +185,10 @@ Plan 4 test results at merge:
 - 2026-10-22 · PR #65 merged to master (`7ced464`), branch deleted: the device's font (facility-0072) and ADRs facility-0070 to 0085. GitGuardian passed. Still to check by eye: the font on a real iPhone and a real Android phone. Next: write the plan for facility-0074 as amended (facility-0075 to 0085) with `sp-writing-plans`.
 - 2026-10-22 · Plan 13 written and committed on the new branch `feat/ux-fix-list` (from `7ced464`; not pushed): `docs/superpowers/plans/2026-10-22-ux-fix-list.md`, 12 tasks. The server changes in 3 places: `ownShift` on `GET /api/my-work`, a new `GET /api/attendance/signs/{token}`, and the words in messages, summaries and Excel. Tasks 2–7 fix the Cleaner phone, D6, D4 and D3 (ahead via the existing board API). Tasks 8–11 sweep the words. Task 12 covers docs and the real run. Six planning decisions are at the top of the plan, for the PR. Next (new session): `git checkout feat/ux-fix-list`; the owner picks how to run the plan (subagent-driven with `sp-subagent-driven-development` recommended, or `sp-executing-plans`); then Task 1. No code has changed yet.
 
+## Task log (plan 13)
+
+- 2026-10-22 · Task 1 done: `GET /api/my-work` sends `ownShift { shift, opensAt, closesAt }` (AttendanceCalendar.WindowClock; facility-0077); new `GET /api/attendance/signs/{token}` (Cleaner only; 204 for an active check-in sign of an active Area, 404 "ไม่พบป้ายลงเวลานี้" otherwise; records nothing; facility-0082). Unit 302; API 540 + 5 skipped. Next: Task 2 (check-in page).
+
 ## Sharing a test build (colleagues on other networks)
 
 Test data only. The Development seed has an Admin whose password is public in this repo (facility-0049), so a shared link must never point at a database with real data, and never at a long-lived server.
@@ -199,7 +204,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
-- UX fix list (facility-0074, font done; every item settled 2026-10-22 in facility-0076 to 0085): write the plan. See `## Next: the UX fix list` below.
+- UX fix list (facility-0074 as amended): plan 13, in progress on `feat/ux-fix-list`.
 
 ## Next: the UX fix list
 

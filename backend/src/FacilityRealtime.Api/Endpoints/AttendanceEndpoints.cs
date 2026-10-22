@@ -16,11 +16,13 @@ namespace FacilityRealtime.Api.Endpoints;
 public static class AttendanceEndpoints
 {
     private const string CleanersOnly = "การลงเวลาใช้สำหรับแม่บ้านเท่านั้น";
+    private const string SignNotFound = "ไม่พบป้ายลงเวลานี้";
 
     public static IEndpointRouteBuilder MapAttendanceEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("/api/attendance", RecordAsync).RequireAuthorization();
         app.MapGet("/api/attendance/me", GetMineAsync).RequireAuthorization();
+        app.MapGet("/api/attendance/signs/{token}", CheckSignAsync).RequireAuthorization();
         return app;
     }
 
@@ -53,12 +55,13 @@ public static class AttendanceEndpoints
             return ApiResults.Message(StatusCodes.Status400BadRequest, gpsError);
         }
 
-        var sign = await db.Signs.Include(s => s.Area)
-            .FirstOrDefaultAsync(s => s.QrToken == request.QrToken && s.ServicePointId == null);
-        if (sign?.Area is not { IsActive: true } area)
+        var sign = await FindCheckInSignAsync(db, request.QrToken);
+        if (sign is null)
         {
-            return ApiResults.Message(StatusCodes.Status404NotFound, "ไม่พบป้ายลงเวลานี้");
+            return ApiResults.Message(StatusCodes.Status404NotFound, SignNotFound);
         }
+
+        var area = sign.Area!;
 
         var now = clock.GetUtcNow().UtcDateTime;
 
@@ -140,6 +143,33 @@ public static class AttendanceEndpoints
             ? ApiResults.Message(StatusCodes.Status403Forbidden, CleanersOnly)
             : Results.Ok(await StateForAsync(db, user, clock.GetUtcNow().UtcDateTime, settings));
     }
+
+    /// <summary>
+    /// facility-0082: the check-in page asks on opening whether its sign still works. It records nothing, and it never
+    /// says whose sign it is: another Area's sign is told on the press, as a Blocked Scan (facility-0080).
+    /// </summary>
+    private static async Task<IResult> CheckSignAsync(string token, ClaimsPrincipal principal, AppDbContext db)
+    {
+        var user = await CurrentUser.LoadAsync(principal, db);
+        if (user is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        if (user.Role != UserRole.Cleaner)
+        {
+            return ApiResults.Message(StatusCodes.Status403Forbidden, CleanersOnly);
+        }
+
+        return await FindCheckInSignAsync(db, token) is null
+            ? ApiResults.Message(StatusCodes.Status404NotFound, SignNotFound)
+            : Results.NoContent();
+    }
+
+    /// <summary>An Area's check-in sign by its QR Token, with its Area, while the Area is active; otherwise null.</summary>
+    private static Task<Sign?> FindCheckInSignAsync(AppDbContext db, string token) =>
+        db.Signs.Include(s => s.Area)
+            .FirstOrDefaultAsync(s => s.QrToken == token && s.ServicePointId == null && s.Area!.IsActive);
 
     internal static async Task<AttendanceStateDto> StateForAsync(AppDbContext db, User user, DateTime nowUtc, AttendanceSettings settings)
     {

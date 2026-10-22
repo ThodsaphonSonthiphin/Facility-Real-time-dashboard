@@ -29,6 +29,16 @@ public static class AttendanceCalendar
     }
 
     /// <summary>
+    /// facility-0077: the Thai wall-clock times a shift's attendance window opens and closes, as a phone shows them:
+    /// Day 06:00 and 20:00, Night 18:00 and 08:00 (the next morning) with the default settings.
+    /// </summary>
+    public static (TimeOnly Opens, TimeOnly Closes) WindowClock(Shift shift, AttendanceSettings settings)
+    {
+        var start = shift == Shift.Day ? ShiftCalendar.DayStart : ShiftCalendar.NightStart;
+        return (start.AddMinutes(-settings.OpensMinutesBeforeShift), start.AddHours(12).AddMinutes(settings.ClosesMinutesAfterShift));
+    }
+
+    /// <summary>
     /// facility-0051: the moment an Admin means by a Thai wall-clock <paramref name="thaiTime"/> typed for <paramref name="slot"/>,
     /// as UTC: the one inside the slot's attendance window, or null when there is none. A Day slot's 06:30 is before
     /// the shift starts; a Night slot's 07:20 is the next morning. The window opens at most 6 hours early (Program.cs),

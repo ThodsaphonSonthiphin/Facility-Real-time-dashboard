@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
@@ -339,5 +340,66 @@ public class AttendanceEndpointTests
 
             return result;
         }
+    }
+
+    [Theory]
+    [InlineData("token-checkin-ar01")]
+    [InlineData("token-checkin-ar02")] // another Area's sign: told on the press, as a Blocked Scan (facility-0080)
+    public async Task A_working_check_in_sign_answers_no_content_and_records_nothing(string token)
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
+
+        var response = await cleaner.GetAsync($"/api/attendance/signs/{token}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Empty(await response.Content.ReadAsStringAsync());
+        Assert.Empty(await AllAsync(factory, db => db.BlockedScans));
+        Assert.Empty(await AllAsync(factory, db => db.ShiftAttendances));
+    }
+
+    [Theory]
+    [InlineData("token-restroom-m1")]
+    [InlineData("no-such-token")]
+    public async Task Point_signs_and_unknown_tokens_fail_the_check_in_sign_check(string token)
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+
+        var response = await cleaner.GetAsync($"/api/attendance/signs/{token}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("ไม่พบป้ายลงเวลานี้", body.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task The_sign_of_a_deactivated_area_fails_the_check()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Areas.SingleAsync(a => a.Code == "AR02")).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await cleaner.GetAsync("/api/attendance/signs/token-checkin-ar02");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Only_a_logged_in_cleaner_checks_a_check_in_sign()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        var anonymous = await factory.CreateApiClient().GetAsync("/api/attendance/signs/token-checkin-ar01");
+        var byAdmin = await admin.GetAsync("/api/attendance/signs/token-checkin-ar01");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, byAdmin.StatusCode);
     }
 }

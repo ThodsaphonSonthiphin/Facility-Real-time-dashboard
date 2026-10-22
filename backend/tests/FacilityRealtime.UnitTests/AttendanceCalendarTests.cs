@@ -79,4 +79,25 @@ public class AttendanceCalendarTests
     {
         Assert.Null(AttendanceCalendar.PlaceTime(Slot(8, shift)!, new TimeOnly(hour, minute), Settings));
     }
+
+    [Theory]
+    [InlineData(Shift.Day, 6, 20)]
+    [InlineData(Shift.Night, 18, 8)]
+    public void Window_clock_is_the_thai_time_the_window_opens_and_closes(Shift shift, int opensHour, int closesHour)
+    {
+        var (opens, closes) = AttendanceCalendar.WindowClock(shift, Settings);
+
+        Assert.Equal(new TimeOnly(opensHour, 0), opens);
+        Assert.Equal(new TimeOnly(closesHour, 0), closes);
+    }
+
+    [Fact]
+    public void Window_clock_follows_the_settings()
+    {
+        var (opens, closes) = AttendanceCalendar.WindowClock(
+            Shift.Night, new AttendanceSettings { OpensMinutesBeforeShift = 90, ClosesMinutesAfterShift = 30 });
+
+        Assert.Equal(new TimeOnly(17, 30), opens);
+        Assert.Equal(new TimeOnly(7, 30), closes);
+    }
 }
