@@ -218,7 +218,7 @@ public class AccountEditEndpointTests
         var response = await EditAsync(admin, e1001, new { displayName = "สมชาย ใจดี", areaId = ar02, shift = "Day" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("ต้องเลือก Area ที่ใช้งานอยู่", await AdminSetupApi.MessageAsync(response));
+        Assert.Equal("ต้องเลือกพื้นที่ที่ใช้งานอยู่", await AdminSetupApi.MessageAsync(response));
     }
 
     [Fact]
@@ -251,7 +251,7 @@ public class AccountEditEndpointTests
         var response = await EditAsync(admin, e1001, new { displayName = "สมชาย ใจดี", areaId = ar03, shift = "Day" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("เปิดใช้งานบัญชีก่อน แล้วค่อยเลือก Area", await AdminSetupApi.MessageAsync(response));
+        Assert.Equal("เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่", await AdminSetupApi.MessageAsync(response));
     }
 
     [Theory]

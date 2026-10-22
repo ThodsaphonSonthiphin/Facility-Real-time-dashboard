@@ -29,18 +29,18 @@ export function PrintSignsPage() {
     window.print();
   };
   const heading =
-    which === 'all' ? 'ทุก Area' : details?.[0] ? `${details[0].area.code} ${details[0].area.name}` : undefined;
+    which === 'all' ? 'ทุกพื้นที่' : details?.[0] ? `${details[0].area.code} ${details[0].area.name}` : undefined;
 
   return (
     <main className="print-page">
       <div className="print-controls">
         <Link to={which && which !== 'all' ? `/admin/areas/${which}` : '/admin/areas'}>
-          ‹ กลับไปหน้าจัดการ Area และป้าย
+          ‹ กลับไปหน้าจัดการพื้นที่และป้าย
         </Link>
         <h1>{heading ? `พิมพ์ป้าย QR · ${heading}` : 'พิมพ์ป้าย QR'}</h1>
         <div className="print-options">
           <div className="app-field">
-            <label htmlFor="print-area">Area</label>
+            <label htmlFor="print-area">พื้นที่</label>
             <select
               id="print-area"
               className="app-input"
@@ -48,14 +48,14 @@ export function PrintSignsPage() {
               onChange={(event) => setParams({ area: event.target.value })}
             >
               <option value="" disabled>
-                เลือก Area
+                เลือกพื้นที่
               </option>
               {activeAreas.map((area) => (
                 <option key={area.id} value={String(area.id)}>
                   {`${area.code} ${area.name}`}
                 </option>
               ))}
-              <option value="all">{`ทุก Area (${activeAreas.length})`}</option>
+              <option value="all">{`ทุกพื้นที่ (${activeAreas.length})`}</option>
             </select>
           </div>
           <fieldset className="print-size">
@@ -81,7 +81,7 @@ export function PrintSignsPage() {
         {signs.length > 0 && <p>{summaryLine(signs, size)}</p>}
         {signId !== undefined && which !== 'all' && (
           <p className="app-muted">
-            พิมพ์ป้ายเดียว <Link to={`/admin/print?area=${which}`}>พิมพ์ทั้ง Area ›</Link>
+            พิมพ์ป้ายเดียว <Link to={`/admin/print?area=${which}`}>พิมพ์ทั้งพื้นที่ ›</Link>
           </p>
         )}
         <p className="app-muted">{`ที่อยู่บนป้าย: ${window.location.origin}`}</p>
@@ -95,7 +95,7 @@ export function PrintSignsPage() {
             {getErrorMessage(print.error)}
           </p>
         )}
-        {which === '' && <p className="app-note app-note--info">เลือก Area ที่จะพิมพ์</p>}
+        {which === '' && <p className="app-note app-note--info">เลือกพื้นที่ที่จะพิมพ์</p>}
         {details && signs.length === 0 && <p className="app-note app-note--warn">{nothingToPrint(details, signId)}</p>}
       </div>
       {sheetsOf(signs, perSheet[size]).map((sheet, index) => (

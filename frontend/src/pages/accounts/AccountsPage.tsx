@@ -48,7 +48,7 @@ export function AccountsPage() {
         kind: 'ok',
         text:
           account.role === 'Cleaner'
-            ? `เปิดใช้งาน ${account.displayName} แล้ว ยังไม่มี Area เลือก Area ได้ที่ "แก้ไข"`
+            ? `เปิดใช้งาน ${account.displayName} แล้ว ยังไม่มีพื้นที่ เลือกพื้นที่ได้ที่ "แก้ไข"`
             : `เปิดใช้งาน ${account.displayName} แล้ว`,
       });
     } catch (activationError) {
@@ -117,7 +117,7 @@ export function AccountsPage() {
           )}
           <p className="app-muted">
             ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติการสแกนยังอยู่ · ปิดใช้งาน แก้เบอร์โทร หรือรีเซ็ตรหัสผ่านแล้ว
-            ทุกเครื่องของคนนั้นหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ · ทุกการแก้ในหน้านี้เก็บลงประวัติของ Admin
+            ทุกเครื่องของคนนั้นหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ · ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
           </p>
         </section>
         <aside className="accounts-panel" aria-label="แผงบัญชี">

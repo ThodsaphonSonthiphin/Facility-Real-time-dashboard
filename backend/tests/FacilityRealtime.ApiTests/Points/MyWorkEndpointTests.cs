@@ -8,7 +8,9 @@ namespace FacilityRealtime.ApiTests.Points;
 
 public record MyWorkAreaModel(int AreaId, string AreaCode, string AreaName, bool IsCover, List<PointModel> Points);
 
-public record MyWorkModel(AttendanceStateModel Attendance, List<MyWorkAreaModel> Areas);
+public record OwnShiftModel(string Shift, TimeOnly OpensAt, TimeOnly ClosesAt);
+
+public record MyWorkModel(AttendanceStateModel Attendance, List<MyWorkAreaModel> Areas, OwnShiftModel? OwnShift = null);
 
 /// <summary>facility-0052: a Cleaner sees every point of their own Area and of Areas they cover this shift.</summary>
 public class MyWorkEndpointTests
@@ -108,5 +110,34 @@ public class MyWorkEndpointTests
         var work = (await cleaner.GetFromJsonAsync<MyWorkModel>("/api/my-work"))!;
 
         Assert.Equal("AR01", Assert.Single(work.Areas).AreaCode);
+    }
+
+    [Theory]
+    [InlineData("E1001", "0810000001", 5, "Day", 6, 20)]     // 05:00: before the Day window
+    [InlineData("E1002", "0810000002", 14, "Night", 18, 8)]  // 14:00: between two Night windows
+    public async Task Outside_the_window_my_work_still_names_the_own_shift_and_its_window(
+        string employeeId, string phone, int thaiHour, string shift, int opensHour, int closesHour)
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, employeeId, phone);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, thaiHour, 0));
+
+        var work = (await cleaner.GetFromJsonAsync<MyWorkModel>("/api/my-work"))!;
+
+        Assert.Null(work.Attendance.Shift);
+        Assert.Equal(new OwnShiftModel(shift, new TimeOnly(opensHour, 0), new TimeOnly(closesHour, 0)), work.OwnShift);
+    }
+
+    [Fact]
+    public async Task Inside_the_window_my_work_also_names_the_own_shift()
+    {
+        using var factory = new FacilityApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+
+        var work = (await cleaner.GetFromJsonAsync<MyWorkModel>("/api/my-work"))!;
+
+        Assert.Equal("Day", work.Attendance.Shift);
+        Assert.Equal(new OwnShiftModel("Day", new TimeOnly(6, 0), new TimeOnly(20, 0)), work.OwnShift);
     }
 }

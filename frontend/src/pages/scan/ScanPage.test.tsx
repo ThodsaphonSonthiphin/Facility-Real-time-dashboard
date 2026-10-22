@@ -130,6 +130,40 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
     expect(server.calls.some((c) => c.path === '/api/scan-records')).toBe(false);
   });
 
+  it('the warning shows only after ส่งงาน, goes once a tag or a note is given, and comes back when emptied (facility-0076)', async () => {
+    fakeGps(nearSign);
+    serve();
+    const { user } = await renderApp(SIGN);
+    const warning = 'เลือกปัญหาที่พบอย่างน้อย 1 อย่าง หรือเขียนหมายเหตุ';
+
+    await user.click(await screen.findByRole('radio', { name: 'พบปัญหา' }));
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(warning);
+
+    await user.click(screen.getByRole('checkbox', { name: 'ขยะล้น' }));
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'ขยะล้น' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(warning);
+
+    await user.type(screen.getByLabelText('หมายเหตุ'), 'ก๊อกรั่ว');
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ส่งงาน' })).toBeEnabled();
+  });
+
+  it('the result shows the point status as one line under the heading, with no card (facility-0079)', async () => {
+    fakeGps(nearSign);
+    serve({ 'POST /api/scan-records': () => ({ status: 201, body: saved() }) });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
+    await screen.findByRole('heading', { name: 'ส่งงานแล้ว 10:05' });
+
+    expect(screen.getByText('สถานะของจุดนี้')).toHaveTextContent('สถานะของจุดนี้ รอตรวจ');
+    expect(screen.queryByRole('heading', { name: 'สถานะของจุดนี้' })).not.toBeInTheDocument();
+  });
+
   it('a point the Supervisor sent back shows the defect, and the fix counts as rework (M4, facility-0029)', async () => {
     fakeGps(nearSign);
     serve(
@@ -179,7 +213,7 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
 
     await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
 
-    expect(await screen.findByRole('heading', { name: 'บันทึกเป็นงานนอกรอบ 13:20' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'ส่งเพิ่มแล้ว (ไม่นับรอบ) 13:20' })).toBeInTheDocument();
     expect(
       screen.getByText('ตอนนี้ไม่มีรอบไหนรับงานนี้ ระบบบันทึกไว้แล้ว แต่ไม่นับเป็นรอบใด และสถานะของจุดไม่เปลี่ยน'),
     ).toBeInTheDocument();
@@ -193,7 +227,7 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
     await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
 
     expect(
-      await screen.findByText('ติดธง: ห่างป้าย 85 ม. Admin จะเห็นรายการนี้ ถ้าคุณอยู่ที่จุดนี้จริง แจ้ง Admin ได้เลย'),
+      await screen.findByText('ไกลป้าย: ห่างป้าย 85 ม. แอดมินจะเห็นรายการนี้ ถ้าคุณอยู่ที่จุดนี้จริง แจ้งแอดมินได้เลย'),
     ).toBeInTheDocument();
   });
 
@@ -240,7 +274,7 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
     const { user } = await renderApp(SIGN);
 
     await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
-    expect(await screen.findByRole('heading', { name: 'เปิด Location ก่อนส่งงาน' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'เปิดตำแหน่งก่อนส่งงาน' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
 
@@ -260,7 +294,7 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
     await renderApp(SIGN);
 
     expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
-    expect(screen.getByText('หน้านี้สำหรับแม่บ้าน หรือ หัวหน้างาน บัญชีนี้เป็นAdmin')).toBeInTheDocument();
+    expect(screen.getByText('หน้านี้สำหรับแม่บ้าน หรือ หัวหน้างาน บัญชีนี้เป็นแอดมิน')).toBeInTheDocument();
   });
 });
 
@@ -340,25 +374,25 @@ describe('ScanPage when the send does not go through (M8, M12)', () => {
     await screen.findByRole('heading', { name: 'ห้องประชุม' });
     await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
 
-    expect(await screen.findByRole('heading', { name: 'ป้ายนี้ไม่ใช่ Area ของคุณ' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'ป้ายนี้ไม่ใช่พื้นที่ของคุณ' })).toBeInTheDocument();
     expect(screen.getByText('ไม่ได้บันทึกงาน')).toBeInTheDocument();
     expect(screen.getByText('Area ถัดไป (AR02) · ตึก B')).toBeInTheDocument();
     expect(screen.getByText('Area ทดลอง')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Admin เห็นการสแกนครั้งนี้แล้ว ให้แจ้ง Admin ว่าคุณทำแทน Area ถัดไป เมื่อ Admin กดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ',
+        'แอดมินเห็นการสแกนครั้งนี้แล้ว ให้แจ้งแอดมินว่าคุณทำแทน Area ถัดไป เมื่อแอดมินกดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ',
       ),
     ).toBeInTheDocument();
   });
 
   it('a refusal from the server stays on the form, word for word', async () => {
     fakeGps(nearSign);
-    serve({ 'POST /api/scan-records': () => ({ status: 409, body: { message: 'ลงเวลาเข้างานที่ป้ายของ Area คุณก่อน' } }) });
+    serve({ 'POST /api/scan-records': () => ({ status: 409, body: { message: 'ลงเวลาเข้างานที่ป้ายของพื้นที่คุณก่อน' } }) });
     const { user } = await renderApp(SIGN);
 
     await user.click(await screen.findByRole('button', { name: 'ส่งงาน' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('ลงเวลาเข้างานที่ป้ายของ Area คุณก่อน');
+    expect(await screen.findByRole('alert')).toHaveTextContent('ลงเวลาเข้างานที่ป้ายของพื้นที่คุณก่อน');
     expect(screen.getByRole('button', { name: 'ส่งงาน' })).toBeEnabled();
   });
 

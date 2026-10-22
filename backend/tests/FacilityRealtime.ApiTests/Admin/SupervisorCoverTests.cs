@@ -181,7 +181,7 @@ public class SupervisorCoverTests
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var audit = await AdminSetupApi.AuditAsync(factory);
         Assert.Equal(new[] { "COVER_ASSIGN", "ALERT_REVIEW" }, audit.Select(a => a.Action));
-        Assert.Equal("ปิดเตือนสแกนนอก Area ของ สมปอง ตรวจดี เวลา 08:30: มอบหมายตรวจแทนตึก B แล้ว", audit[1].Summary);
+        Assert.Equal("ปิดเตือนสแกนผิดตึก ของ สมปอง ตรวจดี เวลา 08:30: มอบหมายตรวจแทนตึก B แล้ว", audit[1].Summary);
         Assert.Equal(HttpStatusCode.OK, (await InspectionApi.ScanAsync(supervisor, InspectionApi.BuildingBPoint)).StatusCode);
     }
 

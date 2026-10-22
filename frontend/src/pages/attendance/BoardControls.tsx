@@ -93,7 +93,7 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
           className="app-input"
           type="search"
           value={search}
-          placeholder="ชื่อ Area หรือแม่บ้าน"
+          placeholder="ชื่อพื้นที่หรือแม่บ้าน"
           onChange={(event) => onSearch(event.target.value)}
         />
       </label>

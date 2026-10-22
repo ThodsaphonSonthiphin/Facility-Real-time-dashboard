@@ -15,7 +15,7 @@ internal static class ThaiLabels
     {
         UserRole.Cleaner => "แม่บ้าน",
         UserRole.Supervisor => "หัวหน้า",
-        _ => "Admin",
+        _ => "แอดมิน",
     };
 
     public static string EventName(AttendanceEvent eventType) => eventType switch
@@ -32,9 +32,17 @@ internal static class ThaiLabels
     /// <summary>Gregorian yyyy-MM-dd whatever the server's culture; th-TH would print the Buddhist year.</summary>
     public static string Date(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    public static string AlertName(AlertKind kind) => kind switch
+    /// <summary>facility-0085: a Blocked Scan named by why it was refused, as the Admin's pages say it.</summary>
+    public static string BlockedName(BlockReason reason) => reason switch
     {
-        AlertKind.BlockedScan => "สแกนนอก Area",
+        BlockReason.OtherBuilding => "สแกนผิดตึก",
+        BlockReason.OutsideShift => "สแกนนอกกะ",
+        _ => "สแกนผิดพื้นที่",
+    };
+
+    public static string AlertName(AlertKind kind, BlockReason? reason) => kind switch
+    {
+        AlertKind.BlockedScan => BlockedName(reason ?? BlockReason.OtherArea),
         AlertKind.AttendanceGps => "ลงเวลาไกลจากป้าย",
         AlertKind.SubmissionGps => "ส่งงานไกลจากป้าย",
         AlertKind.InspectionGps => "ตรวจงานไกลจากป้าย",
@@ -47,7 +55,7 @@ internal static class ThaiLabels
         Placement.OnTime => "ตรงเวลา",
         Placement.Late => $"ส่งช้า {lateMinutes ?? 0} นาที",
         Placement.Rework => "ส่งงานแก้",
-        _ => "นอกรอบ",
+        _ => "ส่งเพิ่ม (ไม่นับรอบ)",
     };
 
     /// <summary>What the phone says about a Blocked Scan (facility-0041, 0048).</summary>
@@ -55,7 +63,7 @@ internal static class ThaiLabels
     {
         BlockReason.OtherBuilding => "จุดนี้ไม่ได้อยู่ในตึกของคุณ",
         BlockReason.OutsideShift => "ตอนนี้ไม่ใช่กะของคุณ ตรวจได้เฉพาะในกะของตัวเอง",
-        _ => "ป้ายนี้ไม่ใช่ Area ของคุณ",
+        _ => "ป้ายนี้ไม่ใช่พื้นที่ของคุณ",
     };
 
     /// <summary>facility-0029: ผล of an inspection on the export, as the Supervisor's buttons say it.</summary>

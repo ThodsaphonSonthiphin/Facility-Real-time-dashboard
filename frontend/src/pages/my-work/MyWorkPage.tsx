@@ -1,9 +1,9 @@
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
-import type { AttendanceState, MyWork, PointStatus } from '../../shared/api/types';
+import type { AttendanceState, MyWork, OwnShift, PointStatus, Shift } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
-import { formatTime } from '../../shared/utils/thaiTime';
+import { formatClock, formatTime } from '../../shared/utils/thaiTime';
 import { WorkCard } from './WorkCard';
 import './myWork.css';
 
@@ -25,12 +25,13 @@ const urgency: readonly PointStatus[] = [
  */
 export function MyWorkPage() {
   const { data, error, isLoading, isFetching, refetch } = useGetMyWorkQuery(undefined, freshOnOpen);
+  const shift = data?.attendance.shift;
 
   return (
     <main className="mywork-page">
       <header className="mywork-heading">
         <h1>งานของฉัน</h1>
-        {data && <p className="mywork-sub">{attendanceLine(data.attendance)}</p>}
+        {data && shift && <p className="mywork-sub">{attendanceLine(shift, data.attendance)}</p>}
       </header>
       {isLoading && <p className="mywork-muted">กำลังโหลดงาน...</p>}
       {error && (
@@ -38,7 +39,7 @@ export function MyWorkPage() {
           {getErrorMessage(error)}
         </p>
       )}
-      {data && <WorkList work={data} />}
+      {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
       <footer className="mywork-footer">
         <span>ไม่มีแจ้งเตือนเด้งขึ้น เปิดหน้านี้หรือกด "อัปเดต" เพื่อดูงานล่าสุด</span>
         <button type="button" className="app-button" disabled={isFetching} onClick={() => void refetch()}>
@@ -49,14 +50,11 @@ export function MyWorkPage() {
   );
 }
 
-function attendanceLine(attendance: AttendanceState): string {
-  if (!attendance.shift) {
-    return 'ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ';
-  }
+function attendanceLine(shift: Shift, attendance: AttendanceState): string {
   const shiftIn = attendance.events.find((e) => e.eventType === 'ShiftIn');
   const shiftOut = attendance.events.find((e) => e.eventType === 'ShiftOut');
   return [
-    shiftLabel[attendance.shift],
+    shiftLabel[shift],
     shiftIn ? `เข้างาน ${formatTime(shiftIn.occurredAt)}` : 'ยังไม่ได้ลงเวลาเข้างาน',
     shiftOut ? `เลิกงาน ${formatTime(shiftOut.occurredAt)}` : null,
   ]
@@ -64,11 +62,25 @@ function attendanceLine(attendance: AttendanceState): string {
     .join(' · ');
 }
 
+/**
+ * facility-0077: outside the own shift's attendance window the server answers with the shift on the clock, which is
+ * someone else's work. So the page shows no counts and no cards, only the own shift and when its check-in opens.
+ */
+function OffShift({ ownShift }: { ownShift?: OwnShift }) {
+  return (
+    <div className="app-note app-note--info">
+      <strong>ตอนนี้ไม่อยู่ในกะของคุณ</strong>
+      {ownShift && <span>{shiftLabel[ownShift.shift]}</span>}
+      {ownShift && <span>{`ลงเวลาเข้างานได้ตั้งแต่ ${formatClock(ownShift.opensAt)}`}</span>}
+    </div>
+  );
+}
+
 function WorkList({ work }: { work: MyWork }) {
   if (work.areas.length === 0) {
     return (
       <p className="app-note app-note--info">
-        ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับ Area หรือ Area ยังไม่มีจุด แจ้ง Admin
+        ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับพื้นที่ หรือพื้นที่ยังไม่มีจุด แจ้งแอดมิน
       </p>
     );
   }
@@ -83,7 +95,7 @@ function WorkList({ work }: { work: MyWork }) {
           <strong>{count('Rework')}</strong> ต้องแก้
         </li>
         <li className="mywork-summary__overdue">
-          <strong>{count('Overdue')}</strong> เลยรอบ
+          <strong>{count('Overdue')}</strong> เลยเวลา
         </li>
         <li>
           <strong>{count('PendingInspection', 'Passed')}</strong> ส่งแล้ว
@@ -98,7 +110,7 @@ function WorkList({ work }: { work: MyWork }) {
         const headingId = `mywork-area-${area.areaId}`;
         const title = area.isCover
           ? `${area.areaName} · ตึก ${area.points[0]?.buildingCode ?? ''} (ทำแทน)`
-          : `${area.areaName} (Area ของฉัน)`;
+          : `${area.areaName} (พื้นที่ของฉัน)`;
         const sorted = [...area.points].sort((a, b) => urgency.indexOf(a.status) - urgency.indexOf(b.status));
         return (
           <section key={area.areaId} className="mywork-area" aria-labelledby={headingId}>

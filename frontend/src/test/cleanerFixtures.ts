@@ -5,6 +5,7 @@ import type {
   BlockedScan,
   MyWork,
   MyWorkArea,
+  OwnShift,
   PointCard,
 } from '../shared/api/types';
 import { authAnswer } from './fakeServer';
@@ -55,12 +56,20 @@ export function area(points: PointCard[] = [point()], overrides: Partial<MyWorkA
   return { areaId: 1, areaCode: 'AR01', areaName: 'Area ทดลอง', isCover: false, points, ...overrides };
 }
 
-export function myWork(attendanceState: AttendanceState = onDuty, areas: MyWorkArea[] = [area()]): MyWork {
-  return { attendance: attendanceState, areas };
+/** The own shift as the server sends it with the default settings: attendance from 60 minutes before to 60 after. */
+export const dayShift: OwnShift = { shift: 'Day', opensAt: '06:00:00', closesAt: '20:00:00' };
+export const nightShift: OwnShift = { shift: 'Night', opensAt: '18:00:00', closesAt: '08:00:00' };
+
+export function myWork(
+  attendanceState: AttendanceState = onDuty,
+  areas: MyWorkArea[] = [area()],
+  ownShift: OwnShift = dayShift,
+): MyWork {
+  return { attendance: attendanceState, areas, ownShift };
 }
 
 export const otherAreaBlocked: BlockedScan = {
-  message: 'ป้ายนี้ไม่ใช่ Area ของคุณ',
+  message: 'ป้ายนี้ไม่ใช่พื้นที่ของคุณ',
   areaCode: 'AR02',
   areaName: 'Area ถัดไป',
   reason: 'OtherArea',

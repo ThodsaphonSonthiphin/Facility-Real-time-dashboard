@@ -42,7 +42,7 @@ public static class RoundWindowRules
         {
             if (window.Shift == Shift.Night && pattern == ShiftPattern.DayOnly)
             {
-                return "Area นี้ทำเฉพาะกะเช้า ใส่ช่วงรอบกะดึกไม่ได้";
+                return "พื้นที่นี้ทำเฉพาะกะเช้า ใส่ช่วงรอบกะดึกไม่ได้";
             }
 
             var start = MinutesIntoShift(window.Shift, window.Start);

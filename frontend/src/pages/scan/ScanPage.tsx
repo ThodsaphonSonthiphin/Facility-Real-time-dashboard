@@ -57,7 +57,7 @@ export function ScanPage() {
     return (
       <StatusScreen
         title={getErrorMessage(pointQuery.error)}
-        detail="ลองสแกนป้ายอีกครั้ง ถ้ายังเปิดไม่ได้ แจ้ง Admin"
+        detail="ลองสแกนป้ายอีกครั้ง ถ้ายังเปิดไม่ได้ แจ้งแอดมิน"
         linkTo="/my-work"
         linkText="ดูงานของฉัน"
       />

@@ -34,7 +34,7 @@ export function SendFailed({ point, draft, triedAt, sending, onResend }: SendFai
           <li>เดินไปตรงที่มีสัญญาณ</li>
           <li>กด "ส่งใหม่"</li>
         </ol>
-        <p className="scan-muted">เวลาที่บันทึกคือเวลาที่ส่งสำเร็จ ถ้าพ้นเวลารอบจะนับเป็นส่งช้า ถ้าเดินออกไกลจากป้าย การส่งงานอาจติดธง</p>
+        <p className="scan-muted">เวลาที่บันทึกคือเวลาที่ส่งสำเร็จ ถ้าพ้นเวลารอบจะนับเป็นส่งช้า ถ้าเดินออกไกลจากป้าย การส่งงานจะขึ้นว่าไกลป้าย</p>
         <p className="scan-muted">ระบบไม่เก็บงานไว้ในมือถือแล้วส่งเองทีหลัง</p>
       </section>
       <button type="button" className="scan-submit" disabled={sending} onClick={onResend}>

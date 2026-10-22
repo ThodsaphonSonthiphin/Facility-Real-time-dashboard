@@ -25,7 +25,7 @@ const logGets = (server: ReturnType<typeof serve>) => server.calls.filter((call)
 
 /** Each row's cells. */
 const rows = () =>
-  within(screen.getByRole('table', { name: 'ประวัติของ Admin' }))
+  within(screen.getByRole('table', { name: 'ประวัติการแก้ไขของแอดมิน' }))
     .getAllByRole('row')
     .slice(1)
     .map((row) => within(row).getAllByRole('cell'));
@@ -41,7 +41,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
     const server = serve();
     await renderApp('/admin/history');
 
-    await screen.findByRole('table', { name: 'ประวัติของ Admin' });
+    await screen.findByRole('table', { name: 'ประวัติการแก้ไขของแอดมิน' });
     expect(query(logGets(server)[0].search)).toEqual({});
     expect(mainCells()).toEqual([
       ['15/10 10:42', 'ผู้ดูแลทดสอบ', 'เพิ่มเวลาลงงาน', 'เพิ่มเวลาเข้างานของ 650001 แม่บ้านทดสอบ AR01 กะเช้า 15/10/2026', 'มือถือแบตหมด หัวหน้ายืนยันว่ามาทำงาน'],
@@ -68,7 +68,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
     await user.click(screen.getByRole('button', { name: 'โหลดรายการเก่ากว่านี้' }));
 
     expect(await screen.findByText('แสดง 6 รายการ')).toBeInTheDocument();
-    expect(mainCells()[5]).toEqual(['13/10 14:40', 'ผู้ดูแลทดสอบ', 'ออก QR ใหม่', 'ออก QR ใหม่ของป้าย AR01-03 ป้ายเดิมสแกนไม่ได้แล้ว', '–']);
+    expect(mainCells()[5]).toEqual(['13/10 14:40', 'ผู้ดูแลทดสอบ', 'สร้าง QR ใหม่', 'ออก QR ใหม่ของป้าย AR01-03 ป้ายเดิมสแกนไม่ได้แล้ว', '–']);
     expect(query(logGets(server)[1].search)).toEqual({ beforeId: '46' });
     expect(screen.queryByRole('button', { name: 'โหลดรายการเก่ากว่านี้' })).not.toBeInTheDocument();
   });
@@ -106,7 +106,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
       within(screen.getByRole('combobox', { name: 'ประเภท' }))
         .getAllByRole('option')
         .map((option) => option.textContent),
-    ).toEqual(['ทุกประเภท', 'แก้การลงเวลา', 'มอบหมายทำแทน', 'ปิดเตือน', 'Area · จุด · รอบ · ป้าย', 'ออก QR ใหม่', 'บัญชี', 'ส่งออก Excel']);
+    ).toEqual(['ทุกประเภท', 'แก้การลงเวลา', 'มอบหมายทำแทน', 'ปิดเตือน', 'พื้นที่ · จุด · รอบ · ป้าย', 'สร้าง QR ใหม่', 'บัญชี', 'ส่งออก Excel']);
   });
 
   it('a typed range is checked before asking (92 days at most), then kept in the address', async () => {
@@ -166,11 +166,11 @@ describe('HistoryPage (D9, facility-0057)', () => {
     expect(await screen.findByText('ไม่มีประวัติในช่วงนี้')).toBeInTheDocument();
   });
 
-  it('is in the Admin menu as ประวัติ Admin', async () => {
+  it('is in the Admin menu as ประวัติการแก้ไขของแอดมิน', async () => {
     serve();
     await renderApp('/admin/history');
-    const menu = await screen.findByRole('navigation', { name: 'เมนู Admin' });
-    expect(within(menu).getByRole('link', { name: 'ประวัติ Admin' })).toHaveAttribute('aria-current', 'page');
+    const menu = await screen.findByRole('navigation', { name: 'เมนูแอดมิน' });
+    expect(within(menu).getByRole('link', { name: 'ประวัติการแก้ไขของแอดมิน' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('the typed range follows the address when the menu link opens the page again', async () => {
@@ -179,7 +179,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
     await screen.findByText('แสดง 5 รายการ');
     expect(fromField()).toHaveValue('01/10/2026');
 
-    await user.click(within(screen.getByRole('navigation', { name: 'เมนู Admin' })).getByRole('link', { name: 'ประวัติ Admin' }));
+    await user.click(within(screen.getByRole('navigation', { name: 'เมนูแอดมิน' })).getByRole('link', { name: 'ประวัติการแก้ไขของแอดมิน' }));
 
     await waitFor(() => expect(fromField()).toHaveValue(formatShiftDate(addDays(thaiToday(), -6))));
     expect(toField()).toHaveValue(formatShiftDate(thaiToday()));
@@ -195,7 +195,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
     expect(within(changes[0]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'รายการ: – → เข้างาน',
       'เวลา: – → 15/10 06:58',
-      'ที่มา: – → Admin เพิ่ม',
+      'ที่มา: – → แอดมินเพิ่ม',
     ]);
     expect(within(changes[2]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'คุยแล้ว: ไม่ใช่ → ใช่',

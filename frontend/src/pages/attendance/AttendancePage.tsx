@@ -115,7 +115,7 @@ export function AttendancePage() {
         </p>
       )}
       {board && fill && !fillRow && !editing && (
-        <p className="app-note app-note--info">ไม่พบแม่บ้านคนนี้ในกะนี้ อาจย้าย Area หรือปิดใช้งานแล้ว</p>
+        <p className="app-note app-note--info">ไม่พบแม่บ้านคนนี้ในกะนี้ อาจย้ายพื้นที่หรือปิดใช้งานแล้ว</p>
       )}
       {board && (
         <>
@@ -159,9 +159,9 @@ function Tiles({ summary }: { summary: BoardSummary }) {
   return (
     <ul className="attendance-tiles" aria-label="สรุปกะนี้">
       <li className="attendance-tile">
-        <span>Area ที่ต้องมีคนกะนี้</span>
+        <span>พื้นที่ที่ต้องมีคนกะนี้</span>
         <strong>{summary.required}</strong>
-        <span className="app-muted">ไม่รวม Area ที่ปิดกะนี้</span>
+        <span className="app-muted">ไม่รวมพื้นที่ที่ปิดกะนี้</span>
       </li>
       <li className="attendance-tile">
         <span>มีคนแล้ว</span>
@@ -176,7 +176,7 @@ function Tiles({ summary }: { summary: BoardSummary }) {
       <li className="attendance-tile">
         <span>มีคนทำแทน</span>
         <strong>{summary.covered}</strong>
-        <span className="app-muted">Admin มอบหมายเฉพาะกะนี้</span>
+        <span className="app-muted">แอดมินมอบหมายเฉพาะกะนี้</span>
       </li>
     </ul>
   );
@@ -186,13 +186,13 @@ function Tiles({ summary }: { summary: BoardSummary }) {
 function BoardNotes() {
   return (
     <div className="attendance-notes">
-      <span>หน้านี้ดูว่าแต่ละ Area มีคนอยู่แล้วหรือยัง ไม่ใช่ระบบลงเวลาทำงานของบริษัท จึงไม่คิดสายหรือกลับก่อน</span>
+      <span>หน้านี้ดูว่าแต่ละพื้นที่มีคนอยู่แล้วหรือยัง ไม่ใช่ระบบลงเวลาทำงานของบริษัท จึงไม่คิดสายหรือกลับก่อน</span>
       <span>
-        เรียง Area ที่ยังไม่มีคนขึ้นก่อน · Area ที่ทำเฉพาะกะเช้าไม่นับเป็น "ต้องมีคน" ในกะดึก · มอบหมายคนทำแทนได้ที่{' '}
+        เรียงพื้นที่ที่ยังไม่มีคนขึ้นก่อน · พื้นที่ที่ทำเฉพาะกะเช้าไม่นับเป็น "ต้องมีคน" ในกะดึก · มอบหมายคนทำแทนได้ที่{' '}
         <Link to="/admin/alerts">รายการที่ขึ้นเตือน</Link>
       </span>
       <span>
-        ลืมลงเวลาเลิกงาน: ช่องเลิกงานว่างไว้ หมดกะแล้วขึ้นใน <Link to="/admin/alerts">รายการที่ขึ้นเตือน</Link> ให้ Admin เติม
+        ลืมลงเวลาเลิกงาน: ช่องเลิกงานว่างไว้ หมดกะแล้วขึ้นใน <Link to="/admin/alerts">รายการที่ขึ้นเตือน</Link> ให้แอดมินเติม
       </span>
     </div>
   );

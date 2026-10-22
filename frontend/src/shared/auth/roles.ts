@@ -15,5 +15,5 @@ export function homeOf(role: Role): string {
 export const roleLabel: Record<Role, string> = {
   cleaner: 'แม่บ้าน',
   supervisor: 'หัวหน้างาน',
-  admin: 'Admin',
+  admin: 'แอดมิน',
 };

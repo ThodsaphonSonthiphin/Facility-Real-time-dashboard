@@ -47,7 +47,7 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     expect(screen.getByText('อยู่ในรัศมี')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'สะอาด' })).not.toBeChecked();
     expect(screen.getByRole('radio', { name: 'ไม่สะอาด' })).not.toBeChecked();
-    expect(screen.queryByLabelText('ข้อบกพร่อง')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('สิ่งที่ต้องแก้')).not.toBeInTheDocument();
     // The Supervisor's page never touches the Cleaner's endpoints
     expect(server.calls.some((c) => c.path.startsWith('/api/service-points') || c.path === '/api/scan-records')).toBe(false);
   });
@@ -84,10 +84,10 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     await user.click(await screen.findByRole('radio', { name: 'ไม่สะอาด' }));
     await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('ใส่ข้อบกพร่องก่อนบันทึก');
+    expect(screen.getByRole('alert')).toHaveTextContent('ใส่สิ่งที่ต้องแก้ก่อนบันทึก');
     expect(server.calls.some((c) => c.path === '/api/inspections')).toBe(false);
 
-    await user.type(screen.getByLabelText('ข้อบกพร่อง'), '  พื้นใต้อ่างล้างมือยังเปียก ');
+    await user.type(screen.getByLabelText('สิ่งที่ต้องแก้'), '  พื้นใต้อ่างล้างมือยังเปียก ');
     await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
 
     expect(await screen.findByRole('heading', { name: 'บันทึกผลตรวจแล้ว 10:15' })).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     expect(screen.getByText('ต้องแก้ไข')).toBeInTheDocument();
     expect(screen.getByText('“พื้นใต้อ่างล้างมือยังเปียก”')).toBeInTheDocument();
     expect(
-      screen.getByText('แม่บ้านทดสอบเห็นข้อบกพร่องนี้ทันทีในหน้างานของฉัน และเมื่อสแกนจุดนี้ แก้แล้วส่งงานใหม่ จากนั้นหัวหน้าตรวจอีกรอบ'),
+      screen.getByText('แม่บ้านทดสอบเห็นสิ่งที่ต้องแก้นี้ทันทีในหน้างานของฉัน และเมื่อสแกนจุดนี้ แก้แล้วส่งงานใหม่ จากนั้นหัวหน้าตรวจอีกรอบ'),
     ).toBeInTheDocument();
     expect(
       screen.getByText('ถ้าไม่ได้แก้จนรอบ 13:00–15:00 เริ่ม การ์ดขึ้นรอบใหม่ และรอบนี้บันทึกว่า "ไม่ได้แก้"'),
@@ -126,7 +126,7 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     const { user } = await renderApp(SIGN);
 
     await user.click(await screen.findByRole('radio', { name: 'ไม่สะอาด' }));
-    await user.type(screen.getByLabelText('ข้อบกพร่อง'), 'คราบน้ำ');
+    await user.type(screen.getByLabelText('สิ่งที่ต้องแก้'), 'คราบน้ำ');
     await user.click(screen.getByRole('radio', { name: 'สะอาด' }));
     await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
 
@@ -176,13 +176,13 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     const { user } = await renderApp(SIGN);
 
     expect(
-      await screen.findByText('ห่างป้าย 80 ม. · ±40 ม. · นอกรัศมี ผลตรวจจากตรงนี้จะติดธงให้ Admin เห็น'),
+      await screen.findByText('ห่างป้าย 80 ม. · ±40 ม. · นอกรัศมี ผลตรวจจากตรงนี้จะขึ้นว่าไกลป้ายให้แอดมินเห็น'),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('radio', { name: 'สะอาด' }));
     await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
 
-    expect(await screen.findByText('ติดธง: ห่างป้าย 80 ม. Admin จะเห็นรายการนี้')).toBeInTheDocument();
+    expect(await screen.findByText('ไกลป้าย: ห่างป้าย 80 ม. แอดมินจะเห็นรายการนี้')).toBeInTheDocument();
   });
 
   it('a covered building says the inspection is a cover (facility-0048)', async () => {
@@ -190,7 +190,7 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     serve({}, inspectionScan({ isCover: true }));
     await renderApp(SIGN);
 
-    expect(await screen.findByText('ตรวจแทนตึก A ในกะนี้ (Admin มอบหมาย)')).toBeInTheDocument();
+    expect(await screen.findByText('ตรวจแทนตึก A ในกะนี้ (แอดมินมอบหมาย)')).toBeInTheDocument();
   });
 
   it('no submission in the current round: the reason, the point, and no inspect button (M16, facility-0047 rule 7)', async () => {
@@ -315,7 +315,7 @@ describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
     const server = serve();
     const { user } = await renderApp(SIGN);
 
-    expect(await screen.findByRole('heading', { name: 'เปิด Location ก่อนตรวจงาน' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'เปิดตำแหน่งก่อนตรวจงาน' })).toBeInTheDocument();
     expect(server.calls.some((c) => c.path === '/api/inspections/scan')).toBe(false);
 
     await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
@@ -332,7 +332,7 @@ describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
 
     expect(await screen.findByRole('heading', { name: 'อ่านตำแหน่งไม่ได้' })).toBeInTheDocument();
     expect(
-      screen.getByText('หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง ยังไม่ได้ตรวจงาน แจ้ง Admin'),
+      screen.getByText('หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง ยังไม่ได้ตรวจงาน แจ้งแอดมิน'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ลองอีกครั้ง' })).not.toBeInTheDocument();
   });
@@ -347,7 +347,7 @@ describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
     expect(screen.getByText('Area ตึกอื่น (BR01) · ตึก B')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Admin เห็นการสแกนครั้งนี้แล้ว ให้แจ้ง Admin ว่าคุณตรวจแทนตึก B ในกะนี้ เมื่อ Admin กดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ',
+        'แอดมินเห็นการสแกนครั้งนี้แล้ว ให้แจ้งแอดมินว่าคุณตรวจแทนตึก B ในกะนี้ เมื่อแอดมินกดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ',
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'กลับไปตึกของฉัน' })).toHaveAttribute('href', '/my-building');
@@ -404,7 +404,7 @@ describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
     const { user } = await renderApp(SIGN);
 
     await user.click(await screen.findByRole('radio', { name: 'ไม่สะอาด' }));
-    await user.type(screen.getByLabelText('ข้อบกพร่อง'), 'พื้นเปียก');
+    await user.type(screen.getByLabelText('สิ่งที่ต้องแก้'), 'พื้นเปียก');
     await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
 
     expect(await screen.findByRole('heading', { name: 'ยังไม่ได้บันทึกผลตรวจ' })).toBeInTheDocument();
@@ -462,7 +462,7 @@ describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
     await user.click(await screen.findByRole('radio', { name: 'สะอาด' }));
     await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
 
-    expect(await screen.findByRole('heading', { name: 'เปิด Location ก่อนบันทึกผลตรวจ' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'เปิดตำแหน่งก่อนบันทึกผลตรวจ' })).toBeInTheDocument();
     expect(server.calls.some((c) => c.path === '/api/inspections')).toBe(false);
 
     await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
@@ -511,7 +511,7 @@ describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
 
     await user.click(await screen.findByRole('radio', { name: 'สะอาด' }));
     await user.click(screen.getByRole('button', { name: 'บันทึกผลตรวจ' }));
-    await screen.findByRole('heading', { name: 'เปิด Location ก่อนบันทึกผลตรวจ' });
+    await screen.findByRole('heading', { name: 'เปิดตำแหน่งก่อนบันทึกผลตรวจ' });
     await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' })).toBeDisabled());

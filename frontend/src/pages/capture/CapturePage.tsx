@@ -55,8 +55,8 @@ export function CapturePage() {
 
   return (
     <main className="capture-page">
-      <Link to={`/admin/areas/${areaId}`}>‹ กลับไปหน้าจัดการ Area และป้าย</Link>
-      {detail && <span className="capture-kicker">{`Admin · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>}
+      <Link to={`/admin/areas/${areaId}`}>‹ กลับไปหน้าจัดการพื้นที่และป้าย</Link>
+      {detail && <span className="capture-kicker">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>}
       <h1>เก็บพิกัดป้าย</h1>
       {area.error && (
         <p className="app-note app-note--error" role="alert">
@@ -71,7 +71,7 @@ export function CapturePage() {
           onChoose={(signId) => setParams({ sign: String(signId) })}
         />
       )}
-      <p className="app-muted">ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติ Admin</p>
+      <p className="app-muted">ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติการแก้ไขของแอดมิน</p>
     </main>
   );
 }
@@ -145,8 +145,8 @@ function CaptureWorkspace({ signs, selected, onChoose }: CaptureWorkspaceProps) 
         />
       )}
       <section className="capture-signs" aria-labelledby="capture-signs-title">
-        <h2 id="capture-signs-title">ป้ายของ Area นี้</h2>
-        <ul aria-label="ป้ายของ Area นี้">
+        <h2 id="capture-signs-title">ป้ายของพื้นที่นี้</h2>
+        <ul aria-label="ป้ายของพื้นที่นี้">
           {signs.map((target) => {
             const isSelected = target.sign.id === selected?.sign.id;
             return (
@@ -192,7 +192,7 @@ function SignCapture({ target, phase, problem, saving, onStart, onSave }: SignCa
       {phase.kind === 'reading' && (
         <>
           <p className="capture-progress" role="status">
-            {`กำลังอ่าน GPS ${phase.progress.seconds} / ${SECONDS} วินาที`}
+            {`กำลังอ่านตำแหน่ง ${phase.progress.seconds} / ${SECONDS} วินาที`}
           </p>
           <p>
             {`ยืนนิ่งตรงที่ติดป้าย · อ่านได้ ${phase.progress.readings} ครั้ง${
@@ -223,17 +223,17 @@ function SignCapture({ target, phase, problem, saving, onStart, onSave }: SignCa
       )}
       {result?.kind === 'too-few' && (
         <p className="app-note app-note--warn">
-          {`อ่าน GPS ได้แค่ ${result.readings} ครั้งใน ${SECONDS} วินาที ลองเดินไปใกล้หน้าต่างหรือที่โล่ง แล้วเก็บใหม่`}
+          {`อ่านตำแหน่งได้แค่ ${result.readings} ครั้งใน ${SECONDS} วินาที ลองเดินไปใกล้หน้าต่างหรือที่โล่ง แล้วเก็บใหม่`}
         </p>
       )}
       {result?.kind === 'denied' && (
         <p className="app-note app-note--error" role="alert">
-          เปิด Location และอนุญาตให้เว็บนี้อ่านตำแหน่ง แล้วกด "ใช้ตำแหน่งตรงนี้" อีกครั้ง
+          เปิดตำแหน่งและอนุญาตให้เว็บนี้อ่านตำแหน่ง แล้วกด "ใช้ตำแหน่งตรงนี้" อีกครั้ง
         </p>
       )}
       {result?.kind === 'unavailable' && (
         <p className="app-note app-note--error" role="alert">
-          เครื่องนี้อ่านตำแหน่งไม่ได้ เปิดหน้านี้บนมือถือที่มี GPS
+          เครื่องนี้อ่านตำแหน่งไม่ได้ เปิดหน้านี้บนมือถือที่อ่านตำแหน่งได้
         </p>
       )}
       {result?.kind === 'insecure' && (

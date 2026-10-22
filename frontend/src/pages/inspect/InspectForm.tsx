@@ -70,7 +70,7 @@ export function InspectForm({ visit, submission, draft, onChange, sending, notic
         </fieldset>
         {draft.result === 'Rework' && (
           <div className="inspect-defect">
-            <label htmlFor="inspect-defect">ข้อบกพร่อง</label>
+            <label htmlFor="inspect-defect">สิ่งที่ต้องแก้</label>
             <textarea
               id="inspect-defect"
               rows={4}
@@ -90,7 +90,7 @@ export function InspectForm({ visit, submission, draft, onChange, sending, notic
           {sending ? 'กำลังบันทึก...' : 'บันทึกผลตรวจ'}
         </button>
       </form>
-      <p className="inspect-muted">ไม่สะอาด = แม่บ้านเห็นข้อบกพร่องทันที แก้แล้วส่งงานใหม่ · ตรวจกี่ครั้งก็ได้</p>
+      <p className="inspect-muted">ไม่สะอาด = แม่บ้านเห็นสิ่งที่ต้องแก้ทันที แก้แล้วส่งงานใหม่ · ตรวจกี่ครั้งก็ได้</p>
     </main>
   );
 }

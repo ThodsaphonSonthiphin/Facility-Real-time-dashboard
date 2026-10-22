@@ -33,10 +33,10 @@ export function cleanerChoices(cleaners: CleanerOption[], shift: Shift, areaId: 
 /** What the page checks before sending; the server checks the rest (code format, slots) and its message is shown. */
 export function draftProblem(draft: AreaDraft, isNew: boolean): string | null {
   if (isNew && draft.code.trim() === '') {
-    return 'ใส่รหัส Area ก่อน';
+    return 'ใส่รหัสพื้นที่ก่อน';
   }
   if (draft.name.trim() === '') {
-    return 'ใส่ชื่อ Area ก่อน';
+    return 'ใส่ชื่อพื้นที่ก่อน';
   }
   if (draft.buildingId === '') {
     return 'เลือกตึกก่อน';

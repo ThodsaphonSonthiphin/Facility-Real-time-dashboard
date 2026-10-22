@@ -120,7 +120,7 @@ flowchart TB
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
         subgraph ApiP["FacilityRealtime.Api"]
-            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>/api/inspections/scan | /api/inspections | /api/my-building<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)<br/>AdminInspectionSummaryEndpoints: /api/admin/inspection-summary"]
+            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance (+ /signs/{token}) | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>/api/inspections/scan | /api/inspections | /api/my-building<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)<br/>AdminInspectionSummaryEndpoints: /api/admin/inspection-summary"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
             Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, InspectionRecorded → Admins + the building's Supervisors; AttendanceRecorded → Admins"]
             Jwt["Auth/AuthSetup.cs<br/>JWT bearer validation"]

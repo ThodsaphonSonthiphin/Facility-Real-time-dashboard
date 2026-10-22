@@ -52,12 +52,12 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     const men = screen.getByRole('article', { name: 'ป้าย AR01-01' });
     expect(within(men).getByText('จุดทำความสะอาด')).toBeInTheDocument();
     expect(within(men).getByRole('heading', { name: 'ห้องน้ำชาย' })).toBeInTheDocument();
-    expect(within(men).getByText('Area AR01 · ตึก A')).toBeInTheDocument();
+    expect(within(men).getByText('พื้นที่ AR01 · ตึก A')).toBeInTheDocument();
     expect(within(men).getByText('สแกนด้วยกล้องมือถือ')).toBeInTheDocument();
     expect(
       within(men).getByText('รอบ เช้า 07:00–09:00, 16:00–18:00 · ดึก 20:00–22:00, 03:00–05:00'),
     ).toBeInTheDocument();
-    expect(within(men).getByText('รหัสป้าย AR01-01 · ออก QR 16/10/2026')).toBeInTheDocument();
+    expect(within(men).getByText('รหัสป้าย AR01-01 · สร้าง QR 16/10/2026')).toBeInTheDocument();
     expect(
       within(men).getByText(`${window.location.origin}/scan/0b6f3c3e-2f7d-4c55-9d7e-1a2b3c4d5e6f`),
     ).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     expect(
       screen.getByText('ป้ายลงเวลา 0 + จุดทำความสะอาด 1 = 1 ป้าย · กระดาษ A4 แผ่นละ 6 ป้าย · 1 แผ่น · ตัดตามเส้นประ'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'พิมพ์ทั้ง Area ›' })).toHaveAttribute('href', '/admin/print?area=1');
+    expect(screen.getByRole('link', { name: 'พิมพ์ทั้งพื้นที่ ›' })).toHaveAttribute('href', '/admin/print?area=1');
   });
 
   it('prints every active Area, leaving out deactivated Areas and points', async () => {
@@ -113,13 +113,13 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     const server = serve({ 'GET /api/admin/areas/1': () => ({ status: 200, body: detail }) });
     await renderApp('/admin/print?area=all');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย QR · ทุก Area' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย QR · ทุกพื้นที่' })).toBeInTheDocument();
     await waitFor(() => expect(cardNames()).toEqual(['ป้าย AR01-IN', 'ป้าย AR01-01', 'ป้าย AR02-IN']));
     expect(
       screen.getByText('ป้ายลงเวลา 2 + จุดทำความสะอาด 1 = 3 ป้าย · กระดาษ A4 แผ่นละ 6 ป้าย · 1 แผ่น · ตัดตามเส้นประ'),
     ).toBeInTheDocument();
     expect(server.calls.some((call) => call.path === '/api/admin/areas/3')).toBe(false);
-    expect(screen.getByRole('option', { name: 'ทุก Area (2)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'ทุกพื้นที่ (2)' })).toBeInTheDocument();
   });
 
   it('choosing an Area changes the address, and "พิมพ์" opens the browser’s print', async () => {
@@ -127,10 +127,10 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     serve();
     const { user, router } = await renderApp('/admin/print');
 
-    expect(await screen.findByText('เลือก Area ที่จะพิมพ์')).toBeInTheDocument();
+    expect(await screen.findByText('เลือกพื้นที่ที่จะพิมพ์')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'พิมพ์' })).toBeDisabled();
     await screen.findByRole('option', { name: 'AR02 Office ทดลอง' });
-    await user.selectOptions(screen.getByLabelText('Area'), 'AR02 Office ทดลอง');
+    await user.selectOptions(screen.getByLabelText('พื้นที่'), 'AR02 Office ทดลอง');
 
     expect(router.state.location.search).toBe('?area=2');
     expect(await screen.findByRole('article', { name: 'ป้าย AR02-IN' })).toBeInTheDocument();
@@ -169,7 +169,7 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     });
     await renderApp('/admin/print?area=3');
 
-    expect(await screen.findByText('Area นี้ปิดใช้งาน ป้ายสแกนไม่ได้ จึงไม่มีป้ายให้พิมพ์')).toBeInTheDocument();
+    expect(await screen.findByText('พื้นที่นี้ปิดใช้งาน ป้ายสแกนไม่ได้ จึงไม่มีป้ายให้พิมพ์')).toBeInTheDocument();
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
   });
 });

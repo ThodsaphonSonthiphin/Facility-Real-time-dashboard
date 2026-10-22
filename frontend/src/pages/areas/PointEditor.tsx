@@ -1,18 +1,21 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import type { AdminPoint, AreaSummary } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { useCreatePointMutation, useSetPointActiveMutation, useUpdatePointMutation } from './areasApi';
-import { isClock, sameWindow, sortWindows, type WindowDraft } from './pointRules';
+import { clockOf, sameWindow, sortWindows, type WindowDraft } from './pointRules';
 import { SignPanel } from './SignPanel';
 
+/** What is typed in one shift's four boxes but not yet added (facility-0083). */
 interface Typed {
-  start: string;
-  end: string;
+  startHour: string;
+  startMinute: string;
+  endHour: string;
+  endMinute: string;
 }
 
-const noTyped: Typed = { start: '', end: '' };
+const noTyped: Typed = { startHour: '', startMinute: '', endHour: '', endMinute: '' };
 
 interface PointEditorProps {
   area: AreaSummary;
@@ -32,7 +35,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
   const [windows, setWindows] = useState<WindowDraft[]>(() =>
     (point?.roundWindows ?? []).map(({ shift, start, end }) => ({ shift, start, end })),
   );
-  // What is typed in เริ่ม / ถึง but not yet added, per shift: a save must not drop it silently
+  // What is typed in the boxes but not yet added, per shift: a save must not drop it silently
   const [pending, setPending] = useState<Record<Shift, Typed>>({ Day: noTyped, Night: noTyped });
   const [problem, setProblem] = useState<string | null>(null);
   const [createPoint, created] = useCreatePointMutation();
@@ -49,7 +52,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
       setProblem('ใส่ชื่อจุดก่อน');
       return;
     }
-    if (shifts.some((shift) => pending[shift].start.trim() !== '' || pending[shift].end.trim() !== '')) {
+    if (shifts.some((shift) => Object.values(pending[shift]).some((box) => box.trim() !== ''))) {
       setProblem('มีเวลาที่พิมพ์ไว้แต่ยังไม่ได้กด "เพิ่ม" กด "เพิ่ม" หรือลบเวลานั้นก่อนบันทึก');
       return;
     }
@@ -108,7 +111,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
             />
           ))}
           <p className="app-field__help">
-            ช่วงห้ามซ้อนกันและต้องอยู่ในกะ · ส่งหลังช่วงจบนับเป็นส่งช้า · Area ที่ทำเฉพาะกะเช้าจะไม่มีช่องกะดึก
+            ช่วงห้ามซ้อนกันและต้องอยู่ในกะ · ส่งหลังช่วงจบนับเป็นส่งช้า · พื้นที่ที่ทำเฉพาะกะเช้าจะไม่มีช่องกะดึก
           </p>
         </div>
         {problem && (
@@ -129,7 +132,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
         <div className="areas-editor__active">
           {point.isActive ? (
             <>
-              <p className="app-field__help">ปิดใช้งานแล้วจุดและป้ายหายจาก Dashboard และสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>
+              <p className="app-field__help">ปิดใช้งานแล้วจุดและป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>
               <button type="button" className="app-button" disabled={sending} onClick={() => void toggle(false)}>
                 ปิดใช้งานจุดนี้
               </button>
@@ -167,19 +170,20 @@ interface ShiftWindowsProps {
   onRemove: (draft: WindowDraft) => void;
 }
 
-/** One shift's windows (D4: "07:00–09:00 ×", then เริ่ม / ถึง / เพิ่ม). Enter in the times adds, not saves. */
+/** One shift's windows (D4: "07:00–09:00 ×", then เริ่ม [ชม.]:[นาที] ถึง [ชม.]:[นาที] เพิ่ม). Enter in a box adds, not saves. */
 function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemove }: ShiftWindowsProps) {
-  const { start, end } = typed;
   const [problem, setProblem] = useState<string | null>(null);
   const label = shiftShortLabel[shift];
   const mine = sortWindows(windows.filter((w) => w.shift === shift));
 
   const add = () => {
-    const draft = { shift, start: start.trim(), end: end.trim() };
-    if (!isClock(draft.start) || !isClock(draft.end)) {
-      setProblem('เวลาต้องเขียนแบบ 07:00');
+    const start = clockOf(typed.startHour, typed.startMinute);
+    const end = clockOf(typed.endHour, typed.endMinute);
+    if (!start || !end) {
+      setProblem('ชั่วโมงใส่ 0–23 นาทีใส่ 00–59');
       return;
     }
+    const draft = { shift, start, end };
     if (windows.some((w) => sameWindow(w, draft))) {
       setProblem('มีช่วงนี้แล้ว');
       return;
@@ -187,13 +191,6 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
     setProblem(null);
     onAdd(draft);
     onTyped(noTyped);
-  };
-
-  const addOnEnter = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      add();
-    }
   };
 
   return (
@@ -216,28 +213,22 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
         ))}
       </ul>
       <div className="areas-shift__add">
-        <label className="app-field">
-          เริ่ม
-          <input
-            className="app-input areas-shift__time"
-            placeholder="07:00"
-            maxLength={5}
-            value={start}
-            onChange={(event) => onTyped({ start: event.target.value, end })}
-            onKeyDown={addOnEnter}
-          />
-        </label>
-        <label className="app-field">
-          ถึง
-          <input
-            className="app-input areas-shift__time"
-            placeholder="09:00"
-            maxLength={5}
-            value={end}
-            onChange={(event) => onTyped({ start, end: event.target.value })}
-            onKeyDown={addOnEnter}
-          />
-        </label>
+        <TimeBoxes
+          label="เริ่ม"
+          hour={typed.startHour}
+          minute={typed.startMinute}
+          hint={['07', '00']}
+          onChange={(startHour, startMinute) => onTyped({ ...typed, startHour, startMinute })}
+          onEnter={add}
+        />
+        <TimeBoxes
+          label="ถึง"
+          hour={typed.endHour}
+          minute={typed.endMinute}
+          hint={['09', '00']}
+          onChange={(endHour, endMinute) => onTyped({ ...typed, endHour, endMinute })}
+          onEnter={add}
+        />
         <button type="button" className="app-button" onClick={add}>
           เพิ่ม
         </button>
@@ -248,5 +239,64 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
         </p>
       )}
     </fieldset>
+  );
+}
+
+interface TimeBoxesProps {
+  label: string;
+  hour: string;
+  minute: string;
+  /** Placeholders for the hour and the minute, e.g. ['07', '00']. */
+  hint: [string, string];
+  onChange: (hour: string, minute: string) => void;
+  onEnter: () => void;
+}
+
+/**
+ * facility-0083: one time as an hour box and a minute box, never one "HH:mm" string. Only digits are kept, and the
+ * second hour digit moves the cursor to the minute box.
+ */
+function TimeBoxes({ label, hour, minute, hint, onChange, onEnter }: TimeBoxesProps) {
+  const minuteBox = useRef<HTMLInputElement>(null);
+  const enterAdds = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onEnter();
+    }
+  };
+
+  return (
+    <span className="areas-time">
+      <span className="areas-time__label">{label}</span>
+      <input
+        className="app-input areas-time__box"
+        aria-label={`${label} ชั่วโมง`}
+        inputMode="numeric"
+        maxLength={2}
+        placeholder={hint[0]}
+        value={hour}
+        onChange={(event) => {
+          const digits = event.target.value.replace(/\D/g, '');
+          onChange(digits, minute);
+          if (digits.length === 2) {
+            minuteBox.current?.focus();
+            minuteBox.current?.select();
+          }
+        }}
+        onKeyDown={enterAdds}
+      />
+      <span aria-hidden="true">:</span>
+      <input
+        ref={minuteBox}
+        className="app-input areas-time__box"
+        aria-label={`${label} นาที`}
+        inputMode="numeric"
+        maxLength={2}
+        placeholder={hint[1]}
+        value={minute}
+        onChange={(event) => onChange(hour, event.target.value.replace(/\D/g, ''))}
+        onKeyDown={enterAdds}
+      />
+    </span>
   );
 }

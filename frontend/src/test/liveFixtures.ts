@@ -190,6 +190,15 @@ export function attendanceBoard(rows: BoardRow[] = boardRows, overrides: Partial
   };
 }
 
+/**
+ * The Day shift of 16/10/2026, not started (facility-0084): nobody has checked in, so every Area that works it is
+ * Empty, in the server's order (Areas with nobody first, then by code).
+ */
+export const aheadBoard: AttendanceBoard = attendanceBoard(
+  [{ ...workingRow, state: 'Empty', events: [] }, noCleanerRow, emptyRow],
+  { shiftDate: '2026-10-16', shift: 'Day' },
+);
+
 /** 09:10: แม่บ้านที่อื่น (AR03) scanned a point of AR12 and was refused; a cover can still be given (facility-0041). */
 export const blockedAlert: Alert = {
   kind: 'BlockedScan',

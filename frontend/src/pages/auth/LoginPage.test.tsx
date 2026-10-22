@@ -119,7 +119,7 @@ describe('AdminLoginPage (D0)', () => {
     fakeServer({ ...noSession, 'POST /api/auth/login': () => authAnswer('admin') });
     const { user, router } = await renderApp('/my-work');
 
-    await user.click(screen.getByRole('link', { name: 'หน้า Admin' }));
+    await user.click(screen.getByRole('link', { name: 'หน้าแอดมิน' }));
 
     expect(router.state.location.pathname).toBe('/login/admin');
     expect(router.state.location.state).toMatchObject({ from: { pathname: '/my-work' } });

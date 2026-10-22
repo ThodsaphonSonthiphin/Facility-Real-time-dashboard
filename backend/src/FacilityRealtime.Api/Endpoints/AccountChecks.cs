@@ -48,13 +48,13 @@ internal static class AccountChecks
             case UserRole.Admin:
                 return areaId is null && buildingId is null && shift is null
                     ? (new AccountPlace(null, null, null), null)
-                    : (null, Bad("บัญชี Admin ไม่มี Area ตึก หรือกะ"));
+                    : (null, Bad("บัญชีแอดมินไม่มีพื้นที่ ตึก หรือกะ"));
 
             case UserRole.Cleaner:
             {
                 if (buildingId is not null)
                 {
-                    return (null, Bad("แม่บ้านประจำ Area ไม่ได้ประจำตึก"));
+                    return (null, Bad("แม่บ้านประจำพื้นที่ ไม่ได้ประจำตึก"));
                 }
 
                 if (shift is not { } cleanerShift)
@@ -70,7 +70,7 @@ internal static class AccountChecks
                 var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && (a.IsActive || a.Id == currentAreaId));
                 if (area is null)
                 {
-                    return (null, Bad("ต้องเลือก Area ที่ใช้งานอยู่"));
+                    return (null, Bad("ต้องเลือกพื้นที่ที่ใช้งานอยู่"));
                 }
 
                 // Not HasShift: it is false for an inactive Area, and a kept inactive Area must still pass when the shift fits
@@ -88,7 +88,7 @@ internal static class AccountChecks
             {
                 if (areaId is not null)
                 {
-                    return (null, Bad("หัวหน้าประจำตึก ไม่ได้ประจำ Area"));
+                    return (null, Bad("หัวหน้าประจำตึก ไม่ได้ประจำพื้นที่"));
                 }
 
                 if (buildingId is null || shift is not { } supervisorShift)

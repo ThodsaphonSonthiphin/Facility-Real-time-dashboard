@@ -189,7 +189,7 @@ describe('ExportPage (D8, facility-0053)', () => {
     const { user } = await renderApp('/admin/export?from=2026-10-15&to=2026-10-15&building=2');
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B'));
 
-    await user.click(within(screen.getByRole('navigation', { name: 'เมนู Admin' })).getByRole('link', { name: 'ส่งออก Excel' }));
+    await user.click(within(screen.getByRole('navigation', { name: 'เมนูแอดมิน' })).getByRole('link', { name: 'ส่งออก Excel' }));
 
     expect(fromField()).toHaveValue(formatShiftDate(addDays(thaiToday(), -6)));
     expect(toField()).toHaveValue(formatShiftDate(thaiToday()));
@@ -199,9 +199,9 @@ describe('ExportPage (D8, facility-0053)', () => {
   it('is in the Admin menu as ส่งออก Excel, and links back to the Dashboard', async () => {
     serve();
     await renderApp('/admin/export');
-    const menu = screen.getByRole('navigation', { name: 'เมนู Admin' });
+    const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
     expect(within(menu).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('aria-current', 'page');
-    expect(within(screen.getByRole('main')).getByRole('link', { name: '‹ กลับไป Dashboard' })).toHaveAttribute(
+    expect(within(screen.getByRole('main')).getByRole('link', { name: '‹ กลับไปหน้าสถานะจุด' })).toHaveAttribute(
       'href',
       '/dashboard',
     );

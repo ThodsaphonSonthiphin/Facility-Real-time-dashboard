@@ -5,7 +5,7 @@ namespace FacilityRealtime.Api.Endpoints;
 /// <summary>facility-0036: without a location the scan is refused — the one exception to "flag, never block".</summary>
 internal static class GpsInput
 {
-    public const string Required = "ต้องเปิด Location และอนุญาตให้เว็บอ่านตำแหน่งก่อนสแกน";
+    public const string Required = "ต้องเปิดตำแหน่งและอนุญาตให้เว็บอ่านตำแหน่งก่อนสแกน";
 
     public const string Invalid = "ตำแหน่งที่ส่งมาไม่ถูกต้อง ลองสแกนใหม่อีกครั้ง";
 

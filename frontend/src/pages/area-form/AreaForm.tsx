@@ -49,7 +49,7 @@ export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
     <form className="areaform-form app-panel" onSubmit={(event) => void submit(event)}>
       {isNew ? (
         <div className="app-field">
-          <label htmlFor="areaform-code">รหัส Area</label>
+          <label htmlFor="areaform-code">รหัสพื้นที่</label>
           <input
             id="areaform-code"
             className="app-input"
@@ -58,14 +58,14 @@ export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
             disabled={sending}
             onChange={(event) => set({ code: event.target.value })}
           />
-          {/* Outside the label, so the field's name stays "รหัส Area" */}
-          <span className="app-field__help">ตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03 · พิมพ์บนทุกป้ายของ Area แก้ทีหลังไม่ได้</span>
+          {/* Outside the label, so the field's name stays "รหัสพื้นที่" */}
+          <span className="app-field__help">ตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03 · พิมพ์บนทุกป้ายของพื้นที่ แก้ทีหลังไม่ได้</span>
         </div>
       ) : (
-        <p className="areaform-fixed">{`รหัส Area ${detail.area.code} (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)`}</p>
+        <p className="areaform-fixed">{`รหัสพื้นที่ ${detail.area.code} (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)`}</p>
       )}
       <label className="app-field">
-        ชื่อ Area
+        ชื่อพื้นที่
         <input
           className="app-input"
           value={draft.name}
@@ -122,11 +122,11 @@ export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
         />
       )}
       <p className="app-field__help">
-        Area ละ 1 คนต่อกะ · รายชื่อแสดงเฉพาะแม่บ้านที่ยังไม่มี Area ในกะนั้น · เปลี่ยนเป็น "เฉพาะกะเช้า"
+        พื้นที่ละ 1 คนต่อกะ · รายชื่อแสดงเฉพาะแม่บ้านที่ยังไม่มีพื้นที่ในกะนั้น · เปลี่ยนเป็น "เฉพาะกะเช้า"
         แล้วช่องกะดึกและเวลารอบกะดึกหายไป
       </p>
       {losesNightRounds && (
-        <p className="app-note app-note--warn">บันทึกแล้วเวลารอบกะดึกของทุกจุดใน Area นี้จะถูกลบ และแม่บ้านกะดึกออกจาก Area</p>
+        <p className="app-note app-note--warn">บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่</p>
       )}
       {problem && (
         <p className="app-note app-note--error" role="alert">

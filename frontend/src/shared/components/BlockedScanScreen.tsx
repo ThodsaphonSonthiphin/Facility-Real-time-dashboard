@@ -31,19 +31,19 @@ export function BlockedScanScreen({ blocked, sign, ownAreaName }: BlockedScanScr
         <dd>{`${blocked.areaName} (${blocked.areaCode}) · ตึก ${blocked.buildingCode}`}</dd>
         {ownAreaName && (
           <>
-            <dt>Area ของคุณ</dt>
+            <dt>พื้นที่ของคุณ</dt>
             <dd>{ownAreaName}</dd>
           </>
         )}
       </dl>
       {sign === 'check-in' && (
-        <p>ลงเวลาที่ป้ายของ Area ตัวเองเท่านั้น วันที่ทำแทน Area อื่นก็ลงเวลาที่ป้ายของตัวเองตามปกติ Admin เห็นการสแกนครั้งนี้แล้ว</p>
+        <p>ลงเวลาที่ป้ายของพื้นที่ตัวเองเท่านั้น วันที่ทำแทนพื้นที่อื่นก็ลงเวลาที่ป้ายของตัวเองตามปกติ แอดมินเห็นการสแกนครั้งนี้แล้ว</p>
       )}
       {sign === 'point' && (
         <section className="app-panel">
           <h2>ถ้าได้รับมอบหมายให้ทำแทน</h2>
           <p>
-            {`Admin เห็นการสแกนครั้งนี้แล้ว ให้แจ้ง Admin ว่าคุณทำแทน ${blocked.areaName} เมื่อ Admin กดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ`}
+            {`แอดมินเห็นการสแกนครั้งนี้แล้ว ให้แจ้งแอดมินว่าคุณทำแทน ${blocked.areaName} เมื่อแอดมินกดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ`}
           </p>
         </section>
       )}
@@ -51,7 +51,7 @@ export function BlockedScanScreen({ blocked, sign, ownAreaName }: BlockedScanScr
         <section className="app-panel">
           <h2>ถ้าได้รับมอบหมายให้ตรวจแทน</h2>
           <p>
-            {`Admin เห็นการสแกนครั้งนี้แล้ว ให้แจ้ง Admin ว่าคุณตรวจแทนตึก ${blocked.buildingCode} ในกะนี้ เมื่อ Admin กดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ`}
+            {`แอดมินเห็นการสแกนครั้งนี้แล้ว ให้แจ้งแอดมินว่าคุณตรวจแทนตึก ${blocked.buildingCode} ในกะนี้ เมื่อแอดมินกดมอบหมาย สแกนป้ายนี้ใหม่ได้ทันทีจนหมดกะ`}
           </p>
         </section>
       )}

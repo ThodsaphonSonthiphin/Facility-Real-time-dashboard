@@ -13,12 +13,12 @@ export function AreaList({ areas, selectedId, loading }: AreaListProps) {
   return (
     <section className="areas-list" aria-labelledby="areas-list-title">
       <div className="areas-list__head">
-        <h2 id="areas-list-title">{`Area ทั้งหมด (${areas?.length ?? 0})`}</h2>
+        <h2 id="areas-list-title">{`พื้นที่ทั้งหมด (${areas?.length ?? 0})`}</h2>
         <Link className="app-button" to="/admin/areas/new">
-          + เพิ่ม Area
+          + เพิ่มพื้นที่
         </Link>
       </div>
-      {loading && <p className="app-muted">กำลังโหลด Area...</p>}
+      {loading && <p className="app-muted">กำลังโหลดพื้นที่...</p>}
       <ul>
         {areas?.map((area) => {
           const selected = area.id === selectedId;

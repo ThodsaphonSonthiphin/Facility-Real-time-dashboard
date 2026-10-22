@@ -27,7 +27,11 @@ const checkInApi = baseApi.injectEndpoints({
         }
       },
     }),
+    // facility-0082: 204 when the sign works, 404 when it does not. It records nothing and never says whose sign it is
+    checkSign: build.query<null, string>({
+      query: (token) => `/attendance/signs/${encodeURIComponent(token)}`,
+    }),
   }),
 });
 
-export const { useRecordAttendanceMutation } = checkInApi;
+export const { useRecordAttendanceMutation, useCheckSignQuery } = checkInApi;

@@ -55,7 +55,7 @@ describe('routing (facility-0026, 0058)', () => {
     await renderApp('/dashboard');
 
     expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
-    expect(screen.getByText('หน้านี้สำหรับAdmin บัญชีนี้เป็นแม่บ้าน')).toBeInTheDocument();
+    expect(screen.getByText('หน้านี้สำหรับแอดมิน บัญชีนี้เป็นแม่บ้าน')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'กลับหน้าของฉัน' })).toHaveAttribute('href', '/my-work');
   });
 
@@ -63,26 +63,26 @@ describe('routing (facility-0026, 0058)', () => {
     fakeServer({ 'POST /api/auth/refresh': () => authAnswer('admin') });
     await renderApp('/dashboard');
 
-    const menu = screen.getByRole('navigation', { name: 'เมนู Admin' });
+    const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
     expect(within(menu).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'สถานะจุด',
       'การเข้างาน',
       'รายการที่ขึ้นเตือน',
       'สรุปการตรวจ',
       'ส่งออก Excel',
-      'จัดการ Area และป้าย',
+      'จัดการพื้นที่และป้าย',
       'บัญชีผู้ใช้',
-      'ประวัติ Admin',
+      'ประวัติการแก้ไขของแอดมิน',
     ]);
     expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
-    expect(within(menu).getByRole('link', { name: 'จัดการ Area และป้าย' })).toHaveAttribute('href', '/admin/areas');
+    expect(within(menu).getByRole('link', { name: 'จัดการพื้นที่และป้าย' })).toHaveAttribute('href', '/admin/areas');
   });
 
   it('a phone page has no Admin menu', async () => {
     fakeServer({ 'POST /api/auth/refresh': () => authAnswer('cleaner') });
     await renderApp('/my-work');
 
-    expect(screen.queryByRole('navigation', { name: 'เมนู Admin' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'เมนูแอดมิน' })).not.toBeInTheDocument();
   });
 
   it('every Admin page is a lazy route, so a phone never downloads Admin code (facility-0062 item 3)', () => {

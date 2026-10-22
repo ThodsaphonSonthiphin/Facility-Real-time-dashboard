@@ -16,15 +16,16 @@ interface SubmitFormProps {
 
 /** Wireframe M4: เรียบร้อย is chosen; พบปัญหา opens the tags and the note (facility-0007, 0046). */
 export function SubmitForm({ point, draft, onChange, sending, errorText, onSend }: SubmitFormProps) {
-  const [incomplete, setIncomplete] = useState(false);
+  // facility-0076: the warning shows once ส่งงาน was pressed, and only while พบปัญหา still has no tag and no note
+  const [tried, setTried] = useState(false);
+  const incomplete = tried && !isComplete(draft);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!isComplete(draft)) {
-      setIncomplete(true);
+      setTried(true);
       return;
     }
-    setIncomplete(false);
     onSend();
   };
 

@@ -39,7 +39,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     expect(within(form).getByText('แม่บ้าน · 650003 (บทบาทและรหัสแก้ไม่ได้)')).toBeInTheDocument();
     await user.clear(within(form).getByLabelText('ชื่อที่แสดง'));
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านว่าง ใหม่');
-    await user.selectOptions(within(form).getByLabelText('Area ประจำ'), '2');
+    await user.selectOptions(within(form).getByLabelText('พื้นที่ประจำ'), '2');
     expect(within(form).getByRole('radio', { name: /^กะเช้า/ })).toBeChecked();
     await user.click(within(form).getByRole('button', { name: 'บันทึก' }));
 
@@ -58,7 +58,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     const { user } = await openAndPress('แก้ไข แม่บ้านทดสอบ');
 
     const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านทดสอบ' });
-    expect(within(form).getByLabelText('Area ประจำ')).toHaveValue('1');
+    expect(within(form).getByLabelText('พื้นที่ประจำ')).toHaveValue('1');
     expect(within(form).getByRole('radio', { name: /^กะเช้า/ })).toBeEnabled();
     expect(within(form).getByRole('radio', { name: /^กะดึก/ })).toBeDisabled();
     await user.click(within(form).getByRole('button', { name: 'บันทึก' }));
@@ -93,8 +93,8 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     await openAndPress('แก้ไข แม่บ้านที่ลาออก');
 
     const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านที่ลาออก' });
-    expect(within(form).getByLabelText('Area ประจำ')).toBeDisabled();
-    expect(within(form).getByText('เปิดใช้งานบัญชีก่อน แล้วค่อยเลือก Area')).toBeInTheDocument();
+    expect(within(form).getByLabelText('พื้นที่ประจำ')).toBeDisabled();
+    expect(within(form).getByText('เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่')).toBeInTheDocument();
   });
 
   it('changes a phone: checked first, sent once, and never kept on the page (facility-0054)', async () => {
@@ -103,12 +103,18 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     expect(screen.queryByRole('button', { name: 'แก้เบอร์โทร ผู้ดูแลคนที่สอง' })).not.toBeInTheDocument();
 
     const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · แม่บ้านทดสอบ' });
-    await user.type(within(form).getByLabelText('เบอร์โทรใหม่'), '123');
+    // facility-0081: who is being edited, and that the old number is not needed (it is stored as a hash)
+    expect(within(form).getByText('650001')).toBeInTheDocument();
+    expect(within(form).getByText('AR01 · กะเช้า')).toBeInTheDocument();
+    expect(within(form).getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
+    expect(within(form).getByText('แม่บ้าน')).toBeInTheDocument();
+    expect(within(form).getByText(/^ไม่ต้องรู้เบอร์เดิม ใส่เบอร์ที่คนนี้ใช้ตอนนี้แล้วกดบันทึก/)).toBeInTheDocument();
+    await user.type(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้'), '123');
     await user.click(within(form).getByRole('button', { name: 'บันทึกเบอร์ใหม่' }));
     expect(within(form).getByRole('alert')).toHaveTextContent('เบอร์โทรต้องเป็นเลข 10 หลัก ขึ้นต้นด้วย 0');
 
-    await user.clear(within(form).getByLabelText('เบอร์โทรใหม่'));
-    await user.type(within(form).getByLabelText('เบอร์โทรใหม่'), '0810000099');
+    await user.clear(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้'));
+    await user.type(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้'), '0810000099');
     await user.click(within(form).getByRole('button', { name: 'บันทึกเบอร์ใหม่' }));
 
     expect(
@@ -161,7 +167,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
 
     const ask = screen.getByRole('alertdialog', { name: 'ปิดใช้งานบัญชี แม่บ้านทดสอบ?' });
     expect(ask).toHaveTextContent('แม่บ้านทดสอบ เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดภายใน 5 นาที ประวัติยังอยู่ เปิดใช้งานกลับได้');
-    expect(ask).toHaveTextContent('AR01 กะเช้า จะว่าง เปิดใช้งานกลับแล้วต้องเลือก Area ใหม่');
+    expect(ask).toHaveTextContent('AR01 กะเช้า จะว่าง เปิดใช้งานกลับแล้วต้องเลือกพื้นที่ใหม่');
     await user.click(within(ask).getByRole('button', { name: 'ยกเลิก' }));
     expect(server.calls.some((call) => call.path.endsWith('/deactivate'))).toBe(false);
     expect(screen.getByRole('form', { name: 'เพิ่มบัญชี' })).toBeInTheDocument();
@@ -182,7 +188,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     await openAndPress('เปิดใช้งาน แม่บ้านที่ลาออก');
 
     expect(
-      await screen.findByText('เปิดใช้งาน แม่บ้านที่ลาออก แล้ว ยังไม่มี Area เลือก Area ได้ที่ "แก้ไข"'),
+      await screen.findByText('เปิดใช้งาน แม่บ้านที่ลาออก แล้ว ยังไม่มีพื้นที่ เลือกพื้นที่ได้ที่ "แก้ไข"'),
     ).toBeInTheDocument();
     expect(server.calls.filter((call) => call.path === '/api/admin/accounts/26/activate')).toHaveLength(1);
   });

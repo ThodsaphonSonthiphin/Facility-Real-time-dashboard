@@ -15,7 +15,7 @@ public class InspectionExportTests
     private const string Path = "/api/admin/export";
 
     private static readonly string[] Header =
-        ["วันที่กะ", "กะ", "ตึก", "Area", "จุด", "ป้าย", "รอบ", "เวลาตรวจ", "ผล", "ข้อบกพร่อง", "ตรวจแทน", "รหัสพนักงาน", "ชื่อ", "GPS"];
+        ["วันที่กะ", "กะ", "ตึก", "พื้นที่", "จุด", "ป้าย", "รอบ", "เวลาตรวจ", "ผล", "สิ่งที่ต้องแก้", "ตรวจแทน", "รหัสพนักงาน", "ชื่อ", "ตำแหน่ง"];
 
     private static async Task<(FacilityApiFactory Factory, HttpClient Admin)> StartAsync(DateTimeOffset now)
     {

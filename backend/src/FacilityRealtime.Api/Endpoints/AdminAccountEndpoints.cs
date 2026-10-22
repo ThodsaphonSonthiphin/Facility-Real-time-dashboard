@@ -64,7 +64,7 @@ public static class AdminAccountEndpoints
         {
             if (request.EmployeeId is not null || request.Phone is not null)
             {
-                return Bad("บัญชี Admin ใช้ชื่อผู้ใช้และรหัสผ่าน ไม่ใช้รหัสพนักงานหรือเบอร์โทร");
+                return Bad("บัญชีแอดมินใช้ชื่อผู้ใช้และรหัสผ่าน ไม่ใช้รหัสพนักงานหรือเบอร์โทร");
             }
 
             if (AccountRules.NormalizeUsername(request.Username) is not { } username)
@@ -165,7 +165,7 @@ public static class AdminAccountEndpoints
         // Decision 4: a deactivated Cleaner holds no Area; the Area's slot may already be someone else's
         if (!user.IsActive && user.Role == UserRole.Cleaner && request.AreaId is not null)
         {
-            return Bad("เปิดใช้งานบัญชีก่อน แล้วค่อยเลือก Area");
+            return Bad("เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่");
         }
 
         var (place, error) = await ReadPlaceAsync(db, user.Role, user.Id, request.AreaId, request.BuildingId, request.Shift, checkSlot: user.IsActive, currentAreaId: user.AreaId);
@@ -271,7 +271,7 @@ public static class AdminAccountEndpoints
 
         if (user.Role == UserRole.Admin)
         {
-            return Bad("บัญชี Admin ไม่มีเบอร์โทร ใช้ปุ่มรีเซ็ตรหัสผ่าน");
+            return Bad("บัญชีแอดมินไม่มีเบอร์โทร ใช้ปุ่มรีเซ็ตรหัสผ่าน");
         }
 
         var phone = PhoneNumber.Normalize(request.Phone);

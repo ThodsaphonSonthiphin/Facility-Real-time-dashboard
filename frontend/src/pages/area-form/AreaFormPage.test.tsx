@@ -45,14 +45,14 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     });
     const { user, router } = await renderApp('/admin/areas/new');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'เพิ่ม Area' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'เพิ่มพื้นที่' })).toBeInTheDocument();
     const day = await screen.findByLabelText('แม่บ้านประจำกะเช้า');
     // D10: only the shift's Cleaners who have no Area yet
     expect(optionTexts(day)).toEqual(['— ยังไม่มี —', 'แม่บ้านว่าง (650003)']);
     expect(optionTexts(screen.getByLabelText('แม่บ้านประจำกะดึก'))).toEqual(['— ยังไม่มี —', 'แม่บ้านว่างกะดึก (650004)']);
 
-    await user.type(screen.getByLabelText('รหัส Area'), 'AR03');
-    await user.type(screen.getByLabelText('ชื่อ Area'), 'Area ใหม่');
+    await user.type(screen.getByLabelText('รหัสพื้นที่'), 'AR03');
+    await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ใหม่');
     await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
     await user.selectOptions(day, 'แม่บ้านว่าง (650003)');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
@@ -73,11 +73,11 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     const { user } = await renderApp('/admin/areas/new');
 
     await user.click(await screen.findByRole('button', { name: 'บันทึก' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('ใส่รหัส Area ก่อน');
-    await user.type(screen.getByLabelText('รหัส Area'), 'AR03');
+    expect(screen.getByRole('alert')).toHaveTextContent('ใส่รหัสพื้นที่ก่อน');
+    await user.type(screen.getByLabelText('รหัสพื้นที่'), 'AR03');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('ใส่ชื่อ Area ก่อน');
-    await user.type(screen.getByLabelText('ชื่อ Area'), 'Area ใหม่');
+    expect(screen.getByRole('alert')).toHaveTextContent('ใส่ชื่อพื้นที่ก่อน');
+    await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ใหม่');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
     expect(screen.getByRole('alert')).toHaveTextContent('เลือกตึกก่อน');
     expect(server.calls.some((call) => call.method === 'POST' && call.path === '/api/admin/areas')).toBe(false);
@@ -92,9 +92,9 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     });
     const { user, router } = await renderApp('/admin/areas/1/edit');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'แก้ไข Area · AR01 Area ทดลอง' })).toBeInTheDocument();
-    expect(screen.getByText('รหัส Area AR01 (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)')).toBeInTheDocument();
-    expect(screen.getByLabelText('ชื่อ Area')).toHaveValue('Area ทดลอง');
+    expect(await screen.findByRole('heading', { level: 1, name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' })).toBeInTheDocument();
+    expect(screen.getByText('รหัสพื้นที่ AR01 (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)')).toBeInTheDocument();
+    expect(screen.getByLabelText('ชื่อพื้นที่')).toHaveValue('Area ทดลอง');
     expect(screen.getByLabelText('ตึก')).toHaveValue('1');
     expect(screen.getByLabelText('แม่บ้านประจำกะเช้า')).toHaveValue('21');
     expect(screen.getByLabelText('แม่บ้านประจำกะดึก')).toHaveValue('22');
@@ -102,7 +102,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     await user.click(screen.getByRole('radio', { name: 'เฉพาะกะเช้า' }));
     expect(screen.queryByLabelText('แม่บ้านประจำกะดึก')).not.toBeInTheDocument();
     expect(
-      screen.getByText('บันทึกแล้วเวลารอบกะดึกของทุกจุดใน Area นี้จะถูกลบ และแม่บ้านกะดึกออกจาก Area'),
+      screen.getByText('บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่'),
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 
@@ -117,15 +117,15 @@ describe('AreaFormPage (D10, facility-0045)', () => {
   });
 
   it('shows the server’s refusal and stays on the form', async () => {
-    serve({ 'POST /api/admin/areas': () => ({ status: 409, body: { message: 'รหัส Area นี้มีแล้ว' } }) });
+    serve({ 'POST /api/admin/areas': () => ({ status: 409, body: { message: 'รหัสพื้นที่นี้มีแล้ว' } }) });
     const { user, router } = await renderApp('/admin/areas/new');
 
-    await user.type(await screen.findByLabelText('รหัส Area'), 'AR01');
-    await user.type(screen.getByLabelText('ชื่อ Area'), 'Area ซ้ำ');
+    await user.type(await screen.findByLabelText('รหัสพื้นที่'), 'AR01');
+    await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ซ้ำ');
     await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('รหัส Area นี้มีแล้ว');
+    expect(await screen.findByRole('alert')).toHaveTextContent('รหัสพื้นที่นี้มีแล้ว');
     expect(router.state.location.pathname).toBe('/admin/areas/new');
   });
 
@@ -144,18 +144,18 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     });
     const { user } = await renderApp('/admin/areas/1/edit');
 
-    expect(await screen.findByText('ป้ายลงเวลา AR01-IN ระบบสร้างให้เองตอนเพิ่ม Area')).toBeInTheDocument();
-    expect(screen.getByText('จุดทำความสะอาด 2 จุด · เพิ่มหรือแก้ที่หน้า จัดการ Area และป้าย')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'ปิดใช้งาน Area นี้' }));
+    expect(await screen.findByText('ป้ายลงเวลา AR01-IN ระบบสร้างให้เองตอนเพิ่มพื้นที่')).toBeInTheDocument();
+    expect(screen.getByText('จุดทำความสะอาด 2 จุด · เพิ่มหรือแก้ที่หน้า จัดการพื้นที่และป้าย')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ปิดใช้งานพื้นที่นี้' }));
 
     expect(await screen.findByText('ปิดใช้งาน AR01 แล้ว')).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'เปิดใช้งาน Area นี้' })).toBeInTheDocument();
-    expect(screen.getByText('Area นี้ปิดใช้งานอยู่ ป้ายทุกป้ายสแกนไม่ได้')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'เปิดใช้งานพื้นที่นี้' })).toBeInTheDocument();
+    expect(screen.getByText('พื้นที่นี้ปิดใช้งานอยู่ ป้ายทุกป้ายสแกนไม่ได้')).toBeInTheDocument();
     expect(server.calls.some((call) => call.path === '/api/admin/areas/1/deactivate')).toBe(true);
 
-    await user.click(screen.getByRole('button', { name: 'เปิดใช้งาน Area นี้' }));
+    await user.click(screen.getByRole('button', { name: 'เปิดใช้งานพื้นที่นี้' }));
     expect(await screen.findByText('เปิดใช้งาน AR01 แล้ว')).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'ปิดใช้งาน Area นี้' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'ปิดใช้งานพื้นที่นี้' })).toBeInTheDocument();
     expect(server.calls.some((call) => call.path === '/api/admin/areas/1/activate')).toBe(true);
   });
 
@@ -175,8 +175,8 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     });
     const { user, router } = await renderApp('/admin/areas/new');
 
-    await user.type(await screen.findByLabelText('รหัส Area'), 'AR03');
-    await user.type(screen.getByLabelText('ชื่อ Area'), 'Area ใหม่');
+    await user.type(await screen.findByLabelText('รหัสพื้นที่'), 'AR03');
+    await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ใหม่');
     await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 

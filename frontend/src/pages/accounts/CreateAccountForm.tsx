@@ -124,7 +124,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
               onChange={(event) => set({ password: event.target.value })}
             />
           </label>
-          <p className="app-field__help">Admin: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว 8–100 ตัวอักษร (บอกเองด้วยวาจาหรือกระดาษ)</p>
+          <p className="app-field__help">แอดมิน: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว 8–100 ตัวอักษร (บอกเองด้วยวาจาหรือกระดาษ)</p>
         </>
       ) : (
         <>
@@ -161,7 +161,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
           </div>
           {draft.role === 'Cleaner' ? (
             <div className="app-field">
-              <label htmlFor="accounts-create-area">Area ประจำ</label>
+              <label htmlFor="accounts-create-area">พื้นที่ประจำ</label>
               <select
                 id="accounts-create-area"
                 className="app-input"
@@ -169,7 +169,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
                 disabled={isLoading}
                 onChange={(event) => chooseArea(event.target.value)}
               >
-                <option value="">— ยังไม่กำหนด Area —</option>
+                <option value="">— ยังไม่กำหนดพื้นที่ —</option>
                 {activeAreas.map((option) => (
                   <option key={option.id} value={String(option.id)}>
                     {areaOptionLabel(option)}
@@ -205,7 +205,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
           />
           <p className="app-field__help">
             {draft.role === 'Cleaner'
-              ? 'Area ละ 1 คนต่อกะ · ถ้ากะนี้มีคนประจำแล้วจะเลือกไม่ได้ · Area ที่ทำเฉพาะกะเช้าเลือกได้แค่กะเช้า · ยังไม่กำหนด Area ได้ เลือกทีหลังที่ปุ่ม "แก้ไข"'
+              ? 'พื้นที่ละ 1 คนต่อกะ · ถ้ากะนี้มีคนประจำแล้วจะเลือกไม่ได้ · พื้นที่ที่ทำเฉพาะกะเช้าเลือกได้แค่กะเช้า · ยังไม่กำหนดพื้นที่ได้ เลือกทีหลังที่ปุ่ม "แก้ไข"'
               : 'หัวหน้าประจำตึกและกะ ตึกละ 1 คนต่อกะ · ตรวจได้เฉพาะในกะตัวเอง · ไม่ต้องลงเวลา'}
           </p>
         </>

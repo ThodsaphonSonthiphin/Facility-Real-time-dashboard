@@ -62,7 +62,7 @@ export function ExportPage() {
   return (
     <main className="export-page">
       <header>
-        <span className="app-muted">Admin เท่านั้น · ช่วงทดลองใช้ไฟล์ Excel แทนหน้ารายงาน</span>
+        <span className="app-muted">แอดมินเท่านั้น · ช่วงทดลองใช้ไฟล์ Excel แทนหน้ารายงาน</span>
         <h1>ส่งออก Excel</h1>
       </header>
       <div className="export-layout">
@@ -115,11 +115,11 @@ export function ExportPage() {
             </p>
           )}
           <div className="export-notes">
-            <span>ไม่มีพิกัด GPS ดิบ มีแค่ระยะห่างจากป้าย และผลในรัศมี / นอกรัศมี</span>
-            <span>การส่งออกเก็บลงประวัติ Admin (ใคร เมื่อไร ชุดไหน ช่วงวันไหน)</span>
+            <span>ไม่มีพิกัดตำแหน่งดิบ มีแค่ระยะห่างจากป้าย และผลในรัศมี / นอกรัศมี</span>
+            <span>การส่งออกเก็บลงประวัติการแก้ไขของแอดมิน (ใคร เมื่อไร ชุดไหน ช่วงวันไหน)</span>
             <span>ไฟล์ที่ดาวน์โหลดแล้วอยู่นอกการลบตามระยะเวลาเก็บข้อมูล ห้ามส่งต่อนอกบริษัท (เรื่องคนเก็บไฟล์รอคุยกับ HR)</span>
           </div>
-          <Link to="/dashboard">‹ กลับไป Dashboard</Link>
+          <Link to="/dashboard">‹ กลับไปหน้าสถานะจุด</Link>
         </section>
       </div>
     </main>

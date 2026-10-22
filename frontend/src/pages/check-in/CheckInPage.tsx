@@ -3,15 +3,16 @@ import { Link, useParams } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import { blockedScanOf, isNotSent, statusOf } from '../../shared/api/scanAnswers';
-import type { AttendanceEvent, AttendanceState, BlockedScan } from '../../shared/api/types';
+import type { AttendanceEvent, AttendanceState, BlockedScan, OwnShift } from '../../shared/api/types';
 import { BlockedScanScreen } from '../../shared/components/BlockedScanScreen';
 import { LocationHelp } from '../../shared/components/LocationHelp';
+import { StatusScreen } from '../../shared/components/StatusScreen';
 import { readLocation, type LocationProblem } from '../../shared/geo/readLocation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { eventLabel, shiftLabel } from '../../shared/utils/labels';
-import { formatTime } from '../../shared/utils/thaiTime';
+import { formatClock, formatTime } from '../../shared/utils/thaiTime';
 import { AttendanceTimeline } from './AttendanceTimeline';
-import { useRecordAttendanceMutation } from './checkInApi';
+import { useCheckSignQuery, useRecordAttendanceMutation } from './checkInApi';
 import './checkIn.css';
 
 type Outcome =
@@ -22,11 +23,13 @@ type Outcome =
 
 /**
  * Wireframes M1, M2, M3, M8 and M10: the page an Area's check-in sign opens (/check-in/<token>, plan 8 decision 1).
- * The buttons are the events the server allows next (facility-0031). The server records, flags or blocks
- * (facility-0035, 0036, 0041) and never computes late or early (facility-0050).
+ * On opening it asks whether the sign still works (facility-0082). The buttons are the events the server allows next
+ * (facility-0031). The server records, flags or blocks (facility-0035, 0036, 0041) and never computes late or early
+ * (facility-0050).
  */
 export function CheckInPage() {
   const { token = '' } = useParams();
+  const signQuery = useCheckSignQuery(token, freshOnOpen);
   const workQuery = useGetMyWorkQuery(undefined, freshOnOpen);
   const [record] = useRecordAttendanceMutation();
   const [pressed, setPressed] = useState<AttendanceEvent | null>(null);
@@ -35,8 +38,13 @@ export function CheckInPage() {
   const work = workQuery.data;
   const attendance = work?.attendance;
   const ownArea = work?.areas.find((area) => !area.isCover);
-  // Buttons only from a fresh answer: a cached one may be from before another device recorded something
-  const liveAttendance = workQuery.isFetching ? undefined : attendance;
+  // A 404 is a sign that no longer works; any other failure of the check shows like a failed load
+  const signGone = statusOf(signQuery.error) === 404;
+  const loadError = workQuery.error ?? (signGone ? undefined : signQuery.error);
+  // Buttons only from fresh answers, once the server has said the sign works: a cached answer may be from before
+  // another device recorded something
+  const signWorks = signQuery.isSuccess && !signQuery.isFetching;
+  const liveAttendance = workQuery.isFetching || !signWorks ? undefined : attendance;
 
   const press = async (eventType: AttendanceEvent) => {
     setPressed(eventType);
@@ -70,6 +78,16 @@ export function CheckInPage() {
     }
   };
 
+  if (signGone) {
+    return (
+      <StatusScreen
+        title="ป้ายนี้ใช้ไม่ได้แล้ว"
+        detail="ยังไม่ได้ลงเวลา ป้ายนี้อาจถูกสร้าง QR ใหม่แล้ว หรือไม่มีในระบบ แจ้งแอดมิน"
+        linkTo="/my-work"
+        linkText="ดูงานของฉัน"
+      />
+    );
+  }
   if (outcome?.kind === 'location') {
     const { problem, eventType } = outcome;
     return <LocationHelp problem={problem} action="ลงเวลา" busy={pressed !== null} onRetry={() => void press(eventType)} />;
@@ -84,19 +102,15 @@ export function CheckInPage() {
         <span className="checkin-kicker">ป้ายลงเวลา</span>
         <h1>ลงเวลา</h1>
         {attendance?.shift && <p className="checkin-sub">{shiftLabel[attendance.shift]}</p>}
-        {ownArea && <p className="checkin-area">{`Area ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
+        {ownArea && <p className="checkin-area">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
       </header>
-      {workQuery.isLoading && <p className="checkin-hint">กำลังโหลด...</p>}
-      {workQuery.error && (
+      {(workQuery.isLoading || signQuery.isLoading) && <p className="checkin-hint">กำลังโหลด...</p>}
+      {loadError != null && (
         <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(workQuery.error)}
+          {getErrorMessage(loadError)}
         </p>
       )}
-      {attendance && !attendance.shift && (
-        <p className="app-note app-note--warn">
-          ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ ลงเวลาได้ตั้งแต่ 60 นาทีก่อนกะเริ่มจนถึง 60 นาทีหลังกะจบ
-        </p>
-      )}
+      {attendance && !attendance.shift && <OffShiftNote ownShift={work?.ownShift} />}
       {attendance?.shift && <AttendanceTimeline attendance={attendance} />}
       {outcome?.kind === 'answered' && (
         <AnsweredNote eventType={outcome.eventType} state={outcome.state} accuracyM={outcome.accuracyM} />
@@ -132,6 +146,19 @@ export function CheckInPage() {
   );
 }
 
+/** facility-0077: outside the attendance window the Cleaner is told their own shift and when it can be recorded. */
+function OffShiftNote({ ownShift }: { ownShift?: OwnShift }) {
+  return (
+    <div className="app-note app-note--warn">
+      <strong>ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ</strong>
+      {ownShift && <span>{`กะของคุณ: ${shiftLabel[ownShift.shift]}`}</span>}
+      {ownShift && (
+        <span>{`ลงเวลาได้ตั้งแต่ ${formatClock(ownShift.opensAt)} ถึง ${formatClock(ownShift.closesAt)}`}</span>
+      )}
+    </div>
+  );
+}
+
 interface AnsweredNoteProps {
   eventType: AttendanceEvent;
   state: AttendanceState;
@@ -161,9 +188,9 @@ function AnsweredNote({ eventType, state, accuracyM }: AnsweredNoteProps) {
   if (recorded?.withinRadius === false) {
     return (
       <div className="app-note app-note--warn" role="status">
-        <strong>{`บันทึกเวลา${label}แล้ว ${time} แต่อยู่ไกลจากป้าย · ติดธง`}</strong>
+        <strong>{`บันทึกเวลา${label}แล้ว ${time} แต่อยู่ไกลป้าย`}</strong>
         <span>{`ความแม่นยำของตำแหน่ง ±${Math.round(accuracyM)} ม.`}</span>
-        <span>Admin จะเห็นรายการนี้ ถ้าคุณยืนอยู่หน้าป้ายจริง แจ้ง Admin ได้เลย</span>
+        <span>แอดมินจะเห็นรายการนี้ ถ้าคุณยืนอยู่หน้าป้ายจริง แจ้งแอดมินได้เลย</span>
       </div>
     );
   }

@@ -7,7 +7,7 @@ export function InspectHeading({ visit }: { visit: InspectionVisit }) {
     <header className="inspect-heading">
       <span className="inspect-kicker">{`ตรวจงาน · ${point.areaName} · ตึก ${point.buildingCode}`}</span>
       <h1>{point.name}</h1>
-      {visit.isCover && <p className="inspect-sub">{`ตรวจแทนตึก ${point.buildingCode} ในกะนี้ (Admin มอบหมาย)`}</p>}
+      {visit.isCover && <p className="inspect-sub">{`ตรวจแทนตึก ${point.buildingCode} ในกะนี้ (แอดมินมอบหมาย)`}</p>}
     </header>
   );
 }

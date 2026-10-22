@@ -111,6 +111,41 @@ public class InspectionAlertTests
     }
 
     [Fact]
+    public async Task Reviewing_a_scan_into_another_building_is_logged_as_a_wrong_building_scan()
+    {
+        using var factory = new FacilityApiFactory();
+        await InspectionApi.AddBuildingBAsync(factory);
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+        await InspectionApi.ScanAsync(supervisor, InspectionApi.BuildingBPoint);
+        var alert = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin));
+
+        var review = await AdminAttendanceApi.ReviewAsync(admin, "BlockedScan", alert.RecordId);
+
+        Assert.Equal(HttpStatusCode.NoContent, review.StatusCode);
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.StartsWith("ปิดเตือนสแกนผิดตึก ของ ", entry.Summary); // named by its reason (facility-0085)
+    }
+
+    [Fact]
+    public async Task Reviewing_a_scan_outside_the_shift_is_logged_as_a_scan_outside_the_shift()
+    {
+        using var factory = new FacilityApiFactory();
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
+        await InspectionApi.ScanAsync(supervisor);
+        var alert = Assert.Single(await AdminAttendanceApi.AlertsAsync(admin));
+
+        var review = await AdminAttendanceApi.ReviewAsync(admin, "BlockedScan", alert.RecordId);
+
+        Assert.Equal(HttpStatusCode.NoContent, review.StatusCode);
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.StartsWith("ปิดเตือนสแกนนอกกะ ของ ", entry.Summary); // named by its reason (facility-0085)
+    }
+
+    [Fact]
     public async Task No_cover_is_offered_once_that_shift_has_ended()
     {
         using var factory = new FacilityApiFactory();

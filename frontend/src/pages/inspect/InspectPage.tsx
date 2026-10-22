@@ -132,7 +132,7 @@ function OpenFailed({ error, onRetry }: { error: unknown; onRetry: () => void })
   return (
     <StatusScreen
       title={getErrorMessage(error)}
-      detail="ลองสแกนป้ายอีกครั้ง ถ้ายังเปิดไม่ได้ แจ้ง Admin"
+      detail="ลองสแกนป้ายอีกครั้ง ถ้ายังเปิดไม่ได้ แจ้งแอดมิน"
       linkTo="/my-building"
       linkText="กลับไปตึกของฉัน"
     />

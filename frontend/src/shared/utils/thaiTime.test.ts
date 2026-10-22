@@ -6,11 +6,20 @@ import {
   formatRound,
   formatShiftDate,
   formatTime,
+  formatWeekday,
   parseShiftDate,
   thaiToday,
 } from './thaiTime';
 
 describe('thaiTime', () => {
+  it('formatWeekday names a shift date\'s Thai weekday, short', () => {
+    expect(formatWeekday('2026-10-15')).toBe('พฤ.');
+    expect(formatWeekday('2026-10-16')).toBe('ศ.');
+    expect(formatWeekday('2026-10-17')).toBe('ส.');
+    expect(formatWeekday('2026-10-18')).toBe('อา.');
+    expect(formatWeekday('2026-10-19')).toBe('จ.');
+  });
+
   it('formatDayTime gives the Thai day/month and time, for lists that cover more than one day', () => {
     expect(formatDayTime('2026-10-15T02:10:00Z')).toBe('15/10 09:10');
     expect(formatDayTime('2026-10-14T23:52:00Z')).toBe('15/10 06:52');

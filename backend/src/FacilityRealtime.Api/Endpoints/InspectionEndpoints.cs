@@ -146,17 +146,17 @@ public static class InspectionEndpoints
         var defect = string.IsNullOrWhiteSpace(request.Defect) ? null : request.Defect.Trim();
         if (result == InspectionResult.Rework && defect is null)
         {
-            return Bad("เลือกไม่สะอาดต้องระบุข้อบกพร่อง");
+            return Bad("เลือกไม่สะอาดต้องระบุสิ่งที่ต้องแก้");
         }
 
         if (result == InspectionResult.Passed && defect is not null)
         {
-            return Bad("ข้อบกพร่องใส่ได้เฉพาะเมื่อเลือกไม่สะอาด");
+            return Bad("สิ่งที่ต้องแก้ใส่ได้เฉพาะเมื่อเลือกไม่สะอาด");
         }
 
         if (defect is { Length: > InspectionRules.MaxDefectLength })
         {
-            return Bad($"ข้อบกพร่องยาวได้ไม่เกิน {InspectionRules.MaxDefectLength} ตัวอักษร");
+            return Bad($"สิ่งที่ต้องแก้ยาวได้ไม่เกิน {InspectionRules.MaxDefectLength} ตัวอักษร");
         }
 
         if (request.ScanRecordId is not { } scanRecordId)

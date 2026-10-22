@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { isClock, sortWindows } from './pointRules';
+import { clockOf, sortWindows } from './pointRules';
 
 describe('point rules (facility-0047)', () => {
-  it('accepts only a 24-hour "HH:mm", as the server does', () => {
-    expect(isClock('07:00')).toBe(true);
-    expect(isClock('23:59')).toBe(true);
-    expect(isClock('7:00')).toBe(false);
-    expect(isClock('24:00')).toBe(false);
-    expect(isClock('07:60')).toBe(false);
-    expect(isClock('0700')).toBe(false);
+  it('clockOf joins an hour box and a minute box as the server\'s "HH:mm" (facility-0083)', () => {
+    expect(clockOf('7', '00')).toBe('07:00');
+    expect(clockOf('07', '30')).toBe('07:30');
+    expect(clockOf('10', '')).toBe('10:00');
+    expect(clockOf(' 23 ', ' 59 ')).toBe('23:59');
+    expect(clockOf('0', '05')).toBe('00:05');
+    expect(clockOf('24', '00')).toBeNull();
+    expect(clockOf('', '00')).toBeNull();
+    expect(clockOf('07', '5')).toBeNull();
+    expect(clockOf('07', '60')).toBeNull();
+    expect(clockOf('0700', '')).toBeNull();
+    expect(clockOf('7a', '00')).toBeNull();
   });
 
   it('orders windows Day first, then by time into the shift (a night 03:00 after 20:00)', () => {

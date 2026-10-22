@@ -52,12 +52,12 @@ export function MyBuildingPage() {
 function countLine(building: MyBuilding): string {
   const points = building.buildings.flatMap((section) => section.points);
   const areas = new Set(points.map((point) => point.areaId));
-  return `${areas.size} Area · ${points.length} จุด`;
+  return `${areas.size} พื้นที่ · ${points.length} จุด`;
 }
 
 function BuildingList({ building }: { building: MyBuilding }) {
   if (building.buildings.length === 0) {
-    return <p className="app-note app-note--info">บัญชีนี้ยังไม่ได้ผูกกับตึก หรือตึกปิดใช้งาน แจ้ง Admin</p>;
+    return <p className="app-note app-note--info">บัญชีนี้ยังไม่ได้ผูกกับตึก หรือตึกปิดใช้งาน แจ้งแอดมิน</p>;
   }
   const points = building.buildings.flatMap((section) => section.points);
   const count = (status: PointStatus) => points.filter((point) => point.status === status).length;

@@ -73,7 +73,7 @@ public static class AdminAreaEndpoints
 
         if (SignCodes.NormalizeAreaCode(request.Code) is not { } code)
         {
-            return Bad("รหัส Area ต้องเป็นตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03");
+            return Bad("รหัสพื้นที่ต้องเป็นตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03");
         }
 
         var (form, error) = await ReadFormAsync(
@@ -85,7 +85,7 @@ public static class AdminAreaEndpoints
 
         if (await db.Areas.AnyAsync(a => a.Code == code))
         {
-            return Conflict("รหัส Area นี้มีแล้ว");
+            return Conflict("รหัสพื้นที่นี้มีแล้ว");
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
@@ -99,7 +99,7 @@ public static class AdminAreaEndpoints
             await db.SaveChangesAsync();
             await AreaCleaners.ApplyAsync(db, area.Id, form.DayCleaner, form.NightCleaner);
             AuditTrail.Add(
-                db, admin.Id, now, "AREA_CREATE", "areas", area.Id, $"เพิ่ม Area {code} {form.Name}",
+                db, admin.Id, now, "AREA_CREATE", "areas", area.Id, $"เพิ่มพื้นที่ {code} {form.Name}",
                 before: null, after: Snapshot(area, form.DayCleaner, form.NightCleaner));
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -153,7 +153,7 @@ public static class AdminAreaEndpoints
             if (after != before || nightWindows.Count > 0)
             {
                 AuditTrail.Add(
-                    db, admin.Id, now, "AREA_UPDATE", "areas", area.Id, $"แก้ Area {area.Code} {area.Name}",
+                    db, admin.Id, now, "AREA_UPDATE", "areas", area.Id, $"แก้พื้นที่ {area.Code} {area.Name}",
                     before, after with { RemovedNightWindows = nightWindows.Count });
                 await db.SaveChangesAsync();
             }
@@ -188,7 +188,7 @@ public static class AdminAreaEndpoints
             area.IsActive = active;
             AuditTrail.Add(
                 db, admin.Id, clock.GetUtcNow().UtcDateTime, active ? "AREA_ACTIVATE" : "AREA_DEACTIVATE", "areas", area.Id,
-                $"{(active ? "เปิด" : "ปิด")}ใช้งาน Area {area.Code}",
+                $"{(active ? "เปิด" : "ปิด")}ใช้งานพื้นที่ {area.Code}",
                 before: new { IsActive = !active }, after: new { IsActive = active });
             await db.SaveChangesAsync();
         }
@@ -203,7 +203,7 @@ public static class AdminAreaEndpoints
         var trimmed = name?.Trim() ?? string.Empty;
         if (trimmed.Length is 0 or > 150)
         {
-            return (null, Bad("ต้องใส่ชื่อ Area ไม่เกิน 150 ตัวอักษร"));
+            return (null, Bad("ต้องใส่ชื่อพื้นที่ ไม่เกิน 150 ตัวอักษร"));
         }
 
         if (pattern is not { } shiftPattern || !Enum.IsDefined(shiftPattern))
@@ -219,7 +219,7 @@ public static class AdminAreaEndpoints
 
         if (shiftPattern == ShiftPattern.DayOnly && nightCleanerId is not null)
         {
-            return (null, Bad("Area ที่ทำเฉพาะกะเช้าไม่มีแม่บ้านกะดึก"));
+            return (null, Bad("พื้นที่ที่ทำเฉพาะกะเช้าไม่มีแม่บ้านกะดึก"));
         }
 
         User? day = null;
@@ -246,7 +246,7 @@ public static class AdminAreaEndpoints
             // Wireframe D10: the picker offers only Cleaners without an Area in that shift
             if (cleaner.AreaId is { } otherAreaId && otherAreaId != areaId)
             {
-                return (null, Conflict($"{cleaner.DisplayName} ประจำ {cleaner.Area!.Code} อยู่แล้ว ย้ายออกจาก Area นั้นก่อน"));
+                return (null, Conflict($"{cleaner.DisplayName} ประจำ {cleaner.Area!.Code} อยู่แล้ว ย้ายออกจากพื้นที่นั้นก่อน"));
             }
 
             if (shift == Shift.Day)
@@ -276,5 +276,5 @@ public static class AdminAreaEndpoints
 
     private static IResult Conflict(string message) => ApiResults.Message(StatusCodes.Status409Conflict, message);
 
-    private static IResult AreaNotFound() => ApiResults.Message(StatusCodes.Status404NotFound, "ไม่พบ Area นี้");
+    private static IResult AreaNotFound() => ApiResults.Message(StatusCodes.Status404NotFound, "ไม่พบพื้นที่นี้");
 }

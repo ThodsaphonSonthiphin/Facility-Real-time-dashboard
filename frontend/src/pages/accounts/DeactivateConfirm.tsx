@@ -33,7 +33,7 @@ export function DeactivateConfirm({ account, onDone, onCancel }: DeactivateConfi
       <div id={`${titleId}-detail`}>
         <p>{`${account.displayName} เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดภายใน 5 นาที ประวัติยังอยู่ เปิดใช้งานกลับได้`}</p>
         {account.role === 'Cleaner' && account.areaCode && account.shift && (
-          <p>{`${account.areaCode} ${shiftShortLabel[account.shift]} จะว่าง เปิดใช้งานกลับแล้วต้องเลือก Area ใหม่`}</p>
+          <p>{`${account.areaCode} ${shiftShortLabel[account.shift]} จะว่าง เปิดใช้งานกลับแล้วต้องเลือกพื้นที่ใหม่`}</p>
         )}
       </div>
       {problem && (

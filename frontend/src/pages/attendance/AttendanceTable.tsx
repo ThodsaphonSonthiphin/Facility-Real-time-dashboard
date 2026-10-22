@@ -12,14 +12,14 @@ interface AttendanceTableProps {
 /** Wireframe D2's table, in the server's order: Areas with nobody first (facility-0050). Names are React text only. */
 export function AttendanceTable({ rows, onCorrect }: AttendanceTableProps) {
   if (rows.length === 0) {
-    return <p className="app-note app-note--info">ไม่พบ Area ที่ตรงกับที่ค้นหา</p>;
+    return <p className="app-note app-note--info">ไม่พบพื้นที่ที่ตรงกับที่ค้นหา</p>;
   }
   return (
     <div className="app-table-scroll">
-    <table className="app-table attendance-table" aria-label="การเข้างานราย Area">
+    <table className="app-table attendance-table" aria-label="การเข้างานรายพื้นที่">
       <thead>
         <tr>
-          <th scope="col">Area</th>
+          <th scope="col">พื้นที่</th>
           <th scope="col">แม่บ้าน</th>
           <th scope="col">สถานะ</th>
           {attendanceEvents.map((type) => (
@@ -27,7 +27,7 @@ export function AttendanceTable({ rows, onCorrect }: AttendanceTableProps) {
               {eventLabel[type]}
             </th>
           ))}
-          <th scope="col">ธง</th>
+          <th scope="col">ไกลป้าย</th>
           {onCorrect && <th scope="col">แก้ไข</th>}
         </tr>
       </thead>
@@ -93,7 +93,7 @@ function EventTime({ event }: { event?: BoardEvent }) {
   return (
     <>
       {formatTime(event.occurredAt)}
-      {event.source !== 'Scan' && <span className="attendance-badge">แก้โดย Admin</span>}
+      {event.source !== 'Scan' && <span className="attendance-badge">แก้โดยแอดมิน</span>}
     </>
   );
 }

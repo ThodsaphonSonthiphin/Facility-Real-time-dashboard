@@ -258,6 +258,7 @@ public class AlertEndpointTests
         Assert.Equal("ALERT_REVIEW", entry.Action);
         Assert.Equal("blocked_scans", entry.EntityType);
         Assert.Equal(alert.RecordId, entry.EntityId);
+        Assert.StartsWith("ปิดเตือนสแกนผิดพื้นที่ ของ สมชาย ใจดี เวลา ", entry.Summary); // named by its reason (facility-0085)
     }
 
     [Fact]

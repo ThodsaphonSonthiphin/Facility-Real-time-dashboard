@@ -36,7 +36,7 @@ public static class AdminPointEndpoints
         var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId);
         if (area is null)
         {
-            return ApiResults.Message(StatusCodes.Status404NotFound, "ไม่พบ Area นี้");
+            return ApiResults.Message(StatusCodes.Status404NotFound, "ไม่พบพื้นที่นี้");
         }
 
         if (!TryReadForm(request, area.ShiftPattern, out var name, out var windows, out var error))

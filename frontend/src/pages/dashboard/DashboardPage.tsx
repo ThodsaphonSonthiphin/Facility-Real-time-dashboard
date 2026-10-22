@@ -11,7 +11,7 @@ import './dashboard.css';
 
 /** Wireframe D1's grey line, word for word. */
 const RULES_NOTE =
-  'รอบเป็นช่วงเวลา พ้นเวลาสิ้นสุดแล้วยังไม่ส่ง = เลยรอบ · ส่งหลังช่วงจบนับเป็นรอบนั้นแต่ติดว่าส่งช้า · พอรอบใหม่เริ่ม การ์ดเริ่มใหม่ งานเก่าที่ไม่ได้ตรวจหรือไม่ได้แก้เก็บในประวัติ · ป้ายแดง "แจ้งปัญหา" คือของชำรุดที่แม่บ้านแจ้ง ไม่ใช่สถานะของการ์ด';
+  'รอบเป็นช่วงเวลา พ้นเวลาสิ้นสุดแล้วยังไม่ส่ง = เลยเวลา · ส่งหลังช่วงจบนับเป็นรอบนั้นแต่ติดว่าส่งช้า · พอรอบใหม่เริ่ม การ์ดเริ่มใหม่ งานเก่าที่ไม่ได้ตรวจหรือไม่ได้แก้เก็บในประวัติ · ป้ายแดง "แจ้งปัญหา" คือของชำรุดที่แม่บ้านแจ้ง ไม่ใช่สถานะของการ์ด';
 
 /**
  * facility-0058, wireframe D1: every point of every active Area, by Area, as the clock's shift sees it. Pushed cards
@@ -43,7 +43,7 @@ export function DashboardPage() {
         </p>
       )}
       {data && data.length === 0 && (
-        <p className="app-note app-note--info">ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการ Area และป้าย</p>
+        <p className="app-note app-note--info">ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการพื้นที่และป้าย</p>
       )}
       {data && data.length > 0 && shown.length === 0 && <p className="app-note app-note--info">ไม่มีจุดตามตัวกรองนี้</p>}
       {groupByArea(shown).map((group) => (

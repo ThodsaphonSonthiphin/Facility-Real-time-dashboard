@@ -36,15 +36,15 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
       'ทั้งหมด (7)',
       'แม่บ้าน (4)',
       'หัวหน้า (1)',
-      'Admin (2)',
+      'แอดมิน (2)',
       'ปิดใช้งาน (1)',
     ]);
     expect(within(filters).getByRole('button', { name: 'ทั้งหมด (7)' })).toHaveAttribute('aria-pressed', 'true');
     expect(cellsOf('แม่บ้านทดสอบ')).toEqual(['650001', 'แม่บ้าน', 'AR01 · กะเช้า', 'ใช้งาน']);
-    expect(cellsOf('แม่บ้านว่าง')).toEqual(['650003', 'แม่บ้าน', 'ยังไม่มี Area · กะเช้า', 'ใช้งาน']);
+    expect(cellsOf('แม่บ้านว่าง')).toEqual(['650003', 'แม่บ้าน', 'ยังไม่มีพื้นที่ · กะเช้า', 'ใช้งาน']);
     expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['660001', 'หัวหน้า', 'ตึก A · กะเช้า', 'ใช้งาน']);
-    expect(cellsOf('ผู้ดูแลคนที่สอง')).toEqual(['admin2', 'Admin', '—', 'ใช้งาน']);
-    expect(cellsOf('แม่บ้านที่ลาออก')).toEqual(['650006', 'แม่บ้าน', 'ยังไม่มี Area · กะเช้า', 'ปิดใช้งาน']);
+    expect(cellsOf('ผู้ดูแลคนที่สอง')).toEqual(['admin2', 'แอดมิน', '—', 'ใช้งาน']);
+    expect(cellsOf('แม่บ้านที่ลาออก')).toEqual(['650006', 'แม่บ้าน', 'ยังไม่มีพื้นที่ · กะเช้า', 'ปิดใช้งาน']);
   });
 
   it('filters by role or by deactivated, and searches names and login names', async () => {
@@ -86,10 +86,10 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     await user.type(within(form).getByLabelText('รหัสพนักงาน'), '650010');
     await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '081-000-0009');
 
-    const areaSelect = await within(form).findByLabelText('Area ประจำ');
+    const areaSelect = await within(form).findByLabelText('พื้นที่ประจำ');
     await within(areaSelect).findByRole('option', { name: /^AR02/ });
     expect(within(areaSelect).getAllByRole('option').map((option) => option.textContent)).toEqual([
-      '— ยังไม่กำหนด Area —',
+      '— ยังไม่กำหนดพื้นที่ —',
       'AR01 Area ทดลอง · ตึก A · 2 กะ · กะเช้ามีคนแล้ว (แม่บ้านทดสอบ) · กะดึกมีคนแล้ว (แม่บ้านกะดึก)',
       'AR02 Office ทดลอง · ตึก A · กะเช้าอย่างเดียว',
     ]);
@@ -100,7 +100,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
 
     await user.selectOptions(areaSelect, '2');
     expect(within(form).getByRole('radio', { name: /^กะดึก/ })).toBeDisabled();
-    expect(within(form).getByText('(Area นี้ทำเฉพาะกะเช้า)')).toBeInTheDocument();
+    expect(within(form).getByText('(พื้นที่นี้ทำเฉพาะกะเช้า)')).toBeInTheDocument();
     await user.click(within(form).getByRole('radio', { name: /^กะเช้า/ }));
     await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
 
@@ -138,7 +138,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
 
     const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
     await user.click(within(form).getByRole('radio', { name: 'หัวหน้า' }));
-    expect(within(form).queryByLabelText('Area ประจำ')).not.toBeInTheDocument();
+    expect(within(form).queryByLabelText('พื้นที่ประจำ')).not.toBeInTheDocument();
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'หัวหน้าใหม่');
     await user.type(within(form).getByLabelText('รหัสพนักงาน'), '660002');
     await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0820000002');
@@ -172,7 +172,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     const { user } = await renderApp('/admin/accounts');
 
     const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
-    await user.click(within(form).getByRole('radio', { name: 'Admin' }));
+    await user.click(within(form).getByRole('radio', { name: 'แอดมิน' }));
     expect(within(form).queryByLabelText('เบอร์โทรศัพท์')).not.toBeInTheDocument();
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'ผู้ดูแลคนที่สาม');
     await user.type(within(form).getByLabelText('ชื่อผู้ใช้'), 'admin3');
@@ -252,7 +252,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
 
     // Day is ticked with no Area; AR01's Day is held, so choosing AR01 must drop it
     await user.click(within(form).getByRole('radio', { name: /^กะเช้า/ }));
-    await user.selectOptions(await within(form).findByLabelText('Area ประจำ'), '1');
+    await user.selectOptions(await within(form).findByLabelText('พื้นที่ประจำ'), '1');
     expect(within(form).getByRole('radio', { name: /^กะเช้า/ })).not.toBeChecked();
     await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
 

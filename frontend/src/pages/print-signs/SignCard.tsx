@@ -12,7 +12,7 @@ export function SignCard({ sign }: { sign: PrintSign }) {
       <QrCode text={sign.url} label={`QR ${sign.code}`} />
       <span className="print-sign__scan">สแกนด้วยกล้องมือถือ</span>
       <span className="print-sign__hint">{sign.hint}</span>
-      <span className="print-sign__code">{`รหัสป้าย ${sign.code} · ออก QR ${formatDate(sign.issuedAt)}`}</span>
+      <span className="print-sign__code">{`รหัสป้าย ${sign.code} · สร้าง QR ${formatDate(sign.issuedAt)}`}</span>
       <span className="print-sign__url">{sign.url}</span>
     </article>
   );

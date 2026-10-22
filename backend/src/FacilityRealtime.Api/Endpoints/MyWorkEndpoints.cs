@@ -50,6 +50,13 @@ public static class MyWorkEndpoints
             })
             .ToList();
 
-        return Results.Ok(new MyWorkDto(await AttendanceEndpoints.StateForAsync(db, user, now, settings), areas));
+        var ownShift = user.Shift is { } regular ? OwnShiftOf(regular, settings) : null;
+        return Results.Ok(new MyWorkDto(await AttendanceEndpoints.StateForAsync(db, user, now, settings), areas, ownShift));
+    }
+
+    private static OwnShiftDto OwnShiftOf(Shift shift, AttendanceSettings settings)
+    {
+        var (opens, closes) = AttendanceCalendar.WindowClock(shift, settings);
+        return new OwnShiftDto(shift, opens, closes);
     }
 }

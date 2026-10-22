@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (system font)
+Last updated: 2026-10-22 (plan 13 merged, PR #66)
 
 ## Project
 
@@ -31,6 +31,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 10 | Admin setup: Areas, points, round windows, signs, sign location capture, print signs, accounts | done, merged (PR #59, `a6dc170`) (branch `feat/admin-setup`): `docs/superpowers/plans/2026-10-19-admin-setup.md` |
 | 11 | Admin live board: lazy Admin routes, point status with hub and 30 s poll (D1), attendance and corrections (D2), alerts and covers (D3) | done, merged (PR #60, `f897548`) (branch `feat/admin-live-board`): `docs/superpowers/plans/2026-10-19-admin-live-board.md` |
 | 12 | Admin reports: inspection summary (D7), Excel export (D8), Admin history (D9) | done, merged (PR #62, `d9ac984`) (branch `feat/admin-reports`): `docs/superpowers/plans/2026-10-21-admin-reports.md` |
+| 13 | UX fix list: facility-0074 as amended (facility-0075 to 0085) | done, merged (PR #66) (branch `feat/ux-fix-list`): `docs/superpowers/plans/2026-10-22-ux-fix-list.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -181,6 +182,27 @@ Plan 4 test results at merge:
 - 2026-10-21 · PR #62 merged to master (`d9ac984`), branch deleted. Plan 12 is done, and it was the last of the six frontend plans: every wireframe page now exists. Cleanup: API stopped, throwaway database `facility_reports_test` dropped, `wwwroot` deleted. GitGuardian passed. Next: the owner chooses (see Pending work): the UX/UI pass over every page, the server-side search for the Admin history, or the Excel import of accounts.
 - 2026-10-22 · Owner: only the device's font now, the rest of facility-0074 stays (D3 covers ahead, D6 phone, D4 round windows, the five Cleaner phone problems; facility-0074 amended). Font done (branch `feat/system-font`, PR #65): `@fontsource/ibm-plex-sans-thai` imports removed from `main.tsx` and the package uninstalled, `index.css` is `font-family: system-ui, sans-serif` (facility-0072); the build has no font files, main JS 157.53 kB gzip. Lint and tsc clean, frontend tests 385 passed. Next: the plan for the rest of facility-0074 (see `## Next`).
 - 2026-10-22 · Requirements session (`sp-grill-with-doc`) over mockups of the rest of facility-0074: ADRs facility-0076 to 0085 settle how each item is fixed (0085 adds a fifth group: UI words, list approved by the owner); the owner dropped telling a wrong-Area sign on open (facility-0080: the cover flow already goes scan, blocked, Admin approves), and changed D6 (show the old phone: impossible, it is a hash; facility-0081) and D4 (typed in split hour and minute boxes, not a list; facility-0083). No code changed. Next: write the plan.
+- 2026-10-22 · PR #65 merged to master (`7ced464`), branch deleted: the device's font (facility-0072) and ADRs facility-0070 to 0085. GitGuardian passed. Still to check by eye: the font on a real iPhone and a real Android phone. Next: write the plan for facility-0074 as amended (facility-0075 to 0085) with `sp-writing-plans`.
+- 2026-10-22 · Plan 13 written and committed on the new branch `feat/ux-fix-list` (from `7ced464`; not pushed): `docs/superpowers/plans/2026-10-22-ux-fix-list.md`, 12 tasks. The server changes in 3 places: `ownShift` on `GET /api/my-work`, a new `GET /api/attendance/signs/{token}`, and the words in messages, summaries and Excel. Tasks 2–7 fix the Cleaner phone, D6, D4 and D3 (ahead via the existing board API). Tasks 8–11 sweep the words. Task 12 covers docs and the real run. Six planning decisions are at the top of the plan, for the PR. Next (new session): `git checkout feat/ux-fix-list`; the owner picks how to run the plan (subagent-driven with `sp-subagent-driven-development` recommended, or `sp-executing-plans`); then Task 1. No code has changed yet.
+
+## Task log (plan 13)
+
+- 2026-10-22 · Task 1 done: `GET /api/my-work` sends `ownShift { shift, opensAt, closesAt }` (AttendanceCalendar.WindowClock; facility-0077); new `GET /api/attendance/signs/{token}` (Cleaner only; 204 for an active check-in sign of an active Area, 404 "ไม่พบป้ายลงเวลานี้" otherwise; records nothing; facility-0082). Unit 302; API 540 + 5 skipped. Next: Task 2 (check-in page).
+- 2026-10-22 · Task 2 done: the check-in page asks `GET /api/attendance/signs/{token}` on opening and shows buttons only after a fresh 204; a 404 shows "ป้ายนี้ใช้ไม่ได้แล้ว" with no button (facility-0082); off shift it shows "กะของคุณ: …" and "ลงเวลาได้ตั้งแต่ … ถึง …" from `ownShift` (facility-0077); the "วันนี้" row shows only recorded times (facility-0078). Types `OwnShift`, fixtures `dayShift` / `nightShift`. Frontend 389 tests. Next: Task 3 (My Work off shift).
+- 2026-10-22 · Task 3 done: My Work off shift shows "ตอนนี้ไม่อยู่ในกะของคุณ", the own shift and "ลงเวลาเข้างานได้ตั้งแต่ …" from `ownShift`, with no counts and no cards (facility-0077); the server still sends the clock's points, the page hides them (plan decision 1). Frontend 389 tests. Next: Task 4 (scan page).
+- 2026-10-22 · Task 4 done: the scan form's "เลือกปัญหาที่พบ…" warning shows after ส่งงาน only while nothing is chosen, and goes as soon as a tag or a note is given (facility-0076); the result page shows "สถานะของจุดนี้ [chip]" as one line under the heading, no card (facility-0079). Frontend 391 tests; main JS 157.82 kB gzip. Next: Task 5 (D6 phone form).
+- 2026-10-22 · Task 5 done: D6 "แก้เบอร์โทร" shows the name, employee ID, role and place in large type, the field reads "เบอร์โทรที่คนนี้ใช้ตอนนี้", and the help starts "ไม่ต้องรู้เบอร์เดิม …" (facility-0081). Frontend 391 tests. Next: Task 6 (D4 hour and minute boxes).
+- 2026-10-22 · Task 6 done: D4 round-window times are typed as an hour box and a minute box ("เริ่ม ชั่วโมง" … "ถึง นาที"); the hour 0–23 in one or two digits, the minute empty (00) or 00–59, digits only, two hour digits move on to the minute, Enter adds; `clockOf` replaces `isClock` (facility-0083). Frontend 391 tests. Next: Task 7 (D3 covers ahead).
+- 2026-10-22 · Task 7 done: D3 "วันและกะ" picks the shift on the clock ("(กะนี้)") to the Night shift 7 days on, with the Thai weekday; a shift not started shows every Area of it with "แม่บ้านประจำ: …" (the board's `shiftDate` and `shift`, no server change); a search by Cleaner, Area code or name; the cover form, its candidates and the covers box follow the pick (facility-0075, 0084). `formatWeekday`, `coverSlots`, `slotText`, `matchesSearch`. Frontend 401 tests. Next: Task 8 (words on the phone pages).
+- 2026-10-22 · Task 8 done: approved words (facility-0085) on the phone pages, the login pages and the shared pieces: พื้นที่, แอดมิน, ตำแหน่ง, ไกลป้าย, เลยเวลา, ส่งเพิ่ม (ไม่นับรอบ), สิ่งที่ต้องแก้; tests changed with them. Frontend 401 tests; main JS 157.92 kB gzip. Next: Task 9 (words on the Admin live and report pages).
+- 2026-10-22 · Task 9 done: approved words (facility-0085) on D1, D2, D3, D7, D8, D9 and the menu (จัดการพื้นที่และป้าย, ประวัติการแก้ไขของแอดมิน; blocked scans named สแกนผิดพื้นที่ / ผิดตึก / นอกกะ; ไกลป้าย for flags; ตรวจตอนอยู่ไกลป้าย on D7); tests changed with them. Frontend 401 tests. Next: Task 10 (words on the Admin setup pages).
+- 2026-10-22 · Task 10 done: approved words (facility-0085) on D4, D5 (printed signs: "พื้นที่ AR01 · ตึก A", "สร้าง QR"), D6, D10 and M17 (วัดที่ป้ายจริง / ปักจากแผนที่, สร้าง QR ใหม่, แอดมิน); tests changed with them. Frontend 401 tests. Next: Task 11 (server words).
+- 2026-10-22 · Task 11 done: approved words (facility-0085) in server messages, new audit summaries and the Excel file (headers พื้นที่, ตำแหน่ง, แจ้งปัญหา, สิ่งที่ต้องแก้; "ส่งเพิ่ม (ไม่นับรอบ)"; "แก้โดยแอดมิน"); a Blocked Scan's alert name in summaries follows its reason (`ThaiLabels.BlockedName`), which closes the parked "สแกนนอก Area" item; old audit rows keep their words. Unit 302; API 542 + 5 skipped. Next: Task 12 (docs, final checks, real run).
+- 2026-10-22 · Task 12 done: ADR amendments (0062 measured size, 0074, 0077, 0082, 0083, 0084, 0085), architecture endpoint list, handoff Next and Notes; the parked "สแกนนอก Area" item removed. Unit 302; API 542 + 5 skipped; frontend 401; main JS 157.93 kB gzip. Next: the controller's real run, then the whole-branch review.
+- 2026-10-22 · Controller's real run (plan 13), scripted part: the API on throwaway database `facility_ux_test` (Homebrew MySQL, no root password) served the built app (main JS 157.94 kB gzip). A Python script as the seed users passed 13/13: Cleaner E1001 gets 204 with no body on `/api/attendance/signs/token-checkin-ar01` and 404 "ไม่พบป้ายลงเวลานี้" on `token-restroom-m1` and `nope`; E1001's `ownShift` is Day 06:00:00–20:00:00; Night Cleaner E1002 at 14:56 has no `attendance.shift` and `ownShift.opensAt` 18:00:00; the Admin export of today is an .xlsx whose headers read พื้นที่ and ตำแหน่ง (no Area, GPS or Issue); tomorrow's Day board lists AR01 and AR02 as Empty with their regular Cleaners; a cover for AR01 tomorrow is 201, shows on that board and is cancelled with 204. `/check-in/nope`, `/scan/…` and `/admin/alerts` serve the app. No warn or fail in the API log. Frontend 401 passed three more times (once while the backend suite ran), so Task 12's one-off failure did not come back. API stopped, `facility_ux_test` dropped, `wwwroot` deleted. Not run: the owner's Chrome checklist (plan 13 Task 12 Step 5 item 3). Next: the whole-branch review, then the owner's checklist and OK for the push and PR.
+- 2026-10-22 · Final-review fix wave: check-in "กำลังโหลด..." also while the sign check runs; a dead assertion removed; ThaiLabels.AlertName takes the block reason with no default; the D4 minute box is selected on auto-advance; D3's covers box ahead names the picked shift when empty and shows the date of each assignment. Unit 302; API 542 + 5 skipped; frontend 402. Next: the owner's Chrome checklist, then the OK for the push and PR.
+- 2026-10-22 · Owner tried the build (throwaway `facility_ux_test`) on the three open questions. (1) Excel "ตำแหน่ง" is column L, after "ที่มา", not next to "ชื่อ" (F) as reported; kept unless the owner says otherwise. (2) D3 ahead: a covered Area looked like an empty one; the owner chose: it says "ทำแทนแล้ว: <name>" and has no assign button (cancel in the covers box to change who); the open cover form also closes once that Area is covered (facility-0084 amended). (3) No in-page retry after a failed sign check: checked by blocking the request, kept as is (plan decision 2). Frontend 403 tests; lint and tsc clean. Next: the owner's Chrome checklist, then the OK for the push and PR.
+- 2026-10-22 · Owner: push, PR and merge. Cleanup: API stopped, `facility_ux_test` dropped, `wwwroot` deleted. PR #66 opened (the plan's decisions 1–6 and the owner's three decisions in its description) and merged to master with the owner's OK. Next: the owner chooses from Pending work (Excel import of accounts, server-side search for the Admin history).
 
 ## Sharing a test build (colleagues on other networks)
 
@@ -197,27 +219,10 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
-- UX fix list (facility-0074, font done; every item settled 2026-10-22 in facility-0076 to 0085): write the plan. See `## Next: the UX fix list` below.
 
-## Next: the UX fix list
+## Next: after plan 13
 
-Owner, 2026-10-21 and 2026-10-22: no page-by-page UX/UI pass; the owner finds the app OK, and Admin pages are for a computer only (facility-0073). The list is **facility-0074**; item 3 (the device's font, facility-0072) is done. On 2026-10-22 each item was settled with the owner over mockups (a private claude.ai canvas "Mockup รายการแก้ UX"). Left, with the ADR that says how:
-
-1. D3 covers up to 7 days ahead: facility-0075, 0084 (the same Area list with a date and shift choice and a search box; a shift not started lists every Area with its regular Cleaner).
-2. D6 "แก้เบอร์โทร": facility-0081 (the old number cannot be shown, it is a hash; the form says it is not needed and shows who is being edited). D4 round windows: facility-0083 (typed, hour and minute in separate boxes).
-3. Cleaner phone: facility-0076 (the warning clears once a tag or note is given), 0077 (off shift: My Work and the check-in page say the Cleaner's own shift time; My Work shows no counts or cards), 0078 (the "วันนี้" row shows only recorded times), 0079 (the result page shows the status as one line, no card), 0082 (an unusable check-in QR is told on open). Not changed: a sign of another Area still blocks on press (facility-0080).
-4. UI words (facility-0085, added 2026-10-22): text the users see says what people on site say, not the team's glossary (Area → พื้นที่, Admin → แอดมิน, ติดธง → ไกลป้าย, and the rest of the approved list in that ADR). Pages, server messages, Excel headers and printed signs; code, API and database names stay.
-
-Other ADRs from the session: facility-0070 (the work is for the real pilot; order: phone, then the Admin pages that run the pilot, then reports), facility-0071 (keep the current look). Next step: write the plan with `sp-writing-plans` (spec = facility-0074 as amended 2026-10-22, plus facility-0075 to 0085), then run it with `sp-subagent-driven-development`.
-
-Not in scope (facility-0074 Consequences): the "แสดง" fetch sign on D7/D9, the deferred plan 12 minors (`BuildingSelect` on a failed load, an `?actor=` id missing from the list, a shared hook for D7–D9), Admin pages on a phone.
-
-Rules that bind page changes (ADRs, so a change to one is its own decision):
-- Styling is plain CSS, no UI library (facility-0063): tokens in `frontend/src/index.css`, shared pieces in `shared/components/shared.css` (class prefix `app-`), one CSS file per page with its own prefix, never `style={...}`. Switching to MUI, Bootstrap or Tailwind would be a new ADR: the main JS is 157.35 kB gzip of a 200 kB budget (facility-0062), and all 25 or so pages would be rewritten.
-- Thai UI text comes from the wireframes in `docs/design/wireframe/` (the ADR wins where they differ). User-typed and server text is React text only (facility-0066). No link from an Admin page to a sign page (facility-0059). Nothing stored on the device (facility-0068).
-- Tests find elements by role, label or text, so renaming a visible string or label changes tests: change them together.
-
-To see the app while working: "Sharing a test build" below (build with `npm run build:api`, a throwaway database `facility_*_test`; on this Mac MySQL has no root password; the Development seed in `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs` has one Admin, Cleaner and Supervisor to log in as). The seed is nearly empty, so pages with tables need a few records made first. Afterwards stop the API, drop the database and delete `wwwroot`.
+Plan 13 built the UX fix list (facility-0074 as amended; facility-0075 to 0085) and is merged (PR #66). The owner chooses what comes next from Pending work. Still to check by eye on real phones: the device's font (facility-0072), the plain-http message, and the check-in page's sign check over the tunnel.
 
 ## Owner's rules (still in force)
 
@@ -284,7 +289,6 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - `AuditLogQuery` runs 2 queries; one join would do.
 - History paging: `NextBeforeId` offers an empty next page when the rows exactly fill the limit.
 - No test yet that every timestamp in every response ends in `Z`.
-- ThaiLabels.AlertName(BlockedScan) is still 'สแกนนอก Area', so the permanent audit summary for closing a Supervisor's Blocked Scan says 'สแกนนอก Area'; change the wording before rollout.
 - Retrying POST /api/inspections writes a second Inspection Record (Passed) or gets 409 (Rework); the page must disable the button while posting.
 - Supervisors' building covers (facility-0048) can be assigned from a Blocked Scan on D3, but no endpoint lists them, so the alert page cannot show or cancel them (plan 11 decision 10).
 - From plan 3: a point can be added to a deactivated Area; two Admins editing one point at once get 500 instead of 409; the 404 tests of the sign routes are missing; removing a round window loads its Scan Records into memory.
@@ -306,7 +310,6 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - Inspection Summary `notInspected` counts finished rounds left ไม่ได้ตรวจ in closed shifts, not submitted minus inspected; work a Cleaner submits after the shift end (inside the 60-minute window) cannot be inspected by anyone and is left out of the beat's numbers (plan 6 decision 17).
 - Cleaners still get no hub events. My Work reloads on open.
 - Disable the inspect button while POST /api/inspections is in flight: a retried Passed writes a second Inspection Record, and a retried Rework gets 409.
-- A Blocked Scan alert of a Supervisor still says 'สแกนนอก Area' in the history summary; show the alert's `blockReason` on the page instead.
 - Key alerts by kind **and** id: the "far from sign" and "no Shift-Out" alerts of one attendance share an id.
 - Leave out unused filters entirely; an empty value gets 400. The same holds for unused account fields in plan 5.
 - `PUT /api/admin/accounts/{id}` replaces every place field: leaving `areaId` out clears a Cleaner's Area, so the client sends the current `areaId` to keep it.
@@ -316,7 +319,9 @@ The 13 planning decisions are at the top of the plan-4 file and in the PR #53 de
 - Date ranges (plan 12): `shared/utils/dateRange.ts` (`checkRange` with the server's limits, `readRange`, `toRangeParams`, `exportLink`) and `shared/components/RangeFields.tsx` (typed dd/mm/yyyy with the shortcuts). `thaiToday` is in `shared/utils/thaiTime.ts`.
 - The print page's `@page` rule (A4, no margin) is in the one CSS bundle, so it applies to anything the browser prints.
 - M17 on a real phone over https is still to be checked: a desktop browser with a fixed simulated location may report one reading only (the real run nudges it), while phones report about once a second.
-- Bundle after plan 12: all the JavaScript a phone loads from `index.html` is 157.35 kB gzip of 200 kB. Admin pages, the three report pages included, are their own files.
+- Bundle after plan 12: all the JavaScript a phone loads from `index.html` is 157.35 kB gzip of 200 kB; 157.93 kB after plan 13. Admin pages, the three report pages included, are their own files.
+- Screen words follow facility-0085 (พื้นที่, แอดมิน, ตำแหน่ง, ไกลป้าย, เลยเวลา, ส่งเพิ่ม (ไม่นับรอบ), สิ่งที่ต้องแก้, สร้าง QR ใหม่ …); code, API and database names keep the glossary words. New text uses the screen words.
+- `GET /api/my-work` sends `ownShift` (facility-0077); `GET /api/attendance/signs/{token}` checks a check-in sign on open (facility-0082). D3 reads a shift ahead with the board's `shiftDate` and `shift` (facility-0084).
 
 ## Before plan 5
 

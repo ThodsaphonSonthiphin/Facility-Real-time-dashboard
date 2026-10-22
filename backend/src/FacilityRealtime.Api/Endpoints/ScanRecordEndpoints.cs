@@ -102,7 +102,7 @@ public static class ScanRecordEndpoints
         {
             return ApiResults.Message(
                 StatusCodes.Status409Conflict,
-                attendance.Contains(AttendanceEvent.ShiftOut) ? "ลงเวลาเลิกงานแล้ว ส่งงานไม่ได้" : "ลงเวลาเข้างานที่ป้ายของ Area คุณก่อน");
+                attendance.Contains(AttendanceEvent.ShiftOut) ? "ลงเวลาเลิกงานแล้ว ส่งงานไม่ได้" : "ลงเวลาเข้างานที่ป้ายของพื้นที่คุณก่อน");
         }
 
         var facts = (await RoundFactsQuery.LoadAsync(db, [point.Id], slot))[point.Id];

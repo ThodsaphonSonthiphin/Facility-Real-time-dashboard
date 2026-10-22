@@ -173,7 +173,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     serve([]);
     await renderApp('/dashboard');
 
-    expect(await screen.findByText('ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการ Area และป้าย')).toBeInTheDocument();
+    expect(await screen.findByText('ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการพื้นที่และป้าย')).toBeInTheDocument();
   });
 
   it('links to the Excel export (D8)', async () => {
