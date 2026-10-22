@@ -299,6 +299,18 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(server.calls.some((c) => c.path === '/api/attendance')).toBe(false);
   });
 
+  it('off shift for an account with no shift: only the headline, no shift and no times (facility-0077)', async () => {
+    const work = myWork(outsideShift);
+    delete work.ownShift;
+    serve({}, work);
+    await renderApp(SIGN);
+
+    expect(await screen.findByText('ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ')).toBeInTheDocument();
+    expect(screen.queryByText(/กะของคุณ:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ลงเวลาได้ตั้งแต่/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
+  });
+
   it('a sign that no longer works is told on opening, with no button, and nothing is sent (facility-0082)', async () => {
     const server = serve({
       'GET /api/attendance/signs/token-checkin-ar01': () => ({ status: 404, body: { message: 'ไม่พบป้ายลงเวลานี้' } }),
