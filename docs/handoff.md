@@ -292,7 +292,9 @@ Where `ui-ux-pro-max` fits:
 
 - 2026-10-22 · Spec published as issue #68 (`ready-for-agent`). Owner's answers at the spec: one test seam (the whole-app page tests with `renderApp` and `fakeServer`; no tests of the shared components alone, no class or colour tests); My Work B's large card holds the most urgent ต้องแก้ไข / เลยเวลา / ยังไม่ทำ point with words for its status, and with nothing left it is replaced by "ส่งครบทุกจุดที่ต้องทำตอนนี้แล้ว"; the last group is "ยังไม่ต้องทำ" (ยังไม่ถึงรอบ + นอกเวลา). Recorded in `pages/phone.md`. The ADRs, design-system and docs/agents files that #68 points at are still uncommitted on master's working copy: commit them (branch + PR, owner's OK) before anyone works from #68. Next: commit the docs, then `/to-tickets` on #68.
 
-Next session: commit the session's docs (branch + PR), then the owner runs `/to-tickets` on #68.
+- 2026-10-22 · Docs committed on branch `docs/tailwind-grill-and-spec`, PR #69 opened, not merged (waits for the owner). The pre-commit hook ran lint and the frontend tests: 403 passed. Next: the owner merges #69, then runs `/to-tickets` on #68.
+
+Next session: the owner merges PR #69, then runs `/to-tickets` on #68.
 
 ## Owner's rules (still in force)
 
