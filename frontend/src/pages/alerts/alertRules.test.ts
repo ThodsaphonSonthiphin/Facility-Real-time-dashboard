@@ -6,6 +6,8 @@ import {
   inspectionGpsAlert,
   missingAlert,
   candidates,
+  emptyRow,
+  noCleanerRow,
   reviewedAlert,
 } from '../../test/liveFixtures';
 import {
@@ -14,12 +16,47 @@ import {
   alertWho,
   candidateText,
   coverNotice,
+  coverSlots,
   fillLink,
   filterAlerts,
+  matchesSearch,
   slotOfShiftEnd,
+  slotText,
 } from './alertRules';
 
 describe('alert rules (wireframe D3)', () => {
+  it('coverSlots runs from the shift on the clock to the Night shift 7 days later (facility-0075)', () => {
+    const fromDay = coverSlots({ shiftDate: '2026-10-15', shift: 'Day' });
+    expect(fromDay).toHaveLength(16);
+    expect(fromDay.slice(0, 3)).toEqual([
+      { shiftDate: '2026-10-15', shift: 'Day' },
+      { shiftDate: '2026-10-15', shift: 'Night' },
+      { shiftDate: '2026-10-16', shift: 'Day' },
+    ]);
+    expect(fromDay[fromDay.length - 1]).toEqual({ shiftDate: '2026-10-22', shift: 'Night' });
+
+    const fromNight = coverSlots({ shiftDate: '2026-10-31', shift: 'Night' });
+    expect(fromNight).toHaveLength(15);
+    expect(fromNight.slice(0, 2)).toEqual([
+      { shiftDate: '2026-10-31', shift: 'Night' },
+      { shiftDate: '2026-11-01', shift: 'Day' },
+    ]);
+    expect(fromNight[fromNight.length - 1]).toEqual({ shiftDate: '2026-11-07', shift: 'Night' });
+  });
+
+  it('slotText names the shift, the weekday and the date', () => {
+    expect(slotText({ shiftDate: '2026-10-17', shift: 'Night' })).toBe('กะดึก ส. 17/10/2026');
+  });
+
+  it('matchesSearch finds a row by its regular Cleaner, Area code or Area name, ignoring case and spaces (facility-0084)', () => {
+    expect(matchesSearch(emptyRow, '  ลา ')).toBe(true);
+    expect(matchesSearch(emptyRow, 'ar12')).toBe(true);
+    expect(matchesSearch(emptyRow, 'สิบสอง')).toBe(true);
+    expect(matchesSearch(emptyRow, 'ทดสอบ')).toBe(false);
+    expect(matchesSearch(noCleanerRow, '')).toBe(true);
+    expect(matchesSearch(noCleanerRow, 'แม่บ้าน')).toBe(false);
+  });
+
   it('splits by talked-about or not, and puts the three GPS flags under one type', () => {
     expect(filterAlerts(alerts, 'open', 'all')).toHaveLength(4);
     expect(filterAlerts(alerts, 'reviewed', 'all')).toEqual([reviewedAlert]);

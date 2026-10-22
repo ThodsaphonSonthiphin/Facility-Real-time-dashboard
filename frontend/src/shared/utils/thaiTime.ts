@@ -30,6 +30,14 @@ export function formatShiftDate(date: string): string {
   return `${day}/${month}/${year}`;
 }
 
+const weekdays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+
+/** A shift date ("2026-10-16", already a Thai calendar date) as its short Thai weekday, "ศ." (D3's shift picker). */
+export function formatWeekday(date: string): string {
+  const [year, month, day] = date.split('-').map(Number);
+  return weekdays[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+}
+
 /** Today's Thai calendar date as the server writes a shift date, "2026-10-15" (to fill a date range). */
 export function thaiToday(now: Date = new Date()): string {
   const [day, month, year] = formatDate(now).split('/');

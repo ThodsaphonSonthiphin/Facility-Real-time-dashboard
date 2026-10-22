@@ -1,7 +1,9 @@
 import type { Alert, AlertKind } from '../../shared/api/alertListApi';
+import type { BoardRow } from '../../shared/api/attendanceBoardApi';
 import type { Shift } from '../../shared/api/types';
+import { addDays } from '../../shared/utils/dateRange';
 import { eventLabel, shiftShortLabel } from '../../shared/utils/labels';
-import { formatDate, formatShiftDate, formatTime } from '../../shared/utils/thaiTime';
+import { formatDate, formatShiftDate, formatTime, formatWeekday } from '../../shared/utils/thaiTime';
 import type { CoverAssignment, CoverCandidate } from './alertsApi';
 
 /** Wireframe D3's tabs: "ยังไม่ได้คุย / คุยแล้ว / ทั้งหมด". */
@@ -108,8 +110,15 @@ export function fillLink(alert: Alert): string {
   return `/admin/attendance?${params.toString()}`;
 }
 
-/** One choice of "ให้ใครทำแทน": who, their own Area, their Shift-In, and whether they already scanned this Area's signs. */
-export function candidateText(candidate: CoverCandidate): string {
+/**
+ * One choice of "ให้ใครทำแทน": who, their own Area, their Shift-In, and whether they already scanned this Area's signs.
+ * For a shift not started nobody has checked in or scanned, so only who and their Area are shown.
+ */
+export function candidateText(candidate: CoverCandidate, ahead: boolean | number = false): string {
+  // `=== true`, and the type allows a number: `candidates.map(candidateText)` passes the index as the second argument
+  if (ahead === true) {
+    return `${candidate.displayName} · ${candidate.areaCode}`;
+  }
   return [
     candidate.displayName,
     candidate.areaCode,
@@ -125,4 +134,51 @@ export function coverNotice(cover: CoverAssignment): string {
   return cover.areaCode
     ? `มอบหมาย ${cover.personName} ทำแทน ${cover.areaCode} แล้ว`
     : `มอบหมาย ${cover.personName} ตรวจแทนตึก ${cover.buildingCode ?? ''} แล้ว`;
+}
+
+/** A shift the cover box shows (facility-0075). */
+export interface CoverSlot {
+  shiftDate: string;
+  shift: Shift;
+}
+
+/** facility-0075: covers are assigned up to 7 days ahead, so the night and the weekend never wait for an Admin. */
+export const AHEAD_DAYS = 7;
+
+/** From the shift on the clock to the Night shift 7 days later, in the order they come. */
+export function coverSlots(current: CoverSlot): CoverSlot[] {
+  const slots: CoverSlot[] = [];
+  for (let day = 0; day <= AHEAD_DAYS; day += 1) {
+    const shiftDate = addDays(current.shiftDate, day);
+    for (const shift of ['Day', 'Night'] as const) {
+      // On the first date a Night shift on the clock has already passed that date's Day shift
+      if (day > 0 || current.shift === 'Day' || shift === 'Night') {
+        slots.push({ shiftDate, shift });
+      }
+    }
+  }
+  return slots;
+}
+
+export function sameSlot(a: CoverSlot, b: CoverSlot): boolean {
+  return a.shiftDate === b.shiftDate && a.shift === b.shift;
+}
+
+/** The picker's value, e.g. "2026-10-16:Night". */
+export function slotKey(slot: CoverSlot): string {
+  return `${slot.shiftDate}:${slot.shift}`;
+}
+
+/** "กะดึก ศ. 16/10/2026": the weekday matters, because the Admin thinks "Saturday", not a date. */
+export function slotText(slot: CoverSlot): string {
+  return `${shiftShortLabel[slot.shift]} ${formatWeekday(slot.shiftDate)} ${formatShiftDate(slot.shiftDate)}`;
+}
+
+/** facility-0084: the cover box's search, by the regular Cleaner's name or the Area's code or name. */
+export function matchesSearch(row: BoardRow, search: string): boolean {
+  const words = search.trim().toLowerCase();
+  if (words === '') {
+    return true;
+  }
+  return [row.areaCode, row.areaName, row.cleaner?.displayName ?? ''].some((text) => text.toLowerCase().includes(words));
 }
