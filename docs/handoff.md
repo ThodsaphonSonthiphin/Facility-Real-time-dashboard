@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#70–#74 merged, last PR #87; #75 in PR #89, #76 on `feat/supervisor-new-look`; next: `implement` #77; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#70–#74 merged, last PR #87; #75 in PR #89, #76 in PR #90 (stacked); next: `implement` #77; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -426,7 +426,7 @@ Where `ui-ux-pro-max` fits:
   - **Checks:** lint and tsc clean; main JS 162.78 kB gzip; CSS 23.88 / 5.13 kB gzip.
   - **Not done:** the owner's eye check on a real phone (with #75).
 
-  Next: PR (based on `feat/check-in-new-look`), then `implement` #77.
+  Pushed; PR #90 opened against `feat/check-in-new-look` (stacked on #89), not merged. Next: `implement` #77.
 
 Next session: `implement` #77 (and the eye check of #75 + #76).
 
