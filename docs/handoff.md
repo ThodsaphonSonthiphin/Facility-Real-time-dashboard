@@ -192,6 +192,7 @@ Plan 4 test results at merge:
 - 2026-10-22 · Task 3 done: My Work off shift shows "ตอนนี้ไม่อยู่ในกะของคุณ", the own shift and "ลงเวลาเข้างานได้ตั้งแต่ …" from `ownShift`, with no counts and no cards (facility-0077); the server still sends the clock's points, the page hides them (plan decision 1). Frontend 389 tests. Next: Task 4 (scan page).
 - 2026-10-22 · Task 4 done: the scan form's "เลือกปัญหาที่พบ…" warning shows after ส่งงาน only while nothing is chosen, and goes as soon as a tag or a note is given (facility-0076); the result page shows "สถานะของจุดนี้ [chip]" as one line under the heading, no card (facility-0079). Frontend 391 tests; main JS 157.82 kB gzip. Next: Task 5 (D6 phone form).
 - 2026-10-22 · Task 5 done: D6 "แก้เบอร์โทร" shows the name, employee ID, role and place in large type, the field reads "เบอร์โทรที่คนนี้ใช้ตอนนี้", and the help starts "ไม่ต้องรู้เบอร์เดิม …" (facility-0081). Frontend 391 tests. Next: Task 6 (D4 hour and minute boxes).
+- 2026-10-22 · Task 6 done: D4 round-window times are typed as an hour box and a minute box ("เริ่ม ชั่วโมง" … "ถึง นาที"); the hour 0–23 in one or two digits, the minute empty (00) or 00–59, digits only, two hour digits move on to the minute, Enter adds; `clockOf` replaces `isClock` (facility-0083). Frontend 391 tests. Next: Task 7 (D3 covers ahead).
 
 ## Sharing a test build (colleagues on other networks)
 

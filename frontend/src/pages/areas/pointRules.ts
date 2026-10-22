@@ -7,9 +7,18 @@ export interface WindowDraft {
   end: string;
 }
 
-/** "07:00" only: two-digit 24-hour time, as RoundWindowRules.TryParseTime on the server. */
-export function isClock(text: string): boolean {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(text);
+/**
+ * facility-0083: a time typed as an hour box and a minute box, as the server's two-digit 24-hour "HH:mm"
+ * (RoundWindowRules.TryParseTime). The hour is 0–23 in one or two digits; the minute is empty (00) or two digits
+ * 00–59. Anything else is null.
+ */
+export function clockOf(hour: string, minute: string): string | null {
+  const h = hour.trim();
+  const m = minute.trim() === '' ? '00' : minute.trim();
+  if (!/^\d{1,2}$/.test(h) || !/^\d{2}$/.test(m) || Number(h) > 23 || Number(m) > 59) {
+    return null;
+  }
+  return `${h.padStart(2, '0')}:${m}`;
 }
 
 /** Minutes from the shift's start (07:00 or 19:00), wrapping past midnight: RoundWindowRules.MinutesIntoShift. */

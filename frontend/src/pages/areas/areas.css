@@ -191,12 +191,25 @@
 .areas-shift__add {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
 }
 
-.areas-shift__time {
-  width: 90px;
+/* facility-0083: [ชม.]:[นาที] */
+.areas-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.areas-time__label {
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.areas-time__box {
+  width: 3.5em;
+  text-align: center;
 }
 
 .areas-sign {
