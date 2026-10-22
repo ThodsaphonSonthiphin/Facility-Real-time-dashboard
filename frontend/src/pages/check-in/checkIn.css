@@ -65,12 +65,6 @@
   font-weight: 600;
 }
 
-.checkin-step--next {
-  border: 2px solid var(--color-primary);
-  color: var(--color-primary);
-  font-weight: 600;
-}
-
 .checkin-flag {
   color: var(--color-warn-text);
   font-weight: 700;

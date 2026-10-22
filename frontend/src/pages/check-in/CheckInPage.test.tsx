@@ -1,25 +1,32 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SEND_TIMEOUT_MS } from '../../shared/api/baseApi';
 import {
+  area,
   attendance,
   cleanerSession,
   entry,
   myWork,
+  nightShift,
   notCheckedIn,
   onDuty,
   otherAreaBlocked,
   outsideShift,
 } from '../../test/cleanerFixtures';
 import { fakeGps, farFromSign, nearSign } from '../../test/fakeGps';
-import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
+import { fakeServer, type FakeResponse, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
 
 const SIGN = '/check-in/token-checkin-ar01';
 const shiftIn0652 = entry('ShiftIn', '2026-10-14T23:52:00Z');
 
 function serve(routes: FakeRoutes, work = myWork(notCheckedIn)) {
-  return fakeServer({ ...cleanerSession, 'GET /api/my-work': () => ({ status: 200, body: work }), ...routes });
+  return fakeServer({
+    ...cleanerSession,
+    'GET /api/my-work': () => ({ status: 200, body: work }),
+    'GET /api/attendance/signs/token-checkin-ar01': () => ({ status: 204 }),
+    ...routes,
+  });
 }
 
 /** The four tiles of "วันนี้", as a person reads them. */
@@ -38,7 +45,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(screen.getByRole('heading', { name: 'ลงเวลา' })).toBeInTheDocument();
     expect(screen.getByText('กะเช้า 07:00–19:00')).toBeInTheDocument();
     expect(screen.getByText('Area ของคุณ: Area ทดลอง · 1 จุด')).toBeInTheDocument();
-    expect(steps()).toEqual(['เข้างาน ถัดไป', 'ออกพัก –', 'กลับจากพัก –', 'เลิกงาน –']);
+    expect(steps()).toEqual(['เข้างาน –', 'ออกพัก –', 'กลับจากพัก –', 'เลิกงาน –']);
   });
 
   it('เข้างาน sends the sign token, the event and the GPS, shows the time and offers the next events (M10)', async () => {
@@ -58,7 +65,9 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
       longitude: 100.5018,
       accuracyM: 12,
     });
-    expect(steps()).toEqual(['เข้างาน 06:52', 'ออกพัก ถัดไป', 'กลับจากพัก –', 'เลิกงาน ถัดไป']);
+    // facility-0078: two events may come next, and only the buttons say so
+    expect(steps()).toEqual(['เข้างาน 06:52', 'ออกพัก –', 'กลับจากพัก –', 'เลิกงาน –']);
+    expect(screen.queryByText('ถัดไป')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ออกพัก' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'เลิกงาน' })).toBeInTheDocument();
     // the answer updated My Work's cached copy; nothing was asked again
@@ -184,13 +193,14 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(screen.getByRole('link', { name: 'กลับไปงานของฉัน' })).toHaveAttribute('href', '/my-work');
   });
 
-  it('outside the attendance window there is no button (facility-0069)', async () => {
-    serve({}, myWork(outsideShift));
+  it('outside the attendance window: no button, the own shift and the times it can be recorded (facility-0069, 0077)', async () => {
+    serve({}, myWork(outsideShift, [area()], nightShift));
     await renderApp(SIGN);
 
-    expect(
-      await screen.findByText('ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ ลงเวลาได้ตั้งแต่ 60 นาทีก่อนกะเริ่มจนถึง 60 นาทีหลังกะจบ'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ')).toBeInTheDocument();
+    expect(screen.getByText('กะของคุณ: กะดึก 19:00–07:00')).toBeInTheDocument();
+    expect(screen.getByText('ลงเวลาได้ตั้งแต่ 18:00 ถึง 08:00')).toBeInTheDocument();
+    expect(screen.queryByText(/60 นาที/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
   });
 
@@ -287,5 +297,52 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
 
     expect(gps.calls).toBe(1);
     expect(server.calls.some((c) => c.path === '/api/attendance')).toBe(false);
+  });
+
+  it('a sign that no longer works is told on opening, with no button, and nothing is sent (facility-0082)', async () => {
+    const server = serve({
+      'GET /api/attendance/signs/token-checkin-ar01': () => ({ status: 404, body: { message: 'ไม่พบป้ายลงเวลานี้' } }),
+    });
+    await renderApp(SIGN);
+
+    expect(await screen.findByRole('heading', { name: 'ป้ายนี้ใช้ไม่ได้แล้ว' })).toBeInTheDocument();
+    expect(
+      screen.getByText('ยังไม่ได้ลงเวลา ป้ายนี้อาจถูกสร้าง QR ใหม่แล้ว หรือไม่มีในระบบ แจ้งแอดมิน'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ดูงานของฉัน' })).toHaveAttribute('href', '/my-work');
+    expect(server.calls.some((c) => c.path === '/api/attendance')).toBe(false);
+  });
+
+  it('the buttons wait until the server says the sign works, asked once per opening (facility-0082)', async () => {
+    let answer: (response: FakeResponse) => void = () => {};
+    const server = serve({
+      'GET /api/attendance/signs/token-checkin-ar01': () =>
+        new Promise<FakeResponse>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    await renderApp(SIGN);
+
+    expect(await screen.findByText('กะเช้า 07:00–19:00')).toBeInTheDocument();
+    await waitFor(() => expect(server.calls.some((c) => c.path === '/api/attendance/signs/token-checkin-ar01')).toBe(true));
+    expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
+
+    answer({ status: 204 });
+
+    expect(await screen.findByRole('button', { name: 'เข้างาน' })).toBeInTheDocument();
+    expect(server.calls.filter((c) => c.path === '/api/attendance/signs/token-checkin-ar01')).toHaveLength(1);
+  });
+
+  it('if the sign cannot be checked, the page says why and offers no button', async () => {
+    serve({
+      'GET /api/attendance/signs/token-checkin-ar01': () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+    await renderApp(SIGN);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+    expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
   });
 });

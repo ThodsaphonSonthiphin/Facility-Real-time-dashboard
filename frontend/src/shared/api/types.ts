@@ -121,10 +121,18 @@ export interface MyWorkArea {
   points: PointCard[];
 }
 
-/** MyWorkDto (facility-0052): the attendance, then the own Area, then covered Areas. */
+/** OwnShiftDto (facility-0077): the Cleaner's regular shift and the Thai wall-clock times its attendance opens and closes, "HH:mm:ss". */
+export interface OwnShift {
+  shift: Shift;
+  opensAt: string;
+  closesAt: string;
+}
+
+/** MyWorkDto (facility-0052): the attendance, then the own Area, then covered Areas. ownShift is missing for an account with no shift. */
 export interface MyWork {
   attendance: AttendanceState;
   areas: MyWorkArea[];
+  ownShift?: OwnShift;
 }
 
 /** BlockedScanResponse (403): the scanned sign belongs elsewhere and nothing was recorded (facility-0041, 0048). */
