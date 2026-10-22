@@ -308,4 +308,60 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
     expect(await screen.findByText('ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR12 แล้ว')).toBeInTheDocument();
     expect(server.calls.some((call) => call.method === 'DELETE' && call.path === '/api/admin/cover-assignments/81')).toBe(true);
   });
+
+  it('goes back to the box of this shift once the clock reaches the shift that was picked', async () => {
+    let night = false;
+    serve({
+      'GET /api/admin/attendance': (request) => ({
+        status: 200,
+        body:
+          request.search === '?shiftDate=2026-10-15&shift=Night'
+            ? attendanceBoard([emptyRow], { shift: 'Night' })
+            : night
+              ? attendanceBoard(undefined, { shift: 'Night' })
+              : attendanceBoard(),
+      }),
+    });
+    const { user, store } = await renderApp('/admin/alerts');
+    await waitFor(() => expect(() => hub.latest()).not.toThrow());
+    await apiIdle(store);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'วันและกะ' }), 'กะดึก พฤ. 15/10/2026');
+    expect(await screen.findByRole('region', { name: 'พื้นที่ของกะที่ยังไม่เริ่ม (1)' })).toBeInTheDocument();
+
+    // The board of now is the one cached for the Day shift, so that is the tag the event refreshes
+    night = true;
+    act(() => hub.latest().push('AttendanceRecorded', { areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }));
+
+    expect(await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /พื้นที่ของกะที่ยังไม่เริ่ม/ })).not.toBeInTheDocument();
+    const picker = screen.getByRole('combobox', { name: 'วันและกะ' });
+    expect(picker).toHaveValue('2026-10-15:Night');
+    expect(within(picker).getByRole('option', { name: 'กะดึก พฤ. 15/10/2026 (กะนี้)' })).toBeInTheDocument();
+  });
+
+  it('goes back to the box of this shift once the clock has passed the shift that was picked', async () => {
+    let later = false;
+    serveAhead({
+      'GET /api/admin/attendance': (request) => ({
+        status: 200,
+        body:
+          request.search === '?shiftDate=2026-10-16&shift=Day'
+            ? aheadBoard
+            : later
+              ? attendanceBoard(undefined, { shiftDate: '2026-10-17' })
+              : attendanceBoard(),
+      }),
+    });
+    const { user, store } = await renderApp('/admin/alerts');
+    await waitFor(() => expect(() => hub.latest()).not.toThrow());
+    await apiIdle(store);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'วันและกะ' }), 'กะเช้า ศ. 16/10/2026');
+    expect(await screen.findByRole('region', { name: 'พื้นที่ของกะที่ยังไม่เริ่ม (3)' })).toBeInTheDocument();
+
+    later = true;
+    act(() => hub.latest().push('AttendanceRecorded', { areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }));
+
+    expect(await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'วันและกะ' })).toHaveValue('2026-10-17:Day');
+  });
 });

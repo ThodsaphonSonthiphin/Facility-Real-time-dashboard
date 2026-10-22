@@ -114,9 +114,8 @@ export function fillLink(alert: Alert): string {
  * One choice of "ให้ใครทำแทน": who, their own Area, their Shift-In, and whether they already scanned this Area's signs.
  * For a shift not started nobody has checked in or scanned, so only who and their Area are shown.
  */
-export function candidateText(candidate: CoverCandidate, ahead: boolean | number = false): string {
-  // `=== true`, and the type allows a number: `candidates.map(candidateText)` passes the index as the second argument
-  if (ahead === true) {
+export function candidateText(candidate: CoverCandidate, ahead = false): string {
+  if (ahead) {
     return `${candidate.displayName} · ${candidate.areaCode}`;
   }
   return [

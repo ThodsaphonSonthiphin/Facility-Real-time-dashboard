@@ -94,7 +94,7 @@ describe('alert rules (wireframe D3)', () => {
   });
 
   it('describes a cover candidate and a made cover in words', () => {
-    expect(candidates.map(candidateText)).toEqual([
+    expect(candidates.map((candidate) => candidateText(candidate))).toEqual([
       'แม่บ้านที่อื่น · AR03 · เข้างานแล้ว 06:55 · สแกนป้าย Area นี้เมื่อ 09:10',
       'แม่บ้านทดสอบ · AR01 · เข้างานแล้ว 06:52',
       'แม่บ้านมาสาย · AR08 · ยังไม่ลงเวลา',
