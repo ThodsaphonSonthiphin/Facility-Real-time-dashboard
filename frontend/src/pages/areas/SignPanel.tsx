@@ -62,7 +62,7 @@ function SignLocation({ areaId, sign }: { areaId: number; sign: AdminSign }) {
     try {
       await setLocation({ signId: sign.id, ...place, source: 'Map' }).unwrap();
       setText('');
-      setNote({ kind: 'ok', text: 'บันทึกพิกัดจากแผนที่แล้ว ป้ายนี้ยังไม่ยืนยันหน้างาน' });
+      setNote({ kind: 'ok', text: 'บันทึกพิกัดที่ปักจากแผนที่แล้ว ป้ายนี้ยังไม่ได้วัดที่ป้ายจริง' });
     } catch (error) {
       setNote({ kind: 'error', text: getErrorMessage(error) });
     }
@@ -78,13 +78,13 @@ function SignLocation({ areaId, sign }: { areaId: number; sign: AdminSign }) {
       </p>
       <Link to={`/admin/areas/${areaId}/capture?sign=${sign.id}`}>เก็บพิกัดที่ป้ายด้วยมือถือ (M17) ›</Link>
       <p className="app-field__help">
-        เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย แล้วกด "ใช้ตำแหน่งตรงนี้" ระบบอ่าน GPS ต่อเนื่อง 30 วินาที แล้วใช้ค่ากลาง
+        เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย แล้วกด "ใช้ตำแหน่งตรงนี้" ระบบอ่านตำแหน่งต่อเนื่อง 30 วินาที แล้วใช้ค่ากลาง
         ให้ยืนนิ่งจนครบเวลา
       </p>
       {sign.locationSource !== 'Site' && (
         <div className="areas-sign__row">
           <label className="app-field">
-            ยังไม่ได้ไปหน้างาน? ใส่พิกัดจากแผนที่ไปก่อน
+            ยังไม่ได้ไปที่ป้าย? ปักพิกัดจากแผนที่ไปก่อน
             <input
               className="app-input"
               placeholder="13.756300, 100.501800"
@@ -94,10 +94,10 @@ function SignLocation({ areaId, sign }: { areaId: number; sign: AdminSign }) {
             />
           </label>
           <button type="button" className="app-button" disabled={isLoading} onClick={() => void saveMapPick()}>
-            บันทึกพิกัดจากแผนที่
+            บันทึกพิกัดที่ปักจากแผนที่
           </button>
           <p className="app-field__help">
-            คัดลอกพิกัดจากแอปแผนที่ พิกัดจากแผนที่จะขึ้นว่า "ยังไม่ยืนยันหน้างาน" จนกว่าจะมาเก็บที่ป้ายจริง
+            คัดลอกพิกัดจากแอปแผนที่ พิกัดที่ปักจากแผนที่จะขึ้นว่า "ยังไม่ได้วัดที่ป้ายจริง" จนกว่าจะมาวัดที่ป้าย
           </p>
         </div>
       )}
@@ -145,7 +145,7 @@ function SignRadius({ sign }: { sign: AdminSign }) {
           บันทึกรัศมี
         </button>
       </div>
-      <p className="app-field__help">สแกนห่างจากป้ายเกินรัศมีจะติดธง ค่าเริ่ม 50 ม.</p>
+      <p className="app-field__help">สแกนห่างจากป้ายเกินรัศมีจะขึ้นว่าไกลป้าย ค่าเริ่ม 50 ม.</p>
       <NoteLine note={note} />
     </section>
   );
@@ -173,8 +173,8 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
   return (
     <section className="areas-sign__part" aria-labelledby={titleId}>
       <h4 id={titleId}>QR ของป้าย</h4>
-      <p>{`ออก QR ล่าสุด ${formatDate(sign.qrIssuedAt)} ${formatTime(sign.qrIssuedAt)}`}</p>
-      {!canIssueQr && <p className="app-field__help">ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงออก QR ใหม่ได้</p>}
+      <p>{`สร้าง QR ล่าสุด ${formatDate(sign.qrIssuedAt)} ${formatTime(sign.qrIssuedAt)}`}</p>
+      {!canIssueQr && <p className="app-field__help">ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้</p>}
       {canIssueQr && !asking && (
         <button
           type="button"
@@ -184,7 +184,7 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
             setDone(false);
           }}
         >
-          ออก QR ใหม่
+          สร้าง QR ใหม่
         </button>
       )}
       {asking && (
@@ -194,7 +194,7 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
           aria-labelledby={`${titleId}-ask`}
           aria-describedby={`${titleId}-detail`}
         >
-          <p id={`${titleId}-ask`} className="app-confirm__title">{`ออก QR ใหม่ของป้าย ${sign.code} ${label}?`}</p>
+          <p id={`${titleId}-ask`} className="app-confirm__title">{`สร้าง QR ใหม่ของป้าย ${sign.code} ${label}?`}</p>
           <p id={`${titleId}-detail`}>ป้ายที่ติดอยู่ตอนนี้จะสแกนไม่ได้ทันที ต้องพิมพ์ป้ายใหม่ไปติดแทน ประวัติการสแกนไม่เปลี่ยน</p>
           <div className="app-confirm__buttons">
             <button
@@ -203,7 +203,7 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
               disabled={isLoading}
               onClick={() => void confirm()}
             >
-              {isLoading ? 'กำลังออก QR...' : 'ยืนยัน ออก QR ใหม่'}
+              {isLoading ? 'กำลังสร้าง QR...' : 'ยืนยัน สร้าง QR ใหม่'}
             </button>
             {/* The safe choice has the focus */}
             <button type="button" className="app-button" autoFocus disabled={isLoading} onClick={() => setAsking(false)}>
@@ -214,7 +214,7 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
       )}
       {done && (
         <p className="app-note app-note--info" role="status">
-          <span>ออก QR ใหม่แล้ว ป้ายเดิมสแกนไม่ได้แล้ว</span>{' '}
+          <span>สร้าง QR ใหม่แล้ว ป้ายเดิมสแกนไม่ได้แล้ว</span>{' '}
           <Link to={`/admin/print?area=${areaId}&sign=${sign.id}`}>พิมพ์ป้ายใหม่ ›</Link>
         </p>
       )}

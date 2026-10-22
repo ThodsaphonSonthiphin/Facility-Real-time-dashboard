@@ -196,6 +196,7 @@ Plan 4 test results at merge:
 - 2026-10-22 · Task 7 done: D3 "วันและกะ" picks the shift on the clock ("(กะนี้)") to the Night shift 7 days on, with the Thai weekday; a shift not started shows every Area of it with "แม่บ้านประจำ: …" (the board's `shiftDate` and `shift`, no server change); a search by Cleaner, Area code or name; the cover form, its candidates and the covers box follow the pick (facility-0075, 0084). `formatWeekday`, `coverSlots`, `slotText`, `matchesSearch`. Frontend 401 tests. Next: Task 8 (words on the phone pages).
 - 2026-10-22 · Task 8 done: approved words (facility-0085) on the phone pages, the login pages and the shared pieces: พื้นที่, แอดมิน, ตำแหน่ง, ไกลป้าย, เลยเวลา, ส่งเพิ่ม (ไม่นับรอบ), สิ่งที่ต้องแก้; tests changed with them. Frontend 401 tests; main JS 157.92 kB gzip. Next: Task 9 (words on the Admin live and report pages).
 - 2026-10-22 · Task 9 done: approved words (facility-0085) on D1, D2, D3, D7, D8, D9 and the menu (จัดการพื้นที่และป้าย, ประวัติการแก้ไขของแอดมิน; blocked scans named สแกนผิดพื้นที่ / ผิดตึก / นอกกะ; ไกลป้าย for flags; ตรวจตอนอยู่ไกลป้าย on D7); tests changed with them. Frontend 401 tests. Next: Task 10 (words on the Admin setup pages).
+- 2026-10-22 · Task 10 done: approved words (facility-0085) on D4, D5 (printed signs: "พื้นที่ AR01 · ตึก A", "สร้าง QR"), D6, D10 and M17 (วัดที่ป้ายจริง / ปักจากแผนที่, สร้าง QR ใหม่, แอดมิน); tests changed with them. Frontend 401 tests. Next: Task 11 (server words).
 
 ## Sharing a test build (colleagues on other networks)
 

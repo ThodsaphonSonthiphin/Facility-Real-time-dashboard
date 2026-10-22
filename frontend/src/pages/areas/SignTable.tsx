@@ -17,7 +17,7 @@ export function SignTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (tar
 
   return (
     <>
-      <table className="app-table areas-signs" aria-label="ป้ายของ Area นี้">
+      <table className="app-table areas-signs" aria-label="ป้ายของพื้นที่นี้">
         <thead>
           <tr>
             <th scope="col">ป้าย</th>
@@ -30,7 +30,7 @@ export function SignTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (tar
           <tr>
             <th scope="row">
               <strong>{checkInSign.code}</strong> ป้ายลงเวลา
-              <span className="app-muted areas-kind">ป้ายลงเวลา 1 ป้ายต่อ Area</span>
+              <span className="app-muted areas-kind">ป้ายลงเวลา 1 ป้ายต่อพื้นที่</span>
             </th>
             <td>เข้างาน ออกพัก กลับจากพัก เลิกงาน</td>
             <td>{placeText(checkInSign)}</td>
@@ -71,10 +71,10 @@ export function SignTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (tar
           ))}
         </tbody>
       </table>
-      {detail.points.length === 0 && <p className="app-muted">Area นี้ยังไม่มีจุดทำความสะอาด</p>}
+      {detail.points.length === 0 && <p className="app-muted">พื้นที่นี้ยังไม่มีจุดทำความสะอาด</p>}
       {area.isActive && (
         <button type="button" className="app-button areas-add-point" onClick={() => onEdit({ kind: 'new-point' })}>
-          + เพิ่มจุดทำความสะอาดใน Area นี้
+          + เพิ่มจุดทำความสะอาดในพื้นที่นี้
         </button>
       )}
     </>

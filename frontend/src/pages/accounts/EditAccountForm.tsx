@@ -88,7 +88,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
       </label>
       {account.role === 'Cleaner' && (
         <div className="app-field">
-          <label htmlFor={`${titleId}-area`}>Area ประจำ</label>
+          <label htmlFor={`${titleId}-area`}>พื้นที่ประจำ</label>
           <select
             id={`${titleId}-area`}
             className="app-input"
@@ -96,14 +96,14 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
             disabled={isLoading || !account.isActive}
             onChange={(event) => chooseArea(event.target.value)}
           >
-            <option value="">— ยังไม่กำหนด Area —</option>
+            <option value="">— ยังไม่กำหนดพื้นที่ —</option>
             {areaChoices.map((option) => (
               <option key={option.id} value={String(option.id)}>
                 {areaOptionLabel(option, account.id)}
               </option>
             ))}
           </select>
-          {!account.isActive && <span className="app-field__help">เปิดใช้งานบัญชีก่อน แล้วค่อยเลือก Area</span>}
+          {!account.isActive && <span className="app-field__help">เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่</span>}
         </div>
       )}
       {account.role === 'Supervisor' && (

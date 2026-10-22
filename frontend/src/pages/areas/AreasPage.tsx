@@ -20,7 +20,7 @@ export function AreasPage() {
 
   return (
     <main className="areas-page">
-      <h1>จัดการ Area จุด และพิกัดป้าย</h1>
+      <h1>จัดการพื้นที่ จุด และพิกัดป้าย</h1>
       {error && (
         <p className="app-note app-note--error" role="alert">
           {getErrorMessage(error)}
@@ -28,22 +28,22 @@ export function AreasPage() {
       )}
       {areaId !== undefined && selectedId === undefined && (
         <p className="app-note app-note--error" role="alert">
-          ไม่พบ Area นี้
+          ไม่พบพื้นที่นี้
         </p>
       )}
       <div className="areas-layout">
         <AreaList areas={areas.data} selectedId={selectedId} loading={areas.isLoading} />
         <div className="areas-main">
           {areas.data?.length === 0 && (
-            <p className="app-note app-note--info">ยังไม่มี Area กด "+ เพิ่ม Area" เพื่อเริ่ม</p>
+            <p className="app-note app-note--info">ยังไม่มีพื้นที่ กด "+ เพิ่มพื้นที่" เพื่อเริ่ม</p>
           )}
-          {detail.isFetching && !detail.currentData && <p className="app-muted">กำลังโหลด Area...</p>}
+          {detail.isFetching && !detail.currentData && <p className="app-muted">กำลังโหลดพื้นที่...</p>}
           {detail.currentData && <AreaDetailPanel key={detail.currentData.area.id} detail={detail.currentData} />}
         </div>
       </div>
       <p className="app-muted">
-        แม่บ้านสแกนได้เฉพาะป้ายของ Area ตัวเอง · ป้ายลงเวลา 1 ป้ายต่อ Area ระบบสร้างให้เองเมื่อเพิ่ม Area ·
-        ทุกการแก้ในหน้านี้เก็บลงประวัติ Admin
+        แม่บ้านสแกนได้เฉพาะป้ายของพื้นที่ตัวเอง · ป้ายลงเวลา 1 ป้ายต่อพื้นที่ ระบบสร้างให้เองเมื่อเพิ่มพื้นที่ ·
+        ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
       </p>
     </main>
   );

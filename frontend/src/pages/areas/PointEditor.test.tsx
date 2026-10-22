@@ -117,7 +117,7 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
       },
     });
     const { user } = await renderApp('/admin/areas/2');
-    await user.click(await screen.findByRole('button', { name: '+ เพิ่มจุดทำความสะอาดใน Area นี้' }));
+    await user.click(await screen.findByRole('button', { name: '+ เพิ่มจุดทำความสะอาดในพื้นที่นี้' }));
 
     const editor = screen.getByRole('region', { name: 'เพิ่มจุด · AR02 Office ทดลอง' });
     expect(within(editor).queryByRole('group', { name: 'กะดึก' })).not.toBeInTheDocument();
@@ -229,7 +229,7 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
         }),
     });
     const { user } = await renderApp('/admin/areas/2');
-    await user.click(await screen.findByRole('button', { name: '+ เพิ่มจุดทำความสะอาดใน Area นี้' }));
+    await user.click(await screen.findByRole('button', { name: '+ เพิ่มจุดทำความสะอาดในพื้นที่นี้' }));
 
     const editor = screen.getByRole('region', { name: 'เพิ่มจุด · AR02 Office ทดลอง' });
     await user.type(within(editor).getByLabelText('ชื่อจุด'), 'โถงทางเดิน');

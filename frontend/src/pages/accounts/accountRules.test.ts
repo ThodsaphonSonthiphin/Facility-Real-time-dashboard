@@ -40,7 +40,7 @@ describe('account rules (facility-0020, 0054)', () => {
 
   it('writes where each role works', () => {
     expect(placeText(account())).toBe('AR01 · กะเช้า');
-    expect(placeText(account({ areaId: undefined, areaCode: undefined, shift: 'Night' }))).toBe('ยังไม่มี Area · กะดึก');
+    expect(placeText(account({ areaId: undefined, areaCode: undefined, shift: 'Night' }))).toBe('ยังไม่มีพื้นที่ · กะดึก');
     expect(placeText(account({ role: 'Supervisor', areaCode: undefined, buildingCode: 'B', shift: 'Night' }))).toBe(
       'ตึก B · กะดึก',
     );

@@ -12,14 +12,14 @@ export const filterLabel: Record<AccountFilter, string> = {
   all: 'ทั้งหมด',
   Cleaner: 'แม่บ้าน',
   Supervisor: 'หัวหน้า',
-  Admin: 'Admin',
+  Admin: 'แอดมิน',
   inactive: 'ปิดใช้งาน',
 };
 
 export const accountRoleLabel: Record<AccountRole, string> = {
   Cleaner: 'แม่บ้าน',
   Supervisor: 'หัวหน้า',
-  Admin: 'Admin',
+  Admin: 'แอดมิน',
 };
 
 function inFilter(account: Account, filter: AccountFilter): boolean {
@@ -55,7 +55,7 @@ export function placeText(account: Account): string {
   const shift = account.shift ? shiftShortLabel[account.shift] : 'ไม่มีกะ';
   return account.role === 'Supervisor'
     ? `ตึก ${account.buildingCode ?? '-'} · ${shift}`
-    : `${account.areaCode ?? 'ยังไม่มี Area'} · ${shift}`;
+    : `${account.areaCode ?? 'ยังไม่มีพื้นที่'} · ${shift}`;
 }
 
 /** D6's Area option: "AR12 ชื่อ · ตึก B · 2 กะ · กะเช้ามีคนแล้ว (ทองใบ)". The account being edited is not "someone". */
@@ -79,7 +79,7 @@ export function cleanerShiftBlock(area: AreaSummary | undefined, shift: Shift, e
     return null;
   }
   if (shift === 'Night' && area.shiftPattern === 'DayOnly') {
-    return 'Area นี้ทำเฉพาะกะเช้า';
+    return 'พื้นที่นี้ทำเฉพาะกะเช้า';
   }
   const holder = shift === 'Day' ? area.dayCleaner : area.nightCleaner;
   return holder && holder.id !== exceptUserId ? `มีคนประจำแล้ว (${holder.displayName})` : null;

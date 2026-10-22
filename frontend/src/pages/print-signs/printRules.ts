@@ -33,7 +33,7 @@ export function printableSigns(details: AreaDetail[], signId?: number): PrintSig
     .filter((detail) => detail.area.isActive)
     .flatMap((detail): PrintSign[] => {
       const { area, checkInSign } = detail;
-      const place = `Area ${area.code} · ตึก ${area.buildingCode}`;
+      const place = `พื้นที่ ${area.code} · ตึก ${area.buildingCode}`;
       const checkIn: PrintSign = {
         key: `sign-${checkInSign.id}`,
         kind: 'check-in',
@@ -86,7 +86,7 @@ export function nothingToPrint(details: AreaDetail[], signId: number | undefined
     return 'ป้ายนี้ปิดใช้งานหรือไม่มีแล้ว';
   }
   if (details.length === 1 && !details[0].area.isActive) {
-    return 'Area นี้ปิดใช้งาน ป้ายสแกนไม่ได้ จึงไม่มีป้ายให้พิมพ์';
+    return 'พื้นที่นี้ปิดใช้งาน ป้ายสแกนไม่ได้ จึงไม่มีป้ายให้พิมพ์';
   }
   return 'ไม่มีป้ายให้พิมพ์';
 }

@@ -22,16 +22,16 @@ export function AreaActiveSection({ detail }: { detail: AreaDetail }) {
   return (
     <>
       <section className="app-panel" aria-labelledby="areaform-signs">
-        <h2 id="areaform-signs">ป้ายของ Area นี้</h2>
-        <p>{`ป้ายลงเวลา ${detail.checkInSign.code} ระบบสร้างให้เองตอนเพิ่ม Area`}</p>
-        <p>{`จุดทำความสะอาด ${activePoints} จุด · เพิ่มหรือแก้ที่หน้า จัดการ Area และป้าย`}</p>
+        <h2 id="areaform-signs">ป้ายของพื้นที่นี้</h2>
+        <p>{`ป้ายลงเวลา ${detail.checkInSign.code} ระบบสร้างให้เองตอนเพิ่มพื้นที่`}</p>
+        <p>{`จุดทำความสะอาด ${activePoints} จุด · เพิ่มหรือแก้ที่หน้า จัดการพื้นที่และป้าย`}</p>
       </section>
       <section className="app-panel" aria-labelledby="areaform-active">
-        <h2 id="areaform-active">{area.isActive ? 'ปิดใช้งาน Area' : 'เปิดใช้งาน Area'}</h2>
+        <h2 id="areaform-active">{area.isActive ? 'ปิดใช้งานพื้นที่' : 'เปิดใช้งานพื้นที่'}</h2>
         {area.isActive ? (
-          <p>Area และทุกป้ายหายจาก Dashboard และสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้ ไม่มีปุ่มลบ</p>
+          <p>พื้นที่และทุกป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้ ไม่มีปุ่มลบ</p>
         ) : (
-          <p className="app-note app-note--warn">Area นี้ปิดใช้งานอยู่ ป้ายทุกป้ายสแกนไม่ได้</p>
+          <p className="app-note app-note--warn">พื้นที่นี้ปิดใช้งานอยู่ ป้ายทุกป้ายสแกนไม่ได้</p>
         )}
         <button
           type="button"
@@ -39,7 +39,7 @@ export function AreaActiveSection({ detail }: { detail: AreaDetail }) {
           disabled={isLoading}
           onClick={() => void toggle()}
         >
-          {area.isActive ? 'ปิดใช้งาน Area นี้' : 'เปิดใช้งาน Area นี้'}
+          {area.isActive ? 'ปิดใช้งานพื้นที่นี้' : 'เปิดใช้งานพื้นที่นี้'}
         </button>
         {note && (
           <p

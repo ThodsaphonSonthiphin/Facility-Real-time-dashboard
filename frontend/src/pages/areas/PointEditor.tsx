@@ -111,7 +111,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
             />
           ))}
           <p className="app-field__help">
-            ช่วงห้ามซ้อนกันและต้องอยู่ในกะ · ส่งหลังช่วงจบนับเป็นส่งช้า · Area ที่ทำเฉพาะกะเช้าจะไม่มีช่องกะดึก
+            ช่วงห้ามซ้อนกันและต้องอยู่ในกะ · ส่งหลังช่วงจบนับเป็นส่งช้า · พื้นที่ที่ทำเฉพาะกะเช้าจะไม่มีช่องกะดึก
           </p>
         </div>
         {problem && (
@@ -132,7 +132,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
         <div className="areas-editor__active">
           {point.isActive ? (
             <>
-              <p className="app-field__help">ปิดใช้งานแล้วจุดและป้ายหายจาก Dashboard และสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>
+              <p className="app-field__help">ปิดใช้งานแล้วจุดและป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>
               <button type="button" className="app-button" disabled={sending} onClick={() => void toggle(false)}>
                 ปิดใช้งานจุดนี้
               </button>

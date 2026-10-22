@@ -37,15 +37,15 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
       }),
     });
     await openAtSign('/admin/areas/1/capture?sign=102', 'AR01-02 ห้องน้ำหญิง');
-    expect(screen.getByText('Admin · เก็บพิกัดป้าย · AR01 Area ทดลอง')).toBeInTheDocument();
+    expect(screen.getByText('แอดมิน · เก็บพิกัดป้าย · AR01 Area ทดลอง')).toBeInTheDocument();
     expect(screen.getByText('รัศมี 50 ม. · ตอนนี้: ยังไม่มีพิกัด')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' }));
     await wait(18_000);
-    expect(screen.getByText('กำลังอ่าน GPS 18 / 30 วินาที')).toBeInTheDocument();
+    expect(screen.getByText('กำลังอ่านตำแหน่ง 18 / 30 วินาที')).toBeInTheDocument();
     expect(screen.getByText('ยืนนิ่งตรงที่ติดป้าย · อ่านได้ 3 ครั้ง · ความแม่นยำตอนนี้ ±16 ม.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'บันทึกพิกัด (รอครบ 30 วินาที)' })).toBeDisabled();
-    expect(within(screen.getByRole('list', { name: 'ป้ายของ Area นี้' })).getByText('กำลังเก็บ')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'ป้ายของพื้นที่นี้' })).getByText('กำลังเก็บ')).toBeInTheDocument();
 
     await wait(12_000);
     expect(screen.getByText('อ่านครบแล้ว 3 ครั้ง ใน 30 วินาที')).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     expect(gps.cleared).toBe(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกพิกัด' }));
-    expect(await screen.findByText('บันทึกพิกัดป้าย AR01-02 แล้ว หน้างาน ±16 ม.')).toBeInTheDocument();
+    expect(await screen.findByText('บันทึกพิกัดป้าย AR01-02 แล้ว วัดที่ป้ายจริง ±16 ม.')).toBeInTheDocument();
     expect(server.calls.find((call) => call.method === 'PUT')).toMatchObject({
       path: '/api/admin/signs/102/location',
       body: { latitude: 13.7564, longitude: 100.5019, accuracyM: 16, source: 'Site' },
@@ -85,7 +85,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     await wait(30_000);
 
     expect(
-      screen.getByText('อ่าน GPS ได้แค่ 2 ครั้งใน 30 วินาที ลองเดินไปใกล้หน้าต่างหรือที่โล่ง แล้วเก็บใหม่'),
+      screen.getByText('อ่านตำแหน่งได้แค่ 2 ครั้งใน 30 วินาที ลองเดินไปใกล้หน้าต่างหรือที่โล่ง แล้วเก็บใหม่'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'บันทึกพิกัด' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'เก็บใหม่' })).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     await wait(1_000);
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'เปิด Location และอนุญาตให้เว็บนี้อ่านตำแหน่ง แล้วกด "ใช้ตำแหน่งตรงนี้" อีกครั้ง',
+      'เปิดตำแหน่งและอนุญาตให้เว็บนี้อ่านตำแหน่ง แล้วกด "ใช้ตำแหน่งตรงนี้" อีกครั้ง',
     );
     expect(screen.getByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' })).toBeInTheDocument();
   });
@@ -125,14 +125,14 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     const { router } = await renderApp('/admin/areas/1/capture');
 
     expect(await screen.findByText('ยืนตรงที่ติดป้าย แล้วเลือกป้ายนั้นจากรายการข้างล่าง')).toBeInTheDocument();
-    const list = screen.getByRole('list', { name: 'ป้ายของ Area นี้' });
+    const list = screen.getByRole('list', { name: 'ป้ายของพื้นที่นี้' });
     expect(within(list).getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'AR01-IN ป้ายลงเวลาหน้างาน ±14 ม.',
-      'AR01-01 ห้องน้ำชายหน้างาน ±14 ม.',
+      'AR01-IN ป้ายลงเวลาวัดที่ป้ายจริง ±14 ม.',
+      'AR01-01 ห้องน้ำชายวัดที่ป้ายจริง ±14 ม.',
       'AR01-02 ห้องน้ำหญิงยังไม่มีพิกัด',
     ]);
     // M17 is a phone page: no Admin menu
-    expect(screen.queryByRole('navigation', { name: 'เมนู Admin' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'เมนูแอดมิน' })).not.toBeInTheDocument();
 
     fireEvent.click(within(list).getByRole('button', { name: /^AR01-IN/ }));
     await waitFor(() => expect(router.state.location.search).toBe('?sign=100'));
@@ -142,13 +142,13 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' }));
     await wait(5_000);
     // The page remounts the list with each sign, so the list is read again after a choice.
-    fireEvent.click(within(screen.getByRole('list', { name: 'ป้ายของ Area นี้' })).getByRole('button', { name: /^AR01-01/ }));
+    fireEvent.click(within(screen.getByRole('list', { name: 'ป้ายของพื้นที่นี้' })).getByRole('button', { name: /^AR01-01/ }));
     expect(gps.cleared).toBe(1);
     expect(await screen.findByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' }));
     await wait(5_000);
-    fireEvent.click(screen.getByRole('link', { name: '‹ กลับไปหน้าจัดการ Area และป้าย' }));
+    fireEvent.click(screen.getByRole('link', { name: '‹ กลับไปหน้าจัดการพื้นที่และป้าย' }));
     await waitFor(() => expect(gps.cleared).toBe(2));
   });
 
@@ -174,7 +174,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
       status: 200,
       body: unlocatedSign({ latitude: 13.7564, longitude: 100.5019, locationAccuracyM: 16, locationSource: 'Site' }),
     });
-    expect(await screen.findByText('บันทึกพิกัดป้าย AR01-02 แล้ว หน้างาน ±16 ม.')).toBeInTheDocument();
+    expect(await screen.findByText('บันทึกพิกัดป้าย AR01-02 แล้ว วัดที่ป้ายจริง ±16 ม.')).toBeInTheDocument();
   });
 
   it('a save the server refuses shows its message, keeps the median, and can be sent again', async () => {

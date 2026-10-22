@@ -16,11 +16,11 @@ export function AreaFormPage() {
   const detail = id === undefined ? undefined : area.currentData;
   const error = buildings.error ?? cleaners.error ?? area.error;
   const title =
-    id === undefined ? 'เพิ่ม Area' : detail ? `แก้ไข Area · ${detail.area.code} ${detail.area.name}` : 'แก้ไข Area';
+    id === undefined ? 'เพิ่มพื้นที่' : detail ? `แก้ไขพื้นที่ · ${detail.area.code} ${detail.area.name}` : 'แก้ไขพื้นที่';
 
   return (
     <main className="areaform-page">
-      <Link to={id === undefined ? '/admin/areas' : `/admin/areas/${id}`}>‹ จัดการ Area และป้าย</Link>
+      <Link to={id === undefined ? '/admin/areas' : `/admin/areas/${id}`}>‹ จัดการพื้นที่และป้าย</Link>
       <h1>{title}</h1>
       {error && (
         <p className="app-note app-note--error" role="alert">
@@ -33,7 +33,7 @@ export function AreaFormPage() {
         !error && <p className="app-muted">กำลังโหลด...</p>
       )}
       {detail && <AreaActiveSection detail={detail} />}
-      <p className="app-muted">การบันทึกทุกครั้งเก็บลงประวัติ Admin</p>
+      <p className="app-muted">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</p>
     </main>
   );
 }

@@ -3,8 +3,8 @@ import { formatCoordinates, roundsText, signPlaceLabel } from './labels';
 
 describe('Admin setup labels', () => {
   it('names where a sign location came from (facility-0045)', () => {
-    expect(signPlaceLabel({ locationSource: 'Site', locationAccuracyM: 14 })).toBe('หน้างาน ±14 ม.');
-    expect(signPlaceLabel({ locationSource: 'Map' })).toBe('ยังไม่ยืนยันหน้างาน (จากแผนที่)');
+    expect(signPlaceLabel({ locationSource: 'Site', locationAccuracyM: 14 })).toBe('วัดที่ป้ายจริง ±14 ม.');
+    expect(signPlaceLabel({ locationSource: 'Map' })).toBe('ปักจากแผนที่ (ยังไม่ได้วัดที่ป้ายจริง)');
     expect(signPlaceLabel({})).toBe('ยังไม่มีพิกัด');
   });
 
