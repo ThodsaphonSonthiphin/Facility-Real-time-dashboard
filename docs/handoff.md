@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#70 Tailwind set-up done on branch `feat/tailwind-setup`; next: the owner's eye check and the PR, then #71; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#70 Tailwind set-up done, PR open; next: merge it, then #71; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -300,7 +300,9 @@ Where `ui-ux-pro-max` fits:
 
 - 2026-10-22 · #70 done on branch `feat/tailwind-setup`: Tailwind 4.3.3 through `@tailwindcss/vite` (dev dependencies), preflight off (only `theme.css` and `utilities.css` are imported); `@theme` holds MASTER.md's tokens and clears Tailwind's own colours, text sizes, radii and fonts, so `bg-blue-600` and the like do not exist; the type scale is `text-xs` 13, `text-sm` 14, `text-md` 15, `text-base` 17, `text-lg` 19, `text-xl` 22, `text-2xl` 28 (written into MASTER.md). The old `:root` variables are renamed `--old-*` in all 19 CSS files (checked to be a pure rename) because they had the same names as the new tokens; they go in #82. `lucide-react` 1.53.0 (the newest release at least two weeks old). Measured: main JS 157.94 kB gzip (no icon used yet); a temporary probe showed `bg-primary` resolving to `#2563eb` and the first icon costing +1.38 kB, later ones about 0.15 kB (facility-0062, 0088 notes); main CSS 22.07 kB raw / 3.88 kB gzip (was 18.75 / 3.26). Tailwind also emits a few utilities from words in the source (`fixed`, `hidden`, `border`, `table`, …); no element uses those as class names. Lint, tsc clean; 403 tests pass. Code review (Standards + Spec) fixes: ADR 0088 keeps its estimate with a dated note; the `:root` comment says the base rules stay; MASTER.md names the icon sizes (`size-5` phone, `size-4` Admin); Tailwind moved to devDependencies. Not done: the owner's eye check of a phone page and an Admin page (nothing should look different). Next: the eye check, push and PR (with the CSS size), then #71.
 
-Next session: the owner's eye check of #70, then the PR; then `implement` #71.
+- 2026-10-22 · Owner's eye check of #70: both login pages (`/login` on a phone, `/login/admin` on the computer) served from this branch and from master side by side; the owner saw no difference. Dev servers stopped, comparison worktree removed. Pushed and PR opened. Next: the owner merges the PR, then `implement` #71.
+
+Next session: the owner merges the #70 PR, then `implement` #71.
 
 ## Owner's rules (still in force)
 
