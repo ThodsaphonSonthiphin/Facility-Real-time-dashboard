@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (plan 13 done and real run passed, branch feat/ux-fix-list)
+Last updated: 2026-10-22 (plan 13 merged, PR #66)
 
 ## Project
 
@@ -31,7 +31,7 @@ A factory cleaning-inspection system: 6 buildings, 70–72 Areas and about 170 h
 | 10 | Admin setup: Areas, points, round windows, signs, sign location capture, print signs, accounts | done, merged (PR #59, `a6dc170`) (branch `feat/admin-setup`): `docs/superpowers/plans/2026-10-19-admin-setup.md` |
 | 11 | Admin live board: lazy Admin routes, point status with hub and 30 s poll (D1), attendance and corrections (D2), alerts and covers (D3) | done, merged (PR #60, `f897548`) (branch `feat/admin-live-board`): `docs/superpowers/plans/2026-10-19-admin-live-board.md` |
 | 12 | Admin reports: inspection summary (D7), Excel export (D8), Admin history (D9) | done, merged (PR #62, `d9ac984`) (branch `feat/admin-reports`): `docs/superpowers/plans/2026-10-21-admin-reports.md` |
-| 13 | UX fix list: facility-0074 as amended (facility-0075 to 0085) | done on branch `feat/ux-fix-list` (not merged): `docs/superpowers/plans/2026-10-22-ux-fix-list.md` |
+| 13 | UX fix list: facility-0074 as amended (facility-0075 to 0085) | done, merged (PR #66) (branch `feat/ux-fix-list`): `docs/superpowers/plans/2026-10-22-ux-fix-list.md` |
 
 Plan 4 test results at merge:
 - Unit tests: 215 passed.
@@ -202,6 +202,7 @@ Plan 4 test results at merge:
 - 2026-10-22 · Controller's real run (plan 13), scripted part: the API on throwaway database `facility_ux_test` (Homebrew MySQL, no root password) served the built app (main JS 157.94 kB gzip). A Python script as the seed users passed 13/13: Cleaner E1001 gets 204 with no body on `/api/attendance/signs/token-checkin-ar01` and 404 "ไม่พบป้ายลงเวลานี้" on `token-restroom-m1` and `nope`; E1001's `ownShift` is Day 06:00:00–20:00:00; Night Cleaner E1002 at 14:56 has no `attendance.shift` and `ownShift.opensAt` 18:00:00; the Admin export of today is an .xlsx whose headers read พื้นที่ and ตำแหน่ง (no Area, GPS or Issue); tomorrow's Day board lists AR01 and AR02 as Empty with their regular Cleaners; a cover for AR01 tomorrow is 201, shows on that board and is cancelled with 204. `/check-in/nope`, `/scan/…` and `/admin/alerts` serve the app. No warn or fail in the API log. Frontend 401 passed three more times (once while the backend suite ran), so Task 12's one-off failure did not come back. API stopped, `facility_ux_test` dropped, `wwwroot` deleted. Not run: the owner's Chrome checklist (plan 13 Task 12 Step 5 item 3). Next: the whole-branch review, then the owner's checklist and OK for the push and PR.
 - 2026-10-22 · Final-review fix wave: check-in "กำลังโหลด..." also while the sign check runs; a dead assertion removed; ThaiLabels.AlertName takes the block reason with no default; the D4 minute box is selected on auto-advance; D3's covers box ahead names the picked shift when empty and shows the date of each assignment. Unit 302; API 542 + 5 skipped; frontend 402. Next: the owner's Chrome checklist, then the OK for the push and PR.
 - 2026-10-22 · Owner tried the build (throwaway `facility_ux_test`) on the three open questions. (1) Excel "ตำแหน่ง" is column L, after "ที่มา", not next to "ชื่อ" (F) as reported; kept unless the owner says otherwise. (2) D3 ahead: a covered Area looked like an empty one; the owner chose: it says "ทำแทนแล้ว: <name>" and has no assign button (cancel in the covers box to change who); the open cover form also closes once that Area is covered (facility-0084 amended). (3) No in-page retry after a failed sign check: checked by blocking the request, kept as is (plan decision 2). Frontend 403 tests; lint and tsc clean. Next: the owner's Chrome checklist, then the OK for the push and PR.
+- 2026-10-22 · Owner: push, PR and merge. Cleanup: API stopped, `facility_ux_test` dropped, `wwwroot` deleted. PR #66 opened (the plan's decisions 1–6 and the owner's three decisions in its description) and merged to master with the owner's OK. Next: the owner chooses from Pending work (Excel import of accounts, server-side search for the Admin history).
 
 ## Sharing a test build (colleagues on other networks)
 
@@ -218,11 +219,10 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
-- Plan 13 (UX fix list): the owner's OK for the push and PR of `feat/ux-fix-list`.
 
 ## Next: after plan 13
 
-Plan 13 built the UX fix list (facility-0074 as amended; facility-0075 to 0085), branch `feat/ux-fix-list`. Report the plan's decisions 1–6 to the owner in the PR. Still to check by eye on real phones: the device's font (facility-0072), the plain-http message, and the check-in page's sign check over the tunnel.
+Plan 13 built the UX fix list (facility-0074 as amended; facility-0075 to 0085) and is merged (PR #66). The owner chooses what comes next from Pending work. Still to check by eye on real phones: the device's font (facility-0072), the plain-http message, and the check-in page's sign check over the tunnel.
 
 ## Owner's rules (still in force)
 
