@@ -59,7 +59,7 @@ export function InspectionSummaryPage() {
   return (
     <main className="summary-page">
       <header>
-        <span className="app-muted">{summary ? rangeLine(summary, Boolean(asked)) : 'Admin เท่านั้น'}</span>
+        <span className="app-muted">{summary ? rangeLine(summary, Boolean(asked)) : 'แอดมินเท่านั้น'}</span>
         <h1>สรุปการตรวจของหัวหน้า</h1>
       </header>
       <div className="summary-controls">
@@ -98,7 +98,7 @@ function rangeKey(range: DateRange | undefined): string {
 
 /** The range the server counted, which is the one asked for, or its default. */
 function rangeLine(summary: InspectionSummary, asked: boolean): string {
-  return `Admin เท่านั้น · ${asked ? 'ช่วงที่เลือก' : '7 วันล่าสุด'} (${formatShiftDate(summary.from)}–${formatShiftDate(summary.to)})`;
+  return `แอดมินเท่านั้น · ${asked ? 'ช่วงที่เลือก' : '7 วันล่าสุด'} (${formatShiftDate(summary.from)}–${formatShiftDate(summary.to)})`;
 }
 
 /** Wireframe D7's notes, with "ตรวจทั้งหมด" and plan 6 decision 17 added. */
@@ -106,11 +106,11 @@ function SummaryNotes() {
   return (
     <div className="summary-notes">
       <span>
-        หน้านี้แสดงข้อมูลให้ Admin เห็น ระบบไม่ประเมินผลเอง และไม่มีขั้นต่ำว่าหัวหน้าต้องตรวจกี่ครั้ง · "จุดที่ตรวจแล้ว"
+        หน้านี้แสดงข้อมูลให้แอดมินเห็น ระบบไม่ประเมินผลเอง และไม่มีขั้นต่ำว่าหัวหน้าต้องตรวจกี่ครั้ง · "จุดที่ตรวจแล้ว"
         นับจุดในตึกและกะของหัวหน้าที่ถูกตรวจอย่างน้อย 1 ครั้งในช่วงที่เลือก
       </span>
       <span>
-        "ไม่ได้ตรวจ" คืองานที่แม่บ้านส่งแล้ว แต่รอบจบก่อนหัวหน้ามาตรวจ · "ตรวจที่ติดธง GPS"
+        "ไม่ได้ตรวจ" คืองานที่แม่บ้านส่งแล้ว แต่รอบจบก่อนหัวหน้ามาตรวจ · "ตรวจตอนอยู่ไกลป้าย"
         คือตรวจตอนที่มือถืออยู่นอกรัศมีของป้าย · "ตรวจทั้งหมด" นับทุกครั้งที่หัวหน้าคนนั้นตรวจ รวมตอนตรวจแทนตึกอื่น
       </span>
       <span>งานที่แม่บ้านส่งหลังจบกะไม่นับในตัวเลขของหัวหน้า เพราะไม่มีใครตรวจได้แล้ว</span>

@@ -20,7 +20,7 @@ export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
             <th scope="col">สัดส่วนที่ตรวจ</th>
             <th scope="col">ไม่ได้ตรวจ</th>
             <th scope="col">ให้แก้ไข</th>
-            <th scope="col">ตรวจที่ติดธง GPS</th>
+            <th scope="col">ตรวจตอนอยู่ไกลป้าย</th>
           </tr>
         </thead>
         <tbody>

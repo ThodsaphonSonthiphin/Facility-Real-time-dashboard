@@ -13,9 +13,9 @@ const adminLinks = [
   { to: '/admin/alerts', label: 'รายการที่ขึ้นเตือน', counted: true },
   { to: '/admin/inspection-summary', label: 'สรุปการตรวจ', counted: false },
   { to: '/admin/export', label: 'ส่งออก Excel', counted: false },
-  { to: '/admin/areas', label: 'จัดการ Area และป้าย', counted: false },
+  { to: '/admin/areas', label: 'จัดการพื้นที่และป้าย', counted: false },
   { to: '/admin/accounts', label: 'บัญชีผู้ใช้', counted: false },
-  { to: '/admin/history', label: 'ประวัติ Admin', counted: false },
+  { to: '/admin/history', label: 'ประวัติการแก้ไขของแอดมิน', counted: false },
 ] as const;
 
 export function AdminNav() {
@@ -24,7 +24,7 @@ export function AdminNav() {
   const open = openAlertCount(alerts);
 
   return (
-    <nav className="app-nav" aria-label="เมนู Admin">
+    <nav className="app-nav" aria-label="เมนูแอดมิน">
       <ul>
         {adminLinks.map((link) => (
           <li key={link.to}>

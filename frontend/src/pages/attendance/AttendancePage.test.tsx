@@ -45,10 +45,10 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
         .getAllByRole('listitem')
         .map((tile) => tile.textContent),
     ).toEqual([
-      'Area ที่ต้องมีคนกะนี้6ไม่รวม Area ที่ปิดกะนี้',
+      'พื้นที่ที่ต้องมีคนกะนี้6ไม่รวมพื้นที่ที่ปิดกะนี้',
       'มีคนแล้ว3รวมพักเบรก',
       'ยังไม่มีคน2ต้องหาคนทำแทน',
-      'มีคนทำแทน1Admin มอบหมายเฉพาะกะนี้',
+      'มีคนทำแทน1แอดมินมอบหมายเฉพาะกะนี้',
     ]);
     expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual([
       'AR09 Area เก้าตึก A',
@@ -61,9 +61,9 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     expect(cells('AR09')[0]).toBe('ไม่มีแม่บ้านประจำ');
     expect(cells('AR12')).toEqual(['แม่บ้านลายังไม่ลงเวลา', 'ยังไม่มีคน', '–', '–', '–', '–', '']);
     expect(cells('AR01')).toEqual(['แม่บ้านทดสอบ', 'ทำงานอยู่', '06:52', '–', '–', '–', 'เข้างาน ห่างป้าย 85 ม.']);
-    expect(within(rowOf('AR02')).getByText('ทำแทน: แม่บ้านที่อื่น (AR03) · Admin มอบหมาย 07:10 · เข้างาน 06:50')).toBeInTheDocument();
+    expect(within(rowOf('AR02')).getByText('ทำแทน: แม่บ้านที่อื่น (AR03) · แอดมินมอบหมาย 07:10 · เข้างาน 06:50')).toBeInTheDocument();
     expect(cells('AR02')[1]).toBe('มีคนทำแทน');
-    expect(cells('AR05')[2]).toBe('07:02แก้โดย Admin');
+    expect(cells('AR05')[2]).toBe('07:02แก้โดยแอดมิน');
     expect(cells('AR07')).toEqual(['แม่บ้านพัก', 'พักเบรก', '06:55', '09:30', '–', '–', '']);
     // facility-0059: no link to a sign page
     expect(within(screen.getByRole('table')).queryAllByRole('link')).toHaveLength(0);
@@ -124,7 +124,7 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
 
     await user.clear(screen.getByRole('searchbox', { name: 'ค้นหา' }));
     await user.type(screen.getByRole('searchbox', { name: 'ค้นหา' }), 'ไม่มีชื่อนี้');
-    expect(screen.getByText('ไม่พบ Area ที่ตรงกับที่ค้นหา')).toBeInTheDocument();
+    expect(screen.getByText('ไม่พบพื้นที่ที่ตรงกับที่ค้นหา')).toBeInTheDocument();
   });
 
   it('a check-in pushed for the shift on screen asks again; one for another shift does not (facility-0027 rule 5)', async () => {

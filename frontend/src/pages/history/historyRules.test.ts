@@ -31,11 +31,11 @@ describe('historyRules (D9)', () => {
 
   it('changeLines: one line per changed field, in Thai, from the stored snapshots (plan 12 decision 8)', () => {
     const [added, cover, review, phone, exported] = firstPage.entries;
-    expect(changeLines(added)).toEqual(['รายการ: – → เข้างาน', 'เวลา: – → 15/10 06:58', 'ที่มา: – → Admin เพิ่ม']);
+    expect(changeLines(added)).toEqual(['รายการ: – → เข้างาน', 'เวลา: – → 15/10 06:58', 'ที่มา: – → แอดมินเพิ่ม']);
     // null fields (BuildingId, BlockedScanId) are "–" on both sides, so they are left out
     expect(changeLines(cover)).toEqual([
       'คนทำแทน (รหัสในระบบ): – → 25',
-      'Area (รหัสในระบบ): – → 1',
+      'พื้นที่ (รหัสในระบบ): – → 1',
       'วันที่ของกะ: – → 15/10/2026',
       'กะ: – → กะเช้า',
     ]);
@@ -47,7 +47,7 @@ describe('historyRules (D9)', () => {
       'ชุดข้อมูล: – → การลงเวลา, การส่งงาน',
       'จำนวนแถว: – → 28, 412',
     ]);
-    expect(changeLines(olderPage.entries[0])).toEqual(['ออก QR: 01/10 09:00 → 13/10 14:40']);
+    expect(changeLines(olderPage.entries[0])).toEqual(['สร้าง QR: 01/10 09:00 → 13/10 14:40']);
   });
 
   it('changeLines leaves out fields that did not change, and shows round windows and Area shifts in Thai', () => {
@@ -57,7 +57,7 @@ describe('historyRules (D9)', () => {
         before: { EventType: 'ShiftOut', OccurredAt: '2026-10-15T11:58:00Z', Source: 'Scan' },
         after: { EventType: 'ShiftOut', OccurredAt: '2026-10-15T11:30:00Z', Source: 'AdminEdit' },
       }),
-    ).toEqual(['เวลา: 15/10 18:58 → 15/10 18:30', 'ที่มา: สแกนเอง → แก้โดย Admin']);
+    ).toEqual(['เวลา: 15/10 18:58 → 15/10 18:30', 'ที่มา: สแกนเอง → แก้โดยแอดมิน']);
     expect(
       changeLines({
         action: 'POINT_UPDATE',
@@ -72,7 +72,7 @@ describe('historyRules (D9)', () => {
         before: area,
         after: { ...area, ShiftPattern: 'DayOnly', NightCleanerId: null, RemovedNightWindows: 2 },
       }),
-    ).toEqual(['กะของ Area: 2 กะ (เช้า + ดึก) → เฉพาะกะเช้า', 'แม่บ้านกะดึก (รหัสในระบบ): 22 → –', 'รอบกะดึกที่ถูกลบ: – → 2']);
+    ).toEqual(['กะของพื้นที่: 2 กะ (เช้า + ดึก) → เฉพาะกะเช้า', 'แม่บ้านกะดึก (รหัสในระบบ): 22 → –', 'รอบกะดึกที่ถูกลบ: – → 2']);
     // the server always stores the count after an Area edit; none removed is no change
     expect(changeLines({ action: 'AREA_UPDATE', before: area, after: { ...area, Name: 'Area ใหม่', RemovedNightWindows: 0 } })).toEqual([
       'ชื่อ: Area ทดลอง → Area ใหม่',
@@ -109,7 +109,7 @@ describe('historyRules (D9)', () => {
   it('changeLines: a time field that does not parse shows as stored', () => {
     expect(
       changeLines({ action: 'QR_REGENERATE', before: { QrIssuedAt: 'not-a-time' }, after: { QrIssuedAt: '2026-10-13T07:40:00Z' } }),
-    ).toEqual(['ออก QR: not-a-time → 13/10 14:40']);
+    ).toEqual(['สร้าง QR: not-a-time → 13/10 14:40']);
   });
 
   it('changeLines: a phone change never shows the number, whatever the snapshot holds', () => {

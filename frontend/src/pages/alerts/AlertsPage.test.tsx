@@ -26,7 +26,7 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
     await screen.findAllByRole('article');
     expect(items()).toEqual([
       'ตรวจงานไกลจากป้าย · หัวหน้าทดสอบ (หัวหน้า)',
-      'สแกนนอก Area (ถูกบล็อก) · แม่บ้านที่อื่น',
+      'สแกนผิดพื้นที่ · แม่บ้านที่อื่น',
       'ไม่ได้ลงเวลาเลิกงาน · แม่บ้านกะดึก',
       'ลงเวลาไกลจากป้าย · แม่บ้านทดสอบ',
     ]);
@@ -74,7 +74,7 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
       () => alerts.map((a) => (closed && a === attendanceGpsAlert ? { ...a, reviewed: true, reviewedAt: '2026-10-15T03:30:00Z' } : a)),
     );
     const { user } = await renderApp('/admin/alerts');
-    const menu = screen.getByRole('navigation', { name: 'เมนู Admin' });
+    const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
     expect(await within(menu).findByRole('link', { name: 'รายการที่ขึ้นเตือน (4)' })).toHaveAttribute('aria-current', 'page');
     const item = await screen.findByRole('article', { name: 'ลงเวลาไกลจากป้าย · แม่บ้านทดสอบ' });
 

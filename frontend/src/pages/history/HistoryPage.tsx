@@ -54,8 +54,8 @@ export function HistoryPage() {
   return (
     <main className="history-page">
       <header>
-        <span className="app-muted">Admin เท่านั้น · อ่านอย่างเดียว</span>
-        <h1>ประวัติการเปลี่ยนแปลงของ Admin</h1>
+        <span className="app-muted">แอดมินเท่านั้น · อ่านอย่างเดียว</span>
+        <h1>ประวัติการแก้ไขของแอดมิน</h1>
       </header>
       <HistoryControls
         args={args}

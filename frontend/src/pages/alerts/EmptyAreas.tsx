@@ -36,7 +36,7 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, o
 
   return (
     <section className="alerts-section" aria-labelledby="alerts-empty">
-      <h2 id="alerts-empty">{ahead ? `พื้นที่ของกะที่ยังไม่เริ่ม (${rows.length})` : `Area ที่ยังไม่มีคน (${rows.length})`}</h2>
+      <h2 id="alerts-empty">{ahead ? `พื้นที่ของกะที่ยังไม่เริ่ม (${rows.length})` : `พื้นที่ที่ยังไม่มีคน (${rows.length})`}</h2>
       {ahead && board ? (
         <span className="app-muted">{`${slotText(board)} ยังไม่เริ่ม จึงแสดงทุกพื้นที่ที่ทำกะนี้พร้อมแม่บ้านประจำ`}</span>
       ) : (
@@ -72,7 +72,7 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, o
           {getErrorMessage(error)}
         </p>
       )}
-      {board && !ahead && rows.length === 0 && <p className="app-note app-note--info">ทุก Area มีคนแล้ว</p>}
+      {board && !ahead && rows.length === 0 && <p className="app-note app-note--info">ทุกพื้นที่มีคนแล้ว</p>}
       {board && ahead && rows.length === 0 && <p className="app-note app-note--info">ไม่มีพื้นที่ที่ทำกะนี้</p>}
       {rows.length > 0 && shown.length === 0 && <p className="app-note app-note--info">ไม่พบพื้นที่ที่ตรงกับที่ค้นหา</p>}
       <ul className="alerts-rows">

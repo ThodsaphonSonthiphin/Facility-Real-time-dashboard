@@ -14,7 +14,7 @@ export type AlertGroup = 'all' | 'blocked' | 'far' | 'missing';
 
 export const alertGroupLabel: Record<AlertGroup, string> = {
   all: 'ทุกประเภท',
-  blocked: 'สแกนแล้วถูกบล็อก',
+  blocked: 'สแกนผิดพื้นที่ / ผิดตึก / นอกกะ',
   far: 'ไกลจากป้าย',
   missing: 'ไม่ได้ลงเวลา',
 };
@@ -34,14 +34,14 @@ export function filterAlerts(alerts: readonly Alert[], tab: ReviewTab, group: Al
   );
 }
 
-/** What happened. A Blocked Scan says why it was refused (blockReason), so a Supervisor's is never "สแกนนอก Area". */
+/** What happened. A Blocked Scan says why it was refused (blockReason), so a Supervisor's is never "สแกนผิดพื้นที่". */
 export function alertTitle(alert: Alert): string {
   switch (alert.kind) {
     case 'BlockedScan':
       if (alert.blockReason === 'OtherBuilding') {
-        return 'สแกนนอกตึก (ถูกบล็อก)';
+        return 'สแกนผิดตึก';
       }
-      return alert.blockReason === 'OutsideShift' ? 'สแกนนอกกะ (ถูกบล็อก)' : 'สแกนนอก Area (ถูกบล็อก)';
+      return alert.blockReason === 'OutsideShift' ? 'สแกนนอกกะ' : 'สแกนผิดพื้นที่';
     case 'AttendanceGps':
       return 'ลงเวลาไกลจากป้าย';
     case 'SubmissionGps':
@@ -69,7 +69,7 @@ export function alertDetail(alert: Alert): string {
   if (alert.kind === 'BlockedScan') {
     const own =
       alert.person.role === 'Cleaner' && alert.person.areaCode
-        ? `Area ของ${alert.person.displayName}คือ ${alert.person.areaCode}`
+        ? `พื้นที่ของ${alert.person.displayName}คือ ${alert.person.areaCode}`
         : null;
     return [sign ? `${sign} ของ ${place}` : place, own, 'ไม่ได้บันทึกงาน'].filter(Boolean).join(' · ');
   }
@@ -122,7 +122,7 @@ export function candidateText(candidate: CoverCandidate, ahead = false): string 
     candidate.displayName,
     candidate.areaCode,
     candidate.shiftInAt ? `เข้างานแล้ว ${formatTime(candidate.shiftInAt)}` : 'ยังไม่ลงเวลา',
-    candidate.scannedThisAreaAt ? `สแกนป้าย Area นี้เมื่อ ${formatTime(candidate.scannedThisAreaAt)}` : null,
+    candidate.scannedThisAreaAt ? `สแกนป้ายพื้นที่นี้เมื่อ ${formatTime(candidate.scannedThisAreaAt)}` : null,
   ]
     .filter(Boolean)
     .join(' · ');

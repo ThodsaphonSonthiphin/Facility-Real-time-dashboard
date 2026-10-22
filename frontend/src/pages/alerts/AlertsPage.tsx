@@ -69,7 +69,7 @@ export function AlertsPage() {
   return (
     <main className="alerts-page">
       <header>
-        <span className="app-muted">เมื่อวานและวันนี้ · Admin เท่านั้น</span>
+        <span className="app-muted">เมื่อวานและวันนี้ · แอดมินเท่านั้น</span>
         <h1>รายการที่ขึ้นเตือน</h1>
       </header>
       {notice && (
@@ -153,7 +153,7 @@ export function AlertsPage() {
           ))}
         </ul>
         <p className="app-muted">
-          ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติของ Admin
+          ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
         </p>
       </section>
       {boardNow && <CoversThisShift board={boardNow} ahead={ahead} onNotice={setNotice} />}

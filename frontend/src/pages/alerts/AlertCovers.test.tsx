@@ -38,7 +38,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     });
     const { user } = await renderApp('/admin/alerts');
 
-    const empty = await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' });
+    const empty = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' });
     expect(within(empty).getByText('แม่บ้านลา ยังไม่ลงเวลา')).toBeInTheDocument();
     expect(within(empty).getByText('ไม่มีแม่บ้านประจำ')).toBeInTheDocument();
 
@@ -48,7 +48,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     expect(within(form).getByText('มีผลเฉพาะกะเช้า 15/10/2026 · หมดสิทธิ์เองเมื่อจบกะ ไม่ต้องกดยกเลิก')).toBeInTheDocument();
     const who = await within(form).findByRole('combobox', { name: 'ให้ใครทำแทน' });
     expect(within(who).getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'แม่บ้านที่อื่น · AR03 · เข้างานแล้ว 06:55 · สแกนป้าย Area นี้เมื่อ 09:10',
+      'แม่บ้านที่อื่น · AR03 · เข้างานแล้ว 06:55 · สแกนป้ายพื้นที่นี้เมื่อ 09:10',
       'แม่บ้านทดสอบ · AR01 · เข้างานแล้ว 06:52',
       'แม่บ้านมาสาย · AR08 · ยังไม่ลงเวลา',
     ]);
@@ -73,7 +73,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
       'POST /api/admin/cover-assignments': () => ({ status: 400, body: { message: 'กะนี้จบไปแล้ว' } }),
     });
     const { user } = await renderApp('/admin/alerts');
-    const empty = await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' });
+    const empty = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' });
 
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR09' }));
     const none = screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR09' });
@@ -98,7 +98,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
       }),
     });
     const { user } = await renderApp('/admin/alerts');
-    const item = await screen.findByRole('article', { name: 'สแกนนอก Area (ถูกบล็อก) · แม่บ้านที่อื่น' });
+    const item = await screen.findByRole('article', { name: 'สแกนผิดพื้นที่ · แม่บ้านที่อื่น' });
     const alertGets = server.calls.filter((call) => call.path === '/api/admin/alerts').length;
 
     await user.click(within(item).getByRole('button', { name: 'ให้ทำแทน AR12 กะนี้' }));
@@ -120,7 +120,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
       }),
     });
     const { user } = await renderApp('/admin/alerts');
-    const item = await screen.findByRole('article', { name: 'สแกนนอกตึก (ถูกบล็อก) · หัวหน้าทดสอบ (หัวหน้า)' });
+    const item = await screen.findByRole('article', { name: 'สแกนผิดตึก · หัวหน้าทดสอบ (หัวหน้า)' });
     expect(within(item).getByText('ป้าย BR01-01 ห้องประชุม ของ BR01 Area ตึกอื่น · ไม่ได้บันทึกงาน')).toBeInTheDocument();
 
     await user.click(within(item).getByRole('button', { name: 'ให้ตรวจแทนตึกนี้กะนี้' }));
@@ -137,7 +137,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
 
     const covers = await screen.findByRole('region', { name: 'คนทำแทนกะนี้ (1)' });
     expect(within(covers).getByRole('listitem')).toHaveTextContent(
-      'แม่บ้านที่อื่น ทำแทน AR02 · แทน แม่บ้านป่วย · Admin มอบหมาย 07:10',
+      'แม่บ้านที่อื่น ทำแทน AR02 · แทน แม่บ้านป่วย · แอดมินมอบหมาย 07:10',
     );
 
     await user.click(within(covers).getByRole('button', { name: 'ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR02' }));
@@ -151,7 +151,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
   it('ยกเลิก waits for the answer: the cover form stays while the assignment is in flight', async () => {
     const server = serve({ 'POST /api/admin/cover-assignments': () => new Promise(() => {}) });
     const { user } = await renderApp('/admin/alerts');
-    const empty = await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' });
+    const empty = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' });
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
     const form = screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' });
     await within(form).findByRole('combobox', { name: 'ให้ใครทำแทน' });
@@ -176,7 +176,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     const { user, store } = await renderApp('/admin/alerts');
     await waitFor(() => expect(() => hub.latest()).not.toThrow());
     await apiIdle(store);
-    const empty = await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' });
+    const empty = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' });
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
     expect(screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' })).toBeInTheDocument();
 
@@ -214,7 +214,7 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
     expect(await screen.findByRole('region', { name: 'พื้นที่ของกะที่ยังไม่เริ่ม (3)' })).toBeInTheDocument();
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'วันและกะ' }), 'กะเช้า พฤ. 15/10/2026 (กะนี้)');
-    expect(await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' })).toBeInTheDocument();
   });
 
   it('a shift not started lists every Area with its regular Cleaner, and the cover is for that shift', async () => {
@@ -332,7 +332,7 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
     night = true;
     act(() => hub.latest().push('AttendanceRecorded', { areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }));
 
-    expect(await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: /พื้นที่ของกะที่ยังไม่เริ่ม/ })).not.toBeInTheDocument();
     const picker = screen.getByRole('combobox', { name: 'วันและกะ' });
     expect(picker).toHaveValue('2026-10-15:Night');
@@ -361,7 +361,7 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
     later = true;
     act(() => hub.latest().push('AttendanceRecorded', { areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }));
 
-    expect(await screen.findByRole('region', { name: 'Area ที่ยังไม่มีคน (2)' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'วันและกะ' })).toHaveValue('2026-10-17:Day');
   });
 });

@@ -17,9 +17,9 @@ export const setTitle: Record<ExportSet, string> = {
 };
 
 export const setDetail: Record<ExportSet, string> = {
-  Attendance: 'คน · Area · กะ · เวลา 4 ครั้ง · ที่มา (สแกนเอง / แก้โดย Admin) · ธง GPS',
-  Submissions: 'จุด · รอบ · เวลา · ผล (ตรงเวลา / ส่งช้า / นอกรอบ) · Issue · ทำแทนหรือไม่ · ธง GPS · รอบที่ไม่ได้ทำ',
-  Inspections: 'หัวหน้า · จุด · รอบ · ผล · ข้อบกพร่อง · ธง GPS · รอบที่ไม่ได้ตรวจ / ไม่ได้แก้',
+  Attendance: 'คน · พื้นที่ · กะ · เวลา 4 ครั้ง · ที่มา (สแกนเอง / แก้โดยแอดมิน) · ไกลป้าย',
+  Submissions: 'จุด · รอบ · เวลา · ผล (ตรงเวลา / ส่งช้า / ส่งเพิ่ม ไม่นับรอบ) · แจ้งปัญหา · ทำแทนหรือไม่ · ไกลป้าย · รอบที่ไม่ได้ทำ',
+  Inspections: 'หัวหน้า · จุด · รอบ · ผล · สิ่งที่ต้องแก้ · ไกลป้าย · รอบที่ไม่ได้ตรวจ / ไม่ได้แก้',
 };
 
 /** AdminExportEndpoints names the file facility_<from>_<to>.xlsx. */

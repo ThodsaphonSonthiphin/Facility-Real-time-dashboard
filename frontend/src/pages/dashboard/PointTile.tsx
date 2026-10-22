@@ -32,7 +32,7 @@ function roundText(point: PointCard): string | null {
   return point.nextRound ? `รอบถัดไป ${formatRound(point.nextRound)}` : null;
 }
 
-const placementNote: Record<Placement, string> = { OnTime: '', Late: ' · ส่งช้า', Rework: ' · งานแก้', OffRound: ' · นอกรอบ' };
+const placementNote: Record<Placement, string> = { OnTime: '', Late: ' · ส่งช้า', Rework: ' · งานแก้', OffRound: ' · ส่งเพิ่ม (ไม่นับรอบ)' };
 
 /** What the card says under its round, by status. The browser computes no time-based status (facility-0061). */
 function detailText(point: PointCard): string {

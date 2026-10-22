@@ -155,7 +155,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     serve({}, nightBoard);
     await renderApp('/admin/attendance?date=2026-10-14&shift=Night&fill=99&event=ShiftOut');
 
-    expect(await screen.findByText('ไม่พบแม่บ้านคนนี้ในกะนี้ อาจย้าย Area หรือปิดใช้งานแล้ว')).toBeInTheDocument();
+    expect(await screen.findByText('ไม่พบแม่บ้านคนนี้ในกะนี้ อาจย้ายพื้นที่หรือปิดใช้งานแล้ว')).toBeInTheDocument();
   });
 
   it('ยกเลิก waits for the answer: it is disabled while the save is in flight', async () => {

@@ -42,9 +42,9 @@ describe('attendance rules (wireframe D2)', () => {
     expect(flagText(workingRow)).toBe('เข้างาน ห่างป้าย 85 ม.');
     expect(flagText(emptyRow)).toBe('');
     expect(flagText(correctedRow)).toBe(''); // no GPS verdict is not a flag
-    expect(coverLine(coveredRow.covers[0])).toBe('ทำแทน: แม่บ้านที่อื่น (AR03) · Admin มอบหมาย 07:10 · เข้างาน 06:50');
+    expect(coverLine(coveredRow.covers[0])).toBe('ทำแทน: แม่บ้านที่อื่น (AR03) · แอดมินมอบหมาย 07:10 · เข้างาน 06:50');
     expect(coverLine({ ...coveredRow.covers[0], ownAreaCode: undefined, shiftInAt: undefined })).toBe(
-      'ทำแทน: แม่บ้านที่อื่น · Admin มอบหมาย 07:10 · ยังไม่ลงเวลา',
+      'ทำแทน: แม่บ้านที่อื่น · แอดมินมอบหมาย 07:10 · ยังไม่ลงเวลา',
     );
   });
 

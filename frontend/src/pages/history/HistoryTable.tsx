@@ -15,7 +15,7 @@ export function HistoryTable({ entries, emptyText }: HistoryTableProps) {
   }
   return (
     <div className="app-table-scroll">
-      <table className="app-table history-table" aria-label="ประวัติของ Admin">
+      <table className="app-table history-table" aria-label="ประวัติการแก้ไขของแอดมิน">
         <thead>
           <tr>
             <th scope="col">เวลา</th>

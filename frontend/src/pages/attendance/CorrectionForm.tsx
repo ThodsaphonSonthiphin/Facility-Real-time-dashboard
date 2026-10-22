@@ -104,7 +104,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
         />
       </label>
       <span className="app-field__help">
-        ระบบเก็บค่าเดิม ผู้แก้ และเวลาที่แก้ไว้ในประวัติ · รายการนี้จะมีป้าย "แก้โดย Admin" · แม่บ้านและหัวหน้าแก้เองไม่ได้
+        ระบบเก็บค่าเดิม ผู้แก้ และเวลาที่แก้ไว้ในประวัติ · รายการนี้จะมีป้าย "แก้โดยแอดมิน" · แม่บ้านและหัวหน้าแก้เองไม่ได้
       </span>
       {problem && (
         <p className="app-note app-note--error" role="alert">

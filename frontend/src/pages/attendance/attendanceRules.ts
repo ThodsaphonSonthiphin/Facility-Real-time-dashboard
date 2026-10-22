@@ -82,7 +82,7 @@ export function flagText(row: BoardRow): string {
 export function coverLine(cover: BoardCover): string {
   return [
     `ทำแทน: ${cover.displayName}${cover.ownAreaCode ? ` (${cover.ownAreaCode})` : ''}`,
-    `Admin มอบหมาย ${formatTime(cover.assignedAt)}`,
+    `แอดมินมอบหมาย ${formatTime(cover.assignedAt)}`,
     cover.shiftInAt ? `เข้างาน ${formatTime(cover.shiftInAt)}` : 'ยังไม่ลงเวลา',
   ].join(' · ');
 }

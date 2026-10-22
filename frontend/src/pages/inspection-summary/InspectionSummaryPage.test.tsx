@@ -44,7 +44,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     const server = serve();
     await renderApp('/admin/inspection-summary');
 
-    expect(await screen.findByText('Admin เท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)')).toBeInTheDocument();
+    expect(await screen.findByText('แอดมินเท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)')).toBeInTheDocument();
     expect(query(summaryGets(server)[0].search)).toEqual({});
     expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual([
       'หัวหน้าทดสอบ660001',
@@ -98,14 +98,14 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
   it('shows a typed range; the address keeps it with the building', async () => {
     const server = serve();
     const { user, router } = await renderApp('/admin/inspection-summary');
-    await screen.findByText('Admin เท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
+    await screen.findByText('แอดมินเท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
 
     await user.clear(fromField());
     await user.type(fromField(), '01/10/2026');
     await user.clear(toField());
     await user.type(toField(), '07/10/2026{Enter}');
 
-    expect(await screen.findByText('Admin เท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)')).toBeInTheDocument();
+    expect(await screen.findByText('แอดมินเท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)')).toBeInTheDocument();
     await screen.findByRole('option', { name: 'B' });
     await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B');
 
@@ -118,7 +118,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
   it('a wrong, backwards or too long range is refused before asking', async () => {
     const server = serve();
     const { user } = await renderApp('/admin/inspection-summary');
-    await screen.findByText('Admin เท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
+    await screen.findByText('แอดมินเท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
     const show = screen.getByRole('button', { name: 'แสดง' });
 
     await user.clear(fromField());
@@ -146,7 +146,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     const server = serve();
     await renderApp('/admin/inspection-summary?from=2026-10-01&to=2026-10-07&building=1');
 
-    expect(await screen.findByText('Admin เท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)')).toBeInTheDocument();
+    expect(await screen.findByText('แอดมินเท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)')).toBeInTheDocument();
     expect(query(summaryGets(server)[0].search)).toEqual({ from: '2026-10-01', to: '2026-10-07', buildingId: '1' });
     expect(fromField()).toHaveValue('01/10/2026');
     expect(toField()).toHaveValue('07/10/2026');
@@ -156,7 +156,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
   it('"แสดง" on the range already in the address asks again, and adds no history entry', async () => {
     const server = serve();
     const { user, router } = await renderApp('/admin/inspection-summary?from=2026-10-01&to=2026-10-07');
-    await screen.findByText('Admin เท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)');
+    await screen.findByText('แอดมินเท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)');
     const before = summaryGets(server).length;
     const entries = window.history.length;
 
@@ -182,11 +182,11 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
   it('the fields follow the address when it changes while the page stays open', async () => {
     serve();
     const { user } = await renderApp('/admin/inspection-summary?from=2026-10-01&to=2026-10-07');
-    await screen.findByText('Admin เท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)');
+    await screen.findByText('แอดมินเท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)');
 
-    await user.click(within(screen.getByRole('navigation', { name: 'เมนู Admin' })).getByRole('link', { name: 'สรุปการตรวจ' }));
+    await user.click(within(screen.getByRole('navigation', { name: 'เมนูแอดมิน' })).getByRole('link', { name: 'สรุปการตรวจ' }));
 
-    await screen.findByText('Admin เท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
+    await screen.findByText('แอดมินเท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
     expect(fromField()).toHaveValue(formatShiftDate(addDays(thaiToday(), -6)));
     expect(toField()).toHaveValue(formatShiftDate(thaiToday()));
   });
@@ -194,14 +194,14 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
   it('is in the Admin menu as สรุปการตรวจ', async () => {
     serve();
     await renderApp('/admin/inspection-summary');
-    const menu = screen.getByRole('navigation', { name: 'เมนู Admin' });
+    const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
     expect(within(menu).getByRole('link', { name: 'สรุปการตรวจ' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('"ส่งออก Excel" opens the export of the range and building on screen', async () => {
     serve();
     await renderApp('/admin/inspection-summary?building=1');
-    await screen.findByText('Admin เท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
+    await screen.findByText('แอดมินเท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
 
     expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute(
       'href',

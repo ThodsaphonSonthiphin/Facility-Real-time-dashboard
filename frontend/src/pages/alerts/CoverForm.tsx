@@ -51,7 +51,7 @@ export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProp
       <span>
         {row.cleaner
           ? `แม่บ้านประจำ: ${row.cleaner.displayName}${ahead ? '' : ' · ยังไม่ลงเวลา'}`
-          : 'Area นี้ไม่มีแม่บ้านประจำกะนี้'}
+          : 'พื้นที่นี้ไม่มีแม่บ้านประจำกะนี้'}
       </span>
       {candidates.isLoading && <p className="app-muted">กำลังโหลดรายชื่อ...</p>}
       {candidates.error && (
@@ -76,7 +76,7 @@ export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProp
         {`มีผลเฉพาะ${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)} · หมดสิทธิ์เองเมื่อจบกะ ไม่ต้องกดยกเลิก`}
       </span>
       <span className="app-field__help">
-        แม่บ้านที่ทำแทนลงเวลาที่ป้าย Area ของตัวเองตามปกติ แล้วสแกนจุดของ Area นี้ได้ · งานที่สแกนจะบันทึกว่า "ทำแทน"
+        แม่บ้านที่ทำแทนลงเวลาที่ป้ายของพื้นที่ตัวเองตามปกติ แล้วสแกนจุดของพื้นที่นี้ได้ · งานที่สแกนจะบันทึกว่า "ทำแทน"
       </span>
       {problem && (
         <p className="app-note app-note--error" role="alert">

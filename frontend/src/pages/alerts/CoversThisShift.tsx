@@ -41,7 +41,7 @@ export function CoversThisShift({ board, ahead, onNotice }: CoversThisShiftProps
               <strong>{cover.displayName}</strong>
               {` ทำแทน ${row.areaCode}`}
               <span className="app-muted">
-                {` · แทน ${row.cleaner ? row.cleaner.displayName : 'ไม่มีแม่บ้านประจำ'} · Admin มอบหมาย ${formatTime(cover.assignedAt)}`}
+                {` · แทน ${row.cleaner ? row.cleaner.displayName : 'ไม่มีแม่บ้านประจำ'} · แอดมินมอบหมาย ${formatTime(cover.assignedAt)}`}
               </span>
             </span>
             <span className="app-muted">หมดสิทธิ์เมื่อจบกะ</span>
