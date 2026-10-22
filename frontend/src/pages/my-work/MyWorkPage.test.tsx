@@ -1,6 +1,6 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { area, cleanerSession, myWork, notCheckedIn, outsideShift, point } from '../../test/cleanerFixtures';
+import { area, cleanerSession, myWork, nightShift, notCheckedIn, outsideShift, point } from '../../test/cleanerFixtures';
 import { fakeServer } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
 
@@ -98,11 +98,17 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     expect(screen.getByText('ยังไม่ส่ง · ส่งได้ถึง 12:00')).toBeInTheDocument();
   });
 
-  it('outside the attendance window the shift line says so (facility-0069)', async () => {
-    serveMyWork(myWork(outsideShift));
+  it('outside the own shift: the shift and when check-in opens, with no counts and no cards (facility-0077)', async () => {
+    serveMyWork(myWork(outsideShift, [area([point({ status: 'Passed' })])], nightShift));
     await renderApp('/my-work');
 
-    expect(await screen.findByText('ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ')).toBeInTheDocument();
+    expect(await screen.findByText('ตอนนี้ไม่อยู่ในกะของคุณ')).toBeInTheDocument();
+    expect(screen.getByText('กะดึก 19:00–07:00')).toBeInTheDocument();
+    expect(screen.getByText('ลงเวลาเข้างานได้ตั้งแต่ 18:00')).toBeInTheDocument();
+    // another shift's work is not this Cleaner's: no "ส่งแล้ว" count and no card
+    expect(screen.queryByRole('list', { name: 'สรุปงาน' })).not.toBeInTheDocument();
+    expect(screen.queryByText('ห้องน้ำชาย')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'อัปเดต' })).toBeEnabled();
   });
 
   it('asks the server again on "อัปเดต" (no push for Cleaners, facility-0052)', async () => {

@@ -1,9 +1,9 @@
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
-import type { AttendanceState, MyWork, PointStatus } from '../../shared/api/types';
+import type { AttendanceState, MyWork, OwnShift, PointStatus, Shift } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
-import { formatTime } from '../../shared/utils/thaiTime';
+import { formatClock, formatTime } from '../../shared/utils/thaiTime';
 import { WorkCard } from './WorkCard';
 import './myWork.css';
 
@@ -25,12 +25,13 @@ const urgency: readonly PointStatus[] = [
  */
 export function MyWorkPage() {
   const { data, error, isLoading, isFetching, refetch } = useGetMyWorkQuery(undefined, freshOnOpen);
+  const shift = data?.attendance.shift;
 
   return (
     <main className="mywork-page">
       <header className="mywork-heading">
         <h1>งานของฉัน</h1>
-        {data && <p className="mywork-sub">{attendanceLine(data.attendance)}</p>}
+        {data && shift && <p className="mywork-sub">{attendanceLine(shift, data.attendance)}</p>}
       </header>
       {isLoading && <p className="mywork-muted">กำลังโหลดงาน...</p>}
       {error && (
@@ -38,7 +39,7 @@ export function MyWorkPage() {
           {getErrorMessage(error)}
         </p>
       )}
-      {data && <WorkList work={data} />}
+      {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
       <footer className="mywork-footer">
         <span>ไม่มีแจ้งเตือนเด้งขึ้น เปิดหน้านี้หรือกด "อัปเดต" เพื่อดูงานล่าสุด</span>
         <button type="button" className="app-button" disabled={isFetching} onClick={() => void refetch()}>
@@ -49,19 +50,30 @@ export function MyWorkPage() {
   );
 }
 
-function attendanceLine(attendance: AttendanceState): string {
-  if (!attendance.shift) {
-    return 'ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ';
-  }
+function attendanceLine(shift: Shift, attendance: AttendanceState): string {
   const shiftIn = attendance.events.find((e) => e.eventType === 'ShiftIn');
   const shiftOut = attendance.events.find((e) => e.eventType === 'ShiftOut');
   return [
-    shiftLabel[attendance.shift],
+    shiftLabel[shift],
     shiftIn ? `เข้างาน ${formatTime(shiftIn.occurredAt)}` : 'ยังไม่ได้ลงเวลาเข้างาน',
     shiftOut ? `เลิกงาน ${formatTime(shiftOut.occurredAt)}` : null,
   ]
     .filter(Boolean)
     .join(' · ');
+}
+
+/**
+ * facility-0077: outside the own shift's attendance window the server answers with the shift on the clock, which is
+ * someone else's work. So the page shows no counts and no cards, only the own shift and when its check-in opens.
+ */
+function OffShift({ ownShift }: { ownShift?: OwnShift }) {
+  return (
+    <div className="app-note app-note--info">
+      <strong>ตอนนี้ไม่อยู่ในกะของคุณ</strong>
+      {ownShift && <span>{shiftLabel[ownShift.shift]}</span>}
+      {ownShift && <span>{`ลงเวลาเข้างานได้ตั้งแต่ ${formatClock(ownShift.opensAt)}`}</span>}
+    </div>
+  );
 }
 
 function WorkList({ work }: { work: MyWork }) {
