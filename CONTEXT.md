@@ -35,6 +35,7 @@ _Avoid_: User Profile, Member, Employee Profile
 **Admin Account**:
 บัญชีผู้ใช้งานระดับผู้ดูแลระบบ มีสิทธิ์จัดการ Service Point, ออก QR Token ใหม่ และจัดการบัญชีผู้ใช้ ซึ่ง Cleaner Account ทำไม่ได้ login ด้วย username + รหัสผ่าน (facility-0002, 0054)
 _Avoid_: Superuser, Root, Manager
+_บนหน้าเว็บ_: แอดมิน (facility-0085)
 
 **Deactivated Account**:
 บัญชี (Cleaner หรือ Admin) ที่ Admin ปิดใช้งาน login ไม่ได้และ Session ที่ค้างอยู่หลุดภายในไม่กี่นาที แต่ประวัติ Scan Record และชื่อยังคงอยู่ เพราะระบบไม่ลบบัญชี Admin เปิดใช้งานกลับได้
@@ -55,10 +56,12 @@ _Avoid_: Overdue Scan, Missed Round
 **Off-Round Submission**:
 การส่งงานนอก Round Window ตอนที่รอบล่าสุดส่งไปแล้ว เช่น ส่ง 15:30 ก่อนรอบ 16:00–18:00 ระบบบันทึกไว้ แต่ไม่นับเป็นรอบใดและการ์ดไม่เปลี่ยน (facility-0047)
 _Avoid_: Extra Scan, Early Scan
+_บนหน้าเว็บ_: ส่งเพิ่ม (ไม่นับรอบ) (facility-0085)
 
 **Overdue**:
 Point Status ที่เวลาปัจจุบันพ้นเวลาสิ้นสุดของ Round Window ปัจจุบันแล้ว และรอบนั้นยังไม่มีการส่งงาน ไม่มีค่าผ่อนผัน (facility-0047)
 _Avoid_: Late, Missed, Expired
+_บนหน้าเว็บ_: เลยเวลา (facility-0085)
 
 **Shift Pattern**:
 รูปแบบกะของ Area มี 2 แบบ: ทำ 2 กะ (เช้า 07:00–19:00 และดึก 19:00–07:00) หรือทำเฉพาะกะเช้า เช่น Office จุดของ Area ที่ทำเฉพาะกะเช้าเป็น Off Hours ตลอดกะดึก (facility-0040, 0042)
@@ -95,6 +98,7 @@ _Avoid_: Location Spoofing, Area Lock, GPS Tracking
 **Geofence Flag**:
 ธงบนการลงเวลา การส่งงาน หรือการตรวจงานที่ระบบรับไว้แล้ว แต่พิกัดอยู่นอกรัศมีหรือคลาดเคลื่อนเกินรัศมีของป้าย (ถ้าปิด Location จะสแกนไม่ได้เลย จึงไม่เกิดธง) แสดงบน Dashboard ให้ Admin เรียกคุย การสแกนป้ายของ Area อื่นไม่ได้ธง แต่เป็น Blocked Scan
 _Avoid_: GPS Error, Location Violation, Rejected Check-In
+_บนหน้าเว็บ_: ไกลป้าย (facility-0085)
 
 **Supervisor Account**:
 บัญชีผู้ใช้งานระดับหัวหน้างาน มีสิทธิ์สแกนตรวจรับพื้นที่ ประเมินผลความสะอาด (สะอาด หรือ ต้องแก้ไข) และระบุข้อบกพร่อง ซึ่งแยกจากสิทธิ์ของ Cleaner Account และ Admin Account หัวหน้าประจำตึก + กะ (ตึกละ 2 คน: เช้า 1 คน ดึก 1 คน) ตรวจได้ทุก Area ในตึกตัวเองเฉพาะในกะของตัวเอง สแกนจุดในตึกอื่นหรือนอกกะเป็น Blocked Scan ไม่ต้องลงเวลา ตรวจกี่ครั้งก็ได้ แต่ตรวจได้เฉพาะงานที่ส่งในรอบปัจจุบัน login ด้วยรหัสพนักงาน + เบอร์โทรเหมือนแม่บ้าน (facility-0047, 0048, 0054)
@@ -111,10 +115,12 @@ _Avoid_: Review State, Grade, Score
 **Area**:
 พื้นที่ที่แม่บ้านรับผิดชอบประจำทุกวัน กะละ 1 คน (Area ที่ทำ 2 กะมีแม่บ้านประจำ 2 คน, Area ที่ทำเฉพาะกะเช้ามี 1 คน) อยู่ในตึก 1 ตึก ทั้งโรงงานมี 70–72 Area แต่ละ Area มี Check-In Sign 1 ป้าย กับ Service Point N จุด และมี Shift Pattern ของตัวเอง Admin เป็นคนสร้างและแก้ไข (facility-0040, 0045)
 _Avoid_: Assigned Zone, Zone, Work Area, Duty Location
+_บนหน้าเว็บ_: พื้นที่ (facility-0085)
 
 **Blocked Scan**:
 การสแกนป้ายของ Area ที่ไม่ใช่ Area ของตน (แม่บ้าน) หรือจุดในตึกหรือกะที่ไม่ใช่ของตน (หัวหน้า) และไม่มี Cover Assignment ระบบไม่บันทึก แจ้งบนมือถือ และเก็บไว้ให้ Admin เห็นในรายการที่ขึ้นเตือน ตัดสินจาก QR Token ไม่ใช่ GPS (facility-0041, 0048)
 _Avoid_: Wrong-Zone Flag, Unauthorized Scan, Rejected Scan
+_บนหน้าเว็บ_: สแกนผิดพื้นที่ / สแกนผิดตึก / สแกนนอกกะ (facility-0085)
 
 **Cover Assignment**:
 การที่ Admin มอบหมายให้แม่บ้านทำแทน Area อื่นเฉพาะกะนั้น เช่น วันที่มีคนลา หมดกะแล้วหมดสิทธิ์เอง ไม่มีแม่บ้านสำรอง คนทำแทนจึงทำทั้ง Area ตัวเองและ Area ที่ได้รับมอบหมาย Scan Record ระหว่างนั้นบันทึกว่าเป็นการทำแทน ใช้กับหัวหน้าที่ตรวจแทนตึกอื่นด้วย (facility-0041, 0048)

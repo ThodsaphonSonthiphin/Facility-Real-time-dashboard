@@ -34,3 +34,5 @@ MenuNest มี `src/index.css` global สำหรับ token และไฟ�
 - หน้าใหม่ (My Work, หน้าตึกของฉัน, Audit Log และหน้าของแผน 2B, 2C) เขียนสไตล์ใน CSS file ของหน้าตั้งแต่แรก ไม่ใช้ `style={...}`
 
 > **แก้ไข 2026-10-15 (แผน 7):** ไม่มี component ไหนถูกย้าย (ดู facility-0025 แก้ไข 2026-10-15) จึงไม่มีช่วงสไตล์สองแบบตามข้อ 5 ทุกหน้าเขียนสไตล์ใน CSS file ตั้งแต่แรก token ใน `index.css` มาจาก wireframe (พื้นสว่าง สีหลัก `#0E6B66` ฟอนต์ IBM Plex Sans Thai จาก `@fontsource` บน origin เดียวกัน ไม่โหลดจาก Google Fonts) class ของ component ใน `shared/components` ขึ้นต้นด้วย `app-`
+
+> **แก้ไข 2026-10-21 (รอบปรับ UX/UI):** เลิกโหลด IBM Plex Sans Thai จาก `@fontsource` และใช้ฟอนต์ของเครื่องแทน (facility-0072) token อื่นใน `index.css` ยังมาจาก wireframe เหมือนเดิม
