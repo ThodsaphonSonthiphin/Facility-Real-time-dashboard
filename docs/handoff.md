@@ -188,7 +188,7 @@ Plan 4 test results at merge:
 ## Task log (plan 13)
 
 - 2026-10-22 · Task 1 done: `GET /api/my-work` sends `ownShift { shift, opensAt, closesAt }` (AttendanceCalendar.WindowClock; facility-0077); new `GET /api/attendance/signs/{token}` (Cleaner only; 204 for an active check-in sign of an active Area, 404 "ไม่พบป้ายลงเวลานี้" otherwise; records nothing; facility-0082). Unit 302; API 540 + 5 skipped. Next: Task 2 (check-in page).
-- 2026-10-22 · Task 2 done: the check-in page asks `GET /api/attendance/signs/{token}` on opening and shows buttons only after a fresh 204; a 404 shows "ป้ายนี้ใช้ไม่ได้แล้ว" with no button (facility-0082); off shift it shows "กะของคุณ: …" and "ลงเวลาได้ตั้งแต่ … ถึง …" from `ownShift` (facility-0077); the "วันนี้" row shows only recorded times (facility-0078). Types `OwnShift`, fixtures `dayShift` / `nightShift`. Frontend 388 tests. Next: Task 3 (My Work off shift).
+- 2026-10-22 · Task 2 done: the check-in page asks `GET /api/attendance/signs/{token}` on opening and shows buttons only after a fresh 204; a 404 shows "ป้ายนี้ใช้ไม่ได้แล้ว" with no button (facility-0082); off shift it shows "กะของคุณ: …" and "ลงเวลาได้ตั้งแต่ … ถึง …" from `ownShift` (facility-0077); the "วันนี้" row shows only recorded times (facility-0078). Types `OwnShift`, fixtures `dayShift` / `nightShift`. Frontend 389 tests. Next: Task 3 (My Work off shift).
 
 ## Sharing a test build (colleagues on other networks)
 
