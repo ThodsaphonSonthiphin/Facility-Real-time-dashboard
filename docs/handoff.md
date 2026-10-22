@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-21
+Last updated: 2026-10-22 (system font)
 
 ## Project
 
@@ -179,6 +179,7 @@ Plan 4 test results at merge:
 - 2026-10-21 · Owner: pressing "แสดง" gave no sign the press landed when the data did not change. Of the options offered (a press effect, a button that reads "กำลังโหลด..." then "✓ แสดงแล้ว", both), the owner chose the press effect only: every `.app-button` (buttons and button-styled links, the whole app) shrinks to 96 % and darkens while pressed, with no motion under `prefers-reduced-motion`. CSS only (shared.css); jsdom cannot show `:active`, so it is checked by eye. Frontend tests 381 passed. Next: the owner checks it in the browser, then the OK for the push and PR.
 - 2026-10-21 · Owner: a real tap is too short to see `:active`. Replaced it with a tap animation: `shared/utils/tapFeedback.ts` (installed once in `main.tsx`, one capture listener on the document) adds `app-button--tapped` on every `pointerdown` on an enabled `.app-button` and removes it on `animationend`, so a 300 ms press (scale 0.94 and darker, back to normal) plays to its end however short the tap; a second tap restarts it; under `prefers-reduced-motion` only the darkening plays. Frontend tests 385 passed (4 new). Next: the owner checks it in the browser, then the OK for the push and PR.
 - 2026-10-21 · PR #62 merged to master (`d9ac984`), branch deleted. Plan 12 is done, and it was the last of the six frontend plans: every wireframe page now exists. Cleanup: API stopped, throwaway database `facility_reports_test` dropped, `wwwroot` deleted. GitGuardian passed. Next: the owner chooses (see Pending work): the UX/UI pass over every page, the server-side search for the Admin history, or the Excel import of accounts.
+- 2026-10-22 · Owner: no UX/UI fixes after all, only the device's font. Of facility-0074 only D3 covers up to 7 days ahead (facility-0075) stays, because it is not a look issue: without it nobody can assign night and weekend covers; D6 phone, D4 round windows and the five Cleaner phone problems are dropped (facility-0074 amended). Font done (branch `feat/system-font`): `@fontsource/ibm-plex-sans-thai` imports removed from `main.tsx` and the package uninstalled, `index.css` is `font-family: system-ui, sans-serif` (facility-0072); the build has no font files, main JS 157.53 kB gzip. Lint and tsc clean, frontend tests 385 passed. Next: D3 covers ahead (see `## Next`).
 
 ## Sharing a test build (colleagues on other networks)
 
@@ -194,25 +195,18 @@ Test data only. The Development seed has an Admin whose password is public in th
 ## Pending work (ask the owner before starting)
 
 - Excel import of accounts (ADR 0056; before rollout to every building).
-- UX fixes from the owner's real run (plans 10 and 11 are done; fold into the UX/UI pass below):
-  - `/admin/accounts`, "แก้เบอร์โทร": show the current phone, then a field for the new phone.
-  - `/admin/areas/:areaId`, round windows: choose the time from a list instead of typing "HH:mm". A window already added to the point cannot be picked again.
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
-- UX/UI pass over every page (owner, 2026-10-21, after plan 12): the owner starts it in a new session. How to start is in `## Next: the UX/UI pass` below.
+- D3 covers ahead (facility-0074 as amended 2026-10-22, facility-0075): write the plan. See `## Next: D3 covers ahead` below.
 
-## Next: the UX/UI pass
+## Next: D3 covers ahead
 
-Owner's call, 2026-10-21: after plan 12, all wireframe pages exist, so fix UX/UI once across the whole system instead of page by page. The owner opens a new session and uses `sp-writing-plans`. The first step is **not** the plan: it is the list of problems.
+Owner, 2026-10-22: no UX/UI fixes; the device's font is done (facility-0072). The one item left from facility-0074 is D3: pick the date and shift, from the current shift up to 7 days ahead, so night and weekend covers can be assigned before the Admin leaves (Mon–Fri until 17:00; facility-0073, 0075). The API already takes a shift that has not started, so it is a page change only.
 
-1. **List the problems, page by page** (no code yet). Either the owner's notes, or the agent opens every page and writes the list for the owner to cut and add to. Pages: phone (M0 login, M9/M14 My Work, M1/M3/M10 check-in, M4/M5/M8/M11-M13 scan, M6/M7/M16 inspect, M15 My Building, M17 capture) at 390 px wide, and Admin (D0 login, D1 Dashboard, D2 attendance, D3 alerts, D4/D10 Areas, D5 print, D6 accounts, D7 summary, D8 export, D9 history) at 1280 px and 390 px (the owner uses Admin pages on a phone too). Order the list by impact on a person at work: a cleaner at a sign, a supervisor walking, the Admin at a desk.
-2. The owner cuts and adds. Then write the plan with `sp-writing-plans` (spec = the list the owner approved plus the ADRs), and run it with `sp-subagent-driven-development`, as for plans 5-12.
+Next step: write the plan with `sp-writing-plans` (spec = facility-0075 plus the ADRs it cites), then run it with `sp-subagent-driven-development`.
 
-What is already known (do not rediscover):
-- From the owner's browser walkthroughs: pressing a button must be felt at once. Done for every `.app-button` by a tap animation (`shared/utils/tapFeedback.ts`). Still open: a button that starts a fetch ("แสดง" on D7/D9) gives no sign that the data was fetched when nothing changes. Offered, not chosen: the button reading "กำลังโหลด..." then "✓ แสดงแล้ว", and a line over the table saying which range is shown and when it was fetched.
-- Two items from earlier real runs: `/admin/accounts` "แก้เบอร์โทร" should show the current phone, then a field for the new one; `/admin/areas/:areaId` round windows should be picked from a list instead of typed "HH:mm" (a window already added cannot be picked again).
-- Deferred minors from plan 12 that are UX: `BuildingSelect` ignores a failed buildings load and shows "ทุกตึก" for an unknown `?building=` id; an `?actor=` id missing from the actors list shows "ทุกคน" while the list is filtered; the same "fields follow the address" block is in D7, D8 and D9 (a shared hook would remove the copies).
+Dropped (facility-0074 amendment 2026-10-22, do not pick up without the owner): D6 "แก้เบอร์โทร" showing the current phone, D4 round windows from a list, the five Cleaner phone problems, the "แสดง" fetch sign on D7/D9, the deferred plan 12 minors, Admin pages on a phone (facility-0073).
 
-Rules that bind the pass (ADRs, so a change to one is its own decision):
+Rules that bind page changes (ADRs, so a change to one is its own decision):
 - Styling is plain CSS, no UI library (facility-0063): tokens in `frontend/src/index.css`, shared pieces in `shared/components/shared.css` (class prefix `app-`), one CSS file per page with its own prefix, never `style={...}`. Switching to MUI, Bootstrap or Tailwind would be a new ADR: the main JS is 157.35 kB gzip of a 200 kB budget (facility-0062), and all 25 or so pages would be rewritten.
 - Thai UI text comes from the wireframes in `docs/design/wireframe/` (the ADR wins where they differ). User-typed and server text is React text only (facility-0066). No link from an Admin page to a sign page (facility-0059). Nothing stored on the device (facility-0068).
 - Tests find elements by role, label or text, so renaming a visible string or label changes tests: change them together.

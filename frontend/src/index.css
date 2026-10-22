@@ -34,7 +34,7 @@
   --phone-width: 480px;
   --desk-width: 1216px;
 
-  font-family: 'IBM Plex Sans Thai', system-ui, sans-serif;
+  font-family: system-ui, sans-serif;
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-text-size-adjust: 100%;
