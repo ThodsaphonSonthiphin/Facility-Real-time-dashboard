@@ -1,3 +1,6 @@
+import { Panel } from '../../shared/components/Boxes';
+import { Button } from '../../shared/components/Button';
+import { noteClass } from '../../shared/components/styles';
 import { formatTime } from '../../shared/utils/thaiTime';
 import { InspectHeading } from './InspectHeading';
 import type { InspectionVisit } from './inspectApi';
@@ -17,28 +20,29 @@ interface InspectSendFailedProps {
  */
 export function InspectSendFailed({ visit, draft, triedAt, sending, onResend }: InspectSendFailedProps) {
   return (
-    <main className="inspect-page">
+    <main className="flex flex-col gap-4 text-base text-text">
       <InspectHeading visit={visit} />
-      <section className="app-note app-note--error" aria-labelledby="inspect-failed-title">
-        <h2 id="inspect-failed-title">ยังไม่ได้บันทึกผลตรวจ</h2>
+      {/* A region with its own heading, in the error note's colours, as on the scan page */}
+      <section aria-labelledby="inspect-failed-title" className={`flex flex-col gap-0.5 ${noteClass('error')}`}>
+        <h2 id="inspect-failed-title" className="text-lg font-bold">
+          ยังไม่ได้บันทึกผลตรวจ
+        </h2>
         <span>{`บันทึกไม่สำเร็จ เพราะไม่มีสัญญาณหรือเซิร์ฟเวอร์ไม่ตอบ · ลองล่าสุด ${formatTime(triedAt)}`}</span>
       </section>
-      <section className="app-panel">
-        <h2>ผลที่คุณเลือกไว้ (ยังอยู่ในหน้านี้)</h2>
+      <Panel title="ผลที่คุณเลือกไว้ (ยังอยู่ในหน้านี้)">
         <p>{describeDraft(draft)}</p>
-      </section>
-      <section className="app-panel">
-        <h2>ทำอย่างไรต่อ</h2>
-        <ol>
+      </Panel>
+      <Panel title="ทำอย่างไรต่อ">
+        <ol className="m-0 list-decimal pl-5">
           <li>อย่าปิดหน้านี้</li>
           <li>เดินไปตรงที่มีสัญญาณ</li>
           <li>กด "ส่งใหม่"</li>
         </ol>
-        <p className="inspect-muted">ระบบไม่เก็บผลตรวจไว้ในมือถือแล้วส่งเองทีหลัง</p>
-      </section>
-      <button type="button" className="inspect-submit" disabled={sending} onClick={onResend}>
+        <p className="text-md text-muted">ระบบไม่เก็บผลตรวจไว้ในมือถือแล้วส่งเองทีหลัง</p>
+      </Panel>
+      <Button variant="primary" size="main" disabled={sending} onClick={onResend}>
         {sending ? 'กำลังส่ง...' : 'ส่งใหม่'}
-      </button>
+      </Button>
     </main>
   );
 }

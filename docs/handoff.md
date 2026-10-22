@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#70–#74 merged, last PR #87; #75 in PR #89; next: `implement` #76; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#70–#74 merged, last PR #87; #75 in PR #89, #76 on `feat/supervisor-new-look`; next: `implement` #77; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -416,7 +416,19 @@ Where `ui-ux-pro-max` fits:
 
   Pushed; PR #89 opened, not merged (the owner says when). Next: `implement` #76.
 
-Next session: `implement` #76 (and the eye check of #75).
+- 2026-10-22 · #76 on branch `feat/supervisor-new-look` (stacked on `feat/check-in-new-look`). My Building and the inspection page are in the new look; `myBuilding.css` and `inspect.css` are deleted.
+  - **My Building:** summary tiles white with a 2 px frame, รอตรวจ cyan and รอแม่บ้านแก้ red (were tinted boxes); point cards framed in cyan (รอตรวจ) or red (ต้องแก้ไข) through `statusFrame` in `buildingRules.ts`; the "ไปที่จุดนี้แล้วสแกน QR เพื่อตรวจ" line is a grey box with a QR icon (was teal text, and blue means pressable); อัปเดต is a full-width button under the live line, as on My Work.
+  - **Inspection:** สะอาด / ไม่สะอาด are 96 px `ChoiceTile`s with icons; สิ่งที่ต้องแก้ is a `Field` + `TextArea`; บันทึกผลตรวจ and ส่งใหม่ are the 56 px main action (were 72 px); the result shows a large chip; "อยู่ในรัศมี" is plain bold words (was a green chip: green is only ever a Point Status); the open-failed screen uses `helpScreenClass`, `Splash` for the wait.
+  - **Owner's call while building:** the chosen ไม่สะอาด tile is blue like every chosen tile (was red); recorded in `pages/phone.md`.
+  - **Shared:** `roundText` and `issueText` moved to `shared/utils/pointText.ts`; My Work, My Building and the dashboard's `PointTile` use them (the dashboard's look is still #77's).
+  - **Tests:** unchanged; 410 pass. Words, names and roles unchanged (checked by the review).
+  - **Code review (one sub-agent, Standards + Spec):** no hard violations. Fixes: the green radius chip, the status frame map shared by the cards and the summary, a comment. Left as is (reported): the building headings are 15 px eyebrow labels as on My Work; loading lines are 15 px on check-in and My Building but 17 px on My Work; #76 says "ตรวจผ่าน / ต้องแก้ไข choices" but the words stay สะอาด / ไม่สะอาด (behaviour unchanged).
+  - **Checks:** lint and tsc clean; main JS 162.78 kB gzip; CSS 23.88 / 5.13 kB gzip.
+  - **Not done:** the owner's eye check on a real phone (with #75).
+
+  Next: PR (based on `feat/check-in-new-look`), then `implement` #77.
+
+Next session: `implement` #77 (and the eye check of #75 + #76).
 
 ## Owner's rules (still in force)
 

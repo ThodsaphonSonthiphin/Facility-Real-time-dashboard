@@ -1,5 +1,7 @@
 import { Link } from 'react-router';
+import { Note } from '../../shared/components/Note';
 import { StatusChip } from '../../shared/components/StatusChip';
+import { buttonClass, noteClass } from '../../shared/components/styles';
 import { formatRound, formatTime } from '../../shared/utils/thaiTime';
 import type { InspectionRecorded, InspectionVisit } from './inspectApi';
 import type { InspectDraft } from './inspectRules';
@@ -15,26 +17,27 @@ export function InspectResult({ visit, draft, result }: InspectResultProps) {
   const { point } = visit;
   const cleaner = visit.submission?.cleanerName ?? 'แม่บ้าน';
   return (
-    <main className="inspect-page">
-      <header className="inspect-heading">
-        <span className="inspect-kicker">{`ตรวจงาน · ${point.areaName} · ตึก ${point.buildingCode}`}</span>
-        <h1>{`บันทึกผลตรวจแล้ว ${formatTime(result.inspectedAt)}`}</h1>
-        <p className="inspect-sub">
+    <main className="flex flex-col gap-4 text-base text-text">
+      <header className="flex flex-col gap-1.5">
+        <span className="text-md tracking-wide text-muted">{`ตรวจงาน · ${point.areaName} · ตึก ${point.buildingCode}`}</span>
+        <h1 className="text-2xl font-bold">{`บันทึกผลตรวจแล้ว ${formatTime(result.inspectedAt)}`}</h1>
+        <p className="text-md text-muted">
           {[point.name, point.currentRound ? `รอบ ${formatRound(point.currentRound)}` : null].filter(Boolean).join(' · ')}
         </p>
       </header>
+      {/* The verdict and the point's new status, large enough to read at arm's length (pages/phone.md) */}
       {result.result === 'Passed' ? (
-        <section className="app-note app-note--info">
-          <p className="inspect-verdict">
+        <section className={noteClass('info')}>
+          <p className={verdictClass}>
             <strong>ผล: สะอาด</strong>
-            <StatusChip status={result.newPointStatus} />
+            <StatusChip status={result.newPointStatus} size="lg" />
           </p>
         </section>
       ) : (
-        <section className="app-note app-note--error">
-          <p className="inspect-verdict">
+        <section className={`flex flex-col gap-1 ${noteClass('error')}`}>
+          <p className={verdictClass}>
             <strong>ผล: ไม่สะอาด</strong>
-            <StatusChip status={result.newPointStatus} />
+            <StatusChip status={result.newPointStatus} size="lg" />
           </p>
           <span>{`“${draft.defect.trim()}”`}</span>
           <span>{`${cleaner}เห็นสิ่งที่ต้องแก้นี้ทันทีในหน้างานของฉัน และเมื่อสแกนจุดนี้ แก้แล้วส่งงานใหม่ จากนั้นหัวหน้าตรวจอีกรอบ`}</span>
@@ -43,13 +46,13 @@ export function InspectResult({ visit, draft, result }: InspectResultProps) {
           )}
         </section>
       )}
-      {result.withinRadius === false && (
-        <p className="app-note app-note--warn">{`ไกลป้าย: ห่างป้าย ${result.distanceM} ม. แอดมินจะเห็นรายการนี้`}</p>
-      )}
-      {result.withinRadius === true && <p className="inspect-muted">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
-      <Link className="app-button app-button--primary" to="/my-building">
+      {result.withinRadius === false && <Note tone="warn">{`ไกลป้าย: ห่างป้าย ${result.distanceM} ม. แอดมินจะเห็นรายการนี้`}</Note>}
+      {result.withinRadius === true && <p className="text-md text-muted">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
+      <Link className={buttonClass('primary', 'main')} data-tap="" to="/my-building">
         กลับไปตึกของฉัน
       </Link>
     </main>
   );
 }
+
+const verdictClass = 'flex flex-wrap items-center gap-2 text-lg';

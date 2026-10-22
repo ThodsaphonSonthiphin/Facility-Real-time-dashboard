@@ -1,4 +1,9 @@
+import { CircleCheck, CircleX, ClipboardCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { Panel } from '../../shared/components/Boxes';
+import { Button } from '../../shared/components/Button';
+import { ChoiceTile, Field, TextArea } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
 import { DistanceLine } from './DistanceLine';
 import { InspectHeading } from './InspectHeading';
 import type { InspectionSubmission, InspectionVisit } from './inspectApi';
@@ -32,65 +37,60 @@ export function InspectForm({ visit, submission, draft, onChange, sending, notic
 
   const alert = problem ?? errorText;
   return (
-    <main className="inspect-page">
+    <main className="flex flex-col gap-4 text-base text-text">
       <InspectHeading visit={visit} />
       {notice && (
-        <p className="app-note app-note--warn" role="status">
+        <Note tone="warn" status>
           {notice}
-        </p>
+        </Note>
       )}
-      <section className="app-panel">
-        <h2>ส่งงานล่าสุด</h2>
-        <p className="inspect-strong">{submissionLine(submission, visit.point)}</p>
-      </section>
+      <Panel title="ส่งงานล่าสุด">
+        <p className="font-semibold">{submissionLine(submission, visit.point)}</p>
+      </Panel>
       <DistanceLine visit={visit} />
-      <form className="inspect-form" onSubmit={onSubmit}>
-        <fieldset className="inspect-choice">
-          <legend>ผลการตรวจ</legend>
-          <label>
-            <input
-              type="radio"
+      <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+        {/* The two verdicts as large tiles (#76), still a real radio group */}
+        <fieldset className="m-0 border-0 p-0">
+          <legend className="mb-2 p-0 font-bold">ผลการตรวจ</legend>
+          <div className="grid grid-cols-2 gap-2.5">
+            <ChoiceTile
               name="inspect-result"
               disabled={sending}
               checked={draft.result === 'Passed'}
               onChange={() => onChange({ ...draft, result: 'Passed' })}
-            />{' '}
-            สะอาด
-          </label>
-          <label className="inspect-choice__rework">
-            <input
-              type="radio"
+            >
+              <CircleCheck aria-hidden="true" className="size-7" />
+              สะอาด
+            </ChoiceTile>
+            <ChoiceTile
               name="inspect-result"
               disabled={sending}
               checked={draft.result === 'Rework'}
               onChange={() => onChange({ ...draft, result: 'Rework' })}
-            />{' '}
-            ไม่สะอาด
-          </label>
+            >
+              <CircleX aria-hidden="true" className="size-7" />
+              ไม่สะอาด
+            </ChoiceTile>
+          </div>
         </fieldset>
         {draft.result === 'Rework' && (
-          <div className="inspect-defect">
-            <label htmlFor="inspect-defect">สิ่งที่ต้องแก้</label>
-            <textarea
-              id="inspect-defect"
+          <Field label="สิ่งที่ต้องแก้">
+            <TextArea
               rows={4}
               maxLength={MAX_DEFECT_LENGTH}
               disabled={sending}
               value={draft.defect}
               onChange={(event) => onChange({ ...draft, defect: event.target.value })}
             />
-          </div>
+          </Field>
         )}
-        {alert && (
-          <p className="app-note app-note--error" role="alert">
-            {alert}
-          </p>
-        )}
-        <button type="submit" className="inspect-submit" disabled={sending}>
+        {alert && <Note tone="error">{alert}</Note>}
+        <Button type="submit" variant="primary" size="main" disabled={sending}>
+          <ClipboardCheck aria-hidden="true" className="size-5" />
           {sending ? 'กำลังบันทึก...' : 'บันทึกผลตรวจ'}
-        </button>
+        </Button>
       </form>
-      <p className="inspect-muted">ไม่สะอาด = แม่บ้านเห็นสิ่งที่ต้องแก้ทันที แก้แล้วส่งงานใหม่ · ตรวจกี่ครั้งก็ได้</p>
+      <p className="text-center text-md text-muted">ไม่สะอาด = แม่บ้านเห็นสิ่งที่ต้องแก้ทันที แก้แล้วส่งงานใหม่ · ตรวจกี่ครั้งก็ได้</p>
     </main>
   );
 }

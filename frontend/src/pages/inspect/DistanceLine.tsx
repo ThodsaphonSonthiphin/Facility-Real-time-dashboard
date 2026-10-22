@@ -1,3 +1,5 @@
+import { Note } from '../../shared/components/Note';
+import { boxClass } from '../../shared/components/styles';
 import type { InspectionVisit } from './inspectApi';
 
 /**
@@ -8,17 +10,18 @@ export function DistanceLine({ visit }: { visit: InspectionVisit }) {
   const accuracy = `±${Math.round(visit.accuracyM)} ม.`;
   if (visit.withinRadius === true) {
     return (
-      <p className="inspect-distance">
+      <p className={`flex items-center justify-between gap-2 text-md text-muted ${boxClass}`}>
         <span>{`ห่างป้าย ${visit.distanceM} ม. · ${accuracy}`}</span>
-        <span className="inspect-radius">อยู่ในรัศมี</span>
+        {/* Plain words, not a chip: green is only ever a Point Status (MASTER.md "Colour") */}
+        <span className="font-semibold whitespace-nowrap text-text">อยู่ในรัศมี</span>
       </p>
     );
   }
   if (visit.withinRadius === false) {
     return (
-      <p className="app-note app-note--warn">
+      <Note tone="warn">
         {`ห่างป้าย ${visit.distanceM} ม. · ${accuracy} · นอกรัศมี ผลตรวจจากตรงนี้จะขึ้นว่าไกลป้ายให้แอดมินเห็น`}
-      </p>
+      </Note>
     );
   }
   return null;

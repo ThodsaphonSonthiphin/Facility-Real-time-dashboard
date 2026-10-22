@@ -1,4 +1,5 @@
 import type { MyWorkArea, PointCard, PointStatus } from '../../shared/api/types';
+import { roundText } from '../../shared/utils/pointText';
 import { formatClock, formatRound, formatTime } from '../../shared/utils/thaiTime';
 
 /** What needs the Cleaner comes first (plan 8 decision 6), then what is done or not due yet. */
@@ -32,13 +33,6 @@ export const sentStatuses: readonly PointStatus[] = ['PendingInspection', 'Passe
 /** Nothing to do yet: the "ยังไม่ต้องทำ" group (owner, 2026-10-22: ยังไม่ถึงรอบ and นอกเวลา together). */
 export const laterStatuses: readonly PointStatus[] = ['BeforeFirstRound', 'OffHours'];
 
-function roundText(point: PointCard): string | null {
-  if (point.currentRound) {
-    return `รอบ ${formatRound(point.currentRound)}`;
-  }
-  return point.nextRound ? `รอบถัดไป ${formatRound(point.nextRound)}` : null;
-}
-
 /** "Area ทดลอง · รอบ 10:00–12:00", or for a covered Area "Area 12 · ตึก B (ทำแทน) · รอบ …". */
 export function whereText({ point, area }: WorkItem): string {
   const where = area.isCover ? `${area.areaName} · ตึก ${point.buildingCode} (ทำแทน)` : area.areaName;
@@ -71,8 +65,4 @@ export function detailOf(point: PointCard): string {
 /** The large card's instruction (owner, 2026-10-22). */
 export function whatToDo(status: PointStatus): string {
   return status === 'Rework' ? 'แก้แล้วสแกน QR ที่จุดนี้เพื่อส่งงานใหม่' : 'สแกน QR ที่จุดนี้เพื่อส่งงาน';
-}
-
-export function issueText(point: PointCard): string | null {
-  return point.issue ? `แจ้งปัญหา: ${[...point.issue.tags, point.issue.note].filter(Boolean).join(' · ')}` : null;
 }

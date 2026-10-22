@@ -4,10 +4,10 @@ import type { InspectionVisit } from './inspectApi';
 export function InspectHeading({ visit }: { visit: InspectionVisit }) {
   const { point } = visit;
   return (
-    <header className="inspect-heading">
-      <span className="inspect-kicker">{`ตรวจงาน · ${point.areaName} · ตึก ${point.buildingCode}`}</span>
-      <h1>{point.name}</h1>
-      {visit.isCover && <p className="inspect-sub">{`ตรวจแทนตึก ${point.buildingCode} ในกะนี้ (แอดมินมอบหมาย)`}</p>}
+    <header className="flex flex-col gap-1">
+      <span className="text-md tracking-wide text-muted">{`ตรวจงาน · ${point.areaName} · ตึก ${point.buildingCode}`}</span>
+      <h1 className="text-2xl font-bold">{point.name}</h1>
+      {visit.isCover && <p className="text-md text-muted">{`ตรวจแทนตึก ${point.buildingCode} ในกะนี้ (แอดมินมอบหมาย)`}</p>}
     </header>
   );
 }

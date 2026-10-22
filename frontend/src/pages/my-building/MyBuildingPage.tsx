@@ -1,13 +1,15 @@
+import { RefreshCw } from 'lucide-react';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import type { PointStatus } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
+import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { useAppSelector } from '../../store/hooks';
 import { selectHubStatus, type HubStatus } from '../../store/slices/hubSlice';
 import { BuildingCard } from './BuildingCard';
-import { inspectionOrder } from './buildingRules';
+import { inspectionOrder, statusFrame } from './buildingRules';
 import { MY_BUILDING_HUB, useGetMyBuildingQuery, type MyBuilding } from './myBuildingApi';
-import './myBuilding.css';
 
 /** Wireframe M15's footnote "หน้านี้อัปเดตเองเมื่อแม่บ้านส่งงาน", by the hub's state (plan 9 decision 9). */
 const liveLine: Record<HubStatus, string> = {
@@ -26,24 +28,21 @@ export function MyBuildingPage() {
   const hubStatus = useAppSelector(selectHubStatus(MY_BUILDING_HUB));
 
   return (
-    <main className="building-page">
-      <header className="building-heading">
-        {data && <span className="building-kicker">{`ตอนนี้ ${shiftLabel[data.shift]}`}</span>}
-        <h1>ตึกของฉัน</h1>
-        {data && <p className="building-sub">{countLine(data)}</p>}
+    <main className="flex flex-col gap-4 text-base text-text">
+      <header className="flex flex-col gap-1">
+        {data && <span className="text-md tracking-wide text-muted">{`ตอนนี้ ${shiftLabel[data.shift]}`}</span>}
+        <h1 className="text-2xl font-bold">ตึกของฉัน</h1>
+        {data && <p className="text-md text-muted">{countLine(data)}</p>}
       </header>
-      {isLoading && <p className="building-muted">กำลังโหลดจุด...</p>}
-      {error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(error)}
-        </p>
-      )}
+      {isLoading && <p className="text-md text-muted">กำลังโหลดจุด...</p>}
+      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && <BuildingList building={data} />}
-      <footer className="building-footer">
-        <span>{liveLine[hubStatus]}</span>
-        <button type="button" className="app-button" disabled={isFetching} onClick={() => void refetch()}>
+      <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
+        <span className="text-md text-muted">{liveLine[hubStatus]}</span>
+        <Button className="w-full" disabled={isFetching} onClick={() => void refetch()}>
+          <RefreshCw aria-hidden="true" className="size-5" />
           {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
-        </button>
+        </Button>
       </footer>
     </main>
   );
@@ -57,36 +56,37 @@ function countLine(building: MyBuilding): string {
 
 function BuildingList({ building }: { building: MyBuilding }) {
   if (building.buildings.length === 0) {
-    return <p className="app-note app-note--info">บัญชีนี้ยังไม่ได้ผูกกับตึก หรือตึกปิดใช้งาน แจ้งแอดมิน</p>;
+    return <Note tone="info">บัญชีนี้ยังไม่ได้ผูกกับตึก หรือตึกปิดใช้งาน แจ้งแอดมิน</Note>;
   }
   const points = building.buildings.flatMap((section) => section.points);
   const count = (status: PointStatus) => points.filter((point) => point.status === status).length;
 
   return (
     <>
-      <ul className="building-summary" aria-label="สรุปการตรวจ">
-        <li className="building-summary__pending">
-          <strong>{count('PendingInspection')}</strong> รอตรวจ
+      {/* รอตรวจ in its own cyan so what waits for the Supervisor stands out (#76); every count says its words */}
+      <ul className="m-0 grid list-none grid-cols-3 gap-2 p-0 text-center text-md" aria-label="สรุปการตรวจ">
+        <li className={`${tileClass} ${statusFrame.PendingInspection} text-status-pending`}>
+          <strong className={countClass}>{count('PendingInspection')}</strong> รอตรวจ
         </li>
-        <li className="building-summary__rework">
-          <strong>{count('Rework')}</strong> รอแม่บ้านแก้
+        <li className={`${tileClass} ${statusFrame.Rework} text-status-rework`}>
+          <strong className={countClass}>{count('Rework')}</strong> รอแม่บ้านแก้
         </li>
-        <li>
-          <strong>{count('Passed')}</strong> ตรวจแล้ว
+        <li className={`${tileClass} border border-border`}>
+          <strong className={countClass}>{count('Passed')}</strong> ตรวจแล้ว
         </li>
       </ul>
       {building.buildings.map((section) => {
         const headingId = `building-${section.buildingId}`;
         return (
-          <section key={section.buildingId} className="building-section" aria-labelledby={headingId}>
-            <h2 id={headingId}>{section.isCover ? `${section.buildingName} (ตรวจแทนกะนี้)` : section.buildingName}</h2>
-            {!section.canInspect && (
-              <p className="app-note app-note--warn">ตอนนี้ไม่ใช่กะของคุณ ดูได้ แต่สแกนตรวจไม่ได้</p>
-            )}
+          <section key={section.buildingId} className="flex flex-col gap-2" aria-labelledby={headingId}>
+            <h2 id={headingId} className="text-md font-bold tracking-wide text-muted">
+              {section.isCover ? `${section.buildingName} (ตรวจแทนกะนี้)` : section.buildingName}
+            </h2>
+            {!section.canInspect && <Note tone="warn">ตอนนี้ไม่ใช่กะของคุณ ดูได้ แต่สแกนตรวจไม่ได้</Note>}
             {section.points.length === 0 ? (
-              <p className="building-muted">ตึกนี้ยังไม่มีจุด</p>
+              <p className="text-md text-muted">ตึกนี้ยังไม่มีจุด</p>
             ) : (
-              <ul className="building-cards">
+              <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {inspectionOrder(section.points).map((point) => (
                   <BuildingCard key={point.id} point={point} canInspect={section.canInspect} />
                 ))}
@@ -98,3 +98,7 @@ function BuildingList({ building }: { building: MyBuilding }) {
     </>
   );
 }
+
+// The base of one summary count; each tile adds its own border
+const tileClass = 'flex flex-col gap-0.5 rounded bg-surface px-1 py-2';
+const countClass = 'text-2xl font-bold tabular-nums';
