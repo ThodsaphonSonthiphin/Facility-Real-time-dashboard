@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (plan 13 merged, PR #66)
+Last updated: 2026-10-22 (plan 13 merged, PR #66; next: Tailwind migration, see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -217,12 +217,70 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 ## Pending work (ask the owner before starting)
 
+- **Next, chosen by the owner (2026-10-22): move the frontend to Tailwind with a new look.** See `## Next: Tailwind migration` below. It comes before the Excel import and before the pilot.
 - Excel import of accounts (ADR 0056; before rollout to every building).
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
 
-## Next: after plan 13
+## Next: Tailwind migration
 
-Plan 13 built the UX fix list (facility-0074 as amended; facility-0075 to 0085) and is merged (PR #66). The owner chooses what comes next from Pending work. Still to check by eye on real phones: the device's font (facility-0072), the plain-http message, and the check-in page's sign check over the tunnel.
+Plan 13 (the UX fix list) is merged (PR #66). Still to check by eye on real phones: the device's font (facility-0072), the plain-http message, and the check-in page's sign check over the tunnel.
+
+**The owner's answers (2026-10-22), the input for the grill:**
+1. Why: so the team that maintains the project after us can work on it more easily.
+2. The look changes too. This is not a like-for-like port.
+3. Timing: now, before the Excel import of accounts and before the pilot.
+
+**What this overrides.** Each needs a new ADR in the grill:
+- facility-0063 (plain CSS, tokens in `index.css`, one CSS file per page, `app-` prefix): replaced by Tailwind.
+- facility-0071 (keep the current look until after the pilot): replaced by the new look.
+- facility-0070's order (pilot first): the owner put this migration first.
+
+**Facts measured on master `c04eab3`:**
+- 19 CSS files, 2,656 lines in all: `index.css` has 79 lines with 36 tokens, and `shared/components/shared.css` has 437 lines (`app-*`).
+- About 650 `className` uses in 77 non-test `.tsx` files, across about 25 pages.
+- Two `@media print` blocks: `shared.css` and the D5 sign page `pages/print-signs/print.css`.
+- Built CSS is 18.75 kB raw, 3.26 kB gzip. Main JS is 157.93 kB gzip.
+- Tailwind 4.3.3 is the latest. `@tailwindcss/vite` 4.3.3 supports `vite ^8`, and the project is on Vite ^8.3. It is CSS built at build time, so the 200 kB JS budget (facility-0062) is not touched; watch the CSS size instead.
+- Tests find elements by role, label and text, never by class, so they survive the move. They do not catch a look that drifts, so every page needs an eye check on a phone and on a computer, including the printed signs.
+
+**Advice already given to the owner:**
+- Move page by page; Tailwind and the old CSS can live side by side.
+- Turn Tailwind's preflight off until the last page has moved.
+- Turn the `app-*` pieces into React components, not `@apply`.
+- Start with one small page (login or My Work). Then the phone pages, then the Admin pages, and the print page last.
+- No `tailwind-merge` or `clsx` until a real class clash shows up.
+
+**The workflow the owner chose:** `grill-with-docs` → `to-spec` → `implement` → `code-review` (Matt Pocock's skills), with the `ui-ux-pro-max` skill. All five SKILL.md files were read on 2026-10-22.
+
+Setup first:
+1. `ui-ux-pro-max` is installed at `~/.agents/skills/ui-ux-pro-max`, which Claude Code does not read, so it is not in the skill list. Symlink it into `~/.claude/skills/ui-ux-pro-max` (ask the owner first).
+   - Its SKILL.md calls the search tool at `${CLAUDE_PLUGIN_ROOT}/.claude/skills/ui-ux-pro-max/scripts/search.py`. That path does not exist here. Use `python3 ~/.agents/skills/ui-ux-pro-max/scripts/search.py` instead.
+2. The owner runs `/setup-matt-pocock-skills` before `to-spec`, `to-tickets` and `code-review`.
+   - Tracker: GitHub Issues of `ThodsaphonSonthiphin/Facility-Real-time-dashboard`.
+   - ADRs: `docs/adr/facility-NNNN-<slug>.md`, as AGENTS.md says. Tell it so; otherwise `grill-with-docs` would name ADRs its own way.
+   - `grill-with-docs`, `to-spec`, `to-tickets` and `implement` have `disable-model-invocation`, so the owner types them.
+
+Where `ui-ux-pro-max` fits:
+0. **Before the grill.** Run `--design-system` twice, with `--stack html-tailwind`, and do not persist yet:
+   - for the Cleaner and Supervisor phone pages: used at a sign, one hand, big targets;
+   - for the Admin computer pages: dense data, so `--density` high.
+   The output is options to talk through.
+1. **`grill-with-docs`.** Use the skill's rules to challenge each choice: contrast 4.5:1, targets 44×44 px, the device's Thai font (facility-0072), Admin table density, and states for loading and errors.
+   - ADRs to come out of it: a new styling ADR (replaces 0063), the new look (replaces 0071), and the design tokens.
+   - Once the owner agrees, persist with `--design-system --persist -p "Facility" --output-dir <repo root>`. That writes `design-system/facility/MASTER.md`, plus page files (phone, Admin) for overrides. It is the source every later step reads.
+   - Between the grill and the spec (recommended): `prototype`. Mockups of 2–3 typical pages (My Work, the scan page, D1) for the owner to pick from, as was done for plan 13.
+2. **`to-spec`.** The skill is barely used here. The spec points at `MASTER.md` and the new ADRs, and takes the Pre-Delivery Checklist from `references/pro-rules.md` as each page's acceptance check. The test seam stays role, label and text.
+   - Between the spec and `implement` (recommended): `to-tickets`, since 25 pages will not fit one session. Order: Tailwind and tokens, then the shared pieces (button, note, field), then the phone pages, then the Admin pages, then the print page.
+3. **`implement`.** The skill is used most here, on every ticket:
+   - Read `MASTER.md` and the page's file first.
+   - Ask targeted questions while building (`--stack react`, `--domain ux`).
+   - Run the Pre-Delivery Checklist before calling a page done.
+4. **`code-review`.** It has only two axes: Standards (the repo's documented standards) and Spec. Neither covers the look or UX, so do one or both:
+   - write the Tailwind rules and the key UX rules (accessibility, target size) into a repo standards document, so the Standards axis checks them;
+   - run a separate `ui-ux-pro-max` UX pass, priorities 1–2 (Accessibility, Touch).
+   An eye check on real phones is still needed.
+
+Next session: confirm the symlink with the owner; then step 0 (draft design directions); then the owner runs `/setup-matt-pocock-skills` and `/grill-with-docs`.
 
 ## Owner's rules (still in force)
 
