@@ -1,5 +1,9 @@
+import { CircleCheck, Send, TriangleAlert } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import type { PointCard } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
+import { ChoiceTile, Field, TextArea, ToggleChip } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
 import { formatTime } from '../../shared/utils/thaiTime';
 import { PointHeading } from './PointHeading';
 import { isComplete, issueTags, type ScanDraft } from './scanRules';
@@ -14,7 +18,11 @@ interface SubmitFormProps {
   onSend: () => void;
 }
 
-/** Wireframe M4: เรียบร้อย is chosen; พบปัญหา opens the tags and the note (facility-0007, 0046). */
+/**
+ * Wireframe M4, drawn as variant A of the mockups (#74): one form, เรียบร้อย / พบปัญหา as two large tiles, the tags as
+ * toggle chips, ส่งงาน as the 56 px main action. เรียบร้อย is chosen; พบปัญหา opens the tags and the note
+ * (facility-0007, 0046). The tiles and chips stay a real radio group and real checkboxes.
+ */
 export function SubmitForm({ point, draft, onChange, sending, errorText, onSend }: SubmitFormProps) {
   // facility-0076: the warning shows once ส่งงาน was pressed, and only while พบปัญหา still has no tag and no note
   const [tried, setTried] = useState(false);
@@ -33,79 +41,71 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
     onChange({ ...draft, tags: draft.tags.includes(tag) ? draft.tags.filter((t) => t !== tag) : [...draft.tags, tag] });
 
   return (
-    <main className="scan-page">
+    <main className="flex flex-col gap-4 text-base text-text">
       <PointHeading point={point} />
       {point.rework && (
-        <div className="app-note app-note--error">
-          <strong>{`หัวหน้าให้แก้ไข · ${formatTime(point.rework.requestedAt)}`}</strong>
+        <Note tone="error" alert={false} title={`หัวหน้าให้แก้ไข · ${formatTime(point.rework.requestedAt)}`}>
           <span>{`“${point.rework.defect}”`}</span>
-        </div>
+        </Note>
       )}
-      <form className="scan-form" onSubmit={onSubmit}>
-        <fieldset className="scan-choice">
-          <legend>ผลการทำความสะอาด</legend>
-          <label>
-            <input
-              type="radio"
+      <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+        <fieldset className="m-0 border-0 p-0">
+          <legend className="mb-2 p-0 font-bold">ผลการทำความสะอาด</legend>
+          <div className="grid grid-cols-2 gap-2.5">
+            <ChoiceTile
               name="scan-status"
               disabled={sending}
               checked={draft.status === 'Normal'}
               onChange={() => onChange({ ...draft, status: 'Normal' })}
-            />{' '}
-            เรียบร้อย
-          </label>
-          <label>
-            <input
-              type="radio"
+            >
+              <CircleCheck aria-hidden="true" className="size-7" />
+              เรียบร้อย
+            </ChoiceTile>
+            <ChoiceTile
               name="scan-status"
               disabled={sending}
               checked={draft.status === 'Issue'}
               onChange={() => onChange({ ...draft, status: 'Issue' })}
-            />{' '}
-            พบปัญหา
-          </label>
+            >
+              <TriangleAlert aria-hidden="true" className="size-7" />
+              พบปัญหา
+            </ChoiceTile>
+          </div>
         </fieldset>
         {draft.status === 'Issue' && (
-          <fieldset className="scan-issue">
-            <legend>ปัญหาที่พบ</legend>
-            <div className="scan-tags">
-              {issueTags.map((tag) => (
-                <label key={tag}>
-                  <input
-                    type="checkbox"
+            <fieldset className="m-0 border-0 p-0">
+              <legend className="mb-2 p-0 font-bold">ปัญหาที่พบ</legend>
+              <div className="flex flex-wrap gap-2">
+                {issueTags.map((tag) => (
+                  <ToggleChip key={tag} disabled={sending} checked={draft.tags.includes(tag)} onChange={() => toggleTag(tag)}>
+                    {tag}
+                  </ToggleChip>
+                ))}
+              </div>
+              {/* The note stays inside "ปัญหาที่พบ", as before (#74 keeps the form's structure) */}
+              <div className="mt-3">
+                <Field label="หมายเหตุ">
+                  <TextArea
+                    rows={3}
+                    maxLength={1000}
                     disabled={sending}
-                    checked={draft.tags.includes(tag)}
-                    onChange={() => toggleTag(tag)}
-                  /> {tag}
-                </label>
-              ))}
-            </div>
-            <label htmlFor="scan-note">หมายเหตุ</label>
-            <textarea
-              id="scan-note"
-              rows={3}
-              maxLength={1000}
-              disabled={sending}
-              value={draft.note}
-              onChange={(event) => onChange({ ...draft, note: event.target.value })}
-            />
-          </fieldset>
+                    value={draft.note}
+                    onChange={(event) => onChange({ ...draft, note: event.target.value })}
+                  />
+                </Field>
+              </div>
+            </fieldset>
         )}
-        {incomplete && (
-          <p className="app-note app-note--error" role="alert">
-            เลือกปัญหาที่พบอย่างน้อย 1 อย่าง หรือเขียนหมายเหตุ
-          </p>
-        )}
-        {errorText && (
-          <p className="app-note app-note--error" role="alert">
-            {errorText}
-          </p>
-        )}
-        <button type="submit" className="scan-submit" disabled={sending}>
+        {incomplete && <Note tone="error">เลือกปัญหาที่พบอย่างน้อย 1 อย่าง หรือเขียนหมายเหตุ</Note>}
+        {errorText && <Note tone="error">{errorText}</Note>}
+        <Button type="submit" variant="primary" size="main" disabled={sending}>
+          <Send aria-hidden="true" className="size-5" />
           {sending ? 'กำลังส่ง...' : 'ส่งงาน'}
-        </button>
+        </Button>
       </form>
-      <p className="scan-hint">ถ้าไม่มีสัญญาณ หน้าจอจะขึ้น "ยังไม่ได้บันทึก" พร้อมปุ่มส่งใหม่ เวลาที่บันทึกคือตอนที่ส่งสำเร็จ</p>
+      <p className="text-center text-md text-muted">
+        ถ้าไม่มีสัญญาณ หน้าจอจะขึ้น "ยังไม่ได้บันทึก" พร้อมปุ่มส่งใหม่ เวลาที่บันทึกคือตอนที่ส่งสำเร็จ
+      </p>
     </main>
   );
 }
