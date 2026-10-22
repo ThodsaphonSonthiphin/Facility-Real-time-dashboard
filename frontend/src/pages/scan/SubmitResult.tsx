@@ -1,6 +1,8 @@
 import { Link } from 'react-router';
 import type { Placement, PointCard } from '../../shared/api/types';
+import { Note } from '../../shared/components/Note';
 import { StatusChip } from '../../shared/components/StatusChip';
+import { buttonClass } from '../../shared/components/styles';
 import { formatMinutes, formatTime } from '../../shared/utils/thaiTime';
 import type { ScanRecordCreated } from './scanApi';
 import { describeDraft, type ScanDraft } from './scanRules';
@@ -24,34 +26,31 @@ interface SubmitResultProps {
  */
 export function SubmitResult({ point, draft, result }: SubmitResultProps) {
   return (
-    <main className="scan-page">
-      <header className="scan-heading">
-        <span className="scan-kicker">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
-        <h1>{`${title[result.placement]} ${formatTime(result.submittedAt)}`}</h1>
-        <p className="scan-sub">{`${point.name} · ${describeDraft(draft)}`}</p>
-        <p className="scan-status">
-          สถานะของจุดนี้ <StatusChip status={result.newPointStatus} />
+    <main className="flex flex-col gap-4 text-base text-text">
+      <header className="flex flex-col gap-1.5">
+        <span className="text-md text-muted">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
+        <h1 className="text-2xl font-bold">{`${title[result.placement]} ${formatTime(result.submittedAt)}`}</h1>
+        <p className="text-md text-muted">{`${point.name} · ${describeDraft(draft)}`}</p>
+        <p className="flex flex-wrap items-center gap-2 text-lg">
+          สถานะของจุดนี้ <StatusChip status={result.newPointStatus} size="lg" />
         </p>
       </header>
       {result.placement === 'Late' && (
-        <p className="app-note app-note--warn">
-          <strong>{`ส่งช้า ${formatMinutes(result.lateMinutes ?? 0)}`}</strong>
+        <Note tone="warn" title={`ส่งช้า ${formatMinutes(result.lateMinutes ?? 0)}`}>
           <span>รอบนี้จบแล้วและยังไม่มีใครส่ง จึงนับเป็นงานของรอบนี้ แต่ติดว่าส่งช้า</span>
-        </p>
+        </Note>
       )}
-      {result.placement === 'Rework' && <p className="app-note app-note--info">นับเป็นงานแก้ของรอบนี้ หัวหน้าจะตรวจอีกครั้ง</p>}
+      {result.placement === 'Rework' && <Note tone="info">นับเป็นงานแก้ของรอบนี้ หัวหน้าจะตรวจอีกครั้ง</Note>}
       {result.placement === 'OffRound' && (
-        <p className="app-note app-note--warn">
-          ตอนนี้ไม่มีรอบไหนรับงานนี้ ระบบบันทึกไว้แล้ว แต่ไม่นับเป็นรอบใด และสถานะของจุดไม่เปลี่ยน
-        </p>
+        <Note tone="warn">ตอนนี้ไม่มีรอบไหนรับงานนี้ ระบบบันทึกไว้แล้ว แต่ไม่นับเป็นรอบใด และสถานะของจุดไม่เปลี่ยน</Note>
       )}
       {result.withinRadius === false && (
-        <p className="app-note app-note--warn">
+        <Note tone="warn">
           {`ไกลป้าย: ห่างป้าย ${result.distanceM} ม. แอดมินจะเห็นรายการนี้ ถ้าคุณอยู่ที่จุดนี้จริง แจ้งแอดมินได้เลย`}
-        </p>
+        </Note>
       )}
-      {result.withinRadius === true && <p className="scan-muted">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
-      <Link className="app-button app-button--primary" to="/my-work">
+      {result.withinRadius === true && <p className="text-md text-muted">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
+      <Link className={buttonClass('primary', 'main')} data-tap="" to="/my-work">
         ดูงานของฉัน
       </Link>
     </main>

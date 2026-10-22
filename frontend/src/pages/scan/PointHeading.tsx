@@ -5,10 +5,10 @@ import { formatClock, formatRound } from '../../shared/utils/thaiTime';
 /** The top of M4 and M12: where the point is, its name, its status and its round. */
 export function PointHeading({ point }: { point: PointCard }) {
   return (
-    <header className="scan-heading">
-      <span className="scan-kicker">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
-      <h1>{point.name}</h1>
-      <p className="scan-status">
+    <header className="flex flex-col gap-1">
+      <span className="text-md tracking-wide text-muted">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
+      <h1 className="text-2xl font-bold">{point.name}</h1>
+      <p className="flex flex-wrap items-center gap-2 text-md">
         <StatusChip status={point.status} />
         <span>{roundLine(point)}</span>
       </p>

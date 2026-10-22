@@ -1,4 +1,7 @@
 import type { PointCard } from '../../shared/api/types';
+import { Panel } from '../../shared/components/Boxes';
+import { Button } from '../../shared/components/Button';
+import { noteClass } from '../../shared/components/styles';
 import { formatTime } from '../../shared/utils/thaiTime';
 import { PointHeading } from './PointHeading';
 import { describeDraft, type ScanDraft } from './scanRules';
@@ -17,29 +20,32 @@ interface SendFailedProps {
  */
 export function SendFailed({ point, draft, triedAt, sending, onResend }: SendFailedProps) {
   return (
-    <main className="scan-page">
+    <main className="flex flex-col gap-4 text-base text-text">
       <PointHeading point={point} />
-      <section className="app-note app-note--error" aria-labelledby="scan-failed-title">
-        <h2 id="scan-failed-title">ยังไม่ได้บันทึก</h2>
+      {/* A region with its own heading (wireframe M12), in the error note's colours */}
+      <section aria-labelledby="scan-failed-title" className={`flex flex-col gap-0.5 ${noteClass('error')}`}>
+        <h2 id="scan-failed-title" className="text-lg font-bold">
+          ยังไม่ได้บันทึก
+        </h2>
         <span>{`ส่งงานไม่สำเร็จ เพราะไม่มีสัญญาณหรือเซิร์ฟเวอร์ไม่ตอบ · ลองล่าสุด ${formatTime(triedAt)}`}</span>
       </section>
-      <section className="app-panel">
-        <h2>สิ่งที่คุณเลือกไว้ (ยังอยู่ในหน้านี้)</h2>
+      <Panel title="สิ่งที่คุณเลือกไว้ (ยังอยู่ในหน้านี้)">
         <p>{describeDraft(draft)}</p>
-      </section>
-      <section className="app-panel">
-        <h2>ทำอย่างไรต่อ</h2>
-        <ol>
+      </Panel>
+      <Panel title="ทำอย่างไรต่อ">
+        <ol className="m-0 list-decimal pl-5">
           <li>อย่าปิดหน้านี้</li>
           <li>เดินไปตรงที่มีสัญญาณ</li>
           <li>กด "ส่งใหม่"</li>
         </ol>
-        <p className="scan-muted">เวลาที่บันทึกคือเวลาที่ส่งสำเร็จ ถ้าพ้นเวลารอบจะนับเป็นส่งช้า ถ้าเดินออกไกลจากป้าย การส่งงานจะขึ้นว่าไกลป้าย</p>
-        <p className="scan-muted">ระบบไม่เก็บงานไว้ในมือถือแล้วส่งเองทีหลัง</p>
-      </section>
-      <button type="button" className="scan-submit" disabled={sending} onClick={onResend}>
+        <p className="text-md text-muted">
+          เวลาที่บันทึกคือเวลาที่ส่งสำเร็จ ถ้าพ้นเวลารอบจะนับเป็นส่งช้า ถ้าเดินออกไกลจากป้าย การส่งงานจะขึ้นว่าไกลป้าย
+        </p>
+        <p className="text-md text-muted">ระบบไม่เก็บงานไว้ในมือถือแล้วส่งเองทีหลัง</p>
+      </Panel>
+      <Button variant="primary" size="main" disabled={sending} onClick={onResend}>
         {sending ? 'กำลังส่ง...' : 'ส่งใหม่'}
-      </button>
+      </Button>
     </main>
   );
 }

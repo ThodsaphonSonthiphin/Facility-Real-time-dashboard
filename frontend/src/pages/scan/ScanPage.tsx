@@ -5,6 +5,7 @@ import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import { blockedScanOf, isNotSent } from '../../shared/api/scanAnswers';
 import type { BlockedScan } from '../../shared/api/types';
 import { BlockedScanScreen } from '../../shared/components/BlockedScanScreen';
+import { Splash } from '../../shared/components/Boxes';
 import { LocationHelp } from '../../shared/components/LocationHelp';
 import { StatusScreen } from '../../shared/components/StatusScreen';
 import { readLocation, type LocationProblem } from '../../shared/geo/readLocation';
@@ -15,7 +16,6 @@ import { SubmitForm } from './SubmitForm';
 import { SubmitResult } from './SubmitResult';
 import { useGetPointByTokenQuery, useSubmitScanMutation, type ScanRecordCreated } from './scanApi';
 import { emptyDraft, offDutyReason, requestOf, type ScanDraft } from './scanRules';
-import './scan.css';
 
 type Outcome =
   | { kind: 'saved'; result: ScanRecordCreated }
@@ -70,7 +70,7 @@ export function ScanPage() {
   const work = workQuery.data;
   // Decide only on fresh answers: the cache may hold My Work from before the Cleaner checked in
   if (!point || !work || pointQuery.isFetching || workQuery.isFetching) {
-    return <p className="app-splash">กำลังเปิดป้าย...</p>;
+    return <Splash>กำลังเปิดป้าย...</Splash>;
   }
 
   if (outcome?.kind === 'saved') {

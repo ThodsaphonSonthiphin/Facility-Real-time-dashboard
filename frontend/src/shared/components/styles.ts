@@ -58,6 +58,19 @@ export function textAreaClass(size: InputSize = 'phone'): string {
 /** A text link (the base layer still colours `a` with the old look until #82). */
 export const linkClass = `text-primary underline hover:text-primary-strong ${focusRing}`;
 
+export type NoteTone = 'info' | 'warn' | 'error';
+
+const noteTones: Record<NoteTone, string> = {
+  info: 'border-info-border bg-info-bg text-info-text',
+  warn: 'border-warn-border bg-warn-bg text-warn-text',
+  error: 'border-error-border bg-error-bg text-error-text',
+};
+
+/** A note box's frame and colours, for Note and for a box that must be a `<section>` with its own heading. */
+export function noteClass(tone: NoteTone): string {
+  return `rounded border px-3.5 py-2.5 ${noteTones[tone]}`;
+}
+
 /** The white box with a thin border that Panel and Facts share. */
 export const boxClass = 'rounded border border-border bg-surface px-4 py-3.5';
 
@@ -65,4 +78,10 @@ export const boxClass = 'rounded border border-border bg-surface px-4 py-3.5';
 export const statusScreenClass = {
   main: 'mx-auto flex max-w-phone flex-col gap-3 px-5 py-12 text-center text-base',
   title: 'text-xl font-bold',
+};
+
+/** The phone's full-page help of BlockedScanScreen and LocationHelp: what went wrong and what to do next. */
+export const helpScreenClass = {
+  main: 'flex flex-col gap-4 text-base text-text',
+  title: 'text-2xl font-bold',
 };

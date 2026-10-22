@@ -83,7 +83,7 @@ Tokens `--color-<kind>-bg`, `--color-<kind>-border`, `--color-<kind>-text` (util
 
 ## Icons (facility-0088)
 
-`lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons. No emoji as icons.
+`lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text, `size-7` (28 px) inside a `ChoiceTile`, as in the mockup. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons. No emoji as icons.
 
 ## Shared components (#71)
 
@@ -93,7 +93,7 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 |---|---|
 | `Button` (`variant` primary / secondary / danger / link, `size` phone / main / desk) | Every button. `main` is the phone page's one 56 px full-width action; `danger` confirms what cannot be undone (red text and border on white, owner 2026-10-22) |
 | `buttonClass(variant, size)` + `data-tap` | A react-router `Link` that looks like a button |
-| `Note` (`tone` info / warn / error, `title`, `icon`) | A message in a box; an error is `role="alert"` |
+| `Note` (`tone` info / warn / error, `title`, `icon`, `alert`) | A message in a box; an error is `role="alert"` unless `alert={false}` (a red box that is part of the page from the start, such as the Supervisor's defect). `noteClass(tone)` for a box that must be a `<section>` with its own heading |
 | `StatusChip` (`size` md / lg) | A Point Status, always with its words |
 | `Field` (`label`, `help`), `TextInput`, `Select`, `TextArea` (`size` phone / desk) | A labelled control; the help line sits outside the label and is linked with `aria-describedby`; `inputClass(size)` for a bare one |
 | `ChoiceTile` (radio), `ToggleChip` (checkbox) | Large answers and issue tags on the phone |

@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#71–#73 PRs held for the eye check with #74; next: `implement` #74; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#71–#74 passed the owner's eye check; PRs #84–#87 to merge; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -352,7 +352,20 @@ Where `ui-ux-pro-max` fits:
 
   Next: PR, then `implement` #74.
 
-Next session: `implement` #74 (branch from `feat/my-work-b`); PRs #84, #85 and #73's wait for the eye check with #74.
+- 2026-10-22 · #74 on branch `feat/scan-a` (stacked on `feat/my-work-b`).
+  - **Scan page, variant A:** one form; เรียบร้อย / พบปัญหา are a real radio group drawn as two 96 px `ChoiceTile`s with icons; the tags are real checkboxes drawn as 48 px `ToggleChip`s; the note field stays inside the "ปัญหาที่พบ" fieldset; ส่งงาน is the 56 px main action with an icon.
+  - **Outcome screens in the new look:** result (large chip), send failed (still a region named "ยังไม่ได้บันทึก", in `noteClass('error')`), off duty, splash, and the shared `BlockedScanScreen` and `LocationHelp`. The check-in and inspect pages use the last two, so they show there in the new look already.
+  - **`Note` gains `alert`:** it is on by default for an error. Red boxes that were not alerts before (the Supervisor's defect, ไม่ได้บันทึก…) pass `alert={false}`, so roles are unchanged.
+  - **Tests:** none changed; 410 pass. The scan, check-in and inspect suites are untouched.
+  - **Files:** `scan.css` deleted.
+  - **Code review:** no hard violations. Fixes: the note back inside its fieldset, the shared `noteClass`, MASTER.md (`alert`, `size-7` icons in a tile), matching kicker spacing.
+  - **Checks:** lint and tsc clean; main JS 162.53 kB gzip; CSS 29.10 / 5.75 kB.
+
+  Next: PR, then the owner's eye check of #71–#74 on a real phone (needs the API and a throwaway database).
+
+- 2026-10-22 · Owner's eye check of #71–#74: **passed**. The run used the app from `feat/scan-a` (#71–#74 stacked), served by the API in Development on throwaway database `facility_ui_test`. The owner opened the link from a `cloudflared` quick tunnel, which the owner ran in their own terminal: inside this session's sandbox, cloudflared could not get a quick tunnel, and running outside the sandbox was refused. Cleanup is done: API stopped, `facility_ui_test` dropped, `wwwroot` deleted. `facility_uxpass_test` (not from this session) is still there, untouched. Next: merge #84 → #85 → #86 → #87 in order, with the owner's OK.
+
+Next session: merge PRs #84–#87 in order (owner's OK), then `implement` #75.
 
 ## Owner's rules (still in force)
 
