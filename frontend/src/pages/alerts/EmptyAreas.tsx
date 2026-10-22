@@ -83,15 +83,21 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, o
               {` · ตึก ${row.buildingCode}`}
             </span>
             <span className="app-muted">{cleanerText(row, ahead)}</span>
-            <button
-              type="button"
-              className="app-button"
-              aria-label={`มอบหมายคนทำแทน ${row.areaCode}`}
-              disabled={chosen === row.areaId}
-              onClick={() => onChoose(row.areaId)}
-            >
-              {chosen === row.areaId ? 'กำลังมอบหมาย ›' : 'มอบหมายคนทำแทน'}
-            </button>
+            {row.covers.length > 0 ? (
+              // Owner, 2026-10-22: a covered Area ahead names who covers and has no assign button, as on the shift on
+              // the clock, where it leaves the list. To change who, cancel in the covers box first
+              <span>{`ทำแทนแล้ว: ${row.covers.map((cover) => cover.displayName).join(', ')}`}</span>
+            ) : (
+              <button
+                type="button"
+                className="app-button"
+                aria-label={`มอบหมายคนทำแทน ${row.areaCode}`}
+                disabled={chosen === row.areaId}
+                onClick={() => onChoose(row.areaId)}
+              >
+                {chosen === row.areaId ? 'กำลังมอบหมาย ›' : 'มอบหมายคนทำแทน'}
+              </button>
+            )}
           </li>
         ))}
       </ul>

@@ -55,7 +55,7 @@ export function AlertsPage() {
     setCover(null);
   }
   const coverRow = cover
-    ? boardNow?.rows.find((row) => row.areaId === cover.areaId && (ahead || row.state === 'Empty'))
+    ? boardNow?.rows.find((row) => row.areaId === cover.areaId && (ahead ? row.covers.length === 0 : row.state === 'Empty'))
     : undefined;
   // Closes only the form the send belongs to: the Admin may have opened another since
   const closeCover = (areaId: number, shiftDate: string, shift: Shift) =>

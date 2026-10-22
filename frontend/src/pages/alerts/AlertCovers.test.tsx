@@ -11,6 +11,7 @@ import {
   candidates,
   coveredRow,
   emptyRow,
+  noCleanerRow,
   supervisorBlockedAlert,
 } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
@@ -308,6 +309,21 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
 
     expect(await screen.findByText('ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR12 แล้ว')).toBeInTheDocument();
     expect(server.calls.some((call) => call.method === 'DELETE' && call.path === '/api/admin/cover-assignments/81')).toBe(true);
+  });
+
+  it('a covered Area ahead names who covers and has no assign button (owner, 2026-10-22)', async () => {
+    const ahead = attendanceBoard(
+      [{ ...emptyRow, state: 'Covered', covers: [{ ...coveredRow.covers[0], id: 81 }] }, noCleanerRow],
+      { shiftDate: '2026-10-16', shift: 'Day' },
+    );
+    serveAhead({}, ahead);
+    const { user } = await renderApp('/admin/alerts');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'วันและกะ' }), 'กะเช้า ศ. 16/10/2026');
+
+    const box = await screen.findByRole('region', { name: 'พื้นที่ของกะที่ยังไม่เริ่ม (2)' });
+    expect(within(box).getByText('ทำแทนแล้ว: แม่บ้านที่อื่น')).toBeInTheDocument();
+    expect(within(box).queryByRole('button', { name: 'มอบหมายคนทำแทน AR12' })).not.toBeInTheDocument();
+    expect(within(box).getByRole('button', { name: 'มอบหมายคนทำแทน AR09' })).toBeEnabled();
   });
 
   it('an ahead shift with no covers says which shift has none', async () => {
