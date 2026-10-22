@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#71 shared components, PR #84 held for the eye check with #72–#74; next: `implement` #72; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#71 PR #84 and #72 held for the eye check with #73–#74; next: `implement` #73; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -327,7 +327,19 @@ Where `ui-ux-pro-max` fits:
 
 - 2026-10-22 · Owner: check #71 by eye together with #72–#74. Pushed; PR #84 opened and **held** (do not merge before that eye check). The page tickets branch from `feat/shared-components`, so their PRs stack on #84 until it merges. Next: `implement` #72.
 
-Next session: `implement` #72 (branch from `feat/shared-components`); PR #84 waits for the eye check with #72–#74.
+- 2026-10-22 · #72 on branch `feat/login-new-look` (stacked on `feat/shared-components`). Both login pages are rebuilt from `Field` + `TextInput`, `Note` and `Button`, and `auth.css` is deleted.
+  - **Phone page:** `text-base` root, 16 px gutter, 56 px main action at the bottom; its bottom padding grows with the home-bar inset (`env(safe-area-inset-bottom)`).
+  - **Admin page:** `text-sm` root, one card, 36 px controls.
+  - **Text:** the build line and help line are 13 px now (they were 11 and 12).
+  - **Links:** new `linkClass` in `styles.ts`, because the base layer still colours `a` with the old teal until #82. Moved pages also set `text-text` on their root, so they do not depend on `--old-color-text`.
+  - **Unchanged:** every text, accessible name, autocomplete and link; the 10 login tests pass as they were.
+  - **Code review:** no hard violations. Fixes: gutter, safe area, link hover and focus, root text colour, import order.
+  - **Checks:** lint and tsc clean; 404 tests; main JS 159.38 kB gzip; CSS 31.40 / 5.78 kB.
+  - **Visible changes for the eye check:** the phone button is 56 px (was 72); the Admin button is 36 px / 14 px (was 48 / 17); the error note is no longer bold.
+
+  Next: PR (based on `feat/shared-components`), then `implement` #73.
+
+Next session: `implement` #73 (branch from `feat/login-new-look`); PRs #84 and #72's wait for the eye check with #73–#74.
 
 ## Owner's rules (still in force)
 
