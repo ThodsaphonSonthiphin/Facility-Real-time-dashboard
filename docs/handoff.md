@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#71 shared components on branch `feat/shared-components`; next: eye check and PR; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#71 shared components, PR #84 held for the eye check with #72–#74; next: `implement` #72; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -325,7 +325,9 @@ Where `ui-ux-pro-max` fits:
 
   Lint and tsc clean; 404 tests pass. Main JS 158.84 kB gzip; CSS 32.64 kB / 5.80 kB gzip. Not done: the owner's eye check. The bar, chips, Admin menu and live badge show only on logged-in pages, which need the API and a throwaway database. Next: the eye check, then the PR.
 
-Next session: the owner's eye check of #71 (logged-in pages), then the PR.
+- 2026-10-22 · Owner: check #71 by eye together with #72–#74. Pushed; PR #84 opened and **held** (do not merge before that eye check). The page tickets branch from `feat/shared-components`, so their PRs stack on #84 until it merges. Next: `implement` #72.
+
+Next session: `implement` #72 (branch from `feat/shared-components`); PR #84 waits for the eye check with #72–#74.
 
 ## Owner's rules (still in force)
 
