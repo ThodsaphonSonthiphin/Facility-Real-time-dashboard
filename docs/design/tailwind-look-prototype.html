@@ -1,0 +1,629 @@
+<title>Facility New Look Mockups</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: prototype chrome (dark) on top and bottom; the page under test in the middle, phone pages at 480px, D1 at desk width.
+   Single light theme on purpose: facility-0087 rule 1 (no dark mode this round). Tokens = design-system/facility/MASTER.md. */
+:root {
+  color-scheme: light;
+  --primary: #2563EB;
+  --primary-strong: #1D4ED8;
+  --on-primary: #FFFFFF;
+  --bg: #F4F5F4;
+  --surface: #FFFFFF;
+  --text: #1D2324;
+  --muted: #5F696B;
+  --border: #D5DADA;
+  --input-border: #AEB6B7;
+  --st-rework: #B42318;
+  --st-overdue: #A85A00;
+  --st-pending: #0E7490;
+  --st-passed: #2E6E4A;
+  --st-idle: #5F696B;
+  --info-bg: #EFF6FF; --info-border: #BFDBFE; --info-text: #1E40AF;
+  --warn-bg: #FFF4E5; --warn-border: #E3B776; --warn-text: #7A4300;
+  --error-bg: #FDECEA; --error-border: #E2A39B; --error-text: #8A1C12;
+  --radius: 8px;
+  --chrome-bg: #1D2324;
+  --chrome-fg: #FFFFFF;
+  --chrome-soft: #C9D0D1;
+  --font: system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.5; -webkit-text-size-adjust: 100%; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+button { font: inherit; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.icon { width: 1.15em; height: 1.15em; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- prototype chrome (not part of the design) ---------- */
+.proto-top { background: var(--chrome-bg); color: var(--chrome-fg); padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.proto-top__label { font-size: 13px; color: var(--chrome-soft); }
+.proto-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.proto-tabs button { background: transparent; color: var(--chrome-fg); border: 1px solid #5A6466; border-radius: 999px; min-height: 40px; padding: 0 14px; font-size: 15px; cursor: pointer; }
+.proto-tabs button[aria-pressed="true"] { background: var(--chrome-fg); color: var(--chrome-bg); border-color: var(--chrome-fg); font-weight: 600; }
+.proto-note { max-width: 1216px; margin: 12px auto 0; font-size: 14px; color: var(--muted); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; align-items: center; gap: 4px; background: var(--chrome-bg); color: var(--chrome-fg); border-radius: 999px; padding: 4px; box-shadow: 0 6px 24px rgba(0,0,0,.28); max-width: calc(100vw - 24px); }
+.switcher button { width: 44px; height: 44px; border-radius: 999px; border: 0; background: transparent; color: var(--chrome-fg); font-size: 22px; cursor: pointer; display: grid; place-items: center; }
+.switcher button:hover { background: #333B3D; }
+.switcher__label { font-size: 15px; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stage { padding-bottom: 96px; }
+
+/* ---------- shared pieces of the new look ---------- */
+.phone { max-width: 480px; margin: 16px auto 0; background: var(--bg); min-height: 70vh; font-size: 17px; }
+@media (min-width: 560px) { .phone { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; } }
+.appbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 15px; }
+.appbar__who { color: var(--muted); }
+.appbar__out { min-height: 48px; padding: 0 4px; background: none; border: 0; color: var(--primary); font-size: 15px; text-decoration: underline; cursor: pointer; }
+.content { padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+.h1 { font-size: 28px; line-height: 1.25; font-weight: 700; }
+.sub { color: var(--muted); font-size: 15px; }
+.kicker { color: var(--muted); font-size: 15px; }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; font-size: 14px; font-weight: 600; line-height: 1.6; white-space: nowrap; color: #fff; background: var(--st-idle); }
+.chip--Rework { background: var(--st-rework); }
+.chip--Overdue { background: var(--st-overdue); }
+.chip--PendingInspection { background: var(--st-pending); }
+.chip--Passed { background: var(--st-passed); }
+.chip--lg { font-size: 17px; padding: 4px 14px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--input-border); background: var(--surface); color: var(--text); font-size: 17px; font-weight: 600; cursor: pointer; }
+.btn:hover { border-color: var(--primary); }
+.btn--primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.btn--primary:hover, .btn--primary:active { background: var(--primary-strong); border-color: var(--primary-strong); }
+.btn--big { min-height: 56px; width: 100%; font-size: 19px; }
+.btn--block { width: 100%; }
+
+.note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--info-border); background: var(--info-bg); color: var(--info-text); font-size: 16px; }
+.note--error { border-color: var(--error-border); background: var(--error-bg); color: var(--error-text); }
+.note--warn { border-color: var(--warn-border); background: var(--warn-bg); color: var(--warn-text); }
+.note .icon { margin-top: 3px; }
+.note__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.issue { color: var(--error-text); font-size: 15px; font-weight: 600; }
+
+/* ---------- My Work A: list by urgency ---------- */
+.counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; list-style: none; margin: 0; padding: 0; }
+.counts li { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; font-size: 15px; }
+.counts strong { font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.counts .c-rework strong { color: var(--st-rework); }
+.counts .c-overdue strong { color: var(--st-overdue); }
+.area-h { font-size: 19px; font-weight: 700; margin-top: 4px; }
+.cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 4px; }
+.card--Rework { border-color: var(--st-rework); border-width: 2px; }
+.card--Overdue { border-color: var(--st-overdue); border-width: 2px; }
+.card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.card__name { font-size: 19px; font-weight: 700; line-height: 1.3; }
+.card__round { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.todo { display: flex; gap: 6px; align-items: center; font-weight: 600; color: var(--st-rework); font-size: 16px; }
+.footer-row { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+
+/* ---------- My Work B: next job first ---------- */
+.next { background: var(--surface); border: 2px solid var(--st-rework); border-radius: var(--radius); padding: 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+.next__eyebrow { font-size: 15px; font-weight: 700; color: var(--st-rework); letter-spacing: .02em; }
+.next__name { font-size: 26px; font-weight: 700; line-height: 1.25; }
+.next__how { display: flex; gap: 8px; align-items: center; font-size: 17px; font-weight: 600; background: var(--bg); padding: 10px 12px; border-radius: var(--radius); }
+.rows { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.rows li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; min-height: 56px; }
+.rows li + li { border-top: 1px solid var(--border); }
+.rows__main { display: flex; flex-direction: column; min-width: 0; }
+.rows__name { font-weight: 600; }
+.rows__meta { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.group-h { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+.progress { display: flex; flex-direction: column; gap: 6px; }
+.bar { height: 10px; background: var(--border); border-radius: 999px; overflow: hidden; display: flex; }
+.bar span { display: block; height: 100%; }
+
+/* ---------- My Work C: by status bucket ---------- */
+.bucket { display: flex; flex-direction: column; gap: 8px; }
+.bucket__h { display: flex; align-items: center; gap: 8px; font-size: 19px; font-weight: 700; }
+.bucket__n { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; }
+.tile2 { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; }
+.tile2__name { font-weight: 700; font-size: 18px; }
+.tile2__area { font-size: 15px; color: var(--muted); grid-column: 1 / -1; }
+.tile2__detail { font-size: 15px; grid-column: 1 / -1; }
+.quiet { display: flex; flex-wrap: wrap; gap: 8px; }
+.quiet span { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-size: 15px; }
+
+/* ---------- Scan A: one form ---------- */
+.choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border: 0; padding: 0; margin: 0; }
+.choice legend { font-size: 17px; font-weight: 700; margin-bottom: 8px; padding: 0; }
+.opt { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 96px; padding: 12px; background: var(--surface); border: 2px solid var(--input-border); border-radius: var(--radius); font-size: 19px; font-weight: 700; cursor: pointer; text-align: center; }
+.opt input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.opt .icon { width: 30px; height: 30px; }
+.opt:has(input:checked) { border-color: var(--primary); background: var(--info-bg); color: var(--info-text); }
+.opt:has(input:focus-visible) { outline: 3px solid var(--primary); outline-offset: 2px; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
+.tags legend { font-size: 17px; font-weight: 700; margin-bottom: 8px; padding: 0; }
+.tag { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 16px; border: 1px solid var(--input-border); border-radius: 999px; background: var(--surface); font-size: 17px; cursor: pointer; }
+.tag input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.tag:has(input:checked) { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 600; }
+.tag:has(input:focus-visible) { outline: 3px solid var(--primary); outline-offset: 2px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 700; }
+.field textarea { font: inherit; font-size: 17px; min-height: 96px; padding: 10px 12px; border: 1px solid var(--input-border); border-radius: var(--radius); background: var(--surface); color: var(--text); resize: vertical; }
+.hint { font-size: 15px; color: var(--muted); }
+.pointhead { display: flex; flex-direction: column; gap: 6px; }
+.statusline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 16px; }
+
+/* ---------- Scan B: two big answers ---------- */
+.answers { display: flex; flex-direction: column; gap: 12px; }
+.answer { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 88px; padding: 14px 18px; border-radius: var(--radius); border: 2px solid var(--input-border); background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
+.answer .icon { width: 32px; height: 32px; }
+.answer__t { display: flex; flex-direction: column; }
+.answer__big { font-size: 22px; font-weight: 700; line-height: 1.25; }
+.answer__small { font-size: 15px; color: var(--muted); }
+.answer--go { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.answer--go .answer__small { color: #DBE7FF; }
+.answer--go:hover { background: var(--primary-strong); }
+
+/* ---------- Scan C: steps with a sticky send bar ---------- */
+.band { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.step { display: flex; flex-direction: column; gap: 10px; }
+.step__h { display: flex; gap: 10px; align-items: center; font-size: 18px; font-weight: 700; }
+.step__n { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; background: var(--text); color: #fff; font-size: 15px; flex: none; }
+.seg { display: flex; flex-direction: column; border: 1px solid var(--input-border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.seg label { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 16px; font-size: 18px; cursor: pointer; }
+.seg label + label { border-top: 1px solid var(--border); }
+.seg input { width: 22px; height: 22px; accent-color: var(--primary); }
+.seg label:has(input:checked) { background: var(--info-bg); font-weight: 700; color: var(--info-text); }
+.checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.checks label { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 12px; background: var(--surface); border: 1px solid var(--input-border); border-radius: var(--radius); font-size: 17px; cursor: pointer; }
+.checks input { width: 22px; height: 22px; accent-color: var(--primary); }
+.sendbar { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 6px; }
+
+/* ---------- result ---------- */
+.result { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.result__ok { display: flex; gap: 10px; align-items: center; font-size: 26px; font-weight: 700; color: var(--st-passed); }
+.result__ok .icon { width: 34px; height: 34px; }
+
+/* ---------- Admin (D1) ---------- */
+.desk { max-width: 1216px; margin: 16px auto 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); font-size: 14px; }
+.deskbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.deskbar__brand { font-weight: 700; font-size: 15px; }
+.deskbar__who { color: var(--muted); display: flex; gap: 12px; align-items: center; }
+.anav { display: flex; gap: 2px; overflow-x: auto; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.anav a { white-space: nowrap; padding: 0 10px; min-height: 36px; display: flex; align-items: center; border-radius: 6px; color: var(--text); text-decoration: none; font-size: 14px; }
+.anav a:hover { background: var(--surface); }
+.anav a[aria-current="page"] { background: var(--primary); color: var(--on-primary); font-weight: 600; }
+.dhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 0 12px; }
+.dhead h1 { font-size: 22px; line-height: 1.3; }
+.dside { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--radius); border: 1px solid var(--input-border); background: var(--surface); color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; }
+.dbtn:hover { border-color: var(--primary); }
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--st-passed); font-weight: 600; }
+.live::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--st-passed); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 0; }
+.select { min-height: 36px; padding: 0 10px; border: 1px solid var(--input-border); border-radius: var(--radius); background: var(--surface); font: inherit; font-size: 14px; color: var(--text); }
+.fbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); font-size: 14px; cursor: pointer; color: var(--text); }
+.fbtn .n { font-variant-numeric: tabular-nums; font-weight: 700; }
+.fbtn[aria-pressed="true"] { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.dot { width: 10px; height: 10px; border-radius: 3px; background: var(--st-idle); flex: none; }
+.dot--Rework { background: var(--st-rework); } .dot--Overdue { background: var(--st-overdue); } .dot--PendingInspection { background: var(--st-pending); } .dot--Passed { background: var(--st-passed); }
+.rules { font-size: 13px; color: var(--muted); max-width: 90ch; padding-bottom: 8px; }
+.darea { padding: 14px 0 6px; display: flex; flex-direction: column; gap: 8px; }
+.darea__h { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.darea__h h2 { font-size: 16px; }
+.dgrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.dtile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dtile--Rework { border-color: var(--st-rework); }
+.dtile--Overdue { border-color: var(--st-overdue); }
+.dtile__top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.dtile__name { font-size: 15px; font-weight: 700; }
+.dtile .chip { font-size: 13px; }
+.meta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dtile .issue { font-size: 13px; }
+.tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+table { border-collapse: collapse; width: 100%; min-width: 820px; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 13px; color: var(--muted); font-weight: 600; background: #FAFBFA; position: sticky; top: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+tr.row--Rework td:first-child { box-shadow: inset 3px 0 0 var(--st-rework); }
+tr.row--Overdue td:first-child { box-shadow: inset 3px 0 0 var(--st-overdue); }
+.sumgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; padding: 4px 0 12px; }
+.sum { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.sum strong { font-size: 26px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.sum--Rework strong { color: var(--st-rework); } .sum--Overdue strong { color: var(--st-overdue); } .sum--PendingInspection strong { color: var(--st-pending); } .sum--Passed strong { color: var(--st-passed); }
+.twocol { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 960px) { .twocol { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); } }
+.sec-h { font-size: 16px; font-weight: 700; padding-bottom: 6px; }
+.need { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.need li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; padding: 10px 12px; }
+.need li + li { border-top: 1px solid var(--border); }
+.need .chip { grid-row: span 2; align-self: start; font-size: 13px; }
+.need__name { font-weight: 700; }
+.arow { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.arow li { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.arow li + li { border-top: 1px solid var(--border); }
+.arow__top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.arow__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.arow .chip { font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="proto-top">
+  <span class="proto-top__label">ต้นแบบหน้าตาใหม่ ใช้ทดลองแล้วทิ้ง ข้อมูลเป็นตัวอย่าง ไม่ได้ต่อกับระบบจริง · เจ้าของโปรเจกต์เลือก (2026-10-22): งานของฉัน B, หน้าสแกน A, D1 A, รอตรวจ ฟ้าอมเขียว</span>
+  <div class="proto-tabs" role="group" aria-label="หน้า">
+    <button type="button" data-page="mywork">งานของฉัน</button>
+    <button type="button" data-page="scan">หน้าสแกน</button>
+    <button type="button" data-page="dash">Dashboard D1</button>
+  </div>
+  <div class="proto-tabs" role="group" aria-label="สีของ รอตรวจ">
+    <span class="proto-top__label" style="align-self:center">สี "รอตรวจ":</span>
+    <button type="button" data-pending="#6D28D9">ม่วง</button>
+    <button type="button" data-pending="#0E7490">ฟ้าอมเขียว</button>
+    <button type="button" data-pending="#9D174D">ชมพูเข้ม</button>
+    <button type="button" data-pending="#0E6B66">เดิม (เขียวอมฟ้า)</button>
+  </div>
+</header>
+<p class="proto-note" id="proto-note"></p>
+<div class="stage" id="stage"></div>
+<nav class="switcher" aria-label="สลับแบบ">
+  <button type="button" id="prev" aria-label="แบบก่อนหน้า">‹</button>
+  <span class="switcher__label" id="vlabel" aria-live="polite"></span>
+  <button type="button" id="next" aria-label="แบบถัดไป">›</button>
+</nav>
+
+<script>
+(function () {
+  // lucide icon paths (ISC licence), drawn inline so the prototype needs no download
+  var ICONS = {
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    circleCheck: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    alertCircle: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+    send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+    pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+    qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'
+  };
+  function ic(name) { return '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
+
+  var LABEL = { Rework: 'ต้องแก้ไข', Overdue: 'เลยเวลา', PendingInspection: 'รอตรวจ', Passed: 'ตรวจผ่าน', NotYetDone: 'ยังไม่ทำ', BeforeFirstRound: 'ยังไม่ถึงรอบ', OffHours: 'นอกเวลา' };
+  var ORDER = ['Rework', 'Overdue', 'NotYetDone', 'PendingInspection', 'Passed', 'BeforeFirstRound', 'OffHours'];
+  function chip(s, big) { return '<span class="chip chip--' + s + (big ? ' chip--lg' : '') + '">' + LABEL[s] + '</span>'; }
+
+  // Example data: a Day-shift Cleaner at 10:40, own Area plus one covered Area
+  var MY = [
+    { area: 'AR01 ห้องน้ำชั้น 1', building: 'A', cover: false, points: [
+      { name: 'ห้องน้ำหญิง', s: 'Rework', round: 'รอบ 10:00–12:00', detail: 'หัวหน้าให้แก้ 10:25: “พื้นยังมีคราบน้ำ”', todo: true },
+      { name: 'ห้องน้ำชาย', s: 'Overdue', round: 'รอบ 09:00–10:30', detail: 'ยังไม่ส่งงาน · เลยเวลารอบแล้ว' },
+      { name: 'อ่างล้างมือ', s: 'NotYetDone', round: 'รอบ 10:00–12:00', detail: 'ยังไม่ส่ง · ส่งได้ถึง 12:00' },
+      { name: 'ทางเดินหน้าห้องน้ำ', s: 'PendingInspection', round: 'รอบถัดไป 12:00–14:00', detail: 'ส่งงาน 10:12 · รอบถัดไป 12:00–14:00' },
+      { name: 'ห้องเก็บอุปกรณ์', s: 'Passed', round: 'รอบถัดไป 12:00–14:00', detail: 'ตรวจผ่าน · ส่งงาน 09:40 · รอบถัดไป 12:00–14:00' }
+    ] },
+    { area: 'AR05 แคนทีน', building: 'B', cover: true, points: [
+      { name: 'โต๊ะอาหารโซน 1', s: 'NotYetDone', round: 'รอบ 10:00–11:00', detail: 'ยังไม่ส่ง · ส่งได้ถึง 11:00', issue: 'แจ้งปัญหา: ของชำรุด · เก้าอี้ขาหัก 1 ตัว' },
+      { name: 'จุดทิ้งขยะหลังแคนทีน', s: 'BeforeFirstRound', round: 'รอบถัดไป 13:00–14:00', detail: 'รอบแรกของกะยังไม่เริ่ม' }
+    ] }
+  ];
+  function areaTitle(a) { return a.cover ? a.area + ' · ตึก ' + a.building + ' (ทำแทน)' : a.area + ' (พื้นที่ของฉัน)'; }
+  function allMy() { var r = []; MY.forEach(function (a) { a.points.forEach(function (p) { r.push(Object.assign({ areaT: a.area + (a.cover ? ' (ทำแทน)' : '') }, p)); }); }); return r; }
+  function byUrgency(list) { return list.slice().sort(function (x, y) { return ORDER.indexOf(x.s) - ORDER.indexOf(y.s); }); }
+
+  function appbar() {
+    return '<div class="appbar"><span class="appbar__who">แม่บ้าน · E1001 นิภา</span><button type="button" class="appbar__out">ออกจากระบบ</button></div>';
+  }
+  function updateFooter() {
+    return '<div class="footer-row"><span class="hint">ไม่มีแจ้งเตือนเด้งขึ้น เปิดหน้านี้หรือกด "อัปเดต" เพื่อดูงานล่าสุด</span>' +
+      '<button type="button" class="btn btn--block">' + ic('refresh') + 'อัปเดต</button></div>';
+  }
+
+  // ---------------- My Work ----------------
+  function myWorkA() {
+    var html = '<div class="phone">' + appbar() + '<main class="content">' +
+      '<header><h1 class="h1">งานของฉัน</h1><p class="sub">กะเช้า 07:00–19:00 · เข้างาน 06:52</p></header>' +
+      '<ul class="counts" aria-label="สรุปงาน"><li class="c-rework"><strong>1</strong>ต้องแก้</li><li class="c-overdue"><strong>1</strong>เลยเวลา</li><li><strong>2</strong>ส่งแล้ว</li></ul>' +
+      '<div class="note">' + ic('info') + '<div class="note__body">วันนี้ทำแทน AR05 แคนทีน ด้วย · สิทธิ์หมดเองเมื่อหมดกะ</div></div>';
+    MY.forEach(function (a) {
+      html += '<section style="display:flex;flex-direction:column;gap:8px"><h2 class="area-h">' + areaTitle(a) + '</h2><ul class="cards">';
+      byUrgency(a.points).forEach(function (p) {
+        html += '<li class="card card--' + p.s + '"><div class="card__top"><h3 class="card__name">' + p.name + '</h3>' + chip(p.s) + '</div>' +
+          '<span class="card__round">' + p.round + '</span><span>' + p.detail + '</span>' +
+          (p.todo ? '<span class="todo">' + ic('qr') + 'แก้แล้วสแกน QR ที่จุดนี้เพื่อส่งงานใหม่</span>' : '') +
+          (p.issue ? '<span class="issue">' + p.issue + '</span>' : '') + '</li>';
+      });
+      html += '</ul></section>';
+    });
+    return html + updateFooter() + '</main></div>';
+  }
+
+  function myWorkB() {
+    var list = byUrgency(allMy());
+    var first = list[0];
+    var todo = list.slice(1).filter(function (p) { return ['Rework', 'Overdue', 'NotYetDone'].indexOf(p.s) >= 0; });
+    var done = list.filter(function (p) { return ['PendingInspection', 'Passed'].indexOf(p.s) >= 0; });
+    var later = list.filter(function (p) { return ['BeforeFirstRound', 'OffHours'].indexOf(p.s) >= 0; });
+    function rows(items) {
+      return '<ul class="rows">' + items.map(function (p) {
+        return '<li><div class="rows__main"><span class="rows__name">' + p.name + '</span><span class="rows__meta">' + p.areaT + ' · ' + p.round + '</span>' +
+          (p.issue ? '<span class="issue">' + p.issue + '</span>' : '') + '</div>' + chip(p.s) + '</li>';
+      }).join('') + '</ul>';
+    }
+    var total = list.length;
+    return '<div class="phone">' + appbar() + '<main class="content">' +
+      '<header><h1 class="h1">งานของฉัน</h1><p class="sub">กะเช้า 07:00–19:00 · เข้างาน 06:52 · ทำแทน AR05 แคนทีน ถึงหมดกะ</p></header>' +
+      '<section class="next" aria-label="งานที่ต้องทำก่อน"><span class="next__eyebrow">ทำอันนี้ก่อน</span>' +
+        '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><h2 class="next__name">' + first.name + '</h2>' + chip(first.s, true) + '</div>' +
+        '<span class="muted">' + first.areaT + ' · ' + first.round + '</span>' +
+        '<span style="font-size:18px">' + first.detail + '</span>' +
+        '<span class="next__how">' + ic('qr') + 'แก้แล้วสแกน QR ที่จุดนี้เพื่อส่งงานใหม่</span></section>' +
+      '<div class="progress"><span class="small"><strong>' + done.length + '</strong> จาก ' + total + ' จุด ส่งแล้ว</span>' +
+        '<div class="bar" aria-hidden="true"><span style="width:' + (100 / total) + '%;background:var(--st-passed)"></span><span style="width:' + (100 / total) + '%;background:var(--st-pending)"></span></div></div>' +
+      '<h2 class="group-h">ต้องทำต่อ</h2>' + rows(todo) +
+      '<h2 class="group-h">ส่งแล้ว</h2>' + rows(done) +
+      '<h2 class="group-h">ยังไม่ถึงรอบ</h2>' + rows(later) +
+      updateFooter() + '</main></div>';
+  }
+
+  function myWorkC() {
+    var list = allMy();
+    var buckets = [
+      { title: 'ต้องแก้ไข', icon: 'alert', ss: ['Rework'], color: 'var(--st-rework)' },
+      { title: 'เลยเวลา', icon: 'clock', ss: ['Overdue'], color: 'var(--st-overdue)' },
+      { title: 'ยังไม่ทำ', icon: 'qr', ss: ['NotYetDone'], color: 'var(--text)' }
+    ];
+    var html = '<div class="phone">' + appbar() + '<main class="content">' +
+      '<header><h1 class="h1">งานของฉัน</h1><p class="sub">กะเช้า 07:00–19:00 · เข้างาน 06:52</p></header>' +
+      '<div class="note">' + ic('info') + '<div class="note__body">วันนี้ทำแทน AR05 แคนทีน ด้วย · สิทธิ์หมดเองเมื่อหมดกะ</div></div>';
+    buckets.forEach(function (b) {
+      var items = list.filter(function (p) { return b.ss.indexOf(p.s) >= 0; });
+      html += '<section class="bucket"><h2 class="bucket__h" style="color:' + b.color + '">' + ic(b.icon) + b.title + ' <span class="bucket__n">' + items.length + '</span></h2>';
+      items.forEach(function (p) {
+        html += '<div class="tile2"><span class="tile2__name">' + p.name + '</span>' + chip(p.s) +
+          '<span class="tile2__area">' + p.areaT + ' · ' + p.round + '</span><span class="tile2__detail">' + p.detail + '</span>' +
+          (p.issue ? '<span class="issue" style="grid-column:1/-1">' + p.issue + '</span>' : '') + '</div>';
+      });
+      html += '</section>';
+    });
+    var rest = list.filter(function (p) { return ['PendingInspection', 'Passed', 'BeforeFirstRound', 'OffHours'].indexOf(p.s) >= 0; });
+    html += '<section class="bucket"><h2 class="bucket__h">' + ic('circleCheck') + 'ไม่ต้องทำตอนนี้ <span class="bucket__n">' + rest.length + '</span></h2><div class="quiet">' +
+      rest.map(function (p) { return '<span>' + p.name + ' ' + chip(p.s) + '</span>'; }).join('') + '</div></section>';
+    return html + updateFooter() + '</main></div>';
+  }
+
+  // ---------------- Scan ----------------
+  var TAGS = ['ขยะล้น', 'น้ำยาหมด', 'พื้นเปียก', 'ของชำรุด'];
+  function pointHead(big) {
+    return '<header class="pointhead"><span class="kicker">AR01 ห้องน้ำชั้น 1 · ตึก A</span><h1 class="h1"' + (big ? ' style="font-size:30px"' : '') + '>อ่างล้างมือ</h1>' +
+      '<p class="statusline">' + chip('NotYetDone') + '<span>รอบ 10:00–12:00 · ส่งได้ถึง 12:00</span></p></header>';
+  }
+  function tagChips(name) {
+    return TAGS.map(function (t, i) { return '<label class="tag"><input type="checkbox" name="' + name + '" id="' + name + i + '">' + t + '</label>'; }).join('');
+  }
+  function resultScreen() {
+    return '<div class="phone">' + appbar() + '<main class="content result">' +
+      '<span class="kicker">AR01 ห้องน้ำชั้น 1 · ตึก A</span>' +
+      '<p class="result__ok">' + ic('circleCheck') + 'ส่งงานแล้ว</p>' +
+      '<h1 class="h1">อ่างล้างมือ</h1>' +
+      '<p class="statusline" style="font-size:18px">สถานะของจุดนี้ ' + chip('PendingInspection', true) + '</p>' +
+      '<p class="hint">ห่างป้าย 4 ม. · อยู่ในรัศมี · ส่งเวลา 10:41</p>' +
+      '<a class="btn btn--big" href="#mywork-a" data-go="mywork">ดูงานของฉัน</a>' +
+      '<button type="button" class="btn btn--block" data-back>กลับไปลองแบบนี้อีกครั้ง</button></main></div>';
+  }
+
+  function scanA() {
+    return '<div class="phone">' + appbar() + '<main class="content">' + pointHead() +
+      '<form class="content" style="padding:0" data-scan>' +
+        '<fieldset class="choice"><legend>ผลการทำความสะอาด</legend>' +
+          '<label class="opt"><input type="radio" name="sa" value="Normal" id="sa-n" checked>' + ic('circleCheck') + 'เรียบร้อย</label>' +
+          '<label class="opt"><input type="radio" name="sa" value="Issue" id="sa-i">' + ic('alert') + 'พบปัญหา</label></fieldset>' +
+        '<div data-issue hidden class="content" style="padding:0">' +
+          '<fieldset class="tags"><legend>ปัญหาที่พบ</legend>' + tagChips('sat') + '</fieldset>' +
+          '<div class="field"><label for="sa-note">หมายเหตุ</label><textarea id="sa-note" rows="3"></textarea></div></div>' +
+        '<div class="note note--error" data-warn hidden role="alert">' + ic('alertCircle') + '<div class="note__body">เลือกปัญหาที่พบอย่างน้อย 1 อย่าง หรือเขียนหมายเหตุ</div></div>' +
+        '<button type="submit" class="btn btn--primary btn--big">' + ic('send') + 'ส่งงาน</button>' +
+      '</form>' +
+      '<p class="hint">ถ้าไม่มีสัญญาณ หน้าจอจะขึ้น "ยังไม่ได้บันทึก" พร้อมปุ่มส่งใหม่ เวลาที่บันทึกคือตอนที่ส่งสำเร็จ</p>' +
+      '</main></div>';
+  }
+
+  function scanB() {
+    return '<div class="phone">' + appbar() + '<main class="content">' + pointHead(true) +
+      '<div class="answers" data-answers>' +
+        '<button type="button" class="answer answer--go" data-send>' + ic('circleCheck') + '<span class="answer__t"><span class="answer__big">เรียบร้อย ส่งงาน</span><span class="answer__small">กดครั้งเดียว ส่งทันที</span></span></button>' +
+        '<button type="button" class="answer" data-open-issue>' + ic('alert') + '<span class="answer__t"><span class="answer__big">พบปัญหา</span><span class="answer__small">เลือกปัญหาก่อนส่ง</span></span></button>' +
+      '</div>' +
+      '<form class="content" style="padding:0" data-scan data-issue hidden>' +
+        '<input type="hidden" name="sb" value="Issue">' +
+        '<fieldset class="tags"><legend>ปัญหาที่พบ</legend>' + tagChips('sbt') + '</fieldset>' +
+        '<div class="field"><label for="sb-note">หมายเหตุ</label><textarea id="sb-note" rows="3"></textarea></div>' +
+        '<div class="note note--error" data-warn hidden role="alert">' + ic('alertCircle') + '<div class="note__body">เลือกปัญหาที่พบอย่างน้อย 1 อย่าง หรือเขียนหมายเหตุ</div></div>' +
+        '<button type="submit" class="btn btn--primary btn--big">' + ic('send') + 'ส่งงาน (พบปัญหา)</button>' +
+        '<button type="button" class="btn btn--block" data-close-issue>ไม่มีปัญหา กลับไป</button>' +
+      '</form>' +
+      '<p class="hint">ถ้าไม่มีสัญญาณ หน้าจอจะขึ้น "ยังไม่ได้บันทึก" พร้อมปุ่มส่งใหม่</p>' +
+      '</main></div>';
+  }
+
+  function scanC() {
+    return '<div class="phone">' + appbar() +
+      '<div class="band"><span class="kicker">AR01 ห้องน้ำชั้น 1 · ตึก A</span><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h1 class="h1" style="font-size:24px">อ่างล้างมือ</h1>' + chip('NotYetDone') + '</div><span class="small muted">รอบ 10:00–12:00 · ส่งได้ถึง 12:00</span></div>' +
+      '<form data-scan>' +
+      '<main class="content">' +
+        '<section class="step"><h2 class="step__h"><span class="step__n">1</span>ทำความสะอาดแล้ว เป็นอย่างไร</h2>' +
+          '<div class="seg" role="radiogroup" aria-label="ผลการทำความสะอาด">' +
+            '<label><input type="radio" name="sc" value="Normal" id="sc-n" checked>' + 'เรียบร้อย</label>' +
+            '<label><input type="radio" name="sc" value="Issue" id="sc-i">' + 'พบปัญหา</label></div></section>' +
+        '<section class="step" data-issue hidden><h2 class="step__h"><span class="step__n">2</span>ปัญหาที่พบ (เลือกได้หลายข้อ)</h2>' +
+          '<div class="checks">' + TAGS.map(function (t, i) { return '<label><input type="checkbox" name="sct" id="sct' + i + '">' + t + '</label>'; }).join('') + '</div>' +
+          '<div class="field"><label for="sc-note">หมายเหตุ</label><textarea id="sc-note" rows="3"></textarea></div></section>' +
+        '<p class="hint">ถ้าไม่มีสัญญาณ หน้าจอจะขึ้น "ยังไม่ได้บันทึก" พร้อมปุ่มส่งใหม่ เวลาที่บันทึกคือตอนที่ส่งสำเร็จ</p>' +
+      '</main>' +
+      '<div class="sendbar"><div class="note note--error" data-warn hidden role="alert">' + ic('alertCircle') + '<div class="note__body">เลือกปัญหาที่พบอย่างน้อย 1 อย่าง หรือเขียนหมายเหตุ</div></div>' +
+        '<button type="submit" class="btn btn--primary btn--big">' + ic('send') + 'ส่งงาน</button></div>' +
+      '</form></div>';
+  }
+
+  // ---------------- Dashboard D1 ----------------
+  var DASH = [
+    { code: 'AR01', name: 'ห้องน้ำชั้น 1', b: 'A', pts: [
+      { n: 'ห้องน้ำหญิง', s: 'Rework', r: 'รอบ 10:00–12:00', d: 'ไม่สะอาด 10:25: “พื้นยังมีคราบน้ำ” · รอแม่บ้านแก้', who: 'นิภา' },
+      { n: 'ห้องน้ำชาย', s: 'Overdue', r: 'รอบ 09:00–10:30', d: 'ยังไม่ส่งงาน · เลยเวลารอบแล้ว', who: '' },
+      { n: 'อ่างล้างมือ', s: 'NotYetDone', r: 'รอบ 10:00–12:00', d: 'ยังไม่ส่งงาน · ส่งได้ถึง 12:00', who: '' },
+      { n: 'ทางเดินหน้าห้องน้ำ', s: 'PendingInspection', r: 'รอบ 10:00–12:00', d: 'ส่งงาน 10:12 · นิภา', who: 'นิภา' },
+      { n: 'ห้องเก็บอุปกรณ์', s: 'Passed', r: 'รอบ 09:00–10:30', d: 'ตรวจผ่าน · ส่งงาน 09:40 · นิภา', who: 'นิภา' }
+    ] },
+    { code: 'AR02', name: 'ห้องน้ำชั้น 2', b: 'A', pts: [
+      { n: 'ห้องน้ำหญิง', s: 'PendingInspection', r: 'รอบ 10:00–12:00', d: 'ส่งงาน 10:31 · มาลี · ส่งช้า', who: 'มาลี' },
+      { n: 'ห้องน้ำชาย', s: 'Passed', r: 'รอบ 10:00–12:00', d: 'ตรวจผ่าน · ส่งงาน 10:05 · มาลี', who: 'มาลี' },
+      { n: 'ห้องอาบน้ำ', s: 'Overdue', r: 'รอบ 09:00–10:30', d: 'ยังไม่ส่งงาน · เลยเวลารอบแล้ว', who: '', issue: 'แจ้งปัญหา: น้ำยาหมด' }
+    ] },
+    { code: 'AR05', name: 'แคนทีน', b: 'B', pts: [
+      { n: 'โต๊ะอาหารโซน 1', s: 'NotYetDone', r: 'รอบ 10:00–11:00', d: 'ยังไม่ส่งงาน · ส่งได้ถึง 11:00', who: '', issue: 'แจ้งปัญหา: ของชำรุด · เก้าอี้ขาหัก 1 ตัว' },
+      { n: 'โต๊ะอาหารโซน 2', s: 'Passed', r: 'รอบ 10:00–11:00', d: 'ตรวจผ่าน · ส่งงาน 10:18 · สมพร', who: 'สมพร' },
+      { n: 'จุดทิ้งขยะหลังแคนทีน', s: 'BeforeFirstRound', r: 'รอบถัดไป 13:00–14:00', d: 'รอบแรกของกะเริ่ม 13:00', who: '' },
+      { n: 'ห้องเตรียมอาหาร', s: 'OffHours', r: '', d: 'จุดนี้ไม่มีรอบในกะนี้', who: '' }
+    ] }
+  ];
+  function dashAll() { var r = []; DASH.forEach(function (a) { a.pts.forEach(function (p) { r.push(Object.assign({ a: a }, p)); }); }); return r; }
+  function counts() { var c = {}; ORDER.forEach(function (s) { c[s] = 0; }); dashAll().forEach(function (p) { c[p.s]++; }); return c; }
+  var RULES = 'รอบเป็นช่วงเวลา พ้นเวลาสิ้นสุดแล้วยังไม่ส่ง = เลยเวลา · ส่งหลังช่วงจบนับเป็นรอบนั้นแต่ติดว่าส่งช้า · พอรอบใหม่เริ่ม การ์ดเริ่มใหม่ งานเก่าที่ไม่ได้ตรวจหรือไม่ได้แก้เก็บในประวัติ · ป้ายแดง "แจ้งปัญหา" คือของชำรุดที่แม่บ้านแจ้ง ไม่ใช่สถานะของการ์ด';
+  var NAV = ['สถานะจุด', 'การเข้างาน', 'รายการที่ขึ้นเตือน', 'สรุปการตรวจ', 'ส่งออก Excel', 'จัดการพื้นที่และป้าย', 'บัญชีผู้ใช้', 'ประวัติการแก้ไขของแอดมิน'];
+  function deskTop() {
+    return '<div class="deskbar"><span class="deskbar__brand">ระบบตรวจงานทำความสะอาด</span><span class="deskbar__who">แอดมิน · A0001<button type="button" class="dbtn">ออกจากระบบ</button></span></div>' +
+      '<nav class="anav" aria-label="เมนูแอดมิน">' + NAV.map(function (n, i) { return '<a href="#dash-a"' + (i === 0 ? ' aria-current="page"' : '') + '>' + n + '</a>'; }).join('') + '</nav>' +
+      '<div class="dhead"><h1>สถานะจุดทำความสะอาด</h1><div class="dside"><button type="button" class="dbtn">' + ic('download') + 'ส่งออก Excel</button><span class="live">อัปเดตสด · 10:40:12</span></div></div>';
+  }
+  function filterRow() {
+    var c = counts();
+    return '<div class="filters"><label class="small" for="fb">ตึก</label><select class="select" id="fb"><option>ทุกตึก</option><option>ตึก A</option><option>ตึก B</option></select>' +
+      ORDER.map(function (s) { return '<button type="button" class="fbtn" aria-pressed="false"><span class="dot dot--' + s + '" aria-hidden="true"></span>' + LABEL[s] + ' <span class="n">' + c[s] + '</span></button>'; }).join('') +
+      '<button type="button" class="fbtn" aria-pressed="false">' + ic('alert') + 'มีปัญหาที่แจ้ง <span class="n">2</span></button></div>';
+  }
+  function dashA() {
+    var html = '<div class="desk">' + deskTop() + filterRow() + '<p class="rules">' + RULES + '</p>';
+    DASH.forEach(function (a) {
+      html += '<section class="darea"><div class="darea__h"><h2>' + a.code + ' ' + a.name + '</h2><span class="meta">ตึก ' + a.b + ' · ' + a.pts.length + ' จุด</span></div><ul class="dgrid">';
+      a.pts.forEach(function (p) {
+        html += '<li class="dtile dtile--' + p.s + '"><div class="dtile__top"><h3 class="dtile__name">' + p.n + '</h3>' + chip(p.s) + '</div>' +
+          (p.r ? '<span class="meta">' + p.r + '</span>' : '') + '<span>' + p.d + '</span>' + (p.issue ? '<span class="issue">' + p.issue + '</span>' : '') + '</li>';
+      });
+      html += '</ul></section>';
+    });
+    return html + '</div>';
+  }
+  function dashB() {
+    var rows = dashAll().sort(function (x, y) { return ORDER.indexOf(x.s) - ORDER.indexOf(y.s); });
+    return '<div class="desk">' + deskTop() + filterRow() + '<p class="rules">' + RULES + '</p>' +
+      '<div class="tablewrap"><table><thead><tr><th>สถานะ</th><th>จุด</th><th>พื้นที่</th><th>รอบ</th><th>รายละเอียด</th><th>แจ้งปัญหา</th></tr></thead><tbody>' +
+      rows.map(function (p) {
+        return '<tr class="row--' + p.s + '"><td>' + chip(p.s) + '</td><td><strong>' + p.n + '</strong></td><td>' + p.a.code + ' ' + p.a.name + ' <span class="meta">· ตึก ' + p.a.b + '</span></td>' +
+          '<td class="num">' + (p.r ? p.r.replace('รอบถัดไป ', 'ถัดไป ').replace('รอบ ', '') : '–') + '</td><td>' + p.d + '</td><td>' + (p.issue ? '<span class="issue">' + p.issue.replace('แจ้งปัญหา: ', '') + '</span>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<p class="meta" style="padding-top:8px">เรียงจากที่ต้องรีบดูก่อน · กดหัวคอลัมน์เพื่อเรียงใหม่ (ในต้นแบบยังกดไม่ได้)</p></div>';
+  }
+  function dashC() {
+    var c = counts();
+    var sums = ['Rework', 'Overdue', 'PendingInspection', 'Passed', 'NotYetDone'].map(function (s) {
+      return '<div class="sum sum--' + s + '"><span class="small">' + LABEL[s] + '</span><strong>' + c[s] + '</strong></div>';
+    }).join('') + '<div class="sum"><span class="small">ยังไม่ถึงรอบ / นอกเวลา</span><strong>' + (c.BeforeFirstRound + c.OffHours) + '</strong></div>';
+    var need = dashAll().filter(function (p) { return ['Rework', 'Overdue', 'PendingInspection'].indexOf(p.s) >= 0 || p.issue; })
+      .sort(function (x, y) { return ORDER.indexOf(x.s) - ORDER.indexOf(y.s); });
+    var html = '<div class="desk">' + deskTop() + '<div class="sumgrid">' + sums + '</div>' +
+      '<div class="twocol"><section><h2 class="sec-h">ต้องดูตอนนี้ (' + need.length + ')</h2><ul class="need">' +
+      need.map(function (p) {
+        return '<li>' + chip(p.s) + '<span class="need__name">' + p.n + ' <span class="meta">· ' + p.a.code + ' ' + p.a.name + ' · ตึก ' + p.a.b + '</span></span><span>' + p.d + (p.issue ? ' · <span class="issue">' + p.issue + '</span>' : '') + '</span></li>';
+      }).join('') + '</ul></section>' +
+      '<section><h2 class="sec-h">ทุกพื้นที่</h2><ul class="arow">' +
+      DASH.map(function (a) {
+        var per = {}; a.pts.forEach(function (p) { per[p.s] = (per[p.s] || 0) + 1; });
+        return '<li><div class="arow__top"><strong>' + a.code + ' ' + a.name + '</strong><span class="meta">ตึก ' + a.b + ' · ' + a.pts.length + ' จุด</span></div><div class="arow__chips">' +
+          ORDER.filter(function (s) { return per[s]; }).map(function (s) { return '<span class="chip chip--' + s + '">' + LABEL[s] + ' ' + per[s] + '</span>'; }).join('') + '</div></li>';
+      }).join('') + '</ul><p class="rules" style="padding-top:10px">' + RULES + '</p></section></div></div>';
+    return html;
+  }
+
+  var PAGES = {
+    mywork: { title: 'งานของฉัน', note: 'มือถือแม่บ้าน · กะเช้า 10:40 · มีพื้นที่ของตัวเองและพื้นที่ที่ทำแทน', variants: [
+      { key: 'a', name: 'การ์ดเรียงตามความด่วน', render: myWorkA },
+      { key: 'b', name: 'งานถัดไปตัวใหญ่', render: myWorkB },
+      { key: 'c', name: 'แบ่งกลุ่มตามสถานะ', render: myWorkC }] },
+    scan: { title: 'หน้าสแกน', note: 'หน้าที่เปิดเมื่อสแกน QR ที่จุด ลองกด "พบปัญหา" แล้วกดส่งโดยไม่เลือกอะไร และลองส่งจริงเพื่อดูหน้าส่งงานแล้ว', variants: [
+      { key: 'a', name: 'ฟอร์มเดียว ปุ่มเลือกใหญ่', render: scanA },
+      { key: 'b', name: 'สองปุ่มใหญ่ (เรียบร้อยกดครั้งเดียว)', render: scanB },
+      { key: 'c', name: 'ทีละขั้น ปุ่มส่งติดล่าง', render: scanC }] },
+    dash: { title: 'Dashboard D1', note: 'หน้าแอดมินบนคอมพิวเตอร์ ตัวอย่าง 3 พื้นที่ 12 จุด ดูบนจอคอมจะเห็นชัดที่สุด', variants: [
+      { key: 'a', name: 'การ์ดตามพื้นที่', render: dashA },
+      { key: 'b', name: 'ตารางเรียงตามความด่วน', render: dashB },
+      { key: 'c', name: 'สรุปบน + เฉพาะที่ต้องดู', render: dashC }] }
+  };
+  var state = { page: 'mywork', v: 0, result: false };
+
+  function readHash() {
+    var m = /^#(mywork|scan|dash)-([abc])$/.exec(location.hash || '');
+    if (m) { state.page = m[1]; state.v = 'abc'.indexOf(m[2]); }
+  }
+  function writeHash() {
+    var h = '#' + state.page + '-' + PAGES[state.page].variants[state.v].key;
+    if (location.hash !== h) { try { history.replaceState(null, '', h); } catch (e) { location.hash = h; } }
+  }
+  function render() {
+    var p = PAGES[state.page], v = p.variants[state.v];
+    document.getElementById('stage').innerHTML = state.result ? resultScreen() : v.render();
+    document.getElementById('vlabel').textContent = v.key.toUpperCase() + ' · ' + v.name;
+    document.getElementById('proto-note').textContent = p.note;
+    document.querySelectorAll('[data-page]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.page === state.page)); });
+    writeHash();
+    wire();
+  }
+  function go(delta) { var n = PAGES[state.page].variants.length; state.v = (state.v + delta + n) % n; state.result = false; render(); }
+
+  function wire() {
+    var stage = document.getElementById('stage');
+    stage.querySelectorAll('[data-go]').forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); state.page = 'mywork'; state.v = 0; state.result = false; render(); window.scrollTo(0, 0); }); });
+    stage.querySelectorAll('[data-back]').forEach(function (b) { b.addEventListener('click', function () { state.result = false; render(); }); });
+    stage.querySelectorAll('.fbtn').forEach(function (b) { b.addEventListener('click', function () { b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); }); });
+    var issue = stage.querySelector('[data-issue]');
+    var warn = stage.querySelector('[data-warn]');
+    stage.querySelectorAll('input[type="radio"]').forEach(function (r) {
+      r.addEventListener('change', function () { if (issue) issue.hidden = r.value !== 'Issue' || !r.checked; if (warn) warn.hidden = true; });
+    });
+    var answers = stage.querySelector('[data-answers]');
+    var openIssue = stage.querySelector('[data-open-issue]');
+    if (openIssue) openIssue.addEventListener('click', function () { answers.hidden = true; issue.hidden = false; });
+    var closeIssue = stage.querySelector('[data-close-issue]');
+    if (closeIssue) closeIssue.addEventListener('click', function () { answers.hidden = false; issue.hidden = true; if (warn) warn.hidden = true; });
+    var sendNow = stage.querySelector('[data-send]');
+    if (sendNow) sendNow.addEventListener('click', function () { state.result = true; render(); window.scrollTo(0, 0); });
+    stage.querySelectorAll('input[type="checkbox"], textarea').forEach(function (el) { el.addEventListener('input', function () { if (warn) warn.hidden = true; }); });
+    var form = stage.querySelector('form[data-scan]');
+    if (form) form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var radio = form.querySelector('input[type="radio"]:checked');
+      var isIssue = radio ? radio.value === 'Issue' : !!form.querySelector('input[type="hidden"][value="Issue"]');
+      var any = form.querySelector('input[type="checkbox"]:checked') || (form.querySelector('textarea') && form.querySelector('textarea').value.trim() !== '');
+      if (isIssue && !any) { warn.hidden = false; return; }
+      state.result = true; render(); window.scrollTo(0, 0);
+    });
+  }
+
+  document.querySelectorAll('[data-page]').forEach(function (b) {
+    b.addEventListener('click', function () { state.page = b.dataset.page; state.v = 0; state.result = false; render(); });
+  });
+  function setPending(hex) {
+    document.documentElement.style.setProperty('--st-pending', hex);
+    document.querySelectorAll('[data-pending]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.pending === hex)); });
+  }
+  document.querySelectorAll('[data-pending]').forEach(function (b) { b.addEventListener('click', function () { setPending(b.dataset.pending); }); });
+  setPending('#0E7490'); // owner's pick 2026-10-22
+  document.getElementById('prev').addEventListener('click', function () { go(-1); });
+  document.getElementById('next').addEventListener('click', function () { go(1); });
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    if (e.key === 'ArrowLeft') go(-1);
+    if (e.key === 'ArrowRight') go(1);
+  });
+  readHash();
+  render();
+})();
+</script>
