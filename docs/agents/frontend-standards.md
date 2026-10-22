@@ -10,7 +10,9 @@ The rules `code-review` checks on any frontend change (its Standards axis). The 
   - Never a raw Tailwind palette class (`bg-blue-600`) or a raw hex in a component.
   - Arbitrary values (`w-[37px]`) only with a comment saying why no token fits.
 - Class names are complete strings in the source. Never build one (`` `bg-${x}` ``); map a variant to a full class (`{ warn: 'bg-warn-bg', … }`).
-- Shared pieces (button, field, note, chip, table, bar) are React components in `frontend/src/shared/components`. No `@apply`. No UI library.
+- Shared pieces (button, field, note, chip, table, bar) are React components in `frontend/src/shared/components` (listed in MASTER.md). No `@apply`. No UI library.
+- A moved page sets its body text size once on its root: `text-base` on a phone page, `text-sm` on an Admin page. Components inherit it; the shell sets none, so pages not moved yet keep theirs.
+- Two classes on one element must never set the same property (`underline` and `no-underline`, `px-0` and `px-4`): which one wins depends on Tailwind's output order.
 - No `clsx` or `tailwind-merge` until a real class clash needs one.
 - Print rules use the `print:` variant; only `@page` stays as plain CSS in `index.css`.
 - Until the last page moves (#82), Tailwind's preflight stays off, and the old look's variables are named `--old-*`. A moved page uses only the `@theme` tokens; never use an `--old-*` variable in new code.

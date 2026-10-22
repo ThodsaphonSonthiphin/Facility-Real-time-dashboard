@@ -68,82 +68,128 @@
   --container-desk: 1216px;
 }
 
-/* The old look's tokens (--old-*, renamed so they cannot clash with @theme) are for pages not moved yet and go in #82;
-   the base rules after them stay. */
-:root {
-  --old-color-bg: #f4f5f4;
-  --old-color-surface: #ffffff;
-  --old-color-text: #1d2324;
-  --old-color-text-soft: #3b4446;
-  --old-color-muted: #5f696b;
-  --old-color-border: #d5dada;
-  --old-color-input-border: #aeb6b7;
-  --old-color-primary: #0e6b66;
-  --old-color-primary-dark: #0a4f4b;
-  --old-color-on-primary: #ffffff;
-  --old-color-info-bg: #e3f1ef;
-  --old-color-info-border: #9ccbc6;
-  --old-color-info-text: #0a4f4b;
-  --old-color-error-bg: #fdecea;
-  --old-color-error-border: #e2a39b;
-  --old-color-error-text: #8a1c12;
-  --old-color-warn-bg: #fff4e5;
-  --old-color-warn-border: #e3b776;
-  --old-color-warn-text: #7a4300;
-  --old-color-status-rework: #b42318;
-  --old-color-status-overdue: #a85a00;
-  --old-color-status-pending: #4a6378;
-  --old-color-status-passed: #2e6e4a;
-  --old-color-status-idle: #5f696b;
-  --old-color-status-break: #6b5b95;
+/*
+ * Base rules sit in the base layer, below the utilities: an unlayered `a { color }` would beat `text-on-primary` on a
+ * button-styled link. The pages not moved yet are unlayered, so they still win over these rules as before.
+ * The old look's tokens (--old-*, renamed so they cannot clash with @theme) are for those pages and go in #82; the
+ * base rules after them stay.
+ */
+@layer base {
+  :root {
+    --old-color-bg: #f4f5f4;
+    --old-color-surface: #ffffff;
+    --old-color-text: #1d2324;
+    --old-color-text-soft: #3b4446;
+    --old-color-muted: #5f696b;
+    --old-color-border: #d5dada;
+    --old-color-input-border: #aeb6b7;
+    --old-color-primary: #0e6b66;
+    --old-color-primary-dark: #0a4f4b;
+    --old-color-on-primary: #ffffff;
+    --old-color-info-bg: #e3f1ef;
+    --old-color-info-border: #9ccbc6;
+    --old-color-info-text: #0a4f4b;
+    --old-color-error-bg: #fdecea;
+    --old-color-error-border: #e2a39b;
+    --old-color-error-text: #8a1c12;
+    --old-color-warn-bg: #fff4e5;
+    --old-color-warn-border: #e3b776;
+    --old-color-warn-text: #7a4300;
+    --old-color-status-rework: #b42318;
+    --old-color-status-overdue: #a85a00;
+    --old-color-status-pending: #4a6378;
+    --old-color-status-passed: #2e6e4a;
+    --old-color-status-idle: #5f696b;
+    --old-color-status-break: #6b5b95;
 
-  --old-radius-sm: 8px;
-  --old-radius-md: 10px;
-  --old-radius-lg: 14px;
-  --old-gap: 16px;
-  --old-phone-width: 480px;
-  --old-desk-width: 1216px;
+    --old-radius-sm: 8px;
+    --old-radius-md: 10px;
+    --old-radius-lg: 14px;
+    --old-gap: 16px;
+    --old-phone-width: 480px;
+    --old-desk-width: 1216px;
 
-  font-family: system-ui, sans-serif;
-  color: var(--old-color-text);
-  background: var(--old-color-bg);
-  -webkit-text-size-adjust: 100%;
+    font-family: system-ui, sans-serif;
+    color: var(--old-color-text);
+    background: var(--old-color-bg);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--old-color-bg);
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: var(--old-color-primary);
+  }
+
+  a:hover {
+    color: var(--old-color-primary-dark);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/*
+ * A press shows at once, before any answer comes back (owner, 2026-10-21). A quick tap ends before :active can be
+ * seen, so shared/utils/tapFeedback.ts adds is-tapped on every press of a button-styled element (the old look's
+ * .app-button and the new look's [data-tap]) and the animation plays to its end. It lives here, not in a page's
+ * file, so it reaches every page.
+ */
+@keyframes tap {
+  from {
+    transform: scale(0.94);
+    filter: brightness(0.85);
+  }
+
+  to {
+    transform: none;
+    filter: none;
+  }
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: var(--old-color-bg);
+@keyframes tap-still {
+  from {
+    filter: brightness(0.85);
+  }
+
+  to {
+    filter: none;
+  }
 }
 
-#root {
-  min-height: 100vh;
-}
+@layer components {
+  .is-tapped {
+    animation: tap 300ms ease-out;
+  }
 
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
-
-a {
-  color: var(--old-color-primary);
-}
-
-a:hover {
-  color: var(--old-color-primary-dark);
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
+  @media (prefers-reduced-motion: reduce) {
+    .is-tapped {
+      animation-name: tap-still;
+    }
+  }
 }

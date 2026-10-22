@@ -1,13 +1,15 @@
-const TAPPED = 'app-button--tapped';
+const TAPPED = 'is-tapped';
+/** The old look's `.app-button` and the new look's Button (and button-styled links), which carry `data-tap`. */
+const PRESSABLE = '.app-button, [data-tap]';
 
 /**
- * A quick tap is over before `:active` can be seen, so every press of an `.app-button` (buttons and button-styled
- * links) plays a short press animation to its end (owner, 2026-10-21). The animation is in shared.css. One listener
- * on the document covers every page; main.tsx installs it once. Returns the uninstall.
+ * A quick tap is over before `:active` can be seen, so every press of a button-styled element (buttons and
+ * button-styled links) plays a short press animation to its end (owner, 2026-10-21). The animation is in index.css.
+ * One listener on the document covers every page; main.tsx installs it once. Returns the uninstall.
  */
 export function installTapFeedback(root: Document): () => void {
   const play = (event: Event) => {
-    const target = event.target instanceof Element ? event.target.closest<HTMLElement>('.app-button') : null;
+    const target = event.target instanceof Element ? event.target.closest<HTMLElement>(PRESSABLE) : null;
     if (!target || target.matches(':disabled, [aria-disabled="true"]')) {
       return;
     }

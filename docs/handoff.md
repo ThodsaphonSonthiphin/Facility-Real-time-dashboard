@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#70 Tailwind set-up done, PR open; next: merge it, then #71; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#71 shared components, PR #84 held for the eye check with #72–#74; next: `implement` #72; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -302,7 +302,32 @@ Where `ui-ux-pro-max` fits:
 
 - 2026-10-22 · Owner's eye check of #70: both login pages (`/login` on a phone, `/login/admin` on the computer) served from this branch and from master side by side; the owner saw no difference. Dev servers stopped, comparison worktree removed. Pushed and PR opened. Next: the owner merges the PR, then `implement` #71.
 
-Next session: the owner merges the #70 PR, then `implement` #71.
+- 2026-10-22 · Owner: merge. PR #83 merged to master (`16f1cc5`); #70 closed. Next: `implement` #71 (shared components).
+
+- 2026-10-22 · #71 on branch `feat/shared-components`. New components in `shared/components`:
+  - `Button` with `buttonClass` (primary / secondary / danger / link; phone 48, main 56 full width, desk 36);
+  - `Note` (an error is `role="alert"`);
+  - `StatusChip` (md / lg);
+  - `Field` with `TextInput`, `Select`, `TextArea`; the help line sits outside the label and is linked with `aria-describedby`;
+  - `ChoiceTile`, `ToggleChip`;
+  - `Table` (its own scroll box; style-free cells);
+  - `Panel`, `Facts`, `Splash`;
+  - class helpers in `styles.ts`.
+
+  Already moved to the new look: `AppLayout` (shell and bar, `print:hidden`), `AdminNav` (36 px links, the current page in blue), `LiveBadge`, `StatusScreen`, `CrashScreen`, `StatusChip`. Still on `app-*`, for the page tickets: `BlockedScanScreen`, `LocationHelp` (#74); `RangeFields`, `BuildingSelect` (#80).
+
+  Other changes:
+  - `index.css` base rules and old tokens moved into `@layer base`, because an unlayered `a { color }` beat `text-on-primary` on a button-styled link. Unmoved pages are unlayered, so they still win as before.
+  - The press feedback is now class `is-tapped`, with its animation in `index.css`, so it reaches every page. `tapFeedback` also matches `[data-tap]`: TDD, with one new test that a press on the new Button plays.
+  - Owner's decision: the irreversible-action button (old orange `app-button--warn`) becomes `danger`: red error-tone text and border on white, no status colour (facility-0087 note).
+  - The shell sets no text size; each moved page sets `text-base` (phone) or `text-sm` (Admin) on its root (frontend-standards, MASTER.md).
+  - Code review fixes: the `no-underline` / `underline` clash, the arbitrary value comment, the shared focus ring and box classes, the `TextArea` size, a stray `main` input size removed, the doc comments.
+
+  Lint and tsc clean; 404 tests pass. Main JS 158.84 kB gzip; CSS 32.64 kB / 5.80 kB gzip. Not done: the owner's eye check. The bar, chips, Admin menu and live badge show only on logged-in pages, which need the API and a throwaway database. Next: the eye check, then the PR.
+
+- 2026-10-22 · Owner: check #71 by eye together with #72–#74. Pushed; PR #84 opened and **held** (do not merge before that eye check). The page tickets branch from `feat/shared-components`, so their PRs stack on #84 until it merges. Next: `implement` #72.
+
+Next session: `implement` #72 (branch from `feat/shared-components`); PR #84 waits for the eye check with #72–#74.
 
 ## Owner's rules (still in force)
 

@@ -1,5 +1,7 @@
-import { fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { Button } from '../components/Button';
 import { installTapFeedback } from './tapFeedback';
 
 let uninstall: () => void = () => undefined;
@@ -27,10 +29,10 @@ describe('tapFeedback', () => {
 
     fireEvent.pointerDown(show);
     fireEvent.pointerUp(show);
-    expect(show).toHaveClass('app-button--tapped');
+    expect(show).toHaveClass('is-tapped');
 
     fireEvent.animationEnd(show);
-    expect(show).not.toHaveClass('app-button--tapped');
+    expect(show).not.toHaveClass('is-tapped');
   });
 
   it('a tap on the text inside a button-styled link counts too', () => {
@@ -45,7 +47,7 @@ describe('tapFeedback', () => {
 
     fireEvent.pointerDown(label);
 
-    expect(link).toHaveClass('app-button--tapped');
+    expect(link).toHaveClass('is-tapped');
   });
 
   it('a disabled button, or anything that is not a button-styled element, plays nothing', () => {
@@ -57,8 +59,18 @@ describe('tapFeedback', () => {
     fireEvent.pointerDown(busy);
     fireEvent.pointerDown(other);
 
-    expect(busy).not.toHaveClass('app-button--tapped');
-    expect(other).not.toHaveClass('app-button--tapped');
+    expect(busy).not.toHaveClass('is-tapped');
+    expect(other).not.toHaveClass('is-tapped');
+  });
+
+  it('a tap on the new-look Button plays the press as well (facility-0087)', () => {
+    uninstall = installTapFeedback(document);
+    render(createElement(Button, { variant: 'primary' }, 'ส่งงาน'));
+    const send = screen.getByRole('button', { name: 'ส่งงาน' });
+
+    fireEvent.pointerDown(send);
+
+    expect(send).toHaveClass('is-tapped');
   });
 
   it('stops listening once uninstalled', () => {
@@ -67,6 +79,6 @@ describe('tapFeedback', () => {
 
     fireEvent.pointerDown(show);
 
-    expect(show).not.toHaveClass('app-button--tapped');
+    expect(show).not.toHaveClass('is-tapped');
   });
 });

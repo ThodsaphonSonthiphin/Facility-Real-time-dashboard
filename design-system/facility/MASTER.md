@@ -85,6 +85,24 @@ Tokens `--color-<kind>-bg`, `--color-<kind>-border`, `--color-<kind>-text` (util
 
 `lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons. No emoji as icons.
 
+## Shared components (#71)
+
+Build pages from these (in `frontend/src/shared/components`) instead of repeating class strings:
+
+| Component | For |
+|---|---|
+| `Button` (`variant` primary / secondary / danger / link, `size` phone / main / desk) | Every button. `main` is the phone page's one 56 px full-width action; `danger` confirms what cannot be undone (red text and border on white, owner 2026-10-22) |
+| `buttonClass(variant, size)` + `data-tap` | A react-router `Link` that looks like a button |
+| `Note` (`tone` info / warn / error, `title`, `icon`) | A message in a box; an error is `role="alert"` |
+| `StatusChip` (`size` md / lg) | A Point Status, always with its words |
+| `Field` (`label`, `help`), `TextInput`, `Select`, `TextArea` (`size` phone / desk) | A labelled control; the help line sits outside the label and is linked with `aria-describedby`; `inputClass(size)` for a bare one |
+| `ChoiceTile` (radio), `ToggleChip` (checkbox) | Large answers and issue tags on the phone |
+| `Table` | A table in its own scroll box; style-free `<th>` / `<td>` inside |
+| `Panel`, `Facts`, `Splash` | A boxed group, label–value pairs, the waiting line |
+| `AppLayout`, `AdminNav`, `LiveBadge`, `StatusScreen`, `CrashScreen` | The shell, bar and menu, the live badge, full-page messages |
+
+Every button-styled element gets the press feedback of `tapFeedback` (owner, 2026-10-21) through `data-tap`. Components set no body text size: each moved page sets `text-base` (phone) or `text-sm` (Admin) on its root, and the components inherit it.
+
 ## States every page shows
 
 - Loading: the words "กำลังโหลด..." (or a skeleton where the layout is known), never a frozen screen.

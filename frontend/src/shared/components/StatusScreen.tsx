@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import './shared.css';
+import { buttonClass, statusScreenClass } from './styles';
 
 interface StatusScreenProps {
   title: string;
@@ -11,11 +11,11 @@ interface StatusScreenProps {
 /** The full-page message of "not found", "no permission" and similar dead ends. */
 export function StatusScreen({ title, detail, linkTo, linkText }: StatusScreenProps) {
   return (
-    <main className="app-status">
-      <h1 className="app-status__title">{title}</h1>
-      {detail && <p className="app-status__detail">{detail}</p>}
+    <main className={statusScreenClass.main}>
+      <h1 className={statusScreenClass.title}>{title}</h1>
+      {detail && <p className="text-muted">{detail}</p>}
       {linkTo && linkText && (
-        <Link className="app-button app-button--primary" to={linkTo}>
+        <Link className={buttonClass('primary', 'main')} data-tap="" to={linkTo}>
           {linkText}
         </Link>
       )}
