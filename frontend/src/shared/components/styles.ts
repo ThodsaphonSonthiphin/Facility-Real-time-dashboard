@@ -1,7 +1,24 @@
 /**
  * Class strings of the new look (facility-0086, 0087) for the elements a component cannot wrap: a react-router Link
- * that looks like a button, a native input or select. Every class is written out in full, so Tailwind finds it.
+ * that looks like a button, a native input or select, and the status colours shared by more than one component. Every
+ * class is written out in full, so Tailwind finds it.
  */
+
+import type { PointStatus } from '../api/types';
+
+/**
+ * A Point Status's colour as a background, for StatusChip and for a mark beside the status's words (D1's legend).
+ * facility-0087 rule 3: the three statuses with nothing to do share one grey.
+ */
+export const statusBg: Record<PointStatus, string> = {
+  Rework: 'bg-status-rework',
+  Overdue: 'bg-status-overdue',
+  PendingInspection: 'bg-status-pending',
+  Passed: 'bg-status-passed',
+  NotYetDone: 'bg-status-idle',
+  BeforeFirstRound: 'bg-status-idle',
+  OffHours: 'bg-status-idle',
+};
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'link';
 /** phone: 48 px; main: the phone page's one main action, 56 px and full width; desk: the Admin pages, 36 px. */

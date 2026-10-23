@@ -51,6 +51,12 @@ export const legendOrder: readonly PointStatus[] = [
   'OffHours',
 ];
 
+/** ต้องแก้ไข and เลยเวลา need someone, so their tile is framed in the status colour as well as the chip (#77). */
+export const tileFrame: Partial<Record<PointStatus, string>> = {
+  Rework: 'border-2 border-status-rework',
+  Overdue: 'border-2 border-status-overdue',
+};
+
 /** The cards of one building; '' is every building. */
 export function inBuilding(points: readonly PointCard[], buildingCode: string): PointCard[] {
   return buildingCode === '' ? [...points] : points.filter((point) => point.buildingCode === buildingCode);

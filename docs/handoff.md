@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#70–#74 merged, last PR #87; #75 in PR #89, #76 in PR #90 (stacked); next: `implement` #77; see `## Next: Tailwind migration`)
+Last updated: 2026-10-23 (#70–#74 merged, last PR #87; #75 in PR #89, #76 in PR #90, #77 in PR #91 (stacked), eye check passed; next: merge #89–#91, then `implement` #78; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -227,7 +227,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 **Where it stands.** Spec #68 is split into tickets #70–#82, which are sub-issues of #68 with GitHub blocked-by edges.
 - **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A). Master is `47b49e9`; 410 frontend tests pass.
-- **Next:** #75 check-in, #76 Supervisor pages, #77 D1 A, #78 D2 + D3, #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
+- **Next:** #75 check-in, #76 Supervisor pages, #77 D1 A (all three in stacked PRs #89–#91), #78 D2 + D3, #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
 
 **Read first:**
 - `design-system/facility/MASTER.md`: tokens, the shared component table, the pre-delivery check.
@@ -258,7 +258,6 @@ Test data only. The Development seed has an Admin whose password is public in th
 **Known leftovers:**
 - An empty, untracked `package-lock.json` at the repo root. Never commit it.
 - `facility_uxpass_test` in MySQL, not from this session; ask before dropping it.
-- `roundText` and `issueText` repeat in my-work, dashboard and my-building. Move them to `shared/` when #76/#77 touch those pages.
 
 Plan 13 (the UX fix list) is merged (PR #66). Still to check by eye on real phones: the device's font (facility-0072), the plain-http message, and the check-in page's sign check over the tunnel.
 
@@ -428,7 +427,24 @@ Where `ui-ux-pro-max` fits:
 
   Pushed; PR #90 opened against `feat/check-in-new-look` (stacked on #89), not merged. Next: `implement` #77.
 
-Next session: `implement` #77 (and the eye check of #75 + #76).
+- 2026-10-23 · #77 on branch `feat/dashboard-d1-a` (stacked on `feat/supervisor-new-look`). D1 is variant A; `dashboard.css` is deleted.
+  - **Layout:** Area sections ("AR01 …", "ตึก A · n จุด"); tiles in an auto-fill grid, 230 px minimum (four across at 1280 px).
+  - **Filter row:** building `Select` (desk); one 36 px toggle per status with a dot (`statusBg`) and a bold count; "มีปัญหาที่แจ้ง n" with a `TriangleAlert` icon. A toggle that is on gets a blue frame (`aria-pressed:` ring). The borders use `input-border` for 3:1.
+  - **Tiles:** ต้องแก้ไข / เลยเวลา have a 2 px frame in the status colour (`tileFrame` in `boardRules.ts`, the same idiom as `statusFrame`). The issue stays a small red box, as the rules line calls it ป้ายแดง.
+  - **Header:** ส่งออก Excel is a desk button-link with a `Download` icon. The error and empty messages are `Note`s.
+  - **Text:** everything is ≥14 px. The mockup's 13 px rules line and round line became 14 px (admin.md: 13 px is for table meta only).
+  - **Idle dots:** the three idle statuses share one grey dot (the dashed and faded dots are gone, facility-0087 rule 3).
+  - **Shared:** StatusChip's colour map moved to `styles.ts` as `statusBg`.
+  - **Tests:** unchanged; 410 pass. Words, names and roles unchanged (checked by the review).
+  - **Code review (one sub-agent, Standards + Spec):** one hard violation, the toggle borders (`border`, 1.4:1), now fixed. Also fixed: the frame map moved to `boardRules.ts`, the `styles.ts` header, the icon colour (currentColor, as in the mockup). Left as is (reported): `gap-2.5` / `gap-1.5` / `px-2.5` copy the mockup and the shared components (off the 4/8 rhythm); the issue box is a box, while the mockup has red text.
+  - **Checks:** lint and tsc clean; main JS 162.83 kB gzip; CSS 24.72 / 5.24 kB gzip.
+  - **Not done:** the owner's eye check at 1280 px on a computer (with #75 and #76).
+
+  Pushed; PR #91 opened against `feat/supervisor-new-look` (stacked on #90), not merged. Next: `implement` #78.
+
+- 2026-10-23 · Owner's eye check of #75–#77: **passed**. The app was served from `feat/dashboard-d1-a` (#75–#77 stacked) by the API in Development on throwaway database `facility_ui_test`. D1 was checked on the computer; the phone pages were checked through a `cloudflared` quick tunnel that the owner ran. Cleanup is done: API stopped, `facility_ui_test` dropped, `wwwroot` deleted. `facility_uxpass_test` is still there, untouched. Next: merge #89 → #90 → #91 in order, with the owner's OK; then `implement` #78.
+
+Next session: merge #89 → #90 → #91 (owner's OK), then `implement` #78 (D2 + D3).
 
 ## Owner's rules (still in force)
 
