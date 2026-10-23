@@ -8,17 +8,24 @@ export interface WindowDraft {
 }
 
 /**
- * facility-0083: a time typed as an hour box and a minute box, as the server's two-digit 24-hour "HH:mm"
- * (RoundWindowRules.TryParseTime). The hour is 0–23 in one or two digits; the minute is empty (00) or two digits
- * 00–59. Anything else is null.
+ * facility-0083 (amended 2026-10-23): a time typed as four digits in one field, as the server's two-digit 24-hour
+ * "HH:mm" (RoundWindowRules.TryParseTime). The hour is 0–23 and the minute 00–59; anything else is null.
  */
-export function clockOf(hour: string, minute: string): string | null {
-  const h = hour.trim();
-  const m = minute.trim() === '' ? '00' : minute.trim();
-  if (!/^\d{1,2}$/.test(h) || !/^\d{2}$/.test(m) || Number(h) > 23 || Number(m) > 59) {
+export function clockOf(digits: string): string | null {
+  if (!/^\d{4}$/.test(digits)) {
     return null;
   }
-  return `${h.padStart(2, '0')}:${m}`;
+  const hour = Number(digits.slice(0, 2));
+  const minute = Number(digits.slice(2));
+  if (hour > 23 || minute > 59) {
+    return null;
+  }
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+/** The four digits as the field shows them while they are typed: "07" stays "07", "0700" reads "07:00". */
+export function typedTime(digits: string): string {
+  return digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits;
 }
 
 /** Minutes from the shift's start (07:00 or 19:00), wrapping past midnight: RoundWindowRules.MinutesIntoShift. */
@@ -41,4 +48,9 @@ export function sortWindows(windows: readonly WindowDraft[]): WindowDraft[] {
 
 export function sameWindow(a: WindowDraft, b: WindowDraft): boolean {
   return a.shift === b.shift && a.start === b.start && a.end === b.end;
+}
+
+/** The id of the point editor's heading; the Drawer that holds it takes its name from the same heading. */
+export function pointEditorTitleId(pointId: number | undefined): string {
+  return pointId === undefined ? 'point-editor-new' : `point-editor-${pointId}`;
 }

@@ -23,15 +23,12 @@ function serve(routes: FakeRoutes = {}) {
   });
 }
 
-/** Types one Round Window into a shift's four boxes (facility-0083); an empty string leaves that box empty. */
-async function typeWindow(user: UserEvent, shift: HTMLElement, from: [string, string], to: [string, string]) {
-  const boxes: [string, string][] = [
-    ['เริ่ม ชั่วโมง', from[0]],
-    ['เริ่ม นาที', from[1]],
-    ['ถึง ชั่วโมง', to[0]],
-    ['ถึง นาที', to[1]],
-  ];
-  for (const [name, text] of boxes) {
+/** Types one Round Window into a shift's two time fields (facility-0083); an empty string leaves that field empty. */
+async function typeWindow(user: UserEvent, shift: HTMLElement, from: string, to: string) {
+  for (const [name, text] of [
+    ['เริ่ม', from],
+    ['ถึง', to],
+  ] as const) {
     const box = within(shift).getByLabelText(name);
     await user.clear(box);
     if (text !== '') {
@@ -48,11 +45,11 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     const editor = screen.getByRole('region', { name: 'แก้ไขจุด · AR01 Area ทดลอง' });
     const day = within(editor).getByRole('group', { name: 'กะเช้า' });
 
-    await typeWindow(user, day, ['08', '00'], ['10', '00']);
+    await typeWindow(user, day, '0800', '1000');
     await user.click(within(editor).getByRole('button', { name: 'บันทึกจุด' }));
 
     expect(await within(editor).findByRole('alert')).toHaveTextContent(
-      'มีเวลาที่พิมพ์ไว้แต่ยังไม่ได้กด "เพิ่ม" กด "เพิ่ม" หรือลบเวลานั้นก่อนบันทึก',
+      'มีเวลาที่พิมพ์ไว้แต่ยังไม่ได้เพิ่ม กด "+ เพิ่มช่วงเวลา" หรือลบเวลานั้นก่อนบันทึก',
     );
     expect(server.calls.some((call) => call.path.startsWith('/api/admin') && call.method !== 'GET')).toBe(false);
   });
@@ -80,8 +77,8 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     expect(within(night).getByText('03:00–05:00')).toBeInTheDocument();
 
     await user.click(within(day).getByRole('button', { name: 'ลบช่วง 16:00–18:00' }));
-    await typeWindow(user, night, ['23', '00'], ['01', '00']);
-    await user.click(within(night).getByRole('button', { name: 'เพิ่ม' }));
+    await typeWindow(user, night, '2300', '0100');
+    await user.click(within(night).getByRole('button', { name: '+ เพิ่มช่วงเวลา' }));
     expect(within(night).getByText('23:00–01:00')).toBeInTheDocument();
     await user.clear(within(editor).getByLabelText('ชื่อจุด'));
     await user.type(within(editor).getByLabelText('ชื่อจุด'), 'ห้องน้ำชาย ชั้น 1');
@@ -117,7 +114,7 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
       },
     });
     const { user } = await renderApp('/admin/areas/2');
-    await user.click(await screen.findByRole('button', { name: '+ เพิ่มจุดทำความสะอาดในพื้นที่นี้' }));
+    await user.click(await screen.findByRole('button', { name: '+ เพิ่มจุด' }));
 
     const editor = screen.getByRole('region', { name: 'เพิ่มจุด · AR02 Office ทดลอง' });
     expect(within(editor).queryByRole('group', { name: 'กะดึก' })).not.toBeInTheDocument();
@@ -127,8 +124,8 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
 
     await user.type(within(editor).getByLabelText('ชื่อจุด'), 'โถงทางเดิน');
     const day = within(editor).getByRole('group', { name: 'กะเช้า' });
-    await typeWindow(user, day, ['08', '00'], ['10', '00']);
-    await user.keyboard('{Enter}'); // Enter in a box adds the window
+    await typeWindow(user, day, '0800', '1000');
+    await user.keyboard('{Enter}'); // Enter in a field adds the window
     await user.click(within(editor).getByRole('button', { name: 'บันทึกจุด' }));
 
     expect(await screen.findByText('บันทึกจุด โถงทางเดิน แล้ว')).toBeInTheDocument();
@@ -136,32 +133,37 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
       name: 'โถงทางเดิน',
       roundWindows: [{ shift: 'Day', start: '08:00', end: '10:00' }],
     });
-    // The new point is now edited in place, and its row is in the table
-    expect(await screen.findByRole('region', { name: 'แก้ไขจุด · AR02 Office ทดลอง' })).toBeInTheDocument();
-    expect(screen.getByRole('row', { name: /AR02-01/ })).toBeInTheDocument();
+    // The save closes the editor, and the new point's row is in the table
+    expect(screen.queryByRole('region', { name: 'เพิ่มจุด · AR02 Office ทดลอง' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('row', { name: /AR02-01/ })).toBeInTheDocument();
   });
 
-  it('hour and minute boxes: two hour digits move on, an empty minute is 00, a bad time is refused (facility-0083)', async () => {
+  it('one time field each: the colon is added, Backspace takes a digit, Enter adds, a bad time is refused (facility-0083)', async () => {
     serve();
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-01' }));
     const day = screen.getByRole('group', { name: 'กะเช้า' });
 
-    await user.type(within(day).getByLabelText('เริ่ม ชั่วโมง'), '10');
-    expect(within(day).getByLabelText('เริ่ม นาที')).toHaveFocus();
-    await user.keyboard('3x0');
-    expect(within(day).getByLabelText('เริ่ม นาที')).toHaveValue('30');
-    await user.type(within(day).getByLabelText('ถึง ชั่วโมง'), '12');
-    await user.click(within(day).getByRole('button', { name: 'เพิ่ม' }));
+    await user.type(within(day).getByLabelText('เริ่ม'), '1030');
+    expect(within(day).getByLabelText('เริ่ม')).toHaveValue('10:30');
+    await user.type(within(day).getByLabelText('ถึง'), '1200');
+    await user.keyboard('{Enter}'); // Enter in a field adds the window
     expect(within(day).getByText('10:30–12:00')).toBeInTheDocument();
-    expect((within(day).getByLabelText('เริ่ม ชั่วโมง') as HTMLInputElement).value).toBe(''); // added, so the boxes empty
+    // added, so both fields empty again
+    expect(within(day).getByLabelText('เริ่ม')).toHaveValue('');
+    expect(within(day).getByLabelText('ถึง')).toHaveValue('');
 
-    await typeWindow(user, day, ['24', '00'], ['25', '00']);
-    await user.click(within(day).getByRole('button', { name: 'เพิ่ม' }));
-    expect(within(day).getByRole('alert')).toHaveTextContent('ชั่วโมงใส่ 0–23 นาทีใส่ 00–59');
+    // Backspace takes the last digit typed, never the colon the field added
+    await user.type(within(day).getByLabelText('เริ่ม'), '0900');
+    await user.type(within(day).getByLabelText('เริ่ม'), '{Backspace}');
+    expect(within(day).getByLabelText('เริ่ม')).toHaveValue('09:0');
 
-    await typeWindow(user, day, ['7', '00'], ['9', '']); // 07:00–09:00 is already there
-    await user.click(within(day).getByRole('button', { name: 'เพิ่ม' }));
+    await typeWindow(user, day, '2400', '2500');
+    await user.click(within(day).getByRole('button', { name: '+ เพิ่มช่วงเวลา' }));
+    expect(within(day).getByRole('alert')).toHaveTextContent('ใส่เวลาเป็น 07:00 (ชั่วโมง 0–23 นาที 00–59)');
+
+    await typeWindow(user, day, '0700', '0900'); // 07:00–09:00 is already there
+    await user.click(within(day).getByRole('button', { name: '+ เพิ่มช่วงเวลา' }));
     expect(within(day).getByRole('alert')).toHaveTextContent('มีช่วงนี้แล้ว');
   });
 
@@ -174,8 +176,8 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
 
     const editor = screen.getByRole('region', { name: 'แก้ไขจุด · AR01 Area ทดลอง' });
     const day = within(editor).getByRole('group', { name: 'กะเช้า' });
-    await typeWindow(user, day, ['18', '00'], ['20', '00']);
-    await user.click(within(day).getByRole('button', { name: 'เพิ่ม' }));
+    await typeWindow(user, day, '1800', '2000');
+    await user.click(within(day).getByRole('button', { name: '+ เพิ่มช่วงเวลา' }));
     await user.click(within(editor).getByRole('button', { name: 'บันทึกจุด' }));
 
     expect(await within(editor).findByRole('alert')).toHaveTextContent('ช่วง 18:00–20:00 ต้องอยู่ในกะเช้า');
@@ -205,6 +207,10 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
 
     await user.click(screen.getByRole('button', { name: 'ปิดใช้งานจุดนี้' }));
     expect(await screen.findByText('ปิดใช้งานจุด ห้องน้ำหญิง แล้ว')).toBeInTheDocument();
+
+    // The save closed the editor; the row stays in the table, marked, and opening it again offers the way back
+    expect(screen.queryByRole('region', { name: 'แก้ไขจุด · AR01 Area ทดลอง' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'แก้ไข AR01-02' }));
     expect(await screen.findByText('จุดนี้ปิดใช้งานอยู่ ป้ายสแกนไม่ได้')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'เปิดใช้งานจุดนี้' }));
@@ -229,7 +235,7 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
         }),
     });
     const { user } = await renderApp('/admin/areas/2');
-    await user.click(await screen.findByRole('button', { name: '+ เพิ่มจุดทำความสะอาดในพื้นที่นี้' }));
+    await user.click(await screen.findByRole('button', { name: '+ เพิ่มจุด' }));
 
     const editor = screen.getByRole('region', { name: 'เพิ่มจุด · AR02 Office ทดลอง' });
     await user.type(within(editor).getByLabelText('ชื่อจุด'), 'โถงทางเดิน');

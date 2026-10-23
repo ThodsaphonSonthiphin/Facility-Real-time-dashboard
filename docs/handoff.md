@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-23 (#70–#77 merged, last PR #91; #78 in PR #93; next: eye check of #78, then `implement` #79; see `## Next: Tailwind migration`)
+Last updated: 2026-10-24 (#70–#78 merged, last PR #93; #79 in PR #95, D4 reworked after the owner's test-1 feedback; next: second eye check of D4, then the owner's D10/M17 feedback and `implement` #80; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -226,8 +226,8 @@ Test data only. The Development seed has an Admin whose password is public in th
 ### Start here (new session, 2026-10-22)
 
 **Where it stands.** Spec #68 is split into tickets #70–#82, which are sub-issues of #68 with GitHub blocked-by edges.
-- **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A). Master is `c177dfd`; 410 frontend tests pass.
-- **Next:** #78 D2 + D3 (PR #93), #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
+- **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A), #78 (D2 + D3). Master is `7b1054b`; 416 frontend tests pass.
+- **Next:** #79 D4 + D10 + M17 (PR #95), #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
 
 **Read first:**
 - `design-system/facility/MASTER.md`: tokens, the shared component table, the pre-delivery check.
@@ -237,7 +237,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 **How each ticket has gone (keep doing it):**
 1. Run `/mattpocock-skills:implement #N`. Branch from master as `feat/<slug>`.
-2. Rebuild the page from the shared components (`Button`, `buttonClass` + `data-tap` for a Link, `Note`, `StatusChip`, `Field` / `TextInput` / `Select` / `TextArea`, `ChoiceTile`, `ToggleChip`, `Table`, `Panel`, `Facts`, `Splash`, `styles.ts` helpers).
+2. Rebuild the page from the shared components (`Button`, `buttonClass` + `data-tap` for a Link, `Note`, `StatusChip`, `Field` / `FieldGroup` / `TextInput` / `Select` / `TextArea`, `ChoiceTile`, `ToggleChip`, `Table`, `Panel`, `Facts`, `Splash`, `Toast`, `styles.ts` helpers).
    - Set `text-base text-text` (phone) or `text-sm text-text` (Admin) on the page's root.
    - Colour links with `linkClass`.
    - Delete the page's CSS file.
@@ -500,6 +500,33 @@ Where `ui-ux-pro-max` fits:
 - 2026-10-23 · Owner's second eye check of #78: passed. API stopped, `facility_ui_test` dropped, `wwwroot` removed; `facility_uxpass_test` also dropped at the owner's request. PR #93 merged into master on the owner's OK.
 
 Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `Toast` and `Modal`.
+
+- 2026-10-23 · Matt Pocock's skills are usable in OpenCode now (they had been installed for Claude Code only; OpenCode does not read `~/.claude/plugins/cache/`, which is why `implement`, `to-spec`, `to-tickets`, `code-review` and `grill-with-docs` were missing). `~/.config/opencode/scripts/install-mattpocock-skills.sh` symlinks the plugin's 24 promoted skills (version 1.3.1) into `~/.config/opencode/skills/mattpocock/`, and writes one `/‹skill-id›` command per skill into `~/.config/opencode/commands/`. The five user-invoked skills keep `disable-model-invocation`, so they stay out of the model's skill menu but load by id through their command: `/implement #79` works. `handoff`, `wait-what` and `grill-me` keep this machine's own versions (the script leaves them alone). Re-run the script after a plugin update: the symlinks name a version path, so a new version would leave them dangling. No repo file changed.
+
+- 2026-10-23 · #79 on branch `feat/admin-setup-new-look` (from master `7b1054b`). D4, D10 and M17 are in the new look; `areas.css` (248 lines), `areaForm.css` and `capture.css` are deleted. The per-page CSS left in `pages/` belongs to #80 and #81.
+  - **D4:** the 300 px Area rail and the open Area on the Admin tokens; the sign table is the shared `Table`; the editor boxes are `boxClass` sections; the hour/minute boxes (facility-0083) use `inputClass('desk')`.
+  - **D10:** the same one column at 720 px (`max-w-180`, commented: no width token names it), on `Field` / `TextInput` / `Select`; the two lower boxes are named sections.
+  - **M17:** phone sizes in the phone shell (`text-base`, 48 px sign rows, 56 px full-width main action); it gained the "กำลังโหลด..." line it never had.
+  - **Decisions:**
+    - a point save (D4) and an Area (de)activation (D10) answer with the shared `Toast`, as on D2/D3 (owner, #78);
+    - the per-sign notes (radius, location, QR) stay inline `Note`s: they answer one box, and the QR one carries the "พิมพ์ป้ายใหม่ ›" link;
+    - the new-QR question stays a page `alertdialog` (a test asserts it and its accessible description), not the shared `Modal`;
+    - deactivation is an outlined button, not `danger`: MASTER reserves `danger` for what cannot be undone, and the same panel says "เปิดกลับได้" (review finding; the old look used a warn button).
+  - **Shared:** `FieldGroup` in `Field.tsx`; D10's shift pattern and D4's round windows were two private fieldset styles, now one piece (MASTER's table updated). `Panel` was briefly given a `headingId` and reverted: the review called the optional pair unsafe and the edit out of scope, so D10's two boxes are named sections built from `boxClass`.
+  - **Code review (two sub-agents, Standards + Spec):** fixed `danger` on reversible actions; focus rings on the Area rows, the M17 sign rows and the shift radios; 8 px between the Area rows and between the window chips; `gap-1` label pairs; M17's group heading 15 → 19 px; the missing M17 loading line; the map-pick help line under its row; the window chip's × a 36 px target. Left as is (reported): M17's main action sits in the sign card above the sign list (the page's own words say "จากรายการข้างล่าง", so the order cannot change without changing the words); `SignPanel`'s local ok → info + status mapping (two lines); the D4 list heading at 17 px bold, like D3's box titles.
+  - **Checks:** 416 tests pass, the 51 page tests unchanged (no test file touched); lint and tsc clean; main JS 132.07 kB gzip, startup ≈ 163.44 kB (main + preloaded `baseApi` 31.37); CSS 27.65 / 5.86 kB gzip.
+  - **Not done:** the owner's eye check (M17 on a real phone, D4 and D10 at 1280 px).
+
+  Pushed; PR #95 opened against master, not merged. Next: the eye check, then `implement` #80.
+
+- 2026-10-24 · #79 D4 rework after the owner's test-1 feedback (same branch, PR #95; only D4 — D10/M17 feedback comes later).
+  - **1.1 forms in a Drawer:** `Drawer` added beside `Modal` in `shared/components/Modal.tsx`: the same modal `<dialog>`, a full-height panel on the right edge (480 px `w-120`, commented), scrolling on its own; Escape, `onClose` and the opener's keyboard back work as `Modal`'s. D4's point editor, and the Area form (`AreaEditorDrawer`: D10's `AreaForm` + `AreaActiveSection`, the building/Cleaner lists asked for only while it is open), now open there — the Area table stays visible on the left. A save closes the Drawer and floats the shared `Toast`; a Toast under an open dialog would sit under its backdrop.
+  - **1.2 master-detail:** the header is the name, the shifts/Cleaner line, `[แก้ไขพื้นที่]` (Drawer) and `[พิมพ์ป้าย]`; two `toggleClass` tabs (the D3 pattern, `aria-pressed`) — `จุดทำความสะอาด`, whose list heading carries the count and `+ เพิ่มจุด` at the table's top right, and `ป้ายลงเวลา` holding the check-in sign's place, radius and QR. The check-in sign is no longer a row of the point table.
+  - **1.3 time picker:** one field per time `[07:00] – [09:00]` plus `+ เพิ่มช่วงเวลา`; digits only, the colon added after the second digit, Backspace takes a digit, Enter adds; saved windows are 24 px pills whose ✕ has a 36 px hit area. facility-0083 amended with the owner's new rationale (2026-10-23); the browser `input type=time` stays rejected (AM/PM).
+  - **Folders:** `pages/area-form/` merged into `pages/areas/` — D4 now uses D10's form, and the repo's boundaries rule forbids page→page imports (facility-0025 amended). The `/admin/areas/new` and `/admin/areas/:areaId/edit` paths are unchanged.
+  - **Tests changed (reported, not silent):** `row(/AR01-IN/)` is gone (the check-in sign is Tab 2; the test asserts its region and its `พิมพ์ป้ายลงเวลา` link); `แก้ไขพื้นที่` is a button, not a link; `พิมพ์ป้ายของพื้นที่นี้ ›` → `พิมพ์ป้าย`; `+ เพิ่มจุดทำความสะอาดในพื้นที่นี้` → `+ เพิ่มจุด`; `แก้ไข AR01-IN` → the `ป้ายลงเวลา` tab; the four time boxes → the `เริ่ม` / `ถึง` fields; `เพิ่ม` → `+ เพิ่มช่วงเวลา`; a save or (de)activation now closes the editor, so the deactivation test opens the point again; the facility-0083 test now covers the colon, Backspace and Enter; two new tests (the Area form opens in a Drawer, `clockOf`/`typedTime`).
+  - **Checks:** 418 tests pass, lint and `tsc -b` clean; main JS 132.04 kB gzip, CSS 28.28 / 6.00 kB gzip.
+  - **Not done:** the second eye check (D4 at 1280 px).
 
 ## Owner's rules (still in force)
 

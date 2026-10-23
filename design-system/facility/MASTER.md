@@ -81,11 +81,11 @@ Tokens `--color-<kind>-bg`, `--color-<kind>-border`, `--color-<kind>-text` (util
 - Corners 8 px (`--radius`, utility `rounded`); chips may be fully round (`rounded-full`).
 - Widths: phone column `--container-phone` 480 px (`max-w-phone`), Admin page `--container-desk` 1216 px (`max-w-desk`).
 - Phone targets at least **48 px** high; primary actions (ส่งงาน, ลงเวลา) **56 px**, full width.
-- Admin targets at least **36 px** high.
+- Admin targets at least **36 px** high. The one exception is the window pill's ✕ in D4 (24 px, owner 2026-10-23): a 36 px target grew past the pill's own words and a click beside the time deleted the window, so that ✕ is exactly the size it looks. Nothing else may be smaller.
 
 ## Icons (facility-0088)
 
-`lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text, `size-7` (28 px) inside a `ChoiceTile`, as in the mockup. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons, except the Toast's ✕ (owner, #78). No emoji as icons.
+`lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text, `size-7` (28 px) inside a `ChoiceTile`, as in the mockup. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons, except the Toast's ✕ (owner, #78) and the window pill's ✕ (owner, #79). No emoji as icons.
 
 ## Shared components (#71)
 
@@ -99,10 +99,11 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 | `StatusChip` (`size` md / lg) | A Point Status, always with its words |
 | `Toast` (`notice`, `onClose`; with its `Notice` type) | The answer to an Admin's action (D2, D3), floating at the top centre so nothing under it moves (owner, #78). `ok` (done): info colours, a check icon, `role="status"`, gone by itself after 5 s (held while the pointer or keyboard is on it). `warn` (something the Admin did not ask for, such as their form closing): warn colours, `role="status"`. `error`: error colours, `role="alert"`. warn and error stay until ✕ (named ปิดข้อความ), which closes any of them at once |
 | `toggleClass` (`styles.ts`) + `data-tap` | An Admin on/off button with `aria-pressed` (D1 filters, D2 shift, D3 tabs): 36 px, a blue frame when on |
-| `Field` (`label`, `help`), `TextInput`, `Select`, `TextArea` (`size` phone / desk) | A labelled control; the help line sits outside the label and is linked with `aria-describedby`; `inputClass(size)` for a bare one |
+| `Field` (`label`, `help`), `FieldGroup` (`legend`), `TextInput`, `Select`, `TextArea` (`size` phone / desk) | A labelled control; the help line sits outside the label and is linked with `aria-describedby`; `inputClass(size)` for a bare one. `FieldGroup` is the bordered `fieldset` whose legend names a group of answers (D10's shift pattern, D4's round windows) |
 | `ChoiceTile` (radio), `ToggleChip` (checkbox) | Large answers and issue tags on the phone |
 | `Table` | A table in its own scroll box; style-free `<th>` / `<td>` inside |
 | `Modal` (`labelledBy`, `onClose`) | A form over the page (the browser's modal `<dialog>`), so the page behind does not move: D2's correction form, D3's cover form. Its heading (`tabIndex={-1}`) takes the keyboard on open; Escape asks `onClose`; closing gives the keyboard back to what opened it (owner, #78) |
+| `Drawer` (`labelledBy`, `onClose`) | The same modal `<dialog>` as a full-height panel on the right edge (480 px, `w-120`, commented), scrolling on its own, the page still visible on the left: D4's point editor and its Area form (owner, 2026-10-23). Escape, the keyboard and the opener's keyboard back work as `Modal`'s |
 | `Panel`, `Facts`, `Splash` | A boxed group, label–value pairs, the waiting line |
 | `AppLayout`, `AdminNav`, `LiveBadge`, `StatusScreen`, `CrashScreen` | The shell, bar and menu, the live badge, full-page messages |
 
