@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-23 (#70–#74 merged, last PR #87; #75 in PR #89, #76 in PR #90, #77 in PR #91 (stacked), eye check passed; next: merge #89–#91, then `implement` #78; see `## Next: Tailwind migration`)
+Last updated: 2026-10-23 (#70–#77 merged, last PR #91; next: `implement` #78; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -226,8 +226,8 @@ Test data only. The Development seed has an Admin whose password is public in th
 ### Start here (new session, 2026-10-22)
 
 **Where it stands.** Spec #68 is split into tickets #70–#82, which are sub-issues of #68 with GitHub blocked-by edges.
-- **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A). Master is `47b49e9`; 410 frontend tests pass.
-- **Next:** #75 check-in, #76 Supervisor pages, #77 D1 A (all three in stacked PRs #89–#91), #78 D2 + D3, #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
+- **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A). Master is `c177dfd`; 410 frontend tests pass.
+- **Next:** #78 D2 + D3, #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
 
 **Read first:**
 - `design-system/facility/MASTER.md`: tokens, the shared component table, the pre-delivery check.
@@ -444,7 +444,9 @@ Where `ui-ux-pro-max` fits:
 
 - 2026-10-23 · Owner's eye check of #75–#77: **passed**. The app was served from `feat/dashboard-d1-a` (#75–#77 stacked) by the API in Development on throwaway database `facility_ui_test`. D1 was checked on the computer; the phone pages were checked through a `cloudflared` quick tunnel that the owner ran. Cleanup is done: API stopped, `facility_ui_test` dropped, `wwwroot` deleted. `facility_uxpass_test` is still there, untouched. Next: merge #89 → #90 → #91 in order, with the owner's OK; then `implement` #78.
 
-Next session: merge #89 → #90 → #91 (owner's OK), then `implement` #78 (D2 + D3).
+- 2026-10-23 · Owner: merge all three. PRs #89 → #90 → #91 merged to master in order (#90 and #91 retargeted to master first); #75–#77 closed; master `c177dfd` has the same tree as `feat/dashboard-d1-a`; 410 tests pass. Next: `implement` #78 (D2 + D3), branched from master.
+
+Next session: `implement` #78 (D2 + D3).
 
 ## Owner's rules (still in force)
 
