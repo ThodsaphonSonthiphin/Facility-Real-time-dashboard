@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { AssignedCleaner } from '../../shared/api/adminSetupApi';
 import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
 import type { AttendanceEvent } from '../../shared/api/types';
@@ -34,12 +34,6 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
   const [problem, setProblem] = useState<string | null>(null);
   const [correct, { isLoading }] = useCorrectAttendanceMutation();
   const headingId = `attendance-correction-${row.areaId}`;
-  const headingRef = useRef<HTMLHeadingElement>(null);
-
-  // The form opens over the page: its heading takes focus, so keyboard and screen-reader users start at its name
-  useEffect(() => {
-    headingRef.current?.focus();
-  }, []);
 
   const choose = (next: AttendanceEvent) => {
     setEventType(next);
@@ -72,7 +66,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
     <Modal labelledBy={headingId} onClose={() => !isLoading && onCancel()}>
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-0.5">
-          <h2 id={headingId} ref={headingRef} tabIndex={-1} className="text-base font-bold">
+          <h2 id={headingId} tabIndex={-1} className="text-base font-bold">
             {`เพิ่ม/แก้เวลา · ${cleaner.displayName} · ${row.areaCode}`}
           </h2>
           <span className="text-muted">{`${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)}`}</span>

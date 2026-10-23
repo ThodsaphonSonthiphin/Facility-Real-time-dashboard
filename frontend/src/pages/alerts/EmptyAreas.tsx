@@ -24,7 +24,7 @@ interface EmptyAreasProps {
   /** The Area whose cover form is open. */
   chosen: number | null;
   onChoose: (areaId: number) => void;
-  /** The cover form, shown under the list while an Area is chosen. */
+  /** The cover form, a popup over the page while an Area is chosen (owner, #78). */
   children?: ReactNode;
 }
 
@@ -97,7 +97,6 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, o
               <Button
                 size="desk"
                 aria-label={`มอบหมายคนทำแทน ${row.areaCode}`}
-                disabled={chosen === row.areaId}
                 onClick={() => onChoose(row.areaId)}
               >
                 {chosen === row.areaId ? 'กำลังมอบหมาย ›' : 'มอบหมายคนทำแทน'}

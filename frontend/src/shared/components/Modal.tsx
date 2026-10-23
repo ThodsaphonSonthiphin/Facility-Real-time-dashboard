@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { boxClass } from './styles';
 
 interface ModalProps {
-  /** The id of the heading that names the dialog. */
+  /** The id of the heading that names the dialog; give it `tabIndex={-1}`: it takes the keyboard when the form opens. */
   labelledBy: string;
   /** Escape (or a phone's back gesture) asks to close; the parent decides, so a send in flight can keep it open. */
   onClose: () => void;
@@ -22,13 +22,15 @@ export function Modal({ labelledBy, onClose, children }: ModalProps) {
     // Whatever opened it gets the keyboard back on close, so the Admin is where they were in the table
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog?.showModal();
+    // Keyboard and screen-reader users start at the form's name, and Escape reaches the dialog
+    document.getElementById(labelledBy)?.focus();
     return () => {
       dialog?.close();
       if (opener?.isConnected) {
         opener.focus();
       }
     };
-  }, []);
+  }, [labelledBy]);
 
   return (
     <dialog
