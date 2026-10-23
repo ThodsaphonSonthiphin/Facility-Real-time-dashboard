@@ -2,6 +2,7 @@ import type { Placement, PointCard } from '../../shared/api/types';
 import { StatusChip } from '../../shared/components/StatusChip';
 import { issueText, roundText } from '../../shared/utils/pointText';
 import { formatClock, formatTime } from '../../shared/utils/thaiTime';
+import { tileFrame } from './boardRules';
 
 /**
  * One point on wireframe D1. It is not a link: only the sign's QR opens a point (facility-0059). Names, defects and
@@ -11,14 +12,18 @@ export function PointTile({ point }: { point: PointCard }) {
   const round = roundText(point);
   const issue = issueText(point);
   return (
-    <li className="dashboard-tile">
-      <div className="dashboard-tile__top">
-        <h3 className="dashboard-tile__name">{point.name}</h3>
+    <li className={`flex min-w-0 flex-col gap-0.5 rounded bg-surface px-3 py-2.5 ${tileFrame[point.status] ?? 'border border-border'}`}>
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="text-md font-bold">{point.name}</h3>
         <StatusChip status={point.status} />
       </div>
-      {round && <span className="dashboard-tile__round">{round}</span>}
-      <span className="dashboard-tile__detail">{detailText(point)}</span>
-      {issue && <span className="dashboard-tile__issue">{issue}</span>}
+      {round && <span className="text-muted tabular-nums">{round}</span>}
+      <span>{detailText(point)}</span>
+      {issue && (
+        <span className="mt-1 self-start rounded border border-error-border bg-error-bg px-2 py-0.5 font-semibold text-error-text">
+          {issue}
+        </span>
+      )}
     </li>
   );
 }

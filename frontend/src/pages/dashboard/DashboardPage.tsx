@@ -1,13 +1,15 @@
+import { Download } from 'lucide-react';
 import { Link } from 'react-router';
 import { livePoll } from '../../shared/api/baseApi';
 import { LiveBadge } from '../../shared/components/LiveBadge';
+import { Note } from '../../shared/components/Note';
+import { buttonClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { useAppSelector } from '../../store/hooks';
 import { filterPoints, groupByArea, type AreaGroup } from './boardRules';
 import { DASHBOARD_HUB, useGetServicePointsQuery } from './dashboardApi';
 import { Filters } from './Filters';
 import { PointTile } from './PointTile';
-import './dashboard.css';
 
 /** Wireframe D1's grey line, word for word. */
 const RULES_NOTE =
@@ -24,28 +26,25 @@ export function DashboardPage() {
   const shown = data ? filterPoints(data, filters) : [];
 
   return (
-    <main className="dashboard-page">
-      <header className="dashboard-heading">
-        <h1>สถานะจุดทำความสะอาด</h1>
-        <div className="dashboard-heading__side">
-          <Link className="app-button" to="/admin/export">
+    <main className="flex flex-col gap-4 text-sm text-text">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-bold">สถานะจุดทำความสะอาด</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link className={buttonClass('secondary', 'desk')} data-tap="" to="/admin/export">
+            <Download aria-hidden="true" className="size-4" />
             ส่งออก Excel
           </Link>
           <LiveBadge hubKey={DASHBOARD_HUB} />
         </div>
       </header>
       {data && <Filters points={data} />}
-      <p className="app-muted">{RULES_NOTE}</p>
-      {isLoading && <p className="app-muted">กำลังโหลดจุด...</p>}
-      {error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(error)}
-        </p>
-      )}
+      <p className="text-muted">{RULES_NOTE}</p>
+      {isLoading && <p className="text-muted">กำลังโหลดจุด...</p>}
+      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && data.length === 0 && (
-        <p className="app-note app-note--info">ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการพื้นที่และป้าย</p>
+        <Note tone="info">ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการพื้นที่และป้าย</Note>
       )}
-      {data && data.length > 0 && shown.length === 0 && <p className="app-note app-note--info">ไม่มีจุดตามตัวกรองนี้</p>}
+      {data && data.length > 0 && shown.length === 0 && <Note tone="info">ไม่มีจุดตามตัวกรองนี้</Note>}
       {groupByArea(shown).map((group) => (
         <AreaSection key={group.areaId} group={group} />
       ))}
@@ -56,12 +55,13 @@ export function DashboardPage() {
 function AreaSection({ group }: { group: AreaGroup }) {
   const headingId = `dashboard-area-${group.areaId}`;
   return (
-    <section className="dashboard-area" aria-labelledby={headingId}>
-      <div className="dashboard-area__head">
-        <h2 id={headingId}>{`${group.areaCode} ${group.areaName}`}</h2>
-        <span className="app-muted">{`ตึก ${group.buildingCode} · ${group.points.length} จุด`}</span>
+    <section className="flex flex-col gap-2" aria-labelledby={headingId}>
+      <div className="flex flex-wrap items-baseline gap-2.5">
+        <h2 id={headingId} className="text-base font-bold">{`${group.areaCode} ${group.areaName}`}</h2>
+        <span className="text-muted">{`ตึก ${group.buildingCode} · ${group.points.length} จุด`}</span>
       </div>
-      <ul className="dashboard-tiles">
+      {/* auto-fill tiles at least 230 px wide (the mockup's): four across at 1280 px; no token describes a track list */}
+      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-2 p-0">
         {group.points.map((point) => (
           <PointTile key={point.id} point={point} />
         ))}

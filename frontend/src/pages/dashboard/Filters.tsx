@@ -1,9 +1,19 @@
+import { TriangleAlert } from 'lucide-react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import type { PointCard } from '../../shared/api/types';
+import { Select } from '../../shared/components/Field';
+import { focusRing, statusBg } from '../../shared/components/styles';
 import { pointStatusLabel } from '../../shared/utils/labels';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { buildingChosen, issueOnlyToggled, statusToggled } from '../../store/slices/dashboardSlice';
 import { inBuilding, legendOrder, statusCounts } from './boardRules';
+
+// A 36 px toggle (pages/admin.md); the one that is on gets a blue frame, since blue means "can be pressed"
+const toggleClass =
+  'inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded border border-input-border bg-surface px-2.5 text-text ' +
+  `ring-primary ring-inset hover:border-primary aria-pressed:border-primary aria-pressed:ring-1 ${focusRing}`;
+
+const countClass = 'font-bold tabular-nums';
 
 /** Wireframe D1's filter row: the building, the legend as status buttons with counts, and "มีปัญหาที่แจ้ง" (facility-0024). */
 export function Filters({ points }: { points: PointCard[] }) {
@@ -15,11 +25,11 @@ export function Filters({ points }: { points: PointCard[] }) {
   const issues = shown.filter((point) => point.issue).length;
 
   return (
-    <div className="dashboard-filters">
-      <label className="dashboard-filter">
+    <div className="flex flex-wrap items-center gap-2">
+      <label className="inline-flex items-center gap-1.5">
         ตึก
-        <select
-          className="app-input"
+        <Select
+          size="desk"
           value={filters.buildingCode}
           onChange={(event) => dispatch(buildingChosen(event.target.value))}
         >
@@ -29,30 +39,33 @@ export function Filters({ points }: { points: PointCard[] }) {
               {building.code}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
-      <ul className="dashboard-legend" aria-label="สถานะ">
+      <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label="สถานะ">
         {legendOrder.map((status) => (
           <li key={status}>
             <button
               type="button"
-              className="dashboard-legend__item"
+              data-tap=""
+              className={toggleClass}
               aria-pressed={filters.status === status}
               onClick={() => dispatch(statusToggled(status))}
             >
-              <span className={`dashboard-dot dashboard-dot--${status}`} />
-              {`${pointStatusLabel[status]} ${counts[status]}`}
+              <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${statusBg[status]}`} />
+              {pointStatusLabel[status]} <span className={countClass}>{counts[status]}</span>
             </button>
           </li>
         ))}
       </ul>
       <button
         type="button"
-        className="dashboard-issue"
+        data-tap=""
+        className={toggleClass}
         aria-pressed={filters.issueOnly}
         onClick={() => dispatch(issueOnlyToggled())}
       >
-        {`มีปัญหาที่แจ้ง ${issues}`}
+        <TriangleAlert aria-hidden="true" className="size-4" />
+        มีปัญหาที่แจ้ง <span className={countClass}>{issues}</span>
       </button>
     </div>
   );
