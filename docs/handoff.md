@@ -468,7 +468,19 @@ Where `ui-ux-pro-max` fits:
 
   Pushed; PR #93 opened against master, not merged. Next: the eye check, then `implement` #79.
 
-Next session: the eye check of #78 (PR #93), then `implement` #79 (D4 + D10 + M17).
+- 2026-10-23 · Owner's eye check of #78, first round: three changes asked, all done on the same branch (PR #93):
+  1. **Forms as popups.** D2's correction form (and, on the owner's OK, D3's cover form) opened inline and pushed the table down. Both now open in a shared `Modal`: the browser's modal `<dialog>`; the heading (`tabIndex={-1}`) takes focus; Escape asks `onClose`; closing returns focus to the opener (a layout effect, so it never lands on `<body>`).
+     - jsdom 30 has no `showModal`, so `src/test/setup.ts` adds a minimal `showModal` / `close`.
+     - The tests find the forms as `dialog` now (was `region`), plus three new tests: Escape on D2 and on D3, and focus return on D2. 413 tests pass.
+     - D3's Area button is no longer disabled while its form is open: the page behind is inert, and the focus has to return to it. Its words "กำลังมอบหมาย ›" stay.
+  2. **แก้ไข column.** A `link` button now has no side padding (`buttonClass`), so แก้เวลา lines up with the column heading. This also applies to D3's ยกเลิก… buttons.
+  3. **Date controls.** วันที่ + ดูวันที่นี้ + กะปัจจุบัน sit together as one group (`gap-1`); the groups are 16 px apart.
+  - Code review (one sub-agent): no hard findings. Fixed: `text-sm` dropped from `Modal`, `useLayoutEffect`, a stale comment.
+  - Left as is (reported): after a save, the notice line above the counts still shifts the table by one line; the D2 test "pressing กะดึก with a form open" now runs a path a user can only reach by Back or a push (the background is inert in a browser); Chrome's back-gesture close-watcher could close the dialog natively without telling React (low risk on desk pages).
+  - **Checks:** lint and tsc clean; startup JS 132.73 + 31.37 kB gzip; CSS 25.77 / 5.47 kB gzip.
+  - The API is still running on `facility_ui_test` with the new build, for the second round of the eye check.
+
+Next session: the second round of the eye check of #78 (PR #93), then `implement` #79 (D4 + D10 + M17).
 
 ## Owner's rules (still in force)
 
