@@ -1,3 +1,4 @@
+import { Download } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
@@ -10,6 +11,9 @@ import {
 import { livePoll } from '../../shared/api/baseApi';
 import type { AttendanceEvent, Shift } from '../../shared/api/types';
 import { LiveBadge } from '../../shared/components/LiveBadge';
+import { boxClass, buttonClass, linkClass } from '../../shared/components/styles';
+import { Note } from '../../shared/components/Note';
+import { Toast, type Notice } from '../../shared/components/Toast';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { exportLink } from '../../shared/utils/dateRange';
@@ -18,14 +22,11 @@ import { AttendanceTable } from './AttendanceTable';
 import { BoardControls } from './BoardControls';
 import { CorrectionForm } from './CorrectionForm';
 import { readBoardArgs, readFill, searchRows, toBoardParams } from './attendanceRules';
-import './attendance.css';
 
 /** The row whose form is open, the event it opens on, and the slot and Cleaner it was opened for. */
 type Editing = { areaId: number; event?: AttendanceEvent; shiftDate: string; shift: Shift; userId: number };
 
 const formKey = (form: Editing) => `${form.areaId}:${form.event ?? ''}:${form.shiftDate}:${form.shift}:${form.userId}`;
-
-type Notice = { kind: 'ok' | 'error'; text: string } | null;
 
 /**
  * facility-0027, 0050, wireframe D2: whether each Area that works the shift has someone in it, never late or early.
@@ -39,7 +40,7 @@ export function AttendancePage() {
   const { data: board, error, isLoading } = useGetAttendanceBoardQuery(args, livePoll);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Editing | null>(null);
-  const [notice, setNotice] = useState<Notice>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const go = (next: BoardArgs) => setParams(toBoardParams(next));
 
   // From an alert's "เติมเวลา…" link (plan 11 decision 9): the form opens on that Cleaner once the board is in
@@ -53,7 +54,7 @@ export function AttendancePage() {
     (board.shiftDate !== editing.shiftDate || board.shift !== editing.shift || openRow?.cleaner?.id !== editing.userId)
   ) {
     setEditing(null);
-    setNotice({ kind: 'ok', text: 'กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน' });
+    setNotice({ kind: 'warn', text: 'กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน' });
   }
   const open: Editing | null =
     editing ??
@@ -76,15 +77,20 @@ export function AttendancePage() {
   };
 
   return (
-    <main className="attendance-page">
-      <header className="attendance-heading">
-        <div>
-          {board && <span className="app-muted">{slotLine(board)}</span>}
-          <h1>การเข้างาน</h1>
+    <main className="flex flex-col gap-4 text-sm text-text">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          {board && <span className="text-muted">{slotLine(board)}</span>}
+          <h1 className="text-xl font-bold">การเข้างาน</h1>
         </div>
-        <div className="attendance-heading__side">
+        <div className="flex flex-wrap items-center gap-2">
           {board && (
-            <Link className="app-button" to={exportLink({ from: board.shiftDate, to: board.shiftDate }, args.buildingId)}>
+            <Link
+              className={buttonClass('secondary', 'desk')}
+              data-tap=""
+              to={exportLink({ from: board.shiftDate, to: board.shiftDate }, args.buildingId)}
+            >
+              <Download aria-hidden="true" className="size-4" />
               ส่งออก Excel
             </Link>
           )}
@@ -100,22 +106,11 @@ export function AttendancePage() {
         onNow={() => go({ buildingId: args.buildingId })}
         onBuilding={(buildingId) => go({ ...args, buildingId })}
       />
-      {notice && (
-        <p
-          className={notice.kind === 'ok' ? 'app-note app-note--info' : 'app-note app-note--error'}
-          role={notice.kind === 'ok' ? 'status' : 'alert'}
-        >
-          {notice.text}
-        </p>
-      )}
-      {isLoading && <p className="app-muted">กำลังโหลด...</p>}
-      {error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(error)}
-        </p>
-      )}
+      {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
+      {isLoading && <p className="text-muted">กำลังโหลด...</p>}
+      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {board && fill && !fillRow && !editing && (
-        <p className="app-note app-note--info">ไม่พบแม่บ้านคนนี้ในกะนี้ อาจย้ายพื้นที่หรือปิดใช้งานแล้ว</p>
+        <Note tone="info">ไม่พบแม่บ้านคนนี้ในกะนี้ อาจย้ายพื้นที่หรือปิดใช้งานแล้ว</Note>
       )}
       {board && (
         <>
@@ -154,29 +149,36 @@ function slotLine(board: AttendanceBoard): string {
   return `${formatShiftDate(board.shiftDate)} · ${shiftLabel[board.shift]}${board.shiftEnded ? ' · จบกะแล้ว' : ''}`;
 }
 
-/** Wireframe D2's four counts (BoardSummaryDto). */
+const tileClass = `flex flex-col ${boxClass}`;
+const countClass = 'text-2xl font-bold tabular-nums';
+
+/**
+ * Wireframe D2's four counts (BoardSummaryDto). ยังไม่มีคน is framed, tinted and counted in its state's red, the same
+ * colour as its chip and its rows in the table, since it is the one that needs the Admin.
+ */
 function Tiles({ summary }: { summary: BoardSummary }) {
   return (
-    <ul className="attendance-tiles" aria-label="สรุปกะนี้">
-      <li className="attendance-tile">
+    // auto-fit tiles at least 200 px wide: four across on a computer; no token describes a track list
+    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3 p-0" aria-label="สรุปกะนี้">
+      <li className={tileClass}>
         <span>พื้นที่ที่ต้องมีคนกะนี้</span>
-        <strong>{summary.required}</strong>
-        <span className="app-muted">ไม่รวมพื้นที่ที่ปิดกะนี้</span>
+        <strong className={countClass}>{summary.required}</strong>
+        <span className="text-muted">ไม่รวมพื้นที่ที่ปิดกะนี้</span>
       </li>
-      <li className="attendance-tile">
+      <li className={tileClass}>
         <span>มีคนแล้ว</span>
-        <strong>{summary.present}</strong>
-        <span className="app-muted">รวมพักเบรก</span>
+        <strong className={countClass}>{summary.present}</strong>
+        <span className="text-muted">รวมพักเบรก</span>
       </li>
-      <li className="attendance-tile attendance-tile--warn">
+      <li className="flex flex-col rounded border-2 border-status-rework bg-error-bg px-4 py-3.5">
         <span>ยังไม่มีคน</span>
-        <strong>{summary.empty}</strong>
-        <span className="app-muted">ต้องหาคนทำแทน</span>
+        <strong className={`${countClass} text-status-rework`}>{summary.empty}</strong>
+        <span className="text-muted">ต้องหาคนทำแทน</span>
       </li>
-      <li className="attendance-tile">
+      <li className={tileClass}>
         <span>มีคนทำแทน</span>
-        <strong>{summary.covered}</strong>
-        <span className="app-muted">แอดมินมอบหมายเฉพาะกะนี้</span>
+        <strong className={countClass}>{summary.covered}</strong>
+        <span className="text-muted">แอดมินมอบหมายเฉพาะกะนี้</span>
       </li>
     </ul>
   );
@@ -185,14 +187,20 @@ function Tiles({ summary }: { summary: BoardSummary }) {
 /** Wireframe D2's notes under the table. */
 function BoardNotes() {
   return (
-    <div className="attendance-notes">
+    <div className="flex flex-col gap-1 text-muted">
       <span>หน้านี้ดูว่าแต่ละพื้นที่มีคนอยู่แล้วหรือยัง ไม่ใช่ระบบลงเวลาทำงานของบริษัท จึงไม่คิดสายหรือกลับก่อน</span>
       <span>
         เรียงพื้นที่ที่ยังไม่มีคนขึ้นก่อน · พื้นที่ที่ทำเฉพาะกะเช้าไม่นับเป็น "ต้องมีคน" ในกะดึก · มอบหมายคนทำแทนได้ที่{' '}
-        <Link to="/admin/alerts">รายการที่ขึ้นเตือน</Link>
+        <Link className={linkClass} to="/admin/alerts">
+          รายการที่ขึ้นเตือน
+        </Link>
       </span>
       <span>
-        ลืมลงเวลาเลิกงาน: ช่องเลิกงานว่างไว้ หมดกะแล้วขึ้นใน <Link to="/admin/alerts">รายการที่ขึ้นเตือน</Link> ให้แอดมินเติม
+        ลืมลงเวลาเลิกงาน: ช่องเลิกงานว่างไว้ หมดกะแล้วขึ้นใน{' '}
+        <Link className={linkClass} to="/admin/alerts">
+          รายการที่ขึ้นเตือน
+        </Link>{' '}
+        ให้แอดมินเติม
       </span>
     </div>
   );

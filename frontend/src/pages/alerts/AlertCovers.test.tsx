@@ -44,7 +44,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     expect(within(empty).getByText('ไม่มีแม่บ้านประจำ')).toBeInTheDocument();
 
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
-    const form = screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' });
+    const form = screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' });
     expect(within(form).getByText('แม่บ้านประจำ: แม่บ้านลา · ยังไม่ลงเวลา')).toBeInTheDocument();
     expect(within(form).getByText('มีผลเฉพาะกะเช้า 15/10/2026 · หมดสิทธิ์เองเมื่อจบกะ ไม่ต้องกดยกเลิก')).toBeInTheDocument();
     const who = await within(form).findByRole('combobox', { name: 'ให้ใครทำแทน' });
@@ -62,7 +62,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
 
     expect(await screen.findByText('มอบหมาย แม่บ้านทดสอบ ทำแทน AR12 แล้ว')).toBeInTheDocument();
     expect(posts(server).map((call) => call.body)).toEqual([{ userId: 21, areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }]);
-    expect(screen.queryByRole('region', { name: 'มอบหมายคนทำแทน · AR12' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' })).not.toBeInTheDocument();
   });
 
   it('says when nobody can cover, shows a refusal in the form, and ยกเลิก closes it', async () => {
@@ -77,18 +77,33 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     const empty = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' });
 
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR09' }));
-    const none = screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR09' });
+    const none = screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน · AR09' });
     expect(await within(none).findByText('ไม่มีแม่บ้านกะนี้ที่ทำแทนได้')).toBeInTheDocument();
     expect(within(none).getByRole('button', { name: 'ยืนยันมอบหมาย' })).toBeDisabled();
     await user.click(within(none).getByRole('button', { name: 'ยกเลิก' }));
-    expect(screen.queryByRole('region', { name: 'มอบหมายคนทำแทน · AR09' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'มอบหมายคนทำแทน · AR09' })).not.toBeInTheDocument();
 
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
-    const form = screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' });
+    const form = screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' });
     await within(form).findByRole('combobox', { name: 'ให้ใครทำแทน' });
     await user.click(within(form).getByRole('button', { name: 'ยืนยันมอบหมาย' }));
 
     expect(await within(form).findByRole('alert')).toHaveTextContent('กะนี้จบไปแล้ว');
+  });
+
+  it('the cover form is a popup: Escape closes it and the keyboard goes back to the Area it was opened from', async () => {
+    const server = serve();
+    const { user } = await renderApp('/admin/alerts');
+    const empty = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' });
+    const opener = within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' });
+    await user.click(opener);
+    await within(screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' })).findByRole('combobox', { name: 'ให้ใครทำแทน' });
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(posts(server)).toHaveLength(0);
+    expect(opener).toHaveFocus();
   });
 
   it("a Cleaner's Blocked Scan gives its Area cover in one press, which also closes the alert (facility-0041 rule 4)", async () => {
@@ -154,7 +169,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     const { user } = await renderApp('/admin/alerts');
     const empty = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' });
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
-    const form = screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' });
+    const form = screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' });
     await within(form).findByRole('combobox', { name: 'ให้ใครทำแทน' });
 
     await user.click(within(form).getByRole('button', { name: 'ยืนยันมอบหมาย' }));
@@ -162,7 +177,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     const cancel = within(form).getByRole('button', { name: 'ยกเลิก' });
     await waitFor(() => expect(cancel).toBeDisabled());
     await user.click(cancel);
-    expect(screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' })).toBeInTheDocument();
     expect(posts(server)).toHaveLength(1);
   });
 
@@ -179,12 +194,12 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     await apiIdle(store);
     const empty = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' });
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
-    expect(screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' })).toBeInTheDocument();
 
     night = true;
     act(() => hub.latest().push('AttendanceRecorded', { areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }));
 
-    await waitFor(() => expect(screen.queryByRole('region', { name: 'มอบหมายคนทำแทน · AR12' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' })).not.toBeInTheDocument());
   });
 });
 
@@ -246,7 +261,7 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
     expect(within(box).getByText('ไม่มีแม่บ้านประจำ')).toBeInTheDocument();
 
     await user.click(within(box).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
-    const form = screen.getByRole('region', { name: 'มอบหมายคนทำแทน · AR12' });
+    const form = screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' });
     expect(within(form).getByText('แม่บ้านประจำ: แม่บ้านลา')).toBeInTheDocument();
     expect(within(form).getByText('มีผลเฉพาะกะเช้า 16/10/2026 · หมดสิทธิ์เองเมื่อจบกะ ไม่ต้องกดยกเลิก')).toBeInTheDocument();
     const who = await within(form).findByRole('combobox', { name: 'ให้ใครทำแทน' });

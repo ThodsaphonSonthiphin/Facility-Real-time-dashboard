@@ -1,9 +1,11 @@
 import type { AttendanceBoard } from '../../shared/api/attendanceBoardApi';
+import { Button } from '../../shared/components/Button';
+import type { Notice } from '../../shared/components/Toast';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { formatDayTime, formatTime } from '../../shared/utils/thaiTime';
-import type { Notice } from './AlertItem';
 import { slotText } from './alertRules';
 import { useCancelCoverMutation } from './alertsApi';
+import { listClass, rowClass, sectionClass, sectionTitleClass } from './alertStyles';
 
 interface CoversThisShiftProps {
   board: AttendanceBoard;
@@ -31,33 +33,35 @@ export function CoversThisShift({ board, ahead, onNotice }: CoversThisShiftProps
   };
 
   return (
-    <section className="alerts-section" aria-labelledby="alerts-covers">
-      <h2 id="alerts-covers">{`${ahead ? `คนทำแทน${slotText(board)}` : 'คนทำแทนกะนี้'} (${covers.length})`}</h2>
-      {covers.length === 0 && <p className="app-muted">{ahead ? `ยังไม่มีคนทำแทน${slotText(board)}` : 'ยังไม่มีคนทำแทนกะนี้'}</p>}
-      <ul className="alerts-rows">
+    <section className={sectionClass} aria-labelledby="alerts-covers">
+      <h2 id="alerts-covers" className={sectionTitleClass}>
+        {`${ahead ? `คนทำแทน${slotText(board)}` : 'คนทำแทนกะนี้'} (${covers.length})`}
+      </h2>
+      {covers.length === 0 && <p className="text-muted">{ahead ? `ยังไม่มีคนทำแทน${slotText(board)}` : 'ยังไม่มีคนทำแทนกะนี้'}</p>}
+      <ul className={listClass}>
         {covers.map(({ row, cover }) => (
-          <li key={cover.id} className="alerts-row">
+          <li key={cover.id} className={rowClass}>
             <span>
               <strong>{cover.displayName}</strong>
               {` ทำแทน ${row.areaCode}`}
-              <span className="app-muted">
+              <span className="text-muted">
                 {` · แทน ${row.cleaner ? row.cleaner.displayName : 'ไม่มีแม่บ้านประจำ'} · แอดมินมอบหมาย ${ahead ? formatDayTime(cover.assignedAt) : formatTime(cover.assignedAt)}`}
               </span>
             </span>
-            <span className="app-muted">หมดสิทธิ์เมื่อจบกะ</span>
-            <button
-              type="button"
-              className="app-link-button"
+            <span className="text-muted">หมดสิทธิ์เมื่อจบกะ</span>
+            <Button
+              variant="link"
+              size="desk"
               aria-label={`ยกเลิกการทำแทนของ ${cover.displayName} ที่ ${row.areaCode}`}
               disabled={isLoading}
               onClick={() => void cancelCover(cover.id, `ยกเลิกการทำแทนของ ${cover.displayName} ที่ ${row.areaCode} แล้ว`)}
             >
               {ahead ? 'ยกเลิก' : 'ยกเลิกก่อนหมดกะ'}
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
-      <p className="app-muted">การตรวจแทนตึกของหัวหน้ายังไม่แสดงในหน้านี้</p>
+      <p className="text-muted">การตรวจแทนตึกของหัวหน้ายังไม่แสดงในหน้านี้</p>
     </section>
   );
 }

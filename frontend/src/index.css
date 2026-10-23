@@ -27,7 +27,7 @@
   --color-text: #1d2324;
   --color-muted: #5f696b;
   --color-border: #d5dada;
-  --color-input-border: #aeb6b7;
+  --color-input-border: #868f91; /* 3.31:1 on surface, 3.03:1 on bg: control borders need 3:1 (#78) */
 
   --color-status-rework: #b42318;
   --color-status-overdue: #a85a00;

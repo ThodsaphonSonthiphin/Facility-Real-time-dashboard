@@ -26,7 +26,7 @@ Each colour has one meaning.
 | Text | `--color-text` | `#1D2324` | Body text |
 | Muted text | `--color-muted` | `#5F696B` | Secondary text (5.17:1 on background) |
 | Border | `--color-border` | `#D5DADA` | Card and table borders |
-| Input border | `--color-input-border` | `#AEB6B7` | Field outlines |
+| Input border | `--color-input-border` | `#868F91` | Field, button and toggle outlines (3.31:1 on surface, 3.03:1 on background; was `#AEB6B7`, 2.06:1, changed by the owner in #78) |
 
 **No separate accent colour.** Orange, red and green are only ever status.
 
@@ -42,6 +42,8 @@ A status chip is white text on the status colour, **always with its words** (nev
 | Passed | ตรวจผ่าน | `--color-status-passed` | `#2E6E4A` |
 | NotYetDone, BeforeFirstRound, OffHours | ยังไม่ทำ, ยังไม่ถึงรอบ, นอกเวลา | `--color-status-idle` | `#5F696B` |
 | Break (attendance, D2) | พัก | `--color-status-break` | `#6B5B95` |
+
+D2's Area states reuse these chips, with their words: ยังไม่มีคน rework red, ทำงานอยู่ passed green, พักเบรก break, เลิกงานแล้ว idle grey, มีคนทำแทน pending cyan (as in the old look). D3's alert kinds are not states, so their chips take a note's colours: refused at a sign error, far from a sign warn, a missing time plain (#78).
 
 All pass 4.5:1 with white text. The three idle statuses share one grey on purpose: nothing needs doing.
 
@@ -83,7 +85,7 @@ Tokens `--color-<kind>-bg`, `--color-<kind>-border`, `--color-<kind>-text` (util
 
 ## Icons (facility-0088)
 
-`lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text, `size-7` (28 px) inside a `ChoiceTile`, as in the mockup. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons. No emoji as icons.
+`lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text, `size-7` (28 px) inside a `ChoiceTile`, as in the mockup. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons, except the Toast's ✕ (owner, #78). No emoji as icons.
 
 ## Shared components (#71)
 
@@ -91,13 +93,16 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 
 | Component | For |
 |---|---|
-| `Button` (`variant` primary / secondary / danger / link, `size` phone / main / desk) | Every button. `main` is the phone page's one 56 px full-width action; `danger` confirms what cannot be undone (red text and border on white, owner 2026-10-22) |
+| `Button` (`variant` primary / secondary / danger / link, `size` phone / main / desk) | Every button. A `link` button has no side padding, so its words line up with the text above it (owner, #78). `main` is the phone page's one 56 px full-width action; `danger` confirms what cannot be undone (red text and border on white, owner 2026-10-22) |
 | `buttonClass(variant, size)` + `data-tap` | A react-router `Link` that looks like a button |
 | `Note` (`tone` info / warn / error, `title`, `icon`, `alert`, `status`) | A message in a box; an error is `role="alert"` unless `alert={false}` (a red box that is part of the page from the start, such as the Supervisor's defect); `status` makes it `role="status"`, for the answer to a press (the recorded time on the check-in page). `noteClass(tone)` for a box that must be a `<section>` with its own heading |
 | `StatusChip` (`size` md / lg) | A Point Status, always with its words |
+| `Toast` (`notice`, `onClose`; with its `Notice` type) | The answer to an Admin's action (D2, D3), floating at the top centre so nothing under it moves (owner, #78). `ok` (done): info colours, a check icon, `role="status"`, gone by itself after 5 s (held while the pointer or keyboard is on it). `warn` (something the Admin did not ask for, such as their form closing): warn colours, `role="status"`. `error`: error colours, `role="alert"`. warn and error stay until ✕ (named ปิดข้อความ), which closes any of them at once |
+| `toggleClass` (`styles.ts`) + `data-tap` | An Admin on/off button with `aria-pressed` (D1 filters, D2 shift, D3 tabs): 36 px, a blue frame when on |
 | `Field` (`label`, `help`), `TextInput`, `Select`, `TextArea` (`size` phone / desk) | A labelled control; the help line sits outside the label and is linked with `aria-describedby`; `inputClass(size)` for a bare one |
 | `ChoiceTile` (radio), `ToggleChip` (checkbox) | Large answers and issue tags on the phone |
 | `Table` | A table in its own scroll box; style-free `<th>` / `<td>` inside |
+| `Modal` (`labelledBy`, `onClose`) | A form over the page (the browser's modal `<dialog>`), so the page behind does not move: D2's correction form, D3's cover form. Its heading (`tabIndex={-1}`) takes the keyboard on open; Escape asks `onClose`; closing gives the keyboard back to what opened it (owner, #78) |
 | `Panel`, `Facts`, `Splash` | A boxed group, label–value pairs, the waiting line |
 | `AppLayout`, `AdminNav`, `LiveBadge`, `StatusScreen`, `CrashScreen` | The shell, bar and menu, the live badge, full-page messages |
 

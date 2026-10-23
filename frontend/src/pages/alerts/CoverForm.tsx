@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
+import { Button } from '../../shared/components/Button';
+import { Field, Select } from '../../shared/components/Field';
+import { Modal } from '../../shared/components/Modal';
+import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { formatShiftDate } from '../../shared/utils/thaiTime';
@@ -46,56 +50,44 @@ export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProp
   };
 
   return (
-    <section className="app-panel alerts-cover" aria-labelledby={headingId}>
-      <h2 id={headingId}>{`มอบหมายคนทำแทน · ${row.areaCode}`}</h2>
-      <span>
-        {row.cleaner
-          ? `แม่บ้านประจำ: ${row.cleaner.displayName}${ahead ? '' : ' · ยังไม่ลงเวลา'}`
-          : 'พื้นที่นี้ไม่มีแม่บ้านประจำกะนี้'}
-      </span>
-      {candidates.isLoading && <p className="app-muted">กำลังโหลดรายชื่อ...</p>}
-      {candidates.error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(candidates.error)}
-        </p>
-      )}
-      {candidates.data && list.length === 0 && <p className="app-note app-note--info">ไม่มีแม่บ้านกะนี้ที่ทำแทนได้</p>}
-      {list.length > 0 && (
-        <label className="app-field">
-          ให้ใครทำแทน
-          <select className="app-input" value={userId} onChange={(event) => setChosen(Number(event.target.value))}>
-            {list.map((candidate) => (
-              <option key={candidate.id} value={candidate.id}>
-                {candidateText(candidate, ahead)}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <span className="app-field__help">
-        {`มีผลเฉพาะ${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)} · หมดสิทธิ์เองเมื่อจบกะ ไม่ต้องกดยกเลิก`}
-      </span>
-      <span className="app-field__help">
-        แม่บ้านที่ทำแทนลงเวลาที่ป้ายของพื้นที่ตัวเองตามปกติ แล้วสแกนจุดของพื้นที่นี้ได้ · งานที่สแกนจะบันทึกว่า "ทำแทน"
-      </span>
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
-      <div className="app-confirm__buttons">
-        <button
-          type="button"
-          className="app-button app-button--primary"
-          disabled={userId == null || isLoading}
-          onClick={() => void save()}
-        >
-          ยืนยันมอบหมาย
-        </button>
-        <button type="button" className="app-button" disabled={isLoading} onClick={onCancel}>
-          ยกเลิก
-        </button>
+    <Modal labelledBy={headingId} onClose={() => !isLoading && onCancel()}>
+      <div className="flex flex-col gap-2.5">
+        <h2 id={headingId} tabIndex={-1} className="text-base font-bold">{`มอบหมายคนทำแทน · ${row.areaCode}`}</h2>
+        <span>
+          {row.cleaner
+            ? `แม่บ้านประจำ: ${row.cleaner.displayName}${ahead ? '' : ' · ยังไม่ลงเวลา'}`
+            : 'พื้นที่นี้ไม่มีแม่บ้านประจำกะนี้'}
+        </span>
+        {candidates.isLoading && <p className="text-muted">กำลังโหลดรายชื่อ...</p>}
+        {candidates.error && <Note tone="error">{getErrorMessage(candidates.error)}</Note>}
+        {candidates.data && list.length === 0 && <Note tone="info">ไม่มีแม่บ้านกะนี้ที่ทำแทนได้</Note>}
+        {list.length > 0 && (
+          <Field label="ให้ใครทำแทน">
+            <Select size="desk" value={userId} onChange={(event) => setChosen(Number(event.target.value))}>
+              {list.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidateText(candidate, ahead)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+        <span className="text-muted">
+          {`มีผลเฉพาะ${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)} · หมดสิทธิ์เองเมื่อจบกะ ไม่ต้องกดยกเลิก`}
+        </span>
+        <span className="text-muted">
+          แม่บ้านที่ทำแทนลงเวลาที่ป้ายของพื้นที่ตัวเองตามปกติ แล้วสแกนจุดของพื้นที่นี้ได้ · งานที่สแกนจะบันทึกว่า "ทำแทน"
+        </span>
+        {problem && <Note tone="error">{problem}</Note>}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" size="desk" disabled={userId == null || isLoading} onClick={() => void save()}>
+            ยืนยันมอบหมาย
+          </Button>
+          <Button size="desk" disabled={isLoading} onClick={onCancel}>
+            ยกเลิก
+          </Button>
+        </div>
       </div>
-    </section>
+    </Modal>
   );
 }

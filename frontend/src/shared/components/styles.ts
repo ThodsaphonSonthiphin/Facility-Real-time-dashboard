@@ -40,14 +40,24 @@ const buttonVariants: Record<ButtonVariant, string> = {
 };
 
 const buttonSizes: Record<ButtonSize, string> = {
-  phone: 'min-h-12 px-4 text-base',
-  main: 'min-h-14 w-full px-5 text-lg',
-  desk: 'min-h-9 px-3 text-sm',
+  phone: 'min-h-12 text-base',
+  main: 'min-h-14 w-full text-lg',
+  desk: 'min-h-9 text-sm',
 };
 
-/** A button's classes; a Link styled with them also needs `data-tap` for the press feedback. */
+const buttonPadding: Record<ButtonSize, string> = {
+  phone: 'px-4',
+  main: 'px-5',
+  desk: 'px-3',
+};
+
+/**
+ * A button's classes; a Link styled with them also needs `data-tap` for the press feedback. A link-looking button has
+ * no side padding, so its words line up with the text above it, such as a table's column heading (owner, #78).
+ */
 export function buttonClass(variant: ButtonVariant = 'secondary', size: ButtonSize = 'phone'): string {
-  return `${buttonBase} ${buttonVariants[variant]} ${buttonSizes[size]}`;
+  const padding = variant === 'link' ? 'px-0' : buttonPadding[size];
+  return `${buttonBase} ${buttonVariants[variant]} ${buttonSizes[size]} ${padding}`;
 }
 
 const inputBase = `rounded border border-input-border bg-surface text-text ${focusRing} disabled:opacity-50`;
@@ -72,12 +82,22 @@ export function textAreaClass(size: InputSize = 'phone'): string {
   return `${inputBase} resize-y ${textAreaSizes[size]}`;
 }
 
+/**
+ * An Admin page's on/off button (`aria-pressed`): D1's status filters, D2's shift, D3's tabs. 36 px (pages/admin.md);
+ * the one that is on gets a blue frame, since blue means "can be pressed". Give it `data-tap` for the press feedback.
+ */
+export const toggleClass =
+  'inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded border border-input-border bg-surface px-2.5 text-text ' +
+  'ring-primary ring-inset enabled:hover:border-primary aria-pressed:border-primary aria-pressed:ring-1 ' +
+  `disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`;
+
 /** A text link (the base layer still colours `a` with the old look until #82). */
 export const linkClass = `text-primary underline hover:text-primary-strong ${focusRing}`;
 
 export type NoteTone = 'info' | 'warn' | 'error';
 
-const noteTones: Record<NoteTone, string> = {
+/** A note's border, background and text colours, for a note box and for a chip in a note's colours (D3's alert kinds). */
+export const noteTones: Record<NoteTone, string> = {
   info: 'border-info-border bg-info-bg text-info-text',
   warn: 'border-warn-border bg-warn-bg text-warn-text',
   error: 'border-error-border bg-error-bg text-error-text',

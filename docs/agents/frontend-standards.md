@@ -32,7 +32,7 @@ The rules `code-review` checks on any frontend change (its Standards axis). The 
 ## Icons (facility-0088)
 
 - `lucide-react`, one named import per icon.
-- An icon sits beside text and has `aria-hidden="true"`. No icon-only buttons, no emoji as icons.
+- An icon sits beside text and has `aria-hidden="true"`. No icon-only buttons (one exception, the owner's: the Toast's ✕, with `aria-label`), no emoji as icons.
 
 ## Tests and size
 
