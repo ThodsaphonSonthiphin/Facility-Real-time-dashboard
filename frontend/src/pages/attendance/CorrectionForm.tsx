@@ -4,8 +4,8 @@ import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoard
 import type { AttendanceEvent } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
+import { Modal } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
-import { boxClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { attendanceEvents, eventLabel, shiftShortLabel } from '../../shared/utils/labels';
 import { formatShiftDate, formatTime } from '../../shared/utils/thaiTime';
@@ -36,7 +36,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
   const headingId = `attendance-correction-${row.areaId}`;
   const headingRef = useRef<HTMLHeadingElement>(null);
 
-  // The form opens above the table: take focus so it scrolls into view and keyboard and screen-reader users land on it
+  // The form opens over the page: its heading takes focus, so keyboard and screen-reader users start at its name
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
@@ -69,53 +69,55 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
   };
 
   return (
-    <section className={`flex max-w-160 flex-col gap-3 ${boxClass}`} aria-labelledby={headingId}>
-      <div className="flex flex-col gap-0.5">
-        <h2 id={headingId} ref={headingRef} tabIndex={-1} className="text-base font-bold">
-          {`เพิ่ม/แก้เวลา · ${cleaner.displayName} · ${row.areaCode}`}
-        </h2>
-        <span className="text-muted">{`${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)}`}</span>
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <Field label="รายการ">
-          <Select size="desk" value={eventType} onChange={(event) => choose(event.target.value as AttendanceEvent)}>
-            {attendanceEvents.map((type) => {
-              const existing = eventOf(row, type);
-              return (
-                <option key={type} value={type}>
-                  {`${eventLabel[type]} (${existing ? `ตอนนี้ ${formatTime(existing.occurredAt)}` : 'ยังไม่มี'})`}
-                </option>
-              );
-            })}
-          </Select>
+    <Modal labelledBy={headingId} onClose={() => !isLoading && onCancel()}>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-0.5">
+          <h2 id={headingId} ref={headingRef} tabIndex={-1} className="text-base font-bold">
+            {`เพิ่ม/แก้เวลา · ${cleaner.displayName} · ${row.areaCode}`}
+          </h2>
+          <span className="text-muted">{`${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)}`}</span>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Field label="รายการ">
+            <Select size="desk" value={eventType} onChange={(event) => choose(event.target.value as AttendanceEvent)}>
+              {attendanceEvents.map((type) => {
+                const existing = eventOf(row, type);
+                return (
+                  <option key={type} value={type}>
+                    {`${eventLabel[type]} (${existing ? `ตอนนี้ ${formatTime(existing.occurredAt)}` : 'ยังไม่มี'})`}
+                  </option>
+                );
+              })}
+            </Select>
+          </Field>
+          <Field label="เวลา (ชม.:นาที)">
+            <TextInput
+              size="desk"
+              value={time}
+              placeholder="07:05"
+              inputMode="numeric"
+              maxLength={5}
+              onChange={(event) => setTime(event.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="เหตุผล (ต้องกรอก)">
+          <TextInput size="desk" value={reason} maxLength={MAX_REASON} onChange={(event) => setReason(event.target.value)} />
         </Field>
-        <Field label="เวลา (ชม.:นาที)">
-          <TextInput
-            size="desk"
-            value={time}
-            placeholder="07:05"
-            inputMode="numeric"
-            maxLength={5}
-            onChange={(event) => setTime(event.target.value)}
-          />
-        </Field>
+        <span className="text-muted">
+          ระบบเก็บค่าเดิม ผู้แก้ และเวลาที่แก้ไว้ในประวัติ · รายการนี้จะมีป้าย "แก้โดยแอดมิน" · แม่บ้านและหัวหน้าแก้เองไม่ได้
+        </span>
+        {problem && <Note tone="error">{problem}</Note>}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" size="desk" disabled={isLoading} onClick={() => void save()}>
+            {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
+          </Button>
+          <Button size="desk" disabled={isLoading} onClick={onCancel}>
+            ยกเลิก
+          </Button>
+        </div>
       </div>
-      <Field label="เหตุผล (ต้องกรอก)">
-        <TextInput size="desk" value={reason} maxLength={MAX_REASON} onChange={(event) => setReason(event.target.value)} />
-      </Field>
-      <span className="text-muted">
-        ระบบเก็บค่าเดิม ผู้แก้ และเวลาที่แก้ไว้ในประวัติ · รายการนี้จะมีป้าย "แก้โดยแอดมิน" · แม่บ้านและหัวหน้าแก้เองไม่ได้
-      </span>
-      {problem && <Note tone="error">{problem}</Note>}
-      <div className="flex flex-wrap gap-2">
-        <Button variant="primary" size="desk" disabled={isLoading} onClick={() => void save()}>
-          {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
-        </Button>
-        <Button size="desk" disabled={isLoading} onClick={onCancel}>
-          ยกเลิก
-        </Button>
-      </div>
-    </section>
+    </Modal>
   );
 }
 

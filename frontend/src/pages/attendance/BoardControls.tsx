@@ -38,7 +38,7 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-2">
+    <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
       <div className="inline-flex gap-1" role="group" aria-label="กะ">
         {(['Day', 'Night'] as const).map((shift) => (
           <button
@@ -54,28 +54,31 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
           </button>
         ))}
       </div>
-      <Field label="วันที่">
-        <TextInput
-          size="desk"
-          value={dateText}
-          placeholder="วว/ดด/ปปปป"
-          inputMode="numeric"
-          onChange={(event) => setDateText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              showDate();
-            }
-          }}
-        />
-      </Field>
-      <Button size="desk" onClick={showDate}>
-        ดูวันที่นี้
-      </Button>
-      {args.shiftDate && (
-        <Button size="desk" onClick={onNow}>
-          กะปัจจุบัน
+      {/* The date and its buttons are one group, so the eye goes from the date to what it does (owner, #78) */}
+      <div className="flex flex-wrap items-end gap-1">
+        <Field label="วันที่">
+          <TextInput
+            size="desk"
+            value={dateText}
+            placeholder="วว/ดด/ปปปป"
+            inputMode="numeric"
+            onChange={(event) => setDateText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                showDate();
+              }
+            }}
+          />
+        </Field>
+        <Button size="desk" onClick={showDate}>
+          ดูวันที่นี้
         </Button>
-      )}
+        {args.shiftDate && (
+          <Button size="desk" onClick={onNow}>
+            กะปัจจุบัน
+          </Button>
+        )}
+      </div>
       <Field label="ตึก">
         <Select
           size="desk"

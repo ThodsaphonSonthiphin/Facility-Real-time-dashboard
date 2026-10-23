@@ -39,7 +39,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     const { user } = await renderApp('/admin/attendance');
 
     await user.click(await screen.findByRole('button', { name: 'เพิ่มเวลา แม่บ้านลา' }));
-    const form = screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
+    const form = screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
     expect(within(form).getByText('กะเช้า 15/10/2026')).toBeInTheDocument();
     expect(within(form).getByRole('combobox', { name: 'รายการ' })).toHaveValue('ShiftIn');
     await user.type(within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' }), '07:05');
@@ -52,7 +52,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     expect(puts(server).map((call) => call.body)).toEqual([
       { userId: 26, shiftDate: '2026-10-15', shift: 'Day', eventType: 'ShiftIn', time: '07:05', reason: 'มือถือแบตหมด หัวหน้ายืนยัน' },
     ]);
-    expect(screen.queryByRole('region', { name: /^เพิ่ม\/แก้เวลา/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(boardCalls(server).length).toBeGreaterThan(before));
   });
 
@@ -61,7 +61,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     const { user } = await renderApp('/admin/attendance');
 
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
-    const form = screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' });
+    const form = screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' });
     expect(within(form).getByRole('heading', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' })).toHaveFocus();
     const event= within(form).getByRole('combobox', { name: 'รายการ' });
     const time = within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' });
@@ -79,7 +79,31 @@ describe('attendance corrections (D2, facility-0051)', () => {
     expect(time).toHaveValue('06:52');
 
     await user.click(within(form).getByRole('button', { name: 'ยกเลิก' }));
-    expect(screen.queryByRole('region', { name: /^เพิ่ม\/แก้เวลา/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('Escape closes the form without saving, as ยกเลิก does', async () => {
+    const server = serve({ 'PUT /api/admin/attendance': () => savedEvent });
+    const { user } = await renderApp('/admin/attendance');
+    await user.click(await screen.findByRole('button', { name: 'เพิ่มเวลา แม่บ้านลา' }));
+    const form = screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
+    await user.type(within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' }), '07:05');
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(puts(server)).toHaveLength(0);
+  });
+
+  it('closing the form puts the keyboard back on the row it was opened from', async () => {
+    serve();
+    const { user } = await renderApp('/admin/attendance');
+    const opener = await screen.findByRole('button', { name: 'เพิ่มเวลา แม่บ้านลา' });
+    await user.click(opener);
+
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'ยกเลิก' }));
+
+    expect(opener).toHaveFocus();
   });
 
   it("a wrong time or no reason is refused before sending; the server's refusal keeps the draft", async () => {
@@ -88,7 +112,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     });
     const { user } = await renderApp('/admin/attendance');
     await user.click(await screen.findByRole('button', { name: 'เพิ่มเวลา แม่บ้านลา' }));
-    const form = screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
+    const form = screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
     const time = within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' });
     const reason = within(form).getByRole('textbox', { name: 'เหตุผล (ต้องกรอก)' });
     const save = within(form).getByRole('button', { name: 'บันทึก' });
@@ -115,7 +139,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     const server = serve({ 'PUT /api/admin/attendance': () => new Promise(() => {}) });
     const { user } = await renderApp('/admin/attendance');
     await user.click(await screen.findByRole('button', { name: 'เพิ่มเวลา แม่บ้านลา' }));
-    const form = screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
+    const form = screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
     await user.type(within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' }), '07:05');
     await user.type(within(form).getByRole('textbox', { name: 'เหตุผล (ต้องกรอก)' }), 'ลืมสแกน');
 
@@ -141,14 +165,14 @@ describe('attendance corrections (D2, facility-0051)', () => {
     serve({}, nightBoard);
     const { user, router } = await renderApp('/admin/attendance?date=2026-10-14&shift=Night&fill=22&event=ShiftOut');
 
-    const form = await screen.findByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านกะดึก · AR01' });
+    const form = await screen.findByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านกะดึก · AR01' });
     expect(within(form).getByText('กะดึก 14/10/2026')).toBeInTheDocument();
     expect(within(form).getByRole('combobox', { name: 'รายการ' })).toHaveValue('ShiftOut');
 
     await user.click(within(form).getByRole('button', { name: 'ยกเลิก' }));
 
     expect(router.state.location.search).toBe('?date=2026-10-14&shift=Night');
-    expect(screen.queryByRole('region', { name: /^เพิ่ม\/แก้เวลา/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('a link for a Cleaner not on the board says so', async () => {
@@ -162,7 +186,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     const server = serve({ 'PUT /api/admin/attendance': () => new Promise(() => {}) });
     const { user } = await renderApp('/admin/attendance');
     await user.click(await screen.findByRole('button', { name: 'เพิ่มเวลา แม่บ้านลา' }));
-    const form = screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
+    const form = screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
     await user.type(within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' }), '07:05');
     await user.type(within(form).getByRole('textbox', { name: 'เหตุผล (ต้องกรอก)' }), 'มือถือแบตหมด');
 
@@ -171,7 +195,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     const cancel = within(form).getByRole('button', { name: 'ยกเลิก' });
     await waitFor(() => expect(cancel).toBeDisabled());
     await user.click(cancel);
-    expect(screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' })).toBeInTheDocument();
     expect(puts(server)).toHaveLength(1);
   });
 
@@ -193,7 +217,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     await screen.findByText('SignalR Live');
     await apiIdle(store);
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
-    const form = screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' });
+    const form = screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' });
     await user.selectOptions(within(form).getByRole('combobox', { name: 'รายการ' }), 'ShiftOut');
     await user.type(within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' }), '18:55');
     await user.type(within(form).getByRole('textbox', { name: 'เหตุผล (ต้องกรอก)' }), 'ลืมสแกนออก');
@@ -202,7 +226,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     act(() => hub.latest().push('AttendanceRecorded', { areaId: 1, shiftDate: '2026-10-15', shift: 'Day' }));
 
     expect(await screen.findByText('กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน')).toHaveAttribute('role', 'status');
-    expect(screen.queryByRole('region', { name: /^เพิ่ม\/แก้เวลา/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(puts(server)).toHaveLength(0);
   });
 
@@ -215,11 +239,11 @@ describe('attendance corrections (D2, facility-0051)', () => {
     });
     const { user } = await renderApp('/admin/attendance');
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
-    expect(screen.getByRole('region', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'กะดึก' }));
 
     expect(await screen.findByText('กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: /^เพิ่ม\/แก้เวลา/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

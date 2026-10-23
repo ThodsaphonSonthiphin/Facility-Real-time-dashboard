@@ -40,14 +40,24 @@ const buttonVariants: Record<ButtonVariant, string> = {
 };
 
 const buttonSizes: Record<ButtonSize, string> = {
-  phone: 'min-h-12 px-4 text-base',
-  main: 'min-h-14 w-full px-5 text-lg',
-  desk: 'min-h-9 px-3 text-sm',
+  phone: 'min-h-12 text-base',
+  main: 'min-h-14 w-full text-lg',
+  desk: 'min-h-9 text-sm',
 };
 
-/** A button's classes; a Link styled with them also needs `data-tap` for the press feedback. */
+const buttonPadding: Record<ButtonSize, string> = {
+  phone: 'px-4',
+  main: 'px-5',
+  desk: 'px-3',
+};
+
+/**
+ * A button's classes; a Link styled with them also needs `data-tap` for the press feedback. A link-looking button has
+ * no side padding, so its words line up with the text above it, such as a table's column heading (owner, #78).
+ */
 export function buttonClass(variant: ButtonVariant = 'secondary', size: ButtonSize = 'phone'): string {
-  return `${buttonBase} ${buttonVariants[variant]} ${buttonSizes[size]}`;
+  const padding = variant === 'link' ? 'px-0' : buttonPadding[size];
+  return `${buttonBase} ${buttonVariants[variant]} ${buttonSizes[size]} ${padding}`;
 }
 
 const inputBase = `rounded border border-input-border bg-surface text-text ${focusRing} disabled:opacity-50`;
