@@ -81,11 +81,11 @@ Tokens `--color-<kind>-bg`, `--color-<kind>-border`, `--color-<kind>-text` (util
 - Corners 8 px (`--radius`, utility `rounded`); chips may be fully round (`rounded-full`).
 - Widths: phone column `--container-phone` 480 px (`max-w-phone`), Admin page `--container-desk` 1216 px (`max-w-desk`).
 - Phone targets at least **48 px** high; primary actions (ส่งงาน, ลงเวลา) **56 px**, full width.
-- Admin targets at least **36 px** high.
+- Admin targets at least **36 px** high. The one exception is the window pill's ✕ in D4 (24 px, owner 2026-10-23): a 36 px target grew past the pill's own words and a click beside the time deleted the window, so that ✕ is exactly the size it looks. Nothing else may be smaller.
 
 ## Icons (facility-0088)
 
-`lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text, `size-7` (28 px) inside a `ChoiceTile`, as in the mockup. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons, except the Toast's ✕ (owner, #78). No emoji as icons.
+`lucide-react`, imported one at a time, one stroke width (2), sized with the spacing scale: `size-5` (20 px) beside phone text, `size-4` (16 px) beside Admin text, `size-7` (28 px) inside a `ChoiceTile`, as in the mockup. An icon always sits beside its words and gets `aria-hidden`. No icon-only buttons, except the Toast's ✕ (owner, #78) and the window pill's ✕ (owner, #79). No emoji as icons.
 
 ## Shared components (#71)
 
