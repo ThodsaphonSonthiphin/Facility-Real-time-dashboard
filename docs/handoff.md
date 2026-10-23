@@ -533,6 +533,7 @@ Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `
   - **Tabs:** a real tablist (`role="tab"`/`tabpanel`, `aria-selected`, roving `tabIndex`, arrows/Home/End) with a 2 px line under the words instead of a box — `tabClass` + `tabListClass` in `shared/components/styles.ts`, 36 px, documented in MASTER.md. `toggleClass` stays for D1/D2/D3, where the control really is an on/off filter. The count moved into the tab, so the point list lost the heading that said it twice.
   - **Tests changed (reported):** `getByRole('button', { name: 'จุดทำความสะอาด' })` → `getByRole('tab', { name: 'จุดทำความสะอาด (2)' })` with `aria-selected`; the `heading level 3 'จุดทำความสะอาด (2)'` is gone; the `เก็บพิกัดบนมือถือ ›` assertions moved into Tab 2 (the deactivated test now opens Tab 2 to prove the link is not there); a new test covers the arrow keys.
   - **Checks:** 419 tests pass, lint and `tsc -b` clean.
+  - **Owner's decision, the same day (1A + keep apart):** `+ เพิ่มพื้นที่` stays a full page — creating is a rare setup task with six fields and a warning that the code cannot be changed later, so a 480 px Drawer would turn it into a scroll tunnel; `แก้ไขพื้นที่` stays in the open Area's header, never beside the add button. The rule ("an action sits where what it acts on sits, not by its verb") is now in MASTER.md. No code changed for either answer, so no commit besides this note.
 
 ## Owner's rules (still in force)
 

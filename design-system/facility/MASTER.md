@@ -110,6 +110,8 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 
 Every button-styled element gets the press feedback of `tapFeedback` (owner, 2026-10-21) through `data-tap`. Components set no body text size: each moved page sets `text-base` (phone) or `text-sm` (Admin) on its root, and the components inherit it.
 
+Where an action sits follows **what it acts on**, not its verb (owner, 2026-10-24). `+ เพิ่มพื้นที่` acts on the list, so it stays at the list's top and opens a full page — creating has six fields and a warning that the code cannot be changed later. `แก้ไขพื้นที่` acts on the open Area, so it sits in that Area's header and opens in the Drawer. The two are never grouped in one row.
+
 ## States every page shows
 
 - Loading: the words "กำลังโหลด..." (or a skeleton where the layout is known), never a frozen screen.
