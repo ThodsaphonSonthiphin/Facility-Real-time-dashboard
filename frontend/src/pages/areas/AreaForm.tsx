@@ -16,12 +16,16 @@ interface AreaFormProps {
   detail?: AreaDetail;
   buildings: Building[];
   cleaners: CleanerOption[];
+  /** Given: the save hands the saved Area to the caller (D4's Drawer) instead of opening the Area's page. */
+  onSaved?: (saved: AreaDetail) => void;
+  /** Given: "ยกเลิก" closes the form (D4's Drawer) instead of linking back to the Area's page. */
+  onCancel?: () => void;
 }
 
 const SHIFT_PATTERNS = ['DayAndNight', 'DayOnly'] as const;
 
 /** Wireframe D10's form. A save opens the Area on the D4 page. The page keys it by Area id. */
-export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
+export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: AreaFormProps) {
   const navigate = useNavigate();
   const isNew = !detail;
   const areaId = detail?.area.id;
@@ -45,7 +49,11 @@ export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
         areaId === undefined
           ? await createArea({ code: draft.code.trim(), ...formBody(draft) }).unwrap()
           : await updateArea({ areaId, body: formBody(draft) }).unwrap();
-      navigate(`/admin/areas/${saved.area.id}`);
+      if (onSaved) {
+        onSaved(saved);
+      } else {
+        navigate(`/admin/areas/${saved.area.id}`);
+      }
     } catch (error) {
       setProblem(getErrorMessage(error));
     }
@@ -137,13 +145,19 @@ export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
         <Button type="submit" variant="primary" size="desk" disabled={sending}>
           {sending ? 'กำลังบันทึก...' : 'บันทึก'}
         </Button>
-        <Link
-          className={buttonClass('secondary', 'desk')}
-          data-tap=""
-          to={areaId === undefined ? '/admin/areas' : `/admin/areas/${areaId}`}
-        >
-          ยกเลิก
-        </Link>
+        {onCancel ? (
+          <Button size="desk" onClick={onCancel}>
+            ยกเลิก
+          </Button>
+        ) : (
+          <Link
+            className={buttonClass('secondary', 'desk')}
+            data-tap=""
+            to={areaId === undefined ? '/admin/areas' : `/admin/areas/${areaId}`}
+          >
+            ยกเลิก
+          </Link>
+        )}
       </div>
     </form>
   );

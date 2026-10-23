@@ -1,4 +1,5 @@
-import type { AreaDetail, AreaSummary } from '../../shared/api/adminSetupApi';
+import type { AdminSign, AreaDetail, AreaSummary } from '../../shared/api/adminSetupApi';
+import { signPlaceLabel } from '../../shared/utils/labels';
 
 /** Wireframe D4's line under each Area in the list. */
 export function areaMeta(area: AreaSummary): string {
@@ -25,4 +26,9 @@ export function areaLine(detail: AreaDetail): string {
   const pattern = area.shiftPattern === 'DayOnly' ? 'ทำเฉพาะกะเช้า' : 'ทำ 2 กะ (เช้า + ดึก)';
   const activePoints = detail.points.filter((point) => point.isActive).length;
   return `${pattern} · แม่บ้านประจำ: ${cleaners} · ป้าย 1 + ${activePoints}`;
+}
+
+/** A sign's place, in one line: how it was captured (or that it has none yet) and its radius. */
+export function signPlaceText(sign: AdminSign): string {
+  return `${signPlaceLabel(sign)} · รัศมี ${sign.radiusM} ม.`;
 }

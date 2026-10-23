@@ -86,10 +86,10 @@ export const routes: RouteObject[] = [
               // facility-0045, wireframe D4; without an id the first Area is open
               { path: 'admin/areas/:areaId?', lazy: async () => ({ Component: (await import('./pages/areas')).AreasPage }) },
               // facility-0045, wireframe D10 ("new" outranks the id above)
-              { path: 'admin/areas/new', lazy: async () => ({ Component: (await import('./pages/area-form')).AreaFormPage }) },
+              { path: 'admin/areas/new', lazy: async () => ({ Component: (await import('./pages/areas')).AreaFormPage }) },
               {
                 path: 'admin/areas/:areaId/edit',
-                lazy: async () => ({ Component: (await import('./pages/area-form')).AreaFormPage }),
+                lazy: async () => ({ Component: (await import('./pages/areas')).AreaFormPage }),
               },
               // facility-0021 item 6, wireframe D5: ?area=<id>[&sign=<id>] or ?area=all
               { path: 'admin/print', lazy: async () => ({ Component: (await import('./pages/print-signs')).PrintSignsPage }) },
