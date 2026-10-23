@@ -7,6 +7,10 @@
 
 ## Agent skills
 
+### Session start
+
+Read `docs/handoff.md` first, every session: it carries the current branch and PR, what is done, what the owner still owes a check on, and how to bring the test build back up (the throwaway API, database and tunnel do not survive a reboot). It is updated after every task (owner's rule).
+
 ### Issue tracker
 
 GitHub Issues of `ThodsaphonSonthiphin/Facility-Real-time-dashboard`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.

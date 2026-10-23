@@ -225,7 +225,9 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 ### Waiting on the owner's eye check (written 2026-10-24, to check 2026-10-25)
 
-The owner ended the session before the check was finished: "เรายังตรวจกันไมครบ ช่วยจดไว้หน่อย". Nothing is blocking; these three are only **checks owed**, not known bugs.
+The owner ended the session before the check was finished: "เรายังตรวจกันไมครบ ช่วยจดไว้หน่อย" — and will open a new session on 2026-10-25 to finish it. Nothing is blocking; these three are only **checks owed**, not known bugs.
+
+**State at the end of 2026-10-24.** Branch `feat/admin-setup-new-look`, PR [#95](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/pull/95) **open, not merged** — merge only on the owner's explicit OK. Last commit `4f43345`; 419 frontend tests pass, lint and `tsc -b` clean; main JS 132.02 kB gzip, CSS 28.71 / 6.04 kB gzip. The working tree carries only the two deliberate leftovers (`M .gitignore`, untracked root `package-lock.json`) — never commit either. The API, `facility_ui_test` and `wwwroot` may still be running; a quick tunnel from the day before will be dead, so start a new one and send its URL.
 
 **1. D4 — จัดการพื้นที่และป้าย** (the bulk of the round; `/admin/areas/1`)
 - The header: name, shifts/Cleaner line on the left; `[แก้ไขพื้นที่] [พิมพ์ป้าย]` on the right.
