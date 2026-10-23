@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-23 (#70–#74 merged, last PR #87; #75 in PR #89, #76 in PR #90, #77 in PR #91 (stacked); next: `implement` #78; see `## Next: Tailwind migration`)
+Last updated: 2026-10-23 (#70–#74 merged, last PR #87; #75 in PR #89, #76 in PR #90, #77 in PR #91 (stacked), eye check passed; next: merge #89–#91, then `implement` #78; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -442,7 +442,9 @@ Where `ui-ux-pro-max` fits:
 
   Pushed; PR #91 opened against `feat/supervisor-new-look` (stacked on #90), not merged. Next: `implement` #78.
 
-Next session: `implement` #78 (D2 + D3), and the eye check of #75–#77.
+- 2026-10-23 · Owner's eye check of #75–#77: **passed**. The app was served from `feat/dashboard-d1-a` (#75–#77 stacked) by the API in Development on throwaway database `facility_ui_test`. D1 was checked on the computer; the phone pages were checked through a `cloudflared` quick tunnel that the owner ran. Cleanup is done: API stopped, `facility_ui_test` dropped, `wwwroot` deleted. `facility_uxpass_test` is still there, untouched. Next: merge #89 → #90 → #91 in order, with the owner's OK; then `implement` #78.
+
+Next session: merge #89 → #90 → #91 (owner's OK), then `implement` #78 (D2 + D3).
 
 ## Owner's rules (still in force)
 
