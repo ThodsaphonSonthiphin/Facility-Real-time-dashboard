@@ -20,11 +20,12 @@ interface Typed {
 
 const noTyped: Typed = { start: '', end: '' };
 
-// The pill's ✕: a 20 px glyph over a 36 px hit area (pages/admin.md), so the pill itself stays small. It is the one
-// icon-only kind of button besides the Toast's ✕ (owner, 2026-10-23: the windows read as small pills with an easy ✕)
+// The pill's ✕: a 24 px button inside a 30 px pill, over a 36 px hit area (pages/admin.md) that grows only 6 px each
+// way — less than the 8 px between it and the window's words, so a click on the time never deletes the window. It is
+// the one icon-only kind of button besides the Toast's ✕ (owner, 2026-10-23)
 const removeClass =
-  `relative inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-info-text ` +
-  `after:absolute after:-inset-2 after:content-[''] hover:text-primary-strong ${focusRing}`;
+  `relative inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-info-text ` +
+  `after:absolute after:-inset-1.5 after:content-[''] hover:bg-surface hover:text-primary-strong ${focusRing}`;
 
 interface PointEditorProps {
   area: AreaSummary;
@@ -203,12 +204,12 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
 
   return (
     <FieldGroup legend={label} disabled={disabled}>
-      <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" aria-label={`ช่วงรอบ${label}`}>
+      <ul className="m-0 flex list-none flex-wrap gap-x-3 gap-y-3 p-0" aria-label={`ช่วงรอบ${label}`}>
         {mine.length === 0 && <li className="text-muted">ยังไม่มีช่วงรอบ</li>}
         {mine.map((w) => (
           <li
             key={`${w.start}-${w.end}`}
-            className="inline-flex items-center gap-1 rounded-full border border-info-border bg-info-bg py-0.5 pr-0.5 pl-2.5 text-xs"
+            className="inline-flex items-center gap-2 rounded-full border border-info-border bg-info-bg py-0.5 pr-0.5 pl-2.5 text-xs"
           >
             <span>{`${w.start}–${w.end}`}</span>
             <button
