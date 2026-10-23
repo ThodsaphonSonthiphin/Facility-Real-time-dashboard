@@ -478,7 +478,7 @@ Where `ui-ux-pro-max` fits:
   - Code review (one sub-agent): no hard findings. Fixed: `text-sm` dropped from `Modal`, `useLayoutEffect`, a stale comment.
   - Left as is (reported): after a save, the notice line above the counts still shifts the table by one line; the D2 test "pressing กะดึก with a form open" now runs a path a user can only reach by Back or a push (the background is inert in a browser); Chrome's back-gesture close-watcher could close the dialog natively without telling React (low risk on desk pages).
   - **Checks:** lint and tsc clean; startup JS 132.73 + 31.37 kB gzip; CSS 25.77 / 5.47 kB gzip.
-  - The API is still running on `facility_ui_test` with the new build, for the second round of the eye check.
+  - The second round of the eye check ran on `facility_ui_test`.
 
 - 2026-10-23 · Owner's ask, on the reported table shift after a save: notices become a toast (same branch, PR #93).
   - **Owner's spec:**
@@ -497,7 +497,9 @@ Where `ui-ux-pro-max` fits:
   - **Tests:** 3 new (D2: ✕ closes, goes after 5 s but not while hovered; D3: an error stays until ✕). 416 pass.
   - **Checks:** lint and tsc clean; startup JS 132.68 + 31.37 kB gzip; CSS 26.93 / 5.75 kB gzip.
 
-Next session: the second round of the eye check of #78 (PR #93), then `implement` #79 (D4 + D10 + M17).
+- 2026-10-23 · Owner's second eye check of #78: passed. API stopped, `facility_ui_test` dropped, `wwwroot` removed (`facility_uxpass_test` is still there; it is not from this work). PR #93 merged into master on the owner's OK.
+
+Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `Toast` and `Modal`.
 
 ## Owner's rules (still in force)
 
