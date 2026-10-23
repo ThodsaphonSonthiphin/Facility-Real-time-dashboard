@@ -257,7 +257,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 **Known leftovers:**
 - An empty, untracked `package-lock.json` at the repo root. Never commit it.
-- `facility_uxpass_test` in MySQL, not from this session; ask before dropping it.
+- `facility_uxpass_test`: dropped on 2026-10-23 at the owner's request.
 
 Plan 13 (the UX fix list) is merged (PR #66). Still to check by eye on real phones: the device's font (facility-0072), the plain-http message, and the check-in page's sign check over the tunnel.
 
@@ -497,7 +497,7 @@ Where `ui-ux-pro-max` fits:
   - **Tests:** 3 new (D2: ✕ closes, goes after 5 s but not while hovered; D3: an error stays until ✕). 416 pass.
   - **Checks:** lint and tsc clean; startup JS 132.68 + 31.37 kB gzip; CSS 26.93 / 5.75 kB gzip.
 
-- 2026-10-23 · Owner's second eye check of #78: passed. API stopped, `facility_ui_test` dropped, `wwwroot` removed (`facility_uxpass_test` is still there; it is not from this work). PR #93 merged into master on the owner's OK.
+- 2026-10-23 · Owner's second eye check of #78: passed. API stopped, `facility_ui_test` dropped, `wwwroot` removed; `facility_uxpass_test` also dropped at the owner's request. PR #93 merged into master on the owner's OK.
 
 Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `Toast` and `Modal`.
 
