@@ -480,6 +480,22 @@ Where `ui-ux-pro-max` fits:
   - **Checks:** lint and tsc clean; startup JS 132.73 + 31.37 kB gzip; CSS 25.77 / 5.47 kB gzip.
   - The API is still running on `facility_ui_test` with the new build, for the second round of the eye check.
 
+- 2026-10-23 · Owner's ask, on the reported table shift after a save: notices become a toast (same branch, PR #93).
+  - **Owner's spec:**
+    - floats at the top right over the page and pushes nothing down;
+    - a done notice goes by itself (3–5 s, we use 5 s) and has a check icon;
+    - "✕" closes it at once.
+  - **Shared `Toast`** (`shared/components/Toast.tsx`, which now owns the `Notice` type) replaces `NoticeLine`:
+    - the timer holds while the pointer or the keyboard is on it, with a 200 ms fade (none under reduced motion);
+    - `warn` and `error` stay until "✕ ปิด". The board-flip notice on D2 ("กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด…") is now `warn`, because it reports a form closing by itself.
+  - **Owner may still want:** the done colour is the info blue (the owner allowed "green or blue"; a green would need new tokens).
+  - **Review (one sub-agent):**
+    - Hard finding: the ✕ was an icon-only button (frontend-standards forbids it). It is now "✕ ปิด", named "ปิดข้อความ".
+    - Also fixed: `shadow-md` → `shadow-sm` ("no heavy shadows"); the icon is 16 px (Admin size).
+    - Left as is: after "ปิด" the keyboard falls to `<body>`. As before, the `role="status"` element is inserted already holding its words, which some screen readers can miss.
+  - **Tests:** 3 new (D2: ✕ closes, goes after 5 s but not while hovered; D3: an error stays until ✕). 416 pass.
+  - **Checks:** lint and tsc clean; startup JS 132.68 + 31.37 kB gzip; CSS 26.93 / 5.75 kB gzip.
+
 Next session: the second round of the eye check of #78 (PR #93), then `implement` #79 (D4 + D10 + M17).
 
 ## Owner's rules (still in force)

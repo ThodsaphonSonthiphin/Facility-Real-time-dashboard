@@ -35,19 +35,3 @@ export function Note({ tone, title, icon, children, alert = tone === 'error', st
     </div>
   );
 }
-
-/** The answer to an Admin's action at the top of a page (D2, D3): it outlives the form or item that sent it. */
-export type Notice = { kind: 'ok' | 'error'; text: string };
-
-/**
- * A notice as one note box: done is `role="status"` (read out politely), failed is `role="alert"`. The words sit on the
- * element with the role, so the role is found from the words.
- */
-export function NoticeLine({ notice }: { notice: Notice }) {
-  const ok = notice.kind === 'ok';
-  return (
-    <p className={noteClass(ok ? 'info' : 'error')} role={ok ? 'status' : 'alert'}>
-      {notice.text}
-    </p>
-  );
-}

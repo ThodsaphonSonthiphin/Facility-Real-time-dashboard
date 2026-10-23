@@ -5,7 +5,8 @@ import { useGetAttendanceBoardQuery } from '../../shared/api/attendanceBoardApi'
 import { livePoll } from '../../shared/api/baseApi';
 import type { Shift } from '../../shared/api/types';
 import { Select } from '../../shared/components/Field';
-import { Note, NoticeLine, type Notice } from '../../shared/components/Note';
+import { Note } from '../../shared/components/Note';
+import { Toast, type Notice } from '../../shared/components/Toast';
 import { toggleClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { AlertItem } from './AlertItem';
@@ -75,7 +76,7 @@ export function AlertsPage() {
         <span className="text-muted">เมื่อวานและวันนี้ · แอดมินเท่านั้น</span>
         <h1 className="text-xl font-bold">รายการที่ขึ้นเตือน</h1>
       </header>
-      {notice && <NoticeLine notice={notice} />}
+      {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
       <EmptyAreas
         board={boardNow}
         error={board.error}

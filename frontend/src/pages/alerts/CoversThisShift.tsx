@@ -1,6 +1,6 @@
 import type { AttendanceBoard } from '../../shared/api/attendanceBoardApi';
 import { Button } from '../../shared/components/Button';
-import type { Notice } from '../../shared/components/Note';
+import type { Notice } from '../../shared/components/Toast';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { formatDayTime, formatTime } from '../../shared/utils/thaiTime';
 import { slotText } from './alertRules';

@@ -1,5 +1,6 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import type { UserEvent } from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
 import { adminSession, buildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
@@ -19,6 +20,15 @@ function serve(routes: FakeRoutes = {}, board: AttendanceBoard = attendanceBoard
 const savedEvent = { status: 200, body: boardEvent(1100, 'ShiftIn', '2026-10-15T00:05:00Z', { source: 'AdminAdd' }) };
 const boardCalls = (server: ReturnType<typeof serve>) => server.calls.filter((call) => call.path === '/api/admin/attendance' && call.method === 'GET');
 const puts = (server: ReturnType<typeof serve>) => server.calls.filter((call) => call.method === 'PUT');
+
+/** Adds แม่บ้านลา's missing Shift-In at 07:05 through the form. */
+async function addShiftIn(user: UserEvent) {
+  await user.click(await screen.findByRole('button', { name: 'เพิ่มเวลา แม่บ้านลา' }));
+  const form = screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านลา · AR12' });
+  await user.type(within(form).getByRole('textbox', { name: 'เวลา (ชม.:นาที)' }), '07:05');
+  await user.type(within(form).getByRole('textbox', { name: 'เหตุผล (ต้องกรอก)' }), 'มือถือแบตหมด หัวหน้ายืนยัน');
+  await user.click(within(form).getByRole('button', { name: 'บันทึก' }));
+}
 
 /** Last night's shift of AR01: แม่บ้านกะดึก checked in 18:55 and has no Shift-Out. */
 const nightRow: BoardRow = {
@@ -54,6 +64,39 @@ describe('attendance corrections (D2, facility-0051)', () => {
     ]);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(boardCalls(server).length).toBeGreaterThan(before));
+  });
+
+  it('the saved notice floats over the page and ✕ closes it at once', async () => {
+    serve({ 'PUT /api/admin/attendance': () => savedEvent });
+    const { user } = await renderApp('/admin/attendance');
+
+    await addShiftIn(user);
+
+    expect(await screen.findByText('บันทึกเวลาเข้างานของ แม่บ้านลา แล้ว')).toHaveAttribute('role', 'status');
+    await user.click(screen.getByRole('button', { name: 'ปิดข้อความ' }));
+    expect(screen.queryByText('บันทึกเวลาเข้างานของ แม่บ้านลา แล้ว')).not.toBeInTheDocument();
+  });
+
+  it('the saved notice goes by itself after 5 s, but not while the pointer is on it', async () => {
+    serve({ 'PUT /api/admin/attendance': () => savedEvent });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { user } = await renderApp('/admin/attendance');
+      await addShiftIn(user);
+      const notice = await screen.findByText('บันทึกเวลาเข้างานของ แม่บ้านลา แล้ว');
+
+      await user.hover(notice);
+      act(() => vi.advanceTimersByTime(8_000));
+      expect(notice).toBeInTheDocument();
+
+      await user.unhover(notice);
+      act(() => vi.advanceTimersByTime(4_000));
+      expect(notice).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(1_500));
+      expect(notice).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('แก้เวลา opens on the first event not scanned, shows each current time, and a chosen event brings its time', async () => {

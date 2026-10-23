@@ -1,5 +1,5 @@
-import { screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { Alert } from '../../shared/api/alertListApi';
 import { adminSession } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
@@ -135,6 +135,28 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('ปิดเตือนนี้ไปแล้ว');
     await waitFor(() => expect(alertGets(server).length).toBeGreaterThan(before));
+  });
+
+  it('a refusal does not go by itself: it stays until ✕', async () => {
+    serve({
+      'POST /api/admin/alerts/review': () => ({ status: 409, body: { message: 'ปิดเตือนนี้ไปแล้ว' } }),
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { user } = await renderApp('/admin/alerts');
+      const item = await screen.findByRole('article', { name: 'ลงเวลาไกลจากป้าย · แม่บ้านทดสอบ' });
+      await user.click(within(item).getByRole('button', { name: 'คุยแล้ว ปิดเตือน' }));
+      await user.click(within(item).getByRole('button', { name: 'ยืนยันปิดเตือน' }));
+      const refusal = await screen.findByText('ปิดเตือนนี้ไปแล้ว');
+
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(refusal).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'ปิดข้อความ' }));
+      expect(refusal).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('one close at a time: the button waits for the answer', async () => {

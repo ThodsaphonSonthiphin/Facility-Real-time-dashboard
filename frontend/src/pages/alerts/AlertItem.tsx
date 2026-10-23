@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import type { Alert, AlertKind, CoverSuggestion } from '../../shared/api/alertListApi';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
-import type { Notice } from '../../shared/components/Note';
+import type { Notice } from '../../shared/components/Toast';
 import { buttonClass, noteTones } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { eventLabel } from '../../shared/utils/labels';

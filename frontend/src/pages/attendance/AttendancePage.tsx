@@ -12,7 +12,8 @@ import { livePoll } from '../../shared/api/baseApi';
 import type { AttendanceEvent, Shift } from '../../shared/api/types';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { boxClass, buttonClass, linkClass } from '../../shared/components/styles';
-import { Note, NoticeLine, type Notice } from '../../shared/components/Note';
+import { Note } from '../../shared/components/Note';
+import { Toast, type Notice } from '../../shared/components/Toast';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { exportLink } from '../../shared/utils/dateRange';
@@ -53,7 +54,7 @@ export function AttendancePage() {
     (board.shiftDate !== editing.shiftDate || board.shift !== editing.shift || openRow?.cleaner?.id !== editing.userId)
   ) {
     setEditing(null);
-    setNotice({ kind: 'ok', text: 'กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน' });
+    setNotice({ kind: 'warn', text: 'กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน' });
   }
   const open: Editing | null =
     editing ??
@@ -105,7 +106,7 @@ export function AttendancePage() {
         onNow={() => go({ buildingId: args.buildingId })}
         onBuilding={(buildingId) => go({ ...args, buildingId })}
       />
-      {notice && <NoticeLine notice={notice} />}
+      {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
       {isLoading && <p className="text-muted">กำลังโหลด...</p>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {board && fill && !fillRow && !editing && (
