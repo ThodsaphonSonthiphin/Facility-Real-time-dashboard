@@ -103,6 +103,7 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 | `ChoiceTile` (radio), `ToggleChip` (checkbox) | Large answers and issue tags on the phone |
 | `Table` | A table in its own scroll box; style-free `<th>` / `<td>` inside |
 | `Modal` (`labelledBy`, `onClose`) | A form over the page (the browser's modal `<dialog>`), so the page behind does not move: D2's correction form, D3's cover form. Its heading (`tabIndex={-1}`) takes the keyboard on open; Escape asks `onClose`; closing gives the keyboard back to what opened it (owner, #78) |
+| `Drawer` (`labelledBy`, `onClose`) | The same modal `<dialog>` as a full-height panel on the right edge (480 px, `w-120`, commented), scrolling on its own, the page still visible on the left: D4's point editor and its Area form (owner, 2026-10-23). Escape, the keyboard and the opener's keyboard back work as `Modal`'s |
 | `Panel`, `Facts`, `Splash` | A boxed group, label–value pairs, the waiting line |
 | `AppLayout`, `AdminNav`, `LiveBadge`, `StatusScreen`, `CrashScreen` | The shell, bar and menu, the live badge, full-page messages |
 

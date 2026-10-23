@@ -71,3 +71,5 @@ src/
 > **แก้ไข 2026-10-19 (แผน 11):** เพิ่ม `pages/dashboard` (D1), `pages/attendance` (D2), `pages/alerts` (D3), `shared/api/attendanceBoardApi.ts` (ตารางการเข้างาน ใช้ทั้ง D2 และ D3), `shared/api/alertListApi.ts` (รายการเตือน ใช้ทั้ง D3 และเมนู Admin), `shared/components/LiveBadge.tsx` และ `store/slices/dashboardSlice.ts`
 
 > **แก้ไข 2026-10-21 (แผน 12):** เพิ่ม `pages/inspection-summary` (D7), `pages/export` (D8), `pages/history` (D9), `shared/utils/dateRange.ts` (ช่วงวันของหน้ารายงาน), `shared/components/RangeFields.tsx` (ช่องตั้งแต่ / ถึง และปุ่มลัด) และ `shared/components/BuildingSelect.tsx`
+
+> **แก้ไข 2026-10-23 (#79):** รวม `pages/area-form/` (D10) เข้า `pages/areas/` — D4 เปิดฟอร์ม Area ใน Drawer ข้างขวา (เจ้าของ) จึงต้องใช้ `AreaForm` ตัวเดียวกับ D10 และกฎ boundaries ของ repo ห้ามหน้าหนึ่ง import อีกหน้า ฉะนั้น D4 กับ D10 เป็นหน้าเดียวกันในเชิงโค้ด: `pages/areas/` ถือ `AreasPage` (D4), `AreaFormPage` (D10), `AreaForm`, `AreaActiveSection`, `AreaEditorDrawer`, `areasApi` และ `areaFormApi` เส้นทาง `/admin/areas/new` และ `/admin/areas/:areaId/edit` ไม่เปลี่ยน

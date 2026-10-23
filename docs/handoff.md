@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-23 (#70–#78 merged, last PR #93; #79 in PR #95; next: eye check of #79, then `implement` #80; see `## Next: Tailwind migration`)
+Last updated: 2026-10-24 (#70–#78 merged, last PR #93; #79 in PR #95, D4 reworked after the owner's test-1 feedback; next: second eye check of D4, then the owner's D10/M17 feedback and `implement` #80; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -518,6 +518,15 @@ Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `
   - **Not done:** the owner's eye check (M17 on a real phone, D4 and D10 at 1280 px).
 
   Pushed; PR #95 opened against master, not merged. Next: the eye check, then `implement` #80.
+
+- 2026-10-24 · #79 D4 rework after the owner's test-1 feedback (same branch, PR #95; only D4 — D10/M17 feedback comes later).
+  - **1.1 forms in a Drawer:** `Drawer` added beside `Modal` in `shared/components/Modal.tsx`: the same modal `<dialog>`, a full-height panel on the right edge (480 px `w-120`, commented), scrolling on its own; Escape, `onClose` and the opener's keyboard back work as `Modal`'s. D4's point editor, and the Area form (`AreaEditorDrawer`: D10's `AreaForm` + `AreaActiveSection`, the building/Cleaner lists asked for only while it is open), now open there — the Area table stays visible on the left. A save closes the Drawer and floats the shared `Toast`; a Toast under an open dialog would sit under its backdrop.
+  - **1.2 master-detail:** the header is the name, the shifts/Cleaner line, `[แก้ไขพื้นที่]` (Drawer) and `[พิมพ์ป้าย]`; two `toggleClass` tabs (the D3 pattern, `aria-pressed`) — `จุดทำความสะอาด (n)` with `+ เพิ่มจุด` at the table's top right, and `ป้ายลงเวลา` holding the check-in sign's place, radius and QR. The check-in sign is no longer a row of the point table.
+  - **1.3 time picker:** one field per time `[07:00] – [09:00]` plus `+ เพิ่มช่วงเวลา`; digits only, the colon added after the second digit, Backspace takes a digit, Enter adds; saved windows are 24 px pills whose ✕ has a 36 px hit area. facility-0083 amended with the owner's new rationale (2026-10-23); the browser `input type=time` stays rejected (AM/PM).
+  - **Folders:** `pages/area-form/` merged into `pages/areas/` — D4 now uses D10's form, and the repo's boundaries rule forbids page→page imports (facility-0025 amended). The `/admin/areas/new` and `/admin/areas/:areaId/edit` paths are unchanged.
+  - **Tests changed (reported, not silent):** `row(/AR01-IN/)` is gone (the check-in sign is Tab 2; the test asserts its region and its `พิมพ์ป้ายลงเวลา` link); `แก้ไขพื้นที่` is a button, not a link; `พิมพ์ป้ายของพื้นที่นี้ ›` → `พิมพ์ป้าย`; `+ เพิ่มจุดทำความสะอาดในพื้นที่นี้` → `+ เพิ่มจุด`; `แก้ไข AR01-IN` → the `ป้ายลงเวลา` tab; the four time boxes → the `เริ่ม` / `ถึง` fields; `เพิ่ม` → `+ เพิ่มช่วงเวลา`; a save or (de)activation now closes the editor, so the deactivation test opens the point again; the facility-0083 test now covers the colon, Backspace and Enter; two new tests (the Area form opens in a Drawer, `clockOf`/`typedTime`).
+  - **Checks:** 418 tests pass, lint and `tsc -b` clean; main JS 132.04 kB gzip, CSS 28.28 / 6.00 kB gzip.
+  - **Not done:** the second eye check (D4 at 1280 px).
 
 ## Owner's rules (still in force)
 
