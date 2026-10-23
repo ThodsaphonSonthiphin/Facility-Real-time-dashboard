@@ -1,14 +1,26 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import type { Alert, CoverSuggestion } from '../../shared/api/alertListApi';
+import type { Alert, AlertKind, CoverSuggestion } from '../../shared/api/alertListApi';
+import { Button } from '../../shared/components/Button';
+import { Field, TextInput } from '../../shared/components/Field';
+import type { Notice } from '../../shared/components/Note';
+import { buttonClass, noteTones } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { eventLabel } from '../../shared/utils/labels';
 import { formatDayTime } from '../../shared/utils/thaiTime';
 import { alertDetail, alertTitle, alertWho, coverNotice, fillLink } from './alertRules';
 import { useAssignCoverMutation, useReviewAlertMutation } from './alertsApi';
 
-/** A line at the top of the alert page; an action's result outlives the item, which may move tabs. */
-export type Notice = { kind: 'ok' | 'error'; text: string };
+// An alert's kind is not a Point Status, so its chip takes a note's colours, never a status colour (facility-0087 rule
+// 3): refused at a sign in the error tone, far from a sign in the warn tone, a missing time plain grey (not a
+// control's outline, so it does not look pressable)
+const kindChip: Record<AlertKind, string> = {
+  BlockedScan: noteTones.error,
+  AttendanceGps: noteTones.warn,
+  SubmissionGps: noteTones.warn,
+  InspectionGps: noteTones.warn,
+  MissingAttendance: 'border-border bg-bg text-text',
+};
 
 interface AlertItemProps {
   alert: Alert;
@@ -21,29 +33,33 @@ export function AlertItem({ alert, onNotice }: AlertItemProps) {
   const title = alertTitle(alert);
 
   return (
-    <li className="alerts-item">
-      <article aria-label={`${title} · ${alertWho(alert)}`}>
-        <div className="alerts-item__top">
-          <span className="alerts-item__time">{formatDayTime(alert.at)}</span>
+    <li>
+      <article
+        aria-label={`${title} · ${alertWho(alert)}`}
+        className="flex flex-col gap-1.5 rounded border border-border px-3.5 py-3"
+      >
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="text-muted tabular-nums">{formatDayTime(alert.at)}</span>
           <strong>{alertWho(alert)}</strong>
         </div>
-        <span className={`alerts-chip alerts-chip--${alert.kind}`}>{title}</span>
-        <span className="alerts-item__detail">{alertDetail(alert)}</span>
-        <div className="alerts-item__actions">
+        {/* self-start: its own line in every card, not only when the name is long */}
+        <span className={`self-start rounded-full border px-2.5 py-0.5 font-semibold ${kindChip[alert.kind]}`}>{title}</span>
+        <span>{alertDetail(alert)}</span>
+        <div className="flex flex-wrap items-center gap-2.5">
           {alert.cover && !alert.reviewed && <CoverButton alert={alert} cover={alert.cover} onNotice={onNotice} />}
           {alert.reviewed && (
-            <span className="app-muted">{alert.reviewedAt ? `คุยแล้ว ${formatDayTime(alert.reviewedAt)}` : 'คุยแล้ว'}</span>
+            <span className="text-muted">{alert.reviewedAt ? `คุยแล้ว ${formatDayTime(alert.reviewedAt)}` : 'คุยแล้ว'}</span>
           )}
           {alert.kind === 'MissingAttendance' && (
             // facility-0051: it closes once the time is filled, on the attendance page
-            <Link className="app-button" to={fillLink(alert)}>
+            <Link className={buttonClass('secondary', 'desk')} data-tap="" to={fillLink(alert)}>
               {`เติมเวลา${eventLabel[alert.missingEvents[0] ?? 'ShiftOut']}`}
             </Link>
           )}
           {!alert.reviewed && alert.kind !== 'MissingAttendance' && !reviewing && (
-            <button type="button" className="app-button" onClick={() => setReviewing(true)}>
+            <Button size="desk" onClick={() => setReviewing(true)}>
               คุยแล้ว ปิดเตือน
-            </button>
+            </Button>
           )}
         </div>
         {reviewing && (
@@ -84,18 +100,17 @@ function ReviewForm({ alert, onDone, onError, onCancel }: ReviewFormProps) {
   };
 
   return (
-    <div className="alerts-review">
-      <label className="app-field">
-        หมายเหตุ (ไม่บังคับ)
-        <input className="app-input" value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} />
-      </label>
-      <div className="app-confirm__buttons">
-        <button type="button" className="app-button app-button--primary" disabled={isLoading} onClick={() => void send()}>
+    <div className="flex max-w-120 flex-col gap-2">
+      <Field label="หมายเหตุ (ไม่บังคับ)">
+        <TextInput size="desk" value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} />
+      </Field>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" size="desk" disabled={isLoading} onClick={() => void send()}>
           ยืนยันปิดเตือน
-        </button>
-        <button type="button" className="app-button" disabled={isLoading} onClick={onCancel}>
+        </Button>
+        <Button size="desk" disabled={isLoading} onClick={onCancel}>
           ยกเลิก
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -131,8 +146,8 @@ function CoverButton({ alert, cover, onNotice }: CoverButtonProps) {
   };
 
   return (
-    <button type="button" className="app-button app-button--primary" disabled={isLoading} onClick={() => void give()}>
+    <Button variant="primary" size="desk" disabled={isLoading} onClick={() => void give()}>
       {cover.areaId != null ? `ให้ทำแทน ${alert.areaCode} กะนี้` : 'ให้ตรวจแทนตึกนี้กะนี้'}
-    </button>
+    </Button>
   );
 }

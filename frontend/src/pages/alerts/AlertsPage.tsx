@@ -4,8 +4,11 @@ import { useGetAlertsQuery } from '../../shared/api/alertListApi';
 import { useGetAttendanceBoardQuery } from '../../shared/api/attendanceBoardApi';
 import { livePoll } from '../../shared/api/baseApi';
 import type { Shift } from '../../shared/api/types';
+import { Select } from '../../shared/components/Field';
+import { Note, NoticeLine, type Notice } from '../../shared/components/Note';
+import { toggleClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { AlertItem, type Notice } from './AlertItem';
+import { AlertItem } from './AlertItem';
 import {
   alertGroupLabel,
   coverSlots,
@@ -18,7 +21,7 @@ import {
 import { CoverForm } from './CoverForm';
 import { CoversThisShift } from './CoversThisShift';
 import { EmptyAreas } from './EmptyAreas';
-import './alerts.css';
+import { listClass, sectionClass, sectionTitleClass } from './alertStyles';
 
 const GROUPS: readonly AlertGroup[] = ['all', 'blocked', 'far', 'missing'];
 
@@ -67,19 +70,12 @@ export function AlertsPage() {
   ];
 
   return (
-    <main className="alerts-page">
-      <header>
-        <span className="app-muted">เมื่อวานและวันนี้ · แอดมินเท่านั้น</span>
-        <h1>รายการที่ขึ้นเตือน</h1>
+    <main className="flex flex-col gap-4 text-sm text-text">
+      <header className="flex flex-col gap-0.5">
+        <span className="text-muted">เมื่อวานและวันนี้ · แอดมินเท่านั้น</span>
+        <h1 className="text-xl font-bold">รายการที่ขึ้นเตือน</h1>
       </header>
-      {notice && (
-        <p
-          className={notice.kind === 'ok' ? 'app-note app-note--info' : 'app-note app-note--error'}
-          role={notice.kind === 'ok' ? 'status' : 'alert'}
-        >
-          {notice.text}
-        </p>
-      )}
+      {notice && <NoticeLine notice={notice} />}
       <EmptyAreas
         board={boardNow}
         error={board.error}
@@ -112,15 +108,18 @@ export function AlertsPage() {
           />
         )}
       </EmptyAreas>
-      <section className="alerts-section" aria-labelledby="alerts-list">
-        <h2 id="alerts-list">เตือนจากการสแกน</h2>
-        <div className="alerts-filters">
-          <div className="alerts-tabs" role="group" aria-label="การคุย">
+      <section className={sectionClass} aria-labelledby="alerts-list">
+        <h2 id="alerts-list" className={sectionTitleClass}>
+          เตือนจากการสแกน
+        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="การคุย">
             {tabs.map((item) => (
               <button
                 key={item.tab}
                 type="button"
-                className="alerts-tab"
+                data-tap=""
+                className={toggleClass}
                 aria-pressed={tab === item.tab}
                 onClick={() => setTab(item.tab)}
               >
@@ -128,31 +127,27 @@ export function AlertsPage() {
               </button>
             ))}
           </div>
-          <label className="alerts-type">
+          <label className="inline-flex items-center gap-1.5">
             ประเภท
-            <select className="app-input" value={group} onChange={(event) => setGroup(event.target.value as AlertGroup)}>
+            <Select size="desk" value={group} onChange={(event) => setGroup(event.target.value as AlertGroup)}>
               {GROUPS.map((value) => (
                 <option key={value} value={value}>
                   {alertGroupLabel[value]}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         </div>
-        {alerts.isLoading && <p className="app-muted">กำลังโหลด...</p>}
-        {alerts.error && (
-          <p className="app-note app-note--error" role="alert">
-            {getErrorMessage(alerts.error)}
-          </p>
-        )}
-        {alerts.data && shown.length === 0 && <p className="app-note app-note--info">ไม่มีรายการ</p>}
-        <ul className="alerts-list">
+        {alerts.isLoading && <p className="text-muted">กำลังโหลด...</p>}
+        {alerts.error && <Note tone="error">{getErrorMessage(alerts.error)}</Note>}
+        {alerts.data && shown.length === 0 && <Note tone="info">ไม่มีรายการ</Note>}
+        <ul className={listClass}>
           {shown.map((alert) => (
             // The same record id can come with two kinds (a far Shift-In and its missing Shift-Out)
             <AlertItem key={`${alert.kind}-${alert.recordId}`} alert={alert} onNotice={setNotice} />
           ))}
         </ul>
-        <p className="app-muted">
+        <p className="text-muted">
           ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
         </p>
       </section>

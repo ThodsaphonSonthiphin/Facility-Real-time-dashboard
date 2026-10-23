@@ -72,12 +72,22 @@ export function textAreaClass(size: InputSize = 'phone'): string {
   return `${inputBase} resize-y ${textAreaSizes[size]}`;
 }
 
+/**
+ * An Admin page's on/off button (`aria-pressed`): D1's status filters, D2's shift, D3's tabs. 36 px (pages/admin.md);
+ * the one that is on gets a blue frame, since blue means "can be pressed". Give it `data-tap` for the press feedback.
+ */
+export const toggleClass =
+  'inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded border border-input-border bg-surface px-2.5 text-text ' +
+  'ring-primary ring-inset enabled:hover:border-primary aria-pressed:border-primary aria-pressed:ring-1 ' +
+  `disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`;
+
 /** A text link (the base layer still colours `a` with the old look until #82). */
 export const linkClass = `text-primary underline hover:text-primary-strong ${focusRing}`;
 
 export type NoteTone = 'info' | 'warn' | 'error';
 
-const noteTones: Record<NoteTone, string> = {
+/** A note's border, background and text colours, for a note box and for a chip in a note's colours (D3's alert kinds). */
+export const noteTones: Record<NoteTone, string> = {
   info: 'border-info-border bg-info-bg text-info-text',
   warn: 'border-warn-border bg-warn-bg text-warn-text',
   error: 'border-error-border bg-error-bg text-error-text',

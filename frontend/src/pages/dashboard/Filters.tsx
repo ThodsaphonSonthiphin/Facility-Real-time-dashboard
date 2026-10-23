@@ -2,16 +2,11 @@ import { TriangleAlert } from 'lucide-react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import type { PointCard } from '../../shared/api/types';
 import { Select } from '../../shared/components/Field';
-import { focusRing, statusBg } from '../../shared/components/styles';
+import { statusBg, toggleClass } from '../../shared/components/styles';
 import { pointStatusLabel } from '../../shared/utils/labels';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { buildingChosen, issueOnlyToggled, statusToggled } from '../../store/slices/dashboardSlice';
 import { inBuilding, legendOrder, statusCounts } from './boardRules';
-
-// A 36 px toggle (pages/admin.md); the one that is on gets a blue frame, since blue means "can be pressed"
-const toggleClass =
-  'inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded border border-input-border bg-surface px-2.5 text-text ' +
-  `ring-primary ring-inset hover:border-primary aria-pressed:border-primary aria-pressed:ring-1 ${focusRing}`;
 
 const countClass = 'font-bold tabular-nums';
 

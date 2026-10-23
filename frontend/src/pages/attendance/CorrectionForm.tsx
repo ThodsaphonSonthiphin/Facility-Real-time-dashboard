@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { AssignedCleaner } from '../../shared/api/adminSetupApi';
 import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
 import type { AttendanceEvent } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
+import { Field, Select, TextInput } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
+import { boxClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { attendanceEvents, eventLabel, shiftShortLabel } from '../../shared/utils/labels';
 import { formatShiftDate, formatTime } from '../../shared/utils/thaiTime';
@@ -65,13 +69,16 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
   };
 
   return (
-    <section className="app-panel attendance-form" aria-labelledby={headingId}>
-      <h2 id={headingId} ref={headingRef} tabIndex={-1}>{`เพิ่ม/แก้เวลา · ${cleaner.displayName} · ${row.areaCode}`}</h2>
-      <span className="app-muted">{`${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)}`}</span>
-      <div className="attendance-form__row">
-        <label className="app-field">
-          รายการ
-          <select className="app-input" value={eventType} onChange={(event) => choose(event.target.value as AttendanceEvent)}>
+    <section className={`flex max-w-160 flex-col gap-3 ${boxClass}`} aria-labelledby={headingId}>
+      <div className="flex flex-col gap-0.5">
+        <h2 id={headingId} ref={headingRef} tabIndex={-1} className="text-base font-bold">
+          {`เพิ่ม/แก้เวลา · ${cleaner.displayName} · ${row.areaCode}`}
+        </h2>
+        <span className="text-muted">{`${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)}`}</span>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <Field label="รายการ">
+          <Select size="desk" value={eventType} onChange={(event) => choose(event.target.value as AttendanceEvent)}>
             {attendanceEvents.map((type) => {
               const existing = eventOf(row, type);
               return (
@@ -80,44 +87,33 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
                 </option>
               );
             })}
-          </select>
-        </label>
-        <label className="app-field">
-          เวลา (ชม.:นาที)
-          <input
-            className="app-input"
+          </Select>
+        </Field>
+        <Field label="เวลา (ชม.:นาที)">
+          <TextInput
+            size="desk"
             value={time}
             placeholder="07:05"
             inputMode="numeric"
             maxLength={5}
             onChange={(event) => setTime(event.target.value)}
           />
-        </label>
+        </Field>
       </div>
-      <label className="app-field">
-        เหตุผล (ต้องกรอก)
-        <input
-          className="app-input"
-          value={reason}
-          maxLength={MAX_REASON}
-          onChange={(event) => setReason(event.target.value)}
-        />
-      </label>
-      <span className="app-field__help">
+      <Field label="เหตุผล (ต้องกรอก)">
+        <TextInput size="desk" value={reason} maxLength={MAX_REASON} onChange={(event) => setReason(event.target.value)} />
+      </Field>
+      <span className="text-muted">
         ระบบเก็บค่าเดิม ผู้แก้ และเวลาที่แก้ไว้ในประวัติ · รายการนี้จะมีป้าย "แก้โดยแอดมิน" · แม่บ้านและหัวหน้าแก้เองไม่ได้
       </span>
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
-      <div className="app-confirm__buttons">
-        <button type="button" className="app-button app-button--primary" disabled={isLoading} onClick={() => void save()}>
+      {problem && <Note tone="error">{problem}</Note>}
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" size="desk" disabled={isLoading} onClick={() => void save()}>
           {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
-        </button>
-        <button type="button" className="app-button" disabled={isLoading} onClick={onCancel}>
+        </Button>
+        <Button size="desk" disabled={isLoading} onClick={onCancel}>
           ยกเลิก
-        </button>
+        </Button>
       </div>
     </section>
   );

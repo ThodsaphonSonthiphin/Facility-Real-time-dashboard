@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import type { AttendanceBoard, BoardArgs } from '../../shared/api/attendanceBoardApi';
 import type { Shift } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
+import { Field, Select, TextInput } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
+import { toggleClass } from '../../shared/components/styles';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { parseShiftDate } from '../../shared/utils/thaiTime';
 
@@ -34,13 +38,14 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
   };
 
   return (
-    <div className="attendance-controls">
-      <div className="attendance-shifts" role="group" aria-label="กะ">
+    <div className="flex flex-wrap items-end gap-2">
+      <div className="inline-flex gap-1" role="group" aria-label="กะ">
         {(['Day', 'Night'] as const).map((shift) => (
           <button
             key={shift}
             type="button"
-            className="attendance-shift"
+            data-tap=""
+            className={toggleClass}
             aria-pressed={board?.shift === shift}
             disabled={!board}
             onClick={() => board && onSlot(board.shiftDate, shift)}
@@ -49,10 +54,9 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
           </button>
         ))}
       </div>
-      <label className="attendance-control">
-        วันที่
-        <input
-          className="app-input"
+      <Field label="วันที่">
+        <TextInput
+          size="desk"
           value={dateText}
           placeholder="วว/ดด/ปปปป"
           inputMode="numeric"
@@ -63,19 +67,18 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
             }
           }}
         />
-      </label>
-      <button type="button" className="app-button" onClick={showDate}>
+      </Field>
+      <Button size="desk" onClick={showDate}>
         ดูวันที่นี้
-      </button>
+      </Button>
       {args.shiftDate && (
-        <button type="button" className="app-button" onClick={onNow}>
+        <Button size="desk" onClick={onNow}>
           กะปัจจุบัน
-        </button>
+        </Button>
       )}
-      <label className="attendance-control">
-        ตึก
-        <select
-          className="app-input"
+      <Field label="ตึก">
+        <Select
+          size="desk"
           value={args.buildingId ?? ''}
           onChange={(event) => onBuilding(event.target.value === '' ? undefined : Number(event.target.value))}
         >
@@ -85,22 +88,21 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
               {building.code}
             </option>
           ))}
-        </select>
-      </label>
-      <label className="attendance-control">
-        ค้นหา
-        <input
-          className="app-input"
+        </Select>
+      </Field>
+      <Field label="ค้นหา">
+        <TextInput
+          size="desk"
           type="search"
           value={search}
           placeholder="ชื่อพื้นที่หรือแม่บ้าน"
           onChange={(event) => onSearch(event.target.value)}
         />
-      </label>
+      </Field>
       {dateError && (
-        <p className="app-note app-note--error" role="alert">
-          {dateError}
-        </p>
+        <div className="basis-full">
+          <Note tone="error">{dateError}</Note>
+        </div>
       )}
     </div>
   );

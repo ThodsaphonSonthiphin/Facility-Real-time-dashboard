@@ -26,7 +26,7 @@ Each colour has one meaning.
 | Text | `--color-text` | `#1D2324` | Body text |
 | Muted text | `--color-muted` | `#5F696B` | Secondary text (5.17:1 on background) |
 | Border | `--color-border` | `#D5DADA` | Card and table borders |
-| Input border | `--color-input-border` | `#AEB6B7` | Field outlines |
+| Input border | `--color-input-border` | `#868F91` | Field, button and toggle outlines (3.31:1 on surface, 3.03:1 on background; was `#AEB6B7`, 2.06:1, changed by the owner in #78) |
 
 **No separate accent colour.** Orange, red and green are only ever status.
 
@@ -42,6 +42,8 @@ A status chip is white text on the status colour, **always with its words** (nev
 | Passed | ตรวจผ่าน | `--color-status-passed` | `#2E6E4A` |
 | NotYetDone, BeforeFirstRound, OffHours | ยังไม่ทำ, ยังไม่ถึงรอบ, นอกเวลา | `--color-status-idle` | `#5F696B` |
 | Break (attendance, D2) | พัก | `--color-status-break` | `#6B5B95` |
+
+D2's Area states reuse these chips, with their words: ยังไม่มีคน rework red, ทำงานอยู่ passed green, พักเบรก break, เลิกงานแล้ว idle grey, มีคนทำแทน pending cyan (as in the old look). D3's alert kinds are not states, so their chips take a note's colours: refused at a sign error, far from a sign warn, a missing time plain (#78).
 
 All pass 4.5:1 with white text. The three idle statuses share one grey on purpose: nothing needs doing.
 
@@ -95,6 +97,8 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 | `buttonClass(variant, size)` + `data-tap` | A react-router `Link` that looks like a button |
 | `Note` (`tone` info / warn / error, `title`, `icon`, `alert`, `status`) | A message in a box; an error is `role="alert"` unless `alert={false}` (a red box that is part of the page from the start, such as the Supervisor's defect); `status` makes it `role="status"`, for the answer to a press (the recorded time on the check-in page). `noteClass(tone)` for a box that must be a `<section>` with its own heading |
 | `StatusChip` (`size` md / lg) | A Point Status, always with its words |
+| `NoticeLine` (in `Note.tsx`, with its `Notice` type) | The answer to an Admin's action at the top of a page (D2, D3): done is an info box with `role="status"`, failed an error box with `role="alert"`, the words on the element with the role |
+| `toggleClass` (`styles.ts`) + `data-tap` | An Admin on/off button with `aria-pressed` (D1 filters, D2 shift, D3 tabs): 36 px, a blue frame when on |
 | `Field` (`label`, `help`), `TextInput`, `Select`, `TextArea` (`size` phone / desk) | A labelled control; the help line sits outside the label and is linked with `aria-describedby`; `inputClass(size)` for a bare one |
 | `ChoiceTile` (radio), `ToggleChip` (checkbox) | Large answers and issue tags on the phone |
 | `Table` | A table in its own scroll box; style-free `<th>` / `<td>` inside |

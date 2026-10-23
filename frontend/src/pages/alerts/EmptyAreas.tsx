@@ -1,10 +1,15 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
+import { Button } from '../../shared/components/Button';
+import { Select, TextInput } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
+import { linkClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { formatShiftDate } from '../../shared/utils/thaiTime';
 import { matchesSearch, sameSlot, slotKey, slotText, type CoverSlot } from './alertRules';
+import { listClass, rowClass, sectionClass, sectionTitleClass } from './alertStyles';
 
 interface EmptyAreasProps {
   board?: AttendanceBoard;
@@ -35,22 +40,27 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, o
   const current = slots[0];
 
   return (
-    <section className="alerts-section" aria-labelledby="alerts-empty">
-      <h2 id="alerts-empty">{ahead ? `พื้นที่ของกะที่ยังไม่เริ่ม (${rows.length})` : `พื้นที่ที่ยังไม่มีคน (${rows.length})`}</h2>
+    <section className={sectionClass} aria-labelledby="alerts-empty">
+      <h2 id="alerts-empty" className={sectionTitleClass}>
+        {ahead ? `พื้นที่ของกะที่ยังไม่เริ่ม (${rows.length})` : `พื้นที่ที่ยังไม่มีคน (${rows.length})`}
+      </h2>
       {ahead && board ? (
-        <span className="app-muted">{`${slotText(board)} ยังไม่เริ่ม จึงแสดงทุกพื้นที่ที่ทำกะนี้พร้อมแม่บ้านประจำ`}</span>
+        <span className="text-muted">{`${slotText(board)} ยังไม่เริ่ม จึงแสดงทุกพื้นที่ที่ทำกะนี้พร้อมแม่บ้านประจำ`}</span>
       ) : (
-        <span className="app-muted">
-          ข้อมูลเดียวกับ <Link to="/admin/attendance">การเข้างาน</Link>
+        <span className="text-muted">
+          ข้อมูลเดียวกับ{' '}
+          <Link className={linkClass} to="/admin/attendance">
+            การเข้างาน
+          </Link>
           {board ? ` · ${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)}` : ''}
         </span>
       )}
-      <div className="alerts-filters">
+      <div className="flex flex-wrap items-center gap-2">
         {current && slot && (
-          <label className="alerts-type">
+          <label className="inline-flex items-center gap-1.5">
             วันและกะ
-            <select
-              className="app-input"
+            <Select
+              size="desk"
               value={slotKey(slot)}
               onChange={(event) => onSlot(slots.find((option) => slotKey(option) === event.target.value) ?? current)}
             >
@@ -59,44 +69,39 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, o
                   {sameSlot(option, current) ? `${slotText(option)} (กะนี้)` : slotText(option)}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
-        <label className="alerts-type">
+        <label className="inline-flex items-center gap-1.5">
           ค้นหาชื่อแม่บ้านหรือพื้นที่
-          <input type="search" className="app-input" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <TextInput size="desk" type="search" value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
       </div>
-      {error != null && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(error)}
-        </p>
-      )}
-      {board && !ahead && rows.length === 0 && <p className="app-note app-note--info">ทุกพื้นที่มีคนแล้ว</p>}
-      {board && ahead && rows.length === 0 && <p className="app-note app-note--info">ไม่มีพื้นที่ที่ทำกะนี้</p>}
-      {rows.length > 0 && shown.length === 0 && <p className="app-note app-note--info">ไม่พบพื้นที่ที่ตรงกับที่ค้นหา</p>}
-      <ul className="alerts-rows">
+      {error != null && <Note tone="error">{getErrorMessage(error)}</Note>}
+      {board && !ahead && rows.length === 0 && <Note tone="info">ทุกพื้นที่มีคนแล้ว</Note>}
+      {board && ahead && rows.length === 0 && <Note tone="info">ไม่มีพื้นที่ที่ทำกะนี้</Note>}
+      {rows.length > 0 && shown.length === 0 && <Note tone="info">ไม่พบพื้นที่ที่ตรงกับที่ค้นหา</Note>}
+      <ul className={listClass}>
         {shown.map((row) => (
-          <li key={row.areaId} className="alerts-row">
+          <li key={row.areaId} className={rowClass}>
             <span>
               <strong>{`${row.areaCode} ${row.areaName}`}</strong>
               {` · ตึก ${row.buildingCode}`}
             </span>
-            <span className="app-muted">{cleanerText(row, ahead)}</span>
+            <span className="text-muted">{cleanerText(row, ahead)}</span>
             {row.covers.length > 0 ? (
               // Owner, 2026-10-22: a covered Area ahead names who covers and has no assign button, as on the shift on
               // the clock, where it leaves the list. To change who, cancel in the covers box first
               <span>{`ทำแทนแล้ว: ${row.covers.map((cover) => cover.displayName).join(', ')}`}</span>
             ) : (
-              <button
-                type="button"
-                className="app-button"
+              <Button
+                size="desk"
                 aria-label={`มอบหมายคนทำแทน ${row.areaCode}`}
                 disabled={chosen === row.areaId}
                 onClick={() => onChoose(row.areaId)}
               >
                 {chosen === row.areaId ? 'กำลังมอบหมาย ›' : 'มอบหมายคนทำแทน'}
-              </button>
+              </Button>
             )}
           </li>
         ))}
