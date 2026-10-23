@@ -20,12 +20,13 @@ interface Typed {
 
 const noTyped: Typed = { start: '', end: '' };
 
-// The pill's ✕: a 24 px button inside a 30 px pill, over a 36 px hit area (pages/admin.md) that grows only 6 px each
-// way — less than the 8 px between it and the window's words, so a click on the time never deletes the window. It is
-// the one icon-only kind of button besides the Toast's ✕ (owner, 2026-10-23)
+// The pill's ✕: only the cross, with no box or circle of its own — `border-0 bg-transparent` turns off the browser's
+// grey button face (preflight is off until #82), as the Toast's ✕ does. It is a 24 px button over a 36 px hit area
+// (pages/admin.md) that grows only 6 px each way — less than the 8 px between it and the window's words, so a click
+// on the time never deletes the window (owner, 2026-10-23: "ผมไม่ต้องการวงกลมนั้น")
 const removeClass =
-  `relative inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-info-text ` +
-  `after:absolute after:-inset-1.5 after:content-[''] hover:bg-surface hover:text-primary-strong ${focusRing}`;
+  `relative inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent ` +
+  `text-info-text after:absolute after:-inset-1.5 after:content-[''] hover:text-primary-strong ${focusRing}`;
 
 interface PointEditorProps {
   area: AreaSummary;
