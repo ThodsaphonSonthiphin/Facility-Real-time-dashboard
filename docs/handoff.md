@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-24 (#70–#78 merged, last PR #93; #79 in PR #95, D4 reworked after the owner's test-1 feedback; next: second eye check of D4, then the owner's D10/M17 feedback and `implement` #80; see `## Next: Tailwind migration`)
+Last updated: 2026-10-24 (#70–#78 merged, last PR #93; #79 in PR #95 with D4 reworked after the owner's test-1 feedback; **the owner stopped mid-check and asked for the remaining checks to be written down — see `### Waiting on the owner's eye check` under `## Next: Tailwind migration`**; then `implement` #80)
 
 ## Project
 
@@ -222,6 +222,32 @@ Test data only. The Development seed has an Admin whose password is public in th
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
 
 ## Next: Tailwind migration
+
+### Waiting on the owner's eye check (written 2026-10-24, to check 2026-10-25)
+
+The owner ended the session before the check was finished: "เรายังตรวจกันไมครบ ช่วยจดไว้หน่อย". Nothing is blocking; these three are only **checks owed**, not known bugs.
+
+**1. D4 — จัดการพื้นที่และป้าย** (the bulk of the round; `/admin/areas/1`)
+- The header: name, shifts/Cleaner line on the left; `[แก้ไขพื้นที่] [พิมพ์ป้าย]` on the right.
+- The view switcher is a tablist with a 2 px line under the words (not boxes): `จุดทำความสะอาด (2)` / `ป้ายลงเวลา`. Judge whether it reads as tabs at 1280 px and whether the spacing under the header is right.
+- Tab 1: `+ เพิ่มจุด` at the table's top right, no second heading; Tab 2: the check-in sign's place, radius, QR, `เก็บพิกัดบนมือถือ ›` and `[พิมพ์ป้ายลงเวลา]`.
+- The Drawer (480 px, right edge): a click on a point row's `แก้ไข`, `+ เพิ่มจุด`, and `แก้ไขพื้นที่`. Judge its width, and that a save closes it and a Toast appears.
+- The window picker: `[07:00] – [09:00]` + `+ เพิ่มช่วงเวลา`, and the pill's ✕. **Two fixes after the last screenshot are still unconfirmed by the owner**: the ✕ shows only a cross (no browser grey circle) and is exactly as big as it looks, so a click beside the time no longer deletes the window.
+
+**2. D10 — ฟอร์มพื้นที่** (`/admin/areas/2/edit` in the Drawer, `/admin/areas/new` as a full page)
+- Same form both ways: code (create only), name, building, shift pattern, day/night Cleaner, the help line and the `losesNightRounds` warning. Confirmed by the owner already: create stays a full page, edit opens in the Drawer, and the two are never grouped in one row.
+
+**3. M17 — เก็บพิกัดด้วยมือถือ** (phone, `/admin/areas/2/capture`, then per sign)
+- Use **AR02**, whose signs have no place yet (AR01's are measured). The parts to judge: the 30-second reading, the "ใช้ตำแหน่งตรงนี้" answer, and the words when the reading is weak.
+
+**Environment (it does not survive a reboot):**
+- Frontend: `cd frontend && npm run build:api` (writes `backend/src/FacilityRealtime.Api/wwwroot`; the folder is git-ignored and is a throwaway).
+- API: `cd backend/src/FacilityRealtime.Api && dotnet run --no-launch-profile` → `http://localhost:5001`, log `/tmp/facility-api.log`; throwaway database `facility_ui_test`, login `admin / admin1234`.
+- Phone: `cloudflared tunnel --url http://localhost:5001` (log `/tmp/facility-tunnel.log`). A quick tunnel's URL changes on every start — read the current one with `grep -o "https://[a-z0-9-]*\.trycloudflare\.com" /tmp/facility-tunnel.log | tail -1` and send it to the owner; the one from 2026-10-24 (`worm-oasis-menu-moderate`) is already stale.
+- Seed: AR01 (2 shifts, 2 points, signs measured), AR02 (day only, 1 point, signs unmeasured); E1001 / 0810000001 (Cleaner), S2001 / 0820000001 (Supervisor).
+- Repo noise left alone on purpose: a modified `.gitignore` and an untracked root `package-lock.json`. Never commit either.
+
+**After the check:** the owner's answers (fix or pass), then merge PR #95 only on the owner's explicit OK, then `implement` #80. Cleanup: stop the API and cloudflared, drop `facility_ui_test`, delete `wwwroot`.
 
 ### Start here (new session, 2026-10-22)
 
