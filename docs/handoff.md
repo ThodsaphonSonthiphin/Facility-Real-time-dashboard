@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-22 (#70–#74 merged, last PR #87; next: `implement` #75; see `## Next: Tailwind migration`)
+Last updated: 2026-10-22 (#70–#74 merged, last PR #87; #75 in PR #89; next: `implement` #76; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -404,7 +404,19 @@ Where `ui-ux-pro-max` fits:
 
 - 2026-10-22 · Owner: merge all four. PRs #84 → #85 → #86 → #87 merged to master in order (each retargeted to master first); #71–#74 closed; master `47b49e9` has the same tree as `feat/scan-a`; 410 tests pass. Next: `implement` #75 (check-in page), then #76–#81.
 
-Next session: `implement` #75.
+- 2026-10-22 · #75 on branch `feat/check-in-new-look` (from master `cf1d313`). The check-in sign page is in the new look; `checkIn.css` is deleted.
+  - **Page:** `text-base text-text` root; kicker, 28 px heading, the shift line now 19 px in text colour (was 15 px muted), the own Area 15 px muted; the "วันนี้" row is a four-column box of 15 px steps (was 12 px), a recorded step solid, one still to come dashed; ไกลป้าย in the warn text colour.
+  - **Buttons:** all ลงเวลา buttons 56 px full width; only the first (the next event) is blue, the others outlined. **Owner's call while building:** "56 px primary" in #75 means the size; phone.md's one-blue rule stands (recorded in `pages/phone.md`). The old first button was 72 px / 22 px text.
+  - **Notes:** load error and failed press are `Note` errors (`role="alert"` as before); the answer to a press keeps `role="status"` through a new `Note` prop `status` (MASTER.md updated); the off-shift note and "ลงเวลาครบแล้ว" stay without a role.
+  - **Height:** the page fills the screen less the shell (100 px: `pt-3` + 48 px bar + `gap-4` + `pb-6`), so the buttons sit low; the old value (80 px) made the page scroll.
+  - **Tests:** unchanged, plus one assertion that the recorded time is `role="status"`; 410 pass.
+  - **Code review (one sub-agent, Standards + Spec):** no wrong words, names or roles. Fixes: the min-height, the timeline's doc comment, the `status` test. Left as is (reported): no bottom safe-area inset in the phone shell (the scan pages have the same gap; a shell change, for #82 or a small ticket); off-rhythm gaps `gap-2.5` / `gap-1.5` match the scan pages; the kicker + heading pattern now repeats in four places and could become a shared `PageHeading`; `Note`'s `alert` + `status` are two booleans for one role.
+  - **Checks:** lint and tsc clean; main JS 162.61 kB gzip; CSS 27.74 / 5.60 kB gzip.
+  - **Not done:** the owner's eye check on a real phone (can be batched with #76).
+
+  Pushed; PR #89 opened, not merged (the owner says when). Next: `implement` #76.
+
+Next session: `implement` #76 (and the eye check of #75).
 
 ## Owner's rules (still in force)
 

@@ -57,7 +57,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
 
     await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
 
-    expect(await screen.findByText('บันทึกเวลาเข้างานแล้ว 06:52')).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent('บันทึกเวลาเข้างานแล้ว 06:52');
     expect(server.calls.find((c) => c.path === '/api/attendance')?.body).toEqual({
       qrToken: 'token-checkin-ar01',
       eventType: 'ShiftIn',

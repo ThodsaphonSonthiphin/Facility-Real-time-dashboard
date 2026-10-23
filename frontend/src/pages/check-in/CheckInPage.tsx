@@ -5,15 +5,17 @@ import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import { blockedScanOf, isNotSent, statusOf } from '../../shared/api/scanAnswers';
 import type { AttendanceEvent, AttendanceState, BlockedScan, OwnShift } from '../../shared/api/types';
 import { BlockedScanScreen } from '../../shared/components/BlockedScanScreen';
+import { Button } from '../../shared/components/Button';
 import { LocationHelp } from '../../shared/components/LocationHelp';
+import { Note } from '../../shared/components/Note';
 import { StatusScreen } from '../../shared/components/StatusScreen';
+import { buttonClass } from '../../shared/components/styles';
 import { readLocation, type LocationProblem } from '../../shared/geo/readLocation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { eventLabel, shiftLabel } from '../../shared/utils/labels';
 import { formatClock, formatTime } from '../../shared/utils/thaiTime';
 import { AttendanceTimeline } from './AttendanceTimeline';
 import { useCheckSignQuery, useRecordAttendanceMutation } from './checkInApi';
-import './checkIn.css';
 
 type Outcome =
   | { kind: 'answered'; eventType: AttendanceEvent; state: AttendanceState; accuracyM: number }
@@ -97,49 +99,46 @@ export function CheckInPage() {
   }
 
   return (
-    <main className="checkin-page">
-      <header className="checkin-heading">
-        <span className="checkin-kicker">ป้ายลงเวลา</span>
-        <h1>ลงเวลา</h1>
-        {attendance?.shift && <p className="checkin-sub">{shiftLabel[attendance.shift]}</p>}
-        {ownArea && <p className="checkin-area">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
+    // min-h: the screen less the shell above and below the page (pt-3 + the 48 px bar + gap-4 + pb-6 = 100 px), so the
+    // buttons sit low, in thumb reach; no token describes that height
+    <main className="flex min-h-[calc(100dvh-6.25rem)] flex-col gap-4 text-base text-text">
+      <header className="flex flex-col gap-1">
+        <span className="text-md tracking-wide text-muted">ป้ายลงเวลา</span>
+        <h1 className="text-2xl font-bold">ลงเวลา</h1>
+        {attendance?.shift && <p className="text-lg font-semibold">{shiftLabel[attendance.shift]}</p>}
+        {ownArea && <p className="text-md text-muted">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
       </header>
-      {(workQuery.isLoading || signQuery.isLoading) && <p className="checkin-hint">กำลังโหลด...</p>}
-      {loadError != null && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(loadError)}
-        </p>
-      )}
+      {(workQuery.isLoading || signQuery.isLoading) && <p className="text-md text-muted">กำลังโหลด...</p>}
+      {loadError != null && <Note tone="error">{getErrorMessage(loadError)}</Note>}
       {attendance && !attendance.shift && <OffShiftNote ownShift={work?.ownShift} />}
       {attendance?.shift && <AttendanceTimeline attendance={attendance} />}
       {outcome?.kind === 'answered' && (
         <AnsweredNote eventType={outcome.eventType} state={outcome.state} accuracyM={outcome.accuracyM} />
       )}
-      {outcome?.kind === 'failed' && (
-        <p className="app-note app-note--error" role="alert">
-          {outcome.message}
-        </p>
-      )}
+      {outcome?.kind === 'failed' && <Note tone="error">{outcome.message}</Note>}
       {liveAttendance?.shift && liveAttendance.nextEvents.length === 0 && (
-        <p className="app-note app-note--info">ลงเวลาครบแล้วสำหรับกะนี้</p>
+        <Note tone="info">ลงเวลาครบแล้วสำหรับกะนี้</Note>
       )}
       {liveAttendance && liveAttendance.nextEvents.length > 0 && (
-        <div className="checkin-actions">
+        // At most one blue button per screen (pages/phone.md): the next event; the others are outlined, all 56 px
+        <div className="mt-auto flex flex-col gap-2.5">
           {liveAttendance.nextEvents.map((eventType, index) => (
-            <button
+            <Button
               key={eventType}
-              type="button"
-              className={index === 0 ? 'checkin-press checkin-press--main' : 'checkin-press'}
+              variant={index === 0 ? 'primary' : 'secondary'}
+              size="main"
               disabled={pressed !== null}
               onClick={() => void press(eventType)}
             >
               {pressed === eventType ? 'กำลังบันทึก...' : eventLabel[eventType]}
-            </button>
+            </Button>
           ))}
         </div>
       )}
-      <p className="checkin-hint">ระบบแสดงปุ่มถัดไปให้เองตามลำดับ · กดซ้ำภายใน 5 นาทีไม่นับ · ไม่คิดสายหรือกลับก่อน</p>
-      <Link className="app-button" to="/my-work">
+      <p className="text-center text-md text-muted">
+        ระบบแสดงปุ่มถัดไปให้เองตามลำดับ · กดซ้ำภายใน 5 นาทีไม่นับ · ไม่คิดสายหรือกลับก่อน
+      </p>
+      <Link className={buttonClass('secondary', 'phone')} data-tap="" to="/my-work">
         ดูงานของฉัน
       </Link>
     </main>
@@ -149,13 +148,12 @@ export function CheckInPage() {
 /** facility-0077: outside the attendance window the Cleaner is told their own shift and when it can be recorded. */
 function OffShiftNote({ ownShift }: { ownShift?: OwnShift }) {
   return (
-    <div className="app-note app-note--warn">
-      <strong>ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ</strong>
+    <Note tone="warn" title="ตอนนี้ไม่อยู่ในช่วงลงเวลาของกะคุณ">
       {ownShift && <span>{`กะของคุณ: ${shiftLabel[ownShift.shift]}`}</span>}
       {ownShift && (
         <span>{`ลงเวลาได้ตั้งแต่ ${formatClock(ownShift.opensAt)} ถึง ${formatClock(ownShift.closesAt)}`}</span>
       )}
-    </div>
+    </Note>
   );
 }
 
@@ -173,30 +171,29 @@ function AnsweredNote({ eventType, state, accuracyM }: AnsweredNoteProps) {
 
   if (state.outcome === 'TooSoon') {
     return (
-      <p className="app-note app-note--warn" role="status">
+      <Note tone="warn" status>
         {`ยังไม่บันทึก${label} เพราะเพิ่งลงเวลาไปไม่ถึง 5 นาที กดซ้ำภายใน 5 นาทีไม่นับ`}
-      </p>
+      </Note>
     );
   }
   if (state.outcome === 'AlreadyRecorded') {
     return (
-      <p className="app-note app-note--info" role="status">
+      <Note tone="info" status>
         {`${label}: ลงเวลาไว้แล้วตอน ${time} ระบบเก็บเวลาแรกไว้`}
-      </p>
+      </Note>
     );
   }
   if (recorded?.withinRadius === false) {
     return (
-      <div className="app-note app-note--warn" role="status">
-        <strong>{`บันทึกเวลา${label}แล้ว ${time} แต่อยู่ไกลป้าย`}</strong>
+      <Note tone="warn" status title={`บันทึกเวลา${label}แล้ว ${time} แต่อยู่ไกลป้าย`}>
         <span>{`ความแม่นยำของตำแหน่ง ±${Math.round(accuracyM)} ม.`}</span>
         <span>แอดมินจะเห็นรายการนี้ ถ้าคุณยืนอยู่หน้าป้ายจริง แจ้งแอดมินได้เลย</span>
-      </div>
+      </Note>
     );
   }
   return (
-    <p className="app-note app-note--info" role="status">
+    <Note tone="info" status>
       {`บันทึกเวลา${label}แล้ว ${time}`}
-    </p>
+    </Note>
   );
 }

@@ -93,7 +93,7 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 |---|---|
 | `Button` (`variant` primary / secondary / danger / link, `size` phone / main / desk) | Every button. `main` is the phone page's one 56 px full-width action; `danger` confirms what cannot be undone (red text and border on white, owner 2026-10-22) |
 | `buttonClass(variant, size)` + `data-tap` | A react-router `Link` that looks like a button |
-| `Note` (`tone` info / warn / error, `title`, `icon`, `alert`) | A message in a box; an error is `role="alert"` unless `alert={false}` (a red box that is part of the page from the start, such as the Supervisor's defect). `noteClass(tone)` for a box that must be a `<section>` with its own heading |
+| `Note` (`tone` info / warn / error, `title`, `icon`, `alert`, `status`) | A message in a box; an error is `role="alert"` unless `alert={false}` (a red box that is part of the page from the start, such as the Supervisor's defect); `status` makes it `role="status"`, for the answer to a press (the recorded time on the check-in page). `noteClass(tone)` for a box that must be a `<section>` with its own heading |
 | `StatusChip` (`size` md / lg) | A Point Status, always with its words |
 | `Field` (`label`, `help`), `TextInput`, `Select`, `TextArea` (`size` phone / desk) | A labelled control; the help line sits outside the label and is linked with `aria-describedby`; `inputClass(size)` for a bare one |
 | `ChoiceTile` (radio), `ToggleChip` (checkbox) | Large answers and issue tags on the phone |
