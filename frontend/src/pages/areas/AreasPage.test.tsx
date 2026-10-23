@@ -48,7 +48,7 @@ describe('AreasPage (D4, facility-0045)', () => {
     expect(screen.getByRole('link', { name: 'พิมพ์ป้าย' })).toHaveAttribute('href', '/admin/print?area=1');
     expect(screen.getByRole('link', { name: 'เก็บพิกัดบนมือถือ ›' })).toHaveAttribute('href', '/admin/areas/1/capture');
     // Tab 1 is the point list; the check-in sign has its own tab, with its own print link
-    expect(screen.getByRole('button', { name: 'จุดทำความสะอาด (2)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'จุดทำความสะอาด' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('heading', { level: 3, name: 'จุดทำความสะอาด (2)' })).toBeInTheDocument();
 
     const men = row(/AR01-01/);

@@ -151,7 +151,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     expect(within(checkInQr).getByText('ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้')).toBeInTheDocument();
 
     // the point list is Tab 1, the check-in sign is Tab 2
-    await user.click(screen.getByRole('button', { name: 'จุดทำความสะอาด (2)' }));
+    await user.click(screen.getByRole('button', { name: 'จุดทำความสะอาด' }));
     await user.click(screen.getByRole('button', { name: 'แก้ไข AR01-01' }));
     const pointQr = within(screen.getByRole('region', { name: 'แก้ไขจุด · AR01 Area ทดลอง' })).getByRole('region', {
       name: 'QR ของป้าย',

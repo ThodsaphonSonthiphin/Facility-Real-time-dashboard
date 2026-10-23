@@ -78,7 +78,7 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
       )}
       <div className="flex flex-wrap gap-2" role="group" aria-label="ส่วนของพื้นที่">
         <button type="button" data-tap="" className={toggleClass} aria-pressed={tab === 'points'} onClick={() => setTab('points')}>
-          {`จุดทำความสะอาด (${detail.points.length})`}
+          จุดทำความสะอาด
         </button>
         <button type="button" data-tap="" className={toggleClass} aria-pressed={tab === 'check-in'} onClick={() => setTab('check-in')}>
           ป้ายลงเวลา
