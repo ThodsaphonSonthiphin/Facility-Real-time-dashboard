@@ -1,5 +1,8 @@
 import { Link } from 'react-router';
 import type { AdminSign, AreaDetail } from '../../shared/api/adminSetupApi';
+import { Table } from '../../shared/components/Boxes';
+import { Button } from '../../shared/components/Button';
+import { buttonClass } from '../../shared/components/styles';
 import { roundsText, signPlaceLabel } from '../../shared/utils/labels';
 
 /** Which row's editor is open below the table. */
@@ -14,10 +17,12 @@ const placeText = (sign: AdminSign) => `${signPlaceLabel(sign)} · รัศม�
 export function SignTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (target: EditTarget) => void }) {
   const { area, checkInSign } = detail;
   const printLink = (sign: AdminSign) => `/admin/print?area=${area.id}&sign=${sign.id}`;
+  // One row's actions sit on one line; a deactivated row's words are muted, its links keep a link's colour
+  const actionsClass = 'flex items-center gap-3 whitespace-nowrap';
 
   return (
     <>
-      <table className="app-table areas-signs" aria-label="ป้ายของพื้นที่นี้">
+      <Table label="ป้ายของพื้นที่นี้">
         <thead>
           <tr>
             <th scope="col">ป้าย</th>
@@ -28,54 +33,68 @@ export function SignTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (tar
         </thead>
         <tbody>
           <tr>
-            <th scope="row">
+            <th scope="row" className="font-normal">
               <strong>{checkInSign.code}</strong> ป้ายลงเวลา
-              <span className="app-muted areas-kind">ป้ายลงเวลา 1 ป้ายต่อพื้นที่</span>
+              <span className="block text-muted">ป้ายลงเวลา 1 ป้ายต่อพื้นที่</span>
             </th>
             <td>เข้างาน ออกพัก กลับจากพัก เลิกงาน</td>
             <td>{placeText(checkInSign)}</td>
-            <td className="areas-actions">
-              <button
-                type="button"
-                className="app-link-button"
-                aria-label={`แก้ไข ${checkInSign.code}`}
-                onClick={() => onEdit({ kind: 'check-in' })}
-              >
-                แก้ไข
-              </button>
-              {area.isActive && <Link to={printLink(checkInSign)}>พิมพ์</Link>}
+            <td>
+              <div className={actionsClass}>
+                <Button
+                  variant="link"
+                  size="desk"
+                  aria-label={`แก้ไข ${checkInSign.code}`}
+                  onClick={() => onEdit({ kind: 'check-in' })}
+                >
+                  แก้ไข
+                </Button>
+                {area.isActive && (
+                  <Link className={buttonClass('link', 'desk')} data-tap="" to={printLink(checkInSign)}>
+                    พิมพ์
+                  </Link>
+                )}
+              </div>
             </td>
           </tr>
           {detail.points.map((point) => (
-            <tr key={point.id} className={point.isActive ? undefined : 'app-row--inactive'}>
-              <th scope="row">
+            <tr key={point.id} className={point.isActive ? undefined : 'text-muted'}>
+              <th scope="row" className="font-normal">
                 <strong>{point.sign.code}</strong> {point.name}
-                <span className="app-muted areas-kind">
+                <span className="block text-muted">
                   {point.isActive ? 'จุดทำความสะอาด' : 'จุดทำความสะอาด · ปิดใช้งาน'}
                 </span>
               </th>
               <td>{roundsText(point.roundWindows)}</td>
               <td>{placeText(point.sign)}</td>
-              <td className="areas-actions">
-                <button
-                  type="button"
-                  className="app-link-button"
-                  aria-label={`แก้ไข ${point.sign.code}`}
-                  onClick={() => onEdit({ kind: 'point', pointId: point.id })}
-                >
-                  แก้ไข
-                </button>
-                {area.isActive && point.isActive && <Link to={printLink(point.sign)}>พิมพ์</Link>}
+              <td>
+                <div className={actionsClass}>
+                  <Button
+                    variant="link"
+                    size="desk"
+                    aria-label={`แก้ไข ${point.sign.code}`}
+                    onClick={() => onEdit({ kind: 'point', pointId: point.id })}
+                  >
+                    แก้ไข
+                  </Button>
+                  {area.isActive && point.isActive && (
+                    <Link className={buttonClass('link', 'desk')} data-tap="" to={printLink(point.sign)}>
+                      พิมพ์
+                    </Link>
+                  )}
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
-      </table>
-      {detail.points.length === 0 && <p className="app-muted">พื้นที่นี้ยังไม่มีจุดทำความสะอาด</p>}
+      </Table>
+      {detail.points.length === 0 && <p className="text-muted">พื้นที่นี้ยังไม่มีจุดทำความสะอาด</p>}
       {area.isActive && (
-        <button type="button" className="app-button areas-add-point" onClick={() => onEdit({ kind: 'new-point' })}>
-          + เพิ่มจุดทำความสะอาดในพื้นที่นี้
-        </button>
+        <div>
+          <Button size="desk" onClick={() => onEdit({ kind: 'new-point' })}>
+            + เพิ่มจุดทำความสะอาดในพื้นที่นี้
+          </Button>
+        </div>
       )}
     </>
   );

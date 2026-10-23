@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import type { AdminPoint, AreaDetail } from '../../shared/api/adminSetupApi';
+import { Button } from '../../shared/components/Button';
+import { Note } from '../../shared/components/Note';
+import { boxClass, buttonClass, linkClass } from '../../shared/components/styles';
+import { Toast, type Notice } from '../../shared/components/Toast';
 import { areaLine } from './areaText';
 import { PointEditor } from './PointEditor';
 import { SignPanel } from './SignPanel';
@@ -13,42 +17,47 @@ import { SignTable, type EditTarget } from './SignTable';
 export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
   const { area } = detail;
   const [editing, setEditing] = useState<EditTarget | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
 
   const open = (target: EditTarget) => {
     setEditing(target);
     setNotice(null);
   };
-  // A new point becomes the point being edited; until the refreshed Area arrives, no editor shows
+  // A new point becomes the point being edited; until the refreshed Area arrives, no editor shows. The answer to the
+  // save floats (Toast), as on D2 and D3 (owner, #78)
   const saved = (point: AdminPoint, message: string) => {
     setEditing({ kind: 'point', pointId: point.id });
-    setNotice(message);
+    setNotice({ kind: 'ok', text: message });
   };
   const editedPoint = editing?.kind === 'point' ? detail.points.find((point) => point.id === editing.pointId) : undefined;
 
   return (
-    <section className="areas-detail" aria-labelledby="areas-detail-title">
-      <header className="areas-detail__head">
-        <span className="app-muted">{`พื้นที่ที่เลือก · ตึก ${area.buildingCode}`}</span>
-        <h2 id="areas-detail-title">{`${area.code} ${area.name}`}</h2>
-        <p>{areaLine(detail)}</p>
-        <div className="areas-detail__links">
-          <Link className="app-button" to={`/admin/areas/${area.id}/edit`}>
+    <section className="flex flex-col gap-3" aria-labelledby="areas-detail-title">
+      <header className="flex flex-col gap-1">
+        <span className="text-muted">{`พื้นที่ที่เลือก · ตึก ${area.buildingCode}`}</span>
+        <h2 id="areas-detail-title" className="text-xl font-bold">{`${area.code} ${area.name}`}</h2>
+        <p className="text-muted">{areaLine(detail)}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <Link className={buttonClass('secondary', 'desk')} data-tap="" to={`/admin/areas/${area.id}/edit`}>
             แก้ไขพื้นที่
           </Link>
-          {area.isActive && <Link to={`/admin/print?area=${area.id}`}>พิมพ์ป้ายของพื้นที่นี้ ›</Link>}
-          {area.isActive && <Link to={`/admin/areas/${area.id}/capture`}>เก็บพิกัดบนมือถือ ›</Link>}
+          {area.isActive && (
+            <Link className={linkClass} to={`/admin/print?area=${area.id}`}>
+              พิมพ์ป้ายของพื้นที่นี้ ›
+            </Link>
+          )}
+          {area.isActive && (
+            <Link className={linkClass} to={`/admin/areas/${area.id}/capture`}>
+              เก็บพิกัดบนมือถือ ›
+            </Link>
+          )}
         </div>
       </header>
       {!area.isActive && (
-        <p className="app-note app-note--warn">พื้นที่นี้ปิดใช้งาน ป้ายทุกป้ายสแกนไม่ได้ เปิดใช้งานได้ที่ "แก้ไขพื้นที่"</p>
+        <Note tone="warn">พื้นที่นี้ปิดใช้งาน ป้ายทุกป้ายสแกนไม่ได้ เปิดใช้งานได้ที่ "แก้ไขพื้นที่"</Note>
       )}
       <SignTable detail={detail} onEdit={open} />
-      {notice && (
-        <p className="app-note app-note--info" role="status">
-          {notice}
-        </p>
-      )}
+      {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
       {editing?.kind === 'new-point' && (
         <PointEditor key="new" area={area} onSaved={saved} onClose={() => setEditing(null)} />
       )}
@@ -62,8 +71,8 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
         />
       )}
       {editing?.kind === 'check-in' && (
-        <section className="areas-editor app-panel" aria-labelledby="checkin-editor">
-          <h3 id="checkin-editor">{`ป้ายลงเวลา · ${area.code} ${area.name}`}</h3>
+        <section className={`flex flex-col gap-3 ${boxClass}`} aria-labelledby="checkin-editor">
+          <h3 id="checkin-editor" className="text-lg font-semibold">{`ป้ายลงเวลา · ${area.code} ${area.name}`}</h3>
           <SignPanel
             key={detail.checkInSign.id}
             areaId={area.id}
@@ -71,11 +80,9 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
             label="ป้ายลงเวลา"
             canIssueQr={area.isActive}
           />
-          <div className="areas-editor__buttons">
-            <button type="button" className="app-button" onClick={() => setEditing(null)}>
-              ปิด
-            </button>
-          </div>
+          <Button size="desk" onClick={() => setEditing(null)}>
+            ปิด
+          </Button>
         </section>
       )}
     </section>

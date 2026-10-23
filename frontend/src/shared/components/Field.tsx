@@ -45,6 +45,27 @@ export function Field({ label, help, children }: FieldProps) {
 
 type Sized<T> = Omit<T, 'size'> & { size?: InputSize };
 
+/**
+ * A bordered group of controls with its legend, for answers that belong together (D10's shift pattern, D4's round
+ * windows). The controls inside lay themselves out; `disabled` reaches every control in the group.
+ */
+export function FieldGroup({
+  legend,
+  disabled = false,
+  children,
+}: {
+  legend: ReactNode;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2 rounded border border-border p-2.5" disabled={disabled}>
+      <legend className="px-1 font-semibold">{legend}</legend>
+      {children}
+    </fieldset>
+  );
+}
+
 export function TextInput({ size, className, ...rest }: Sized<InputHTMLAttributes<HTMLInputElement>>) {
   return <input className={className ? `${inputClass(size)} ${className}` : inputClass(size)} {...rest} />;
 }

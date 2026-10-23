@@ -2,6 +2,10 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import type { AreaDetail, Building, CleanerOption } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
+import { Field, FieldGroup, Select, TextInput } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
+import { boxClass, buttonClass, focusRing } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftPatternLabel, shiftShortLabel } from '../../shared/utils/labels';
 import { useCreateAreaMutation, useUpdateAreaMutation } from './areaFormApi';
@@ -13,6 +17,8 @@ interface AreaFormProps {
   buildings: Building[];
   cleaners: CleanerOption[];
 }
+
+const SHIFT_PATTERNS = ['DayAndNight', 'DayOnly'] as const;
 
 /** Wireframe D10's form. A save opens the Area on the D4 page. The page keys it by Area id. */
 export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
@@ -46,39 +52,35 @@ export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
   };
 
   return (
-    <form className="areaform-form app-panel" onSubmit={(event) => void submit(event)}>
+    <form className={`flex flex-col gap-3 ${boxClass}`} onSubmit={(event) => void submit(event)}>
       {isNew ? (
-        <div className="app-field">
-          <label htmlFor="areaform-code">รหัสพื้นที่</label>
-          <input
-            id="areaform-code"
-            className="app-input"
+        <Field
+          label="รหัสพื้นที่"
+          help="ตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03 · พิมพ์บนทุกป้ายของพื้นที่ แก้ทีหลังไม่ได้"
+        >
+          <TextInput
+            size="desk"
             value={draft.code}
             maxLength={20}
             disabled={sending}
             onChange={(event) => set({ code: event.target.value })}
           />
-          {/* Outside the label, so the field's name stays "รหัสพื้นที่" */}
-          <span className="app-field__help">ตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03 · พิมพ์บนทุกป้ายของพื้นที่ แก้ทีหลังไม่ได้</span>
-        </div>
+        </Field>
       ) : (
-        <p className="areaform-fixed">{`รหัสพื้นที่ ${detail.area.code} (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)`}</p>
+        <p className="text-muted">{`รหัสพื้นที่ ${detail.area.code} (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)`}</p>
       )}
-      <label className="app-field">
-        ชื่อพื้นที่
-        <input
-          className="app-input"
+      <Field label="ชื่อพื้นที่">
+        <TextInput
+          size="desk"
           value={draft.name}
           maxLength={150}
           disabled={sending}
           onChange={(event) => set({ name: event.target.value })}
         />
-      </label>
-      <div className="app-field">
-        <label htmlFor="areaform-building">ตึก</label>
-        <select
-          id="areaform-building"
-          className="app-input"
+      </Field>
+      <Field label="ตึก">
+        <Select
+          size="desk"
           value={draft.buildingId}
           disabled={sending}
           onChange={(event) => set({ buildingId: event.target.value })}
@@ -89,22 +91,24 @@ export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
               {building.name}
             </option>
           ))}
-        </select>
-      </div>
-      <fieldset className="areaform-choice" disabled={sending}>
-        <legend>รูปแบบกะ</legend>
-        {(['DayAndNight', 'DayOnly'] as const).map((pattern) => (
-          <label key={pattern}>
-            <input
-              type="radio"
-              name="areaform-pattern"
-              checked={draft.shiftPattern === pattern}
-              onChange={() => set({ shiftPattern: pattern })}
-            />{' '}
-            {shiftPatternLabel[pattern]}
-          </label>
-        ))}
-      </fieldset>
+        </Select>
+      </Field>
+      <FieldGroup legend="รูปแบบกะ" disabled={sending}>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {SHIFT_PATTERNS.map((pattern) => (
+            <label key={pattern} className="inline-flex min-h-9 items-center gap-2">
+              <input
+                type="radio"
+                className={`accent-primary ${focusRing}`}
+                name="areaform-pattern"
+                checked={draft.shiftPattern === pattern}
+                onChange={() => set({ shiftPattern: pattern })}
+              />
+              {shiftPatternLabel[pattern]}
+            </label>
+          ))}
+        </div>
+      </FieldGroup>
       <CleanerSelect
         shift="Day"
         value={draft.dayCleanerId}
@@ -121,23 +125,23 @@ export function AreaForm({ detail, buildings, cleaners }: AreaFormProps) {
           onChange={(nightCleanerId) => set({ nightCleanerId })}
         />
       )}
-      <p className="app-field__help">
+      <p className="text-muted">
         พื้นที่ละ 1 คนต่อกะ · รายชื่อแสดงเฉพาะแม่บ้านที่ยังไม่มีพื้นที่ในกะนั้น · เปลี่ยนเป็น "เฉพาะกะเช้า"
         แล้วช่องกะดึกและเวลารอบกะดึกหายไป
       </p>
       {losesNightRounds && (
-        <p className="app-note app-note--warn">บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่</p>
+        <Note tone="warn">บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่</Note>
       )}
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
-      <div className="areaform-buttons">
-        <button type="submit" className="app-button app-button--primary" disabled={sending}>
+      {problem && <Note tone="error">{problem}</Note>}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" variant="primary" size="desk" disabled={sending}>
           {sending ? 'กำลังบันทึก...' : 'บันทึก'}
-        </button>
-        <Link className="app-button" to={areaId === undefined ? '/admin/areas' : `/admin/areas/${areaId}`}>
+        </Button>
+        <Link
+          className={buttonClass('secondary', 'desk')}
+          data-tap=""
+          to={areaId === undefined ? '/admin/areas' : `/admin/areas/${areaId}`}
+        >
           ยกเลิก
         </Link>
       </div>
@@ -155,24 +159,16 @@ interface CleanerSelectProps {
 
 /** D10: "แม่บ้านประจำกะเช้า สมศรี (650123)". */
 function CleanerSelect({ shift, value, choices, disabled, onChange }: CleanerSelectProps) {
-  const id = `areaform-cleaner-${shift}`;
   return (
-    <div className="app-field">
-      <label htmlFor={id}>{`แม่บ้านประจำ${shiftShortLabel[shift]}`}</label>
-      <select
-        id={id}
-        className="app-input"
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-      >
+    <Field label={`แม่บ้านประจำ${shiftShortLabel[shift]}`}>
+      <Select size="desk" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
         <option value="">— ยังไม่มี —</option>
         {choices.map((cleaner) => (
           <option key={cleaner.id} value={String(cleaner.id)}>
             {`${cleaner.displayName} (${cleaner.employeeId})`}
           </option>
         ))}
-      </select>
-    </div>
+      </Select>
+    </Field>
   );
 }

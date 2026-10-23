@@ -1,6 +1,10 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import type { AdminPoint, AreaSummary } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
+import { Field, FieldGroup, TextInput } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
+import { boxClass, focusRing, inputClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { useCreatePointMutation, useSetPointActiveMutation, useUpdatePointMutation } from './areasApi';
@@ -16,6 +20,9 @@ interface Typed {
 }
 
 const noTyped: Typed = { startHour: '', startMinute: '', endHour: '', endMinute: '' };
+
+// The × of a window chip: 36 px high like every Admin target (pages/admin.md); the chip itself is only as tall
+const removeClass = `inline-flex h-9 w-6 cursor-pointer items-center justify-center text-primary hover:text-primary-strong ${focusRing}`;
 
 interface PointEditorProps {
   area: AreaSummary;
@@ -83,21 +90,20 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
   };
 
   return (
-    <section className="areas-editor app-panel" aria-labelledby={titleId}>
-      <h3 id={titleId}>{`${point ? 'แก้ไขจุด' : 'เพิ่มจุด'} · ${area.code} ${area.name}`}</h3>
-      <form className="areas-editor__form" onSubmit={(event) => void save(event)}>
-        <label className="app-field">
-          ชื่อจุด
-          <input
-            className="app-input"
+    <section className={`flex flex-col gap-3 ${boxClass}`} aria-labelledby={titleId}>
+      <h3 id={titleId} className="text-lg font-semibold">{`${point ? 'แก้ไขจุด' : 'เพิ่มจุด'} · ${area.code} ${area.name}`}</h3>
+      <form className="flex flex-col gap-3" onSubmit={(event) => void save(event)}>
+        <Field label="ชื่อจุด">
+          <TextInput
+            size="desk"
             value={name}
             maxLength={150}
             disabled={sending}
             onChange={(event) => setName(event.target.value)}
           />
-        </label>
-        <div className="areas-editor__shifts">
-          <span className="areas-editor__label">ช่วงเวลารอบทำความสะอาด</span>
+        </Field>
+        <div className="flex flex-col gap-2.5">
+          <span className="font-semibold">ช่วงเวลารอบทำความสะอาด</span>
           {shifts.map((shift) => (
             <ShiftWindows
               key={shift}
@@ -110,39 +116,35 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
               onRemove={(draft) => setWindows((all) => all.filter((w) => !sameWindow(w, draft)))}
             />
           ))}
-          <p className="app-field__help">
+          <p className="text-muted">
             ช่วงห้ามซ้อนกันและต้องอยู่ในกะ · ส่งหลังช่วงจบนับเป็นส่งช้า · พื้นที่ที่ทำเฉพาะกะเช้าจะไม่มีช่องกะดึก
           </p>
         </div>
-        {problem && (
-          <p className="app-note app-note--error" role="alert">
-            {problem}
-          </p>
-        )}
-        <div className="areas-editor__buttons">
-          <button type="submit" className="app-button app-button--primary" disabled={sending}>
+        {problem && <Note tone="error">{problem}</Note>}
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" variant="primary" size="desk" disabled={sending}>
             {sending ? 'กำลังบันทึก...' : 'บันทึกจุด'}
-          </button>
-          <button type="button" className="app-button" onClick={onClose}>
+          </Button>
+          <Button size="desk" onClick={onClose}>
             ปิด
-          </button>
+          </Button>
         </div>
       </form>
       {point && (
-        <div className="areas-editor__active">
+        <div className="flex flex-col items-start gap-2">
           {point.isActive ? (
             <>
-              <p className="app-field__help">ปิดใช้งานแล้วจุดและป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>
-              <button type="button" className="app-button" disabled={sending} onClick={() => void toggle(false)}>
+              <p className="text-muted">ปิดใช้งานแล้วจุดและป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>
+              <Button size="desk" disabled={sending} onClick={() => void toggle(false)}>
                 ปิดใช้งานจุดนี้
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <p className="app-note app-note--warn">จุดนี้ปิดใช้งานอยู่ ป้ายสแกนไม่ได้</p>
-              <button type="button" className="app-button" disabled={sending} onClick={() => void toggle(true)}>
+              <Note tone="warn">จุดนี้ปิดใช้งานอยู่ ป้ายสแกนไม่ได้</Note>
+              <Button size="desk" disabled={sending} onClick={() => void toggle(true)}>
                 เปิดใช้งานจุดนี้
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -194,16 +196,18 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
   };
 
   return (
-    <fieldset className="areas-shift" disabled={disabled}>
-      <legend>{label}</legend>
-      <ul className="areas-shift__windows" aria-label={`ช่วงรอบ${label}`}>
-        {mine.length === 0 && <li className="app-muted">ยังไม่มีช่วงรอบ</li>}
+    <FieldGroup legend={label} disabled={disabled}>
+      <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label={`ช่วงรอบ${label}`}>
+        {mine.length === 0 && <li className="text-muted">ยังไม่มีช่วงรอบ</li>}
         {mine.map((w) => (
-          <li key={`${w.start}-${w.end}`} className="areas-shift__chip">
+          <li
+            key={`${w.start}-${w.end}`}
+            className="inline-flex items-center gap-1 rounded-full border border-info-border bg-info-bg pr-1 pl-3"
+          >
             <span>{`${w.start}–${w.end}`}</span>
             <button
               type="button"
-              className="app-link-button"
+              className={removeClass}
               aria-label={`ลบช่วง ${w.start}–${w.end}`}
               onClick={() => onRemove(w)}
             >
@@ -212,7 +216,7 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
           </li>
         ))}
       </ul>
-      <div className="areas-shift__add">
+      <div className="flex flex-wrap items-end gap-3">
         <TimeBoxes
           label="เริ่ม"
           hour={typed.startHour}
@@ -229,16 +233,12 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
           onChange={(endHour, endMinute) => onTyped({ ...typed, endHour, endMinute })}
           onEnter={add}
         />
-        <button type="button" className="app-button" onClick={add}>
+        <Button size="desk" onClick={add}>
           เพิ่ม
-        </button>
+        </Button>
       </div>
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
-    </fieldset>
+      {problem && <Note tone="error">{problem}</Note>}
+    </FieldGroup>
   );
 }
 
@@ -258,6 +258,8 @@ interface TimeBoxesProps {
  */
 function TimeBoxes({ label, hour, minute, hint, onChange, onEnter }: TimeBoxesProps) {
   const minuteBox = useRef<HTMLInputElement>(null);
+  // Two digits fit the 3.5 em box the wireframe drew; no token names that width
+  const timeBoxClass = `${inputClass('desk')} w-14 text-center`;
   const enterAdds = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -266,10 +268,10 @@ function TimeBoxes({ label, hour, minute, hint, onChange, onEnter }: TimeBoxesPr
   };
 
   return (
-    <span className="areas-time">
-      <span className="areas-time__label">{label}</span>
+    <span className="inline-flex items-center gap-1">
+      <span className="mr-1">{label}</span>
       <input
-        className="app-input areas-time__box"
+        className={timeBoxClass}
         aria-label={`${label} ชั่วโมง`}
         inputMode="numeric"
         maxLength={2}
@@ -288,7 +290,7 @@ function TimeBoxes({ label, hour, minute, hint, onChange, onEnter }: TimeBoxesPr
       <span aria-hidden="true">:</span>
       <input
         ref={minuteBox}
-        className="app-input areas-time__box"
+        className={timeBoxClass}
         aria-label={`${label} นาที`}
         inputMode="numeric"
         maxLength={2}
