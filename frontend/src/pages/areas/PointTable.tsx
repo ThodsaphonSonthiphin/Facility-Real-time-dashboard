@@ -11,8 +11,9 @@ export type EditTarget = { kind: 'point'; pointId: number } | { kind: 'new-point
 
 /**
  * Wireframe D4's Tab 1 (owner, 2026-10-23): only the Area's points, in the server's order, a deactivated one marked,
- * with "+ เพิ่มจุด" at the table's top right. Signs of a deactivated point or Area cannot be scanned, so they are not
- * offered for printing. The check-in sign has its own tab, so it is not a row here.
+ * with "+ เพิ่มจุด" at the table's top right. The tab carries the count, so there is no heading to say it twice.
+ * Signs of a deactivated point or Area cannot be scanned, so they are not offered for printing. The check-in sign has
+ * its own tab, so it is not a row here.
  */
 export function PointTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (target: EditTarget) => void }) {
   const { area, points } = detail;
@@ -21,15 +22,14 @@ export function PointTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (ta
   const actionsClass = 'flex items-center gap-3 whitespace-nowrap';
 
   return (
-    <section className="flex flex-col gap-2" aria-labelledby="points-title">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id="points-title" className="text-base font-bold">{`จุดทำความสะอาด (${points.length})`}</h3>
-        {area.isActive && (
+    <div className="flex flex-col gap-2">
+      {area.isActive && (
+        <div className="flex justify-end">
           <Button size="desk" onClick={() => onEdit({ kind: 'new-point' })}>
             + เพิ่มจุด
           </Button>
-        )}
-      </div>
+        </div>
+      )}
       {points.length === 0 ? (
         <p className="text-muted">พื้นที่นี้ยังไม่มีจุดทำความสะอาด</p>
       ) : (
@@ -75,6 +75,6 @@ export function PointTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (ta
           </tbody>
         </Table>
       )}
-    </section>
+    </div>
   );
 }

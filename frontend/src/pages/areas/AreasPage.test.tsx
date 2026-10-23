@@ -46,10 +46,9 @@ describe('AreasPage (D4, facility-0045)', () => {
       screen.getByText('ทำ 2 กะ (เช้า + ดึก) · แม่บ้านประจำ: เช้า แม่บ้านทดสอบ · ดึก แม่บ้านกะดึก · ป้าย 1 + 2'),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'พิมพ์ป้าย' })).toHaveAttribute('href', '/admin/print?area=1');
-    expect(screen.getByRole('link', { name: 'เก็บพิกัดบนมือถือ ›' })).toHaveAttribute('href', '/admin/areas/1/capture');
-    // Tab 1 is the point list; the check-in sign has its own tab, with its own print link
-    expect(screen.getByRole('button', { name: 'จุดทำความสะอาด' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('heading', { level: 3, name: 'จุดทำความสะอาด (2)' })).toBeInTheDocument();
+    // Tab 1 is the point list, and the tab itself carries the count; the check-in sign has its own tab
+    expect(screen.getByRole('tab', { name: 'จุดทำความสะอาด (2)' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'ป้ายลงเวลา' })).toHaveAttribute('aria-selected', 'false');
 
     const men = row(/AR01-01/);
     expect(within(men).getByText('เช้า 07:00–09:00, 16:00–18:00 · ดึก 20:00–22:00, 03:00–05:00')).toBeInTheDocument();
@@ -60,14 +59,32 @@ describe('AreasPage (D4, facility-0045)', () => {
 
     // The check-in sign is not a point row: it sits in Tab 2 with the place it was captured at
     expect(screen.queryByRole('row', { name: /AR01-IN/ })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'ป้ายลงเวลา' }));
+    await user.click(screen.getByRole('tab', { name: 'ป้ายลงเวลา' }));
     const checkIn = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
     expect(within(checkIn).getByText(/AR01-IN/)).toBeInTheDocument();
+    expect(within(checkIn).getByRole('link', { name: 'เก็บพิกัดบนมือถือ ›' })).toHaveAttribute(
+      'href',
+      '/admin/areas/1/capture',
+    );
     expect(within(checkIn).getByText(/วัดที่ป้ายจริง ±14 ม\. · รัศมี 50 ม\./)).toBeInTheDocument();
     expect(within(checkIn).getByRole('link', { name: 'พิมพ์ป้ายลงเวลา' })).toHaveAttribute(
       'href',
       '/admin/print?area=1&sign=100',
     );
+  });
+
+  it('is a tablist: the arrow keys move between the two views', async () => {
+    serve();
+    const { user } = await renderApp('/admin/areas/1');
+
+    const points = await screen.findByRole('tab', { name: 'จุดทำความสะอาด (2)' });
+    points.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'ป้ายลงเวลา' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'ป้ายลงเวลา' })).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(points).toHaveAttribute('aria-selected', 'true');
+    expect(points).toHaveFocus();
   });
 
   it('opens the Area form in the right-hand Drawer, without leaving the page (owner, 2026-10-23)', async () => {
@@ -130,14 +147,17 @@ describe('AreasPage (D4, facility-0045)', () => {
       'GET /api/admin/areas': () => ({ status: 200, body: [detail.area] }),
       'GET /api/admin/areas/1': () => ({ status: 200, body: detail }),
     });
-    await renderApp('/admin/areas/1');
+    const { user } = await renderApp('/admin/areas/1');
 
     expect(
       await screen.findByText('พื้นที่นี้ปิดใช้งาน ป้ายทุกป้ายสแกนไม่ได้ เปิดใช้งานได้ที่ "แก้ไขพื้นที่"'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'พิมพ์ป้าย' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'เก็บพิกัดบนมือถือ ›' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'พิมพ์' })).not.toBeInTheDocument();
+    // the capture link lives in Tab 2, which offers nothing either
+    await user.click(screen.getByRole('tab', { name: 'ป้ายลงเวลา' }));
+    expect(screen.queryByRole('link', { name: 'เก็บพิกัดบนมือถือ ›' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'พิมพ์ป้ายลงเวลา' })).not.toBeInTheDocument();
     expect(screen.getByText('ตึก A · 2 กะ · 2 จุด · ป้ายยังไม่ยืนยัน 1 · ปิดใช้งาน')).toBeInTheDocument();
   });
 

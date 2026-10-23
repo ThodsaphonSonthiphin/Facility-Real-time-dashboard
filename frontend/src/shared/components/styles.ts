@@ -91,6 +91,19 @@ export const toggleClass =
   'ring-primary ring-inset enabled:hover:border-primary aria-pressed:border-primary aria-pressed:ring-1 ' +
   `disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`;
 
+/**
+ * An Admin page's view switcher, used with `role="tab"` and `aria-selected` (D4's points and check-in sign): a line
+ * under the words rather than a box, so a view switch never looks like the buttons beside it that do something
+ * (owner, 2026-10-23). 36 px (pages/admin.md). `-mb-px` lays the 2 px line over the list's 1 px rule.
+ */
+export const tabListClass = 'flex gap-6 border-b border-border';
+
+export const tabClass =
+  'inline-flex min-h-9 -mb-px cursor-pointer items-center gap-1.5 border-x-0 border-t-0 border-b-2 border-transparent ' +
+  'bg-transparent px-0.5 pb-2 font-semibold text-muted hover:text-primary ' +
+  'aria-selected:border-primary aria-selected:text-primary ' +
+  `${focusRing}`;
+
 /** A text link (the base layer still colours `a` with the old look until #82). */
 export const linkClass = `text-primary underline hover:text-primary-strong ${focusRing}`;
 

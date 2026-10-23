@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router';
 import type { AreaDetail } from '../../shared/api/adminSetupApi';
 import { Button } from '../../shared/components/Button';
 import { Drawer } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
-import { boxClass, buttonClass, linkClass, toggleClass } from '../../shared/components/styles';
+import { boxClass, buttonClass, linkClass, tabClass, tabListClass } from '../../shared/components/styles';
 import { Toast, type Notice } from '../../shared/components/Toast';
 import { AreaEditorDrawer } from './AreaEditorDrawer';
 import { areaLine, signPlaceText } from './areaText';
@@ -45,13 +45,40 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
     setNotice({ kind: 'ok', text });
   };
 
+  // The count lives in the tab, so the list needs no heading of its own (owner, 2026-10-23)
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'points', label: `จุดทำความสะอาด (${detail.points.length})` },
+    { id: 'check-in', label: 'ป้ายลงเวลา' },
+  ];
+  // A tablist's keyboard: arrows move between the tabs, Home/End to the ends (the tab that is on is the only stop)
+  const onTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const at = tabs.findIndex((one) => one.id === tab);
+    const to =
+      event.key === 'ArrowRight'
+        ? (at + 1) % tabs.length
+        : event.key === 'ArrowLeft'
+          ? (at - 1 + tabs.length) % tabs.length
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? tabs.length - 1
+              : -1;
+    if (to === -1) return;
+    event.preventDefault();
+    setTab(tabs[to].id);
+    document.getElementById(`area-tab-${tabs[to].id}`)?.focus();
+  };
+
   return (
     <section className="flex flex-col gap-3" aria-labelledby="areas-detail-title">
-      <header className="flex flex-col gap-1">
-        <span className="text-muted">{`พื้นที่ที่เลือก · ตึก ${area.buildingCode}`}</span>
-        <h2 id="areas-detail-title" className="text-xl font-bold">{`${area.code} ${area.name}`}</h2>
-        <p className="text-muted">{areaLine(detail)}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-muted">{`พื้นที่ที่เลือก · ตึก ${area.buildingCode}`}</span>
+          <h2 id="areas-detail-title" className="text-xl font-bold">{`${area.code} ${area.name}`}</h2>
+          <p className="text-muted">{areaLine(detail)}</p>
+        </div>
+        {/* The page's actions sit away from the name, on the right: they are not part of it (owner, 2026-10-23) */}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="desk"
             onClick={() => {
@@ -66,29 +93,32 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
               พิมพ์ป้าย
             </Link>
           )}
-          {area.isActive && (
-            <Link className={linkClass} to={`/admin/areas/${area.id}/capture`}>
-              เก็บพิกัดบนมือถือ ›
-            </Link>
-          )}
         </div>
       </header>
       {!area.isActive && (
         <Note tone="warn">พื้นที่นี้ปิดใช้งาน ป้ายทุกป้ายสแกนไม่ได้ เปิดใช้งานได้ที่ "แก้ไขพื้นที่"</Note>
       )}
-      <div className="flex flex-wrap gap-2" role="group" aria-label="ส่วนของพื้นที่">
-        <button type="button" data-tap="" className={toggleClass} aria-pressed={tab === 'points'} onClick={() => setTab('points')}>
-          จุดทำความสะอาด
-        </button>
-        <button type="button" data-tap="" className={toggleClass} aria-pressed={tab === 'check-in'} onClick={() => setTab('check-in')}>
-          ป้ายลงเวลา
-        </button>
+      <div role="tablist" aria-label="ส่วนของพื้นที่" className={tabListClass} onKeyDown={onTabKey}>
+        {tabs.map((one) => (
+          <button
+            key={one.id}
+            id={`area-tab-${one.id}`}
+            type="button"
+            role="tab"
+            data-tap=""
+            aria-selected={tab === one.id}
+            aria-controls={tab === one.id ? `area-panel-${one.id}` : undefined}
+            tabIndex={tab === one.id ? 0 : -1}
+            className={tabClass}
+            onClick={() => setTab(one.id)}
+          >
+            {one.label}
+          </button>
+        ))}
       </div>
-      {tab === 'points' ? (
-        <PointTable detail={detail} onEdit={open} />
-      ) : (
-        <CheckInSign detail={detail} />
-      )}
+      <div role="tabpanel" id={`area-panel-${tab}`} aria-labelledby={`area-tab-${tab}`} className="flex flex-col gap-3">
+        {tab === 'points' ? <PointTable detail={detail} onEdit={open} /> : <CheckInSign detail={detail} />}
+      </div>
       {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
       {drawerOpen && (
         <Drawer key={drawerId} labelledBy={drawerId} onClose={closeEditor}>
@@ -108,9 +138,14 @@ function CheckInSign({ detail }: { detail: AreaDetail }) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h3 id="checkin-panel-title" className="text-base font-bold">{`ป้ายลงเวลา · ${area.code} ${area.name}`}</h3>
         {area.isActive && (
-          <Link className={buttonClass('secondary', 'desk')} data-tap="" to={`/admin/print?area=${area.id}&sign=${checkInSign.id}`}>
-            พิมพ์ป้ายลงเวลา
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link className={linkClass} to={`/admin/areas/${area.id}/capture`}>
+              เก็บพิกัดบนมือถือ ›
+            </Link>
+            <Link className={buttonClass('secondary', 'desk')} data-tap="" to={`/admin/print?area=${area.id}&sign=${checkInSign.id}`}>
+              พิมพ์ป้ายลงเวลา
+            </Link>
+          </div>
         )}
       </div>
       <p className="text-muted">{`${checkInSign.code} · เข้างาน ออกพัก กลับจากพัก เลิกงาน · ${signPlaceText(checkInSign)}`}</p>
