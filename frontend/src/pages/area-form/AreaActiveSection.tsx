@@ -42,7 +42,7 @@ export function AreaActiveSection({ detail }: { detail: AreaDetail }) {
           <Note tone="warn">พื้นที่นี้ปิดใช้งานอยู่ ป้ายทุกป้ายสแกนไม่ได้</Note>
         )}
         <div>
-          {/* white on white: deactivation is undone by the same button, so it is not `danger` (MASTER.md) */}
+          {/* deactivation is undone by the same button, so it is not `danger` (MASTER.md): the words carry it */}
           <Button size="desk" disabled={isLoading} onClick={() => void toggle()}>
             {area.isActive ? 'ปิดใช้งานพื้นที่นี้' : 'เปิดใช้งานพื้นที่นี้'}
           </Button>
