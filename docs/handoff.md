@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-23 (#70–#77 merged, last PR #91; next: `implement` #78; see `## Next: Tailwind migration`)
+Last updated: 2026-10-23 (#70–#77 merged, last PR #91; #78 in PR #93; next: eye check of #78, then `implement` #79; see `## Next: Tailwind migration`)
 
 ## Project
 
@@ -227,7 +227,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 **Where it stands.** Spec #68 is split into tickets #70–#82, which are sub-issues of #68 with GitHub blocked-by edges.
 - **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A). Master is `c177dfd`; 410 frontend tests pass.
-- **Next:** #78 D2 + D3, #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
+- **Next:** #78 D2 + D3 (PR #93), #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
 
 **Read first:**
 - `design-system/facility/MASTER.md`: tokens, the shared component table, the pre-delivery check.
@@ -242,7 +242,7 @@ Test data only. The Development seed has an Admin whose password is public in th
    - Colour links with `linkClass`.
    - Delete the page's CSS file.
 3. Keep every text, accessible name and role. A red box that was not an alert takes `Note alert={false}`. Tests should pass unchanged; use TDD only where behaviour changes, at the page-test seam.
-4. Run `tsc`, `eslint` and the suite, then `npm run build` (main JS was 162.53 kB gzip after #74; budget 200).
+4. Run `tsc`, `eslint` and the suite, then `npm run build` (startup JS, main plus the preloaded `baseApi` chunk, was 164.05 kB gzip after #78; budget 200).
 5. Review with one sub-agent covering both axes (Standards and Spec) as two separate sections, and fix what it finds.
 6. Commit; the pre-commit hook runs lint and the tests. Push and open a PR with the sizes and checks.
 7. Update this file.
@@ -446,7 +446,29 @@ Where `ui-ux-pro-max` fits:
 
 - 2026-10-23 · Owner: merge all three. PRs #89 → #90 → #91 merged to master in order (#90 and #91 retargeted to master first); #75–#77 closed; master `c177dfd` has the same tree as `feat/dashboard-d1-a`; 410 tests pass. Next: `implement` #78 (D2 + D3), branched from master.
 
-Next session: `implement` #78 (D2 + D3).
+- 2026-10-23 · #78 on branch `feat/attendance-alerts-new-look` (from master `6081a94`). D2 and D3 are in the new look; `attendance.css` and `alerts.css` are deleted.
+  - **D2:**
+    - shift toggles; `Field` controls;
+    - the four counts are white boxes, and ยังไม่มีคน is framed and tinted red;
+    - the table is in the shared `Table` box; Area-state chips keep the status colours (Empty rework, Working passed, OnBreak break, Done idle, Covered pending), each with its words;
+    - แก้โดยแอดมิน is a warn badge; the correction form uses `Field`s.
+  - **D3:**
+    - the three white boxes; review tabs as toggles;
+    - **decision made while building:** alert-kind chips take note colours, not status colours (BlockedScan error, the Gps kinds warn, Missing plain grey), recorded in MASTER.md;
+    - the cover form loses its blue frame (blue means pressable).
+  - **Shared:**
+    - `toggleClass` in `styles.ts` (D1's filters use it too; hover only when enabled);
+    - `NoticeLine` + `Notice` in `Note.tsx`: one `<p>` with the role, because a D2 test checks the role sits on the text's own element;
+    - `noteTones` exported.
+  - **Owner's call (review finding):** `--color-input-border` `#AEB6B7` (2.06:1, below the 3:1 rule since #70) → `#868F91` (3.31:1 on surface, 3.03:1 on bg), in `index.css` and MASTER.md. Every moved page's fields, buttons and toggles get darker outlines. PR #91 wrongly said D1's toggles met 3:1; PR #93 corrects it.
+  - **Build:** main JS 132.68 kB gzip, but Rolldown now splits a preloaded `baseApi` chunk (RTK Query, 31.37 kB gzip), so startup JS ≈ 164.05 kB (budget 200). Measure main + preloaded chunks from now on. The split appears when D2 or D3 use the shared components; it is not configured. CSS 25.38 / 5.36 kB gzip.
+  - **Tests:** unchanged; 410 pass. Words, names and roles unchanged (checked by the review against master).
+  - **Code review (one sub-agent, Standards + Spec):** besides the border, fixed: duplicate imports, the kind chips reuse `noteTones`, `boxClass` for the counts, the ยังไม่มีคน tint, `max-w-120` instead of `max-w-phone`, hover on disabled toggles. Left as is (reported): `alertStyles.ts`'s section box is close to `Panel` (Panel cannot take a heading id); Covered in cyan shares รอตรวจ's colour, as in the old look.
+  - **Not done:** the owner's eye check of D2 and D3 at 1280 px, and of the darker outlines on the pages already merged.
+
+  Pushed; PR #93 opened against master, not merged. Next: the eye check, then `implement` #79.
+
+Next session: the eye check of #78 (PR #93), then `implement` #79 (D4 + D10 + M17).
 
 ## Owner's rules (still in force)
 
