@@ -4,8 +4,12 @@ import { freshOnOpen } from '../../shared/api/baseApi';
 import { blockedScanOf, isNotSent, statusOf } from '../../shared/api/scanAnswers';
 import type { BlockedScan } from '../../shared/api/types';
 import { BlockedScanScreen } from '../../shared/components/BlockedScanScreen';
+import { Splash } from '../../shared/components/Boxes';
+import { Button } from '../../shared/components/Button';
 import { LocationHelp } from '../../shared/components/LocationHelp';
+import { Note } from '../../shared/components/Note';
 import { StatusScreen } from '../../shared/components/StatusScreen';
+import { helpScreenClass } from '../../shared/components/styles';
 import { readLocation, type LocationProblem } from '../../shared/geo/readLocation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { InspectForm } from './InspectForm';
@@ -14,7 +18,6 @@ import { InspectSendFailed } from './InspectSendFailed';
 import { NothingToInspect } from './NothingToInspect';
 import { useOpenInspectionQuery, useRecordInspectionMutation, type InspectionRecorded, type InspectionVisit } from './inspectApi';
 import { emptyDraft, locationProblemOf, requestOf, type InspectDraft } from './inspectRules';
-import './inspect.css';
 
 type Outcome =
   | { kind: 'recorded'; result: InspectionRecorded; visit: InspectionVisit }
@@ -85,7 +88,7 @@ export function InspectPage() {
   }
   // Decide only on a fresh answer: the cache may hold this sign's scan from an earlier visit
   if (visitQuery.isFetching || (!visit && !visitQuery.error)) {
-    return <p className="app-splash">กำลังอ่านตำแหน่งและเปิดงานตรวจ...</p>;
+    return <Splash>กำลังอ่านตำแหน่งและเปิดงานตรวจ...</Splash>;
   }
   if (visitQuery.error || !visit) {
     return <OpenFailed error={visitQuery.error} onRetry={() => void visitQuery.refetch()} />;
@@ -120,12 +123,14 @@ function OpenFailed({ error, onRetry }: { error: unknown; onRetry: () => void })
   }
   if (isNotSent(error)) {
     return (
-      <main className="app-help">
-        <h1 className="app-help__title">เปิดงานตรวจไม่ได้</h1>
-        <p className="app-note app-note--error">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ยังไม่ได้ตรวจงาน เดินไปตรงที่มีสัญญาณ แล้วกดลองอีกครั้ง</p>
-        <button type="button" className="app-button app-button--primary" onClick={onRetry}>
+      <main className={helpScreenClass.main}>
+        <h1 className={helpScreenClass.title}>เปิดงานตรวจไม่ได้</h1>
+        <Note tone="error" alert={false}>
+          เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ยังไม่ได้ตรวจงาน เดินไปตรงที่มีสัญญาณ แล้วกดลองอีกครั้ง
+        </Note>
+        <Button variant="primary" size="main" onClick={onRetry}>
           ลองอีกครั้ง
-        </button>
+        </Button>
       </main>
     );
   }

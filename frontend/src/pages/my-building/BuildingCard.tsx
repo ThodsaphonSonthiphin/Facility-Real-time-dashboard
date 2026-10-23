@@ -1,6 +1,9 @@
+import { QrCode } from 'lucide-react';
 import type { PointCard } from '../../shared/api/types';
 import { StatusChip } from '../../shared/components/StatusChip';
-import { formatClock, formatRound, formatTime } from '../../shared/utils/thaiTime';
+import { issueText, roundText } from '../../shared/utils/pointText';
+import { formatClock, formatTime } from '../../shared/utils/thaiTime';
+import { statusFrame } from './buildingRules';
 
 interface BuildingCardProps {
   point: PointCard;
@@ -10,28 +13,22 @@ interface BuildingCardProps {
 
 /** One point on My Building. Names, defects and notes are rendered as React text only (facility-0066). */
 export function BuildingCard({ point, canInspect }: BuildingCardProps) {
-  const round = point.currentRound
-    ? `รอบ ${formatRound(point.currentRound)}`
-    : point.nextRound
-      ? `รอบถัดไป ${formatRound(point.nextRound)}`
-      : null;
-
+  const issue = issueText(point);
   return (
-    <li className={`building-card building-card--${point.status}`}>
-      <div className="building-card__top">
-        <h3 className="building-card__name">{point.name}</h3>
+    <li className={`flex flex-col gap-1 rounded bg-surface px-3.5 py-3 ${statusFrame[point.status] ?? 'border border-border'}`}>
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="text-lg font-semibold">{point.name}</h3>
         <StatusChip status={point.status} />
       </div>
-      <span className="building-card__where">{[point.areaName, round].filter(Boolean).join(' · ')}</span>
-      <span className="building-card__detail">{detailOf(point)}</span>
+      <span className="text-md text-muted tabular-nums">{[point.areaName, roundText(point)].filter(Boolean).join(' · ')}</span>
+      <span>{detailOf(point)}</span>
       {canInspect && point.status === 'PendingInspection' && (
-        <span className="building-card__todo">ไปที่จุดนี้แล้วสแกน QR เพื่อตรวจ</span>
-      )}
-      {point.issue && (
-        <span className="building-card__issue">
-          {`แจ้งปัญหา: ${[...point.issue.tags, point.issue.note].filter(Boolean).join(' · ')}`}
+        <span className="flex items-center gap-2 rounded bg-bg px-3 py-2 font-semibold">
+          <QrCode aria-hidden="true" className="size-5 shrink-0" />
+          ไปที่จุดนี้แล้วสแกน QR เพื่อตรวจ
         </span>
       )}
+      {issue && <span className="text-md font-semibold text-error-text">{issue}</span>}
     </li>
   );
 }

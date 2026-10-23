@@ -2,7 +2,8 @@ import { QrCode } from 'lucide-react';
 import { useId } from 'react';
 import type { PointStatus } from '../../shared/api/types';
 import { StatusChip } from '../../shared/components/StatusChip';
-import { detailOf, issueText, whatToDo, whereText, type WorkItem } from './workRules';
+import { issueText } from '../../shared/utils/pointText';
+import { detailOf, whatToDo, whereText, type WorkItem } from './workRules';
 
 // The card's frame and heading take the point's status colour; ยังไม่ทำ has nothing wrong, so it stays neutral
 const tone: Partial<Record<PointStatus, string>> = {

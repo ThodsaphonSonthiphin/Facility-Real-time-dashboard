@@ -46,3 +46,9 @@ export function inspectionOrder(points: readonly PointCard[]): PointCard[] {
     return groupOf(a.status) === 2 ? ordinal(a.areaCode, b.areaCode) : ordinal(waitingSince(a), waitingSince(b));
   });
 }
+
+/** What waits for the Supervisor (รอตรวจ) or for the Cleaner (ต้องแก้ไข) is framed in its status colour (#76). */
+export const statusFrame: Partial<Record<PointStatus, string>> = {
+  PendingInspection: 'border-2 border-status-pending',
+  Rework: 'border-2 border-status-rework',
+};

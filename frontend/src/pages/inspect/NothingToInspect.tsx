@@ -1,6 +1,9 @@
 import { Link } from 'react-router';
 import type { PointCard } from '../../shared/api/types';
+import { Panel } from '../../shared/components/Boxes';
+import { Note } from '../../shared/components/Note';
 import { StatusChip } from '../../shared/components/StatusChip';
+import { buttonClass, noteClass } from '../../shared/components/styles';
 import { formatRound, formatTime } from '../../shared/utils/thaiTime';
 import { DistanceLine } from './DistanceLine';
 import { InspectHeading } from './InspectHeading';
@@ -14,30 +17,31 @@ import type { InspectionVisit } from './inspectApi';
 export function NothingToInspect({ visit, notice }: { visit: InspectionVisit; notice: string | null }) {
   const { point } = visit;
   return (
-    <main className="inspect-page">
+    <main className="flex flex-col gap-4 text-base text-text">
       <InspectHeading visit={visit} />
       {notice && (
-        <p className="app-note app-note--warn" role="status">
+        <Note tone="warn" status>
           {notice}
-        </p>
+        </Note>
       )}
-      <section className="app-note app-note--info" aria-labelledby="inspect-nothing-title">
-        <h2 id="inspect-nothing-title">{visit.refusal}</h2>
+      <section aria-labelledby="inspect-nothing-title" className={`flex flex-col gap-0.5 ${noteClass('info')}`}>
+        <h2 id="inspect-nothing-title" className="text-lg font-bold">
+          {visit.refusal}
+        </h2>
         <span>ตรวจได้เฉพาะงานที่ส่งในรอบปัจจุบัน</span>
       </section>
-      <section className="app-panel">
-        <h2>จุดนี้ตอนนี้</h2>
-        <p className="inspect-status">
+      <Panel title="จุดนี้ตอนนี้">
+        <p className="flex flex-wrap items-center gap-2">
           <StatusChip status={point.status} />
           <span>{roundLine(point)}</span>
         </p>
         {point.rework && <p>{`ให้แก้ ${formatTime(point.rework.requestedAt)}: “${point.rework.defect}”`}</p>}
-      </section>
+      </Panel>
       <DistanceLine visit={visit} />
-      <Link className="app-button app-button--primary" to="/my-building">
+      <Link className={buttonClass('primary', 'main')} data-tap="" to="/my-building">
         กลับไปตึกของฉัน
       </Link>
-      <p className="inspect-muted">ไม่มีปุ่มตรวจจนกว่าแม่บ้านจะส่งงานในรอบนี้</p>
+      <p className="text-center text-md text-muted">ไม่มีปุ่มตรวจจนกว่าแม่บ้านจะส่งงานในรอบนี้</p>
     </main>
   );
 }

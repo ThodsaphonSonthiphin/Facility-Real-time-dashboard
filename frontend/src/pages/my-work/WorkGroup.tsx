@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { StatusChip } from '../../shared/components/StatusChip';
-import { detailOf, issueText, whereText, type WorkItem } from './workRules';
+import { issueText } from '../../shared/utils/pointText';
+import { detailOf, whereText, type WorkItem } from './workRules';
 
 /**
  * One of variant B's groups (ต้องทำต่อ / ส่งแล้ว / ยังไม่ต้องทำ) as short rows: name, where and round, a ต้องแก้ไข

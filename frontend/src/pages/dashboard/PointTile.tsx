@@ -1,6 +1,7 @@
 import type { Placement, PointCard } from '../../shared/api/types';
 import { StatusChip } from '../../shared/components/StatusChip';
-import { formatClock, formatRound, formatTime } from '../../shared/utils/thaiTime';
+import { issueText, roundText } from '../../shared/utils/pointText';
+import { formatClock, formatTime } from '../../shared/utils/thaiTime';
 
 /**
  * One point on wireframe D1. It is not a link: only the sign's QR opens a point (facility-0059). Names, defects and
@@ -8,6 +9,7 @@ import { formatClock, formatRound, formatTime } from '../../shared/utils/thaiTim
  */
 export function PointTile({ point }: { point: PointCard }) {
   const round = roundText(point);
+  const issue = issueText(point);
   return (
     <li className="dashboard-tile">
       <div className="dashboard-tile__top">
@@ -16,20 +18,9 @@ export function PointTile({ point }: { point: PointCard }) {
       </div>
       {round && <span className="dashboard-tile__round">{round}</span>}
       <span className="dashboard-tile__detail">{detailText(point)}</span>
-      {point.issue && (
-        <span className="dashboard-tile__issue">
-          {`แจ้งปัญหา: ${[...point.issue.tags, point.issue.note].filter(Boolean).join(' · ')}`}
-        </span>
-      )}
+      {issue && <span className="dashboard-tile__issue">{issue}</span>}
     </li>
   );
-}
-
-function roundText(point: PointCard): string | null {
-  if (point.currentRound) {
-    return `รอบ ${formatRound(point.currentRound)}`;
-  }
-  return point.nextRound ? `รอบถัดไป ${formatRound(point.nextRound)}` : null;
 }
 
 const placementNote: Record<Placement, string> = { OnTime: '', Late: ' · ส่งช้า', Rework: ' · งานแก้', OffRound: ' · ส่งเพิ่ม (ไม่นับรอบ)' };
