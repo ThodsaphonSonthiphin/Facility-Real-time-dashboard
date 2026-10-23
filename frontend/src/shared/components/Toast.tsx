@@ -20,15 +20,15 @@ const looks: Record<Notice['kind'], { tone: NoteTone; Icon: LucideIcon; role: 's
 
 interface ToastProps {
   notice: Notice;
-  /** ปิด, or the 5 s running out: the page drops the notice. */
+  /** ✕, or the 5 s running out: the page drops the notice. */
   onClose: () => void;
 }
 
 /**
- * A notice floating at the top right over the page, so nothing under it moves (owner, #78). Done goes by itself after
- * 5 s, held while the pointer or the keyboard is on it; warn and error stay until ปิด, so they are not missed. Done and
+ * A notice floating at the top centre over the page, so nothing under it moves (owner, #78). Done goes by itself after
+ * 5 s, held while the pointer or the keyboard is on it; warn and error stay until ✕, so they are not missed. Done and
  * warn are `role="status"` (read out politely), error `role="alert"`. The words sit on the element with the role, so
- * the role is found from the words.
+ * the role is found from the words. ✕ is the one icon-only button (owner, #78), named ปิดข้อความ for screen readers.
  */
 export function Toast({ notice, onClose }: ToastProps) {
   const { tone, Icon, role } = looks[notice.kind];
@@ -60,7 +60,7 @@ export function Toast({ notice, onClose }: ToastProps) {
 
   return (
     <div
-      className={`fixed top-4 right-4 left-4 z-10 ml-auto flex max-w-96 items-center gap-2.5 rounded border py-1 pr-1 pl-3.5 shadow-sm transition-opacity starting:opacity-0 motion-reduce:transition-none ${noteTones[tone]} ${fading ? 'opacity-0' : 'opacity-100'}`}
+      className={`fixed top-4 right-4 left-4 z-10 mx-auto flex max-w-96 items-center gap-2.5 rounded border py-1 pr-1 pl-3.5 shadow-sm transition-opacity starting:opacity-0 motion-reduce:transition-none ${noteTones[tone]} ${fading ? 'opacity-0' : 'opacity-100'}`}
       onMouseEnter={() => {
         setPointerOn(true);
         setFading(false);
@@ -80,11 +80,10 @@ export function Toast({ notice, onClose }: ToastProps) {
         type="button"
         data-tap=""
         aria-label="ปิดข้อความ"
-        className={`inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1 rounded border-0 bg-transparent px-2 text-current underline ${focusRing}`}
+        className={`inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded border-0 bg-transparent text-current ${focusRing}`}
         onClick={onClose}
       >
         <X aria-hidden="true" className="size-4" />
-        ปิด
       </button>
     </div>
   );
