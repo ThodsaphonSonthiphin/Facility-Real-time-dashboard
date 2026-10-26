@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { BuildingSelect } from '../../shared/components/BuildingSelect';
+import { Button } from '../../shared/components/Button';
+import { MoreInfo } from '../../shared/components/MoreInfo';
+import { Note } from '../../shared/components/Note';
 import { RangeFields } from '../../shared/components/RangeFields';
+import { boxClass, focusRing, linkClass } from '../../shared/components/styles';
 import { checkRange, lastSevenDays, rangeTexts, readBuildingId, readRange } from '../../shared/utils/dateRange';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { thaiToday } from '../../shared/utils/thaiTime';
 import { useExportExcelMutation } from './exportApi';
 import { EXPORT_MAX_DAYS, exportSets, fileNameFor, setDetail, setTitle, type ExportSet } from './exportRules';
-import './export.css';
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
 
@@ -60,68 +63,82 @@ export function ExportPage() {
   };
 
   return (
-    <main className="export-page">
-      <header>
-        <span className="app-muted">แอดมินเท่านั้น · ช่วงทดลองใช้ไฟล์ Excel แทนหน้ารายงาน</span>
-        <h1>ส่งออก Excel</h1>
+    <main className="flex flex-col gap-4 text-sm text-text">
+      <header className="flex flex-col gap-0.5">
+        <span className="text-muted">แอดมินเท่านั้น · ช่วงทดลองใช้ไฟล์ Excel แทนหน้ารายงาน</span>
+        <h1 className="text-xl font-bold">ส่งออก Excel</h1>
       </header>
-      <div className="export-layout">
-        <section className="app-panel export-panel" aria-labelledby="export-choose">
-          <h2 id="export-choose">1. เลือกข้อมูล</h2>
+      {/* The choices take the wider column, the download the narrower, as in the wireframe; no token describes the
+          1.4 : 1 track list */}
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <section className={sectionClass} aria-labelledby="export-choose">
+          <h2 id="export-choose" className={titleClass}>
+            1. เลือกข้อมูล
+          </h2>
           {exportSets.map((set) => (
-            <label key={set} className="export-set">
-              <input type="checkbox" checked={sets.includes(set)} onChange={() => toggle(set)} />
-              <span className="export-set__text">
+            <label
+              key={set}
+              className="flex cursor-pointer items-start gap-3 rounded border border-border px-3.5 py-3 has-checked:border-primary"
+            >
+              <input
+                type="checkbox"
+                className={`mt-0.5 size-5 shrink-0 accent-primary ${focusRing}`}
+                checked={sets.includes(set)}
+                onChange={() => toggle(set)}
+              />
+              <span className="flex flex-col gap-0.5">
                 <strong>{setTitle[set]}</strong>
-                <span className="app-muted">{setDetail[set]}</span>
+                <span className="text-muted">{setDetail[set]}</span>
               </span>
             </label>
           ))}
-          <h2>2. ช่วงวันและตึก</h2>
-          <div className="export-range">
+          <h2 className={titleClass}>2. ช่วงวันและตึก</h2>
+          <div className="flex flex-wrap items-end gap-3">
             <RangeFields value={texts} onChange={setTexts} />
             <BuildingSelect value={buildingId} onChange={setBuildingId} />
           </div>
-          <p className="app-muted">เลือกได้ 1–31 วัน นับตามวันที่ของกะ</p>
+          <p className="text-muted">เลือกได้ 1–31 วัน นับตามวันที่ของกะ</p>
         </section>
-        <section className="app-panel export-panel" aria-labelledby="export-download">
-          <h2 id="export-download">3. ดาวน์โหลด</h2>
+        <section className={sectionClass} aria-labelledby="export-download">
+          <h2 id="export-download" className={titleClass}>
+            3. ดาวน์โหลด
+          </h2>
           {typeof range === 'string' ? (
-            <p className="app-muted">กรอกช่วงวันให้ถูกต้องก่อน</p>
+            <p className="text-muted">กรอกช่วงวันให้ถูกต้องก่อน</p>
           ) : (
-            <div className="export-file">
+            <div className="flex flex-col gap-1 rounded bg-bg px-3.5 py-3 wrap-anywhere">
               <strong>{fileNameFor(range)}</strong>
-              <span className="app-muted">
+              <span className="text-muted">
                 {sets.length === 0
                   ? 'ยังไม่ได้เลือกข้อมูล'
                   : `${sets.length} แผ่นงาน · ${sets.map((set) => setTitle[set]).join(' + ')}`}
               </span>
             </div>
           )}
-          <button
-            type="button"
-            className="app-button app-button--primary"
-            disabled={sending}
-            onClick={() => void download()}
-          >
-            {sending ? 'กำลังสร้างไฟล์...' : 'ดาวน์โหลด .xlsx'}
-          </button>
+          <div>
+            <Button variant="primary" size="desk" disabled={sending} onClick={() => void download()}>
+              {sending ? 'กำลังสร้างไฟล์...' : 'ดาวน์โหลด .xlsx'}
+            </Button>
+          </div>
           {notice && (
-            <p
-              className={notice.kind === 'ok' ? 'app-note app-note--info' : 'app-note app-note--error'}
-              role={notice.kind === 'ok' ? 'status' : 'alert'}
-            >
+            <Note tone={notice.kind === 'ok' ? 'info' : 'error'} status={notice.kind === 'ok'}>
               {notice.text}
-            </p>
+            </Note>
           )}
-          <div className="export-notes">
+          <p className="text-muted">ไฟล์ที่ดาวน์โหลดแล้วห้ามส่งต่อนอกบริษัท</p>
+          <MoreInfo summary="เกี่ยวกับไฟล์นี้">
             <span>ไม่มีพิกัดตำแหน่งดิบ มีแค่ระยะห่างจากป้าย และผลในรัศมี / นอกรัศมี</span>
             <span>การส่งออกเก็บลงประวัติการแก้ไขของแอดมิน (ใคร เมื่อไร ชุดไหน ช่วงวันไหน)</span>
-            <span>ไฟล์ที่ดาวน์โหลดแล้วอยู่นอกการลบตามระยะเวลาเก็บข้อมูล ห้ามส่งต่อนอกบริษัท (เรื่องคนเก็บไฟล์รอคุยกับ HR)</span>
-          </div>
-          <Link to="/dashboard">‹ กลับไปหน้าสถานะจุด</Link>
+            <span>ไฟล์ที่ดาวน์โหลดแล้วอยู่นอกการลบตามระยะเวลาเก็บข้อมูล</span>
+          </MoreInfo>
+          <Link className={`self-start ${linkClass}`} to="/dashboard">
+            ‹ กลับไปหน้าสถานะจุด
+          </Link>
         </section>
       </div>
     </main>
   );
 }
+
+const sectionClass = `flex flex-col gap-3.5 ${boxClass}`;
+const titleClass = 'text-lg font-semibold';

@@ -1,3 +1,6 @@
+import { Table } from '../../shared/components/Boxes';
+import { Button } from '../../shared/components/Button';
+import { Note } from '../../shared/components/Note';
 import { accountRoleLabel, placeText } from './accountRules';
 import type { Account } from './accountsApi';
 
@@ -18,11 +21,10 @@ interface AccountTableProps {
  */
 export function AccountTable({ accounts, me, busy, onAction }: AccountTableProps) {
   if (accounts.length === 0) {
-    return <p className="app-note app-note--info">ไม่พบบัญชีที่ตรงกับที่ค้นหา</p>;
+    return <Note tone="info">ไม่พบบัญชีที่ตรงกับที่ค้นหา</Note>;
   }
   return (
-    <div className="app-table-scroll">
-    <table className="app-table" aria-label="บัญชีผู้ใช้">
+    <Table label="บัญชีผู้ใช้">
       <thead>
         <tr>
           <th scope="col">ชื่อ</th>
@@ -35,67 +37,68 @@ export function AccountTable({ accounts, me, busy, onAction }: AccountTableProps
       </thead>
       <tbody>
         {accounts.map((account) => (
-          <tr key={account.id} className={account.isActive ? undefined : 'app-row--inactive'}>
+          <tr key={account.id} className={account.isActive ? undefined : 'text-muted'}>
             <th scope="row">{account.displayName}</th>
             <td>{account.loginName}</td>
             <td>{accountRoleLabel[account.role]}</td>
             <td>{placeText(account)}</td>
             <td>{account.isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}</td>
-            <td className="accounts-actions">
-              <button
-                type="button"
-                className="app-link-button"
-                aria-label={`แก้ไข ${account.displayName}`}
-                onClick={() => onAction('edit', account)}
-              >
-                แก้ไข
-              </button>
-              {account.role === 'Admin' ? (
-                <button
-                  type="button"
-                  className="app-link-button"
-                  aria-label={`รีเซ็ตรหัสผ่าน ${account.displayName}`}
-                  onClick={() => onAction('password', account)}
+            <td>
+              <div className="flex items-center gap-3 whitespace-nowrap">
+                <Button
+                  variant="link"
+                  size="desk"
+                  aria-label={`แก้ไข ${account.displayName}`}
+                  onClick={() => onAction('edit', account)}
                 >
-                  รีเซ็ตรหัสผ่าน
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="app-link-button"
-                  aria-label={`แก้เบอร์โทร ${account.displayName}`}
-                  onClick={() => onAction('phone', account)}
-                >
-                  แก้เบอร์โทร
-                </button>
-              )}
-              {account.isActive
-                ? account.id !== me && (
-                    <button
-                      type="button"
-                      className="app-link-button"
+                  แก้ไข
+                </Button>
+                {account.role === 'Admin' ? (
+                  <Button
+                    variant="link"
+                    size="desk"
+                    aria-label={`รีเซ็ตรหัสผ่าน ${account.displayName}`}
+                    onClick={() => onAction('password', account)}
+                  >
+                    รีเซ็ตรหัสผ่าน
+                  </Button>
+                ) : (
+                  <Button
+                    variant="link"
+                    size="desk"
+                    aria-label={`แก้เบอร์โทร ${account.displayName}`}
+                    onClick={() => onAction('phone', account)}
+                  >
+                    แก้เบอร์โทร
+                  </Button>
+                )}
+                {account.isActive ? (
+                  account.id !== me && (
+                    <Button
+                      variant="link"
+                      size="desk"
                       aria-label={`ปิดใช้งาน ${account.displayName}`}
                       onClick={() => onAction('deactivate', account)}
                     >
                       ปิดใช้งาน
-                    </button>
+                    </Button>
                   )
-                : (
-                    <button
-                      type="button"
-                      className="app-link-button"
-                      aria-label={`เปิดใช้งาน ${account.displayName}`}
-                      disabled={busy}
-                      onClick={() => onAction('activate', account)}
-                    >
-                      เปิดใช้งาน
-                    </button>
-                  )}
+                ) : (
+                  <Button
+                    variant="link"
+                    size="desk"
+                    aria-label={`เปิดใช้งาน ${account.displayName}`}
+                    disabled={busy}
+                    onClick={() => onAction('activate', account)}
+                  >
+                    เปิดใช้งาน
+                  </Button>
+                )}
+              </div>
             </td>
           </tr>
         ))}
       </tbody>
-    </table>
-    </div>
+    </Table>
   );
 }

@@ -1,63 +1,107 @@
+import type { ReactNode } from 'react';
+import { Table } from '../../shared/components/Boxes';
+import { Note } from '../../shared/components/Note';
 import type { SummaryRow } from './summaryApi';
 import { inspectedShare, placeText, pointsText } from './summaryRules';
 
-/** Wireframe D7's table, in the server's order, plus "ตรวจทั้งหมด" (facility-0048 rule 5). Names are React text only. */
+/** Wireframe D7's table, in the server's order, plus "จำนวนครั้งที่ตรวจ" (facility-0048 rule 5). Names are React text only. */
 export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
   if (rows.length === 0) {
-    return <p className="app-note app-note--info">ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก</p>;
+    return <Note tone="info">ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก</Note>;
   }
   return (
-    <div className="app-table-scroll">
-      <table className="app-table summary-table" aria-label="การตรวจของหัวหน้าแต่ละคน">
-        <thead>
-          <tr>
-            <th scope="col">หัวหน้า</th>
-            <th scope="col">ตึก · กะ</th>
-            <th scope="col">จุดที่ตรวจแล้ว</th>
-            <th scope="col">ตรวจทั้งหมด</th>
-            <th scope="col">งานที่แม่บ้านส่ง</th>
-            <th scope="col">ตรวจแล้ว</th>
-            <th scope="col">สัดส่วนที่ตรวจ</th>
-            <th scope="col">ไม่ได้ตรวจ</th>
-            <th scope="col">ให้แก้ไข</th>
-            <th scope="col">ตรวจตอนอยู่ไกลป้าย</th>
+    <Table label="การตรวจของหัวหน้าแต่ละคน">
+      <thead>
+        <tr>
+          <th scope="col">หัวหน้า</th>
+          <th scope="col">ตึก · กะ</th>
+          <th scope="col">จุดที่ตรวจแล้ว</th>
+          <th scope="col">
+            <Count>จำนวนครั้งที่ตรวจ</Count>
+          </th>
+          <th scope="col">
+            <Count>งานที่แม่บ้านส่ง</Count>
+          </th>
+          <th scope="col">
+            <Count>ตรวจแล้ว</Count>
+          </th>
+          <th scope="col">สัดส่วนที่ตรวจ</th>
+          <th scope="col">
+            <Count>ไม่ได้ตรวจ</Count>
+          </th>
+          <th scope="col">
+            <Count>ให้แก้ไข</Count>
+          </th>
+          <th scope="col">
+            <Count>ตรวจตอนอยู่ไกลป้าย</Count>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.supervisorId}>
+            <th scope="row">
+              {row.displayName}
+              <span className="block text-xs font-normal text-muted">{row.employeeId}</span>
+            </th>
+            <td>{placeText(row)}</td>
+            <td
+              className={
+                row.pointsInspected < row.pointsTotal
+                  ? 'font-semibold whitespace-nowrap text-warn-text tabular-nums'
+                  : 'tabular-nums'
+              }
+            >
+              {pointsText(row)}
+            </td>
+            <td>
+              <Count>{row.inspections}</Count>
+            </td>
+            <td>
+              <Count>{row.submitted}</Count>
+            </td>
+            <td>
+              <Count>{row.submittedInspected}</Count>
+            </td>
+            <td>
+              <Share row={row} />
+            </td>
+            <td>
+              <Count>{row.notInspected}</Count>
+            </td>
+            <td>
+              <Count>{row.reworks}</Count>
+            </td>
+            <td>
+              <Count>{row.gpsFlagged}</Count>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.supervisorId}>
-              <th scope="row">
-                {row.displayName}
-                <span className="summary-sub">{row.employeeId}</span>
-              </th>
-              <td>{placeText(row)}</td>
-              <td className={row.pointsInspected < row.pointsTotal ? 'summary-missed' : undefined}>{pointsText(row)}</td>
-              <td className="summary-number">{row.inspections}</td>
-              <td className="summary-number">{row.submitted}</td>
-              <td className="summary-number">{row.submittedInspected}</td>
-              <td>
-                <Share row={row} />
-              </td>
-              <td className="summary-number">{row.notInspected}</td>
-              <td className="summary-number">{row.reworks}</td>
-              <td className="summary-number">{row.gpsFlagged}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </Table>
   );
 }
 
-/** A <progress> bar draws the share without an inline width (facility-0063). */
+/**
+ * A count, or its column's heading, on the right of its cell, so the heading sits over the numbers (pages/admin.md);
+ * Table sets every cell's alignment, so the span carries its own.
+ */
+function Count({ children }: { children: ReactNode }) {
+  return <span className="block text-right tabular-nums">{children}</span>;
+}
+
+/**
+ * A <progress> bar draws the share without an inline width. Grey, not primary: blue means "can be pressed", and the
+ * page judges nothing (plan 12 decision 4). `w-30` is the old 120 px bar.
+ */
 function Share({ row }: { row: SummaryRow }) {
   const share = inspectedShare(row);
   if (share == null) {
     return <>–</>;
   }
   return (
-    <span className="summary-share">
-      <progress max={100} value={share} aria-label={`ตรวจ ${share}% ของงานที่ส่ง`} />
+    <span className="inline-flex items-center gap-2 text-xs tabular-nums">
+      <progress className="h-2 w-30 accent-muted" max={100} value={share} aria-label={`ตรวจ ${share}% ของงานที่ส่ง`} />
       {`${share}%`}
     </span>
   );

@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useGetAreasQuery, useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
+import { Field, TextInput } from '../../shared/components/Field';
+import { MoreInfo } from '../../shared/components/MoreInfo';
+import { Note } from '../../shared/components/Note';
+import { toggleClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { useAppSelector } from '../../store/hooks';
 import { accountFilters, filterAccounts, filterCounts, filterLabel, type AccountFilter } from './accountRules';
@@ -10,7 +14,6 @@ import { CreateAccountForm } from './CreateAccountForm';
 import { DeactivateConfirm } from './DeactivateConfirm';
 import { EditAccountForm } from './EditAccountForm';
 import { PasswordForm, PhoneForm } from './SecretForms';
-import './accounts.css';
 
 type Panel = { kind: 'create' } | { kind: 'edit' | 'phone' | 'password' | 'deactivate'; id: number };
 
@@ -66,21 +69,19 @@ export function AccountsPage() {
   };
 
   return (
-    <main className="accounts-page">
-      <h1>บัญชีผู้ใช้</h1>
-      {error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(error)}
-        </p>
-      )}
-      <div className="accounts-layout">
-        <section className="accounts-list" aria-label="รายชื่อบัญชี">
-          <div className="accounts-filters" role="group" aria-label="กรองบัญชี">
+    <main className="flex flex-col gap-4 text-sm text-text">
+      <h1 className="text-xl font-bold">บัญชีผู้ใช้</h1>
+      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
+      {/* the list, then the 360 px side panel of the wireframe; no token describes a two-column track list */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="flex min-w-0 flex-col gap-2.5" aria-label="รายชื่อบัญชี">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="กรองบัญชี">
             {accountFilters.map((option) => (
               <button
                 key={option}
                 type="button"
-                className={filter === option ? 'accounts-filter accounts-filter--on' : 'accounts-filter'}
+                data-tap=""
+                className={toggleClass}
                 aria-pressed={filter === option}
                 onClick={() => setFilter(option)}
               >
@@ -88,25 +89,23 @@ export function AccountsPage() {
               </button>
             ))}
           </div>
-          <label className="app-field accounts-search">
-            ค้นหา
-            <input
-              type="search"
-              className="app-input"
-              placeholder="ชื่อ รหัสพนักงาน หรือชื่อผู้ใช้"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </label>
+          <div className="max-w-90">
+            <Field label="ค้นหา">
+              <TextInput
+                size="desk"
+                type="search"
+                placeholder="ชื่อ รหัสพนักงาน หรือชื่อผู้ใช้"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </Field>
+          </div>
           {notice && (
-            <p
-              className={notice.kind === 'ok' ? 'app-note app-note--info' : 'app-note app-note--error'}
-              role={notice.kind === 'ok' ? 'status' : 'alert'}
-            >
+            <Note tone={notice.kind === 'ok' ? 'info' : 'error'} status={notice.kind === 'ok'}>
               {notice.text}
-            </p>
+            </Note>
           )}
-          {accounts.isLoading && <p className="app-muted">กำลังโหลดบัญชี...</p>}
+          {accounts.isLoading && <p className="text-muted">กำลังโหลดบัญชี...</p>}
           {accounts.data && (
             <AccountTable
               accounts={filterAccounts(list, filter, search)}
@@ -115,13 +114,15 @@ export function AccountsPage() {
               onAction={act}
             />
           )}
-          <p className="app-muted">
-            ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติการสแกนยังอยู่ · ปิดใช้งาน แก้เบอร์โทร หรือรีเซ็ตรหัสผ่านแล้ว
-            ทุกเครื่องของคนนั้นหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ · ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
-          </p>
+          <MoreInfo summary="เกี่ยวกับการปิดใช้งาน">
+            <span>
+              ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติการสแกนยังอยู่ · ปิดใช้งาน แก้เบอร์โทร หรือรีเซ็ตรหัสผ่านแล้ว
+              ทุกเครื่องของคนนั้นหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ · ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
+            </span>
+          </MoreInfo>
         </section>
-        <aside className="accounts-panel" aria-label="แผงบัญชี">
-          {!target && <CreateAccountForm accounts={list} areas={areas.data ?? []} buildings={buildings.data ?? []} />}
+        <aside className="flex min-w-0 flex-col gap-2.5" aria-label="แผงบัญชี">
+          {(!target || panel.kind === 'deactivate') && <CreateAccountForm accounts={list} areas={areas.data ?? []} buildings={buildings.data ?? []} />}
           {target && panel.kind === 'edit' && (
             <EditAccountForm
               key={target.id}
@@ -137,7 +138,13 @@ export function AccountsPage() {
             <PhoneForm key={target.id} account={target} onDone={done} onCancel={backToCreate} />
           )}
           {target && panel.kind === 'password' && (
-            <PasswordForm key={target.id} account={target} isSelf={target.id === me} onDone={done} onCancel={backToCreate} />
+            <PasswordForm
+              key={target.id}
+              account={target}
+              isSelf={target.id === me}
+              onDone={done}
+              onCancel={backToCreate}
+            />
           )}
           {target && panel.kind === 'deactivate' && (
             <DeactivateConfirm key={target.id} account={target} onDone={done} onCancel={backToCreate} />

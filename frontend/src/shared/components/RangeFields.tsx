@@ -1,7 +1,8 @@
 import type { KeyboardEvent } from 'react';
 import { matchesPreset, presetLabel, presetRange, rangePresets, rangeTexts, type RangeTexts } from '../utils/dateRange';
 import { thaiToday } from '../utils/thaiTime';
-import './shared.css';
+import { Field, TextInput } from './Field';
+import { toggleClass } from './styles';
 
 interface RangeFieldsProps {
   value: RangeTexts;
@@ -22,35 +23,36 @@ export function RangeFields({ value, onChange, onEnter }: RangeFieldsProps) {
   };
   const today = thaiToday();
   return (
-    <div className="app-range">
-      <label className="app-field">
-        ตั้งแต่
-        <input
-          className="app-input app-range__date"
+    <div className="flex flex-wrap items-end gap-2">
+      <Field label="ตั้งแต่">
+        <TextInput
+          size="desk"
+          className="w-38"
           value={value.fromText}
           placeholder="วว/ดด/ปปปป"
           inputMode="numeric"
           onChange={(event) => onChange({ ...value, fromText: event.target.value })}
           onKeyDown={enter}
         />
-      </label>
-      <label className="app-field">
-        ถึง
-        <input
-          className="app-input app-range__date"
+      </Field>
+      <Field label="ถึง">
+        <TextInput
+          size="desk"
+          className="w-38"
           value={value.toText}
           placeholder="วว/ดด/ปปปป"
           inputMode="numeric"
           onChange={(event) => onChange({ ...value, toText: event.target.value })}
           onKeyDown={enter}
         />
-      </label>
-      <div className="app-range__presets" role="group" aria-label="ปุ่มลัดช่วงวัน">
+      </Field>
+      <div className="inline-flex gap-2" role="group" aria-label="ปุ่มลัดช่วงวัน">
         {rangePresets.map((preset) => (
           <button
             key={preset}
             type="button"
-            className="app-button"
+            data-tap=""
+            className={toggleClass}
             aria-pressed={matchesPreset(value, preset, today)}
             onClick={() => onChange(rangeTexts(presetRange(preset, thaiToday())))}
           >

@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import type { AreaSummary, Building } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
+import { Field, FieldGroup, Select, TextInput } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import {
   accountRoleLabel,
@@ -12,6 +15,7 @@ import {
   type CreateDraft,
 } from './accountRules';
 import { useCreateAccountMutation, type Account } from './accountsApi';
+import { formClass, formTitleClass, radioClass, radioLabelClass } from './accountStyles';
 import { ShiftChoice } from './ShiftChoice';
 
 interface CreateAccountFormProps {
@@ -73,98 +77,98 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
   };
 
   return (
-    <form className="accounts-form app-panel" aria-labelledby="accounts-create-title" onSubmit={(event) => void submit(event)}>
-      <h2 id="accounts-create-title">เพิ่มบัญชี</h2>
-      <fieldset className="accounts-choice accounts-choice--row" disabled={isLoading}>
-        <legend>บทบาท</legend>
-        {(['Cleaner', 'Supervisor', 'Admin'] as const).map((role) => (
-          <label key={role}>
-            <input
-              type="radio"
-              name="accounts-create-role"
-              checked={draft.role === role}
-              onChange={() => setDraft({ ...emptyDraft(role), displayName: draft.displayName })}
-            />
-            {` ${accountRoleLabel[role]}`}
-          </label>
-        ))}
-      </fieldset>
-      <label className="app-field">
-        ชื่อที่แสดง
-        <input
-          className="app-input"
+    <form className={formClass} aria-labelledby="accounts-create-title" onSubmit={(event) => void submit(event)}>
+      <h2 id="accounts-create-title" className={formTitleClass}>
+        เพิ่มบัญชี
+      </h2>
+      <FieldGroup legend="บทบาท" disabled={isLoading}>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {(['Cleaner', 'Supervisor', 'Admin'] as const).map((role) => (
+            <label key={role} className={radioLabelClass}>
+              <input
+                type="radio"
+                className={radioClass}
+                name="accounts-create-role"
+                checked={draft.role === role}
+                onChange={() =>
+                  setDraft({
+                    ...emptyDraft(role),
+                    displayName: draft.displayName,
+                  })
+                }
+              />
+              {accountRoleLabel[role]}
+            </label>
+          ))}
+        </div>
+      </FieldGroup>
+      <Field label="ชื่อที่แสดง">
+        <TextInput
+          size="desk"
           maxLength={150}
           value={draft.displayName}
           disabled={isLoading}
           onChange={(event) => set({ displayName: event.target.value })}
         />
-      </label>
+      </Field>
       {draft.role === 'Admin' ? (
         <>
-          <label className="app-field">
-            ชื่อผู้ใช้
-            <input
-              className="app-input"
+          <Field label="ชื่อผู้ใช้">
+            <TextInput
+              size="desk"
               autoComplete="off"
               maxLength={100}
               value={draft.username}
               disabled={isLoading}
               onChange={(event) => set({ username: event.target.value })}
             />
-          </label>
-          <label className="app-field">
-            รหัสผ่านชั่วคราว
-            <input
+          </Field>
+          <Field label="รหัสผ่านชั่วคราว">
+            <TextInput
+              size="desk"
               type="password"
-              className="app-input"
               autoComplete="new-password"
               maxLength={100}
               value={draft.password}
               disabled={isLoading}
               onChange={(event) => set({ password: event.target.value })}
             />
-          </label>
-          <p className="app-field__help">แอดมิน: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว 8–100 ตัวอักษร (บอกเองด้วยวาจาหรือกระดาษ)</p>
+          </Field>
+          <p className="text-muted">แอดมิน: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว 8–100 ตัวอักษร (บอกเองด้วยวาจาหรือกระดาษ)</p>
         </>
       ) : (
         <>
-          <div className="app-field">
-            <label htmlFor="accounts-create-employee">รหัสพนักงาน</label>
-            <input
-              id="accounts-create-employee"
-              className="app-input"
+          <Field label="รหัสพนักงาน" help="ห้ามซ้ำ แก้ทีหลังไม่ได้">
+            <TextInput
+              size="desk"
               autoComplete="off"
               maxLength={20}
               value={draft.employeeId}
               disabled={isLoading}
               onChange={(event) => set({ employeeId: event.target.value })}
             />
-            <span className="app-field__help">ห้ามซ้ำ แก้ทีหลังไม่ได้</span>
-          </div>
-          <div className="app-field">
-            <label htmlFor="accounts-create-phone">เบอร์โทรศัพท์</label>
-            <input
-              id="accounts-create-phone"
+          </Field>
+          <Field
+            label="เบอร์โทรศัพท์"
+            help={
+              'ใช้แทนรหัสผ่าน ระบบเก็บเบอร์แบบที่เปิดดูไม่ได้ ใช้ตรวจตอน login อย่างเดียว · เปลี่ยนเบอร์ทีหลังได้ด้วยปุ่ม "แก้เบอร์โทร"'
+            }
+          >
+            <TextInput
+              size="desk"
               type="tel"
               inputMode="numeric"
-              className="app-input"
               autoComplete="off"
               maxLength={16}
               value={draft.phone}
               disabled={isLoading}
               onChange={(event) => set({ phone: event.target.value })}
             />
-            <span className="app-field__help">
-              ใช้แทนรหัสผ่าน ระบบเก็บเบอร์แบบที่เปิดดูไม่ได้ ใช้ตรวจตอน login อย่างเดียว · เปลี่ยนเบอร์ทีหลังได้ด้วยปุ่ม
-              "แก้เบอร์โทร"
-            </span>
-          </div>
+          </Field>
           {draft.role === 'Cleaner' ? (
-            <div className="app-field">
-              <label htmlFor="accounts-create-area">พื้นที่ประจำ</label>
-              <select
-                id="accounts-create-area"
-                className="app-input"
+            <Field label="พื้นที่ประจำ">
+              <Select
+                size="desk"
                 value={draft.areaId}
                 disabled={isLoading}
                 onChange={(event) => chooseArea(event.target.value)}
@@ -175,14 +179,12 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
                     {areaOptionLabel(option)}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
           ) : (
-            <div className="app-field">
-              <label htmlFor="accounts-create-building">ตึกที่ประจำ</label>
-              <select
-                id="accounts-create-building"
-                className="app-input"
+            <Field label="ตึกที่ประจำ">
+              <Select
+                size="desk"
                 value={draft.buildingId}
                 disabled={isLoading}
                 onChange={(event) => chooseBuilding(event.target.value)}
@@ -193,8 +195,8 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
                     {building.name}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
           )}
           <ShiftChoice
             name="accounts-create-shift"
@@ -203,26 +205,22 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
             disabled={isLoading}
             onChange={(shift) => set({ shift })}
           />
-          <p className="app-field__help">
+          <p className="text-muted">
             {draft.role === 'Cleaner'
               ? 'พื้นที่ละ 1 คนต่อกะ · ถ้ากะนี้มีคนประจำแล้วจะเลือกไม่ได้ · พื้นที่ที่ทำเฉพาะกะเช้าเลือกได้แค่กะเช้า · ยังไม่กำหนดพื้นที่ได้ เลือกทีหลังที่ปุ่ม "แก้ไข"'
               : 'หัวหน้าประจำตึกและกะ ตึกละ 1 คนต่อกะ · ตรวจได้เฉพาะในกะตัวเอง · ไม่ต้องลงเวลา'}
           </p>
         </>
       )}
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
+      {problem && <Note tone="error">{problem}</Note>}
       {notice && (
-        <p className="app-note app-note--info" role="status">
+        <Note tone="info" status>
           {notice}
-        </p>
+        </Note>
       )}
-      <button type="submit" className="app-button app-button--primary" disabled={isLoading}>
+      <Button type="submit" variant="primary" size="desk" disabled={isLoading}>
         {isLoading ? 'กำลังสร้าง...' : 'สร้างบัญชี'}
-      </button>
+      </Button>
     </form>
   );
 }

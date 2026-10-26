@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
+import { Button } from '../../shared/components/Button';
+import { MoreInfo } from '../../shared/components/MoreInfo';
+import { Note } from '../../shared/components/Note';
 import { checkRange, lastSevenDays, rangeTexts } from '../../shared/utils/dateRange';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { thaiToday } from '../../shared/utils/thaiTime';
@@ -8,7 +11,6 @@ import { HistoryControls } from './HistoryControls';
 import { useGetAuditActorsQuery, useGetAuditLogInfiniteQuery, type HistoryArgs } from './historyApi';
 import { HISTORY_MAX_DAYS, readHistoryArgs, searchEntries, toHistoryParams } from './historyRules';
 import { HistoryTable } from './HistoryTable';
-import './history.css';
 
 /**
  * facility-0057 rule 2, wireframe D9: every Admin change, newest first, read-only; opening it is not logged. The
@@ -52,10 +54,10 @@ export function HistoryPage() {
   };
 
   return (
-    <main className="history-page">
-      <header>
-        <span className="app-muted">แอดมินเท่านั้น · อ่านอย่างเดียว</span>
-        <h1>ประวัติการแก้ไขของแอดมิน</h1>
+    <main className="flex flex-col gap-4 text-sm text-text">
+      <header className="flex flex-col gap-0.5">
+        <span className="text-muted">แอดมินเท่านั้น · อ่านอย่างเดียว</span>
+        <h1 className="text-xl font-bold">ประวัติการแก้ไขของแอดมิน</h1>
       </header>
       <HistoryControls
         args={args}
@@ -67,25 +69,17 @@ export function HistoryPage() {
         search={search}
         onSearch={setSearch}
       />
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
-      {log.isFetching && !log.currentData && <p className="app-muted">กำลังโหลด...</p>}
-      {log.error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(log.error)}
-        </p>
-      )}
+      {problem && <Note tone="error">{problem}</Note>}
+      {log.isFetching && !log.currentData && <p className="text-muted">กำลังโหลด...</p>}
+      {log.error && <Note tone="error">{getErrorMessage(log.error)}</Note>}
       {log.currentData && (
         <>
           <HistoryTable
             entries={shown}
             emptyText={entries.length > 0 ? 'ไม่พบรายการที่ตรงกับที่ค้นหา' : 'ไม่มีประวัติในช่วงนี้'}
           />
-          <div className="history-more">
-            <span className="app-muted">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-muted">
               {search.trim() === ''
                 ? `แสดง ${entries.length} รายการ`
                 : `พบ ${shown.length} จาก ${entries.length} รายการที่แสดงอยู่${
@@ -93,21 +87,19 @@ export function HistoryPage() {
                   }`}
             </span>
             {log.hasNextPage && (
-              <button
-                type="button"
-                className="app-button"
-                disabled={log.isFetchingNextPage}
-                onClick={() => void log.fetchNextPage()}
-              >
+              <Button size="desk" disabled={log.isFetchingNextPage} onClick={() => void log.fetchNextPage()}>
                 {log.isFetchingNextPage ? 'กำลังโหลด...' : 'โหลดรายการเก่ากว่านี้'}
-              </button>
+              </Button>
             )}
           </div>
         </>
       )}
-      <p className="history-footnote">
-        ไม่มีใครแก้หรือลบรายการในหน้านี้ได้ · เก็บนานเท่ากับข้อมูลที่ถูกแก้ · เบอร์โทรไม่แสดงทั้งก่อนและหลัง · การเปิดดูหน้านี้ไม่ถูกบันทึก
-      </p>
+      <MoreInfo summary="เกี่ยวกับหน้านี้">
+        <span>
+          ไม่มีใครแก้หรือลบรายการในหน้านี้ได้ · เก็บนานเท่ากับข้อมูลที่ถูกแก้ · เบอร์โทรไม่แสดงทั้งก่อนและหลัง ·
+          การเปิดดูหน้านี้ไม่ถูกบันทึก
+        </span>
+      </MoreInfo>
     </main>
   );
 }
