@@ -3,7 +3,7 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import type { AdminPoint, AreaSummary } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
-import { Field, FieldGroup, TextInput } from '../../shared/components/Field';
+import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
 import { focusRing, inputClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -204,7 +204,9 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
   };
 
   return (
-    <FieldGroup legend={label} disabled={disabled}>
+    // a fieldset without a frame: the legend names the group, and `disabled` reaches its controls (owner, 2026-10-26)
+    <fieldset className="flex flex-col gap-2" disabled={disabled}>
+      <legend className="mb-1 font-semibold">{label}</legend>
       <ul className="m-0 flex list-none flex-wrap gap-x-3 gap-y-3 p-0" aria-label={`ช่วงรอบ${label}`}>
         {mine.length === 0 && <li className="text-muted">ยังไม่มีช่วงรอบ</li>}
         {mine.map((w) => (
@@ -247,7 +249,7 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
         </Button>
       </div>
       {problem && <Note tone="error">{problem}</Note>}
-    </FieldGroup>
+    </fieldset>
   );
 }
 

@@ -4,6 +4,10 @@ import { boxClass } from './styles';
 interface DialogProps {
   /** The id of the heading that names the dialog; give it `tabIndex={-1}`: it takes the keyboard when the form opens. */
   labelledBy: string;
+  /** `alertdialog` for a confirm of something that cannot be undone; the browser's `dialog` otherwise. */
+  role?: 'alertdialog';
+  /** The id of the text that explains an `alertdialog`, read out after its name. */
+  describedBy?: string;
   /** Escape (or a phone's back gesture) asks to close; the parent decides, so a send in flight can keep it open. */
   onClose: () => void;
   children: ReactNode;
@@ -14,7 +18,7 @@ interface DialogProps {
  * Admin keeps their place in the table (owner, #78). Rendered while open; the parent unmounts it to close it.
  * `Modal` is the box in the middle of the page, `Drawer` the one on its right edge.
  */
-function DialogFrame({ labelledBy, onClose, className, children }: DialogProps & { className: string }) {
+function DialogFrame({ labelledBy, describedBy, role, onClose, className, children }: DialogProps & { className: string }) {
   const ref = useRef<HTMLDialogElement>(null);
 
   // A layout effect: its cleanup runs before the dialog leaves the page, so the keyboard never lands on <body>
@@ -36,7 +40,9 @@ function DialogFrame({ labelledBy, onClose, className, children }: DialogProps &
   return (
     <dialog
       ref={ref}
+      role={role}
       aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
       // The browser would close the dialog itself; the parent unmounts it instead, so React's state stays the truth
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
@@ -60,10 +66,12 @@ function DialogFrame({ labelledBy, onClose, className, children }: DialogProps &
  * The page's own box in the middle of the page, 640 px: D2's correction form, D3's cover form. `w-160` is 640 px, the
  * form's old width; the calc keeps a 16 px gutter on a narrow window; no token describes that.
  */
-export function Modal({ labelledBy, onClose, children }: DialogProps) {
+export function Modal({ labelledBy, describedBy, role, onClose, children }: DialogProps) {
   return (
     <DialogFrame
       labelledBy={labelledBy}
+      describedBy={describedBy}
+      role={role}
       onClose={onClose}
       className={`m-auto w-160 max-w-[calc(100%-2rem)] ${boxClass}`}
     >

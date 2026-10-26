@@ -120,7 +120,7 @@ export function AccountsPage() {
           </p>
         </section>
         <aside className="flex min-w-0 flex-col gap-2.5" aria-label="แผงบัญชี">
-          {!target && <CreateAccountForm accounts={list} areas={areas.data ?? []} buildings={buildings.data ?? []} />}
+          {(!target || panel.kind === 'deactivate') && <CreateAccountForm accounts={list} areas={areas.data ?? []} buildings={buildings.data ?? []} />}
           {target && panel.kind === 'edit' && (
             <EditAccountForm
               key={target.id}

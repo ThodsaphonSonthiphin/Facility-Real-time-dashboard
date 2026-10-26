@@ -31,7 +31,7 @@ function NoteLine({ note }: { note: NoteKind }) {
 
 // The three parts sit side by side when the screen is wide enough, 240 px each at the least; no token names that
 // track list
-const panelsClass = 'grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3 border-t border-border pt-3';
+const panelsClass = 'grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3';
 const partClass = 'flex flex-col gap-1.5';
 const rowClass = 'flex flex-wrap items-end gap-2';
 

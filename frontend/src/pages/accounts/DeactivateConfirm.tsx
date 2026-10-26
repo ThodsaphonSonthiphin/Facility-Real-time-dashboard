@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../shared/components/Button';
+import { Modal } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
-import { noteClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { useSetAccountActiveMutation, type Account } from './accountsApi';
@@ -14,8 +14,9 @@ interface DeactivateConfirmProps {
 
 /**
  * Plan 10 decision 7: deactivating asks once, because a Cleaner loses their Area and activation does not give it back
- * (plan 5 decision 3). The devices of the person drop within 5 minutes (facility-0012, 0014). The confirm is `danger`
- * like D4's new QR: the lost Area does not come back.
+ * (plan 5 decision 3). The devices of the person drop within 5 minutes (facility-0012, 0014). A popup over the page
+ * (owner, 2026-10-26), so the Admin must answer it; the confirm is `danger` like D4's new QR, because the lost Area does
+ * not come back. Escape and ยกเลิก close it, but not while the send is in flight.
  */
 export function DeactivateConfirm({ account, onDone, onCancel }: DeactivateConfirmProps) {
   const [setAccountActive, { isLoading }] = useSetAccountActiveMutation();
@@ -32,29 +33,30 @@ export function DeactivateConfirm({ account, onDone, onCancel }: DeactivateConfi
   };
 
   return (
-    <div
-      className={`flex flex-col gap-2 ${noteClass('warn')}`}
+    <Modal
+      labelledBy={titleId}
+      describedBy={`${titleId}-detail`}
       role="alertdialog"
-      aria-labelledby={titleId}
-      aria-describedby={`${titleId}-detail`}
+      onClose={() => !isLoading && onCancel()}
     >
-      <p id={titleId} className="font-bold">{`ปิดใช้งานบัญชี ${account.displayName}?`}</p>
-      <div id={`${titleId}-detail`} className="flex flex-col gap-1">
-        <p>{`${account.displayName} เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดภายใน 5 นาที ประวัติยังอยู่ เปิดใช้งานกลับได้`}</p>
-        {account.role === 'Cleaner' && account.areaCode && account.shift && (
-          <p>{`${account.areaCode} ${shiftShortLabel[account.shift]} จะว่าง เปิดใช้งานกลับแล้วต้องเลือกพื้นที่ใหม่`}</p>
-        )}
+      <div className="flex flex-col gap-3">
+        <h2 id={titleId} tabIndex={-1} className="text-lg font-semibold">{`ปิดใช้งานบัญชี ${account.displayName}?`}</h2>
+        <div id={`${titleId}-detail`} className="flex flex-col gap-1">
+          <p>{`${account.displayName} เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดภายใน 5 นาที ประวัติยังอยู่ เปิดใช้งานกลับได้`}</p>
+          {account.role === 'Cleaner' && account.areaCode && account.shift && (
+            <p>{`${account.areaCode} ${shiftShortLabel[account.shift]} จะว่าง เปิดใช้งานกลับแล้วต้องเลือกพื้นที่ใหม่`}</p>
+          )}
+        </div>
+        {problem && <Note tone="error">{problem}</Note>}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="danger" size="desk" disabled={isLoading} onClick={() => void confirm()}>
+            {isLoading ? 'กำลังปิดใช้งาน...' : 'ยืนยัน ปิดใช้งาน'}
+          </Button>
+          <Button size="desk" disabled={isLoading} onClick={onCancel}>
+            ยกเลิก
+          </Button>
+        </div>
       </div>
-      {problem && <Note tone="error">{problem}</Note>}
-      <div className="flex flex-wrap gap-2">
-        <Button variant="danger" size="desk" disabled={isLoading} onClick={() => void confirm()}>
-          {isLoading ? 'กำลังปิดใช้งาน...' : 'ยืนยัน ปิดใช้งาน'}
-        </Button>
-        {/* The safe choice has the focus */}
-        <Button size="desk" autoFocus disabled={isLoading} onClick={onCancel}>
-          ยกเลิก
-        </Button>
-      </div>
-    </div>
+    </Modal>
   );
 }

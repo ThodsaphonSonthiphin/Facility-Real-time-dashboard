@@ -16,8 +16,6 @@ import {
 import { formClass, formTitleClass } from './accountStyles';
 import { useChangePhoneMutation, useResetPasswordMutation, type Account } from './accountsApi';
 
-const whoClass = 'text-lg font-bold';
-
 interface SecretFormProps {
   account: Account;
   onDone: (text: string) => void;
@@ -55,24 +53,24 @@ export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
   return (
     <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
       <h2 id={titleId} className={formTitleClass}>{`แก้เบอร์โทร · ${account.displayName}`}</h2>
-      {/* facility-0081: who the form is for, large enough to catch the wrong row */}
+      {/* facility-0081: who the form is for; the owner found 19 px bold too large (2026-10-26), so the normal size */}
       <Facts
         items={[
           {
             label: 'ชื่อ',
-            value: <span className={whoClass}>{account.displayName}</span>,
+            value: account.displayName,
           },
           {
             label: 'รหัสพนักงาน',
-            value: <span className={whoClass}>{account.loginName}</span>,
+            value: account.loginName,
           },
           {
             label: 'บทบาท',
-            value: <span className={whoClass}>{accountRoleLabel[account.role]}</span>,
+            value: accountRoleLabel[account.role],
           },
           {
             label: 'ประจำที่',
-            value: <span className={whoClass}>{placeText(account)}</span>,
+            value: placeText(account),
           },
         ]}
       />
