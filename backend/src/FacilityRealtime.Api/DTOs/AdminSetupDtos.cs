@@ -4,6 +4,14 @@ namespace FacilityRealtime.Api.DTOs;
 
 public record BuildingDto(int Id, string Code, string Name);
 
+/// <summary>A row of the buildings page, off buildings too (facility-0090); also the D7 and D8 building pickers.</summary>
+public record ManagedBuildingDto(int Id, string Code, string Name, bool IsActive, int ActiveAreaCount, int ActiveSupervisorCount);
+
+public record CreateBuildingRequest(string? Code, string? Name);
+
+/// <summary>The code is set once (facility-0090 decision 2), so only the name is sent.</summary>
+public record UpdateBuildingRequest(string? Name);
+
 /// <summary>For the Area form's Cleaner pickers (wireframe D10).</summary>
 public record CleanerOptionDto(int Id, string EmployeeId, string DisplayName, Shift? Shift, int? AreaId, string? AreaCode);
 

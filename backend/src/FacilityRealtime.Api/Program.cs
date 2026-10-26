@@ -105,6 +105,7 @@ app.MapMyWorkEndpoints();
 app.MapInspectionEndpoints();
 app.MapMyBuildingEndpoints();
 app.MapAdminAreaEndpoints();
+app.MapAdminBuildingEndpoints();
 app.MapAdminPointEndpoints();
 app.MapAdminSignEndpoints();
 app.MapAdminAttendanceEndpoints();

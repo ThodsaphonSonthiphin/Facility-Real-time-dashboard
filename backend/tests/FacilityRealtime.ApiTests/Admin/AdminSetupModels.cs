@@ -4,6 +4,8 @@ public record MessageModel(string Message);
 
 public record BuildingModel(int Id, string Code, string Name);
 
+public record ManagedBuildingModel(int Id, string Code, string Name, bool IsActive, int ActiveAreaCount, int ActiveSupervisorCount);
+
 public record CleanerOptionModel(int Id, string EmployeeId, string DisplayName, string? Shift, int? AreaId, string? AreaCode);
 
 public record AssignedCleanerModel(int Id, string EmployeeId, string DisplayName);
