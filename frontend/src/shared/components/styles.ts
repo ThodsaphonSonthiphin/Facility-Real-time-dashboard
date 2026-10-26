@@ -107,6 +107,12 @@ export const tabClass =
 /** A text link. */
 export const linkClass = `text-primary underline hover:text-primary-strong ${focusRing}`;
 
+/**
+ * A text link inside a sentence on a phone page: its tap area is 48 px high, but its words and the lines around them stay
+ * where they were (the negative margin cancels the padding).
+ */
+export const inlineLinkClass = `${linkClass} inline-block py-4 -my-4`;
+
 export type NoteTone = 'info' | 'warn' | 'error';
 
 /** A note's border, background and text colours, for a note box and for a chip in a note's colours (D3's alert kinds). */

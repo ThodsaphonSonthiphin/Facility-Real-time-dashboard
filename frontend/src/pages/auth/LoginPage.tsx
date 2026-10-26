@@ -4,7 +4,7 @@ import { buildCommit } from '../../shared/version/buildInfo';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
-import { boxClass, linkClass } from '../../shared/components/styles';
+import { boxClass, inlineLinkClass } from '../../shared/components/styles';
 import { useLogin } from './useLogin';
 
 /** Wireframe M0: Cleaners and Supervisors log in with employee ID + phone on their phone (facility-0054). */
@@ -65,7 +65,7 @@ export function LoginPage() {
         <span>เปลี่ยนเบอร์โทร: แจ้งแอดมินให้แก้ · ไม่มีการสมัครเอง</span>
         <span>
           แอดมินเข้าด้วยชื่อผู้ใช้และรหัสผ่าน ·{' '}
-          <Link className={linkClass} to="/login/admin" state={location.state}>
+          <Link className={inlineLinkClass} to="/login/admin" state={location.state}>
             หน้าแอดมิน
           </Link>
         </span>
