@@ -221,6 +221,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 ## Pending work (ask the owner before starting)
 
+- **Buildings managed by Admin (owner, 2026-10-26):** today a building (`buildings` table: code, name, active) exists only as the Development seed (`DbInitializer`, "ตึก A") and can be read through `GET /api/admin/buildings`; nothing creates one. Decided: Admin adds, renames and turns buildings on and off in the system; the code is set once and cannot change; a building is never deleted, only turned off; changes go to the audit log. Not started: needs an ADR (facility-0045 and 0048 touched) and a plan. The 6 real buildings are added through this page on deploy, not seeded in code.
 - **Next, chosen by the owner (2026-10-22): move the frontend to Tailwind with a new look.** See `## Next: Tailwind migration` below. It comes before the Excel import and before the pilot.
 - Excel import of accounts (ADR 0056; before rollout to every building).
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
