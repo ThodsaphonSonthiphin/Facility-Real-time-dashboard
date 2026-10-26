@@ -209,14 +209,14 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     );
   });
 
-  it('an off building can still be chosen, for its old data (facility-0090)', async () => {
-    const server = serve();
-    const { user } = await renderApp('/admin/inspection-summary');
+  it('the building picker lists active buildings only, an off one is left out (facility-0090)', async () => {
+    serve();
+    await renderApp('/admin/inspection-summary');
 
     const picker = await screen.findByRole('combobox', { name: 'ตึก' });
-    await waitFor(() => expect(within(picker).getByRole('option', { name: 'C (ปิดใช้งาน)' })).toBeInTheDocument());
-    await user.selectOptions(picker, 'C (ปิดใช้งาน)');
-
-    await waitFor(() => expect(query(summaryGets(server).at(-1)!.search)).toMatchObject({ buildingId: '3' }));
+    await waitFor(() =>
+      expect(within(picker).getAllByRole('option').map((option) => option.textContent)).toEqual(['ทุกตึก', 'A', 'B']),
+    );
+    expect(within(picker).queryByRole('option', { name: /ปิดใช้งาน/ })).not.toBeInTheDocument();
   });
 });
