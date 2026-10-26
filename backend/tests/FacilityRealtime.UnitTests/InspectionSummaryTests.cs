@@ -106,4 +106,67 @@ public class InspectionSummaryTests
         Assert.Equal(1, tallies[0].SubmittedInspected);
         Assert.Equal(0, tallies[0].NotInspected);       // the late work is what made the round ไม่ได้ตรวจ
     }
+
+    /// <summary>Round 08:00-10:00 of Day8, sent <paramref name="minutes"/> minutes after 08:00 Thai time.</summary>
+    private static RoundSubmission SentAt(long id, int point, int minutes) =>
+        new(id, point, Day8, new TimeOnly(8, 0), new TimeOnly(10, 0), ShiftCalendar.StartUtc(Day8).AddHours(1).AddMinutes(minutes));
+
+    [Fact]
+    public void A_submission_sent_over_before_anyone_inspected_it_is_left_out_because_it_can_never_be_inspected()
+    {
+        // the Cleaner sends twice in the open round; the Supervisor is offered only the latest, so only it is inspected
+        var tallies = InspectionSummary.Tally(
+            [Supervisors[0]],
+            Points,
+            [SentAt(1, 10, 20), SentAt(2, 10, 40)],
+            [Inspected(2, 10, 1, Day8, InspectionResult.Passed)],
+            [Round(10, Day8, RoundOutcome.Passed)]);
+
+        Assert.Equal(1, tallies[0].Submitted);
+        Assert.Equal(1, tallies[0].SubmittedInspected);
+        Assert.Equal(1, tallies[0].Inspections);
+    }
+
+    [Fact]
+    public void Sent_over_twice_with_nothing_inspected_counts_the_round_once_and_not_inspected()
+    {
+        var tallies = InspectionSummary.Tally(
+            [Supervisors[0]],
+            Points,
+            [SentAt(1, 10, 20), SentAt(2, 10, 40)],
+            [],
+            [Round(10, Day8, RoundOutcome.NotInspected)]);
+
+        Assert.Equal(1, tallies[0].Submitted);
+        Assert.Equal(0, tallies[0].SubmittedInspected);
+        Assert.Equal(1, tallies[0].NotInspected);
+    }
+
+    [Fact]
+    public void A_submission_that_was_inspected_is_counted_even_when_a_rework_fix_followed_it()
+    {
+        var tallies = InspectionSummary.Tally(
+            [Supervisors[0]],
+            Points,
+            [SentAt(1, 10, 20), SentAt(2, 10, 50)],
+            [Inspected(1, 10, 1, Day8, InspectionResult.Rework), Inspected(2, 10, 1, Day8, InspectionResult.Passed)],
+            [Round(10, Day8, RoundOutcome.Passed)]);
+
+        Assert.Equal(2, tallies[0].Submitted);
+        Assert.Equal(2, tallies[0].SubmittedInspected);
+    }
+
+    [Fact]
+    public void Two_submissions_at_the_same_instant_leave_out_the_one_with_the_lower_id()
+    {
+        var tallies = InspectionSummary.Tally(
+            [Supervisors[0]],
+            Points,
+            [SentAt(1, 10, 20), SentAt(2, 10, 20)],
+            [Inspected(2, 10, 1, Day8, InspectionResult.Passed)],
+            [Round(10, Day8, RoundOutcome.Passed)]);
+
+        Assert.Equal(1, tallies[0].Submitted);
+        Assert.Equal(1, tallies[0].SubmittedInspected);
+    }
 }
