@@ -9,13 +9,13 @@
 graph TD
     QR["QR sign on the wall<br/>/scan/token or /check-in/token"] --> Pages
     subgraph FE["frontend/src — React 19 + TypeScript"]
-        Pages["pages/ — 16 feature folders"]
+        Pages["pages/ — 17 feature folders"]
         Shared["shared/ — api, auth, geo, components, utils"]
         Router["main.tsx, App.tsx, router.tsx"]
         Store["store/ — auth, hub, dashboard"]
     end
     subgraph BE["backend/src — ASP.NET Core 10"]
-        Endpoints["Endpoints/ — 48 HTTP routes"]
+        Endpoints["Endpoints/ — 53 HTTP routes"]
         Rules["Application/ — pure rules, no I/O"]
         Persist["Infrastructure/ — EF Core, PBKDF2, Excel"]
         Hub["Hubs/ScanHub — /hubs/scan"]
@@ -122,7 +122,7 @@ Root: `frontend/src/` — 109 `.tsx` files, of which 61 are page components.
 | `shared/utils/` | `thaiTime.ts` (34 imports), `getErrorMessage.ts` (31), `labels.ts` (26), `dateRange.ts` (11), `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock — every time you see a strange time, look here first. |
 | `shared/version/` | `buildInfo.ts` | The build commit shown on the login pages. |
 
-### pages — 16 feature folders
+### pages — 17 feature folders
 
 | Folder | Purpose | Key files |
 |---|---|---|
@@ -136,6 +136,7 @@ Root: `frontend/src/` — 109 `.tsx` files, of which 61 are page components.
 | `attendance/` | Admin attendance board + corrections (D2) | `AttendancePage.tsx`, `CorrectionForm.tsx`, `attendanceRules.ts` |
 | `alerts/` | Empty areas, covers, alert list (D3) | `AlertsPage.tsx`, `CoversThisShift.tsx`, `alertRules.ts` |
 | `areas/` | Area / point / sign setup (D4, D10) — largest folder, 23 files | `AreasPage.tsx`, `PointEditor.tsx` (301 lines), `SignPanel.tsx` (235), `signRules.ts` (radius 10–500 m) |
+| `buildings/` | Building setup: add, rename, on/off (facility-0090) | `BuildingsPage.tsx`, `BuildingDrawer.tsx`, `buildingRules.ts` (same counts as the server's `BuildingRules`) |
 | `accounts/` | Account CRUD, no delete (D6) | `AccountsPage.tsx`, `CreateAccountForm.tsx`, `SecretForms.tsx` |
 | `print-signs/` | QR sign printing (D5) | `PrintSignsPage.tsx`, `qr.ts` + `printRules.ts` — `signUrl()` builds `/scan/<token>` |
 | `capture/` | Admin records a sign's GPS standing at the site (M17) | `CapturePage.tsx`, `captureLocation.ts` (30 s, median of ≥3 readings) |
@@ -174,6 +175,7 @@ From `frontend/src/router.tsx`. Guards come from `shared/components/ProtectedRou
 | `/admin/areas/:areaId?` | `pages/areas/AreasPage.tsx` (lazy) | admin |
 | `/admin/areas/new` | `pages/areas/AreaFormPage.tsx` (lazy) — outranks `:areaId?` | admin |
 | `/admin/areas/:areaId/edit` | `pages/areas/AreaFormPage.tsx` (lazy) | admin |
+| `/admin/buildings` | `pages/buildings/BuildingsPage.tsx` (lazy) | admin |
 | `/admin/print` | `pages/print-signs/PrintSignsPage.tsx` (lazy) | admin |
 | `/admin/accounts` | `pages/accounts/AccountsPage.tsx` (lazy) | admin |
 | `/admin/history` | `pages/history/HistoryPage.tsx` (lazy) | admin |
@@ -229,7 +231,7 @@ Solution `backend/FacilityRealtime.slnx` — four projects, no controllers.
 | Path | Purpose |
 |---|---|
 | `Program.cs` | Composition root, numbered 1–9 in comments: services → middleware → migrate → hub → endpoint groups → SPA fallback. |
-| `Endpoints/` (31 files) | All HTTP routes. `*Endpoints.cs` registers routes; the rest are helpers (`ThaiLabels`, `GpsInput`, `ApiResults`, `BlockedScans`, `PointNotifications`, `ExportSheets`, `AdminQuery`, `AccountChecks`, read-model builders). |
+| `Endpoints/` (30 files) | All HTTP routes. `*Endpoints.cs` registers routes; the rest are helpers (`ThaiLabels`, `GpsInput`, `ApiResults`, `BlockedScans`, `PointNotifications`, `ExportSheets`, `AdminQuery`, `AccountChecks`, read-model builders). |
 | `Auth/` | `AuthSetup.cs` (JWT bearer, `AdminOnly` policy, SignalR query-string token), `JwtAccessTokenIssuer.cs`, `JwtKeys.cs`, `AuthClaims.cs`, `CurrentUser.cs`. |
 | `Hubs/ScanHub.cs` | Server → client only, **zero hub methods**. Admin connections join the `"admins"` group on connect. |
 | `DTOs/` (14 files) | One request/response record set per feature. |
@@ -523,7 +525,7 @@ graph LR
 
 ## Part 9 — API reference
 
-48 HTTP routes. `frontend/src/shared/api/baseApi.ts:16` adds the `/api` prefix, so the frontend `url` values below are relative to it.
+53 HTTP routes. `frontend/src/shared/api/baseApi.ts:16` adds the `/api` prefix, so the frontend `url` values below are relative to it.
 
 **How to read the Why column:** it answers *"what business goal does this call serve, what breaks without it?"* — not "what does it fetch". If you are deciding whether an endpoint is essential while changing something, the Why is the row that matters.
 
@@ -561,6 +563,11 @@ graph LR
 | Method | Route | Handler | Called by | Why |
 |---|---|---|---|---|
 | GET | `/api/admin/buildings` | `AdminAreaEndpoints.cs:18` | `shared/api/adminSetupApi.ts:113` | Picker options used across many pages. |
+| GET | `/api/admin/buildings/all` | `AdminBuildingEndpoints.cs` | `adminSetupApi.ts` (`getAllBuildings`) | Every building, off ones too, with active Area and Supervisor counts: the buildings page and the D7/D8 picker. |
+| POST | `/api/admin/buildings` | `AdminBuildingEndpoints.cs` → `CreateAsync` | `pages/buildings/buildingsApi.ts` | Code set once, never reused (facility-0090). |
+| PUT | `/api/admin/buildings/{id}` | `AdminBuildingEndpoints.cs` → `RenameAsync` | `buildingsApi.ts` | Name only. |
+| POST | `/api/admin/buildings/{id}/deactivate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | Refused while an active Area or Supervisor is left in it. |
+| POST | `/api/admin/buildings/{id}/activate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | No condition; its Areas stay as they are. |
 | GET | `/api/admin/cleaners` | `AdminAreaEndpoints.cs:19` | `adminSetupApi.ts:117` | Same. |
 | GET | `/api/admin/areas` | `AdminAreaEndpoints.cs:20` | `adminSetupApi.ts:105` | Area summaries with counts. |
 | GET | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:22` | `adminSetupApi.ts:109` | Area detail: points, windows, signs. |
