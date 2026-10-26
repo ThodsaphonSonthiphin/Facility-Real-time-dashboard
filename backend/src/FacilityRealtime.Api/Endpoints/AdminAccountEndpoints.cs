@@ -72,9 +72,9 @@ public static class AdminAccountEndpoints
                 return Bad("ชื่อผู้ใช้ต้องเป็นตัวอักษรอังกฤษ ตัวเลข . _ หรือ - ยาว 3–100 ตัว");
             }
 
-            if (!AccountRules.IsAllowedPassword(request.Password))
+            if (AccountRules.PasswordProblem(request.Password) is { } passwordProblem)
             {
-                return Bad($"รหัสผ่านชั่วคราวต้องยาว {AccountRules.MinPassword}–{AccountRules.MaxPassword} ตัวอักษร");
+                return Bad(passwordProblem);
             }
 
             if (await UsernameTakenAsync(db, username, exceptUserId: 0))
@@ -305,9 +305,9 @@ public static class AdminAccountEndpoints
             return Bad("แม่บ้านและหัวหน้าไม่มีรหัสผ่าน ใช้ปุ่มแก้เบอร์โทร");
         }
 
-        if (!AccountRules.IsAllowedPassword(request.Password))
+        if (AccountRules.PasswordProblem(request.Password) is { } passwordProblem)
         {
-            return Bad($"รหัสผ่านชั่วคราวต้องยาว {AccountRules.MinPassword}–{AccountRules.MaxPassword} ตัวอักษร");
+            return Bad(passwordProblem);
         }
 
         await ReplaceSecretAsync(db, hasher, clock, admin, user, request.Password!, "ACCOUNT_PASSWORD", $"รีเซ็ตรหัสผ่านของ {user.LoginName} {user.DisplayName}");

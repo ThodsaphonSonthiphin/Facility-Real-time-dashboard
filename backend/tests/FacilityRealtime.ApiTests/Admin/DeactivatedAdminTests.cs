@@ -24,7 +24,7 @@ public class DeactivatedAdminTests
     [InlineData("POST", "/api/admin/accounts", """{ "role": "Cleaner", "displayName": "x", "employeeId": "E9", "phone": "0000000099", "shift": "Day" }""")]
     [InlineData("PUT", "/api/admin/accounts/2", """{ "displayName": "x", "shift": "Day" }""")]
     [InlineData("PUT", "/api/admin/accounts/2/phone", """{ "phone": "0000000099" }""")]
-    [InlineData("PUT", "/api/admin/accounts/1/password", """{ "password": "temporary-9" }""")]
+    [InlineData("PUT", "/api/admin/accounts/1/password", """{ "password": "temporary-pass-9" }""")]
     [InlineData("POST", "/api/admin/accounts/2/deactivate", null)]
     [InlineData("POST", "/api/admin/accounts/2/activate", null)]
     [InlineData("GET", "/api/admin/audit-log", null)]
