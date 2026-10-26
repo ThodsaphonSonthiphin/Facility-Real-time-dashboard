@@ -55,7 +55,7 @@ public class AccountRulesTests
     [Theory]
     [InlineData("temporary-pass-1", true)]
     [InlineData("temp pass phrase", true)]
-    [InlineData("123456789012345", true)]
+    [InlineData("temporary-pass1", true)]
     [InlineData("12345678901234", false)]
     [InlineData("               ", false)]
     [InlineData(null, false)]
@@ -70,6 +70,7 @@ public class AccountRulesTests
     [InlineData("short", "รหัสผ่านชั่วคราวต้องยาว 15–100 ตัวอักษร")]
     [InlineData(null, "รหัสผ่านชั่วคราวต้องยาว 15–100 ตัวอักษร")]
     [InlineData("1QAZ2WSX3EDC4RFV", "รหัสผ่านนี้คนใช้กันเยอะ เดาง่าย ตั้งรหัสอื่น")]
+    [InlineData("123456789012345", "รหัสผ่านนี้คนใช้กันเยอะ เดาง่าย ตั้งรหัสอื่น")]
     [InlineData("temporary-pass-1", null)]
     public void A_password_problem_says_the_length_first_then_whether_it_is_common(string? password, string? problem) =>
         Assert.Equal(problem, AccountRules.PasswordProblem(password));

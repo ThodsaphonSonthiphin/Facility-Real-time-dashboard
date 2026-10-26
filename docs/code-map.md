@@ -247,7 +247,7 @@ Pure static classes, no database, no HTTP, fully unit-tested:
 | `Attendance/` | `AttendanceRules`, `AttendanceCalendar`, `AreaAttendance`, `AttendanceSettings` |
 | `Inspections/` | `InspectionRules` (what may be judged), `SupervisorScope`, `InspectionSummary` |
 | `Common/` | `ThaiTime` — Asia/Bangkok ↔ UTC. Every wall-clock conversion goes through here. |
-| Others | `Accounts/AccountRules`, `Alerts/AlertKind`, `Signs/SignCodes`, `Export/ExportRules`, `Shifts/ShiftCalendar` |
+| Others | `Accounts/AccountRules`, `Accounts/CommonPasswords` (the embedded `common-passwords.txt` list of common passwords, read once; facility-0089), `Alerts/AlertKind`, `Signs/SignCodes`, `Export/ExportRules`, `Shifts/ShiftCalendar` |
 
 ### `FacilityRealtime.Infrastructure`
 

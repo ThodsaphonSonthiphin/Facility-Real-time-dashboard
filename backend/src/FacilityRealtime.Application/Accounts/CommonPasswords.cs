@@ -2,9 +2,10 @@ namespace FacilityRealtime.Application.Accounts;
 
 /// <summary>
 /// facility-0089: passwords too common to allow, compared ignoring letter case. common-passwords.txt is every entry of
-/// 15–100 characters in SecLists' xato-net-10-million-passwords-1000000.txt (MIT License, commit c205c36), lowercased,
-/// sorted and without duplicates, one per line; shorter entries are already refused by the length rule. Read once, on
-/// the first check. It stays on the server: the browser checks only the length (facility-0062).
+/// 15–100 characters in SecLists' xato-net-10-million-passwords-1000000.txt (MIT License, commit c205c36; notice in
+/// LICENSE-seclists), lowercased, sorted and without duplicates, one per line; shorter entries are already refused by
+/// the length rule. Read once, on the first check. It stays on the server: the browser checks only the length
+/// (facility-0062).
 /// </summary>
 internal static class CommonPasswords
 {
