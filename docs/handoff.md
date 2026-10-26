@@ -595,6 +595,8 @@ Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `
 
 - 2026-10-26 · **Branch cleanup (owner: "branch ไหนไม่ใช้ก็ลบทิ้ง").** All 18 merged remote branches and the 3 merged local ones are deleted; GitHub now has only `master`. No PR is open. The one branch kept is the local `prototype/tailwind-look` (the owner's chosen mockup, commit `a8dab9c`, never for master): `design-system/facility/pages/*.md` point at it, and it is on no remote now, so a deletion would lose it. Push it again or move the mockup into the repo if the owner wants it kept safe.
 
+- 2026-10-26 · **The owner finished the eye checks** (D4 / D10 / M17, D6–D9, My Work live) and said to delete the prototype branch. Every check owed in this file is closed; #79, #80 and #97's "eye check owed" lines above are history. The local `prototype/tailwind-look` (`a8dab9c`) is deleted, so `design-system/facility/pages/*.md` still name a branch that no longer exists; the chosen layouts are written in those files. Cleanup done: API and tunnel stopped, `facility_ui_test` dropped (`facility_dashboard` untouched), `wwwroot` and `frontend/dist` removed. Next: #81 D5 print, then #82 the contract step.
+
 ## Owner's rules (still in force)
 
 - Never merge a PR or the younger brother's work without asking. PR #50–#53 were approved.
