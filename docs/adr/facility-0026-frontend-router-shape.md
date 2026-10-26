@@ -63,3 +63,5 @@ flowchart TD
 > **แก้ไข 2026-10-19 (แผน 11):** เพิ่ม `/admin/attendance` (D2) และ `/admin/alerts` (D3) ใต้ guard ของ Admin หน้า Admin ทุกหน้าเป็น `lazy` route (facility-0062) และ route ราก (`/`) มี `hydrateFallbackElement` "กำลังโหลด..." ระหว่างโหลดไฟล์ของหน้าแรก
 
 > **แก้ไข 2026-10-21 (แผน 12):** เพิ่ม `/admin/inspection-summary` (D7, `?from=yyyy-MM-dd&to=yyyy-MM-dd&building=<id>`), `/admin/export` (D8, รับ `?from&to&building` มาเติมฟอร์ม) และ `/admin/history` (D9, `?from&to&actor=<id>&category=<AuditCategory>`) ใต้ guard ของ Admin เป็น `lazy` route ทั้งสามหน้า
+
+> **ยืนยัน 2026-10-15 (ก่อนแผน 8):** ป้าย QR ยังชี้ `PublicBaseUrl` + `/scan/<token>` (ตัวเลือก 1) ไม่เปลี่ยนเส้นทางเป็น path สั้นหรือรวมรหัสอาคาร โดเมนจริงยังรอ facility-0049 แยกต่างหาก
