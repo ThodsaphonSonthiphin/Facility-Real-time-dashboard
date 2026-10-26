@@ -83,15 +83,15 @@ export function Modal({ labelledBy, describedBy, role, onClose, children }: Dial
 /**
  * A panel sliding in from the right edge, full height, scrolling on its own (owner, 2026-10-23): the Area's table
  * stays visible on the left while a point or the Area itself is edited on the right. `w-120` is 480 px, half a 1280 px
- * screen's content beside the 300 px Area list; no token describes that. Only the left edge has a border, so the panel
- * looks attached to the screen's edge.
+ * screen's content beside the 300 px Area list; no token describes that. No border at all (owner, 2026-10-26):
+ * `border-0` also switches off the 3 px frame the browser gives a <dialog>, which the page's CSS does not reset yet.
  */
 export function Drawer({ labelledBy, onClose, children }: DialogProps) {
   return (
     <DialogFrame
       labelledBy={labelledBy}
       onClose={onClose}
-      className="m-0 ml-auto h-dvh max-h-none w-120 max-w-[calc(100%-1rem)] overflow-y-auto rounded-none border-l border-border bg-surface px-4 py-3.5"
+      className="m-0 ml-auto h-dvh max-h-none w-120 max-w-[calc(100%-1rem)] overflow-y-auto rounded-none border-0 bg-surface px-4 py-3.5"
     >
       {children}
     </DialogFrame>
