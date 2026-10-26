@@ -68,6 +68,7 @@ public class BuildingAdminEndpointTests
         var response = await admin.PostAsJsonAsync(Buildings, new { code = " b2 ", name = "  ตึกผลิต " });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("/api/admin/buildings/all", response.Headers.Location?.OriginalString); // the list route; one building has no GET
         var created = (await response.Content.ReadFromJsonAsync<ManagedBuildingModel>())!;
         Assert.Equal(("B2", "ตึกผลิต", true, 0, 0), (created.Code, created.Name, created.IsActive, created.ActiveAreaCount, created.ActiveSupervisorCount));
         var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));

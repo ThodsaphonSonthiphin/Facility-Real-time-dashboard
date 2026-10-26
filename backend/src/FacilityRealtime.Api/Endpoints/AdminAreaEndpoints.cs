@@ -219,10 +219,15 @@ public static class AdminAreaEndpoints
             return (null, Bad("ต้องเลือกรูปแบบกะ"));
         }
 
-        var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == buildingId && b.IsActive);
+        var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == buildingId);
         if (building is null)
         {
             return (null, Bad("ไม่พบตึกนี้"));
+        }
+
+        if (!building.IsActive)
+        {
+            return (null, Bad("ต้องเลือกตึกที่ใช้งานอยู่"));
         }
 
         if (shiftPattern == ShiftPattern.DayOnly && nightCleanerId is not null)

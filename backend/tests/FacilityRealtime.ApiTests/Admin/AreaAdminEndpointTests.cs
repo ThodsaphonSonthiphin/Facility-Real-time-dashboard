@@ -255,6 +255,32 @@ public class AreaAdminEndpointTests
         Assert.Equal(2, await AdminSetupApi.ReadAsync(factory, db => db.Areas.CountAsync()));
     }
 
+    [Theory]
+    [InlineData(false, "ต้องเลือกตึกที่ใช้งานอยู่")] // a building that is off (facility-0090)
+    [InlineData(true, "ไม่พบตึกนี้")]               // an id that does not exist
+    public async Task A_building_that_is_off_or_unknown_is_refused_with_its_own_message(bool unknown, string expected)
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var offId = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var off = new Building { Code = "Z", Name = "ตึกปิด", IsActive = false, CreatedAt = DateTime.UtcNow };
+            db.Buildings.Add(off);
+            await db.SaveChangesAsync();
+            offId = off.Id;
+        });
+        var form = new { code = "AR03", name = "Lobby", buildingId = unknown ? 9999 : offId, shiftPattern = "DayOnly" };
+
+        var created = await admin.PostAsJsonAsync(Areas, form);
+        var edited = await admin.PutAsJsonAsync($"{Areas}/{await AdminSetupApi.AreaIdAsync(factory, "AR02")}", form);
+
+        Assert.Equal(HttpStatusCode.BadRequest, created.StatusCode);
+        Assert.Equal(expected, await AdminSetupApi.MessageAsync(created));
+        Assert.Equal(HttpStatusCode.BadRequest, edited.StatusCode);
+        Assert.Equal(expected, await AdminSetupApi.MessageAsync(edited));
+    }
+
     [Fact]
     public async Task Area_codes_are_unique()
     {

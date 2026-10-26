@@ -85,7 +85,7 @@ public static class AdminBuildingEndpoints
             throw;
         }
 
-        return Results.Created($"/api/admin/buildings/{building.Id}", await LoadOneAsync(db, building.Id));
+        return Results.Created("/api/admin/buildings/all", await LoadOneAsync(db, building.Id));
     }
 
     private static async Task<IResult> RenameAsync(int id, UpdateBuildingRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)

@@ -42,7 +42,7 @@ export function BuildingsPage() {
         {list.length > 0 && <BuildingTable buildings={list} onEdit={(building) => setOpen({ kind: 'edit', id: building.id })} />}
       </section>
       <p className="text-muted">
-        ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติยังอยู่ · ปิดตึกได้เมื่อไม่มีพื้นที่ที่เปิดอยู่และไม่มีหัวหน้าประจำตึก ·
+        ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติยังอยู่ · ปิดตึกได้เมื่อไม่มีพื้นที่ที่เปิดอยู่และไม่มีหัวหน้าที่เปิดใช้งานประจำตึก ·
         ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
       </p>
       {open?.kind === 'create' && <BuildingDrawer onClose={close} onDone={done} />}
