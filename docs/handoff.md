@@ -593,6 +593,8 @@ Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `
 - 2026-10-26 · **Merged, in this order, on the owner's "handoff commit push PR merge ให้เรียบร้อย":** #96 (`edf2418`), then #98 retargeted from `feat/admin-reports-new-look` to master (`07319cd`), then #97 (`d4e8fde`) after master was merged into its branch to resolve the one conflict, this file (both sides' entries kept). Every suite passed on the combined code before #97 merged: frontend 422, unit 306, API 544 + 5 skipped. GitGuardian passed on all three. **The eye checks the owner has not finished are now checks on master, not on a branch:** D4 / D10 (M17 on a phone), D6–D9 at 1280 px (the deactivate popup, the shut notes, the renamed column), and My Work live on two phones. Anything they find goes in a new branch.
   - **Open questions kept for the owner:** the other Admin and phone pages still carry always-visible explanations (D1–D4, D10, M17); I offered to list them page by page so the owner picks which to shut behind `MoreInfo`. The D6 and D8 answers are still boxes in the page, not Toasts.
 
+- 2026-10-26 · **Branch cleanup (owner: "branch ไหนไม่ใช้ก็ลบทิ้ง").** All 18 merged remote branches and the 3 merged local ones are deleted; GitHub now has only `master`. No PR is open. The one branch kept is the local `prototype/tailwind-look` (the owner's chosen mockup, commit `a8dab9c`, never for master): `design-system/facility/pages/*.md` point at it, and it is on no remote now, so a deletion would lose it. Push it again or move the mockup into the repo if the owner wants it kept safe.
+
 ## Owner's rules (still in force)
 
 - Never merge a PR or the younger brother's work without asking. PR #50–#53 were approved.
