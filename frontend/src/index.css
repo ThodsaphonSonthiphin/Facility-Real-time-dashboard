@@ -62,6 +62,26 @@
   --text-2xl: 28px;
   --text-2xl--line-height: 1.25;
 
+  /*
+   * The printed QR sign (D5) keeps the old layout, so signs already on the walls and new ones match (facility-0087
+   * rule 8). For the sign and its sheet only, never another page. The sizes are in points and below the 13 px floor
+   * on purpose.
+   */
+  --color-sign-ink: #000000;
+  --color-sign-soft: #333333;
+  --color-sign-cut: #9aa3a4;
+  --color-sign-paper: #ffffff;
+  --text-sign-url: 6.5pt;
+  --text-sign-url--line-height: 1.25;
+  --text-sign-meta: 9pt;
+  --text-sign-meta--line-height: 1.25;
+  --text-sign-label: 11pt;
+  --text-sign-label--line-height: 1.25;
+  --text-sign-name: 16pt;
+  --text-sign-name--line-height: 1.25;
+  --text-sign-name-big: 24pt;
+  --text-sign-name-big--line-height: 1.25;
+
   --radius: 8px;
 
   --container-phone: 480px;
@@ -152,6 +172,15 @@
   textarea {
     font: inherit;
   }
+}
+
+/*
+ * The printed signs (D5): one A4 sheet per page with no browser margin, each sheet keeping its own 8 mm. No Tailwind
+ * class writes @page (facility-0086), so it lives here.
+ */
+@page {
+  size: A4 portrait;
+  margin: 0;
 }
 
 /*

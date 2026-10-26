@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-26 (**three PRs merged to master on the owner's explicit "handoff commit push PR merge": #96 D6–D9 in the new look (`edf2418`), #98 D7 leaves out superseded submissions and renames its column to "จำนวนครั้งที่ตรวจ" (`07319cd`), #97 My Work updates live for Cleaners (`d4e8fde`). The eye checks of #79 (D4, D10, M17), #80 (D6–D9) and #97 (two phones) were NOT finished and are still owed — see `### Waiting on the owner's eye check`**; earlier: #70–#79 merged; 2026-10-25 wrote `docs/code-map.md`, the file-level map for the owner)
+Last updated: 2026-10-26 (**#81 D5 print signs moved to Tailwind on branch `feat/print-signs-tailwind`, committed, not pushed; a real print and the owner's eye check are owed — see `### Start here`**; earlier: **three PRs merged to master on the owner's explicit "handoff commit push PR merge": #96 D6–D9 in the new look (`edf2418`), #98 D7 leaves out superseded submissions and renames its column to "จำนวนครั้งที่ตรวจ" (`07319cd`), #97 My Work updates live for Cleaners (`d4e8fde`). The eye checks of #79 (D4, D10, M17), #80 (D6–D9) and #97 (two phones) were NOT finished and are still owed — see `### Waiting on the owner's eye check`**; earlier: #70–#79 merged; 2026-10-25 wrote `docs/code-map.md`, the file-level map for the owner)
 
 ## Project
 
@@ -259,7 +259,8 @@ The owner ended the session before the check was finished: "เรายัง�
 
 **Where it stands.** Spec #68 is split into tickets #70–#82, which are sub-issues of #68 with GitHub blocked-by edges.
 - **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A), #78 (D2 + D3), #79 (D4 + D10 + M17, PR #95), #80 (D6–D9, PR #96). Master is `d4e8fde` (the merge of PR #97) plus this note; 422 frontend tests pass.
-- **Next:** #81 D5 print (depends only on #71, which is merged), then #82, the contract step (preflight on, old CSS deleted, final eye check and UX pass). Before that, the owner's eye checks above, and the follow-ups they ask for.
+- **#81 D5 print, done on branch `feat/print-signs-tailwind` (2026-10-26), committed, not pushed, no PR yet.** `print.css` is deleted; the page uses `Field`, `FieldGroup`, `Select`, `Button`, `Note` and `linkClass`; the sign's colours and point sizes are a paper-only `sign-*` token group in `@theme` (documented in MASTER.md, "The printed sign (D5)"); the mm measures are arbitrary values with a comment; `@page` moved to `index.css` (it now applies to every printed page, not only after D5's chunk loaded). Check: the page printed to PDF with headless Chrome before and after, small and A5 (6 A4 pages), **0 differing pixels at 150 dpi**. 422 frontend tests, lint and tsc clean; startup JS 162.99 kB gzip (main 130.55 + `baseApi` 32.45; master 161.94); CSS 31.26 kB / 6.54 kB gzip in one file (master 29.38 + 1.52 kB print chunk, 6.16 + 0.62 kB gzip). Review (one sub-agent, both axes): no hard violation, nothing that could change the print; the two radios are now mapped like AreaForm's. **Owed:** a real print on paper compared with a sign on the wall, and the owner's eye check of the on-screen part at 1280 px; then push and PR on the owner's OK.
+- **Next:** #82, the contract step (preflight on, old CSS deleted, final eye check and UX pass). Before that, the owner's eye checks above, and the follow-ups they ask for.
 
 **Read first:**
 - `design-system/facility/MASTER.md`: tokens, the shared component table, the pre-delivery check.

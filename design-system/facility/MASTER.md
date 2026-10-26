@@ -57,6 +57,24 @@ Tokens `--color-<kind>-bg`, `--color-<kind>-border`, `--color-<kind>-text` (util
 | Warn | `#FFF4E5` | `#E3B776` | `#7A4300` |
 | Error | `#FDECEA` | `#E2A39B` | `#8A1C12` |
 
+### The printed sign (D5)
+
+The QR sign keeps the layout it had before the move, so signs already on the walls and new ones match (facility-0087 rule 8). Its tokens are for the sign and its sheet only (the sheet also shows on screen before printing), never for another page; its sizes are in points and go below the 13 px floor on purpose. Its measures (A4 sheet, 8 mm margin, 36 mm or 80 mm QR) are millimetre arbitrary values with a comment, and `@page` sits in `index.css`.
+
+| Token (`@theme`) | Value | Use |
+|---|---|---|
+| `--color-sign-ink` | `#000000` | The sign's words and the QR |
+| `--color-sign-soft` | `#333333` | The URL line |
+| `--color-sign-cut` | `#9AA3A4` | The dashed cut line |
+| `--color-sign-paper` | `#FFFFFF` | The sheet and the QR's light modules |
+| `--text-sign-url` | 6.5 pt | The URL line |
+| `--text-sign-meta` | 9 pt | Place, hint, sign code |
+| `--text-sign-label` | 11 pt | The sign's type, "สแกนด้วยกล้องมือถือ" |
+| `--text-sign-name` | 16 pt | The name on a small sign |
+| `--text-sign-name-big` | 24 pt | The name on an A5 sign |
+
+All with line height 1.25.
+
 ## Type
 
 - Font: the device's own, `system-ui, sans-serif` (facility-0072). Never load a web font.
