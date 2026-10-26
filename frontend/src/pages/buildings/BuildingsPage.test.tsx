@@ -142,4 +142,52 @@ describe('BuildingsPage (facility-0090)', () => {
     expect(sent(server, 'POST', '/api/admin/buildings/2/deactivate')).toHaveLength(1);
     expect(sent(server, 'POST', '/api/admin/buildings/3/activate')).toHaveLength(1);
   });
+
+  it("shows the server's refusal to turn a building off, and keeps the Drawer open", async () => {
+    const message = 'ปิดตึก B ไม่ได้ ยังมีพื้นที่ที่เปิดอยู่ 1 แห่ง ปิดหรือย้ายออกก่อน';
+    serve({ 'POST /api/admin/buildings/2/deactivate': () => ({ status: 409, body: { message } }) });
+    const { user } = await renderApp('/admin/buildings');
+
+    const drawer = await openEditor(user, b);
+    await user.click(within(drawer).getByRole('button', { name: 'ปิดใช้งานตึกนี้' }));
+
+    expect(await within(drawer).findByText(message)).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: `แก้ไขตึก · ${b.code} ${b.name}` })).toBeInTheDocument();
+    expect(screen.queryByText('ปิดใช้งานตึก B แล้ว')).not.toBeInTheDocument();
+  });
+
+  it('says so when there are no buildings yet', async () => {
+    serve({ 'GET /api/admin/buildings/all': () => ({ status: 200, body: [] }) });
+    await renderApp('/admin/buildings');
+
+    expect(await screen.findByText('ยังไม่มีตึก กด "+ เพิ่มตึก" เพื่อเริ่ม')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'ตึกทั้งหมด (0)' })).toBeInTheDocument();
+  });
+
+  it("shows the server's answer when the list cannot be loaded", async () => {
+    serve({ 'GET /api/admin/buildings/all': () => ({ status: 500, body: { message: 'โหลดรายการตึกไม่ได้' } }) });
+    await renderApp('/admin/buildings');
+
+    expect(await screen.findByText('โหลดรายการตึกไม่ได้')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('says it is loading until the first answer comes', async () => {
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    serve({
+      'GET /api/admin/buildings/all': async () => {
+        await answered;
+        return { status: 200, body: managedBuildings };
+      },
+    });
+    await renderApp('/admin/buildings');
+
+    expect(await screen.findByText('กำลังโหลดตึก...')).toBeInTheDocument();
+    answer();
+    expect(await screen.findByRole('row', { name: /^A / })).toBeInTheDocument();
+    expect(screen.queryByText('กำลังโหลดตึก...')).not.toBeInTheDocument();
+  });
 });
