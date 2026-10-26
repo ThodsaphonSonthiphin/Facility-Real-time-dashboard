@@ -35,6 +35,10 @@ public static class InspectionSummary
     /// fix) can never be inspected, because a Supervisor inspects only in the clock's shift. It is left out of the beat's
     /// Submitted and SubmittedInspected, and a NotInspected round whose latest submission is such work is left out of
     /// NotInspected. PointsInspected, Inspections, Reworks and GpsFlagged are unchanged; the export still lists the round.
+    /// Owner 2026-10-26: a submission sent over by a later one in the same round before anyone inspected it can never be
+    /// inspected either, because the Supervisor is offered only the round's latest submission (InspectionRules.Find). It is
+    /// left out of Submitted too, so a Cleaner's repeat does not lower the Supervisor's share. One that was inspected stays
+    /// (a rework's first submission), and the export still lists every submission.
     /// </summary>
     public static IReadOnlyList<SupervisorTally> Tally(
         IReadOnlyList<SummarySupervisor> supervisors,
@@ -46,6 +50,12 @@ public static class InspectionSummary
         var pointOf = points.ToDictionary(p => p.Id);
         var inspectedIds = inspections.Select(i => i.ScanRecordId).ToHashSet();
         static bool AfterShift(RoundSubmission s) => s.SubmittedAtUtc > ShiftCalendar.EndUtc(s.Slot);
+        static bool SameRound(RoundSubmission a, RoundSubmission b) =>
+            a.PointId == b.PointId && a.Slot == b.Slot && a.RoundStart == b.RoundStart && a.RoundEnd == b.RoundEnd;
+        // the same order InspectionRules.Find uses to pick the latest: by time, then by id
+        static bool SentOver(RoundSubmission s, RoundSubmission later) =>
+            SameRound(s, later) && (later.SubmittedAtUtc > s.SubmittedAtUtc || (later.SubmittedAtUtc == s.SubmittedAtUtc && later.Id > s.Id));
+        bool Superseded(RoundSubmission s) => !inspectedIds.Contains(s.Id) && submissions.Any(other => SentOver(s, other));
         bool LatestAfterShift(FinishedRound r) =>
             submissions
                 .Where(s => s.PointId == r.PointId && s.Slot == r.Slot && s.RoundStart == r.RoundStart && s.RoundEnd == r.RoundEnd)
@@ -62,7 +72,7 @@ public static class InspectionSummary
                 .Select(p => p.Id)
                 .ToHashSet();
             var own = inspections.Where(i => i.SupervisorId == supervisor.Id).ToList();
-            var beatSubmissions = submissions.Where(s => InBeat(s.PointId, s.Slot.Shift) && !AfterShift(s)).ToList();
+            var beatSubmissions = submissions.Where(s => InBeat(s.PointId, s.Slot.Shift) && !AfterShift(s) && !Superseded(s)).ToList();
 
             return new SupervisorTally(
                 supervisor.Id,
