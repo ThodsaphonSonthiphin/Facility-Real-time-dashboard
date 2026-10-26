@@ -630,7 +630,7 @@ The 16 planning decisions are at the top of the plan-5 file (`docs/superpowers/p
 5. Changing a phone or resetting a password revokes all refresh tokens; the log row has no before or after; the same value again changes and logs nothing.
 6. An Admin may reset their own password but cannot deactivate themselves.
 7. On creation a Cleaner's Area is optional, a Supervisor needs building and shift, an Admin has neither.
-8. Input limits: employee ID 1–20 characters, username 3–100, temporary password 8–100, display name 1–150, phone exactly 10 Arabic digits starting with 0.
+8. Input limits: employee ID 1–20 characters, username 3–100, temporary password 15–100 (Admin only, see facility-0089), display name 1–150, phone exactly 10 Arabic digits starting with 0.
 9. Fields that do not belong to the role must be omitted (400 otherwise).
 10. The export is `POST /api/admin/export`, returns the `.xlsx`, covers 1–31 shift dates, one building or all, sets `Attendance` and `Submissions`.
 11. No inspection sheet yet; the Supervisor plan adds it.
