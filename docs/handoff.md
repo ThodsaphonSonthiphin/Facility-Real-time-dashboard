@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-26 (**#79 merged: PR #95 merged to master on the owner's explicit OK, merge commit `9d1d1f0`; the D4 / D10 / M17 eye checks below were NOT finished and are still owed**; earlier: #70–#78 merged, last PR #93; D4 reworked after the owner's test-1 feedback; **the owner stopped mid-check and asked for the remaining checks to be written down — see `### Waiting on the owner's eye check` under `## Next: Tailwind migration`**; then `implement` #80; 2026-10-25 wrote `docs/code-map.md` — the file-level map for the owner)
+Last updated: 2026-10-26 (**three PRs merged to master on the owner's explicit "handoff commit push PR merge": #96 D6–D9 in the new look (`edf2418`), #98 D7 leaves out superseded submissions and renames its column to "จำนวนครั้งที่ตรวจ" (`07319cd`), #97 My Work updates live for Cleaners (`d4e8fde`). The eye checks of #79 (D4, D10, M17), #80 (D6–D9) and #97 (two phones) were NOT finished and are still owed — see `### Waiting on the owner's eye check`**; earlier: #70–#79 merged; 2026-10-25 wrote `docs/code-map.md`, the file-level map for the owner)
 
 ## Project
 
@@ -231,7 +231,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 The owner ended the session before the check was finished: "เรายังตรวจกันไมครบ ช่วยจดไว้หน่อย" — and will open a new session on 2026-10-25 to finish it. Nothing is blocking; these three are only **checks owed**, not known bugs.
 
-**State at the end of 2026-10-24.** Branch `feat/admin-setup-new-look`, PR [#95](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/pull/95) **merged to master on 2026-10-26 (`9d1d1f0`) on the owner's explicit OK, with the eye checks below still owed** — fix anything they find in a new branch. Last commit `4f43345`; 419 frontend tests pass, lint and `tsc -b` clean; main JS 132.02 kB gzip, CSS 28.71 / 6.04 kB gzip. The working tree carries only the two deliberate leftovers (`M .gitignore`, untracked root `package-lock.json`) — never commit either. The API, `facility_ui_test` and `wwwroot` may still be running; a quick tunnel from the day before will be dead, so start a new one and send its URL.
+**State at the end of 2026-10-24.** Branch `feat/admin-setup-new-look`, PR [#95](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/pull/95) **merged to master on 2026-10-26 (`9d1d1f0`) on the owner's explicit OK, with the eye checks below still owed** — fix anything they find in a new branch. Last commit `4f43345`; 419 frontend tests pass, lint and `tsc -b` clean; main JS 132.02 kB gzip, CSS 28.71 / 6.04 kB gzip. The working tree carries only the two deliberate leftovers (`M .gitignore`, untracked root `package-lock.json`) — never commit either. The API, `facility_ui_test` and `wwwroot` may still be running; a quick tunnel from the day before will be dead, so start a new one and send its URL. **Update 2026-10-26 (later): #96, #97 and #98 are merged too (see the log below); the same three eye checks, plus D6–D9 and the live My Work on two phones, are still owed. Fixes go in a new branch.**
 
 **1. D4 — จัดการพื้นที่และป้าย** (the bulk of the round; `/admin/areas/1`)
 - The header: name, shifts/Cleaner line on the left; `[แก้ไขพื้นที่] [พิมพ์ป้าย]` on the right.
@@ -258,8 +258,8 @@ The owner ended the session before the check was finished: "เรายัง�
 ### Start here (new session, 2026-10-22)
 
 **Where it stands.** Spec #68 is split into tickets #70–#82, which are sub-issues of #68 with GitHub blocked-by edges.
-- **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A), #78 (D2 + D3). Master is `7b1054b`; 416 frontend tests pass.
-- **Next:** #80 D6–D9 is on branch `feat/admin-reports-new-look` (PR open, eye check owed; #79 D4 + D10 + M17 is merged, PR #95), then #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
+- **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A), #78 (D2 + D3), #79 (D4 + D10 + M17, PR #95), #80 (D6–D9, PR #96). Master is `d4e8fde` (the merge of PR #97) plus this note; 422 frontend tests pass.
+- **Next:** #81 D5 print (depends only on #71, which is merged), then #82, the contract step (preflight on, old CSS deleted, final eye check and UX pass). Before that, the owner's eye checks above, and the follow-ups they ask for.
 
 **Read first:**
 - `design-system/facility/MASTER.md`: tokens, the shared component table, the pre-delivery check.
@@ -589,6 +589,9 @@ Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `
   - **Tests:** API 544 passed + 5 skipped (new `CleanerLiveTests`: both shifts' Cleaners of the Area get it, another Area's does not, a covering Cleaner does, a cancelled cover and a deactivated Cleaner do not; `TestData.AddCleanerAsync` takes an optional phone). Two old tests that pinned "Cleaners get nothing" now use AR02's Cleaner as the one who must get nothing. Frontend 422 passed: four tests that counted `/api/my-work` calls now wait for the hub's catch-up call first (a start always asks once more), and three live tests were added. Unit 302 passed.
   - **Docs:** facility-0052 and 0058 each have a 2026-10-26 amendment; `docs/code-map.md` corrected (its open question 3 is closed).
   - **Not done:** the owner's eye check (log in as a Cleaner on one phone and a Supervisor on another, mark ไม่สะอาด, watch the Cleaner's page change) and the PR.
+
+- 2026-10-26 · **Merged, in this order, on the owner's "handoff commit push PR merge ให้เรียบร้อย":** #96 (`edf2418`), then #98 retargeted from `feat/admin-reports-new-look` to master (`07319cd`), then #97 (`d4e8fde`) after master was merged into its branch to resolve the one conflict, this file (both sides' entries kept). Every suite passed on the combined code before #97 merged: frontend 422, unit 306, API 544 + 5 skipped. GitGuardian passed on all three. **The eye checks the owner has not finished are now checks on master, not on a branch:** D4 / D10 (M17 on a phone), D6–D9 at 1280 px (the deactivate popup, the shut notes, the renamed column), and My Work live on two phones. Anything they find goes in a new branch.
+  - **Open questions kept for the owner:** the other Admin and phone pages still carry always-visible explanations (D1–D4, D10, M17); I offered to list them page by page so the owner picks which to shut behind `MoreInfo`. The D6 and D8 answers are still boxes in the page, not Toasts.
 
 ## Owner's rules (still in force)
 
