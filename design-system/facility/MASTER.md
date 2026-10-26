@@ -5,6 +5,7 @@ Read this before building or moving any page. A page file in `pages/` (`phone.md
 - Decisions: facility-0086 (Tailwind), facility-0087 (the new look), facility-0088 (icons), facility-0072 (device font).
 - **The `@theme` block of `frontend/src/index.css` is the source of the token values.** The values below are the ones agreed in the grill (2026-10-22), shown so the rules can be read. If `index.css` and this file disagree, `index.css` is right: fix this file in the same change.
 - Code rules (Tailwind usage, class names, tests) are in `docs/agents/frontend-standards.md`.
+- `index.css` is the only CSS file, and Tailwind's preflight is on (#82): the browser's own heading sizes, list bullets, link colours and button faces are gone, so every element's look comes from its utilities.
 
 The goal of the look: **easy to read and easy to tap at the sign.** A Cleaner stands alone at a QR sign, one hand on the phone, sometimes outdoors. Every choice below serves that before it serves looks.
 
@@ -127,7 +128,7 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 | `Panel`, `Facts`, `Splash` | A boxed group, label–value pairs, the waiting line |
 | `AppLayout`, `AdminNav`, `LiveBadge`, `StatusScreen`, `CrashScreen` | The shell, bar and menu, the live badge, full-page messages |
 
-Every button-styled element gets the press feedback of `tapFeedback` (owner, 2026-10-21) through `data-tap`. Components set no body text size: each moved page sets `text-base` (phone) or `text-sm` (Admin) on its root, and the components inherit it.
+Every button-styled element gets the press feedback of `tapFeedback` (owner, 2026-10-21) through `data-tap`. Components set no body text size: each page sets `text-base` (phone) or `text-sm` (Admin) on its root, and the components inherit it.
 
 Where an action sits follows **what it acts on**, not its verb (owner, 2026-10-24). `+ เพิ่มพื้นที่` acts on the list, so it stays at the list's top and opens a full page — creating has six fields and a warning that the code cannot be changed later. `แก้ไขพื้นที่` acts on the open Area, so it sits in that Area's header and opens in the Drawer. The two are never grouped in one row.
 

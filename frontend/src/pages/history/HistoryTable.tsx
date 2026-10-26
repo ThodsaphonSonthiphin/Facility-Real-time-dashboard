@@ -53,7 +53,7 @@ function Changes({ entry }: { entry: AuditEntry }) {
     return <>–</>;
   }
   return (
-    <ul className="m-0 pl-4.5">
+    <ul className="m-0 list-disc pl-4.5">
       {lines.map((line) => (
         <li key={line}>{line}</li>
       ))}

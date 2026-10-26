@@ -13,7 +13,7 @@ afterEach(() => {
 
 function button(attributes: Record<string, string> = {}): HTMLButtonElement {
   const element = document.createElement('button');
-  element.className = 'app-button';
+  element.dataset.tap = '';
   element.textContent = 'แสดง';
   for (const [name, value] of Object.entries(attributes)) {
     element.setAttribute(name, value);
@@ -38,7 +38,7 @@ describe('tapFeedback', () => {
   it('a tap on the text inside a button-styled link counts too', () => {
     uninstall = installTapFeedback(document);
     const link = document.createElement('a');
-    link.className = 'app-button';
+    link.dataset.tap = '';
     link.href = '/admin/export';
     const label = document.createElement('span');
     label.textContent = 'ส่งออก Excel';

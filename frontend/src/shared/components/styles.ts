@@ -104,8 +104,14 @@ export const tabClass =
   'aria-selected:border-primary aria-selected:text-primary ' +
   `${focusRing}`;
 
-/** A text link (the base layer still colours `a` with the old look until #82). */
+/** A text link. */
 export const linkClass = `text-primary underline hover:text-primary-strong ${focusRing}`;
+
+/**
+ * A text link inside a sentence on a phone page: its tap area is 48 px high, but its words and the lines around them stay
+ * where they were (the negative margin cancels the padding).
+ */
+export const inlineLinkClass = `${linkClass} inline-block py-4 -my-4`;
 
 export type NoteTone = 'info' | 'warn' | 'error';
 

@@ -4,7 +4,7 @@ import { buildCommit } from '../../shared/version/buildInfo';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
-import { linkClass } from '../../shared/components/styles';
+import { inlineLinkClass } from '../../shared/components/styles';
 import { useLogin } from './useLogin';
 
 /** Wireframe D0: the Admin logs in with username + password (facility-0054). */
@@ -62,7 +62,7 @@ export function AdminLoginPage() {
         <footer className="flex flex-col gap-1 text-center text-xs text-muted">
           <span>
             แม่บ้านและหัวหน้าเข้าด้วยรหัสพนักงาน + เบอร์โทรบนมือถือ ·{' '}
-            <Link className={linkClass} to="/login" state={location.state}>
+            <Link className={inlineLinkClass} to="/login" state={location.state}>
               หน้าเข้าสู่ระบบของพนักงาน
             </Link>
           </span>
