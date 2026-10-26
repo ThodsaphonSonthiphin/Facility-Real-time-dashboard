@@ -74,8 +74,15 @@ public static class AdminBuildingEndpoints
         }
         catch (DbUpdateException)
         {
-            // The unique index on the code: another Admin added the same code at the same moment
-            return Conflict(BuildingRules.CodeTaken);
+            // The unique index on the code: another Admin added the same code at the same moment. Any other failed
+            // save (a deadlock, a lock timeout, a dropped connection) is not "code taken", so it is rethrown.
+            db.ChangeTracker.Clear();
+            if (await db.Buildings.AnyAsync(b => b.Code == code))
+            {
+                return Conflict(BuildingRules.CodeTaken);
+            }
+
+            throw;
         }
 
         return Results.Created($"/api/admin/buildings/{building.Id}", await LoadOneAsync(db, building.Id));

@@ -149,9 +149,13 @@ public class BuildingAdminEndpointTests
         var saved = (await response.Content.ReadFromJsonAsync<ManagedBuildingModel>())!;
         Assert.Equal(("A", "อาคารผลิต 1"), (saved.Code, saved.Name));
         var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
-        Assert.Equal(("BUILDING_UPDATE", "แก้ตึก A อาคารผลิต 1"), (entry.Action, entry.Summary));
-        Assert.Equal("ตึก A", JsonDocument.Parse(entry.BeforeJson!).RootElement.GetProperty("Name").GetString());
-        Assert.Equal("อาคารผลิต 1", JsonDocument.Parse(entry.AfterJson!).RootElement.GetProperty("Name").GetString());
+        Assert.Equal(
+            ("BUILDING_UPDATE", "buildings", (long?)a, "แก้ตึก A อาคารผลิต 1"),
+            (entry.Action, entry.EntityType, entry.EntityId, entry.Summary));
+        var before = JsonDocument.Parse(entry.BeforeJson!).RootElement;
+        var after = JsonDocument.Parse(entry.AfterJson!).RootElement;
+        Assert.Equal(("A", "ตึก A"), (before.GetProperty("Code").GetString(), before.GetProperty("Name").GetString()));
+        Assert.Equal(("A", "อาคารผลิต 1"), (after.GetProperty("Code").GetString(), after.GetProperty("Name").GetString()));
     }
 
     [Fact]
@@ -246,16 +250,24 @@ public class BuildingAdminEndpointTests
         var offAgain = await admin.PostAsync($"{Buildings}/{b}/deactivate", null);
         var whileOff = (await admin.GetFromJsonAsync<List<BuildingModel>>(Buildings))!;
         var on = await admin.PostAsync($"{Buildings}/{b}/activate", null);
+        var onAgain = await admin.PostAsync($"{Buildings}/{b}/activate", null);
         var afterOn = (await admin.GetFromJsonAsync<List<BuildingModel>>(Buildings))!;
 
         Assert.Equal(HttpStatusCode.OK, off.StatusCode);
         Assert.Equal(HttpStatusCode.OK, offAgain.StatusCode);
         Assert.DoesNotContain("B", whileOff.Select(x => x.Code));
         Assert.Equal(HttpStatusCode.OK, on.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, onAgain.StatusCode);
         Assert.True((await on.Content.ReadFromJsonAsync<ManagedBuildingModel>())!.IsActive);
         Assert.Contains("B", afterOn.Select(x => x.Code));
         var audit = await AdminSetupApi.AuditAsync(factory);
         Assert.Equal(new[] { "BUILDING_DEACTIVATE", "BUILDING_ACTIVATE" }, audit.Select(x => x.Action));
         Assert.Equal(new[] { "ปิดใช้งานตึก B", "เปิดใช้งานตึก B" }, audit.Select(x => x.Summary));
+        Assert.All(audit, x => Assert.Equal(("buildings", (long?)b), (x.EntityType, x.EntityId)));
+        Assert.Equal(
+            new[] { (true, false), (false, true) },
+            audit.Select(x => (IsActiveIn(x.BeforeJson), IsActiveIn(x.AfterJson))));
     }
+
+    private static bool IsActiveIn(string? json) => JsonDocument.Parse(json!).RootElement.GetProperty("IsActive").GetBoolean();
 }
