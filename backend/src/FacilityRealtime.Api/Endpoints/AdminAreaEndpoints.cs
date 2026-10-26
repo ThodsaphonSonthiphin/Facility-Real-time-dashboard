@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
+using FacilityRealtime.Application.Buildings;
 using FacilityRealtime.Application.Signs;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
@@ -181,6 +182,13 @@ public static class AdminAreaEndpoints
         if (area is null)
         {
             return AreaNotFound();
+        }
+
+        // facility-0090 decision 4: an Area of a building that is off stays off
+        if (active && !area.IsActive
+            && await db.Buildings.Where(b => b.Id == area.BuildingId && !b.IsActive).Select(b => b.Code).FirstOrDefaultAsync() is { } offCode)
+        {
+            return Conflict(BuildingRules.OffForArea(offCode));
         }
 
         if (area.IsActive != active)

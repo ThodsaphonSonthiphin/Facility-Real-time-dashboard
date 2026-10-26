@@ -270,4 +270,52 @@ public class BuildingAdminEndpointTests
     }
 
     private static bool IsActiveIn(string? json) => JsonDocument.Parse(json!).RootElement.GetProperty("IsActive").GetBoolean();
+
+    [Fact]
+    public async Task An_area_of_an_off_building_stays_off_until_it_moves_or_the_building_is_on()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var a = await AdminSetupApi.BuildingIdAsync(factory);
+        var b = await TestData.AddBuildingAsync(factory, "B");
+        var area = await TestData.AddAreaAsync(factory, "AR03", "B");
+        await admin.PostAsync($"/api/admin/areas/{area}/deactivate", null);
+        await admin.PostAsync($"{Buildings}/{b}/deactivate", null);
+
+        var refused = await admin.PostAsync($"/api/admin/areas/{area}/activate", null);
+        var moved = await admin.PutAsJsonAsync(
+            $"/api/admin/areas/{area}",
+            new { name = "Area AR03", buildingId = a, shiftPattern = "DayAndNight", dayCleanerId = (int?)null, nightCleanerId = (int?)null });
+        var on = await admin.PostAsync($"/api/admin/areas/{area}/activate", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Equal("ตึก B ปิดใช้งานอยู่ เปิดตึกก่อน หรือย้ายพื้นที่ไปตึกอื่น", await AdminSetupApi.MessageAsync(refused));
+        Assert.Equal(HttpStatusCode.OK, moved.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, on.StatusCode);
+        Assert.True((await on.Content.ReadFromJsonAsync<AreaDetailModel>())!.Area.IsActive);
+        // the refused turn-on wrote nothing; the move is an AREA_UPDATE (its building changed)
+        Assert.Equal(
+            new[] { "AREA_DEACTIVATE", "BUILDING_DEACTIVATE", "AREA_UPDATE", "AREA_ACTIVATE" },
+            (await AdminSetupApi.AuditAsync(factory)).Select(x => x.Action));
+    }
+
+    [Fact]
+    public async Task A_supervisor_of_an_off_building_stays_off_until_the_building_is_on()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var b = await TestData.AddBuildingAsync(factory, "B");
+        var supervisor = await TestData.AddSupervisorAsync(factory, "S3001", "0830000001", "B", Shift.Day);
+        await admin.PostAsync($"{AccountApi.Path}/{supervisor}/deactivate", null);
+        await admin.PostAsync($"{Buildings}/{b}/deactivate", null);
+
+        var refused = await admin.PostAsync($"{AccountApi.Path}/{supervisor}/activate", null);
+        await admin.PostAsync($"{Buildings}/{b}/activate", null);
+        var on = await admin.PostAsync($"{AccountApi.Path}/{supervisor}/activate", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Equal("ตึก B ปิดใช้งานอยู่ เปิดตึกก่อน หรือย้ายหัวหน้าไปตึกอื่น", await AdminSetupApi.MessageAsync(refused));
+        Assert.Equal(HttpStatusCode.OK, on.StatusCode);
+        Assert.True((await AccountApi.ReadAsync(on)).IsActive);
+    }
 }
