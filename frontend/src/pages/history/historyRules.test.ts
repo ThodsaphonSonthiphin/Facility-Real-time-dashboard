@@ -7,6 +7,7 @@ describe('historyRules (D9)', () => {
     expect(actionText('ATTENDANCE_EDIT')).toBe('แก้เวลาลงงาน');
     expect(actionText('ACCOUNT_PHONE')).toBe('แก้เบอร์โทร');
     expect(actionText('SIGN_LOCATION')).toBe('เก็บพิกัดป้าย');
+    expect(actionText('BUILDING_DEACTIVATE')).toBe('ปิดใช้ตึก');
     expect(actionText('SOMETHING_NEW')).toBe('SOMETHING_NEW');
     expect(actionText('constructor')).toBe('constructor');
   });

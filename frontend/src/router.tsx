@@ -92,6 +92,8 @@ export const routes: RouteObject[] = [
                 path: 'admin/areas/:areaId/edit',
                 lazy: async () => ({ Component: (await import('./pages/areas')).AreaFormPage }),
               },
+              // facility-0090: the buildings, off ones too; add and edit in the Drawer
+              { path: 'admin/buildings', lazy: async () => ({ Component: (await import('./pages/buildings')).BuildingsPage }) },
               // facility-0021 item 6, wireframe D5: ?area=<id>[&sign=<id>] or ?area=all
               { path: 'admin/print', lazy: async () => ({ Component: (await import('./pages/print-signs')).PrintSignsPage }) },
               // facility-0020, 0056, wireframe D6
