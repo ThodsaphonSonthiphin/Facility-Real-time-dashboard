@@ -1,5 +1,7 @@
 import type { Shift } from '../../shared/api/types';
+import { FieldGroup } from '../../shared/components/Field';
 import { shiftLabel } from '../../shared/utils/labels';
+import { radioClass, radioLabelClass } from './accountStyles';
 
 interface ShiftChoiceProps {
   /** The radio group's name, unique per form. */
@@ -14,24 +16,26 @@ interface ShiftChoiceProps {
 /** D6's "กะ": a held slot or a night in a day-only Area cannot be picked, and the page says why. */
 export function ShiftChoice({ name, value, blockOf, disabled, onChange }: ShiftChoiceProps) {
   return (
-    <fieldset className="accounts-choice" disabled={disabled}>
-      <legend>กะ</legend>
+    <FieldGroup legend="กะ" disabled={disabled}>
       {(['Day', 'Night'] as const).map((shift) => {
         const block = blockOf(shift);
         return (
-          <label key={shift}>
+          <label key={shift} className={radioLabelClass}>
             <input
               type="radio"
+              className={radioClass}
               name={name}
               disabled={block !== null}
               checked={value === shift}
               onChange={() => onChange(shift)}
             />
-            {` ${shiftLabel[shift]}`}
-            {block && <span className="app-muted">{` (${block})`}</span>}
+            <span>
+              {shiftLabel[shift]}
+              {block && <span className="text-muted">{` (${block})`}</span>}
+            </span>
           </label>
         );
       })}
-    </fieldset>
+    </FieldGroup>
   );
 }

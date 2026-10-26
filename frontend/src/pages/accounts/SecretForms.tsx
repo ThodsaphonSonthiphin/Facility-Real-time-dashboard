@@ -1,4 +1,8 @@
 import { useState, type FormEvent } from 'react';
+import { Facts } from '../../shared/components/Boxes';
+import { Button } from '../../shared/components/Button';
+import { Field, TextInput } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import {
   accountRoleLabel,
@@ -9,7 +13,10 @@ import {
   PHONE_PROBLEM,
   placeText,
 } from './accountRules';
+import { formClass, formTitleClass } from './accountStyles';
 import { useChangePhoneMutation, useResetPasswordMutation, type Account } from './accountsApi';
+
+const whoClass = 'text-lg font-bold';
 
 interface SecretFormProps {
   account: Account;
@@ -46,49 +53,46 @@ export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
   };
 
   return (
-    <form className="accounts-form app-panel" aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
-      <h2 id={titleId}>{`แก้เบอร์โทร · ${account.displayName}`}</h2>
-      <dl className="app-facts accounts-who">
-        <dt>ชื่อ</dt>
-        <dd>{account.displayName}</dd>
-        <dt>รหัสพนักงาน</dt>
-        <dd>{account.loginName}</dd>
-        <dt>บทบาท</dt>
-        <dd>{accountRoleLabel[account.role]}</dd>
-        <dt>ประจำที่</dt>
-        <dd>{placeText(account)}</dd>
-      </dl>
-      <div className="app-field">
-        <label htmlFor={`${titleId}-input`}>เบอร์โทรที่คนนี้ใช้ตอนนี้</label>
-        <input
-          id={`${titleId}-input`}
+    <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
+      <h2 id={titleId} className={formTitleClass}>{`แก้เบอร์โทร · ${account.displayName}`}</h2>
+      {/* facility-0081: who the form is for, large enough to catch the wrong row */}
+      <Facts
+        items={[
+          {
+            label: 'ชื่อ',
+            value: <span className={whoClass}>{account.displayName}</span>,
+          },
+          {
+            label: 'รหัสพนักงาน',
+            value: <span className={whoClass}>{account.loginName}</span>,
+          },
+          {
+            label: 'บทบาท',
+            value: <span className={whoClass}>{accountRoleLabel[account.role]}</span>,
+          },
+          {
+            label: 'ประจำที่',
+            value: <span className={whoClass}>{placeText(account)}</span>,
+          },
+        ]}
+      />
+      <Field
+        label="เบอร์โทรที่คนนี้ใช้ตอนนี้"
+        help="ไม่ต้องรู้เบอร์เดิม ใส่เบอร์ที่คนนี้ใช้ตอนนี้แล้วกดบันทึก · เบอร์ใช้แทนรหัสผ่าน ระบบจึงเก็บแบบที่เปิดดูไม่ได้ · บันทึกแล้วทุกเครื่องของคนนี้ต้องเข้าสู่ระบบใหม่ · ถ้าใส่เบอร์เดิม ระบบไม่เปลี่ยนอะไรและเครื่องเดิมยังใช้งานได้"
+      >
+        <TextInput
+          size="desk"
           type="tel"
           inputMode="numeric"
-          className="app-input"
           autoComplete="off"
           maxLength={16}
           value={phone}
           disabled={isLoading}
           onChange={(event) => setPhone(event.target.value)}
         />
-        <span className="app-field__help">
-          ไม่ต้องรู้เบอร์เดิม ใส่เบอร์ที่คนนี้ใช้ตอนนี้แล้วกดบันทึก · เบอร์ใช้แทนรหัสผ่าน ระบบจึงเก็บแบบที่เปิดดูไม่ได้ ·
-          บันทึกแล้วทุกเครื่องของคนนี้ต้องเข้าสู่ระบบใหม่ · ถ้าใส่เบอร์เดิม ระบบไม่เปลี่ยนอะไรและเครื่องเดิมยังใช้งานได้
-        </span>
-      </div>
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
-      <div className="accounts-buttons">
-        <button type="submit" className="app-button app-button--primary" disabled={isLoading}>
-          {isLoading ? 'กำลังบันทึก...' : 'บันทึกเบอร์ใหม่'}
-        </button>
-        <button type="button" className="app-button" onClick={onCancel}>
-          ยกเลิก
-        </button>
-      </div>
+      </Field>
+      {problem && <Note tone="error">{problem}</Note>}
+      <FormButtons sending={isLoading} label="บันทึกเบอร์ใหม่" onCancel={onCancel} />
     </form>
   );
 }
@@ -120,35 +124,38 @@ export function PasswordForm({ account, isSelf, onDone, onCancel }: SecretFormPr
   };
 
   return (
-    <form className="accounts-form app-panel" aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
-      <h2 id={titleId}>{`รีเซ็ตรหัสผ่าน · ${account.displayName}`}</h2>
-      <div className="app-field">
-        <label htmlFor={`${titleId}-input`}>รหัสผ่านชั่วคราวใหม่</label>
-        <input
-          id={`${titleId}-input`}
+    <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
+      <h2 id={titleId} className={formTitleClass}>{`รีเซ็ตรหัสผ่าน · ${account.displayName}`}</h2>
+      <Field
+        label="รหัสผ่านชั่วคราวใหม่"
+        help="8–100 ตัวอักษร บอกเองด้วยวาจาหรือกระดาษ · ถ้าใส่รหัสเดิม ระบบไม่เปลี่ยนอะไร"
+      >
+        <TextInput
+          size="desk"
           type="password"
-          className="app-input"
           autoComplete="new-password"
           maxLength={MAX_PASSWORD}
           value={password}
           disabled={isLoading}
           onChange={(event) => setPassword(event.target.value)}
         />
-        <span className="app-field__help">8–100 ตัวอักษร บอกเองด้วยวาจาหรือกระดาษ · ถ้าใส่รหัสเดิม ระบบไม่เปลี่ยนอะไร</span>
-      </div>
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
-      <div className="accounts-buttons">
-        <button type="submit" className="app-button app-button--primary" disabled={isLoading}>
-          {isLoading ? 'กำลังบันทึก...' : 'บันทึกรหัสผ่านใหม่'}
-        </button>
-        <button type="button" className="app-button" onClick={onCancel}>
-          ยกเลิก
-        </button>
-      </div>
+      </Field>
+      {problem && <Note tone="error">{problem}</Note>}
+      <FormButtons sending={isLoading} label="บันทึกรหัสผ่านใหม่" onCancel={onCancel} />
     </form>
+  );
+}
+
+/** บันทึก… and ยกเลิก under the phone and password forms. */
+function FormButtons({ sending, label, onCancel }: { sending: boolean; label: string; onCancel: () => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button type="submit" variant="primary" size="desk" disabled={sending}>
+        {sending ? 'กำลังบันทึก...' : label}
+      </Button>
+      <Button size="desk" onClick={onCancel}>
+        ยกเลิก
+      </Button>
+    </div>
   );
 }

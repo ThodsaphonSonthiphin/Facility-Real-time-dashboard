@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import type { AreaSummary, Building } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
+import { Field, Select, TextInput } from '../../shared/components/Field';
+import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import {
   accountRoleLabel,
@@ -12,6 +15,7 @@ import {
   type EditDraft,
 } from './accountRules';
 import { useUpdateAccountMutation, type Account } from './accountsApi';
+import { formClass, formTitleClass } from './accountStyles';
 import { ShiftChoice } from './ShiftChoice';
 
 interface EditAccountFormProps {
@@ -73,25 +77,22 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
   };
 
   return (
-    <form className="accounts-form app-panel" aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
-      <h2 id={titleId}>{`แก้ไขบัญชี · ${account.displayName}`}</h2>
-      <p className="app-muted">{`${accountRoleLabel[account.role]} · ${account.loginName} (บทบาทและรหัสแก้ไม่ได้)`}</p>
-      <label className="app-field">
-        ชื่อที่แสดง
-        <input
-          className="app-input"
+    <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
+      <h2 id={titleId} className={formTitleClass}>{`แก้ไขบัญชี · ${account.displayName}`}</h2>
+      <p className="text-muted">{`${accountRoleLabel[account.role]} · ${account.loginName} (บทบาทและรหัสแก้ไม่ได้)`}</p>
+      <Field label="ชื่อที่แสดง">
+        <TextInput
+          size="desk"
           maxLength={150}
           value={draft.displayName}
           disabled={isLoading}
           onChange={(event) => set({ displayName: event.target.value })}
         />
-      </label>
+      </Field>
       {account.role === 'Cleaner' && (
-        <div className="app-field">
-          <label htmlFor={`${titleId}-area`}>พื้นที่ประจำ</label>
-          <select
-            id={`${titleId}-area`}
-            className="app-input"
+        <Field label="พื้นที่ประจำ" help={account.isActive ? undefined : 'เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่'}>
+          <Select
+            size="desk"
             value={draft.areaId}
             disabled={isLoading || !account.isActive}
             onChange={(event) => chooseArea(event.target.value)}
@@ -102,16 +103,13 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
                 {areaOptionLabel(option, account.id)}
               </option>
             ))}
-          </select>
-          {!account.isActive && <span className="app-field__help">เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่</span>}
-        </div>
+          </Select>
+        </Field>
       )}
       {account.role === 'Supervisor' && (
-        <div className="app-field">
-          <label htmlFor={`${titleId}-building`}>ตึกที่ประจำ</label>
-          <select
-            id={`${titleId}-building`}
-            className="app-input"
+        <Field label="ตึกที่ประจำ">
+          <Select
+            size="desk"
             value={draft.buildingId}
             disabled={isLoading}
             onChange={(event) => chooseBuilding(event.target.value)}
@@ -122,8 +120,8 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
                 {building.name}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
       )}
       {account.role !== 'Admin' && (
         <ShiftChoice
@@ -134,18 +132,14 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
           onChange={(shift) => set({ shift })}
         />
       )}
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
-      <div className="accounts-buttons">
-        <button type="submit" className="app-button app-button--primary" disabled={isLoading}>
+      {problem && <Note tone="error">{problem}</Note>}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" variant="primary" size="desk" disabled={isLoading}>
           {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
-        </button>
-        <button type="button" className="app-button" onClick={onCancel}>
+        </Button>
+        <Button size="desk" onClick={onCancel}>
           ยกเลิก
-        </button>
+        </Button>
       </div>
     </form>
   );
