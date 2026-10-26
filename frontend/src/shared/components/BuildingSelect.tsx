@@ -1,4 +1,4 @@
-import { useGetBuildingsQuery } from '../api/adminSetupApi';
+import { useGetAllBuildingsQuery } from '../api/adminSetupApi';
 import { Field, Select } from './Field';
 
 interface BuildingSelectProps {
@@ -6,9 +6,12 @@ interface BuildingSelectProps {
   onChange: (buildingId: number | undefined) => void;
 }
 
-/** "ตึก" on the report pages (D7, D8): every building, or one by its code (BuildingDto). */
+/**
+ * "ตึก" on the report pages (D7, D8): every building, or one by its code. A building that is off is still listed,
+ * marked, because its old data is still there (facility-0090 decision 5).
+ */
 export function BuildingSelect({ value, onChange }: BuildingSelectProps) {
-  const { data: buildings } = useGetBuildingsQuery();
+  const { data: buildings } = useGetAllBuildingsQuery();
   return (
     <Field label="ตึก">
       <Select
@@ -19,7 +22,7 @@ export function BuildingSelect({ value, onChange }: BuildingSelectProps) {
         <option value="">ทุกตึก</option>
         {(buildings ?? []).map((building) => (
           <option key={building.id} value={building.id}>
-            {building.code}
+            {building.isActive ? building.code : `${building.code} (ปิดใช้งาน)`}
           </option>
         ))}
       </Select>

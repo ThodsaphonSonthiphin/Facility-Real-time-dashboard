@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { addDays } from '../../shared/utils/dateRange';
 import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
-import { adminSession, buildings } from '../../test/adminFixtures';
+import { adminSession, managedBuildings } from '../../test/adminFixtures';
 import { fakeDownload } from '../../test/fakeDownload';
 import { fakeServer, type FakeResponse, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
@@ -20,7 +20,7 @@ function xlsx(name = 'facility_2026-10-09_2026-10-15.xlsx'): FakeResponse {
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
     ...adminSession,
-    'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     'POST /api/admin/export': () => xlsx(),
     ...routes,
   });
@@ -204,6 +204,21 @@ describe('ExportPage (D8, facility-0053)', () => {
     expect(within(screen.getByRole('main')).getByRole('link', { name: '‹ กลับไปหน้าสถานะจุด' })).toHaveAttribute(
       'href',
       '/dashboard',
+    );
+  });
+
+  it('the building picker lists every building, an off one marked (ปิดใช้งาน) (facility-0090)', async () => {
+    serve();
+    await renderApp('/admin/export');
+
+    const picker = await screen.findByRole('combobox', { name: 'ตึก' });
+    await waitFor(() =>
+      expect(within(picker).getAllByRole('option').map((option) => option.textContent)).toEqual([
+        'ทุกตึก',
+        'A',
+        'B',
+        'C (ปิดใช้งาน)',
+      ]),
     );
   });
 });

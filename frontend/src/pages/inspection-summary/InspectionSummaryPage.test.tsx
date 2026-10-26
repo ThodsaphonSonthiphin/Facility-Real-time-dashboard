@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { addDays } from '../../shared/utils/dateRange';
 import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
-import { adminSession, buildings } from '../../test/adminFixtures';
+import { adminSession, managedBuildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { summary } from '../../test/reportFixtures';
 import { renderApp } from '../../test/renderApp';
@@ -17,7 +17,7 @@ function serve(routes: FakeRoutes = {}) {
       const asked = query(request.search);
       return { status: 200, body: { ...summary, from: asked.from ?? summary.from, to: asked.to ?? summary.to } };
     },
-    'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     ...routes,
   });
 }
@@ -207,5 +207,16 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
       'href',
       '/admin/export?from=2026-10-09&to=2026-10-15&building=1',
     );
+  });
+
+  it('an off building can still be chosen, for its old data (facility-0090)', async () => {
+    const server = serve();
+    const { user } = await renderApp('/admin/inspection-summary');
+
+    const picker = await screen.findByRole('combobox', { name: 'ตึก' });
+    await waitFor(() => expect(within(picker).getByRole('option', { name: 'C (ปิดใช้งาน)' })).toBeInTheDocument());
+    await user.selectOptions(picker, 'C (ปิดใช้งาน)');
+
+    await waitFor(() => expect(query(summaryGets(server).at(-1)!.search)).toMatchObject({ buildingId: '3' }));
   });
 });

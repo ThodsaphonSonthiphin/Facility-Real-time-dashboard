@@ -19,6 +19,13 @@ export interface Building {
   name: string;
 }
 
+/** ManagedBuildingDto (facility-0090): every building, off ones too, with what is active in it. */
+export interface ManagedBuilding extends Building {
+  isActive: boolean;
+  activeAreaCount: number;
+  activeSupervisorCount: number;
+}
+
 /** CleanerOptionDto: every active Cleaner, for the Area form's pickers (D10). */
 export interface CleanerOption {
   id: number;
@@ -113,6 +120,11 @@ export const adminSetupApi = baseApi.injectEndpoints({
       query: () => '/admin/buildings',
       providesTags: ['AdminSetup'],
     }),
+    /** Every building, off ones too: the buildings page and the D7/D8 picker (facility-0090 decision 5). */
+    getAllBuildings: build.query<ManagedBuilding[], void>({
+      query: () => '/admin/buildings/all',
+      providesTags: ['AdminSetup'],
+    }),
     getCleaners: build.query<CleanerOption[], void>({
       query: () => '/admin/cleaners',
       providesTags: ['AdminSetup'],
@@ -129,6 +141,7 @@ export const {
   useGetAreasQuery,
   useGetAreaQuery,
   useGetBuildingsQuery,
+  useGetAllBuildingsQuery,
   useGetCleanersQuery,
   useSetSignLocationMutation,
 } = adminSetupApi;
