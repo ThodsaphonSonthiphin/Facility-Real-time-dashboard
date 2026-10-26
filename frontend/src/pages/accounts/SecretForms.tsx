@@ -126,7 +126,7 @@ export function PasswordForm({ account, isSelf, onDone, onCancel }: SecretFormPr
       <h2 id={titleId} className={formTitleClass}>{`รีเซ็ตรหัสผ่าน · ${account.displayName}`}</h2>
       <Field
         label="รหัสผ่านชั่วคราวใหม่"
-        help="8–100 ตัวอักษร บอกเองด้วยวาจาหรือกระดาษ · ถ้าใส่รหัสเดิม ระบบไม่เปลี่ยนอะไร"
+        help="15–100 ตัวอักษร เป็นวลียาว ๆ ได้ บอกเองด้วยวาจาหรือกระดาษ · ถ้าใส่รหัสเดิม ระบบไม่เปลี่ยนอะไร"
       >
         <TextInput
           size="desk"

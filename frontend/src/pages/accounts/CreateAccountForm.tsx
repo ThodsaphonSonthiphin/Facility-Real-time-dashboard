@@ -134,7 +134,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
               onChange={(event) => set({ password: event.target.value })}
             />
           </Field>
-          <p className="text-muted">แอดมิน: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว 8–100 ตัวอักษร (บอกเองด้วยวาจาหรือกระดาษ)</p>
+          <p className="text-muted">แอดมิน: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว 15–100 ตัวอักษร เป็นวลียาว ๆ ได้ (บอกเองด้วยวาจาหรือกระดาษ)</p>
         </>
       ) : (
         <>

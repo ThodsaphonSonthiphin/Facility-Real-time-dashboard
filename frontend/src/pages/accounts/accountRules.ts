@@ -117,9 +117,9 @@ export function normalizePhone(text: string): string | null {
 }
 
 export const PHONE_PROBLEM = 'เบอร์โทรต้องเป็นเลข 10 หลัก ขึ้นต้นด้วย 0';
-export const MIN_PASSWORD = 8;
+export const MIN_PASSWORD = 15;
 export const MAX_PASSWORD = 100;
-export const PASSWORD_PROBLEM = 'รหัสผ่านชั่วคราวต้องยาว 8–100 ตัวอักษร';
+export const PASSWORD_PROBLEM = 'รหัสผ่านชั่วคราวต้องยาว 15–100 ตัวอักษร';
 
 /** The add form as typed; selects hold ids as strings, '' for none. */
 export interface CreateDraft {
