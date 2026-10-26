@@ -99,27 +99,32 @@ public class AccountSecretEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var created = await AccountApi.ReadAsync(await AccountApi.CreateAdminAsync(admin, "admin2", "temporary-1"));
-        var other = await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", "temporary-1");
+        var created = await AccountApi.ReadAsync(await AccountApi.CreateAdminAsync(admin, "admin2", "temporary-pass-1"));
+        var other = await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", "temporary-pass-1");
         var otherRefresh = AuthApi.RefreshCookieValue(other);
 
-        var response = await PasswordAsync(admin, created.Id, "temporary-2");
+        var response = await PasswordAsync(admin, created.Id, "temporary-pass-2");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", "temporary-1")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", "temporary-2")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", "temporary-pass-1")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", "temporary-pass-2")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.RefreshAsync(factory.CreateApiClient(), otherRefresh)).StatusCode);
         var entry = (await AdminSetupApi.AuditAsync(factory)).Last();
         Assert.Equal(("ACCOUNT_PASSWORD", (string?)null, (string?)null), (entry.Action, entry.BeforeJson, entry.AfterJson));
     }
 
-    [Fact]
-    public async Task A_too_short_password_is_refused()
+    [Theory]
+    [InlineData("temporary-1234", "รหัสผ่านชั่วคราวต้องยาว 15–100 ตัวอักษร")]
+    [InlineData("1qaz2wsx3edc4rfv", "รหัสผ่านนี้คนใช้กันเยอะ เดาง่าย ตั้งรหัสอื่น")]
+    public async Task A_short_or_common_password_is_refused_with_its_reason(string password, string message)
     {
         using var factory = new FacilityApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
 
-        Assert.Equal(HttpStatusCode.BadRequest, (await PasswordAsync(admin, adminAuth.User.Id, "short")).StatusCode);
+        var response = await PasswordAsync(admin, adminAuth.User.Id, password);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(message, await AdminSetupApi.MessageAsync(response));
     }
 
     [Fact]
@@ -129,7 +134,7 @@ public class AccountSecretEndpointTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         Assert.Equal(HttpStatusCode.NotFound, (await PhoneAsync(admin, 9999, "0000000061")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await PasswordAsync(admin, 9999, "temporary-9")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await PasswordAsync(admin, 9999, "temporary-pass-9")).StatusCode);
     }
 
     /// <summary>The check docs/handoff.md asked for before account actions are logged: the history page never shows a secret.</summary>
@@ -141,8 +146,8 @@ public class AccountSecretEndpointTests
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
         var created = await AccountApi.ReadAsync(await AccountApi.CreateCleanerAsync(admin, "E2001", "0000000071", areaId: null));
         await PhoneAsync(admin, e1001, "0000000072");
-        var newAdmin = await AccountApi.ReadAsync(await AccountApi.CreateAdminAsync(admin, "admin2", "temporary-71"));
-        await PasswordAsync(admin, newAdmin.Id, "temporary-72");
+        var newAdmin = await AccountApi.ReadAsync(await AccountApi.CreateAdminAsync(admin, "admin2", "temporary-pass-71"));
+        await PasswordAsync(admin, newAdmin.Id, "temporary-pass-72");
         await admin.PostAsync($"{AccountApi.Path}/{created.Id}/deactivate", null);
         var signId = await AdminSetupApi.SignIdAsync(factory, "AR01-01");
         Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/admin/signs/{signId}/regenerate-token", null)).StatusCode);
@@ -151,7 +156,7 @@ public class AccountSecretEndpointTests
         var raw = await admin.GetStringAsync("/api/admin/audit-log");
 
         Assert.Equal(6, (await AdminSetupApi.AuditAsync(factory)).Count);
-        foreach (var secret in new[] { "0000000071", "0000000072", "0810000001", "temporary-71", "temporary-72", "pbkdf2", "token-", newToken })
+        foreach (var secret in new[] { "0000000071", "0000000072", "0810000001", "temporary-pass-71", "temporary-pass-72", "pbkdf2", "token-", newToken })
         {
             Assert.DoesNotContain(secret, raw);
         }

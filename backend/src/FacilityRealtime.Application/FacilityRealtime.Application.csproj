@@ -15,4 +15,8 @@
     <InternalsVisibleTo Include="FacilityRealtime.ApiTests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Accounts\common-passwords.txt" LogicalName="FacilityRealtime.Application.Accounts.common-passwords.txt" />
+  </ItemGroup>
+
 </Project>

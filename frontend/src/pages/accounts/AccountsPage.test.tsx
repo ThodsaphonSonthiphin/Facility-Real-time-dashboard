@@ -176,16 +176,16 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     expect(within(form).queryByLabelText('เบอร์โทรศัพท์')).not.toBeInTheDocument();
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'ผู้ดูแลคนที่สาม');
     await user.type(within(form).getByLabelText('ชื่อผู้ใช้'), 'admin3');
-    await user.type(within(form).getByLabelText('รหัสผ่านชั่วคราว'), 'short');
+    await user.type(within(form).getByLabelText('รหัสผ่านชั่วคราว'), 'temporary-1234');
     await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
-    expect(within(form).getByRole('alert')).toHaveTextContent('รหัสผ่านชั่วคราวต้องยาว 8–100 ตัวอักษร');
+    expect(within(form).getByRole('alert')).toHaveTextContent('รหัสผ่านชั่วคราวต้องยาว 15–100 ตัวอักษร');
 
     await user.clear(within(form).getByLabelText('รหัสผ่านชั่วคราว'));
-    await user.type(within(form).getByLabelText('รหัสผ่านชั่วคราว'), 'temporary-123');
+    await user.type(within(form).getByLabelText('รหัสผ่านชั่วคราว'), 'temporary-pass-123');
     await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
 
     expect(await within(form).findByRole('status')).toHaveTextContent('สร้างบัญชี ผู้ดูแลคนที่สาม แล้ว');
-    expect(created(server)).toEqual({ role: 'Admin', displayName: 'ผู้ดูแลคนที่สาม', username: 'admin3', password: 'temporary-123' });
+    expect(created(server)).toEqual({ role: 'Admin', displayName: 'ผู้ดูแลคนที่สาม', username: 'admin3', password: 'temporary-pass-123' });
     expect(within(form).getByLabelText('รหัสผ่านชั่วคราว')).toHaveValue('');
   });
 

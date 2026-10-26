@@ -108,14 +108,14 @@ public class AccountEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
-        var response = await AccountApi.CreateAdminAsync(admin, "admin2", "temporary-1");
+        var response = await AccountApi.CreateAdminAsync(admin, "admin2", "temporary-pass-1");
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var created = await AccountApi.ReadAsync(response);
         Assert.Equal(("Admin", "admin2", (string?)null), (created.Role, created.LoginName, created.Shift));
-        Assert.Equal(HttpStatusCode.OK, (await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", "temporary-1")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", "temporary-pass-1")).StatusCode);
         var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
-        Assert.DoesNotContain("temporary-1", entry.AfterJson + entry.Summary);
+        Assert.DoesNotContain("temporary-pass-1", entry.AfterJson + entry.Summary);
     }
 
     [Theory]
@@ -138,10 +138,23 @@ public class AccountEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
-        var response = await AccountApi.CreateAdminAsync(admin, "ADMIN", "temporary-1");
+        var response = await AccountApi.CreateAdminAsync(admin, "ADMIN", "temporary-pass-1");
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal("ชื่อผู้ใช้นี้มีแล้ว", await AdminSetupApi.MessageAsync(response));
+    }
+
+    [Fact]
+    public async Task A_common_password_is_refused_with_its_reason_and_nothing_is_logged()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        var response = await AccountApi.CreateAdminAsync(admin, "admin2", "1qaz2wsx3edc4rfv");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("รหัสผ่านนี้คนใช้กันเยอะ เดาง่าย ตั้งรหัสอื่น", await AdminSetupApi.MessageAsync(response));
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
     }
 
     public static TheoryData<string> BadRequests => new()
@@ -156,9 +169,9 @@ public class AccountEndpointTests
         """{ "role": "Cleaner", "displayName": "ก", "employeeId": "E2009", "phone": "0000000019", "shift": "Day", "password": "12345678" }""",
         """{ "role": "Supervisor", "displayName": "ก", "employeeId": "S2009", "phone": "0000000029", "shift": "Night" }""",
         """{ "role": "Supervisor", "displayName": "ก", "employeeId": "S2009", "phone": "0000000029", "shift": "Night", "buildingId": 1, "areaId": 1 }""",
-        """{ "role": "Admin", "displayName": "ก", "username": "admin9", "password": "1234567" }""",
-        """{ "role": "Admin", "displayName": "ก", "username": "admin9", "password": "12345678", "phone": "0000000019" }""",
-        """{ "role": "Admin", "displayName": "ก", "username": "admin9", "password": "12345678", "shift": "Day" }""",
+        """{ "role": "Admin", "displayName": "ก", "username": "admin9", "password": "12345678901234" }""",
+        """{ "role": "Admin", "displayName": "ก", "username": "admin9", "password": "temporary-pass-1", "phone": "0000000019" }""",
+        """{ "role": "Admin", "displayName": "ก", "username": "admin9", "password": "temporary-pass-1", "shift": "Day" }""",
         """{ "displayName": "ก", "employeeId": "E2009", "phone": "0000000019", "shift": "Day" }""",
     };
 

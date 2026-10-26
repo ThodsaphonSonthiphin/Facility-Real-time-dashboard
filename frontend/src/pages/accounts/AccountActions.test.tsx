@@ -135,18 +135,18 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     expect(screen.queryByRole('button', { name: 'รีเซ็ตรหัสผ่าน แม่บ้านทดสอบ' })).not.toBeInTheDocument();
 
     const form = screen.getByRole('form', { name: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลคนที่สอง' });
-    await user.type(within(form).getByLabelText('รหัสผ่านชั่วคราวใหม่'), 'temporary-456');
+    await user.type(within(form).getByLabelText('รหัสผ่านชั่วคราวใหม่'), 'temporary-pass-456');
     await user.click(within(form).getByRole('button', { name: 'บันทึกรหัสผ่านใหม่' }));
     expect(
       await screen.findByText(
         'รีเซ็ตรหัสผ่านของ ผู้ดูแลคนที่สอง แล้ว บอกรหัสใหม่ด้วยวาจาหรือกระดาษ ทุกเครื่องของคนนี้ต้องเข้าสู่ระบบใหม่',
       ),
     ).toBeInTheDocument();
-    expect(sent(server, 'PUT', '/api/admin/accounts/8/password')).toEqual({ password: 'temporary-456' });
+    expect(sent(server, 'PUT', '/api/admin/accounts/8/password')).toEqual({ password: 'temporary-pass-456' });
 
     await user.click(screen.getByRole('button', { name: 'รีเซ็ตรหัสผ่าน ผู้ดูแลทดสอบ' }));
     const own = screen.getByRole('form', { name: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลทดสอบ' });
-    await user.type(within(own).getByLabelText('รหัสผ่านชั่วคราวใหม่'), 'temporary-789');
+    await user.type(within(own).getByLabelText('รหัสผ่านชั่วคราวใหม่'), 'temporary-pass-789');
     await user.click(within(own).getByRole('button', { name: 'บันทึกรหัสผ่านใหม่' }));
     expect(
       await screen.findByText(
