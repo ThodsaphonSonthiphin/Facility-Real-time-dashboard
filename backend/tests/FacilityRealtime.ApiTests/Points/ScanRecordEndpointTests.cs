@@ -483,13 +483,15 @@ public class ScanRecordEndpointTests
     }
 
     [Fact]
-    public async Task Only_admins_receive_the_live_update()
+    public async Task Admins_receive_the_live_update_and_a_Cleaner_of_another_Area_does_not()
     {
+        // facility-0058 as amended 2026-10-26: the Cleaners of the point's own Area get it too (CleanerLiveTests)
         using var factory = new FacilityApiFactory();
-        var (cleaner, cleanerAuth, _) = await AuthApi.LoggedInAsync(factory);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (_, otherAreaAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1003", "0810000003");
         var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
-        await using var cleanerHub = await HubClient.ConnectAsync(factory, cleanerAuth.AccessToken);
+        await using var cleanerHub = await HubClient.ConnectAsync(factory, otherAreaAuth.AccessToken);
         var adminGot = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
         var cleanerGot = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
         adminHub.On<JsonElement>("ScanRecorded", point => adminGot.TrySetResult(point));
@@ -503,6 +505,6 @@ public class ScanRecordEndpointTests
         Assert.Equal("PendingInspection", payload.GetProperty("status").GetString());
         Assert.False(payload.TryGetProperty("qrToken", out _)); // facility-0060
         await Task.Delay(500);
-        Assert.False(cleanerGot.Task.IsCompleted); // facility-0058
+        Assert.False(cleanerGot.Task.IsCompleted); // AR02's Cleaner has nothing to do with AR01's point
     }
 }

@@ -36,6 +36,11 @@ function steps() {
     .map((li) => li.textContent);
 }
 
+/** The hub's first start asks again (facility-0064): wait for that catch-up answer before counting what a press asks. */
+async function hubCatchUp(server: { calls: { path: string }[] }) {
+  await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2));
+}
+
 describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
   it('shows the shift, the own Area and the Shift-In button (M1)', async () => {
     serve({});
@@ -54,8 +59,10 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
       'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['BreakOut', 'ShiftOut'], 'Recorded') }),
     });
     const { user } = await renderApp(SIGN);
+    await screen.findByRole('button', { name: 'เข้างาน' });
+    await hubCatchUp(server);
 
-    await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
+    await user.click(screen.getByRole('button', { name: 'เข้างาน' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('บันทึกเวลาเข้างานแล้ว 06:52');
     expect(server.calls.find((c) => c.path === '/api/attendance')?.body).toEqual({
@@ -70,8 +77,8 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(screen.queryByText('ถัดไป')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ออกพัก' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'เลิกงาน' })).toBeInTheDocument();
-    // the answer updated My Work's cached copy; nothing was asked again
-    expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(1);
+    // the answer updated My Work's cached copy; nothing was asked again after the hub's catch-up
+    expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2);
   });
 
   it('far from the sign: recorded but flagged, with the phone accuracy (M3, facility-0035)', async () => {
@@ -211,12 +218,15 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
       myWork(onDuty),
     );
     const { user } = await renderApp(SIGN);
+    await screen.findByRole('button', { name: 'ออกพัก' });
+    await hubCatchUp(server);
 
-    await user.click(await screen.findByRole('button', { name: 'ออกพัก' }));
+    await user.click(screen.getByRole('button', { name: 'ออกพัก' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('ลงเวลาไม่ตรงลำดับ');
     await screen.findByRole('button', { name: 'ออกพัก' });
-    expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2);
+    // the first answer, the hub's catch-up, and the ask after the refused press
+    expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3);
   });
 
   it('no signal: says the time was not recorded and keeps the buttons (facility-0052)', async () => {

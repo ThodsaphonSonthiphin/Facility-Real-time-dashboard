@@ -272,7 +272,8 @@ public class InspectionEndpointTests
         using var factory = new FacilityApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var (_, cleanerAuth, _) = await AuthApi.LoggedInAsync(factory);
+        // facility-0058 as amended 2026-10-26: AR01's own Cleaners get it too (CleanerLiveTests); AR02's Cleaner does not
+        var (_, cleanerAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1003", "0810000003");
         await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
         await using var cleanerHub = await HubClient.ConnectAsync(factory, cleanerAuth.AccessToken);
         var cleanerGot = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -289,6 +290,6 @@ public class InspectionEndpointTests
         Assert.Equal("Rework", payload.GetProperty("status").GetString());
         Assert.False(payload.TryGetProperty("qrToken", out _)); // facility-0060
         await Task.Delay(500);
-        Assert.False(cleanerGot.Task.IsCompleted); // facility-0058
+        Assert.False(cleanerGot.Task.IsCompleted); // another Area's Cleaner
     }
 }

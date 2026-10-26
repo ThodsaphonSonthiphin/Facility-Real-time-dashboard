@@ -11,7 +11,9 @@ namespace FacilityRealtime.Api.Endpoints;
 
 /// <summary>
 /// facility-0058 rule 3, 0057: a point change goes to the Admins and to the Supervisors of that point's building — its
-/// active Supervisors of both shifts, and anyone covering it in the clock's shift. Nobody else.
+/// active Supervisors of both shifts, and anyone covering it in the clock's shift. Owner 2026-10-26 (amends 0052): also to
+/// the Cleaners of the point's Area, both shifts, and any Cleaner covering that Area in the clock's shift, so My Work
+/// shows an inspection without a press on "อัปเดต". Nobody else.
 /// </summary>
 internal static class PointNotifications
 {
@@ -38,7 +40,18 @@ internal static class PointNotifications
                 .Where(c => db.Users.Any(u => u.Id == c.UserId && u.IsActive && u.Role == UserRole.Supervisor))
                 .Select(c => c.UserId)
                 .ToListAsync();
-            var userIds = own.Concat(covering).Distinct().Select(id => id.ToString(CultureInfo.InvariantCulture)).ToList();
+            var areaId = board.Point.AreaId;
+            var cleaners = await db.Users
+                .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == areaId)
+                .Select(u => u.Id)
+                .ToListAsync();
+            var coveringCleaners = await db.CoverAssignments
+                .Where(c => c.AreaId == areaId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
+                .Where(c => db.Users.Any(u => u.Id == c.UserId && u.IsActive && u.Role == UserRole.Cleaner))
+                .Select(c => c.UserId)
+                .ToListAsync();
+            var userIds = own.Concat(covering).Concat(cleaners).Concat(coveringCleaners).Distinct()
+                .Select(id => id.ToString(CultureInfo.InvariantCulture)).ToList();
             if (userIds.Count > 0)
             {
                 await hub.Clients.Users(userIds).SendAsync(eventName, dto);

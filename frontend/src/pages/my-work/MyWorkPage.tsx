@@ -1,25 +1,36 @@
 import { RefreshCw } from 'lucide-react';
 import { freshOnOpen } from '../../shared/api/baseApi';
-import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
+import { MY_WORK_HUB, useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import type { AttendanceState, MyWork, OwnShift, Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { formatClock, formatTime } from '../../shared/utils/thaiTime';
+import { useAppSelector } from '../../store/hooks';
+import { selectHubStatus, type HubStatus } from '../../store/slices/hubSlice';
 import { NextJob } from './NextJob';
 import { WorkGroup } from './WorkGroup';
 import { byUrgency, laterStatuses, sentStatuses, toDo } from './workRules';
 
 /**
  * facility-0052, wireframes M9 and M14: every point of the Cleaner's own Area, then of the Areas they cover this
- * shift. No push and no hub: the page asks the server each time it opens and on "อัปเดต". No card links to the scan
- * page; the only way there is the sign's QR (facility-0059). The name is not shown: the bar above already shows it.
+ * shift. It changes by itself when the hub says a point changed (the Supervisor's inspection, owner 2026-10-26, which
+ * amends facility-0052), and also asks each time it opens and on "อัปเดต". No card links to the scan page; the only way
+ * there is the sign's QR (facility-0059). The name is not shown: the bar above already shows it.
  * The layout is variant B of the mockups (#73, `design-system/facility/pages/phone.md`): the next job first.
  */
+/** The footnote by the hub's state, as My Building's (plan 9 decision 9). */
+const liveLine: Record<HubStatus, string> = {
+  connecting: 'กำลังเชื่อมต่อการอัปเดตสด...',
+  live: 'หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน',
+  reconnecting: 'การอัปเดตสดหลุด กำลังต่อใหม่ กด "อัปเดต" เพื่อดูงานล่าสุด',
+};
+
 export function MyWorkPage() {
   const { data, error, isLoading, isFetching, refetch } = useGetMyWorkQuery(undefined, freshOnOpen);
   const shift = data?.attendance.shift;
+  const hubStatus = useAppSelector(selectHubStatus(MY_WORK_HUB));
 
   return (
     <main className="flex flex-col gap-4 text-base text-text">
@@ -31,7 +42,7 @@ export function MyWorkPage() {
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
       <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
-        <span className="text-md text-muted">ไม่มีแจ้งเตือนเด้งขึ้น เปิดหน้านี้หรือกด "อัปเดต" เพื่อดูงานล่าสุด</span>
+        <span className="text-md text-muted">{liveLine[hubStatus]}</span>
         <Button className="w-full" disabled={isFetching} onClick={() => void refetch()}>
           <RefreshCw aria-hidden="true" className="size-5" />
           {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}

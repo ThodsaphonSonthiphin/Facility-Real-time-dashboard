@@ -86,10 +86,17 @@ public static class TestData
             await db.SaveChangesAsync();
         });
 
-    /// <summary>An active Cleaner who never logs in, on <paramref name="shift"/>, in no Area unless one is given.</summary>
-    public static async Task<int> AddCleanerAsync(FacilityApiFactory factory, string employeeId, Shift shift, string? areaCode = null)
+    /// <summary>
+    /// An active Cleaner on <paramref name="shift"/>, in no Area unless one is given. Without a <paramref name="phone"/> they
+    /// never log in; with one they can.
+    /// </summary>
+    public static async Task<int> AddCleanerAsync(
+        FacilityApiFactory factory, string employeeId, Shift shift, string? areaCode = null, string? phone = null)
     {
         var id = 0;
+        var secretHash = phone is null
+            ? "not-a-hash"
+            : factory.Services.GetRequiredService<IPasswordHasher>().Hash(PhoneNumber.Normalize(phone));
         await factory.WithDbAsync(async db =>
         {
             var area = areaCode is null ? null : await db.Areas.SingleAsync(a => a.Code == areaCode);
@@ -98,7 +105,7 @@ public static class TestData
                 Role = UserRole.Cleaner,
                 EmployeeId = employeeId,
                 DisplayName = $"แม่บ้านทดสอบ {employeeId}",
-                SecretHash = "not-a-hash",
+                SecretHash = secretHash,
                 AreaId = area?.Id,
                 Shift = shift,
                 CreatedAt = DateTime.UtcNow,

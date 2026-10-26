@@ -6,7 +6,7 @@ namespace FacilityRealtime.Api.Hubs;
 /// <summary>
 /// Server-to-client only. "ScanRecorded", "InspectionRecorded" and "AttendanceRecorded" go to Admin Accounts (facility-0058,
 /// 0027); the first two also go to the Supervisors of the point's building, addressed by account id (facility-0057,
-/// PointNotifications). Cleaners get nothing live.
+/// PointNotifications); since 2026-10-26 they also go to the Cleaners of the point's Area, so My Work updates by itself.
 /// </summary>
 [Authorize]
 public class ScanHub : Hub
