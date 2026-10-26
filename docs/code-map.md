@@ -94,7 +94,7 @@ If you have just opened the repo, read in this order. Each step is one file.
 
 ## Part 3 — Frontend file map
 
-Root: `frontend/src/` — 109 `.tsx` files, of which 61 are page components.
+Root: `frontend/src/` — 114 `.tsx` files (25 of them tests), of which 64 are page components under `pages/`.
 
 ### Root files
 
