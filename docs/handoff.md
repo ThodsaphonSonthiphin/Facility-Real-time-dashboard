@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-24 (#70–#78 merged, last PR #93; #79 in PR #95 with D4 reworked after the owner's test-1 feedback; **the owner stopped mid-check and asked for the remaining checks to be written down — see `### Waiting on the owner's eye check` under `## Next: Tailwind migration`**; then `implement` #80)
+Last updated: 2026-10-26 (**#79 merged: PR #95 merged to master on the owner's explicit OK, merge commit `9d1d1f0`; the D4 / D10 / M17 eye checks below were NOT finished and are still owed**; earlier: #70–#78 merged, last PR #93; D4 reworked after the owner's test-1 feedback; **the owner stopped mid-check and asked for the remaining checks to be written down — see `### Waiting on the owner's eye check` under `## Next: Tailwind migration`**; then `implement` #80; 2026-10-25 wrote `docs/code-map.md` — the file-level map for the owner)
 
 ## Project
 
@@ -204,6 +204,10 @@ Plan 4 test results at merge:
 - 2026-10-22 · Owner tried the build (throwaway `facility_ux_test`) on the three open questions. (1) Excel "ตำแหน่ง" is column L, after "ที่มา", not next to "ชื่อ" (F) as reported; kept unless the owner says otherwise. (2) D3 ahead: a covered Area looked like an empty one; the owner chose: it says "ทำแทนแล้ว: <name>" and has no assign button (cancel in the covers box to change who); the open cover form also closes once that Area is covered (facility-0084 amended). (3) No in-page retry after a failed sign check: checked by blocking the request, kept as is (plan decision 2). Frontend 403 tests; lint and tsc clean. Next: the owner's Chrome checklist, then the OK for the push and PR.
 - 2026-10-22 · Owner: push, PR and merge. Cleanup: API stopped, `facility_ux_test` dropped, `wwwroot` deleted. PR #66 opened (the plan's decisions 1–6 and the owner's three decisions in its description) and merged to master with the owner's OK. Next: the owner chooses from Pending work (Excel import of accounts, server-side search for the Admin history).
 
+## Task log (docs)
+
+- 2026-10-25 · Wrote `docs/code-map.md` for the owner, who said the vibe-coded repo had become unreadable (no idea which file or function does what, how login works, how the scan pulls GPS). Read-only exploration, no source file touched. It covers: where to start reading, the frontend and backend file-to-responsibility maps, the route table, state management, the login flow traced file by file, the scan → GPS → SignalR flow traced file by file, all 48 routes with a Why row each, the ER diagram, the tests that pin each behaviour, and ten things left unclear. `docs/architecture.md` stays the system-level page; code-map links to it and does not repeat it. Spot-checked against the code: 48 `Map*` calls in `backend/src`, 16 feature folders under `frontend/src/pages`, zero `createContext`, React 19.2.8, and both flag-not-block tests (`ScanRecordEndpointTests.cs:327`, `InspectionScanEndpointTests.cs:93`). Two small discrepancies found in `architecture.md` are recorded in code-map Part 12 rather than edited away. Next: the owner reads code-map and says what is still unclear.
+
 ## Sharing a test build (colleagues on other networks)
 
 Test data only. The Development seed has an Admin whose password is public in this repo (facility-0049), so a shared link must never point at a database with real data, and never at a long-lived server.
@@ -227,7 +231,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 The owner ended the session before the check was finished: "เรายังตรวจกันไมครบ ช่วยจดไว้หน่อย" — and will open a new session on 2026-10-25 to finish it. Nothing is blocking; these three are only **checks owed**, not known bugs.
 
-**State at the end of 2026-10-24.** Branch `feat/admin-setup-new-look`, PR [#95](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/pull/95) **open, not merged** — merge only on the owner's explicit OK. Last commit `4f43345`; 419 frontend tests pass, lint and `tsc -b` clean; main JS 132.02 kB gzip, CSS 28.71 / 6.04 kB gzip. The working tree carries only the two deliberate leftovers (`M .gitignore`, untracked root `package-lock.json`) — never commit either. The API, `facility_ui_test` and `wwwroot` may still be running; a quick tunnel from the day before will be dead, so start a new one and send its URL.
+**State at the end of 2026-10-24.** Branch `feat/admin-setup-new-look`, PR [#95](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/pull/95) **merged to master on 2026-10-26 (`9d1d1f0`) on the owner's explicit OK, with the eye checks below still owed** — fix anything they find in a new branch. Last commit `4f43345`; 419 frontend tests pass, lint and `tsc -b` clean; main JS 132.02 kB gzip, CSS 28.71 / 6.04 kB gzip. The working tree carries only the two deliberate leftovers (`M .gitignore`, untracked root `package-lock.json`) — never commit either. The API, `facility_ui_test` and `wwwroot` may still be running; a quick tunnel from the day before will be dead, so start a new one and send its URL.
 
 **1. D4 — จัดการพื้นที่และป้าย** (the bulk of the round; `/admin/areas/1`)
 - The header: name, shifts/Cleaner line on the left; `[แก้ไขพื้นที่] [พิมพ์ป้าย]` on the right.
@@ -249,13 +253,13 @@ The owner ended the session before the check was finished: "เรายัง�
 - Seed: AR01 (2 shifts, 2 points, signs measured), AR02 (day only, 1 point, signs unmeasured); E1001 / 0810000001 (Cleaner), S2001 / 0820000001 (Supervisor).
 - Repo noise left alone on purpose: a modified `.gitignore` and an untracked root `package-lock.json`. Never commit either.
 
-**After the check:** the owner's answers (fix or pass), then merge PR #95 only on the owner's explicit OK, then `implement` #80. Cleanup: stop the API and cloudflared, drop `facility_ui_test`, delete `wwwroot`.
+**After the check:** the owner's answers (fix or pass; fixes go in a new branch since #95 is merged), then `implement` #80. Cleanup: stop the API and cloudflared, drop `facility_ui_test`, delete `wwwroot`.
 
 ### Start here (new session, 2026-10-22)
 
 **Where it stands.** Spec #68 is split into tickets #70–#82, which are sub-issues of #68 with GitHub blocked-by edges.
 - **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A), #78 (D2 + D3). Master is `7b1054b`; 416 frontend tests pass.
-- **Next:** #79 D4 + D10 + M17 (PR #95), #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
+- **Next:** #80 D6–D9 (#79 D4 + D10 + M17 is merged, PR #95), #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
 
 **Read first:**
 - `design-system/facility/MASTER.md`: tokens, the shared component table, the pre-delivery check.
