@@ -49,7 +49,7 @@ export const baseApi = createApi({
   // MyBuilding, ServicePoints: refetched where a live push may have been missed (facility-0064 item 2).
   // AdminSetup: every Admin setup read; every save that changes what they show invalidates it (plan 10 decision 3).
   // AttendanceBoard (per shift, plan 11 decision 5) and Alerts: the Admin's live board; corrections and covers invalidate them
-  tagTypes: ['MyBuilding', 'AdminSetup', 'ServicePoints', 'AttendanceBoard', 'Alerts'],
+  tagTypes: ['MyBuilding', 'MyWork', 'AdminSetup', 'ServicePoints', 'AttendanceBoard', 'Alerts'],
   endpoints: () => ({}),
 });
 

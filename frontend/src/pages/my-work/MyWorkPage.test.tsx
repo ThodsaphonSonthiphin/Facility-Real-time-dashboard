@@ -2,10 +2,17 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { area, cleanerSession, myWork, nightShift, notCheckedIn, outsideShift, point } from '../../test/cleanerFixtures';
 import { fakeServer } from '../../test/fakeServer';
+import { hub } from '../../test/fakeSignalR';
 import { renderApp } from '../../test/renderApp';
 
 function serveMyWork(answer: unknown, status = 200) {
   return fakeServer({ ...cleanerSession, 'GET /api/my-work': () => ({ status, body: answer }) });
+}
+
+/** The hub's first start asks again (facility-0064): wait for that catch-up answer before counting what a press asks. */
+async function settled(server: ReturnType<typeof serveMyWork>) {
+  await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'อัปเดต' })).toBeEnabled());
 }
 
 /** Wireframe M9's four points, in the server's order (not by urgency). */
@@ -200,30 +207,31 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     expect(screen.queryByText(/จุด ส่งแล้ว$/)).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'ทำอันนี้ก่อน' })).not.toBeInTheDocument();
     expect(screen.queryByText('ห้องน้ำชาย')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'อัปเดต' })).toBeEnabled();
+    // the hub's first start asks again, and the button is busy while that answer is on its way
+    await waitFor(() => expect(screen.getByRole('button', { name: 'อัปเดต' })).toBeEnabled());
   });
 
-  it('asks the server again on "อัปเดต" (no push for Cleaners, facility-0052)', async () => {
+  it('asks the server again on "อัปเดต"', async () => {
     const server = serveMyWork(myWork());
     const { user } = await renderApp('/my-work');
     await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
-    expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(1);
+    await settled(server);
 
     await user.click(screen.getByRole('button', { name: 'อัปเดต' }));
 
-    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2));
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3));
   });
 
   it('asks the server again each time the page opens (facility-0052)', async () => {
     const server = serveMyWork(myWork());
     const { router } = await renderApp('/my-work');
     await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
-    expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(1);
+    await settled(server);
 
     await act(() => router.navigate('/nowhere'));
     await act(() => router.navigate('/my-work'));
 
-    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2));
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3));
   });
 
   it('a Cleaner without an Area is told to ask the Admin', async () => {
@@ -241,5 +249,50 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('เซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง');
     expect(screen.getByRole('heading', { name: 'งานของฉัน' })).toBeInTheDocument();
+  });
+
+  it("opens a live connection with the Cleaner's token and says the page updates by itself", async () => {
+    serveMyWork(myWork(undefined, [area(fourPoints)]));
+    await renderApp('/my-work');
+
+    expect(await screen.findByText('หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน')).toBeInTheDocument();
+    expect(hub.latest().tokens).toEqual(['token-cleaner']);
+  });
+
+  it('asks again when the hub says a point changed, so an inspection shows without a press', async () => {
+    let answer = myWork(undefined, [area(fourPoints)]);
+    const server = fakeServer({ ...cleanerSession, 'GET /api/my-work': () => ({ status: 200, body: answer }) });
+    await renderApp('/my-work');
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
+    await settled(server);
+    expect(screen.queryByText(/หัวหน้าให้แก้ 10:30/)).not.toBeInTheDocument();
+
+    // the Supervisor marked ห้องน้ำชาย ไม่สะอาด: the server now answers with it as Rework
+    answer = myWork(undefined, [
+      area([
+        ...fourPoints.slice(0, 1),
+        point({ id: 2, name: 'ห้องน้ำชาย', status: 'Rework', rework: { defect: 'พื้นยังเปียก', requestedAt: '2026-10-15T03:30:00Z' } }),
+        ...fourPoints.slice(2),
+      ]),
+    ]);
+    act(() => hub.latest().push('InspectionRecorded', { ...fourPoints[1], status: 'Rework' }));
+
+    expect(await screen.findByText('หัวหน้าให้แก้ 10:30: “พื้นยังเปียก”')).toBeInTheDocument();
+    expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3);
+  });
+
+  it('a dropped hub says so, and coming back asks the server again (facility-0064)', async () => {
+    const server = serveMyWork(myWork(undefined, [area(fourPoints)]));
+    await renderApp('/my-work');
+    await screen.findByText('หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน');
+    await settled(server);
+
+    act(() => hub.latest().reconnecting());
+    expect(screen.getByText('การอัปเดตสดหลุด กำลังต่อใหม่ กด "อัปเดต" เพื่อดูงานล่าสุด')).toBeInTheDocument();
+
+    act(() => hub.latest().reconnected());
+
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3));
+    expect(screen.getByText('หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน')).toBeInTheDocument();
   });
 });

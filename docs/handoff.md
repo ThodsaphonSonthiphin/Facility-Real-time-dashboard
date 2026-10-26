@@ -583,6 +583,13 @@ Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `
   - **Tests:** 4 new unit tests (the repeat is left out; two repeats with nothing inspected count once; a rework's inspected first submission stays; the same-instant tie goes by id). Unit 306 passed, API 542 passed + 5 skipped, frontend suite passed.
   - **Not done / open:** the Cleaner can still send repeatedly while a submission waits (no block). The owner was offered "stop the repeat at the source" and chose the counting fix only; revisit if repeats become a habit (the Excel export shows them).
 
+- 2026-10-26 · **My Work updates live (branch `feat/cleaner-live-my-work`, from master `d15f4c6`, not in PR #96).** The owner saw that after the Supervisor inspects, the Cleaner's page needs "อัปเดต" to show ไม่สะอาด. This was facility-0052's decision (no push for Cleaners in the pilot), so it was asked first and the owner chose "live, the whole page".
+  - **Server:** `PointNotifications` now also sends `ScanRecorded` / `InspectionRecorded` to the active Cleaners of the point's Area (both shifts) and to any active Cleaner covering that Area in the clock's shift (not cancelled). Same card, no `qrToken`. `AttendanceRecorded` stays Admin-only.
+  - **Page:** `myWorkApi.getMyWork` follows the hub (`MY_WORK_HUB`) and **asks the server again** on a push and on every (re)connect, instead of patching the pushed card: the hub's card is the clock's shift's, and a Cleaner in the hour before or after their shift sees another one. The footer says whether the page is live, as My Building's does; "อัปเดต" stays for a dropped connection. The check-in and scan pages share the query, so they hold the connection too.
+  - **Tests:** API 544 passed + 5 skipped (new `CleanerLiveTests`: both shifts' Cleaners of the Area get it, another Area's does not, a covering Cleaner does, a cancelled cover and a deactivated Cleaner do not; `TestData.AddCleanerAsync` takes an optional phone). Two old tests that pinned "Cleaners get nothing" now use AR02's Cleaner as the one who must get nothing. Frontend 422 passed: four tests that counted `/api/my-work` calls now wait for the hub's catch-up call first (a start always asks once more), and three live tests were added. Unit 302 passed.
+  - **Docs:** facility-0052 and 0058 each have a 2026-10-26 amendment; `docs/code-map.md` corrected (its open question 3 is closed).
+  - **Not done:** the owner's eye check (log in as a Cleaner on one phone and a Supervisor on another, mark ไม่สะอาด, watch the Cleaner's page change) and the PR.
+
 ## Owner's rules (still in force)
 
 - Never merge a PR or the younger brother's work without asking. PR #50–#53 were approved.

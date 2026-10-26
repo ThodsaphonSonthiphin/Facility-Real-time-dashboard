@@ -496,8 +496,8 @@ graph LR
     H["SignalR push fails"] --> I["logged and swallowed<br/>30 s livePoll + onMissed refetch recovers"]
 ```
 
-- **Hub:** `Hubs/ScanHub.cs` at `/hubs/scan`. Zero methods — strictly server → client. Admins join `"admins"` on connect. **Cleaners get nothing live**; their My Work page refetches on open and on focus.
-- **Three events:** `ScanRecorded`, `InspectionRecorded` (both → admins + the building's supervisors), `AttendanceRecorded` (→ admins only).
+- **Hub:** `Hubs/ScanHub.cs` at `/hubs/scan`. Zero methods — strictly server → client. Admins join `"admins"` on connect. Since 2026-10-26 the **Cleaners of the point's Area (both shifts) and anyone covering it** get the point events too; their My Work page asks the server again when one arrives, on open and on "อัปเดต".
+- **Three events:** `ScanRecorded`, `InspectionRecorded` (both → admins + the building's supervisors + the Area's Cleaners and covers), `AttendanceRecorded` (→ admins only).
 - **Auth on the socket:** the access token goes in the query string, accepted **only** for `/hubs` paths (facility-0011) — browsers cannot set headers on a WebSocket.
 - **Three subscribers:** `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts` — one connection per cache entry.
 - **The safety net:** `livePoll` = 30 s poll + refetch on focus. Pushes are best effort; a failure is logged and swallowed because the record is already committed.
@@ -707,7 +707,7 @@ Documented here so you do not waste an afternoon on them.
 
 1. **No frontend caller for `GET /api/me`, `GET /api/attendance/me`, `GET /api/health`.** Exhaustive grep of `frontend/src` finds only backend, test and doc hits. They may be leftovers or tool-facing (curl / tunnel probe).
 2. **Which app decodes the QR is not in this repo.** There is no camera or decoder dependency. The printed URL in `printRules.ts:23-24` implies the phone's OS camera, but no file says so.
-3. **My Work has no live push.** `myWorkApi.ts` has neither `onCacheEntryAdded` nor a polling interval, and `ScanHub.cs:7-9` says *"Cleaners get nothing live."* Whether `freshOnOpen` + focus refetch is sufficient is untested.
+3. ~~My Work has no live push.~~ Fixed 2026-10-26: `myWorkApi.ts` follows the hub, and `PointNotifications` sends to the Area's Cleaners (facility-0052 and 0058 amended).
 4. **`session.ts:63` treats a 403 from refresh as session over, but the backend only ever returns 401 there.** The 403 branch looks defensive.
 5. **`throttle` state is in memory** — a restart forgets every count (`LoginThrottle.cs:16`). Single-server assumption.
 6. **No idle-timeout warning.** `expiresAt` is read only by `getValidAccessToken`; nothing schedules on it.
