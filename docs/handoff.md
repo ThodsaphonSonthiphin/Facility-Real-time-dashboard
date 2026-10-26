@@ -4,7 +4,7 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-23 (#70–#77 merged, last PR #91; #78 in PR #93; next: eye check of #78, then `implement` #79; see `## Next: Tailwind migration`)
+Last updated: 2026-10-24 (#70–#78 merged, last PR #93; #79 in PR #95 with D4 reworked after the owner's test-1 feedback; **the owner stopped mid-check and asked for the remaining checks to be written down — see `### Waiting on the owner's eye check` under `## Next: Tailwind migration`**; then `implement` #80)
 
 ## Project
 
@@ -223,11 +223,39 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 ## Next: Tailwind migration
 
+### Waiting on the owner's eye check (written 2026-10-24, to check 2026-10-25)
+
+The owner ended the session before the check was finished: "เรายังตรวจกันไมครบ ช่วยจดไว้หน่อย" — and will open a new session on 2026-10-25 to finish it. Nothing is blocking; these three are only **checks owed**, not known bugs.
+
+**State at the end of 2026-10-24.** Branch `feat/admin-setup-new-look`, PR [#95](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/pull/95) **open, not merged** — merge only on the owner's explicit OK. Last commit `4f43345`; 419 frontend tests pass, lint and `tsc -b` clean; main JS 132.02 kB gzip, CSS 28.71 / 6.04 kB gzip. The working tree carries only the two deliberate leftovers (`M .gitignore`, untracked root `package-lock.json`) — never commit either. The API, `facility_ui_test` and `wwwroot` may still be running; a quick tunnel from the day before will be dead, so start a new one and send its URL.
+
+**1. D4 — จัดการพื้นที่และป้าย** (the bulk of the round; `/admin/areas/1`)
+- The header: name, shifts/Cleaner line on the left; `[แก้ไขพื้นที่] [พิมพ์ป้าย]` on the right.
+- The view switcher is a tablist with a 2 px line under the words (not boxes): `จุดทำความสะอาด (2)` / `ป้ายลงเวลา`. Judge whether it reads as tabs at 1280 px and whether the spacing under the header is right.
+- Tab 1: `+ เพิ่มจุด` at the table's top right, no second heading; Tab 2: the check-in sign's place, radius, QR, `เก็บพิกัดบนมือถือ ›` and `[พิมพ์ป้ายลงเวลา]`.
+- The Drawer (480 px, right edge): a click on a point row's `แก้ไข`, `+ เพิ่มจุด`, and `แก้ไขพื้นที่`. Judge its width, and that a save closes it and a Toast appears.
+- The window picker: `[07:00] – [09:00]` + `+ เพิ่มช่วงเวลา`, and the pill's ✕. **Two fixes after the last screenshot are still unconfirmed by the owner**: the ✕ shows only a cross (no browser grey circle) and is exactly as big as it looks, so a click beside the time no longer deletes the window.
+
+**2. D10 — ฟอร์มพื้นที่** (`/admin/areas/2/edit` in the Drawer, `/admin/areas/new` as a full page)
+- Same form both ways: code (create only), name, building, shift pattern, day/night Cleaner, the help line and the `losesNightRounds` warning. Confirmed by the owner already: create stays a full page, edit opens in the Drawer, and the two are never grouped in one row.
+
+**3. M17 — เก็บพิกัดด้วยมือถือ** (phone, `/admin/areas/2/capture`, then per sign)
+- Use **AR02**, whose signs have no place yet (AR01's are measured). The parts to judge: the 30-second reading, the "ใช้ตำแหน่งตรงนี้" answer, and the words when the reading is weak.
+
+**Environment (it does not survive a reboot):**
+- Frontend: `cd frontend && npm run build:api` (writes `backend/src/FacilityRealtime.Api/wwwroot`; the folder is git-ignored and is a throwaway).
+- API: `cd backend/src/FacilityRealtime.Api && dotnet run --no-launch-profile` → `http://localhost:5001`, log `/tmp/facility-api.log`; throwaway database `facility_ui_test`, login `admin / admin1234`.
+- Phone: `cloudflared tunnel --url http://localhost:5001` (log `/tmp/facility-tunnel.log`). A quick tunnel's URL changes on every start — read the current one with `grep -o "https://[a-z0-9-]*\.trycloudflare\.com" /tmp/facility-tunnel.log | tail -1` and send it to the owner; the one from 2026-10-24 (`worm-oasis-menu-moderate`) is already stale.
+- Seed: AR01 (2 shifts, 2 points, signs measured), AR02 (day only, 1 point, signs unmeasured); E1001 / 0810000001 (Cleaner), S2001 / 0820000001 (Supervisor).
+- Repo noise left alone on purpose: a modified `.gitignore` and an untracked root `package-lock.json`. Never commit either.
+
+**After the check:** the owner's answers (fix or pass), then merge PR #95 only on the owner's explicit OK, then `implement` #80. Cleanup: stop the API and cloudflared, drop `facility_ui_test`, delete `wwwroot`.
+
 ### Start here (new session, 2026-10-22)
 
 **Where it stands.** Spec #68 is split into tickets #70–#82, which are sub-issues of #68 with GitHub blocked-by edges.
-- **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A). Master is `c177dfd`; 410 frontend tests pass.
-- **Next:** #78 D2 + D3 (PR #93), #79 D4 + D10 + M17, #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
+- **Done and merged:** #70 (Tailwind and tokens), #71 (shared components), #72 (login), #73 (My Work B), #74 (scan A), #75 (check-in), #76 (Supervisor pages), #77 (D1 A), #78 (D2 + D3). Master is `7b1054b`; 416 frontend tests pass.
+- **Next:** #79 D4 + D10 + M17 (PR #95), #80 D6–D9, #81 D5 print. Each depends only on #71, which is merged. #82, the contract step, comes last.
 
 **Read first:**
 - `design-system/facility/MASTER.md`: tokens, the shared component table, the pre-delivery check.
@@ -237,7 +265,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 **How each ticket has gone (keep doing it):**
 1. Run `/mattpocock-skills:implement #N`. Branch from master as `feat/<slug>`.
-2. Rebuild the page from the shared components (`Button`, `buttonClass` + `data-tap` for a Link, `Note`, `StatusChip`, `Field` / `TextInput` / `Select` / `TextArea`, `ChoiceTile`, `ToggleChip`, `Table`, `Panel`, `Facts`, `Splash`, `styles.ts` helpers).
+2. Rebuild the page from the shared components (`Button`, `buttonClass` + `data-tap` for a Link, `Note`, `StatusChip`, `Field` / `FieldGroup` / `TextInput` / `Select` / `TextArea`, `ChoiceTile`, `ToggleChip`, `Table`, `Panel`, `Facts`, `Splash`, `Toast`, `styles.ts` helpers).
    - Set `text-base text-text` (phone) or `text-sm text-text` (Admin) on the page's root.
    - Colour links with `linkClass`.
    - Delete the page's CSS file.
@@ -500,6 +528,40 @@ Where `ui-ux-pro-max` fits:
 - 2026-10-23 · Owner's second eye check of #78: passed. API stopped, `facility_ui_test` dropped, `wwwroot` removed; `facility_uxpass_test` also dropped at the owner's request. PR #93 merged into master on the owner's OK.
 
 Next session: `implement` #79 (D4 + D10 + M17). New Admin pages use the shared `Toast` and `Modal`.
+
+- 2026-10-23 · Matt Pocock's skills are usable in OpenCode now (they had been installed for Claude Code only; OpenCode does not read `~/.claude/plugins/cache/`, which is why `implement`, `to-spec`, `to-tickets`, `code-review` and `grill-with-docs` were missing). `~/.config/opencode/scripts/install-mattpocock-skills.sh` symlinks the plugin's 24 promoted skills (version 1.3.1) into `~/.config/opencode/skills/mattpocock/`, and writes one `/‹skill-id›` command per skill into `~/.config/opencode/commands/`. The five user-invoked skills keep `disable-model-invocation`, so they stay out of the model's skill menu but load by id through their command: `/implement #79` works. `handoff`, `wait-what` and `grill-me` keep this machine's own versions (the script leaves them alone). Re-run the script after a plugin update: the symlinks name a version path, so a new version would leave them dangling. No repo file changed.
+
+- 2026-10-23 · #79 on branch `feat/admin-setup-new-look` (from master `7b1054b`). D4, D10 and M17 are in the new look; `areas.css` (248 lines), `areaForm.css` and `capture.css` are deleted. The per-page CSS left in `pages/` belongs to #80 and #81.
+  - **D4:** the 300 px Area rail and the open Area on the Admin tokens; the sign table is the shared `Table`; the editor boxes are `boxClass` sections; the hour/minute boxes (facility-0083) use `inputClass('desk')`.
+  - **D10:** the same one column at 720 px (`max-w-180`, commented: no width token names it), on `Field` / `TextInput` / `Select`; the two lower boxes are named sections.
+  - **M17:** phone sizes in the phone shell (`text-base`, 48 px sign rows, 56 px full-width main action); it gained the "กำลังโหลด..." line it never had.
+  - **Decisions:**
+    - a point save (D4) and an Area (de)activation (D10) answer with the shared `Toast`, as on D2/D3 (owner, #78);
+    - the per-sign notes (radius, location, QR) stay inline `Note`s: they answer one box, and the QR one carries the "พิมพ์ป้ายใหม่ ›" link;
+    - the new-QR question stays a page `alertdialog` (a test asserts it and its accessible description), not the shared `Modal`;
+    - deactivation is an outlined button, not `danger`: MASTER reserves `danger` for what cannot be undone, and the same panel says "เปิดกลับได้" (review finding; the old look used a warn button).
+  - **Shared:** `FieldGroup` in `Field.tsx`; D10's shift pattern and D4's round windows were two private fieldset styles, now one piece (MASTER's table updated). `Panel` was briefly given a `headingId` and reverted: the review called the optional pair unsafe and the edit out of scope, so D10's two boxes are named sections built from `boxClass`.
+  - **Code review (two sub-agents, Standards + Spec):** fixed `danger` on reversible actions; focus rings on the Area rows, the M17 sign rows and the shift radios; 8 px between the Area rows and between the window chips; `gap-1` label pairs; M17's group heading 15 → 19 px; the missing M17 loading line; the map-pick help line under its row; the window chip's × a 36 px target. Left as is (reported): M17's main action sits in the sign card above the sign list (the page's own words say "จากรายการข้างล่าง", so the order cannot change without changing the words); `SignPanel`'s local ok → info + status mapping (two lines); the D4 list heading at 17 px bold, like D3's box titles.
+  - **Checks:** 416 tests pass, the 51 page tests unchanged (no test file touched); lint and tsc clean; main JS 132.07 kB gzip, startup ≈ 163.44 kB (main + preloaded `baseApi` 31.37); CSS 27.65 / 5.86 kB gzip.
+  - **Not done:** the owner's eye check (M17 on a real phone, D4 and D10 at 1280 px).
+
+  Pushed; PR #95 opened against master, not merged. Next: the eye check, then `implement` #80.
+
+- 2026-10-24 · #79 D4 rework after the owner's test-1 feedback (same branch, PR #95; only D4 — D10/M17 feedback comes later).
+  - **1.1 forms in a Drawer:** `Drawer` added beside `Modal` in `shared/components/Modal.tsx`: the same modal `<dialog>`, a full-height panel on the right edge (480 px `w-120`, commented), scrolling on its own; Escape, `onClose` and the opener's keyboard back work as `Modal`'s. D4's point editor, and the Area form (`AreaEditorDrawer`: D10's `AreaForm` + `AreaActiveSection`, the building/Cleaner lists asked for only while it is open), now open there — the Area table stays visible on the left. A save closes the Drawer and floats the shared `Toast`; a Toast under an open dialog would sit under its backdrop.
+  - **1.2 master-detail:** the header is the name, the shifts/Cleaner line, `[แก้ไขพื้นที่]` (Drawer) and `[พิมพ์ป้าย]`; two tabs — `จุดทำความสะอาด (n)` with `+ เพิ่มจุด` at the table's top right, and `ป้ายลงเวลา` holding the check-in sign's place, radius and QR. The check-in sign is no longer a row of the point table.
+  - **1.3 time picker:** one field per time `[07:00] – [09:00]` plus `+ เพิ่มช่วงเวลา`; digits only, the colon added after the second digit, Backspace takes a digit, Enter adds; saved windows are 30 px pills whose ✕ is 24 px and exactly as big as it looks (owner, later the same day: no grey circle from the browser's button face, and no invisible bigger target reaching over the time). facility-0083 amended with the owner's new rationale (2026-10-23); the browser `input type=time` stays rejected (AM/PM).
+  - **Folders:** `pages/area-form/` merged into `pages/areas/` — D4 now uses D10's form, and the repo's boundaries rule forbids page→page imports (facility-0025 amended). The `/admin/areas/new` and `/admin/areas/:areaId/edit` paths are unchanged.
+  - **Tests changed (reported, not silent):** `row(/AR01-IN/)` is gone (the check-in sign is Tab 2; the test asserts its region and its `พิมพ์ป้ายลงเวลา` link); `แก้ไขพื้นที่` is a button, not a link; `พิมพ์ป้ายของพื้นที่นี้ ›` → `พิมพ์ป้าย`; `+ เพิ่มจุดทำความสะอาดในพื้นที่นี้` → `+ เพิ่มจุด`; `แก้ไข AR01-IN` → the `ป้ายลงเวลา` tab; the four time boxes → the `เริ่ม` / `ถึง` fields; `เพิ่ม` → `+ เพิ่มช่วงเวลา`; a save or (de)activation now closes the editor, so the deactivation test opens the point again; the facility-0083 test now covers the colon, Backspace and Enter; two new tests (the Area form opens in a Drawer, `clockOf`/`typedTime`).
+  - **Checks:** 418 tests pass, lint and `tsc -b` clean; main JS 132.04 kB gzip, CSS 28.28 / 6.00 kB gzip.
+  - **Not done:** the second eye check (D4 at 1280 px).
+
+- 2026-10-24 · #79 D4's header and view switcher, after the owner picked layout A from three mockups (`mockup-d4.html`, a throwaway in `wwwroot`, never committed). The complaint: three stacked rows of look-alike boxes — `[แก้ไขพื้นที่] [พิมพ์ป้าย] เก็บพิกัดบนมือถือ ›` then `[จุดทำความสะอาด] [ป้ายลงเวลา]` — so the eye could not tell an action from a view switch. The cause was not master–detail: it was that the tabs were made from the same button as the actions, and every action shared one left-aligned row with the name.
+  - **Header:** name, shifts/Cleaner line on the left; `[แก้ไขพื้นที่]` and `[พิมพ์ป้าย]` on the right, away from the name. `เก็บพิกัดบนมือถือ ›` left the header — it is about signs — and now sits in Tab 2 beside `[พิมพ์ป้ายลงเวลา]`.
+  - **Tabs:** a real tablist (`role="tab"`/`tabpanel`, `aria-selected`, roving `tabIndex`, arrows/Home/End) with a 2 px line under the words instead of a box — `tabClass` + `tabListClass` in `shared/components/styles.ts`, 36 px, documented in MASTER.md. `toggleClass` stays for D1/D2/D3, where the control really is an on/off filter. The count moved into the tab, so the point list lost the heading that said it twice.
+  - **Tests changed (reported):** `getByRole('button', { name: 'จุดทำความสะอาด' })` → `getByRole('tab', { name: 'จุดทำความสะอาด (2)' })` with `aria-selected`; the `heading level 3 'จุดทำความสะอาด (2)'` is gone; the `เก็บพิกัดบนมือถือ ›` assertions moved into Tab 2 (the deactivated test now opens Tab 2 to prove the link is not there); a new test covers the arrow keys.
+  - **Checks:** 419 tests pass, lint and `tsc -b` clean.
+  - **Owner's decision, the same day (1A + keep apart):** `+ เพิ่มพื้นที่` stays a full page — creating is a rare setup task with six fields and a warning that the code cannot be changed later, so a 480 px Drawer would turn it into a scroll tunnel; `แก้ไขพื้นที่` stays in the open Area's header, never beside the add button. The rule ("an action sits where what it acts on sits, not by its verb") is now in MASTER.md. No code changed for either answer, so no commit besides this note.
 
 ## Owner's rules (still in force)
 

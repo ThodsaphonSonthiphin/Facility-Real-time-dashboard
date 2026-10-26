@@ -30,7 +30,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
       }),
     });
     const { user } = await renderApp('/admin/areas/1');
-    await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-IN' }));
+    await user.click(await screen.findByRole('tab', { name: 'ป้ายลงเวลา' }));
 
     const editor = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
     const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
@@ -144,14 +144,18 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
       'GET /api/admin/areas/1': () => ({ status: 200, body: areaDetail({ area: inactive }) }),
     });
     const { user } = await renderApp('/admin/areas/1');
-    await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-IN' }));
+    await user.click(await screen.findByRole('tab', { name: 'ป้ายลงเวลา' }));
 
     const checkInQr = screen.getByRole('region', { name: 'QR ของป้าย' });
     expect(within(checkInQr).queryByRole('button', { name: 'สร้าง QR ใหม่' })).not.toBeInTheDocument();
     expect(within(checkInQr).getByText('ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้')).toBeInTheDocument();
 
+    // the point list is Tab 1, the check-in sign is Tab 2
+    await user.click(screen.getByRole('tab', { name: /^จุดทำความสะอาด/ }));
     await user.click(screen.getByRole('button', { name: 'แก้ไข AR01-01' }));
-    const pointQr = screen.getByRole('region', { name: 'QR ของป้าย' });
+    const pointQr = within(screen.getByRole('region', { name: 'แก้ไขจุด · AR01 Area ทดลอง' })).getByRole('region', {
+      name: 'QR ของป้าย',
+    });
     expect(within(pointQr).queryByRole('button', { name: 'สร้าง QR ใหม่' })).not.toBeInTheDocument();
     expect(within(pointQr).getByText('ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้')).toBeInTheDocument();
   });
@@ -161,7 +165,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
       'POST /api/admin/signs/100/regenerate-token': () => ({ status: 200, body: checkInSign() }),
     });
     const { user } = await renderApp('/admin/areas/1');
-    await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-IN' }));
+    await user.click(await screen.findByRole('tab', { name: 'ป้ายลงเวลา' }));
 
     const qr = screen.getByRole('region', { name: 'QR ของป้าย' });
     await user.click(within(qr).getByRole('button', { name: 'สร้าง QR ใหม่' }));

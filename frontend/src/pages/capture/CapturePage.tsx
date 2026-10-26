@@ -7,6 +7,9 @@ import {
   type AreaDetail,
 } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
+import { Button } from '../../shared/components/Button';
+import { Note } from '../../shared/components/Note';
+import { boxClass, focusRing, linkClass } from '../../shared/components/styles';
 import type { GpsFix } from '../../shared/geo/readLocation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { formatCoordinates, signPlaceLabel } from '../../shared/utils/labels';
@@ -17,7 +20,6 @@ import {
   type CaptureProgress,
   type CaptureResult,
 } from './captureLocation';
-import './capture.css';
 
 type Phase =
   | { kind: 'idle' }
@@ -31,6 +33,11 @@ interface CaptureSign {
 }
 
 const SECONDS = CAPTURE_MS / 1000;
+
+// A row of the sign list: a 48 px target that says which sign is the one being read
+const rowClass = `flex min-h-12 w-full flex-col items-start gap-1 rounded border px-3 py-2.5 text-left ${focusRing}`;
+const rowIdleClass = 'border-input-border bg-surface text-text hover:border-primary';
+const rowChosenClass = 'border-primary bg-info-bg text-text';
 
 /** The Area's signs that can be scanned: the check-in sign and the active points (D4's order). */
 function captureSigns(detail: AreaDetail): CaptureSign[] {
@@ -54,15 +61,17 @@ export function CapturePage() {
   const selected = signs.find((target) => String(target.sign.id) === params.get('sign'));
 
   return (
-    <main className="capture-page">
-      <Link to={`/admin/areas/${areaId}`}>‹ กลับไปหน้าจัดการพื้นที่และป้าย</Link>
-      {detail && <span className="capture-kicker">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>}
-      <h1>เก็บพิกัดป้าย</h1>
-      {area.error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(area.error)}
-        </p>
+    // M17 is used at the sign, so it takes the phone sizes (pages/admin.md, #79)
+    <main className="flex flex-col gap-4 text-base text-text">
+      <Link className={linkClass} to={`/admin/areas/${areaId}`}>
+        ‹ กลับไปหน้าจัดการพื้นที่และป้าย
+      </Link>
+      {detail && (
+        <span className="text-md tracking-wide text-muted">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>
       )}
+      <h1 className="text-2xl font-bold">เก็บพิกัดป้าย</h1>
+      {area.error && <Note tone="error">{getErrorMessage(area.error)}</Note>}
+      {!detail && !area.error && <p className="text-muted">กำลังโหลด...</p>}
       {detail && (
         <CaptureWorkspace
           key={selected?.sign.id ?? 'none'}
@@ -71,7 +80,7 @@ export function CapturePage() {
           onChoose={(signId) => setParams({ sign: String(signId) })}
         />
       )}
-      <p className="app-muted">ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติการแก้ไขของแอดมิน</p>
+      <p className="text-md text-muted">ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติการแก้ไขของแอดมิน</p>
     </main>
   );
 }
@@ -133,7 +142,7 @@ function CaptureWorkspace({ signs, selected, onChoose }: CaptureWorkspaceProps) 
 
   return (
     <>
-      {!selected && <p className="app-note app-note--info">ยืนตรงที่ติดป้าย แล้วเลือกป้ายนั้นจากรายการข้างล่าง</p>}
+      {!selected && <Note tone="info">ยืนตรงที่ติดป้าย แล้วเลือกป้ายนั้นจากรายการข้างล่าง</Note>}
       {selected && (
         <SignCapture
           target={selected}
@@ -144,21 +153,26 @@ function CaptureWorkspace({ signs, selected, onChoose }: CaptureWorkspaceProps) 
           onSave={(fix) => void save(selected.sign, fix)}
         />
       )}
-      <section className="capture-signs" aria-labelledby="capture-signs-title">
-        <h2 id="capture-signs-title">ป้ายของพื้นที่นี้</h2>
-        <ul aria-label="ป้ายของพื้นที่นี้">
+      <section className="flex flex-col gap-2" aria-labelledby="capture-signs-title">
+        <h2 id="capture-signs-title" className="text-lg font-semibold">
+          ป้ายของพื้นที่นี้
+        </h2>
+        <ul className="m-0 flex list-none flex-col gap-2 p-0" aria-label="ป้ายของพื้นที่นี้">
           {signs.map((target) => {
             const isSelected = target.sign.id === selected?.sign.id;
             return (
               <li key={target.sign.id}>
                 <button
                   type="button"
-                  className={isSelected ? 'capture-row capture-row--selected' : 'capture-row'}
+                  data-tap=""
+                  className={`${rowClass} ${isSelected ? rowChosenClass : rowIdleClass}`}
                   aria-pressed={isSelected}
                   onClick={() => onChoose(target.sign.id)}
                 >
-                  <strong>{`${target.sign.code} ${target.title}`}</strong>
-                  <span>{isSelected && phase.kind === 'reading' ? 'กำลังเก็บ' : signPlaceLabel(target.sign)}</span>
+                  <strong className="font-semibold">{`${target.sign.code} ${target.title}`}</strong>
+                  <span className="text-md text-muted">
+                    {isSelected && phase.kind === 'reading' ? 'กำลังเก็บ' : signPlaceLabel(target.sign)}
+                  </span>
                 </button>
               </li>
             );
@@ -184,14 +198,15 @@ function SignCapture({ target, phase, problem, saving, onStart, onSave }: SignCa
   const result = phase.kind === 'result' ? phase.result : null;
   const readAgain = phase.kind === 'saved' || result?.kind === 'too-few';
   const showStart = phase.kind !== 'reading' && result?.kind !== 'fix' && result?.kind !== 'insecure';
+  const verdict = result?.kind === 'fix' ? accuracyVerdict(result.fix.accuracyM, sign.radiusM) : undefined;
 
   return (
-    <section className="app-panel capture-sign" aria-labelledby="capture-sign-title">
-      <h2 id="capture-sign-title">{`${sign.code} ${title}`}</h2>
-      <p className="app-muted">{`รัศมี ${sign.radiusM} ม. · ตอนนี้: ${signPlaceLabel(sign)}`}</p>
+    <section className={`flex flex-col gap-2.5 ${boxClass}`} aria-labelledby="capture-sign-title">
+      <h2 id="capture-sign-title" className="text-lg font-bold">{`${sign.code} ${title}`}</h2>
+      <p className="text-md text-muted">{`รัศมี ${sign.radiusM} ม. · ตอนนี้: ${signPlaceLabel(sign)}`}</p>
       {phase.kind === 'reading' && (
         <>
-          <p className="capture-progress" role="status">
+          <p className="text-xl font-bold" role="status">
             {`กำลังอ่านตำแหน่ง ${phase.progress.seconds} / ${SECONDS} วินาที`}
           </p>
           <p>
@@ -199,62 +214,49 @@ function SignCapture({ target, phase, problem, saving, onStart, onSave }: SignCa
               phase.progress.accuracyM != null ? ` · ความแม่นยำตอนนี้ ±${Math.round(phase.progress.accuracyM)} ม.` : ''
             }`}
           </p>
-          <button type="button" className="app-button app-button--primary" disabled>
+          <Button variant="primary" size="main" disabled>
             {`บันทึกพิกัด (รอครบ ${SECONDS} วินาที)`}
-          </button>
+          </Button>
         </>
       )}
       {result?.kind === 'fix' && (
         <>
           <p role="status">{`อ่านครบแล้ว ${result.readings} ครั้ง ใน ${SECONDS} วินาที`}</p>
           <p>{`ค่ากลาง: ${formatCoordinates(result.fix.latitude, result.fix.longitude)}`}</p>
-          <p className={accuracyVerdict(result.fix.accuracyM, sign.radiusM).ok ? 'app-note app-note--info' : 'app-note app-note--warn'}>
-            {accuracyVerdict(result.fix.accuracyM, sign.radiusM).text}
-          </p>
-          <div className="capture-buttons">
-            <button type="button" className="app-button app-button--primary" disabled={saving} onClick={() => onSave(result.fix)}>
+          {verdict && <Note tone={verdict.ok ? 'info' : 'warn'}>{verdict.text}</Note>}
+          <div className="flex flex-col gap-2">
+            <Button variant="primary" size="main" disabled={saving} onClick={() => onSave(result.fix)}>
               {saving ? 'กำลังบันทึก...' : 'บันทึกพิกัด'}
-            </button>
-            <button type="button" className="app-button" disabled={saving} onClick={onStart}>
+            </Button>
+            {/* The reading again is not the page's main action (pages/phone.md), so it is outlined, still full width */}
+            <Button variant="secondary" size="phone" className="w-full" disabled={saving} onClick={onStart}>
               เก็บใหม่
-            </button>
+            </Button>
           </div>
         </>
       )}
       {result?.kind === 'too-few' && (
-        <p className="app-note app-note--warn">
+        <Note tone="warn">
           {`อ่านตำแหน่งได้แค่ ${result.readings} ครั้งใน ${SECONDS} วินาที ลองเดินไปใกล้หน้าต่างหรือที่โล่ง แล้วเก็บใหม่`}
-        </p>
+        </Note>
       )}
       {result?.kind === 'denied' && (
-        <p className="app-note app-note--error" role="alert">
-          เปิดตำแหน่งและอนุญาตให้เว็บนี้อ่านตำแหน่ง แล้วกด "ใช้ตำแหน่งตรงนี้" อีกครั้ง
-        </p>
+        <Note tone="error">เปิดตำแหน่งและอนุญาตให้เว็บนี้อ่านตำแหน่ง แล้วกด "ใช้ตำแหน่งตรงนี้" อีกครั้ง</Note>
       )}
       {result?.kind === 'unavailable' && (
-        <p className="app-note app-note--error" role="alert">
-          เครื่องนี้อ่านตำแหน่งไม่ได้ เปิดหน้านี้บนมือถือที่อ่านตำแหน่งได้
-        </p>
+        <Note tone="error">เครื่องนี้อ่านตำแหน่งไม่ได้ เปิดหน้านี้บนมือถือที่อ่านตำแหน่งได้</Note>
       )}
-      {result?.kind === 'insecure' && (
-        <p className="app-note app-note--error" role="alert">
-          หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง
-        </p>
-      )}
+      {result?.kind === 'insecure' && <Note tone="error">หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง</Note>}
       {phase.kind === 'saved' && (
-        <p className="app-note app-note--info" role="status">
+        <Note tone="info" status>
           {phase.text}
-        </p>
+        </Note>
       )}
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
+      {problem && <Note tone="error">{problem}</Note>}
       {showStart && (
-        <button type="button" className="app-button app-button--primary" onClick={onStart}>
+        <Button variant="primary" size="main" onClick={onStart}>
           {readAgain ? 'เก็บใหม่' : 'ใช้ตำแหน่งตรงนี้'}
-        </button>
+        </Button>
       )}
     </section>
   );
