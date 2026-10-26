@@ -103,8 +103,9 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 | `Field` (`label`, `help`), `FieldGroup` (`legend`), `TextInput`, `Select`, `TextArea` (`size` phone / desk) | A labelled control; the help line sits outside the label and is linked with `aria-describedby`; `inputClass(size)` for a bare one. `FieldGroup` is the bordered `fieldset` whose legend names a group of answers (D10's shift pattern, D4's round windows) |
 | `ChoiceTile` (radio), `ToggleChip` (checkbox) | Large answers and issue tags on the phone |
 | `Table` | A table in its own scroll box; style-free `<th>` / `<td>` inside |
-| `Modal` (`labelledBy`, `onClose`) | A form over the page (the browser's modal `<dialog>`), so the page behind does not move: D2's correction form, D3's cover form. Its heading (`tabIndex={-1}`) takes the keyboard on open; Escape asks `onClose`; closing gives the keyboard back to what opened it (owner, #78) |
+| `Modal` (`labelledBy`, `onClose`) | A form over the page (the browser's modal `<dialog>`), so the page behind does not move: D2's correction form, D3's cover form, D6's confirm to deactivate an account (`role="alertdialog"` with `describedBy`, owner 2026-10-26: a confirm of what cannot be undone is a popup, not a box in the page). Its heading (`tabIndex={-1}`) takes the keyboard on open; Escape asks `onClose`; closing gives the keyboard back to what opened it (owner, #78) |
 | `Drawer` (`labelledBy`, `onClose`) | The same modal `<dialog>` as a full-height panel on the right edge (480 px, `w-120`, commented), scrolling on its own, the page still visible on the left: D4's point editor and its Area form (owner, 2026-10-23). Escape, the keyboard and the opener's keyboard back work as `Modal`'s |
+| `MoreInfo` (`summary`) | Notes on how a page counts or keeps things, shut until asked (owner, 2026-10-26). A warning about what the Admin is about to do and a field's help stay in the page |
 | `Panel`, `Facts`, `Splash` | A boxed group, label–value pairs, the waiting line |
 | `AppLayout`, `AdminNav`, `LiveBadge`, `StatusScreen`, `CrashScreen` | The shell, bar and menu, the live badge, full-page messages |
 

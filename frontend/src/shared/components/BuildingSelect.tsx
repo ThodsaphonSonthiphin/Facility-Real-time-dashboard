@@ -1,5 +1,5 @@
 import { useGetBuildingsQuery } from '../api/adminSetupApi';
-import './shared.css';
+import { Field, Select } from './Field';
 
 interface BuildingSelectProps {
   value?: number;
@@ -10,10 +10,9 @@ interface BuildingSelectProps {
 export function BuildingSelect({ value, onChange }: BuildingSelectProps) {
   const { data: buildings } = useGetBuildingsQuery();
   return (
-    <label className="app-field">
-      ตึก
-      <select
-        className="app-input"
+    <Field label="ตึก">
+      <Select
+        size="desk"
         value={value ?? ''}
         onChange={(event) => onChange(event.target.value === '' ? undefined : Number(event.target.value))}
       >
@@ -23,7 +22,7 @@ export function BuildingSelect({ value, onChange }: BuildingSelectProps) {
             {building.code}
           </option>
         ))}
-      </select>
-    </label>
+      </Select>
+    </Field>
   );
 }

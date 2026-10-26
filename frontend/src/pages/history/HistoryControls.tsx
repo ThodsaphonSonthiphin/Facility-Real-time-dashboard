@@ -1,3 +1,5 @@
+import { Button } from '../../shared/components/Button';
+import { Field, Select, TextInput } from '../../shared/components/Field';
 import { RangeFields } from '../../shared/components/RangeFields';
 import type { RangeTexts } from '../../shared/utils/dateRange';
 import type { AuditActor, HistoryArgs } from './historyApi';
@@ -17,20 +19,31 @@ interface HistoryControlsProps {
 }
 
 /** Wireframe D9's filters: the range (typed), ผู้ทำ and ประเภท (facility-0057 rule 2). */
-export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, search, onSearch }: HistoryControlsProps) {
+export function HistoryControls({
+  args,
+  actors,
+  texts,
+  onTexts,
+  onShow,
+  onArgs,
+  search,
+  onSearch,
+}: HistoryControlsProps) {
   return (
-    <div className="history-controls">
+    <div className="flex flex-wrap items-end gap-2">
       <RangeFields value={texts} onChange={onTexts} onEnter={onShow} />
-      <button type="button" className="app-button" onClick={onShow}>
+      <Button size="desk" onClick={onShow}>
         แสดง
-      </button>
-      <label className="app-field">
-        ผู้ทำ
-        <select
-          className="app-input"
+      </Button>
+      <Field label="ผู้ทำ">
+        <Select
+          size="desk"
           value={args.actorId ?? ''}
           onChange={(event) =>
-            onArgs({ ...args, actorId: event.target.value === '' ? undefined : Number(event.target.value) })
+            onArgs({
+              ...args,
+              actorId: event.target.value === '' ? undefined : Number(event.target.value),
+            })
           }
         >
           <option value="">ทุกคน</option>
@@ -39,14 +52,18 @@ export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, 
               {actor.displayName}
             </option>
           ))}
-        </select>
-      </label>
-      <label className="app-field">
-        ประเภท
-        <select
-          className="app-input"
+        </Select>
+      </Field>
+      <Field label="ประเภท">
+        <Select
+          size="desk"
           value={args.category ?? ''}
-          onChange={(event) => onArgs({ ...args, category: auditCategories.find((each) => each === event.target.value) })}
+          onChange={(event) =>
+            onArgs({
+              ...args,
+              category: auditCategories.find((each) => each === event.target.value),
+            })
+          }
         >
           <option value="">ทุกประเภท</option>
           {auditCategories.map((category) => (
@@ -54,18 +71,18 @@ export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, 
               {categoryLabel[category]}
             </option>
           ))}
-        </select>
-      </label>
-      <label className="app-field">
-        ค้นหา
-        <input
-          className="app-input history-search"
+        </Select>
+      </Field>
+      <Field label="ค้นหา">
+        <TextInput
+          size="desk"
+          className="w-60"
           type="search"
           value={search}
           placeholder="ค้นหาชื่อคน จุด หรือรหัส"
           onChange={(event) => onSearch(event.target.value)}
         />
-      </label>
+      </Field>
     </div>
   );
 }

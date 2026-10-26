@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { BuildingSelect } from '../../shared/components/BuildingSelect';
+import { Button } from '../../shared/components/Button';
+import { MoreInfo } from '../../shared/components/MoreInfo';
+import { Note } from '../../shared/components/Note';
 import { RangeFields } from '../../shared/components/RangeFields';
+import { buttonClass } from '../../shared/components/styles';
 import {
   checkRange,
   exportLink,
@@ -18,7 +22,6 @@ import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
 import { useGetInspectionSummaryQuery, type InspectionSummary } from './summaryApi';
 import { SUMMARY_MAX_DAYS } from './summaryRules';
 import { SummaryTable } from './SummaryTable';
-import './inspectionSummary.css';
 
 /**
  * facility-0048 rule 5, wireframe D7: each active Supervisor's inspections over a range, as the server counts them.
@@ -57,35 +60,28 @@ export function InspectionSummaryPage() {
   };
 
   return (
-    <main className="summary-page">
-      <header>
-        <span className="app-muted">{summary ? rangeLine(summary, Boolean(asked)) : 'แอดมินเท่านั้น'}</span>
-        <h1>สรุปการตรวจของหัวหน้า</h1>
+    <main className="flex flex-col gap-4 text-sm text-text">
+      <header className="flex flex-col gap-0.5">
+        <span className="text-muted">{summary ? rangeLine(summary, Boolean(asked)) : 'แอดมินเท่านั้น'}</span>
+        <h1 className="text-xl font-bold">สรุปการตรวจของหัวหน้า</h1>
       </header>
-      <div className="summary-controls">
+      <div className="flex flex-wrap items-end gap-2">
         <RangeFields value={texts} onChange={setTexts} onEnter={show} />
-        <button type="button" className="app-button" onClick={show}>
+        <Button size="desk" onClick={show}>
           แสดง
-        </button>
+        </Button>
         <BuildingSelect value={buildingId} onChange={(building) => go(asked, building)} />
         <Link
-          className="app-button summary-export"
+          className={`ml-auto ${buttonClass('secondary', 'desk')}`}
+          data-tap=""
           to={exportLink(summary ? { from: summary.from, to: summary.to } : asked, buildingId)}
         >
           ส่งออก Excel
         </Link>
       </div>
-      {problem && (
-        <p className="app-note app-note--error" role="alert">
-          {problem}
-        </p>
-      )}
-      {isFetching && !summary && <p className="app-muted">กำลังโหลด...</p>}
-      {error && (
-        <p className="app-note app-note--error" role="alert">
-          {getErrorMessage(error)}
-        </p>
-      )}
+      {problem && <Note tone="error">{problem}</Note>}
+      {isFetching && !summary && <p className="text-muted">กำลังโหลด...</p>}
+      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {summary && <SummaryTable rows={summary.rows} />}
       <SummaryNotes />
     </main>
@@ -101,10 +97,10 @@ function rangeLine(summary: InspectionSummary, asked: boolean): string {
   return `แอดมินเท่านั้น · ${asked ? 'ช่วงที่เลือก' : '7 วันล่าสุด'} (${formatShiftDate(summary.from)}–${formatShiftDate(summary.to)})`;
 }
 
-/** Wireframe D7's notes, with "ตรวจทั้งหมด" and plan 6 decision 17 added. */
+/** Wireframe D7's notes, with "ตรวจทั้งหมด" and plan 6 decision 17 added; shut until asked. */
 function SummaryNotes() {
   return (
-    <div className="summary-notes">
+    <MoreInfo summary="วิธีนับตัวเลข">
       <span>
         หน้านี้แสดงข้อมูลให้แอดมินเห็น ระบบไม่ประเมินผลเอง และไม่มีขั้นต่ำว่าหัวหน้าต้องตรวจกี่ครั้ง · "จุดที่ตรวจแล้ว"
         นับจุดในตึกและกะของหัวหน้าที่ถูกตรวจอย่างน้อย 1 ครั้งในช่วงที่เลือก
@@ -115,6 +111,6 @@ function SummaryNotes() {
       </span>
       <span>งานที่แม่บ้านส่งหลังจบกะไม่นับในตัวเลขของหัวหน้า เพราะไม่มีใครตรวจได้แล้ว</span>
       <span>ดูรายละเอียดรายครั้งได้จากไฟล์ Excel</span>
-    </div>
+    </MoreInfo>
   );
 }
