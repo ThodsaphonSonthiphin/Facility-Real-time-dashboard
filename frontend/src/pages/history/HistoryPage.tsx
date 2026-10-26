@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { Button } from '../../shared/components/Button';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
-import { boxClass } from '../../shared/components/styles';
 import { checkRange, lastSevenDays, rangeTexts } from '../../shared/utils/dateRange';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { thaiToday } from '../../shared/utils/thaiTime';
@@ -94,10 +94,12 @@ export function HistoryPage() {
           </div>
         </>
       )}
-      <p className={`text-muted ${boxClass}`}>
-        ไม่มีใครแก้หรือลบรายการในหน้านี้ได้ · เก็บนานเท่ากับข้อมูลที่ถูกแก้ · เบอร์โทรไม่แสดงทั้งก่อนและหลัง ·
-        การเปิดดูหน้านี้ไม่ถูกบันทึก
-      </p>
+      <MoreInfo summary="เกี่ยวกับหน้านี้">
+        <span>
+          ไม่มีใครแก้หรือลบรายการในหน้านี้ได้ · เก็บนานเท่ากับข้อมูลที่ถูกแก้ · เบอร์โทรไม่แสดงทั้งก่อนและหลัง ·
+          การเปิดดูหน้านี้ไม่ถูกบันทึก
+        </span>
+      </MoreInfo>
     </main>
   );
 }

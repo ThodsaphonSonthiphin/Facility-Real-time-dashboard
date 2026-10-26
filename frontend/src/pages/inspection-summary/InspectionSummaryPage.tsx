@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { BuildingSelect } from '../../shared/components/BuildingSelect';
 import { Button } from '../../shared/components/Button';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { RangeFields } from '../../shared/components/RangeFields';
 import { buttonClass } from '../../shared/components/styles';
@@ -96,11 +97,10 @@ function rangeLine(summary: InspectionSummary, asked: boolean): string {
   return `แอดมินเท่านั้น · ${asked ? 'ช่วงที่เลือก' : '7 วันล่าสุด'} (${formatShiftDate(summary.from)}–${formatShiftDate(summary.to)})`;
 }
 
-/** Wireframe D7's notes, with "ตรวจทั้งหมด" and plan 6 decision 17 added. */
+/** Wireframe D7's notes, with "ตรวจทั้งหมด" and plan 6 decision 17 added; shut until asked. */
 function SummaryNotes() {
   return (
-    // max-w-[80ch]: a readable line length, as the old notes had; no token is measured in characters
-    <div className="flex max-w-[80ch] flex-col gap-1.5 text-muted">
+    <MoreInfo summary="วิธีนับตัวเลข">
       <span>
         หน้านี้แสดงข้อมูลให้แอดมินเห็น ระบบไม่ประเมินผลเอง และไม่มีขั้นต่ำว่าหัวหน้าต้องตรวจกี่ครั้ง · "จุดที่ตรวจแล้ว"
         นับจุดในตึกและกะของหัวหน้าที่ถูกตรวจอย่างน้อย 1 ครั้งในช่วงที่เลือก
@@ -111,6 +111,6 @@ function SummaryNotes() {
       </span>
       <span>งานที่แม่บ้านส่งหลังจบกะไม่นับในตัวเลขของหัวหน้า เพราะไม่มีใครตรวจได้แล้ว</span>
       <span>ดูรายละเอียดรายครั้งได้จากไฟล์ Excel</span>
-    </div>
+    </MoreInfo>
   );
 }

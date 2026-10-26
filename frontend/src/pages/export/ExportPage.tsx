@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { BuildingSelect } from '../../shared/components/BuildingSelect';
 import { Button } from '../../shared/components/Button';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { RangeFields } from '../../shared/components/RangeFields';
 import { boxClass, focusRing, linkClass } from '../../shared/components/styles';
@@ -124,13 +125,12 @@ export function ExportPage() {
               {notice.text}
             </Note>
           )}
-          <div className="flex flex-col gap-1.5 text-muted">
+          <p className="text-muted">ไฟล์ที่ดาวน์โหลดแล้วห้ามส่งต่อนอกบริษัท</p>
+          <MoreInfo summary="เกี่ยวกับไฟล์นี้">
             <span>ไม่มีพิกัดตำแหน่งดิบ มีแค่ระยะห่างจากป้าย และผลในรัศมี / นอกรัศมี</span>
             <span>การส่งออกเก็บลงประวัติการแก้ไขของแอดมิน (ใคร เมื่อไร ชุดไหน ช่วงวันไหน)</span>
-            <span>
-              ไฟล์ที่ดาวน์โหลดแล้วอยู่นอกการลบตามระยะเวลาเก็บข้อมูล ห้ามส่งต่อนอกบริษัท (เรื่องคนเก็บไฟล์รอคุยกับ HR)
-            </span>
-          </div>
+            <span>ไฟล์ที่ดาวน์โหลดแล้วอยู่นอกการลบตามระยะเวลาเก็บข้อมูล</span>
+          </MoreInfo>
           <Link className={`self-start ${linkClass}`} to="/dashboard">
             ‹ กลับไปหน้าสถานะจุด
           </Link>

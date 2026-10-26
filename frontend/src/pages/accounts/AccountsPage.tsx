@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGetAreasQuery, useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { Field, TextInput } from '../../shared/components/Field';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { toggleClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -113,11 +114,12 @@ export function AccountsPage() {
               onAction={act}
             />
           )}
-          <p className="text-muted">
-            ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติการสแกนยังอยู่ · ปิดใช้งาน แก้เบอร์โทร หรือรีเซ็ตรหัสผ่านแล้ว
-            ทุกเครื่องของคนนั้นหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ ·
-            ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
-          </p>
+          <MoreInfo summary="เกี่ยวกับการปิดใช้งาน">
+            <span>
+              ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติการสแกนยังอยู่ · ปิดใช้งาน แก้เบอร์โทร หรือรีเซ็ตรหัสผ่านแล้ว
+              ทุกเครื่องของคนนั้นหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ · ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
+            </span>
+          </MoreInfo>
         </section>
         <aside className="flex min-w-0 flex-col gap-2.5" aria-label="แผงบัญชี">
           {(!target || panel.kind === 'deactivate') && <CreateAccountForm accounts={list} areas={areas.data ?? []} buildings={buildings.data ?? []} />}
