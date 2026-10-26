@@ -562,24 +562,24 @@ graph LR
 
 | Method | Route | Handler | Called by | Why |
 |---|---|---|---|---|
-| GET | `/api/admin/buildings` | `AdminAreaEndpoints.cs:18` | `shared/api/adminSetupApi.ts:113` | Picker options used across many pages. |
-| GET | `/api/admin/buildings/all` | `AdminBuildingEndpoints.cs` | `adminSetupApi.ts` (`getAllBuildings`) | Every building, off ones too, with active Area and Supervisor counts: the buildings page and the D7/D8 picker. |
+| GET | `/api/admin/buildings` | `AdminAreaEndpoints.cs:19` | `shared/api/adminSetupApi.ts:119` | Picker options used across many pages. |
+| GET | `/api/admin/buildings/all` | `AdminBuildingEndpoints.cs` | `adminSetupApi.ts` (`getAllBuildings`) | Every building, off ones too, with active Area and Supervisor counts: the buildings page and the D8 picker (D7 lists the active ones only). |
 | POST | `/api/admin/buildings` | `AdminBuildingEndpoints.cs` → `CreateAsync` | `pages/buildings/buildingsApi.ts` | Code set once, never reused (facility-0090). |
 | PUT | `/api/admin/buildings/{id}` | `AdminBuildingEndpoints.cs` → `RenameAsync` | `buildingsApi.ts` | Name only. |
 | POST | `/api/admin/buildings/{id}/deactivate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | Refused while an active Area or Supervisor is left in it. |
 | POST | `/api/admin/buildings/{id}/activate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | No condition; its Areas stay as they are. |
-| GET | `/api/admin/cleaners` | `AdminAreaEndpoints.cs:19` | `adminSetupApi.ts:117` | Same. |
-| GET | `/api/admin/areas` | `AdminAreaEndpoints.cs:20` | `adminSetupApi.ts:105` | Area summaries with counts. |
-| GET | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:22` | `adminSetupApi.ts:109` | Area detail: points, windows, signs. |
-| POST | `/api/admin/areas` | `AdminAreaEndpoints.cs:31` → `CreateAsync:66` | `pages/areas/areaFormApi.ts:17` | Creates the area **and** its check-in sign in one transaction. |
-| PUT | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:32` → `UpdateAsync:115` | `areaFormApi.ts:21` | Renaming or moving an area drops night windows for a DayOnly pattern. |
-| POST | `/api/admin/areas/{id}/deactivate` | `AdminAreaEndpoints.cs:33` → `SetActiveAsync:172` | `areaFormApi.ts:25` | Deactivate, never delete — history must keep the name. |
-| POST | `/api/admin/areas/{id}/activate` | `AdminAreaEndpoints.cs:35` | `areaFormApi.ts:26` | Re-open. |
+| GET | `/api/admin/cleaners` | `AdminAreaEndpoints.cs:20` | `adminSetupApi.ts:128` | Same. |
+| GET | `/api/admin/areas` | `AdminAreaEndpoints.cs:21` | `adminSetupApi.ts:111` | Area summaries with counts. |
+| GET | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:23` | `adminSetupApi.ts:115` | Area detail: points, windows, signs. |
+| POST | `/api/admin/areas` | `AdminAreaEndpoints.cs:32` → `CreateAsync:67` | `pages/areas/areaFormApi.ts:17` | Creates the area **and** its check-in sign in one transaction. |
+| PUT | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:33` → `UpdateAsync:116` | `areaFormApi.ts:21` | Renaming or moving an area drops night windows for a DayOnly pattern. |
+| POST | `/api/admin/areas/{id}/deactivate` | `AdminAreaEndpoints.cs:34` → `SetActiveAsync:173` | `areaFormApi.ts:25` | Deactivate, never delete — history must keep the name. |
+| POST | `/api/admin/areas/{id}/activate` | `AdminAreaEndpoints.cs:36` | `areaFormApi.ts:26` | Re-open. |
 | POST | `/api/admin/areas/{areaId}/points` | `AdminPointEndpoints.cs:19` → `CreateAsync:28` | `pages/areas/areasApi.ts:15` | A point is meaningless without its sign and round windows. |
 | PUT | `/api/admin/points/{id}` | `AdminPointEndpoints.cs:20` → `UpdateAsync:80` | `areasApi.ts:19` | Unchanged windows keep their ids so a live round keeps its records. |
 | POST | `/api/admin/points/{id}/deactivate` | `AdminPointEndpoints.cs:21` → `SetActiveAsync:136` | `areasApi.ts:23` | Leaves the dashboard, cannot be scanned, history kept. |
 | POST | `/api/admin/points/{id}/activate` | `AdminPointEndpoints.cs:23` | `areasApi.ts:24` | Re-open. |
-| PUT | `/api/admin/signs/{id}/location` | `AdminSignEndpoints.cs:23` → `SetLocationAsync:29` | `adminSetupApi.ts:122` | Sets the coordinates the geofence compares against. Site capture beats map pick. |
+| PUT | `/api/admin/signs/{id}/location` | `AdminSignEndpoints.cs:23` → `SetLocationAsync:29` | `adminSetupApi.ts:133` | Sets the coordinates the geofence compares against. Site capture beats map pick. |
 | PUT | `/api/admin/signs/{id}/radius` | `AdminSignEndpoints.cs:24` → `SetRadiusAsync:95` | `areasApi.ts:31` | A wrong radius makes every scan "off-site". |
 | POST | `/api/admin/signs/{id}/regenerate-token` | `AdminSignEndpoints.cs:25` → `RegenerateTokenAsync:129` | `areasApi.ts:36` | Kills the printed QR at once — the only way to de-authorise a lost sign. |
 

@@ -216,6 +216,7 @@ Plan 4 test results at merge:
   - An Area turned on at the same moment its building is turned off is not guarded.
   - Made during execution: the refusal's two parts join with " และ" (no space after และ).
   - Made during execution: a failed create answers "code taken" only when a re-check finds the code taken; otherwise it is rethrown.
+  - Final-review fixes (2026-10-26): `BuildingSelect` takes `includeOff` (D8 only); the Area form answers "ต้องเลือกตึกที่ใช้งานอยู่" for an off building and keeps "ไม่พบตึกนี้" for an unknown id; the building create answers `Location: /api/admin/buildings/all`; the buildings page footer says "หัวหน้าที่เปิดใช้งาน"; code-map line refs of the Admin setup table refreshed.
 
 ## Sharing a test build (colleagues on other networks)
 
@@ -236,7 +237,7 @@ Test data only. The Development seed has an Admin whose password is public in th
   - the name can be changed and may repeat another building's name;
   - a building is never deleted, only turned off, and only when no active Area and no active Supervisor is left in it;
   - an Area or a Supervisor account in a building that is off cannot be turned on;
-  - the D7 and D8 building pickers also list buildings that are off, marked "(ปิดใช้งาน)";
+  - the D8 building picker also lists buildings that are off, marked "(ปิดใช้งาน)"; D7 lists active ones only (owner, 2026-10-26, after the final review: D7 counts active Supervisors and an off building has none);
   - every change goes to the audit log.
   
   The 6 real buildings are added through this page on deploy, not seeded in code.
