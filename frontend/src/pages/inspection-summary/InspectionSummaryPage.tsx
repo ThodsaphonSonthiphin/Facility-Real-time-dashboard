@@ -97,7 +97,7 @@ function rangeLine(summary: InspectionSummary, asked: boolean): string {
   return `แอดมินเท่านั้น · ${asked ? 'ช่วงที่เลือก' : '7 วันล่าสุด'} (${formatShiftDate(summary.from)}–${formatShiftDate(summary.to)})`;
 }
 
-/** Wireframe D7's notes, with "ตรวจทั้งหมด" and plan 6 decision 17 added; shut until asked. */
+/** Wireframe D7's notes, with "จำนวนครั้งที่ตรวจ" and plan 6 decision 17 added; shut until asked. */
 function SummaryNotes() {
   return (
     <MoreInfo summary="วิธีนับตัวเลข">
@@ -107,7 +107,7 @@ function SummaryNotes() {
       </span>
       <span>
         "ไม่ได้ตรวจ" คืองานที่แม่บ้านส่งแล้ว แต่รอบจบก่อนหัวหน้ามาตรวจ · "ตรวจตอนอยู่ไกลป้าย"
-        คือตรวจตอนที่มือถืออยู่นอกรัศมีของป้าย · "ตรวจทั้งหมด" นับทุกครั้งที่หัวหน้าคนนั้นตรวจ รวมตอนตรวจแทนตึกอื่น
+        คือตรวจตอนที่มือถืออยู่นอกรัศมีของป้าย · "จำนวนครั้งที่ตรวจ" นับทุกครั้งที่หัวหน้าคนนั้นกดบันทึกผลตรวจ งานชิ้นเดียวตรวจซ้ำได้จึงนับหลายครั้ง และรวมตอนตรวจแทนตึกอื่น
       </span>
       <span>งานที่แม่บ้านส่งหลังจบกะไม่นับในตัวเลขของหัวหน้า เพราะไม่มีใครตรวจได้แล้ว</span>
       <span>

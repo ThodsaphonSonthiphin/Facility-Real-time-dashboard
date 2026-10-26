@@ -4,7 +4,7 @@ import { Note } from '../../shared/components/Note';
 import type { SummaryRow } from './summaryApi';
 import { inspectedShare, placeText, pointsText } from './summaryRules';
 
-/** Wireframe D7's table, in the server's order, plus "ตรวจทั้งหมด" (facility-0048 rule 5). Names are React text only. */
+/** Wireframe D7's table, in the server's order, plus "จำนวนครั้งที่ตรวจ" (facility-0048 rule 5). Names are React text only. */
 export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
   if (rows.length === 0) {
     return <Note tone="info">ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก</Note>;
@@ -17,7 +17,7 @@ export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
           <th scope="col">ตึก · กะ</th>
           <th scope="col">จุดที่ตรวจแล้ว</th>
           <th scope="col">
-            <Count>ตรวจทั้งหมด</Count>
+            <Count>จำนวนครั้งที่ตรวจ</Count>
           </th>
           <th scope="col">
             <Count>งานที่แม่บ้านส่ง</Count>
