@@ -24,7 +24,7 @@ export function WorkGroup({ title, items }: { title: string; items: readonly Wor
           return (
             <li key={item.point.id} className="flex min-h-14 items-center justify-between gap-3 px-3.5 py-3">
               <div className="flex min-w-0 flex-col">
-                <h3 className="font-semibold">{item.point.name}</h3>
+                <h3 className="text-lg font-semibold">{item.point.name}</h3>
                 <span className="text-md text-muted">{whereText(item)}</span>
                 {/* A ต้องแก้ไข row also says what to fix (owner, 2026-10-22), as the large card does */}
                 {item.point.status === 'Rework' && (

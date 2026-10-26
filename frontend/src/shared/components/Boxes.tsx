@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { boxClass } from './styles';
 
-/** A white box with a thin border, for a group of things on a page (the old `app-panel`). */
+/** A white box with a thin border, for a group of things on a page. */
 export function Panel({ title, children }: { title?: ReactNode; children: ReactNode }) {
   return (
     <section className={`flex flex-col gap-2 ${boxClass}`}>
@@ -11,7 +11,7 @@ export function Panel({ title, children }: { title?: ReactNode; children: ReactN
   );
 }
 
-/** Label and value pairs in two columns (the old `app-facts`). */
+/** Label and value pairs in two columns. */
 export function Facts({ items }: { items: readonly { label: ReactNode; value: ReactNode }[] }) {
   return (
     // grid-cols-[auto_1fr]: the labels as wide as the longest one, the values take the rest; no token describes that
@@ -50,7 +50,7 @@ export function Table({ label, children }: { label?: string; children: ReactNode
   );
 }
 
-/** The one line shown while a page waits for its first answer (the old `app-splash`). */
+/** The one line shown while a page waits for its first answer. */
 export function Splash({ children }: { children: ReactNode }) {
   return <p className="px-5 py-12 text-center text-base text-muted">{children}</p>;
 }

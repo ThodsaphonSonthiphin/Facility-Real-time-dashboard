@@ -1,10 +1,8 @@
 /*
- * facility-0086: Tailwind 4, moved page by page. Preflight stays off until the last page has moved (#82), so the
- * plain CSS below and in each page's file keeps working beside the utilities.
+ * facility-0086: Tailwind 4 with its preflight. This is the only CSS file in the frontend: tokens, base rules, @page and
+ * the tap animation; every page styles itself with utilities.
  */
-@layer theme, base, components, utilities;
-@import 'tailwindcss/theme.css' layer(theme);
-@import 'tailwindcss/utilities.css' layer(utilities);
+@import 'tailwindcss';
 
 /*
  * The new look (facility-0087), documented in design-system/facility/MASTER.md: when the two disagree, this block is
@@ -89,88 +87,18 @@
 }
 
 /*
- * Base rules sit in the base layer, below the utilities: an unlayered `a { color }` would beat `text-on-primary` on a
- * button-styled link. The pages not moved yet are unlayered, so they still win over these rules as before.
- * The old look's tokens (--old-*, renamed so they cannot clash with @theme) are for those pages and go in #82; the
- * base rules after them stay.
+ * Base rules sit in the base layer, after preflight and below the utilities, so a utility always wins. Preflight
+ * already zeroes margins, sets the font from --font-sans and makes `font: inherit` on controls.
  */
 @layer base {
-  :root {
-    --old-color-bg: #f4f5f4;
-    --old-color-surface: #ffffff;
-    --old-color-text: #1d2324;
-    --old-color-text-soft: #3b4446;
-    --old-color-muted: #5f696b;
-    --old-color-border: #d5dada;
-    --old-color-input-border: #aeb6b7;
-    --old-color-primary: #0e6b66;
-    --old-color-primary-dark: #0a4f4b;
-    --old-color-on-primary: #ffffff;
-    --old-color-info-bg: #e3f1ef;
-    --old-color-info-border: #9ccbc6;
-    --old-color-info-text: #0a4f4b;
-    --old-color-error-bg: #fdecea;
-    --old-color-error-border: #e2a39b;
-    --old-color-error-text: #8a1c12;
-    --old-color-warn-bg: #fff4e5;
-    --old-color-warn-border: #e3b776;
-    --old-color-warn-text: #7a4300;
-    --old-color-status-rework: #b42318;
-    --old-color-status-overdue: #a85a00;
-    --old-color-status-pending: #4a6378;
-    --old-color-status-passed: #2e6e4a;
-    --old-color-status-idle: #5f696b;
-    --old-color-status-break: #6b5b95;
-
-    --old-radius-sm: 8px;
-    --old-radius-md: 10px;
-    --old-radius-lg: 14px;
-    --old-gap: 16px;
-    --old-phone-width: 480px;
-    --old-desk-width: 1216px;
-
-    font-family: system-ui, sans-serif;
-    color: var(--old-color-text);
-    background: var(--old-color-bg);
-    -webkit-text-size-adjust: 100%;
-  }
-
-  *,
-  *::before,
-  *::after {
-    box-sizing: border-box;
-  }
-
   body {
-    margin: 0;
     min-height: 100vh;
-    background: var(--old-color-bg);
+    background: var(--color-bg);
+    color: var(--color-text);
   }
 
   #root {
     min-height: 100vh;
-  }
-
-  h1,
-  h2,
-  h3,
-  p {
-    margin: 0;
-  }
-
-  a {
-    color: var(--old-color-primary);
-  }
-
-  a:hover {
-    color: var(--old-color-primary-dark);
-  }
-
-  button,
-  input,
-  select,
-  textarea {
-    font: inherit;
   }
 }
 
@@ -185,9 +113,8 @@
 
 /*
  * A press shows at once, before any answer comes back (owner, 2026-10-21). A quick tap ends before :active can be
- * seen, so shared/utils/tapFeedback.ts adds is-tapped on every press of a button-styled element (the old look's
- * .app-button and the new look's [data-tap]) and the animation plays to its end. It lives here, not in a page's
- * file, so it reaches every page.
+ * seen, so shared/utils/tapFeedback.ts adds is-tapped on every press of a button-styled element ([data-tap]) and
+ * the animation plays to its end.
  */
 @keyframes tap {
   from {

@@ -1,6 +1,6 @@
 const TAPPED = 'is-tapped';
-/** The old look's `.app-button` and the new look's Button (and button-styled links), which carry `data-tap`. */
-const PRESSABLE = '.app-button, [data-tap]';
+/** Button and the button-styled links, which carry `data-tap`. */
+const PRESSABLE = '[data-tap]';
 
 /**
  * A quick tap is over before `:active` can be seen, so every press of a button-styled element (buttons and

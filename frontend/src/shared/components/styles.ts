@@ -104,7 +104,7 @@ export const tabClass =
   'aria-selected:border-primary aria-selected:text-primary ' +
   `${focusRing}`;
 
-/** A text link (the base layer still colours `a` with the old look until #82). */
+/** A text link. */
 export const linkClass = `text-primary underline hover:text-primary-strong ${focusRing}`;
 
 export type NoteTone = 'info' | 'warn' | 'error';

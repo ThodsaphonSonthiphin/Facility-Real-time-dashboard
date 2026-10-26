@@ -6,6 +6,7 @@ import { MyBuildingPage } from './pages/my-building';
 import { MyWorkPage } from './pages/my-work';
 import { ScanPage } from './pages/scan';
 import { AppLayout } from './shared/components/AppLayout';
+import { Splash } from './shared/components/Boxes';
 import { ByRole } from './shared/components/ByRole';
 import { CrashScreen } from './shared/components/CrashScreen';
 import { HomeRedirect } from './shared/components/HomeRedirect';
@@ -25,7 +26,7 @@ export const routes: RouteObject[] = [
     path: '/',
     errorElement: <CrashScreen />,
     // While the first page's file loads. A file that cannot load (a new build replaced it) shows the crash screen
-    hydrateFallbackElement: <p className="app-splash">กำลังโหลด...</p>,
+    hydrateFallbackElement: <Splash>กำลังโหลด...</Splash>,
     children: [
       { index: true, element: <HomeRedirect /> },
       { path: 'login', element: <LoginPage /> },

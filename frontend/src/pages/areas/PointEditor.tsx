@@ -20,10 +20,10 @@ interface Typed {
 
 const noTyped: Typed = { start: '', end: '' };
 
-// The pill's ✕: only the cross, and exactly the 24 px it looks like — `border-0 bg-transparent` turns off the
-// browser's grey button face (preflight is off until #82), as the Toast's ✕ does, and there is no `::after` layer
-// growing a bigger target: anything past the cross must not delete. A bigger invisible target reached over the
-// window's own words, so a click beside the time deleted it (owner, 2026-10-23). The pill is the target's room.
+// The pill's ✕: only the cross, and exactly the 24 px it looks like (`border-0 bg-transparent` repeat preflight on
+// purpose, as the Toast's ✕ does), and there is no `::after` layer growing a bigger target: anything past the cross
+// must not delete. A bigger invisible target reached over the window's own words, so a click beside the time deleted
+// it (owner, 2026-10-23). The pill is the target's room.
 const removeClass =
   `inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent ` +
   `text-info-text hover:text-primary-strong ${focusRing}`;

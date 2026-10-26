@@ -4,19 +4,18 @@ The rules `code-review` checks on any frontend change (its Standards axis). The 
 
 ## Styling (Tailwind 4, facility-0086)
 
-- Style with Tailwind utility classes. New per-page `.css` files are not allowed; an existing one shrinks or is deleted when its page moves.
+- Style with Tailwind utility classes. `frontend/src/index.css` is the only CSS file: no per-page or per-component `.css` file.
 - Colours, sizes and radii come from the `@theme` tokens in `frontend/src/index.css`: write `bg-primary`, `text-muted`, `rounded` and so on.
   - Never `bg-[var(--color-…)]` for a registered token.
   - Never a raw Tailwind palette class (`bg-blue-600`) or a raw hex in a component.
   - Arbitrary values (`w-[37px]`) only with a comment saying why no token fits.
 - Class names are complete strings in the source. Never build one (`` `bg-${x}` ``); map a variant to a full class (`{ warn: 'bg-warn-bg', … }`).
 - Shared pieces (button, field, note, chip, table, bar) are React components in `frontend/src/shared/components` (listed in MASTER.md). No `@apply`. No UI library.
-- A moved page sets its body text size once on its root: `text-base` on a phone page, `text-sm` on an Admin page. Components inherit it; the shell sets none, so pages not moved yet keep theirs.
+- A page sets its body text size once on its root: `text-base` on a phone page, `text-sm` on an Admin page. Components inherit it; the shell sets none.
 - Two classes on one element must never set the same property (`underline` and `no-underline`, `px-0` and `px-4`): which one wins depends on Tailwind's output order.
 - No `clsx` or `tailwind-merge` until a real class clash needs one.
 - Print rules use the `print:` variant; only `@page` stays as plain CSS in `index.css`.
-- Until the last page moves (#82), Tailwind's preflight stays off, and the old look's variables are named `--old-*`. A moved page uses only the `@theme` tokens; never use an `--old-*` variable in new code.
-- The old plain CSS is not in a cascade layer, so it beats any utility. A moved page must drop its old classes entirely: mixing an old class and utilities on one element lets the old rule win.
+- Tailwind's preflight is on (#82): headings, lists, links, buttons and form controls start unstyled, so a heading is the size of the text around it unless it says otherwise (`text-lg font-semibold`), a list that shows bullets or numbers says so (`list-disc`, `list-decimal`) and a link uses `linkClass`.
 
 ## Look and accessibility (facility-0087)
 

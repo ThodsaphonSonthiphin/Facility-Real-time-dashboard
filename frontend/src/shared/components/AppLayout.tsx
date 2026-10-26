@@ -6,8 +6,7 @@ import { AdminNav } from './AdminNav';
 import { Button } from './Button';
 
 // The phone column (480 px) or the Admin desk (1216 px); printing drops the width and the padding. No text size here:
-// each moved page sets its own on its root (text-base on the phone, text-sm on the Admin pages), so pages not moved
-// yet keep theirs
+// each page sets its own on its root (text-base on the phone, text-sm on the Admin pages)
 const shellClass = {
   phone: 'mx-auto flex max-w-phone flex-col gap-4 px-4 pt-3 pb-6 print:max-w-none print:p-0',
   wide: 'mx-auto flex max-w-desk flex-col gap-4 px-8 pt-4 pb-8 print:max-w-none print:p-0',
