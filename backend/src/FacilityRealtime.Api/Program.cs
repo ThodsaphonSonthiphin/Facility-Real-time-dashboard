@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.Endpoints;
 using FacilityRealtime.Api.Hubs;
+using FacilityRealtime.Application.Accounts;
 using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Infrastructure.Auth;
@@ -78,7 +79,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Facility Real-time Dashboard API"));
 }
 
-// 6. Migrate on startup. Seed only on a developer machine: the seed's known Admin password must never reach a server on the internet (facility-0049).
+// 6. Migrate on startup. Seed only on a developer machine: the seed's known Admin password must never reach a server on the internet (facility-0049). Then the first Admin from the server's settings (facility-0092).
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
@@ -88,6 +89,12 @@ if (!app.Environment.IsEnvironment("Testing"))
     {
         await DbInitializer.SeedAsync(db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>());
     }
+
+    // facility-0092: the first Admin comes from the server's settings (FirstAdmin__*), only while no Admin exists at all.
+    // After the seed, so a developer machine keeps the seed's Admin and nothing happens there.
+    var firstAdmin = app.Configuration.GetSection(FirstAdminSettings.SectionName).Get<FirstAdminSettings>() ?? new FirstAdminSettings();
+    await FirstAdmin.EnsureAsync(
+        db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>(), scope.ServiceProvider.GetRequiredService<TimeProvider>(), firstAdmin, app.Logger);
 }
 
 // 7. SignalR Hub Mapping
