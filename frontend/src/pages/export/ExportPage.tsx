@@ -95,7 +95,7 @@ export function ExportPage() {
           <h2 className={titleClass}>2. ช่วงวันและตึก</h2>
           <div className="flex flex-wrap items-end gap-3">
             <RangeFields value={texts} onChange={setTexts} />
-            <BuildingSelect value={buildingId} onChange={setBuildingId} />
+            <BuildingSelect value={buildingId} onChange={setBuildingId} includeOff />
           </div>
           <p className="text-muted">เลือกได้ 1–31 วัน นับตามวันที่ของกะ</p>
         </section>

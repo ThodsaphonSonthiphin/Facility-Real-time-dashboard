@@ -106,7 +106,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
       within(screen.getByRole('combobox', { name: 'ประเภท' }))
         .getAllByRole('option')
         .map((option) => option.textContent),
-    ).toEqual(['ทุกประเภท', 'แก้การลงเวลา', 'มอบหมายทำแทน', 'ปิดเตือน', 'พื้นที่ · จุด · รอบ · ป้าย', 'สร้าง QR ใหม่', 'บัญชี', 'ส่งออก Excel']);
+    ).toEqual(['ทุกประเภท', 'แก้การลงเวลา', 'มอบหมายทำแทน', 'ปิดเตือน', 'ตึก · พื้นที่ · จุด · รอบ · ป้าย', 'สร้าง QR ใหม่', 'บัญชี', 'ส่งออก Excel']);
   });
 
   it('a typed range is checked before asking (92 days at most), then kept in the address', async () => {

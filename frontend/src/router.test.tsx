@@ -71,6 +71,7 @@ describe('routing (facility-0026, 0058)', () => {
       'สรุปการตรวจ',
       'ส่งออก Excel',
       'จัดการพื้นที่และป้าย',
+      'ตึก',
       'บัญชีผู้ใช้',
       'ประวัติการแก้ไขของแอดมิน',
     ]);
@@ -97,6 +98,7 @@ describe('routing (facility-0026, 0058)', () => {
       'admin/areas/:areaId?',
       'admin/areas/new',
       'admin/areas/:areaId/edit',
+      'admin/buildings',
       'admin/print',
       'admin/accounts',
       'admin/history',

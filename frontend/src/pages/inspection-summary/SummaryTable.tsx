@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { Table } from '../../shared/components/Boxes';
 import { Note } from '../../shared/components/Note';
+import { useBuildingNames } from '../../shared/api/buildingNames';
 import type { SummaryRow } from './summaryApi';
 import { inspectedShare, placeText, pointsText } from './summaryRules';
 
 /** Wireframe D7's table, in the server's order, plus "จำนวนครั้งที่ตรวจ" (facility-0048 rule 5). Names are React text only. */
 export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
+  const names = useBuildingNames();
   if (rows.length === 0) {
     return <Note tone="info">ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก</Note>;
   }
@@ -44,7 +46,7 @@ export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
               {row.displayName}
               <span className="block text-xs font-normal text-muted">{row.employeeId}</span>
             </th>
-            <td>{placeText(row)}</td>
+            <td>{placeText(row, names)}</td>
             <td
               className={
                 row.pointsInspected < row.pointsTotal

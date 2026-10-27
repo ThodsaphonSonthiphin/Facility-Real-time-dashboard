@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { addDays } from '../../shared/utils/dateRange';
 import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
-import { adminSession, buildings } from '../../test/adminFixtures';
+import { adminSession, managedBuildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { summary } from '../../test/reportFixtures';
 import { renderApp } from '../../test/renderApp';
@@ -17,7 +17,7 @@ function serve(routes: FakeRoutes = {}) {
       const asked = query(request.search);
       return { status: 200, body: { ...summary, from: asked.from ?? summary.from, to: asked.to ?? summary.to } };
     },
-    'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     ...routes,
   });
 }
@@ -51,9 +51,9 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
       'หัวหน้ากะดึก660002',
       'หัวหน้าตึกบี660003',
     ]);
-    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['A · กะเช้า', '12 จาก 12 จุด', '101', '168', '96', '57%', '72', '11', '3']);
+    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['A · ตึกทดลอง · กะเช้า', '12 จาก 12 จุด', '101', '168', '96', '57%', '72', '11', '3']);
     expect(cellsOf('หัวหน้ากะดึก')).toEqual([
-      'A · กะดึก',
+      'A · ตึกทดลอง · กะดึก',
       '9 จาก 12 จุด · ไม่ได้ตรวจ 3 จุด',
       '41',
       '150',
@@ -63,7 +63,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
       '2',
       '1',
     ]);
-    expect(cellsOf('หัวหน้าตึกบี')).toEqual(['B · กะเช้า', '0 จาก 10 จุด · ไม่ได้ตรวจ 10 จุด', '0', '0', '0', '–', '0', '0', '0']);
+    expect(cellsOf('หัวหน้าตึกบี')).toEqual(['B · ตึกข้างเคียง · กะเช้า', '0 จาก 10 จุด · ไม่ได้ตรวจ 10 จุด', '0', '0', '0', '–', '0', '0', '0']);
     expect(screen.getByRole('progressbar', { name: 'ตรวจ 57% ของงานที่ส่ง' })).toHaveAttribute('value', '57');
     // facility-0059: no link to a sign page
     expect(within(screen.getByRole('table')).queryAllByRole('link')).toHaveLength(0);
@@ -106,8 +106,8 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     await user.type(toField(), '07/10/2026{Enter}');
 
     expect(await screen.findByText('แอดมินเท่านั้น · ช่วงที่เลือก (01/10/2026–07/10/2026)')).toBeInTheDocument();
-    await screen.findByRole('option', { name: 'B' });
-    await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B');
+    await screen.findByRole('option', { name: 'B · ตึกข้างเคียง' });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B · ตึกข้างเคียง');
 
     await waitFor(() => expect(router.state.location.search).toBe('?from=2026-10-01&to=2026-10-07&building=2'));
     await waitFor(() =>
@@ -150,7 +150,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     expect(query(summaryGets(server)[0].search)).toEqual({ from: '2026-10-01', to: '2026-10-07', buildingId: '1' });
     expect(fromField()).toHaveValue('01/10/2026');
     expect(toField()).toHaveValue('07/10/2026');
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('A'));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('A · ตึกทดลอง'));
   });
 
   it('"แสดง" on the range already in the address asks again, and adds no history entry', async () => {
@@ -207,5 +207,16 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
       'href',
       '/admin/export?from=2026-10-09&to=2026-10-15&building=1',
     );
+  });
+
+  it('the building picker lists active buildings only, an off one is left out (facility-0090)', async () => {
+    serve();
+    await renderApp('/admin/inspection-summary');
+
+    const picker = await screen.findByRole('combobox', { name: 'ตึก' });
+    await waitFor(() =>
+      expect(within(picker).getAllByRole('option').map((option) => option.textContent)).toEqual(['ทุกตึก', 'A · ตึกทดลอง', 'B · ตึกข้างเคียง']),
+    );
+    expect(within(picker).queryByRole('option', { name: /ปิดใช้งาน/ })).not.toBeInTheDocument();
   });
 });

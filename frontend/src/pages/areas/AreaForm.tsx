@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import type { AreaDetail, Building, CleanerOption } from '../../shared/api/adminSetupApi';
+import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, FieldGroup, Select, TextInput } from '../../shared/components/Field';
@@ -35,6 +36,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
   const [updateArea, updated] = useUpdateAreaMutation();
   const sending = created.isLoading || updated.isLoading;
   const set = (patch: Partial<AreaDraft>) => setDraft((current) => ({ ...current, ...patch }));
+  const areaIsOff = detail !== undefined && !detail.area.isActive;
   const losesNightRounds = detail?.area.shiftPattern === 'DayAndNight' && draft.shiftPattern === 'DayOnly';
 
   const submit = async (event: FormEvent) => {
@@ -96,7 +98,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
           <option value="">เลือกตึก</option>
           {buildings.map((building) => (
             <option key={building.id} value={String(building.id)}>
-              {building.name}
+              {buildingOptionText(building)}
             </option>
           ))}
         </Select>
@@ -120,7 +122,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
       <CleanerSelect
         shift="Day"
         value={draft.dayCleanerId}
-        choices={cleanerChoices(cleaners, 'Day', areaId)}
+        choices={cleanerChoices(cleaners, 'Day', areaId, areaIsOff)}
         disabled={sending}
         onChange={(dayCleanerId) => set({ dayCleanerId })}
       />
@@ -128,7 +130,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
         <CleanerSelect
           shift="Night"
           value={draft.nightCleanerId}
-          choices={cleanerChoices(cleaners, 'Night', areaId)}
+          choices={cleanerChoices(cleaners, 'Night', areaId, areaIsOff)}
           disabled={sending}
           onChange={(nightCleanerId) => set({ nightCleanerId })}
         />
@@ -137,6 +139,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
         พื้นที่ละ 1 คนต่อกะ · รายชื่อแสดงเฉพาะแม่บ้านที่ยังไม่มีพื้นที่ในกะนั้น · เปลี่ยนเป็น "เฉพาะกะเช้า"
         แล้วช่องกะดึกและเวลารอบกะดึกหายไป
       </p>
+      {areaIsOff && <Note tone="warn">พื้นที่นี้ปิดใช้งานอยู่ เปิดใช้งานก่อน แล้วค่อยใส่แม่บ้าน</Note>}
       {losesNightRounds && (
         <Note tone="warn">บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่</Note>
       )}

@@ -255,6 +255,32 @@ public class AreaAdminEndpointTests
         Assert.Equal(2, await AdminSetupApi.ReadAsync(factory, db => db.Areas.CountAsync()));
     }
 
+    [Theory]
+    [InlineData(false, "ต้องเลือกตึกที่ใช้งานอยู่")] // a building that is off (facility-0090)
+    [InlineData(true, "ไม่พบตึกนี้")]               // an id that does not exist
+    public async Task A_building_that_is_off_or_unknown_is_refused_with_its_own_message(bool unknown, string expected)
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var offId = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var off = new Building { Code = "Z", Name = "ตึกปิด", IsActive = false, CreatedAt = DateTime.UtcNow };
+            db.Buildings.Add(off);
+            await db.SaveChangesAsync();
+            offId = off.Id;
+        });
+        var form = new { code = "AR03", name = "Lobby", buildingId = unknown ? 9999 : offId, shiftPattern = "DayOnly" };
+
+        var created = await admin.PostAsJsonAsync(Areas, form);
+        var edited = await admin.PutAsJsonAsync($"{Areas}/{await AdminSetupApi.AreaIdAsync(factory, "AR02")}", form);
+
+        Assert.Equal(HttpStatusCode.BadRequest, created.StatusCode);
+        Assert.Equal(expected, await AdminSetupApi.MessageAsync(created));
+        Assert.Equal(HttpStatusCode.BadRequest, edited.StatusCode);
+        Assert.Equal(expected, await AdminSetupApi.MessageAsync(edited));
+    }
+
     [Fact]
     public async Task Area_codes_are_unique()
     {
@@ -379,6 +405,11 @@ public class AreaAdminEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var area2 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.EmployeeId == "E1003")).AreaId = null; // facility-0091: nobody may hold it
+            await db.SaveChangesAsync();
+        });
 
         var off = await admin.PostAsync($"{Areas}/{area2}/deactivate", null);
         var offAgain = await admin.PostAsync($"{Areas}/{area2}/deactivate", null);
@@ -394,6 +425,89 @@ public class AreaAdminEndpointTests
         Assert.Equal(HttpStatusCode.OK, on.StatusCode);
         Assert.Contains("ห้องประชุม", await AdminSetupApi.DashboardNamesAsync(admin));
         Assert.Equal(new[] { "AREA_DEACTIVATE", "AREA_ACTIVATE" }, (await AdminSetupApi.AuditAsync(factory)).Select(a => a.Action));
+    }
+
+    [Fact]
+    public async Task An_area_its_cleaners_hold_stays_on_until_they_are_taken_off()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+
+        var refused = await admin.PostAsync($"{Areas}/{area1}/deactivate", null);
+        var emptied = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, day: null, night: null));
+        var off = await admin.PostAsync($"{Areas}/{area1}/deactivate", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Equal(
+            "ปิดพื้นที่ AR01 ไม่ได้ ยังมีแม่บ้านประจำ สมชาย ใจดี, สมหญิง รักสะอาด ย้ายแม่บ้านออกก่อน",
+            await AdminSetupApi.MessageAsync(refused));
+        Assert.Equal(HttpStatusCode.OK, emptied.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, off.StatusCode);
+        Assert.Equal(new[] { "AREA_UPDATE", "AREA_DEACTIVATE" }, (await AdminSetupApi.AuditAsync(factory)).Select(a => a.Action));
+    }
+
+    [Fact]
+    public async Task An_area_that_is_off_refuses_a_new_cleaner_and_changes_nothing()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var newcomer = await TestData.AddCleanerAsync(factory, "E1009", Shift.Day);
+        await factory.WithDbAsync(async db =>
+        {
+            foreach (var user in await db.Users.Where(u => u.AreaId == area1).ToListAsync())
+            {
+                user.AreaId = null;
+            }
+
+            (await db.Areas.SingleAsync(a => a.Id == area1)).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1009", null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("เปิดใช้งานพื้นที่ก่อน แล้วค่อยใส่แม่บ้าน", await AdminSetupApi.MessageAsync(response));
+        Assert.Null(await AreaOfAsync(factory, "E1009"));
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
+    public async Task An_area_that_is_off_keeps_the_cleaners_it_already_holds_and_lets_a_shift_go_empty()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Areas.SingleAsync(a => a.Id == area1)).IsActive = false; // data from before facility-0091: E1001 and E1002 still hold it
+            await db.SaveChangesAsync();
+        });
+
+        var kept = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1001", "E1002"));
+        var shiftEmptied = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1001", null));
+
+        Assert.Equal(HttpStatusCode.OK, kept.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, shiftEmptied.StatusCode);
+        Assert.Equal(area1, await AreaOfAsync(factory, "E1001"));
+        Assert.Null(await AreaOfAsync(factory, "E1002"));
+    }
+
+    [Fact]
+    public async Task A_deactivated_cleaner_does_not_keep_an_area_on()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.EmployeeId == "E1003")).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var off = await admin.PostAsync($"{Areas}/{await AdminSetupApi.AreaIdAsync(factory, "AR02")}/deactivate", null);
+
+        Assert.Equal(HttpStatusCode.OK, off.StatusCode);
     }
 
     [Fact]

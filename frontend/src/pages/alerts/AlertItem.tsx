@@ -8,6 +8,7 @@ import { buttonClass, noteTones } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { eventLabel } from '../../shared/utils/labels';
 import { formatDayTime } from '../../shared/utils/thaiTime';
+import { useBuildingNames } from '../../shared/api/buildingNames';
 import { alertDetail, alertTitle, alertWho, coverNotice, fillLink } from './alertRules';
 import { useAssignCoverMutation, useReviewAlertMutation } from './alertsApi';
 
@@ -127,6 +128,7 @@ interface CoverButtonProps {
  * one press (undone by cancelling it). The server closes this alert with it. One send at a time.
  */
 function CoverButton({ alert, cover, onNotice }: CoverButtonProps) {
+  const names = useBuildingNames();
   const [assign, { isLoading }] = useAssignCoverMutation();
 
   const give = async () => {
@@ -139,7 +141,7 @@ function CoverButton({ alert, cover, onNotice }: CoverButtonProps) {
         shift: cover.shift,
         blockedScanId: alert.recordId,
       }).unwrap();
-      onNotice({ kind: 'ok', text: coverNotice(made) });
+      onNotice({ kind: 'ok', text: coverNotice(made, names) });
     } catch (error) {
       onNotice({ kind: 'error', text: getErrorMessage(error) });
     }

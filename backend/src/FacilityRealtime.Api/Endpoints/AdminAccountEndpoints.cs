@@ -3,6 +3,7 @@ using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
 using FacilityRealtime.Application.Accounts;
 using FacilityRealtime.Application.Auth;
+using FacilityRealtime.Application.Buildings;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
 using FacilityRealtime.Infrastructure.Persistence;
@@ -223,6 +224,13 @@ public static class AdminAccountEndpoints
         if (user.IsActive == active)
         {
             return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+        }
+
+        // facility-0090 decision 4: a Supervisor of a building that is off stays off
+        if (active && user.Role == UserRole.Supervisor && user.BuildingId is int buildingId
+            && await db.Buildings.Where(b => b.Id == buildingId && !b.IsActive).Select(b => b.Code).FirstOrDefaultAsync() is { } offCode)
+        {
+            return Conflict(BuildingRules.OffForSupervisor(offCode));
         }
 
         if (active && await HolderAsync(db, user.Role, user.AreaId, user.BuildingId, user.Shift, user.Id) is { } holder)

@@ -4,6 +4,7 @@ import { Button } from '../../shared/components/Button';
 import { Note } from '../../shared/components/Note';
 import { attendanceEvents, eventLabel } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
+import { useBuildingNames, buildingText } from '../../shared/api/buildingNames';
 import { areaStateLabel, coverLine, eventOf, flagText } from './attendanceRules';
 
 interface AttendanceTableProps {
@@ -25,6 +26,7 @@ const subClass = 'block text-xs font-normal text-muted';
 
 /** Wireframe D2's table, in the server's order: Areas with nobody first (facility-0050). Names are React text only. */
 export function AttendanceTable({ rows, onCorrect }: AttendanceTableProps) {
+  const names = useBuildingNames();
   if (rows.length === 0) {
     return <Note tone="info">ไม่พบพื้นที่ที่ตรงกับที่ค้นหา</Note>;
   }
@@ -50,7 +52,7 @@ export function AttendanceTable({ rows, onCorrect }: AttendanceTableProps) {
           <tr key={row.areaId} className={row.state === 'Empty' ? '[&>*]:bg-error-bg' : undefined}>
             <th scope="row">
               {`${row.areaCode} ${row.areaName}`}
-              <span className={subClass}>{`ตึก ${row.buildingCode}`}</span>
+              <span className={subClass}>{`ตึก ${buildingText(row.buildingCode, names)}`}</span>
             </th>
             <td>
               <Who row={row} />

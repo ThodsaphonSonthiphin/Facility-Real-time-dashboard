@@ -21,6 +21,7 @@ public static class AuditCategories
         [AuditCategory.AlertReview] = ["ALERT_REVIEW"],
         [AuditCategory.Setup] =
         [
+            "BUILDING_CREATE", "BUILDING_UPDATE", "BUILDING_ACTIVATE", "BUILDING_DEACTIVATE",
             "AREA_CREATE", "AREA_UPDATE", "AREA_ACTIVATE", "AREA_DEACTIVATE",
             "POINT_CREATE", "POINT_UPDATE", "POINT_ACTIVATE", "POINT_DEACTIVATE",
             "SIGN_LOCATION", "SIGN_RADIUS",

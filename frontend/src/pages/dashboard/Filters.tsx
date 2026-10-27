@@ -1,5 +1,6 @@
 import { TriangleAlert } from 'lucide-react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
+import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { PointCard } from '../../shared/api/types';
 import { Select } from '../../shared/components/Field';
 import { statusBg, toggleClass } from '../../shared/components/styles';
@@ -31,7 +32,7 @@ export function Filters({ points }: { points: PointCard[] }) {
           <option value="">ทุกตึก</option>
           {(buildings ?? []).map((building) => (
             <option key={building.id} value={building.code}>
-              {building.code}
+              {buildingOptionText(building)}
             </option>
           ))}
         </Select>

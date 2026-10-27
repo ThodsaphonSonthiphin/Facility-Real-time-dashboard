@@ -24,6 +24,9 @@ import {
   slotText,
 } from './alertRules';
 
+const made = { id: 72, userId: 21, personName: 'แม่บ้านทดสอบ', shiftDate: '2026-10-15', shift: 'Day' as const, assignedAt: '2026-10-15T03:20:00Z' };
+const supervisorCover = { ...made, personName: 'หัวหน้าทดสอบ', buildingId: 2, buildingCode: 'B' };
+
 describe('alert rules (wireframe D3)', () => {
   it('coverSlots runs from the shift on the clock to the Night shift 7 days later (facility-0075)', () => {
     const fromDay = coverSlots({ shiftDate: '2026-10-15', shift: 'Day' });
@@ -99,10 +102,13 @@ describe('alert rules (wireframe D3)', () => {
       'แม่บ้านทดสอบ · AR01 · เข้างานแล้ว 06:52',
       'แม่บ้านมาสาย · AR08 · ยังไม่ลงเวลา',
     ]);
-    const made = { id: 72, userId: 21, personName: 'แม่บ้านทดสอบ', shiftDate: '2026-10-15', shift: 'Day' as const, assignedAt: '2026-10-15T03:20:00Z' };
     expect(coverNotice({ ...made, areaId: 12, areaCode: 'AR12' })).toBe('มอบหมาย แม่บ้านทดสอบ ทำแทน AR12 แล้ว');
-    expect(coverNotice({ ...made, personName: 'หัวหน้าทดสอบ', buildingId: 2, buildingCode: 'B' })).toBe(
-      'มอบหมาย หัวหน้าทดสอบ ตรวจแทนตึก B แล้ว',
+    expect(coverNotice(supervisorCover)).toBe('มอบหมาย หัวหน้าทดสอบ ตรวจแทนตึก B แล้ว');
+  });
+
+  it('names the building of a Supervisor cover with its current name when it is known (facility-0091)', () => {
+    expect(coverNotice(supervisorCover, new Map([['B', 'ตึกข้างเคียง']]))).toBe(
+      'มอบหมาย หัวหน้าทดสอบ ตรวจแทนตึก B · ตึกข้างเคียง แล้ว',
     );
   });
 });

@@ -5,6 +5,7 @@ import type {
   AreaSummary,
   Building,
   CleanerOption,
+  ManagedBuilding,
 } from '../shared/api/adminSetupApi';
 import type { Account } from '../pages/accounts/accountsApi';
 import { authAnswer } from './fakeServer';
@@ -18,6 +19,13 @@ export const adminSession = { 'POST /api/auth/refresh': () => authAnswer('admin'
 export const buildings: Building[] = [
   { id: 1, code: 'A', name: 'ตึกทดลอง' },
   { id: 2, code: 'B', name: 'ตึกข้างเคียง' },
+];
+
+/** GET /api/admin/buildings/all (facility-0090): A holds two open Areas and a Supervisor, B is empty, C is off. */
+export const managedBuildings: ManagedBuilding[] = [
+  { id: 1, code: 'A', name: 'ตึกทดลอง', isActive: true, activeAreaCount: 2, activeSupervisorCount: 1 },
+  { id: 2, code: 'B', name: 'ตึกข้างเคียง', isActive: true, activeAreaCount: 0, activeSupervisorCount: 0 },
+  { id: 3, code: 'C', name: 'ตึกเก่า', isActive: false, activeAreaCount: 0, activeSupervisorCount: 0 },
 ];
 
 /** Active Cleaners: two hold AR01, two have no Area yet, one holds an Area of another building. */

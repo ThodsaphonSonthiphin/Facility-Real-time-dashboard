@@ -4,6 +4,7 @@ import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
+import { useBuildingNames } from '../../shared/api/buildingNames';
 import {
   accountRoleLabel,
   MAX_PASSWORD,
@@ -28,6 +29,7 @@ interface SecretFormProps {
  * not needed. So the form says so and shows who is being edited (facility-0081).
  */
 export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
+  const names = useBuildingNames();
   const [phone, setPhone] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [changePhone, { isLoading }] = useChangePhoneMutation();
@@ -70,7 +72,7 @@ export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
           },
           {
             label: 'ประจำที่',
-            value: placeText(account),
+            value: placeText(account, names),
           },
         ]}
       />

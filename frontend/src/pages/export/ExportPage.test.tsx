@@ -2,9 +2,10 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { addDays } from '../../shared/utils/dateRange';
 import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
-import { adminSession, buildings } from '../../test/adminFixtures';
+import { adminSession, managedBuildings } from '../../test/adminFixtures';
 import { fakeDownload } from '../../test/fakeDownload';
 import { fakeServer, type FakeResponse, type FakeRoutes } from '../../test/fakeServer';
+import { actors, firstPage } from '../../test/reportFixtures';
 import { renderApp } from '../../test/renderApp';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -20,7 +21,7 @@ function xlsx(name = 'facility_2026-10-09_2026-10-15.xlsx'): FakeResponse {
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
     ...adminSession,
-    'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     'POST /api/admin/export': () => xlsx(),
     ...routes,
   });
@@ -71,8 +72,8 @@ describe('ExportPage (D8, facility-0053)', () => {
     await user.type(fromField(), '01/10/2026');
     await user.clear(toField());
     await user.type(toField(), '07/10/2026');
-    await screen.findByRole('option', { name: 'B' });
-    await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B');
+    await screen.findByRole('option', { name: 'B · ตึกข้างเคียง' });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B · ตึกข้างเคียง');
     await user.click(download());
 
     await screen.findByText(/^ดาวน์โหลดแล้ว/);
@@ -172,7 +173,7 @@ describe('ExportPage (D8, facility-0053)', () => {
 
     expect(fromField()).toHaveValue('15/10/2026');
     expect(toField()).toHaveValue('15/10/2026');
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B'));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B · ตึกข้างเคียง'));
     await user.click(download());
 
     await screen.findByText(/^ดาวน์โหลดแล้ว/);
@@ -187,7 +188,7 @@ describe('ExportPage (D8, facility-0053)', () => {
   it('the form follows the address when the menu link is clicked on the open page', async () => {
     serve();
     const { user } = await renderApp('/admin/export?from=2026-10-15&to=2026-10-15&building=2');
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B'));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B · ตึกข้างเคียง'));
 
     await user.click(within(screen.getByRole('navigation', { name: 'เมนูแอดมิน' })).getByRole('link', { name: 'ส่งออก Excel' }));
 
@@ -205,5 +206,47 @@ describe('ExportPage (D8, facility-0053)', () => {
       'href',
       '/dashboard',
     );
+  });
+
+  it('the building picker lists every building, an off one marked (ปิดใช้งาน) (facility-0090)', async () => {
+    serve();
+    await renderApp('/admin/export');
+
+    const picker = await screen.findByRole('combobox', { name: 'ตึก' });
+    await waitFor(() =>
+      expect(within(picker).getAllByRole('option').map((option) => option.textContent)).toEqual([
+        'ทุกตึก',
+        'A · ตึกทดลอง',
+        'B · ตึกข้างเคียง',
+        'C · ตึกเก่า (ปิดใช้งาน)',
+      ]),
+    );
+  });
+
+  it('asks for the buildings on every open, so a rename or a building turned off shows (facility-0091)', async () => {
+    let list = managedBuildings;
+    const server = serve({
+      'GET /api/admin/buildings/all': () => ({ status: 200, body: list }),
+      'GET /api/admin/audit-log': () => ({ status: 200, body: firstPage }),
+      'GET /api/admin/audit-log/actors': () => ({ status: 200, body: actors }),
+    });
+    const { user } = await renderApp('/admin/export');
+    const options = () =>
+      within(screen.getByRole('combobox', { name: 'ตึก' }))
+        .getAllByRole('option')
+        .map((option) => option.textContent);
+    const buildingGets = () => server.calls.filter((call) => call.path === '/api/admin/buildings/all').length;
+    await waitFor(() => expect(options()).toContain('B · ตึกข้างเคียง'));
+    const before = buildingGets();
+
+    // The history page never reads the buildings list, so only the picker itself can ask again.
+    list = managedBuildings.map((building) => (building.code === 'B' ? { ...building, name: 'อาคารใหม่', isActive: false } : building));
+    await user.click(screen.getByRole('link', { name: 'ประวัติการแก้ไขของแอดมิน' }));
+    await screen.findByRole('heading', { level: 1, name: 'ประวัติการแก้ไขของแอดมิน' });
+    expect(buildingGets()).toBe(before);
+    await user.click(screen.getByRole('link', { name: 'ส่งออก Excel' }));
+
+    await waitFor(() => expect(options()).toContain('B · อาคารใหม่ (ปิดใช้งาน)'));
+    expect(buildingGets()).toBe(before + 1);
   });
 });

@@ -53,7 +53,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
 
     await user.type(screen.getByLabelText('รหัสพื้นที่'), 'AR03');
     await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ใหม่');
-    await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
+    await user.selectOptions(screen.getByLabelText('ตึก'), 'A · ตึกทดลอง');
     await user.selectOptions(day, 'แม่บ้านว่าง (650003)');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 
@@ -122,7 +122,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
 
     await user.type(await screen.findByLabelText('รหัสพื้นที่'), 'AR01');
     await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ซ้ำ');
-    await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
+    await user.selectOptions(screen.getByLabelText('ตึก'), 'A · ตึกทดลอง');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('รหัสพื้นที่นี้มีแล้ว');
@@ -132,14 +132,23 @@ describe('AreaFormPage (D10, facility-0045)', () => {
   it('deactivates the Area and can turn it back on (no delete)', async () => {
     let active = true;
     const server = serve({
-      'GET /api/admin/areas/1': () => ({ status: 200, body: areaDetail({ area: areaSummary({ isActive: active }) }) }),
+      'GET /api/admin/areas/1': () => ({
+        status: 200,
+        body: areaDetail({ area: areaSummary({ isActive: active, dayCleaner: undefined, nightCleaner: undefined }) }),
+      }),
       'POST /api/admin/areas/1/deactivate': () => {
         active = false;
-        return { status: 200, body: areaDetail({ area: areaSummary({ isActive: false }) }) };
+        return {
+          status: 200,
+          body: areaDetail({ area: areaSummary({ isActive: false, dayCleaner: undefined, nightCleaner: undefined }) }),
+        };
       },
       'POST /api/admin/areas/1/activate': () => {
         active = true;
-        return { status: 200, body: areaDetail({ area: areaSummary({ isActive: true }) }) };
+        return {
+          status: 200,
+          body: areaDetail({ area: areaSummary({ isActive: true, dayCleaner: undefined, nightCleaner: undefined }) }),
+        };
       },
     });
     const { user } = await renderApp('/admin/areas/1/edit');
@@ -157,6 +166,35 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     expect(await screen.findByText('เปิดใช้งาน AR01 แล้ว')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'ปิดใช้งานพื้นที่นี้' })).toBeInTheDocument();
     expect(server.calls.some((call) => call.path === '/api/admin/areas/1/activate')).toBe(true);
+  });
+
+  it('keeps the Area on while Cleaners hold it, and names them (facility-0091)', async () => {
+    serve();
+    await renderApp('/admin/areas/1/edit');
+
+    const button = await screen.findByRole('button', { name: 'ปิดใช้งานพื้นที่นี้' });
+    expect(button).toBeDisabled();
+    expect(
+      screen.getByText(
+        'ยังมีแม่บ้านประจำ แม่บ้านทดสอบ, แม่บ้านกะดึก เอาแม่บ้านออกจากกะในฟอร์มด้านบน หรือย้ายไปพื้นที่อื่นที่หน้าบัญชีผู้ใช้ก่อน จึงจะปิดพื้นที่ได้',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('on an Area that is off, offers no new Cleaner and says why (facility-0091)', async () => {
+    serve({
+      'GET /api/admin/areas/1': () => ({
+        status: 200,
+        body: areaDetail({ area: areaSummary({ isActive: false }) }),
+      }),
+    });
+    await renderApp('/admin/areas/1/edit');
+
+    const day = await screen.findByLabelText('แม่บ้านประจำกะเช้า');
+    // the free Cleaner 650003 is not offered; the one who already holds the shift stays
+    expect(optionTexts(day)).toEqual(['— ยังไม่มี —', 'แม่บ้านทดสอบ (650001)']);
+    expect(optionTexts(screen.getByLabelText('แม่บ้านประจำกะดึก'))).toEqual(['— ยังไม่มี —', 'แม่บ้านกะดึก (650002)']);
+    expect(screen.getByText('พื้นที่นี้ปิดใช้งานอยู่ เปิดใช้งานก่อน แล้วค่อยใส่แม่บ้าน')).toBeInTheDocument();
   });
 
   it('sends a new Area once: the save is disabled while it is in flight', async () => {
@@ -177,7 +215,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
 
     await user.type(await screen.findByLabelText('รหัสพื้นที่'), 'AR03');
     await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ใหม่');
-    await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
+    await user.selectOptions(screen.getByLabelText('ตึก'), 'A · ตึกทดลอง');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 
     const saving = await screen.findByRole('button', { name: 'กำลังบันทึก...' });

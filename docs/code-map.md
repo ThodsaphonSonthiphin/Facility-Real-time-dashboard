@@ -9,13 +9,13 @@
 graph TD
     QR["QR sign on the wall<br/>/scan/token or /check-in/token"] --> Pages
     subgraph FE["frontend/src — React 19 + TypeScript"]
-        Pages["pages/ — 16 feature folders"]
+        Pages["pages/ — 17 feature folders"]
         Shared["shared/ — api, auth, geo, components, utils"]
         Router["main.tsx, App.tsx, router.tsx"]
         Store["store/ — auth, hub, dashboard"]
     end
     subgraph BE["backend/src — ASP.NET Core 10"]
-        Endpoints["Endpoints/ — 48 HTTP routes"]
+        Endpoints["Endpoints/ — 53 HTTP routes"]
         Rules["Application/ — pure rules, no I/O"]
         Persist["Infrastructure/ — EF Core, PBKDF2, Excel"]
         Hub["Hubs/ScanHub — /hubs/scan"]
@@ -94,7 +94,7 @@ If you have just opened the repo, read in this order. Each step is one file.
 
 ## Part 3 — Frontend file map
 
-Root: `frontend/src/` — 109 `.tsx` files, of which 61 are page components.
+Root: `frontend/src/` — 114 `.tsx` files (25 of them tests), of which 64 are page components under `pages/`.
 
 ### Root files
 
@@ -111,6 +111,7 @@ Root: `frontend/src/` — 109 `.tsx` files, of which 61 are page components.
 |---|---|---|
 | `shared/api/` | `baseApi.ts` | **The single `createApi`.** `baseUrl = ${origin}/api`, Bearer header from `state.auth.accessToken`, `baseQueryWithReauth` (401 → one shared refresh → retry once, skipped for `/auth/*`), `SEND_TIMEOUT_MS = 20_000`, tag types, and the two standard hook options `freshOnOpen` and `livePoll` (30 s + refetch on focus). |
 | | `types.ts` | Every server DTO shared by pages. 47 imports. Note: the server omits null fields, so test with truthiness. |
+| | `buildingNames.ts` | `buildingOptionText` / `buildingText` / `useBuildingNames`: the Admin pages' `code · current name` for a building (facility-0091). Phones keep the bare code. |
 | | `adminSetupApi.ts`, `attendanceBoardApi.ts`, `alertListApi.ts`, `myWorkApi.ts` | Endpoints shared by more than one page. |
 | | `scanHub.ts` | `followScanHub()` — one SignalR connection per RTK Query cache entry, retry ladder, `onMissed` refetch on every reconnect. |
 | | `scanAnswers.ts` | Non-hook helpers: `blockedScanOf` (403 + areaCode = a blocked scan), `isNotSent` (why the send failed). |
@@ -122,7 +123,7 @@ Root: `frontend/src/` — 109 `.tsx` files, of which 61 are page components.
 | `shared/utils/` | `thaiTime.ts` (34 imports), `getErrorMessage.ts` (31), `labels.ts` (26), `dateRange.ts` (11), `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock — every time you see a strange time, look here first. |
 | `shared/version/` | `buildInfo.ts` | The build commit shown on the login pages. |
 
-### pages — 16 feature folders
+### pages — 17 feature folders
 
 | Folder | Purpose | Key files |
 |---|---|---|
@@ -136,6 +137,7 @@ Root: `frontend/src/` — 109 `.tsx` files, of which 61 are page components.
 | `attendance/` | Admin attendance board + corrections (D2) | `AttendancePage.tsx`, `CorrectionForm.tsx`, `attendanceRules.ts` |
 | `alerts/` | Empty areas, covers, alert list (D3) | `AlertsPage.tsx`, `CoversThisShift.tsx`, `alertRules.ts` |
 | `areas/` | Area / point / sign setup (D4, D10) — largest folder, 23 files | `AreasPage.tsx`, `PointEditor.tsx` (301 lines), `SignPanel.tsx` (235), `signRules.ts` (radius 10–500 m) |
+| `buildings/` | Building setup: add, rename, on/off (facility-0090) | `BuildingsPage.tsx`, `BuildingDrawer.tsx`, `buildingRules.ts` (same counts as the server's `BuildingRules`) |
 | `accounts/` | Account CRUD, no delete (D6) | `AccountsPage.tsx`, `CreateAccountForm.tsx`, `SecretForms.tsx` |
 | `print-signs/` | QR sign printing (D5) | `PrintSignsPage.tsx`, `qr.ts` + `printRules.ts` — `signUrl()` builds `/scan/<token>` |
 | `capture/` | Admin records a sign's GPS standing at the site (M17) | `CapturePage.tsx`, `captureLocation.ts` (30 s, median of ≥3 readings) |
@@ -174,6 +176,7 @@ From `frontend/src/router.tsx`. Guards come from `shared/components/ProtectedRou
 | `/admin/areas/:areaId?` | `pages/areas/AreasPage.tsx` (lazy) | admin |
 | `/admin/areas/new` | `pages/areas/AreaFormPage.tsx` (lazy) — outranks `:areaId?` | admin |
 | `/admin/areas/:areaId/edit` | `pages/areas/AreaFormPage.tsx` (lazy) | admin |
+| `/admin/buildings` | `pages/buildings/BuildingsPage.tsx` (lazy) | admin |
 | `/admin/print` | `pages/print-signs/PrintSignsPage.tsx` (lazy) | admin |
 | `/admin/accounts` | `pages/accounts/AccountsPage.tsx` (lazy) | admin |
 | `/admin/history` | `pages/history/HistoryPage.tsx` (lazy) | admin |
@@ -215,7 +218,7 @@ graph TD
 - **Server data → RTK Query.** There is no axios and no plain `fetch` for data. The only two raw `fetch` calls in `src` are `shared/auth/session.ts:43` and `shared/auth/endSession.ts:18`.
 - **Form drafts → local `useState`.** Heaviest users: `pages/areas/SignPanel.tsx` (8), `pages/export/ExportPage.tsx` (6), `pages/areas/PointEditor.tsx` (6).
 - **No React Context anywhere** — grep for `createContext` returns 0 hits.
-- **Refetch policy** is one of two constants from `baseApi.ts`: `freshOnOpen` (phone and setup pages ask again every open) or `livePoll` (admin live pages, 30 s + on focus).
+- **Refetch policy** is one of three constants: `freshOnOpen` (phone and setup pages ask again every open) or `livePoll` (admin live pages, 30 s + on focus), both from `baseApi.ts`, or `namesFreshness` from `shared/api/buildingNames.ts` (30 s, building names only).
 - **SignalR push** is wired in exactly three cache entries via `onCacheEntryAdded → followScanHub`: `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts`.
 
 ---
@@ -229,7 +232,7 @@ Solution `backend/FacilityRealtime.slnx` — four projects, no controllers.
 | Path | Purpose |
 |---|---|
 | `Program.cs` | Composition root, numbered 1–9 in comments: services → middleware → migrate → hub → endpoint groups → SPA fallback. |
-| `Endpoints/` (31 files) | All HTTP routes. `*Endpoints.cs` registers routes; the rest are helpers (`ThaiLabels`, `GpsInput`, `ApiResults`, `BlockedScans`, `PointNotifications`, `ExportSheets`, `AdminQuery`, `AccountChecks`, read-model builders). |
+| `Endpoints/` (30 files) | All HTTP routes. `*Endpoints.cs` registers routes; the rest are helpers (`ThaiLabels`, `GpsInput`, `ApiResults`, `BlockedScans`, `PointNotifications`, `ExportSheets`, `AdminQuery`, `AccountChecks`, read-model builders). |
 | `Auth/` | `AuthSetup.cs` (JWT bearer, `AdminOnly` policy, SignalR query-string token), `JwtAccessTokenIssuer.cs`, `JwtKeys.cs`, `AuthClaims.cs`, `CurrentUser.cs`. |
 | `Hubs/ScanHub.cs` | Server → client only, **zero hub methods**. Admin connections join the `"admins"` group on connect. |
 | `DTOs/` (14 files) | One request/response record set per feature. |
@@ -241,6 +244,7 @@ Pure static classes, no database, no HTTP, fully unit-tested:
 
 | Area | Files |
 |---|---|
+| `Areas/` | `AreaRules` (an Area is turned off only once no active Cleaner holds it; facility-0091) |
 | `Auth/` | `LoginThrottle`, `PhoneNumber`, `RefreshTokenRules`, `JwtSettings`, `IPasswordHasher` |
 | `Geo/` | **`Geofence.cs`** (haversine distance + within-radius verdict), `GpsStamping.cs` |
 | `Rounds/` | **`RoundPlacer.cs`** (OnTime / Late / Rework / OffRound), `PointStatusCalculator`, `RoundWindow`, `RoundRules` |
@@ -523,7 +527,7 @@ graph LR
 
 ## Part 9 — API reference
 
-48 HTTP routes. `frontend/src/shared/api/baseApi.ts:16` adds the `/api` prefix, so the frontend `url` values below are relative to it.
+53 HTTP routes. `frontend/src/shared/api/baseApi.ts:16` adds the `/api` prefix, so the frontend `url` values below are relative to it.
 
 **How to read the Why column:** it answers *"what business goal does this call serve, what breaks without it?"* — not "what does it fetch". If you are deciding whether an endpoint is essential while changing something, the Why is the row that matters.
 
@@ -560,19 +564,24 @@ graph LR
 
 | Method | Route | Handler | Called by | Why |
 |---|---|---|---|---|
-| GET | `/api/admin/buildings` | `AdminAreaEndpoints.cs:18` | `shared/api/adminSetupApi.ts:113` | Picker options used across many pages. |
-| GET | `/api/admin/cleaners` | `AdminAreaEndpoints.cs:19` | `adminSetupApi.ts:117` | Same. |
-| GET | `/api/admin/areas` | `AdminAreaEndpoints.cs:20` | `adminSetupApi.ts:105` | Area summaries with counts. |
-| GET | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:22` | `adminSetupApi.ts:109` | Area detail: points, windows, signs. |
-| POST | `/api/admin/areas` | `AdminAreaEndpoints.cs:31` → `CreateAsync:66` | `pages/areas/areaFormApi.ts:17` | Creates the area **and** its check-in sign in one transaction. |
-| PUT | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:32` → `UpdateAsync:115` | `areaFormApi.ts:21` | Renaming or moving an area drops night windows for a DayOnly pattern. |
-| POST | `/api/admin/areas/{id}/deactivate` | `AdminAreaEndpoints.cs:33` → `SetActiveAsync:172` | `areaFormApi.ts:25` | Deactivate, never delete — history must keep the name. |
-| POST | `/api/admin/areas/{id}/activate` | `AdminAreaEndpoints.cs:35` | `areaFormApi.ts:26` | Re-open. |
+| GET | `/api/admin/buildings` | `AdminAreaEndpoints.cs:20` | `shared/api/adminSetupApi.ts:119` | Picker options used across many pages. |
+| GET | `/api/admin/buildings/all` | `AdminBuildingEndpoints.cs` | `adminSetupApi.ts` (`getAllBuildings`) | Every building, off ones too, with active Area and Supervisor counts: the buildings page and the D8 picker (D7 lists the active ones only). |
+| POST | `/api/admin/buildings` | `AdminBuildingEndpoints.cs` → `CreateAsync` | `pages/buildings/buildingsApi.ts` | Code set once, never reused (facility-0090). |
+| PUT | `/api/admin/buildings/{id}` | `AdminBuildingEndpoints.cs` → `RenameAsync` | `buildingsApi.ts` | Name only. |
+| POST | `/api/admin/buildings/{id}/deactivate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | Refused while an active Area or Supervisor is left in it. |
+| POST | `/api/admin/buildings/{id}/activate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | No condition; its Areas stay as they are. |
+| GET | `/api/admin/cleaners` | `AdminAreaEndpoints.cs:21` | `adminSetupApi.ts:128` | Same. |
+| GET | `/api/admin/areas` | `AdminAreaEndpoints.cs:22` | `adminSetupApi.ts:111` | Area summaries with counts. |
+| GET | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:24` | `adminSetupApi.ts:115` | Area detail: points, windows, signs. |
+| POST | `/api/admin/areas` | `AdminAreaEndpoints.cs:33` → `CreateAsync:68` | `pages/areas/areaFormApi.ts:17` | Creates the area **and** its check-in sign in one transaction. |
+| PUT | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:34` → `UpdateAsync:117` | `areaFormApi.ts:21` | Renaming or moving an area drops night windows for a DayOnly pattern. |
+| POST | `/api/admin/areas/{id}/deactivate` | `AdminAreaEndpoints.cs:35` → `SetActiveAsync:174` | `areaFormApi.ts:25` | Deactivate, never delete — history must keep the name. Refused while an active Cleaner holds the Area (facility-0091). |
+| POST | `/api/admin/areas/{id}/activate` | `AdminAreaEndpoints.cs:37` | `areaFormApi.ts:26` | Re-open. |
 | POST | `/api/admin/areas/{areaId}/points` | `AdminPointEndpoints.cs:19` → `CreateAsync:28` | `pages/areas/areasApi.ts:15` | A point is meaningless without its sign and round windows. |
 | PUT | `/api/admin/points/{id}` | `AdminPointEndpoints.cs:20` → `UpdateAsync:80` | `areasApi.ts:19` | Unchanged windows keep their ids so a live round keeps its records. |
 | POST | `/api/admin/points/{id}/deactivate` | `AdminPointEndpoints.cs:21` → `SetActiveAsync:136` | `areasApi.ts:23` | Leaves the dashboard, cannot be scanned, history kept. |
 | POST | `/api/admin/points/{id}/activate` | `AdminPointEndpoints.cs:23` | `areasApi.ts:24` | Re-open. |
-| PUT | `/api/admin/signs/{id}/location` | `AdminSignEndpoints.cs:23` → `SetLocationAsync:29` | `adminSetupApi.ts:122` | Sets the coordinates the geofence compares against. Site capture beats map pick. |
+| PUT | `/api/admin/signs/{id}/location` | `AdminSignEndpoints.cs:23` → `SetLocationAsync:29` | `adminSetupApi.ts:133` | Sets the coordinates the geofence compares against. Site capture beats map pick. |
 | PUT | `/api/admin/signs/{id}/radius` | `AdminSignEndpoints.cs:24` → `SetRadiusAsync:95` | `areasApi.ts:31` | A wrong radius makes every scan "off-site". |
 | POST | `/api/admin/signs/{id}/regenerate-token` | `AdminSignEndpoints.cs:25` → `RegenerateTokenAsync:129` | `areasApi.ts:36` | Kills the printed QR at once — the only way to de-authorise a lost sign. |
 

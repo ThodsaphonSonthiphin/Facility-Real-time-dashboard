@@ -4,7 +4,44 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-Last updated: 2026-10-26 (**#101 the Admin password rule (15–100 characters, not a common password) is done on branch `feat/admin-password-15`, committed, not pushed; the owner still checks it on D6**; earlier: **#82 the contract step merged to master on the owner's OK (branch `feat/contract-preflight` deleted): preflight on, `shared.css` and every `app-*` class and `--old-*` variable gone; the owner's eye checks and D5 paper print passed, nothing owed on #82; the admin password rule (15 characters) is the next open item, see `## Pending work`**; earlier: **#81 D5 print signs moved to Tailwind, merged to master on the owner's explicit "handoff commit push PR merge"; a real paper print and the owner's 1280 px check are owed, see the #81 entry under `### Start here`**; earlier: **three PRs merged to master on the owner's explicit "handoff commit push PR merge": #96 D6–D9 in the new look (`edf2418`), #98 D7 leaves out superseded submissions and renames its column to "จำนวนครั้งที่ตรวจ" (`07319cd`), #97 My Work updates live for Cleaners (`d4e8fde`). The eye checks of #79 (D4, D10, M17), #80 (D6–D9) and #97 (two phones) were NOT finished and are still owed — see `### Waiting on the owner's eye check`**; earlier: #70–#79 merged; 2026-10-25 wrote `docs/code-map.md`, the file-level map for the owner)
+Last updated: 2026-10-27 (**the owner tested `feat/admin-buildings`: D9 history showing the building rows, a refused turn-on of an Area in an off building and a refused turn-on of a Supervisor of an off building all passed, and moving AR01 into an off building passes by design; three problems found and fixed by facility-0091 (building names on Admin pages and the Excel cell, an Area is turned off only once no active Cleaner holds it). the owner passed all 5 re-checks; pushed, PR opened and merged to master on the owner's explicit OK (2026-10-27), see `## Next session: test the buildings branch`**); earlier: 2026-10-26, end of day (**Buildings managed by Admin (facility-0090): done on branch `feat/admin-buildings` (HEAD `e28a976`), final whole-branch review clean, committed, not pushed. Next session: the owner tests it. See `## Next session: test the buildings branch` just below**; earlier: **#101 the Admin password rule (15–100 characters, not a common password) merged to master as PR #103 (`3a6323b`) after the owner's D6 check**; earlier: **#82 the contract step merged to master on the owner's OK (branch `feat/contract-preflight` deleted): preflight on, `shared.css` and every `app-*` class and `--old-*` variable gone; the owner's eye checks and D5 paper print passed, nothing owed on #82; the admin password rule (15 characters) is the next open item, see `## Pending work`**; earlier: **#81 D5 print signs moved to Tailwind, merged to master on the owner's explicit "handoff commit push PR merge"; a real paper print and the owner's 1280 px check are owed, see the #81 entry under `### Start here`**; earlier: **three PRs merged to master on the owner's explicit "handoff commit push PR merge": #96 D6–D9 in the new look (`edf2418`), #98 D7 leaves out superseded submissions and renames its column to "จำนวนครั้งที่ตรวจ" (`07319cd`), #97 My Work updates live for Cleaners (`d4e8fde`). The eye checks of #79 (D4, D10, M17), #80 (D6–D9) and #97 (two phones) were NOT finished and are still owed (since passed, owner, 2026-10-26) — see `### Waiting on the owner's eye check`**; earlier: #70–#79 merged; 2026-10-25 wrote `docs/code-map.md`, the file-level map for the owner)
+
+## Next session: test the buildings branch
+
+The owner tested `feat/admin-buildings` on 2026-10-27 and this plan (facility-0091) fixed what they found. The owner then passed all 5 re-checks below on the running test build, and gave the explicit OK to push, open the PR and merge. Nothing is owed on this branch. The test API (port 5001) is stopped and its `wwwroot` deleted. The throwaway database `facility_buildings_test` is kept until the owner says to drop it.
+
+**Owner test, 2026-10-27:**
+- Passed: D9 history shows the building rows under its "ตึก · พื้นที่ · จุด · รอบ · ป้าย" filter; turning on an Area that is in an off building is refused; turning on a Supervisor of an off building is refused.
+- Moving AR01 into an off building passes by design: the Area form does not offer an off building, and the server refuses too.
+- Found and fixed by facility-0091 (plan `docs/superpowers/plans/2026-10-27-building-names-and-area-close.md`):
+  - D4 kept showing the building code after a rename. Now every Admin page and picker (D1, D2, D3, D4, D6, D7, D8) shows `code · current name`; phones and printed signs keep the code.
+  - D8 showed codes only and the owner did not see the off building. The D7/D8 picker now asks fresh on every open; D8 lists the off building as `C · name (ปิดใช้งาน)`; the Excel "ตึก" cell is `code · current name`.
+  - Closing building C left its Cleaner on an Area that was off. An Area is now turned off only once no active Cleaner holds it (`AreaRules.DeactivateProblem`, answered 409 with the Cleaners' names); the Area form disables its button and names them.
+- Commits since `e28a976`: `9cce108`, `eb58e01`, `d8dd5e3`, `04729ae`, `c5e0c14`, `8ad44d7`, `7934192`, `635ed61`, then the two docs commits `45231ee` and `b9a1fa8` (ADR facility-0091), then the final fix wave (`3d4a2ff`: the Area form refuses a new Cleaner on an Area that is off, plus docs).
+
+**State (2026-10-27):**
+- Branch `feat/admin-buildings`. Nothing is pushed and there is no PR.
+- Tests: backend unit 340; API 581 passed, 5 skipped (MySQL only); frontend 446; tsc and eslint clean. `npm run build:api` was run, so `backend/src/FacilityRealtime.Api/wwwroot` holds the new build (git-ignored).
+- The test API has been restarted on the new build (port 5001, database `facility_buildings_test`, the owner's test data kept). The owner runs `cloudflared tunnel --url http://localhost:5001` in their own terminal.
+- Data written before facility-0091 may still hold a Cleaner on an Area that is off (test databases only; no migration).
+
+**Bring the test build up** (if the machine was rebooted; details in `### Start here` → "Eye check on a real phone"):
+1. `git checkout feat/admin-buildings`, then `cd frontend && npm install && npm run build:api`.
+2. Create a throwaway DB `facility_buildings_test`. On this Mac, MySQL root has no password.
+3. Start the API on it with `--no-launch-profile` on port 5001 (see `## Sharing a test build`). The Development seed creates building A with AR01 and AR02 on, Supervisor S2001, and admin / admin1234.
+4. **The owner runs `cloudflared tunnel --url http://localhost:5001` in their own terminal.** The agent cannot.
+
+**What the owner re-checks (desktop, 1280 px):**
+1. Rename building A on "ตึก", then open "จัดการพื้นที่และป้าย": the list line and "พื้นที่ที่เลือก · ตึก A · <new name>" show the new name.
+2. D8 "ส่งออก Excel": the picker shows `A · <name>` and the off building as `C · <name> (ปิดใช้งาน)`; export one sheet and see `A · <name>` in the "ตึก" column.
+3. D7, D6, D2, D1: the building pickers and texts show `A · <name>`.
+4. Open the Area form of AR01 (it has Cleaners): "ปิดใช้งานพื้นที่นี้" is disabled and names the Cleaners. Take them out in the form, save, open แก้ไขพื้นที่ again, and the button works.
+5. On an Area that is off, open its form: the Cleaner pickers offer "— ยังไม่มี —" and only the Cleaner who already holds the shift, and a note says to turn the Area on first.
+
+**Afterwards:**
+- Stop the API, drop `facility_buildings_test`, and delete `wwwroot`.
+- Ask the owner by popup whether to push, open the PR and merge. Do none of these without the owner's explicit OK.
+- Update this file.
 
 ## Project
 
@@ -207,6 +244,21 @@ Plan 4 test results at merge:
 ## Task log (docs)
 
 - 2026-10-25 · Wrote `docs/code-map.md` for the owner, who said the vibe-coded repo had become unreadable (no idea which file or function does what, how login works, how the scan pulls GPS). Read-only exploration, no source file touched. It covers: where to start reading, the frontend and backend file-to-responsibility maps, the route table, state management, the login flow traced file by file, the scan → GPS → SignalR flow traced file by file, all 48 routes with a Why row each, the ER diagram, the tests that pin each behaviour, and ten things left unclear. `docs/architecture.md` stays the system-level page; code-map links to it and does not repeat it. Spot-checked against the code: 48 `Map*` calls in `backend/src`, 16 feature folders under `frontend/src/pages`, zero `createContext`, React 19.2.8, and both flag-not-block tests (`ScanRecordEndpointTests.cs:327`, `InspectionScanEndpointTests.cs:93`). Two small discrepancies found in `architecture.md` are recorded in code-map Part 12 rather than edited away. Next: the owner reads code-map and says what is still unclear.
+- 2026-10-26 · Buildings managed by Admin (facility-0090) done on branch `feat/admin-buildings`, committed, not pushed (ADR amendments in facility-0045 and facility-0048, glossary entry **Building** in `CONTEXT.md`, code map rows). Commits: `3109c7e` (ADR, plan, handoff); Task 1 `1ce972d` + `b9229b1` (the endpoints; "code taken" only when it is); Task 2 `d1d3ff7` (an off building keeps its Areas and Supervisors off); Task 3 `bdd11a5` (the D7/D8 picker lists off buildings); Task 4 `e71d73e` + `72982b2` (the buildings page and its tests); and this docs commit. Tests: backend unit 338 passed; API 574 passed, 5 skipped (MySQL only); frontend 438 tests in 49 files. Main JS 130.58 kB gzip, CSS 6.28 kB gzip; the buildings chunk is lazy (2.58 kB gzip). The six plan rulings, one line each:
+  - The full list is `GET /api/admin/buildings/all` (off buildings too, with counts).
+  - The turn-off button is disabled while something is inside.
+  - The D9 Setup option becomes "ตึก · พื้นที่ · จุด · รอบ · ป้าย".
+  - The last column is headed จัดการ and holds the แก้ไข button.
+  - An off building can still be renamed.
+  - An Area turned on at the same moment its building is turned off is not guarded.
+  - Made during execution: the refusal's two parts join with " และ" (no space after และ).
+  - Made during execution: a failed create answers "code taken" only when a re-check finds the code taken; otherwise it is rethrown.
+  - Final-review fixes (2026-10-26): `BuildingSelect` takes `includeOff` (D8 only); the Area form answers "ต้องเลือกตึกที่ใช้งานอยู่" for an off building and keeps "ไม่พบตึกนี้" for an unknown id; the building create answers `Location: /api/admin/buildings/all`; the buildings page footer says "หัวหน้าที่เปิดใช้งาน"; code-map line refs of the Admin setup table refreshed. Commits `130c206`, `aab4f0c` and `e28a976`; the scoped re-review is clean. API tests are now 576 passed, 5 skipped.
+  - Made during execution:
+    - the building tests also assert the audit rows' before and after values;
+    - the glossary says "ไม่มีหัวหน้าที่เปิดใช้งานประจำตึก";
+    - ADR 0090 has an amendment naming the real route `/all`.
+  - Left as they are: the comments at `adminSetupApi.ts:123` and `AdminSetupDtos.cs:7` say "D7/D8 picker". Both pickers do read that list, but only D8 shows the off buildings.
 
 ## Sharing a test build (colleagues on other networks)
 
@@ -221,15 +273,29 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 ## Pending work (ask the owner before starting)
 
-- **Buildings managed by Admin (owner, 2026-10-26):** today a building (`buildings` table: code, name, active) exists only as the Development seed (`DbInitializer`, "ตึก A") and can be read through `GET /api/admin/buildings`; nothing creates one. Decided: Admin adds, renames and turns buildings on and off in the system; the code is set once and cannot change; a building is never deleted, only turned off; changes go to the audit log. Not started: needs an ADR (facility-0045 and 0048 touched) and a plan. The 6 real buildings are added through this page on deploy, not seeded in code.
-- **Admin password of 15 characters and a common-password list (owner, 2026-10-26): done on branch `feat/admin-password-15` (#101, facility-0089), committed, not pushed, not merged.** An Admin password is now 15–100 characters and must not be on the embedded list of common passwords (`CommonPasswords`). The rule is checked when an account is created or its password is reset, in `AccountRules.PasswordProblem`; an existing password shorter than 15 keeps working until it is reset. D6 says 15–100. The owner checked it on D6 on 2026-10-26 and said it passes. Test build taken down after the check (API stopped, `facility_admin_pw_test` dropped, `wwwroot` deleted). The owner's OK to push, PR, merge and delete the branch came on 2026-10-26. Known risk, accepted for the pilot: a person who types an Admin's username and a wrong password 5 times locks that Admin out for 15 minutes (`LoginThrottle`, in memory). The "หน้าแอดมิน" link stays on every login page (the Admin needs it on a phone for M17, and a desktop visitor reaches `/login` first).
-- **Next, chosen by the owner (2026-10-22): move the frontend to Tailwind with a new look.** See `## Next: Tailwind migration` below. It comes before the Excel import and before the pilot.
+- **Buildings managed by Admin (owner, 2026-10-26): done on branch `feat/admin-buildings` (facility-0090), committed, not pushed, not merged; the owner's check is owed.** Before this work a building existed only as the Development seed (`DbInitializer`, "ตึก A") and was readable through `GET /api/admin/buildings`; nothing created one. The ADR decided:
+  - a new Admin menu "ตึก" (`/admin/buildings`) with one table, where a building is added and edited in the Drawer;
+  - the code is A–Z/0–9, 1–20 characters, set once;
+  - the name can be changed and may repeat another building's name;
+  - a building is never deleted, only turned off, and only when no active Area and no active Supervisor is left in it;
+  - an Area or a Supervisor account in a building that is off cannot be turned on;
+  - the D8 building picker also lists buildings that are off, marked "(ปิดใช้งาน)"; D7 lists active ones only (owner, 2026-10-26, after the final review: D7 counts active Supervisors and an off building has none);
+  - every change goes to the audit log.
+  
+  The 6 real buildings are added through this page on deploy, not seeded in code.
+- **Admin password of 15 characters and a common-password list (owner, 2026-10-26): merged to master as PR #103 (`3a6323b`, #101, facility-0089); branch deleted.** An Admin password is now 15–100 characters and must not be on the embedded list of common passwords (`CommonPasswords`). The rule is checked when an account is created or its password is reset, in `AccountRules.PasswordProblem`; an existing password shorter than 15 keeps working until it is reset. D6 says 15–100. The owner checked it on D6 on 2026-10-26 and said it passes. Test build taken down after the check (API stopped, `facility_admin_pw_test` dropped, `wwwroot` deleted). The owner's OK to push, PR, merge and delete the branch came on 2026-10-26. Known risk, accepted for the pilot: a person who types an Admin's username and a wrong password 5 times locks that Admin out for 15 minutes (`LoginThrottle`, in memory). The "หน้าแอดมิน" link stays on every login page (the Admin needs it on a phone for M17, and a desktop visitor reaches `/login` first).
+- **Tailwind migration with the new look (owner, 2026-10-22): done.** Every ticket #70–#82 is merged and spec #68 was closed on 2026-10-26. The eye checks in `### Waiting on the owner's eye check` below (D4, D10, M17, D6–D9, live My Work on two phones) were done by the owner on 2026-10-26 and passed; nothing is owed.
 - Excel import of accounts (ADR 0056; before rollout to every building).
+  - **Owner, 2026-10-26:** the owner already has an Excel file of Cleaners, Supervisors, buildings and Areas.
+  - Its codes may not match the system's rules. An Area code there looks like `BPI_B2_L1`, and `_` is not allowed today.
+  - The owner deferred this. The building code stays A–Z/0–9 for now (facility-0090).
+  - Before this work starts, look at the file's structure with the owner: sheets, column headers and code formats only. Never copy names or phone numbers into the repo or this file.
+  - Then decide two things: whether buildings and Areas are imported too, not only accounts, and whether the Area and building code rules accept `_`. `-` stays forbidden because it separates sign codes.
 - Server-side search for the Admin history (owner, 2026-10-21): a text filter on `/api/admin/audit-log` (summary, actor, reason), so D9's search box covers every row in the range, not only the rows loaded (plan 12 decision 7). Its own branch and PR, after plan 12.
 
 ## Next: Tailwind migration
 
-### Waiting on the owner's eye check (written 2026-10-24, to check 2026-10-25)
+### Waiting on the owner's eye check (written 2026-10-24; **all passed, owner, 2026-10-26**)
 
 The owner ended the session before the check was finished: "เรายังตรวจกันไมครบ ช่วยจดไว้หน่อย" — and will open a new session on 2026-10-25 to finish it. Nothing is blocking; these three are only **checks owed**, not known bugs.
 

@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { account, accounts, adminSession, areaSummary, buildings, officeSummary } from '../../test/adminFixtures';
+import { account, accounts, adminSession, areaSummary, buildings, managedBuildings, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
 
@@ -10,6 +10,7 @@ function serve(routes: FakeRoutes = {}) {
     'GET /api/admin/accounts': () => ({ status: 200, body: accounts }),
     'GET /api/admin/areas': () => ({ status: 200, body: [areaSummary(), officeSummary] }),
     'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     ...routes,
   });
 }
@@ -59,6 +60,10 @@ describe('account actions (D6, facility-0020, 0054)', () => {
 
     const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านทดสอบ' });
     expect(within(form).getByLabelText('พื้นที่ประจำ')).toHaveValue('1');
+    // facility-0091: the Area options carry the building's current name once the names arrive
+    expect(
+      await within(form).findByRole('option', { name: /^AR02 Office ทดลอง · ตึก A · ตึกทดลอง · / }),
+    ).toBeInTheDocument();
     expect(within(form).getByRole('radio', { name: /^กะเช้า/ })).toBeEnabled();
     expect(within(form).getByRole('radio', { name: /^กะดึก/ })).toBeDisabled();
     await user.click(within(form).getByRole('button', { name: 'บันทึก' }));
@@ -124,6 +129,14 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     expect(puts).toHaveLength(1);
     expect(puts[0].body).toEqual({ phone: '0810000099' });
     expect(screen.queryByDisplayValue('0810000099')).not.toBeInTheDocument();
+  });
+
+  it('the phone form of a Supervisor names the building with its current name (facility-0091)', async () => {
+    serve();
+    await openAndPress('แก้เบอร์โทร หัวหน้าทดสอบ');
+
+    const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · หัวหน้าทดสอบ' });
+    expect(await within(form).findByText('ตึก A · ตึกทดลอง · กะเช้า')).toBeInTheDocument();
   });
 
   it('resets an Admin’s password, and says when it was the Admin’s own', async () => {

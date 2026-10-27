@@ -13,6 +13,7 @@ const adminLinks = [
   { to: '/admin/inspection-summary', label: 'สรุปการตรวจ', counted: false },
   { to: '/admin/export', label: 'ส่งออก Excel', counted: false },
   { to: '/admin/areas', label: 'จัดการพื้นที่และป้าย', counted: false },
+  { to: '/admin/buildings', label: 'ตึก', counted: false },
   { to: '/admin/accounts', label: 'บัญชีผู้ใช้', counted: false },
   { to: '/admin/history', label: 'ประวัติการแก้ไขของแอดมิน', counted: false },
 ] as const;

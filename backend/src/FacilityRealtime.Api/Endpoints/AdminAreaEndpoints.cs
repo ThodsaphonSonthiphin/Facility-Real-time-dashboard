@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
+using FacilityRealtime.Application.Areas;
+using FacilityRealtime.Application.Buildings;
 using FacilityRealtime.Application.Signs;
 using FacilityRealtime.Domain.Entities;
 using FacilityRealtime.Domain.Enums;
@@ -134,6 +136,13 @@ public static class AdminAreaEndpoints
         }
 
         var current = await db.Users.Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == area.Id).ToListAsync();
+        // facility-0091 decision 2: an Area that is off takes no new Cleaner; one who already holds it may stay, and a shift may be emptied
+        if (!area.IsActive
+            && new[] { form.DayCleaner, form.NightCleaner }.Any(c => c is not null && c.AreaId != area.Id))
+        {
+            return Bad(AreaRules.OffAreaTakesNoNewCleaner);
+        }
+
         var before = Snapshot(area, current.FirstOrDefault(u => u.Shift == Shift.Day), current.FirstOrDefault(u => u.Shift == Shift.Night));
 
         area.Name = form.Name;
@@ -183,6 +192,27 @@ public static class AdminAreaEndpoints
             return AreaNotFound();
         }
 
+        // facility-0090 decision 4: an Area of a building that is off stays off
+        if (active && !area.IsActive
+            && await db.Buildings.Where(b => b.Id == area.BuildingId && !b.IsActive).Select(b => b.Code).FirstOrDefaultAsync() is { } offCode)
+        {
+            return Conflict(BuildingRules.OffForArea(offCode));
+        }
+
+        // facility-0091 decision 2: an Area is turned off only once no active Cleaner holds it
+        if (!active && area.IsActive)
+        {
+            var holders = await db.Users
+                .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == area.Id)
+                .OrderBy(u => u.Shift)
+                .Select(u => u.DisplayName)
+                .ToListAsync();
+            if (AreaRules.DeactivateProblem(area.Code, holders) is { } problem)
+            {
+                return Conflict(problem);
+            }
+        }
+
         if (area.IsActive != active)
         {
             area.IsActive = active;
@@ -211,10 +241,15 @@ public static class AdminAreaEndpoints
             return (null, Bad("ต้องเลือกรูปแบบกะ"));
         }
 
-        var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == buildingId && b.IsActive);
+        var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == buildingId);
         if (building is null)
         {
             return (null, Bad("ไม่พบตึกนี้"));
+        }
+
+        if (!building.IsActive)
+        {
+            return (null, Bad("ต้องเลือกตึกที่ใช้งานอยู่"));
         }
 
         if (shiftPattern == ShiftPattern.DayOnly && nightCleanerId is not null)

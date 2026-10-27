@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { AreaSummary, Building } from '../../shared/api/adminSetupApi';
+import { buildingOptionText, useBuildingNames } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
@@ -29,6 +30,7 @@ interface EditAccountFormProps {
 
 /** D6's "แก้ไข": name and place; the role and the login name are fixed (plan 5 decision 2). Keyed by account id. */
 export function EditAccountForm({ account, accounts, areas, buildings, onDone, onCancel }: EditAccountFormProps) {
+  const names = useBuildingNames();
   const [draft, setDraft] = useState<EditDraft>(() => editDraftOf(account));
   const [problem, setProblem] = useState<string | null>(null);
   const [updateAccount, { isLoading }] = useUpdateAccountMutation();
@@ -100,7 +102,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
             <option value="">— ยังไม่กำหนดพื้นที่ —</option>
             {areaChoices.map((option) => (
               <option key={option.id} value={String(option.id)}>
-                {areaOptionLabel(option, account.id)}
+                {areaOptionLabel(option, account.id, names)}
               </option>
             ))}
           </Select>
@@ -117,7 +119,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
             <option value="">เลือกตึก</option>
             {buildings.map((building) => (
               <option key={building.id} value={String(building.id)}>
-                {building.name}
+                {buildingOptionText(building)}
               </option>
             ))}
           </Select>

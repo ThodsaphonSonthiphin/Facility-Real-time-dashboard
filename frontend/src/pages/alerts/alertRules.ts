@@ -1,5 +1,6 @@
 import type { Alert, AlertKind } from '../../shared/api/alertListApi';
 import type { BoardRow } from '../../shared/api/attendanceBoardApi';
+import { buildingText, type BuildingNames } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { addDays } from '../../shared/utils/dateRange';
 import { eventLabel, shiftShortLabel } from '../../shared/utils/labels';
@@ -129,10 +130,10 @@ export function candidateText(candidate: CoverCandidate, ahead = false): string 
 }
 
 /** What the page says once a cover is made: an Area for a Cleaner, a building for a Supervisor. */
-export function coverNotice(cover: CoverAssignment): string {
+export function coverNotice(cover: CoverAssignment, names?: BuildingNames): string {
   return cover.areaCode
     ? `มอบหมาย ${cover.personName} ทำแทน ${cover.areaCode} แล้ว`
-    : `มอบหมาย ${cover.personName} ตรวจแทนตึก ${cover.buildingCode ?? ''} แล้ว`;
+    : `มอบหมาย ${cover.personName} ตรวจแทนตึก ${cover.buildingCode ? buildingText(cover.buildingCode, names) : ''} แล้ว`;
 }
 
 /** A shift the cover box shows (facility-0075). */

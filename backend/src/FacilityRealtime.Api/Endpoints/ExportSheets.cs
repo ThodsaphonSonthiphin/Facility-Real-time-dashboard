@@ -20,8 +20,12 @@ internal static class ExportSheets
 
     private sealed record SortedRow(DateOnly ShiftDate, Shift Shift, DateTime SortUtc, string Tie, IReadOnlyList<string> Cells);
 
+    /// <summary>facility-0091 decision 1: "A · อาคารผลิต 1", the building's name now; the code alone if it has none.</summary>
+    private static string Building(string code, IReadOnlyDictionary<string, string> names) =>
+        names.TryGetValue(code, out var name) ? $"{code} · {name}" : code;
+
     /// <summary>One row per Cleaner per shift: the four times, who recorded them, and the GPS verdicts.</summary>
-    public static ExcelSheet Attendance(IReadOnlyList<AttendanceExportRow> events)
+    public static ExcelSheet Attendance(IReadOnlyList<AttendanceExportRow> events, IReadOnlyDictionary<string, string> buildingNames)
     {
         var rows = events
             .GroupBy(e => (e.ShiftDate, e.Shift, e.UserId))
@@ -36,7 +40,7 @@ internal static class ExportSheets
                 [
                     ThaiLabels.Date(group.Key.ShiftDate),
                     ThaiLabels.ShiftName(group.Key.Shift),
-                    first.BuildingCode,
+                    Building(first.BuildingCode, buildingNames),
                     first.AreaCode,
                     first.EmployeeId,
                     first.DisplayName,
@@ -58,7 +62,7 @@ internal static class ExportSheets
     /// <summary>Every submission, plus a "ไม่ได้ทำ" row for each round of a closed shift that nobody did (decision 12).</summary>
     public static ExcelSheet Submissions(
         IReadOnlyList<SubmissionExportRow> submissions, IReadOnlyList<ExportPoint> points, DateOnly first, DateOnly last, DateTime nowUtc,
-        int closesMinutesAfterShift)
+        int closesMinutesAfterShift, IReadOnlyDictionary<string, string> buildingNames)
     {
         var rows = submissions.Select(s => new SortedRow(
             s.ShiftDate,
@@ -68,7 +72,7 @@ internal static class ExportSheets
             [
                 ThaiLabels.Date(s.ShiftDate),
                 ThaiLabels.ShiftName(s.Shift),
-                s.BuildingCode,
+                Building(s.BuildingCode, buildingNames),
                 s.AreaCode,
                 s.PointName,
                 s.SignCode,
@@ -106,7 +110,7 @@ internal static class ExportSheets
                         [
                             ThaiLabels.Date(date),
                             ThaiLabels.ShiftName(shift),
-                            point.BuildingCode,
+                            Building(point.BuildingCode, buildingNames),
                             point.AreaCode,
                             point.PointName,
                             point.SignCode,
@@ -135,7 +139,8 @@ internal static class ExportSheets
     /// decision 13). A round that ended ตรวจผ่าน already shows as its inspections.
     /// </summary>
     public static ExcelSheet Inspections(
-        IReadOnlyList<InspectionExportRow> inspections, IReadOnlyList<PointPlace> places, IReadOnlyList<FinishedRound> rounds)
+        IReadOnlyList<InspectionExportRow> inspections, IReadOnlyList<PointPlace> places, IReadOnlyList<FinishedRound> rounds,
+        IReadOnlyDictionary<string, string> buildingNames)
     {
         var rows = inspections.Select(i => new SortedRow(
             i.ShiftDate,
@@ -145,7 +150,7 @@ internal static class ExportSheets
             [
                 ThaiLabels.Date(i.ShiftDate),
                 ThaiLabels.ShiftName(i.Shift),
-                i.BuildingCode,
+                Building(i.BuildingCode, buildingNames),
                 i.AreaCode,
                 i.PointName,
                 i.SignCode,
@@ -171,7 +176,7 @@ internal static class ExportSheets
                 [
                     ThaiLabels.Date(round.Slot.ShiftDate),
                     ThaiLabels.ShiftName(round.Slot.Shift),
-                    place.BuildingCode,
+                    Building(place.BuildingCode, buildingNames),
                     place.AreaCode,
                     place.PointName,
                     place.SignCode,

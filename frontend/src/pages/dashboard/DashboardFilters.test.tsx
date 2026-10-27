@@ -49,7 +49,7 @@ describe('Dashboard filters (D1, facility-0024)', () => {
   it('the building picker narrows the cards and the counts', async () => {
     serve();
     const { user } = await renderApp('/dashboard');
-    await screen.findByRole('option', { name: 'B' });
+    await screen.findByRole('option', { name: 'B · ตึกข้างเคียง' });
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B');
 

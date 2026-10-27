@@ -6,6 +6,7 @@ import { Drawer } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
 import { boxClass, buttonClass, linkClass, tabClass, tabListClass } from '../../shared/components/styles';
 import { Toast, type Notice } from '../../shared/components/Toast';
+import { useBuildingNames, buildingText } from '../../shared/api/buildingNames';
 import { AreaEditorDrawer } from './AreaEditorDrawer';
 import { areaLine, signPlaceText } from './areaText';
 import { PointEditor } from './PointEditor';
@@ -22,6 +23,7 @@ type Tab = 'points' | 'check-in';
  * it by Area id, so opening another Area closes everything.
  */
 export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
+  const names = useBuildingNames();
   const { area } = detail;
   const [tab, setTab] = useState<Tab>('points');
   const [editing, setEditing] = useState<EditTarget | null>(null);
@@ -73,7 +75,7 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
     <section className="flex flex-col gap-3" aria-labelledby="areas-detail-title">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <span className="text-muted">{`พื้นที่ที่เลือก · ตึก ${area.buildingCode}`}</span>
+          <span className="text-muted">{`พื้นที่ที่เลือก · ตึก ${buildingText(area.buildingCode, names)}`}</span>
           <h2 id="areas-detail-title" className="text-xl font-bold">{`${area.code} ${area.name}`}</h2>
           <p className="text-muted">{areaLine(detail)}</p>
         </div>
