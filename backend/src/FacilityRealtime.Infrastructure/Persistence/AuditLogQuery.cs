@@ -13,6 +13,9 @@ public sealed record AuditActor(int Id, string DisplayName);
 /// <summary>The Admin history page (wireframe D9, facility-0057): read-only, newest first.</summary>
 public static class AuditLogQuery
 {
+    /// <summary>facility-0092: the actor of a row the server wrote by itself (the first Admin, reset-admin).</summary>
+    public const string SystemActorName = "ระบบ";
+
     public static async Task<IReadOnlyList<AuditLogRow>> LoadAsync(AppDbContext db, AuditLogFilter filter)
     {
         var query = db.AuditLog.AsNoTracking().Where(a => a.OccurredAt >= filter.FromUtc && a.OccurredAt < filter.ToUtc);
@@ -34,17 +37,18 @@ public static class AuditLogQuery
 
         // Ids grow with every row, so the newest row has the highest id
         var entries = await query.OrderByDescending(a => a.Id).Take(filter.Limit).ToListAsync();
-        var actorIds = entries.Select(a => a.ActorId).Distinct().ToList();
+        var actorIds = entries.Where(a => a.ActorId != null).Select(a => a.ActorId!.Value).Distinct().ToList();
         var names = await db.Users.AsNoTracking()
             .Where(u => actorIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.DisplayName);
-        return entries.Select(a => new AuditLogRow(a, names[a.ActorId])).ToList();
+        return entries.Select(a => new AuditLogRow(a, a.ActorId is int id ? names[id] : SystemActorName)).ToList();
     }
 
     /// <summary>Everyone with a line in the log, deactivated accounts included, for the "ผู้ทำ" filter.</summary>
     public static async Task<IReadOnlyList<AuditActor>> ActorsAsync(AppDbContext db)
     {
-        var ids = await db.AuditLog.Select(a => a.ActorId).Distinct().ToListAsync();
+        // The system is no account, so the "ผู้ทำ" filter does not offer it; the "บัญชี" category finds its rows
+        var ids = await db.AuditLog.Where(a => a.ActorId != null).Select(a => a.ActorId!.Value).Distinct().ToListAsync();
         return await db.Users.AsNoTracking()
             .Where(u => ids.Contains(u.Id))
             .OrderBy(u => u.DisplayName)

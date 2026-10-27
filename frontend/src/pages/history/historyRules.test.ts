@@ -83,6 +83,13 @@ describe('historyRules (D9)', () => {
     ).toEqual(['ยกเลิกแล้ว: ไม่ใช่ → ใช่']);
   });
 
+  it('names what the server did by itself, and hides the password it reset (facility-0092)', () => {
+    expect(actionText('ADMIN_FIRST_CREATE')).toBe('สร้างแอดมินคนแรกจากค่าในเซิร์ฟเวอร์');
+    expect(actionText('ADMIN_RECOVER_CREATE')).toBe('สร้างแอดมินด้วยคำสั่ง reset-admin');
+    expect(actionText('ADMIN_RECOVER_RESET')).toBe('กู้คืนแอดมินด้วยคำสั่ง reset-admin');
+    expect(changeLines({ action: 'ADMIN_RECOVER_RESET' })).toEqual(['รหัสผ่านเดิม → รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)']);
+  });
+
   it('changeLines hides secrets and shows nothing when nothing was stored', () => {
     expect(changeLines({ action: 'ACCOUNT_PASSWORD' })).toEqual(['รหัสผ่านเดิม → รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)']);
     expect(changeLines({ action: 'SOMETHING_NEW' })).toEqual([]);

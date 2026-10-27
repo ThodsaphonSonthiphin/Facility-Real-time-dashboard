@@ -31,6 +31,9 @@ public class AuditCategoriesTests
     [InlineData("ACCOUNT_PASSWORD", AuditCategory.Account)]
     [InlineData("ACCOUNT_ACTIVATE", AuditCategory.Account)]
     [InlineData("ACCOUNT_DEACTIVATE", AuditCategory.Account)]
+    [InlineData("ADMIN_FIRST_CREATE", AuditCategory.Account)]
+    [InlineData("ADMIN_RECOVER_CREATE", AuditCategory.Account)]
+    [InlineData("ADMIN_RECOVER_RESET", AuditCategory.Account)]
     [InlineData("EXPORT_EXCEL", AuditCategory.Export)]
     [InlineData("QR_REGENERATE", AuditCategory.QrToken)]
     public void Every_action_written_so_far_has_its_category(string action, AuditCategory category) =>
