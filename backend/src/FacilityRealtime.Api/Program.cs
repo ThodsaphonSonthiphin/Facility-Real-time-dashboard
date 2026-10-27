@@ -43,7 +43,8 @@ builder.Services.AddFacilityAuth(builder.Configuration);
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
-    builder.Services.AddDbContext<AppDbContext>(options => options.UseMySQL(ConnectionString(builder.Configuration)));
+    var connectionString = ConnectionString(builder.Configuration);
+    builder.Services.AddDbContext<AppDbContext>(options => options.UseMySQL(connectionString));
 }
 
 // 2. SignalR with string enum serialization

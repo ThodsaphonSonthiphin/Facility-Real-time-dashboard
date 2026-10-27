@@ -27,7 +27,9 @@ public sealed class SystemAdminConsole : IAdminConsole
         Console.Write(prompt);
         if (Console.IsInputRedirected)
         {
-            return Console.ReadLine();
+            var line = Console.ReadLine();
+            Console.WriteLine();
+            return line;
         }
 
         var typed = new StringBuilder();

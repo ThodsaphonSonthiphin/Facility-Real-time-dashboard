@@ -98,6 +98,29 @@ public class ResetAdminCommandTests
             Assert.Equal((UserRole.Admin, "แอดมินสำรอง", true), (created.Role, created.DisplayName, created.IsActive));
             var entry = await db.AuditLog.SingleAsync();
             Assert.Equal(("ADMIN_RECOVER_CREATE", (int?)null, (long?)created.Id), (entry.Action, entry.ActorId, entry.EntityId));
+            Assert.True(factory.Services.GetRequiredService<IPasswordHasher>().Verify(NewPassword, created.SecretHash));
+            Assert.DoesNotContain(NewPassword, entry.Summary);
+            Assert.DoesNotContain(NewPassword, entry.AfterJson ?? "");
+        });
+    }
+
+    [Fact]
+    public async Task Resets_an_active_Admin_without_saying_it_was_turned_on()
+    {
+        using var factory = new FacilityApiFactory();
+        await AuthApi.LoggedInAdminAsync(factory);
+        var console = new FakeConsole(NewPassword, NewPassword);
+
+        var exitCode = await RunAsync(factory, console, "admin");
+
+        Assert.Equal(0, exitCode);
+        await factory.WithDbAsync(async db =>
+        {
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            Assert.True(factory.Services.GetRequiredService<IPasswordHasher>().Verify(NewPassword, admin.SecretHash));
+            var entry = await db.AuditLog.SingleAsync();
+            Assert.Equal(("ADMIN_RECOVER_RESET", (int?)null, (long?)admin.Id), (entry.Action, entry.ActorId, entry.EntityId));
+            Assert.DoesNotContain("และเปิดใช้บัญชี", entry.Summary);
         });
     }
 
