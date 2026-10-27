@@ -148,7 +148,7 @@ _Avoid_: Supervisor KPI, Audit Report, Scorecard
 _Avoid_: Manual Punch, Override, Adjustment
 
 **Audit Log**:
-ประวัติทุกการเปลี่ยนแปลงที่ Admin ทำ: ใคร, เมื่อไร, เปลี่ยนอะไร, ค่าก่อนและหลัง เช่น แก้เวลา, มอบหมายทำแทน, แก้เวลารอบ, ออก QR ใหม่, จัดการบัญชี (facility-0051)
+ประวัติทุกการเปลี่ยนแปลงที่ Admin ทำ: ใคร, เมื่อไร, เปลี่ยนอะไร, ค่าก่อนและหลัง เช่น แก้เวลา, มอบหมายทำแทน, แก้เวลารอบ, ออก QR ใหม่, จัดการบัญชี (facility-0051) รวมทั้งที่ server ทำเองตอนสร้างแอดมินคนแรกหรือกู้คืนแอดมิน ซึ่งผู้ทำคือ "ระบบ" (facility-0092)
 _Avoid_: History, Activity Feed, Change Log
 
 **My Work**:

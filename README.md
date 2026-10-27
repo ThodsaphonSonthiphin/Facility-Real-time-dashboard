@@ -125,3 +125,6 @@ npm --prefix frontend test
 ### หมายเหตุด้านความปลอดภัยของ POC
 - cookie ของ refresh token ไม่ได้ตั้ง `Secure` เพราะมือถือเข้าผ่าน HTTP ในวง WiFi (ADR facility-0013) ถ้าติดตั้งบน HTTPS ให้ตั้งค่า `Jwt:RefreshCookieSecure` เป็น `true`
 - บัญชีทดสอบข้างบนเป็นข้อมูลตัวอย่างเท่านั้น
+
+### คู่มือสำหรับ server จริง
+- [docs/handover.md](docs/handover.md): สร้างแอดมินคนแรกจากค่าใน server และกู้คืนด้วยคำสั่ง `reset-admin` (ADR facility-0092)

@@ -1,7 +1,10 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using FacilityRealtime.Api.Auth;
+using FacilityRealtime.Api.Commands;
 using FacilityRealtime.Api.Endpoints;
 using FacilityRealtime.Api.Hubs;
+using FacilityRealtime.Application.Accounts;
 using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Infrastructure.Auth;
@@ -10,6 +13,18 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// facility-0092: `reset-admin <username>` recovers Admin access from the server's console, then exits without serving.
+// It needs only the connection string, so it runs before the auth setup that asks for Jwt:SigningKey.
+if (args.Length > 0 && args[0] == ResetAdminCommand.Name)
+{
+    Console.OutputEncoding = Encoding.UTF8;
+    var options = new DbContextOptionsBuilder<AppDbContext>().UseMySQL(ConnectionString(builder.Configuration)).Options;
+    await using var adminDb = new AppDbContext(options);
+    await adminDb.Database.MigrateAsync();
+    Environment.ExitCode = await ResetAdminCommand.RunAsync(args[1..], adminDb, new Pbkdf2PasswordHasher(), TimeProvider.System, new SystemAdminConsole());
+    return;
+}
 
 // 1. Clock, hashing, auth and database. The "Testing" environment (API tests) registers its own SQLite context.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -28,9 +43,7 @@ builder.Services.AddFacilityAuth(builder.Configuration);
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? "Server=localhost;Port=3306;Database=facility_dashboard;Uid=root;Pwd=;CharSet=utf8mb4;";
-
+    var connectionString = ConnectionString(builder.Configuration);
     builder.Services.AddDbContext<AppDbContext>(options => options.UseMySQL(connectionString));
 }
 
@@ -78,7 +91,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Facility Real-time Dashboard API"));
 }
 
-// 6. Migrate on startup. Seed only on a developer machine: the seed's known Admin password must never reach a server on the internet (facility-0049).
+// 6. Migrate on startup. Seed only on a developer machine: the seed's known Admin password must never reach a server on the internet (facility-0049). Then the first Admin from the server's settings (facility-0092).
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
@@ -88,6 +101,12 @@ if (!app.Environment.IsEnvironment("Testing"))
     {
         await DbInitializer.SeedAsync(db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>());
     }
+
+    // facility-0092: the first Admin comes from the server's settings (FirstAdmin__*), only while no Admin exists at all.
+    // After the seed, so a developer machine keeps the seed's Admin and nothing happens there.
+    var firstAdmin = app.Configuration.GetSection(FirstAdminSettings.SectionName).Get<FirstAdminSettings>() ?? new FirstAdminSettings();
+    await FirstAdmin.EnsureAsync(
+        db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>(), scope.ServiceProvider.GetRequiredService<TimeProvider>(), firstAdmin, app.Logger);
 }
 
 // 7. SignalR Hub Mapping
@@ -120,6 +139,11 @@ app.MapAdminInspectionSummaryEndpoints();
 app.MapFallbackToFile("{*path:regex(^(?!(api|hubs)(/|$)).*$):nonfile}", "index.html", appFiles);
 
 app.Run();
+
+// One database for serving and for reset-admin (facility-0092)
+static string ConnectionString(IConfiguration configuration) =>
+    configuration.GetConnectionString("DefaultConnection")
+    ?? "Server=localhost;Port=3306;Database=facility_dashboard;Uid=root;Pwd=;CharSet=utf8mb4;";
 
 // Lets WebApplicationFactory<Program> in the API tests reach the entry point
 public partial class Program;

@@ -30,6 +30,7 @@ public static class AuditCategories
         [AuditCategory.Account] =
         [
             "ACCOUNT_CREATE", "ACCOUNT_UPDATE", "ACCOUNT_PHONE", "ACCOUNT_PASSWORD", "ACCOUNT_ACTIVATE", "ACCOUNT_DEACTIVATE",
+            "ADMIN_FIRST_CREATE", "ADMIN_RECOVER_CREATE", "ADMIN_RECOVER_RESET",
         ],
         [AuditCategory.Export] = ["EXPORT_EXCEL"],
     };

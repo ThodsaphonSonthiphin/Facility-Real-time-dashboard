@@ -55,6 +55,9 @@ export const actionLabel: Record<string, string> = {
   ACCOUNT_PASSWORD: 'รีเซ็ตรหัสผ่าน',
   ACCOUNT_ACTIVATE: 'เปิดใช้บัญชี',
   ACCOUNT_DEACTIVATE: 'ปิดใช้บัญชี',
+  ADMIN_FIRST_CREATE: 'สร้างแอดมินคนแรกจากค่าในเซิร์ฟเวอร์',
+  ADMIN_RECOVER_CREATE: 'สร้างแอดมินด้วยคำสั่ง reset-admin',
+  ADMIN_RECOVER_RESET: 'กู้คืนแอดมินด้วยคำสั่ง reset-admin',
   EXPORT_EXCEL: 'ส่งออก Excel',
 };
 
@@ -92,6 +95,7 @@ export function toHistoryParams({ from, to, actorId, category }: HistoryArgs): U
 const secretChange: Record<string, string> = {
   ACCOUNT_PHONE: 'เบอร์เดิม → เบอร์ใหม่ (ไม่แสดงเบอร์)',
   ACCOUNT_PASSWORD: 'รหัสผ่านเดิม → รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)',
+  ADMIN_RECOVER_RESET: 'รหัสผ่านเดิม → รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)',
 };
 
 /** Snapshot fields in Thai (the AuditTrail.Add calls). Ids stay numbers: snapshots keep ids, not names, on purpose. */

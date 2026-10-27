@@ -26,7 +26,7 @@ public record AlertModel(
 public record CoverCandidateModel(int Id, string EmployeeId, string DisplayName, string AreaCode, DateTime? ShiftInAt, DateTime? ScannedThisAreaAt);
 
 public record AuditLogEntryModel(
-    long Id, DateTime OccurredAt, int ActorId, string ActorName, string Action, string? Category,
+    long Id, DateTime OccurredAt, int? ActorId, string ActorName, string Action, string? Category,
     string EntityType, long? EntityId, string Summary, JsonElement? Before, JsonElement? After, string? Reason);
 
 public record AuditLogPageModel(List<AuditLogEntryModel> Entries, long? NextBeforeId);

@@ -4,7 +4,8 @@ namespace FacilityRealtime.Domain.Entities;
 public class AuditEntry
 {
     public long Id { get; set; }
-    public int ActorId { get; set; }
+    /// <summary>The Admin who made the change; null when the server did it itself, shown as "ระบบ" (facility-0092).</summary>
+    public int? ActorId { get; set; }
     public DateTime OccurredAt { get; set; }
 
     /// <summary>e.g. COVER_ASSIGN, COVER_CANCEL, ATTENDANCE_EDIT.</summary>

@@ -114,7 +114,7 @@ namespace FacilityRealtime.Infrastructure.Migrations
                         .HasColumnType("varchar(50)")
                         .HasColumnName("action");
 
-                    b.Property<int>("ActorId")
+                    b.Property<int?>("ActorId")
                         .HasColumnType("int")
                         .HasColumnName("actor_id");
 
@@ -918,8 +918,7 @@ namespace FacilityRealtime.Infrastructure.Migrations
                     b.HasOne("FacilityRealtime.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("ActorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.BlockedScan", b =>

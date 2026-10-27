@@ -10,7 +10,7 @@ namespace FacilityRealtime.Api.DTOs;
 public record AuditLogEntryDto(
     long Id,
     DateTime OccurredAt,
-    int ActorId,
+    int? ActorId,
     string ActorName,
     string Action,
     AuditCategory? Category,

@@ -147,6 +147,26 @@ public class AuditLogEndpointTests
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync(Path + query)).StatusCode);
     }
 
+    /// <summary>facility-0092: the first Admin and reset-admin are written by the server itself, with no Admin logged in.</summary>
+    [Fact]
+    public async Task A_row_the_system_wrote_shows_the_system_as_its_actor()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            AuditTrail.Add(db, actorId: null, ThaiClock.At(8, 9, 0).UtcDateTime, "ADMIN_FIRST_CREATE", "users", 1,
+                "สร้างแอดมินคนแรก admin ผู้ดูแลระบบ จากค่าในเซิร์ฟเวอร์", before: null, after: new { Role = "Admin" });
+            await db.SaveChangesAsync();
+        });
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+
+        var entry = Assert.Single((await PageAsync(admin)).Entries);
+
+        Assert.Equal(("ระบบ", (int?)null, "Account"), (entry.ActorName, entry.ActorId, entry.Category));
+        Assert.Empty((await admin.GetFromJsonAsync<List<AuditActorModel>>(Path + "/actors"))!);
+    }
+
     [Fact]
     public async Task Nobody_can_change_the_log()
     {

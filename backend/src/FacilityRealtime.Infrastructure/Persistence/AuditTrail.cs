@@ -3,12 +3,12 @@ using FacilityRealtime.Domain.Entities;
 
 namespace FacilityRealtime.Infrastructure.Persistence;
 
-/// <summary>facility-0051: every Admin change is logged — who, when, what, before and after. Save it with the change itself.</summary>
+/// <summary>facility-0051: every Admin change is logged — who, when, what, before and after; who is null when the server did it (facility-0092). Save it with the change itself.</summary>
 public static class AuditTrail
 {
     public static void Add(
         AppDbContext db,
-        int actorId,
+        int? actorId,
         DateTime occurredAt,
         string action,
         string entityType,

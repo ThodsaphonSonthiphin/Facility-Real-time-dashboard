@@ -10,7 +10,8 @@ export type AuditCategory = 'Attendance' | 'Cover' | 'AlertReview' | 'Setup' | '
 export interface AuditEntry {
   id: number;
   occurredAt: string;
-  actorId: number;
+  /** Missing on a row the server wrote by itself; actorName is then ระบบ (facility-0092). */
+  actorId?: number;
   actorName: string;
   action: string;
   category?: AuditCategory;
