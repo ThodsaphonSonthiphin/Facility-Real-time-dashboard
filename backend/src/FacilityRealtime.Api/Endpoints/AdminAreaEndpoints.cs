@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.DTOs;
+using FacilityRealtime.Application.Areas;
 using FacilityRealtime.Application.Buildings;
 using FacilityRealtime.Application.Signs;
 using FacilityRealtime.Domain.Entities;
@@ -189,6 +190,20 @@ public static class AdminAreaEndpoints
             && await db.Buildings.Where(b => b.Id == area.BuildingId && !b.IsActive).Select(b => b.Code).FirstOrDefaultAsync() is { } offCode)
         {
             return Conflict(BuildingRules.OffForArea(offCode));
+        }
+
+        // facility-0091 decision 2: an Area is turned off only once no active Cleaner holds it
+        if (!active && area.IsActive)
+        {
+            var holders = await db.Users
+                .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == area.Id)
+                .OrderBy(u => u.Shift)
+                .Select(u => u.DisplayName)
+                .ToListAsync();
+            if (AreaRules.DeactivateProblem(area.Code, holders) is { } problem)
+            {
+                return Conflict(problem);
+            }
         }
 
         if (area.IsActive != active)

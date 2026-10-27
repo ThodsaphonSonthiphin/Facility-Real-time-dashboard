@@ -177,7 +177,11 @@ public class SignAdminEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var areaId = await AdminSetupApi.AreaIdAsync(factory, "AR02");
-        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/admin/areas/{areaId}/deactivate", null)).StatusCode);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Areas.SingleAsync(a => a.Id == areaId)).IsActive = false;
+            await db.SaveChangesAsync();
+        });
 
         var response = await admin.PostAsync($"/api/admin/signs/{await AdminSetupApi.SignIdAsync(factory, "AR02-IN")}/regenerate-token", null);
 

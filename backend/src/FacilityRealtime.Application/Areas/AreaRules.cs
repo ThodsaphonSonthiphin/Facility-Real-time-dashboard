@@ -1,0 +1,11 @@
+namespace FacilityRealtime.Application.Areas;
+
+/// <summary>The answers when something is in the way of an Area change (facility-0091).</summary>
+public static class AreaRules
+{
+    /// <summary>Decision 2: null when the Area may be turned off, else the active Cleaners who still hold it.</summary>
+    public static string? DeactivateProblem(string code, IReadOnlyList<string> cleanerNames) =>
+        cleanerNames.Count == 0
+            ? null
+            : $"ปิดพื้นที่ {code} ไม่ได้ ยังมีแม่บ้านประจำ {string.Join(", ", cleanerNames)} ย้ายแม่บ้านออกก่อน";
+}

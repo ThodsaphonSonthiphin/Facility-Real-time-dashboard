@@ -197,7 +197,12 @@ public class AccountEditEndpointTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
-        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/admin/areas/{ar02}/deactivate", null)).StatusCode);
+        // only data from before facility-0091 has a Cleaner on an Area that is off
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Areas.SingleAsync(a => a.Id == ar02)).IsActive = false;
+            await db.SaveChangesAsync();
+        });
 
         var response = await EditAsync(admin, e1003, new { displayName = "สมศรี เปลี่ยนชื่อ", areaId = ar02, shift = "Day" });
 
@@ -213,7 +218,11 @@ public class AccountEditEndpointTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
-        await admin.PostAsync($"/api/admin/areas/{ar02}/deactivate", null);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Areas.SingleAsync(a => a.Id == ar02)).IsActive = false;
+            await db.SaveChangesAsync();
+        });
 
         var response = await EditAsync(admin, e1001, new { displayName = "สมชาย ใจดี", areaId = ar02, shift = "Day" });
 
