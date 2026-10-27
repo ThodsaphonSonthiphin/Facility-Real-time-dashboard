@@ -101,8 +101,9 @@ export function CheckInPage() {
 
   return (
     // min-h: the screen less the shell above and below the page (pt-3 + the 48 px bar + gap-4 + pb-6 = 100 px), so the
-    // buttons sit low, in thumb reach; no token describes that height
-    <main className="flex min-h-[calc(100dvh-6.25rem)] flex-col gap-4 text-base text-text">
+    // buttons sit low, in thumb reach; no token describes that height. svh, not dvh: a phone hides its toolbar while the
+    // page scrolls, dvh grows with it, and the buttons slid along with the scroll (owner, 2026-10-27)
+    <main className="flex min-h-[calc(100svh-6.25rem)] flex-col gap-4 text-base text-text">
       <header className="flex flex-col gap-1">
         <span className="text-md tracking-wide text-muted">ป้ายลงเวลา</span>
         <h1 className="text-2xl font-bold">ลงเวลา</h1>
