@@ -233,7 +233,6 @@ Solution `backend/FacilityRealtime.slnx` — four projects, no controllers.
 |---|---|
 | `Program.cs` | Composition root, numbered 1–9 in comments: services → middleware → migrate → hub → endpoint groups → SPA fallback. |
 | `Endpoints/` (30 files) | All HTTP routes. `*Endpoints.cs` registers routes; the rest are helpers (`ThaiLabels`, `GpsInput`, `ApiResults`, `BlockedScans`, `PointNotifications`, `ExportSheets`, `AdminQuery`, `AccountChecks`, read-model builders). |
-| `Areas/` | `AreaRules.DeactivateProblem` — an Area is turned off only once no active Cleaner holds it (facility-0091) |
 | `Auth/` | `AuthSetup.cs` (JWT bearer, `AdminOnly` policy, SignalR query-string token), `JwtAccessTokenIssuer.cs`, `JwtKeys.cs`, `AuthClaims.cs`, `CurrentUser.cs`. |
 | `Hubs/ScanHub.cs` | Server → client only, **zero hub methods**. Admin connections join the `"admins"` group on connect. |
 | `DTOs/` (14 files) | One request/response record set per feature. |
@@ -245,6 +244,7 @@ Pure static classes, no database, no HTTP, fully unit-tested:
 
 | Area | Files |
 |---|---|
+| `Areas/` | `AreaRules` (an Area is turned off only once no active Cleaner holds it; facility-0091) |
 | `Auth/` | `LoginThrottle`, `PhoneNumber`, `RefreshTokenRules`, `JwtSettings`, `IPasswordHasher` |
 | `Geo/` | **`Geofence.cs`** (haversine distance + within-radius verdict), `GpsStamping.cs` |
 | `Rounds/` | **`RoundPlacer.cs`** (OnTime / Late / Rework / OffRound), `PointStatusCalculator`, `RoundWindow`, `RoundRules` |
