@@ -7,6 +7,7 @@ import {
   areaSummary,
   buildings,
   cleaners,
+  managedBuildings,
   officeDetail,
   officeSummary,
   sign,
@@ -18,6 +19,7 @@ function serve(routes: FakeRoutes = {}) {
   return fakeServer({
     ...adminSession,
     'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     'GET /api/admin/cleaners': () => ({ status: 200, body: cleaners }),
     'GET /api/admin/areas': () => ({ status: 200, body: [areaSummary(), officeSummary] }),
     'GET /api/admin/areas/1': () => ({ status: 200, body: areaDetail() }),
@@ -36,12 +38,12 @@ describe('AreasPage (D4, facility-0045)', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'AR01 Area ทดลอง' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'จัดการพื้นที่ จุด และพิกัดป้าย' })).toBeInTheDocument();
     const list = screen.getByRole('region', { name: 'พื้นที่ทั้งหมด (2)' });
-    expect(within(list).getByText('ตึก A · 2 กะ · 2 จุด · ป้ายยังไม่ยืนยัน 1')).toBeInTheDocument();
-    expect(within(list).getByText('ตึก A · เฉพาะกะเช้า · 0 จุด · ป้ายยังไม่ยืนยัน 1')).toBeInTheDocument();
+    expect(within(list).getByText('ตึก A · ตึกทดลอง · 2 กะ · 2 จุด · ป้ายยังไม่ยืนยัน 1')).toBeInTheDocument();
+    expect(within(list).getByText('ตึก A · ตึกทดลอง · เฉพาะกะเช้า · 0 จุด · ป้ายยังไม่ยืนยัน 1')).toBeInTheDocument();
     expect(within(list).getByRole('link', { name: /^AR01 Area ทดลอง/ })).toHaveAttribute('aria-current', 'true');
     expect(within(list).getByRole('link', { name: '+ เพิ่มพื้นที่' })).toHaveAttribute('href', '/admin/areas/new');
 
-    expect(screen.getByText('พื้นที่ที่เลือก · ตึก A')).toBeInTheDocument();
+    expect(screen.getByText('พื้นที่ที่เลือก · ตึก A · ตึกทดลอง')).toBeInTheDocument();
     expect(
       screen.getByText('ทำ 2 กะ (เช้า + ดึก) · แม่บ้านประจำ: เช้า แม่บ้านทดสอบ · ดึก แม่บ้านกะดึก · ป้าย 1 + 2'),
     ).toBeInTheDocument();
@@ -158,7 +160,7 @@ describe('AreasPage (D4, facility-0045)', () => {
     await user.click(screen.getByRole('tab', { name: 'ป้ายลงเวลา' }));
     expect(screen.queryByRole('link', { name: 'เก็บพิกัดบนมือถือ ›' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'พิมพ์ป้ายลงเวลา' })).not.toBeInTheDocument();
-    expect(screen.getByText('ตึก A · 2 กะ · 2 จุด · ป้ายยังไม่ยืนยัน 1 · ปิดใช้งาน')).toBeInTheDocument();
+    expect(await screen.findByText('ตึก A · ตึกทดลอง · 2 กะ · 2 จุด · ป้ายยังไม่ยืนยัน 1 · ปิดใช้งาน')).toBeInTheDocument();
   });
 
   it('a deactivated point stays in the table, marked, with no print link', async () => {

@@ -1,10 +1,11 @@
 import type { AdminSign, AreaDetail, AreaSummary } from '../../shared/api/adminSetupApi';
+import { buildingText, type BuildingNames } from '../../shared/api/buildingNames';
 import { signPlaceLabel } from '../../shared/utils/labels';
 
 /** Wireframe D4's line under each Area in the list. */
-export function areaMeta(area: AreaSummary): string {
+export function areaMeta(area: AreaSummary, names?: BuildingNames): string {
   const parts = [
-    `ตึก ${area.buildingCode}`,
+    `ตึก ${buildingText(area.buildingCode, names)}`,
     area.shiftPattern === 'DayOnly' ? 'เฉพาะกะเช้า' : '2 กะ',
     `${area.activePointCount} จุด`,
   ];

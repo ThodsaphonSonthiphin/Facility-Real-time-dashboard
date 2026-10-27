@@ -3,7 +3,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { PointCard } from '../../shared/api/types';
 import type { AppStore } from '../../store';
-import { adminSession, buildings } from '../../test/adminFixtures';
+import { adminSession, buildings, managedBuildings } from '../../test/adminFixtures';
 import { point } from '../../test/cleanerFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
@@ -15,6 +15,7 @@ function serve(answer: PointCard[] = boardPoints, routes: FakeRoutes = {}) {
     ...adminSession,
     'GET /api/service-points': () => ({ status: 200, body: answer }),
     'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     ...routes,
   });
 }
@@ -36,10 +37,10 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
 
     const ar01 = await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
     expect(tileNames(ar01)).toEqual(['ห้องน้ำชาย', 'ห้องน้ำหญิง', 'จุดทิ้งขยะ', 'โถงทางเดิน']);
-    expect(within(ar01).getByText('ตึก A · 4 จุด')).toBeInTheDocument();
+    expect(within(ar01).getByText('ตึก A · ตึกทดลอง · 4 จุด')).toBeInTheDocument();
     const ar02 = screen.getByRole('region', { name: 'AR02 Office ทดลอง' });
     expect(tileNames(ar02)).toEqual(['ห้องทำงาน', 'ห้องน้ำ Office', 'ห้องเก็บของ']);
-    expect(within(ar02).getByText('ตึก B · 3 จุด')).toBeInTheDocument();
+    expect(within(ar02).getByText('ตึก B · ตึกข้างเคียง · 3 จุด')).toBeInTheDocument();
 
     expect(screen.getByText('ส่งงาน 10:05 · แม่บ้านทดสอบ')).toBeInTheDocument();
     expect(screen.getByText('ตรวจผ่าน · ส่งงาน 10:00 · แม่บ้านทดสอบ')).toBeInTheDocument();

@@ -8,6 +8,7 @@ import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { formatShiftDate } from '../../shared/utils/thaiTime';
+import { useBuildingNames } from '../../shared/api/buildingNames';
 import { candidateText, coverNotice } from './alertRules';
 import { useAssignCoverMutation, useGetCoverCandidatesQuery } from './alertsApi';
 
@@ -25,6 +26,7 @@ interface CoverFormProps {
  * may be up to 7 days ahead (facility-0075). The choice lives here only (facility-0024); one send at a time.
  */
 export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProps) {
+  const names = useBuildingNames();
   const candidates = useGetCoverCandidatesQuery(
     { areaId: row.areaId, shiftDate: board.shiftDate, shift: board.shift },
     freshOnOpen,
@@ -43,7 +45,7 @@ export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProp
     setProblem(null);
     try {
       const cover = await assign({ userId, areaId: row.areaId, shiftDate: board.shiftDate, shift: board.shift }).unwrap();
-      onDone(coverNotice(cover));
+      onDone(coverNotice(cover, names));
     } catch (error) {
       setProblem(getErrorMessage(error));
     }

@@ -51,9 +51,9 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
       'หัวหน้ากะดึก660002',
       'หัวหน้าตึกบี660003',
     ]);
-    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['A · กะเช้า', '12 จาก 12 จุด', '101', '168', '96', '57%', '72', '11', '3']);
+    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['A · ตึกทดลอง · กะเช้า', '12 จาก 12 จุด', '101', '168', '96', '57%', '72', '11', '3']);
     expect(cellsOf('หัวหน้ากะดึก')).toEqual([
-      'A · กะดึก',
+      'A · ตึกทดลอง · กะดึก',
       '9 จาก 12 จุด · ไม่ได้ตรวจ 3 จุด',
       '41',
       '150',
@@ -63,7 +63,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
       '2',
       '1',
     ]);
-    expect(cellsOf('หัวหน้าตึกบี')).toEqual(['B · กะเช้า', '0 จาก 10 จุด · ไม่ได้ตรวจ 10 จุด', '0', '0', '0', '–', '0', '0', '0']);
+    expect(cellsOf('หัวหน้าตึกบี')).toEqual(['B · ตึกข้างเคียง · กะเช้า', '0 จาก 10 จุด · ไม่ได้ตรวจ 10 จุด', '0', '0', '0', '–', '0', '0', '0']);
     expect(screen.getByRole('progressbar', { name: 'ตรวจ 57% ของงานที่ส่ง' })).toHaveAttribute('value', '57');
     // facility-0059: no link to a sign page
     expect(within(screen.getByRole('table')).queryAllByRole('link')).toHaveLength(0);

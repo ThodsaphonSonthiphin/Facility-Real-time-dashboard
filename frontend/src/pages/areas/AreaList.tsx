@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import type { AreaSummary } from '../../shared/api/adminSetupApi';
 import { boxClass, buttonClass, focusRing } from '../../shared/components/styles';
+import { useBuildingNames } from '../../shared/api/buildingNames';
 import { areaMeta } from './areaText';
 
 interface AreaListProps {
@@ -16,6 +17,7 @@ const itemIdleClass = 'border-transparent hover:border-input-border';
 
 /** Wireframe D4, left: every Area, deactivated ones too; the open one is marked. */
 export function AreaList({ areas, selectedId, loading }: AreaListProps) {
+  const names = useBuildingNames();
   return (
     <section className={`flex flex-col gap-2 ${boxClass}`} aria-labelledby="areas-list-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -36,7 +38,7 @@ export function AreaList({ areas, selectedId, loading }: AreaListProps) {
                 aria-current={selected ? 'true' : undefined}
               >
                 <span className={area.isActive ? 'font-semibold' : 'font-semibold text-muted'}>{`${area.code} ${area.name}`}</span>
-                <span className="text-muted">{areaMeta(area)}</span>
+                <span className="text-muted">{areaMeta(area, names)}</span>
               </Link>
             </li>
           );

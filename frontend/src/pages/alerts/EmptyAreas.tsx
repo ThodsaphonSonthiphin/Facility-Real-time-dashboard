@@ -8,6 +8,7 @@ import { linkClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { formatShiftDate } from '../../shared/utils/thaiTime';
+import { useBuildingNames, buildingText } from '../../shared/api/buildingNames';
 import { matchesSearch, sameSlot, slotKey, slotText, type CoverSlot } from './alertRules';
 import { listClass, rowClass, sectionClass, sectionTitleClass } from './alertStyles';
 
@@ -34,6 +35,7 @@ interface EmptyAreasProps {
  * cover a known absence before leaving (facility-0075, 0084). The search only narrows the rows on screen.
  */
 export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, onChoose, children }: EmptyAreasProps) {
+  const names = useBuildingNames();
   const [search, setSearch] = useState('');
   const rows = board ? board.rows.filter((row) => ahead || row.state === 'Empty') : [];
   const shown = rows.filter((row) => matchesSearch(row, search));
@@ -86,7 +88,7 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, o
           <li key={row.areaId} className={rowClass}>
             <span>
               <strong>{`${row.areaCode} ${row.areaName}`}</strong>
-              {` · ตึก ${row.buildingCode}`}
+              {` · ตึก ${buildingText(row.buildingCode, names)}`}
             </span>
             <span className="text-muted">{cleanerText(row, ahead)}</span>
             {row.covers.length > 0 ? (

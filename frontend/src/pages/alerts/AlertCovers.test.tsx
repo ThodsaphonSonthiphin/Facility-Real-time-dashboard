@@ -1,6 +1,6 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { adminSession } from '../../test/adminFixtures';
+import { adminSession, managedBuildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
 import {
@@ -21,6 +21,7 @@ function serve(routes: FakeRoutes = {}) {
     ...adminSession,
     'GET /api/admin/alerts': () => ({ status: 200, body: [supervisorBlockedAlert, ...alerts] }),
     'GET /api/admin/attendance': () => ({ status: 200, body: attendanceBoard() }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     'GET /api/admin/cover-assignments/candidates': () => ({ status: 200, body: candidates }),
     ...routes,
   });
@@ -42,6 +43,9 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     const empty = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่มีคน (2)' });
     expect(within(empty).getByText('แม่บ้านลา ยังไม่ลงเวลา')).toBeInTheDocument();
     expect(within(empty).getByText('ไม่มีแม่บ้านประจำ')).toBeInTheDocument();
+    expect(
+      within(empty).getByText((_, element) => element?.tagName === 'SPAN' && element.textContent === 'AR12 Area สิบสอง · ตึก B · ตึกข้างเคียง'),
+    ).toBeInTheDocument();
 
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
     const form = screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน · AR12' });
@@ -141,7 +145,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
 
     await user.click(within(item).getByRole('button', { name: 'ให้ตรวจแทนตึกนี้กะนี้' }));
 
-    expect(await screen.findByText('มอบหมาย หัวหน้าทดสอบ ตรวจแทนตึก B แล้ว')).toBeInTheDocument();
+    expect(await screen.findByText('มอบหมาย หัวหน้าทดสอบ ตรวจแทนตึก B · ตึกข้างเคียง แล้ว')).toBeInTheDocument();
     expect(posts(server).map((call) => call.body)).toEqual([
       { userId: 31, buildingId: 2, shiftDate: '2026-10-15', shift: 'Day', blockedScanId: 302 },
     ]);

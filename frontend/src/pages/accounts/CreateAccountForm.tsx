@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { AreaSummary, Building } from '../../shared/api/adminSetupApi';
-import { buildingOptionText } from '../../shared/api/buildingNames';
+import { buildingOptionText, useBuildingNames } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, FieldGroup, Select, TextInput } from '../../shared/components/Field';
@@ -30,6 +30,7 @@ interface CreateAccountFormProps {
  * in this form's state until it is sent, then it is cleared.
  */
 export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountFormProps) {
+  const names = useBuildingNames();
   const [draft, setDraft] = useState<CreateDraft>(() => emptyDraft());
   const [problem, setProblem] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -177,7 +178,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
                 <option value="">— ยังไม่กำหนดพื้นที่ —</option>
                 {activeAreas.map((option) => (
                   <option key={option.id} value={String(option.id)}>
-                    {areaOptionLabel(option)}
+                    {areaOptionLabel(option, undefined, names)}
                   </option>
                 ))}
               </Select>

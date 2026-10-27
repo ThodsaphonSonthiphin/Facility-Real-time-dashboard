@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { account, accounts, adminSession, areaSummary, buildings, officeSummary } from '../../test/adminFixtures';
+import { account, accounts, adminSession, areaSummary, buildings, managedBuildings, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
 
@@ -10,6 +10,7 @@ function serve(routes: FakeRoutes = {}) {
     'GET /api/admin/accounts': () => ({ status: 200, body: accounts }),
     'GET /api/admin/areas': () => ({ status: 200, body: [areaSummary(), officeSummary] }),
     'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     ...routes,
   });
 }
@@ -42,7 +43,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     expect(within(filters).getByRole('button', { name: 'ทั้งหมด (7)' })).toHaveAttribute('aria-pressed', 'true');
     expect(cellsOf('แม่บ้านทดสอบ')).toEqual(['650001', 'แม่บ้าน', 'AR01 · กะเช้า', 'ใช้งาน']);
     expect(cellsOf('แม่บ้านว่าง')).toEqual(['650003', 'แม่บ้าน', 'ยังไม่มีพื้นที่ · กะเช้า', 'ใช้งาน']);
-    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['660001', 'หัวหน้า', 'ตึก A · กะเช้า', 'ใช้งาน']);
+    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['660001', 'หัวหน้า', 'ตึก A · ตึกทดลอง · กะเช้า', 'ใช้งาน']);
     expect(cellsOf('ผู้ดูแลคนที่สอง')).toEqual(['admin2', 'แอดมิน', '—', 'ใช้งาน']);
     expect(cellsOf('แม่บ้านที่ลาออก')).toEqual(['650006', 'แม่บ้าน', 'ยังไม่มีพื้นที่ · กะเช้า', 'ปิดใช้งาน']);
   });
@@ -90,8 +91,8 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     await within(areaSelect).findByRole('option', { name: /^AR02/ });
     expect(within(areaSelect).getAllByRole('option').map((option) => option.textContent)).toEqual([
       '— ยังไม่กำหนดพื้นที่ —',
-      'AR01 Area ทดลอง · ตึก A · 2 กะ · กะเช้ามีคนแล้ว (แม่บ้านทดสอบ) · กะดึกมีคนแล้ว (แม่บ้านกะดึก)',
-      'AR02 Office ทดลอง · ตึก A · กะเช้าอย่างเดียว',
+      'AR01 Area ทดลอง · ตึก A · ตึกทดลอง · 2 กะ · กะเช้ามีคนแล้ว (แม่บ้านทดสอบ) · กะดึกมีคนแล้ว (แม่บ้านกะดึก)',
+      'AR02 Office ทดลอง · ตึก A · ตึกทดลอง · กะเช้าอย่างเดียว',
     ]);
     await user.selectOptions(areaSelect, '1');
     expect(within(form).getByRole('radio', { name: /^กะเช้า/ })).toBeDisabled();

@@ -1,3 +1,4 @@
+import { buildingText, type BuildingNames } from '../../shared/api/buildingNames';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import type { SummaryRow } from './summaryApi';
 
@@ -15,6 +16,6 @@ export function inspectedShare({ submitted, submittedInspected }: SummaryRow): n
   return submitted === 0 ? null : Math.round((submittedInspected / submitted) * 100);
 }
 
-export function placeText({ buildingCode, shift }: SummaryRow): string {
-  return `${buildingCode} · ${shiftShortLabel[shift]}`;
+export function placeText({ buildingCode, shift }: SummaryRow, names?: BuildingNames): string {
+  return `${buildingText(buildingCode, names)} · ${shiftShortLabel[shift]}`;
 }

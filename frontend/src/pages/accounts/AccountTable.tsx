@@ -1,6 +1,7 @@
 import { Table } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
 import { Note } from '../../shared/components/Note';
+import { useBuildingNames } from '../../shared/api/buildingNames';
 import { accountRoleLabel, placeText } from './accountRules';
 import type { Account } from './accountsApi';
 
@@ -20,6 +21,7 @@ interface AccountTableProps {
  * button names its person, so a screen reader and the tests can tell the rows apart.
  */
 export function AccountTable({ accounts, me, busy, onAction }: AccountTableProps) {
+  const names = useBuildingNames();
   if (accounts.length === 0) {
     return <Note tone="info">ไม่พบบัญชีที่ตรงกับที่ค้นหา</Note>;
   }
@@ -41,7 +43,7 @@ export function AccountTable({ accounts, me, busy, onAction }: AccountTableProps
             <th scope="row">{account.displayName}</th>
             <td>{account.loginName}</td>
             <td>{accountRoleLabel[account.role]}</td>
-            <td>{placeText(account)}</td>
+            <td>{placeText(account, names)}</td>
             <td>{account.isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}</td>
             <td>
               <div className="flex items-center gap-3 whitespace-nowrap">

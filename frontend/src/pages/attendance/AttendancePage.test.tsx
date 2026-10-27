@@ -1,6 +1,6 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { adminSession, buildings } from '../../test/adminFixtures';
+import { adminSession, buildings, managedBuildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
 import { apiIdle, attendanceBoard, workingRow } from '../../test/liveFixtures';
@@ -14,6 +14,7 @@ function serve(routes: FakeRoutes = {}) {
       body: request.search.includes('shift=Night') ? attendanceBoard([workingRow], { shift: 'Night' }) : attendanceBoard(),
     }),
     'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
     ...routes,
   });
 }
@@ -51,12 +52,12 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
       'มีคนทำแทน1แอดมินมอบหมายเฉพาะกะนี้',
     ]);
     expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual([
-      'AR09 Area เก้าตึก A',
-      'AR12 Area สิบสองตึก B',
-      'AR01 Area ทดลองตึก A',
-      'AR02 Office ทดลองตึก B',
-      'AR05 Area ห้าตึก A',
-      'AR07 Area เจ็ดตึก A',
+      'AR09 Area เก้าตึก A · ตึกทดลอง',
+      'AR12 Area สิบสองตึก B · ตึกข้างเคียง',
+      'AR01 Area ทดลองตึก A · ตึกทดลอง',
+      'AR02 Office ทดลองตึก B · ตึกข้างเคียง',
+      'AR05 Area ห้าตึก A · ตึกทดลอง',
+      'AR07 Area เจ็ดตึก A · ตึกทดลอง',
     ]);
     expect(cells('AR09')[0]).toBe('ไม่มีแม่บ้านประจำ');
     expect(cells('AR12')).toEqual(['แม่บ้านลายังไม่ลงเวลา', 'ยังไม่มีคน', '–', '–', '–', '–', '']);
@@ -120,7 +121,7 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     await screen.findByText('15/10/2026 · กะเช้า 07:00–19:00');
 
     await user.type(screen.getByRole('searchbox', { name: 'ค้นหา' }), 'ที่อื่น');
-    expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual(['AR02 Office ทดลองตึก B']);
+    expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual(['AR02 Office ทดลองตึก B · ตึกข้างเคียง']);
 
     await user.clear(screen.getByRole('searchbox', { name: 'ค้นหา' }));
     await user.type(screen.getByRole('searchbox', { name: 'ค้นหา' }), 'ไม่มีชื่อนี้');

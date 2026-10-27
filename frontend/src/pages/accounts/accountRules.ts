@@ -1,4 +1,5 @@
 import type { AreaSummary } from '../../shared/api/adminSetupApi';
+import { buildingText, type BuildingNames } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import type { Account, AccountRole, CreateAccountRequest, UpdateAccountBody } from './accountsApi';
@@ -48,19 +49,19 @@ export function filterCounts(accounts: Account[]): Record<AccountFilter, number>
 }
 
 /** D6's "ประจำที่" column. */
-export function placeText(account: Account): string {
+export function placeText(account: Account, names?: BuildingNames): string {
   if (account.role === 'Admin') {
     return '—';
   }
   const shift = account.shift ? shiftShortLabel[account.shift] : 'ไม่มีกะ';
   return account.role === 'Supervisor'
-    ? `ตึก ${account.buildingCode ?? '-'} · ${shift}`
+    ? `ตึก ${account.buildingCode ? buildingText(account.buildingCode, names) : '-'} · ${shift}`
     : `${account.areaCode ?? 'ยังไม่มีพื้นที่'} · ${shift}`;
 }
 
 /** D6's Area option: "AR12 ชื่อ · ตึก B · 2 กะ · กะเช้ามีคนแล้ว (ทองใบ)". The account being edited is not "someone". */
-export function areaOptionLabel(area: AreaSummary, exceptUserId?: number): string {
-  const parts = [`${area.code} ${area.name}`, `ตึก ${area.buildingCode}`, area.shiftPattern === 'DayOnly' ? 'กะเช้าอย่างเดียว' : '2 กะ'];
+export function areaOptionLabel(area: AreaSummary, exceptUserId?: number, names?: BuildingNames): string {
+  const parts = [`${area.code} ${area.name}`, `ตึก ${buildingText(area.buildingCode, names)}`, area.shiftPattern === 'DayOnly' ? 'กะเช้าอย่างเดียว' : '2 กะ'];
   if (area.dayCleaner && area.dayCleaner.id !== exceptUserId) {
     parts.push(`กะเช้ามีคนแล้ว (${area.dayCleaner.displayName})`);
   }
