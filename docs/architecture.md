@@ -179,6 +179,8 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 **Excel export (facility-0053).** `POST /api/admin/export` reads rows through `ExportQuery` (attendance, submissions, and the active points with their Round Windows, from which the "ไม่ได้ทำ" rows are computed by `ExportRules`). `ExportSheets` turns them into sheets and `Infrastructure/Export/ExcelWorkbook` writes the `.xlsx` with ClosedXML 0.104.2 (MIT licence, the only package plan 5 added). Every cell is written as text (dates `yyyy-MM-dd`, times `HH:mm`), so a name such as `=1+1` can never become a formula when the Admin opens the file. Column widths are fixed, because auto-fit needs fonts that the server may not have. The inspection set adds the "การตรวจงาน" sheet (`InspectionHistoryQuery`, `InspectionHistory.FinishedRounds`): the Inspection Records plus ไม่ได้ตรวจ / ไม่ได้แก้ rows for closed shifts. Each export writes one `EXPORT_EXCEL` audit row with the range, building, sets and row counts, and no row content.
 
+**First Admin and reset-admin (facility-0092).** After the migration (and the Development seed), `FirstAdmin.EnsureAsync` creates one Admin from the server's `FirstAdmin__Username`, `FirstAdmin__Password` and `FirstAdmin__DisplayName`, only while no Admin row exists at all. A bad value stops the startup and names the setting, never the password. Started as `FacilityRealtime.Api reset-admin <username>`, `Program` migrates, runs `Commands/ResetAdminCommand` (password asked twice with the typing hidden), and exits without serving, so it needs only the connection string. Both go through `Persistence/ServerAdminAccounts` and write audit rows whose actor is null, which the history shows as "ระบบ". The handover guide is `docs/handover.md`.
+
 ---
 
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
@@ -486,7 +488,7 @@ classDiagram
     User "1" <-- "0..*" CoverAssignment : assigned by, cancelled by
     CoverAssignment "0..1" <-- "0..*" ScanRecord : cover used
     CoverAssignment "0..1" <-- "0..*" InspectionRecord : under cover
-    User "1" <-- "0..*" AuditEntry : actor
+    User "0..1" <-- "0..*" AuditEntry : actor
     User "1" <-- "0..*" AlertReview : reviewed by
 ```
 
