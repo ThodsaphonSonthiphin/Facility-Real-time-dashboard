@@ -5,6 +5,7 @@ import { Note } from '../../shared/components/Note';
 import { boxClass } from '../../shared/components/styles';
 import { Toast, type Notice } from '../../shared/components/Toast';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
+import { cleanersLeft } from './areaText';
 import { useSetAreaActiveMutation } from './areaFormApi';
 
 /** Wireframe D10's lower half: the Area's signs, and deactivation (no delete; history stays). */
@@ -13,6 +14,7 @@ export function AreaActiveSection({ detail }: { detail: AreaDetail }) {
   const [setAreaActive, { isLoading }] = useSetAreaActiveMutation();
   const [notice, setNotice] = useState<Notice | null>(null);
   const activePoints = detail.points.filter((point) => point.isActive).length;
+  const left = area.isActive ? cleanersLeft(area) : null;
 
   const toggle = async () => {
     try {
@@ -36,14 +38,16 @@ export function AreaActiveSection({ detail }: { detail: AreaDetail }) {
         <h2 id="areaform-active" className="text-lg font-semibold">
           {area.isActive ? 'ปิดใช้งานพื้นที่' : 'เปิดใช้งานพื้นที่'}
         </h2>
-        {area.isActive ? (
+        {!area.isActive && <Note tone="warn">พื้นที่นี้ปิดใช้งานอยู่ ป้ายทุกป้ายสแกนไม่ได้</Note>}
+        {left && (
+          <Note tone="warn">{`${left} เอาแม่บ้านออกจากกะในฟอร์มด้านบน หรือย้ายไปพื้นที่อื่นที่หน้าบัญชีผู้ใช้ก่อน จึงจะปิดพื้นที่ได้`}</Note>
+        )}
+        {area.isActive && !left && (
           <p>พื้นที่และทุกป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้ ไม่มีปุ่มลบ</p>
-        ) : (
-          <Note tone="warn">พื้นที่นี้ปิดใช้งานอยู่ ป้ายทุกป้ายสแกนไม่ได้</Note>
         )}
         <div>
           {/* deactivation is undone by the same button, so it is not `danger` (MASTER.md): the words carry it */}
-          <Button size="desk" disabled={isLoading} onClick={() => void toggle()}>
+          <Button size="desk" disabled={isLoading || left !== null} onClick={() => void toggle()}>
             {area.isActive ? 'ปิดใช้งานพื้นที่นี้' : 'เปิดใช้งานพื้นที่นี้'}
           </Button>
         </div>

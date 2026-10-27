@@ -32,3 +32,9 @@ export function areaLine(detail: AreaDetail): string {
 export function signPlaceText(sign: AdminSign): string {
   return `${signPlaceLabel(sign)} · รัศมี ${sign.radiusM} ม.`;
 }
+
+/** facility-0091 decision 2, as the server's AreaRules.DeactivateProblem names them; null when no Cleaner holds the Area. */
+export function cleanersLeft(area: AreaSummary): string | null {
+  const names = [area.dayCleaner, area.nightCleaner].flatMap((cleaner) => (cleaner ? [cleaner.displayName] : []));
+  return names.length === 0 ? null : `ยังมีแม่บ้านประจำ ${names.join(', ')}`;
+}
