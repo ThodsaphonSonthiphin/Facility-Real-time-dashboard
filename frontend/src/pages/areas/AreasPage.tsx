@@ -1,6 +1,7 @@
 import { useParams } from 'react-router';
 import { useGetAreaQuery, useGetAreasQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { AreaDetailPanel } from './AreaDetailPanel';
@@ -32,10 +33,12 @@ export function AreasPage() {
           {detail.currentData && <AreaDetailPanel key={detail.currentData.area.id} detail={detail.currentData} />}
         </div>
       </div>
-      <p className="text-muted">
-        แม่บ้านสแกนได้เฉพาะป้ายของพื้นที่ตัวเอง · ป้ายลงเวลา 1 ป้ายต่อพื้นที่ ระบบสร้างให้เองเมื่อเพิ่มพื้นที่ ·
-        ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
-      </p>
+      <MoreInfo summary="เกี่ยวกับหน้านี้">
+        <span>
+          แม่บ้านสแกนได้เฉพาะป้ายของพื้นที่ตัวเอง · ป้ายลงเวลา 1 ป้ายต่อพื้นที่ ระบบสร้างให้เองเมื่อเพิ่มพื้นที่ ·
+          ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
+        </span>
+      </MoreInfo>
     </main>
   );
 }

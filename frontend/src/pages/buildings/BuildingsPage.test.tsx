@@ -4,6 +4,7 @@ import type { ManagedBuilding } from '../../shared/api/adminSetupApi';
 import { adminSession, managedBuildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
+import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 const [a, b, c] = managedBuildings;
 
@@ -190,4 +191,16 @@ describe('BuildingsPage (facility-0090)', () => {
     expect(await screen.findByRole('row', { name: /^A / })).toBeInTheDocument();
     expect(screen.queryByText('กำลังโหลดตึก...')).not.toBeInTheDocument();
   });
+
+  it('the page note and the save note wait behind ℹ (owner, 2026-10-27)', async () => {
+    serve();
+    const { user } = await renderApp('/admin/buildings');
+
+    await screen.findByRole('heading', { level: 2, name: 'ตึกทั้งหมด (3)' });
+    expectBehindMoreInfo(/^ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติยังอยู่/, 'เกี่ยวกับหน้านี้');
+
+    await openEditor(user, a);
+    expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');
+  });
+
 });

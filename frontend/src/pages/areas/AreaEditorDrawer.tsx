@@ -2,6 +2,7 @@ import type { AreaDetail } from '../../shared/api/adminSetupApi';
 import { useGetBuildingsQuery, useGetCleanersQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { Button } from '../../shared/components/Button';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Drawer } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -50,7 +51,7 @@ export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerP
           !error && <p className="text-muted">กำลังโหลด...</p>
         )}
         <AreaActiveSection detail={detail} />
-        <p className="text-muted">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</p>
+        <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
       </div>
     </Drawer>
   );

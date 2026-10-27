@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { adminSession, areaDetail, unlocatedSign } from '../../test/adminFixtures';
 import { fakeGpsTrack } from '../../test/fakeGps';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
+import { expectBehindMoreInfo } from '../../test/moreInfo';
 import { renderApp } from '../../test/renderApp';
 
 afterEach(() => vi.useRealTimers());
@@ -226,5 +227,13 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'AR01-01 ห้องน้ำชาย' })).toBeInTheDocument();
     expect(gps.cleared).toBe(1);
     expect(screen.getByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' })).toBeInTheDocument();
+  });
+
+  it('the page note waits behind a phone-size ℹ (owner, 2026-10-27)', async () => {
+    serve();
+    await openAtSign('/admin/areas/1/capture?sign=102', 'AR01-02 ห้องน้ำหญิง');
+
+    expectBehindMoreInfo('ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับหน้านี้');
+    expect(screen.getByText('เกี่ยวกับหน้านี้').closest('summary')).toHaveClass('min-h-12');
   });
 });

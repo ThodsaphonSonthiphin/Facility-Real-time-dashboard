@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGetAllBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { Button } from '../../shared/components/Button';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { Toast, type Notice } from '../../shared/components/Toast';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -41,10 +42,12 @@ export function BuildingsPage() {
         {buildings.data?.length === 0 && <Note tone="info">ยังไม่มีตึก กด "+ เพิ่มตึก" เพื่อเริ่ม</Note>}
         {list.length > 0 && <BuildingTable buildings={list} onEdit={(building) => setOpen({ kind: 'edit', id: building.id })} />}
       </section>
-      <p className="text-muted">
-        ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติยังอยู่ · ปิดตึกได้เมื่อไม่มีพื้นที่ที่เปิดอยู่และไม่มีหัวหน้าที่เปิดใช้งานประจำตึก ·
-        ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
-      </p>
+      <MoreInfo summary="เกี่ยวกับหน้านี้">
+        <span>
+          ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติยังอยู่ · ปิดตึกได้เมื่อไม่มีพื้นที่ที่เปิดอยู่และไม่มีหัวหน้าที่เปิดใช้งานประจำตึก ·
+          ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
+        </span>
+      </MoreInfo>
       {open?.kind === 'create' && <BuildingDrawer onClose={close} onDone={done} />}
       {editing && <BuildingDrawer key={editing.id} building={editing} onClose={close} onDone={done} />}
       {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}

@@ -4,6 +4,7 @@ import { SEND_TIMEOUT_MS } from '../../shared/api/baseApi';
 import { checkedOut, cleanerSession, myWork, notCheckedIn, onDuty, otherAreaBlocked, outsideShift, point } from '../../test/cleanerFixtures';
 import { fakeGps, nearSign } from '../../test/fakeGps';
 import { authAnswer, fakeServer, type FakeRoutes } from '../../test/fakeServer';
+import { expectBehindMoreInfo } from '../../test/moreInfo';
 import { renderApp } from '../../test/renderApp';
 import type { ScanRecordCreated } from './scanApi';
 
@@ -418,5 +419,18 @@ describe('ScanPage when the send does not go through (M8, M12)', () => {
 
     expect(await screen.findByRole('heading', { name: 'ส่งงานแล้ว 10:05' })).toBeInTheDocument();
     expect(server.calls.filter((c) => c.path === '/api/scan-records')).toHaveLength(1);
+  });
+
+  it('what happens with no signal waits behind a phone-size ℹ (owner, 2026-10-27)', async () => {
+    fakeGps(nearSign);
+    serve();
+    await renderApp(SIGN);
+
+    await screen.findByRole('heading', { name: 'ห้องน้ำชาย' });
+    expectBehindMoreInfo(
+      'ถ้าไม่มีสัญญาณ หน้าจอจะขึ้น "ยังไม่ได้บันทึก" พร้อมปุ่มส่งใหม่ เวลาที่บันทึกคือตอนที่ส่งสำเร็จ',
+      'เกี่ยวกับการส่งงาน',
+    );
+    expect(screen.getByText('เกี่ยวกับการส่งงาน').closest('summary')).toHaveClass('min-h-12');
   });
 });

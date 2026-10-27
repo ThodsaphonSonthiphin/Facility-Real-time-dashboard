@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import type { ManagedBuilding } from '../../shared/api/adminSetupApi';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Drawer } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
 import { boxClass } from '../../shared/components/styles';
@@ -128,7 +129,7 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
             </div>
           </section>
         )}
-        <p className="text-muted">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</p>
+        <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
       </div>
     </Drawer>
   );

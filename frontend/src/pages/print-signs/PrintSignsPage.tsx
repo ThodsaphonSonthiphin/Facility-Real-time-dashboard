@@ -4,6 +4,7 @@ import { useGetAreasQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { Button } from '../../shared/components/Button';
 import { Field, FieldGroup, Select } from '../../shared/components/Field';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { focusRing, linkClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -114,9 +115,10 @@ export function PrintSignsPage() {
           ))}
         </section>
       ))}
-      <p className="text-muted print:hidden">
-        ระบบสร้าง QR ในเครื่องนี้เอง ไม่ส่งรหัสออกไปเว็บภายนอก · ติดเสร็จให้สแกนทดสอบ 1 ครั้ง หน้าจอต้องขึ้นชื่อจุดตรงกับป้าย
-      </p>
+      <div className="flex flex-col gap-1.5 print:hidden">
+        <p className="text-muted">ติดเสร็จให้สแกนทดสอบ 1 ครั้ง หน้าจอต้องขึ้นชื่อจุดตรงกับป้าย</p>
+        <MoreInfo summary="เกี่ยวกับ QR">ระบบสร้าง QR ในเครื่องนี้เอง ไม่ส่งรหัสออกไปเว็บภายนอก</MoreInfo>
+      </div>
     </main>
   );
 }

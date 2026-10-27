@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { adminSession, areaDetail, checkInSign, areaSummary, officeDetail, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
+import { expectBehindMoreInfo, expectInView } from '../../test/moreInfo';
 import { qrPath } from './qr';
 
 const closedArea = areaSummary({ id: 3, code: 'AR03', name: 'Area ปิด', isActive: false });
@@ -172,4 +173,14 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     expect(await screen.findByText('พื้นที่นี้ปิดใช้งาน ป้ายสแกนไม่ได้ จึงไม่มีป้ายให้พิมพ์')).toBeInTheDocument();
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
   });
+
+  it('how the QR is made waits behind ℹ; the test scan after hanging stays (owner, 2026-10-27)', async () => {
+    serve();
+    await renderApp('/admin/print?area=1');
+
+    await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย QR · AR01 Area ทดลอง' });
+    expectBehindMoreInfo('ระบบสร้าง QR ในเครื่องนี้เอง ไม่ส่งรหัสออกไปเว็บภายนอก', 'เกี่ยวกับ QR');
+    expectInView('ติดเสร็จให้สแกนทดสอบ 1 ครั้ง หน้าจอต้องขึ้นชื่อจุดตรงกับป้าย');
+  });
+
 });

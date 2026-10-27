@@ -14,6 +14,7 @@ import {
 } from '../../test/adminFixtures';
 import { authAnswer, fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
+import { expectBehindMoreInfo, expectInView } from '../../test/moreInfo';
 
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
@@ -233,4 +234,23 @@ describe('AreasPage (D4, facility-0045)', () => {
     expect(alerts[0]).toHaveTextContent('ไม่พบพื้นที่นี้');
     expect(calls.some((call) => /^\/api\/admin\/areas\/./.test(call.path))).toBe(false);
   });
+
+  it('the page note and the save note wait behind ℹ; the sign help stays (owner, 2026-10-27)', async () => {
+    serve();
+    const { user } = await renderApp('/admin/areas/1');
+
+    await screen.findByRole('heading', { level: 2, name: 'AR01 Area ทดลอง' });
+    expectBehindMoreInfo(
+      'แม่บ้านสแกนได้เฉพาะป้ายของพื้นที่ตัวเอง · ป้ายลงเวลา 1 ป้ายต่อพื้นที่ ระบบสร้างให้เองเมื่อเพิ่มพื้นที่ · ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน',
+      'เกี่ยวกับหน้านี้',
+    );
+    await user.click(screen.getByRole('tab', { name: 'ป้ายลงเวลา' }));
+    expectInView(/^เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย/);
+
+    await user.click(screen.getByRole('button', { name: 'แก้ไขพื้นที่' }));
+    const editor = await screen.findByRole('dialog', { name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' });
+    await within(editor).findByLabelText('ชื่อพื้นที่');
+    expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');
+  });
+
 });

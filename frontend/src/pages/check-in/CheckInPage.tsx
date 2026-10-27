@@ -7,6 +7,7 @@ import type { AttendanceEvent, AttendanceState, BlockedScan, OwnShift } from '..
 import { BlockedScanScreen } from '../../shared/components/BlockedScanScreen';
 import { Button } from '../../shared/components/Button';
 import { LocationHelp } from '../../shared/components/LocationHelp';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { StatusScreen } from '../../shared/components/StatusScreen';
 import { buttonClass } from '../../shared/components/styles';
@@ -135,9 +136,9 @@ export function CheckInPage() {
           ))}
         </div>
       )}
-      <p className="text-center text-md text-muted">
+      <MoreInfo size="phone" summary="เกี่ยวกับการลงเวลา">
         ระบบแสดงปุ่มถัดไปให้เองตามลำดับ · กดซ้ำภายใน 5 นาทีไม่นับ · ไม่คิดสายหรือกลับก่อน
-      </p>
+      </MoreInfo>
       <Link className={buttonClass('secondary', 'phone')} data-tap="" to="/my-work">
         ดูงานของฉัน
       </Link>

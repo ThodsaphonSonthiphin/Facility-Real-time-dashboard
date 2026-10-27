@@ -15,6 +15,7 @@ import {
 } from '../../test/cleanerFixtures';
 import { fakeGps, farFromSign, nearSign } from '../../test/fakeGps';
 import { fakeServer, type FakeResponse, type FakeRoutes } from '../../test/fakeServer';
+import { expectBehindMoreInfo } from '../../test/moreInfo';
 import { renderApp } from '../../test/renderApp';
 
 const SIGN = '/check-in/token-checkin-ar01';
@@ -367,5 +368,14 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
     expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
+  });
+
+  it('how the buttons work waits behind a phone-size ℹ (owner, 2026-10-27)', async () => {
+    serve({});
+    await renderApp(SIGN);
+
+    await screen.findByRole('button', { name: 'เข้างาน' });
+    expectBehindMoreInfo('ระบบแสดงปุ่มถัดไปให้เองตามลำดับ · กดซ้ำภายใน 5 นาทีไม่นับ · ไม่คิดสายหรือกลับก่อน', 'เกี่ยวกับการลงเวลา');
+    expect(screen.getByText('เกี่ยวกับการลงเวลา').closest('summary')).toHaveClass('min-h-12');
   });
 });
