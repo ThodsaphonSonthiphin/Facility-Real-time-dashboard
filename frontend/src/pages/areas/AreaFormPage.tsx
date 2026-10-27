@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router';
 import { useGetAreaQuery, useGetBuildingsQuery, useGetCleanersQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { linkClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -36,7 +37,7 @@ export function AreaFormPage() {
         !error && <p className="text-muted">กำลังโหลด...</p>
       )}
       {detail && <AreaActiveSection detail={detail} />}
-      <p className="text-muted">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</p>
+      <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
     </main>
   );
 }
