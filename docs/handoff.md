@@ -17,7 +17,7 @@ The owner tested `feat/admin-buildings` on 2026-10-27 and this plan (facility-00
   - D4 kept showing the building code after a rename. Now every Admin page and picker (D1, D2, D3, D4, D6, D7, D8) shows `code · current name`; phones and printed signs keep the code.
   - D8 showed codes only and the owner did not see the off building. The D7/D8 picker now asks fresh on every open; D8 lists the off building as `C · name (ปิดใช้งาน)`; the Excel "ตึก" cell is `code · current name`.
   - Closing building C left its Cleaner on an Area that was off. An Area is now turned off only once no active Cleaner holds it (`AreaRules.DeactivateProblem`, answered 409 with the Cleaners' names); the Area form disables its button and names them.
-- Commits since `e28a976`: `9cce108`, `eb58e01`, `d8dd5e3`, `04729ae`, `c5e0c14`, `8ad44d7`, `7934192`, `635ed61`, then the two docs commits `45231ee` and `b9a1fa8` (ADR facility-0091), then the final fix wave (FIXSHA: the Area form refuses a new Cleaner on an Area that is off, plus docs).
+- Commits since `e28a976`: `9cce108`, `eb58e01`, `d8dd5e3`, `04729ae`, `c5e0c14`, `8ad44d7`, `7934192`, `635ed61`, then the two docs commits `45231ee` and `b9a1fa8` (ADR facility-0091), then the final fix wave (`3d4a2ff`: the Area form refuses a new Cleaner on an Area that is off, plus docs).
 
 **State (2026-10-27):**
 - Branch `feat/admin-buildings`. Nothing is pushed and there is no PR.
