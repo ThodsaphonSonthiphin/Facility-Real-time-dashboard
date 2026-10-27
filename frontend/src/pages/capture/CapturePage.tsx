@@ -8,6 +8,7 @@ import {
 } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { Button } from '../../shared/components/Button';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { boxClass, focusRing, linkClass } from '../../shared/components/styles';
 import type { GpsFix } from '../../shared/geo/readLocation';
@@ -80,7 +81,9 @@ export function CapturePage() {
           onChoose={(signId) => setParams({ sign: String(signId) })}
         />
       )}
-      <p className="text-md text-muted">ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติการแก้ไขของแอดมิน</p>
+      <MoreInfo size="phone" summary="เกี่ยวกับหน้านี้">
+        ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติการแก้ไขของแอดมิน
+      </MoreInfo>
     </main>
   );
 }
