@@ -111,6 +111,7 @@ Root: `frontend/src/` — 114 `.tsx` files (25 of them tests), of which 64 are p
 |---|---|---|
 | `shared/api/` | `baseApi.ts` | **The single `createApi`.** `baseUrl = ${origin}/api`, Bearer header from `state.auth.accessToken`, `baseQueryWithReauth` (401 → one shared refresh → retry once, skipped for `/auth/*`), `SEND_TIMEOUT_MS = 20_000`, tag types, and the two standard hook options `freshOnOpen` and `livePoll` (30 s + refetch on focus). |
 | | `types.ts` | Every server DTO shared by pages. 47 imports. Note: the server omits null fields, so test with truthiness. |
+| | `buildingNames.ts` | `buildingOptionText` / `buildingText` / `useBuildingNames`: the Admin pages' `code · current name` for a building (facility-0091). Phones keep the bare code. |
 | | `adminSetupApi.ts`, `attendanceBoardApi.ts`, `alertListApi.ts`, `myWorkApi.ts` | Endpoints shared by more than one page. |
 | | `scanHub.ts` | `followScanHub()` — one SignalR connection per RTK Query cache entry, retry ladder, `onMissed` refetch on every reconnect. |
 | | `scanAnswers.ts` | Non-hook helpers: `blockedScanOf` (403 + areaCode = a blocked scan), `isNotSent` (why the send failed). |
@@ -232,6 +233,7 @@ Solution `backend/FacilityRealtime.slnx` — four projects, no controllers.
 |---|---|
 | `Program.cs` | Composition root, numbered 1–9 in comments: services → middleware → migrate → hub → endpoint groups → SPA fallback. |
 | `Endpoints/` (30 files) | All HTTP routes. `*Endpoints.cs` registers routes; the rest are helpers (`ThaiLabels`, `GpsInput`, `ApiResults`, `BlockedScans`, `PointNotifications`, `ExportSheets`, `AdminQuery`, `AccountChecks`, read-model builders). |
+| `Areas/` | `AreaRules.DeactivateProblem` — an Area is turned off only once no active Cleaner holds it (facility-0091) |
 | `Auth/` | `AuthSetup.cs` (JWT bearer, `AdminOnly` policy, SignalR query-string token), `JwtAccessTokenIssuer.cs`, `JwtKeys.cs`, `AuthClaims.cs`, `CurrentUser.cs`. |
 | `Hubs/ScanHub.cs` | Server → client only, **zero hub methods**. Admin connections join the `"admins"` group on connect. |
 | `DTOs/` (14 files) | One request/response record set per feature. |
@@ -562,19 +564,19 @@ graph LR
 
 | Method | Route | Handler | Called by | Why |
 |---|---|---|---|---|
-| GET | `/api/admin/buildings` | `AdminAreaEndpoints.cs:19` | `shared/api/adminSetupApi.ts:119` | Picker options used across many pages. |
+| GET | `/api/admin/buildings` | `AdminAreaEndpoints.cs:20` | `shared/api/adminSetupApi.ts:119` | Picker options used across many pages. |
 | GET | `/api/admin/buildings/all` | `AdminBuildingEndpoints.cs` | `adminSetupApi.ts` (`getAllBuildings`) | Every building, off ones too, with active Area and Supervisor counts: the buildings page and the D8 picker (D7 lists the active ones only). |
 | POST | `/api/admin/buildings` | `AdminBuildingEndpoints.cs` → `CreateAsync` | `pages/buildings/buildingsApi.ts` | Code set once, never reused (facility-0090). |
 | PUT | `/api/admin/buildings/{id}` | `AdminBuildingEndpoints.cs` → `RenameAsync` | `buildingsApi.ts` | Name only. |
 | POST | `/api/admin/buildings/{id}/deactivate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | Refused while an active Area or Supervisor is left in it. |
 | POST | `/api/admin/buildings/{id}/activate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | No condition; its Areas stay as they are. |
-| GET | `/api/admin/cleaners` | `AdminAreaEndpoints.cs:20` | `adminSetupApi.ts:128` | Same. |
-| GET | `/api/admin/areas` | `AdminAreaEndpoints.cs:21` | `adminSetupApi.ts:111` | Area summaries with counts. |
-| GET | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:23` | `adminSetupApi.ts:115` | Area detail: points, windows, signs. |
-| POST | `/api/admin/areas` | `AdminAreaEndpoints.cs:32` → `CreateAsync:67` | `pages/areas/areaFormApi.ts:17` | Creates the area **and** its check-in sign in one transaction. |
-| PUT | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:33` → `UpdateAsync:116` | `areaFormApi.ts:21` | Renaming or moving an area drops night windows for a DayOnly pattern. |
-| POST | `/api/admin/areas/{id}/deactivate` | `AdminAreaEndpoints.cs:34` → `SetActiveAsync:173` | `areaFormApi.ts:25` | Deactivate, never delete — history must keep the name. |
-| POST | `/api/admin/areas/{id}/activate` | `AdminAreaEndpoints.cs:36` | `areaFormApi.ts:26` | Re-open. |
+| GET | `/api/admin/cleaners` | `AdminAreaEndpoints.cs:21` | `adminSetupApi.ts:128` | Same. |
+| GET | `/api/admin/areas` | `AdminAreaEndpoints.cs:22` | `adminSetupApi.ts:111` | Area summaries with counts. |
+| GET | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:24` | `adminSetupApi.ts:115` | Area detail: points, windows, signs. |
+| POST | `/api/admin/areas` | `AdminAreaEndpoints.cs:33` → `CreateAsync:68` | `pages/areas/areaFormApi.ts:17` | Creates the area **and** its check-in sign in one transaction. |
+| PUT | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:34` → `UpdateAsync:117` | `areaFormApi.ts:21` | Renaming or moving an area drops night windows for a DayOnly pattern. |
+| POST | `/api/admin/areas/{id}/deactivate` | `AdminAreaEndpoints.cs:35` → `SetActiveAsync:174` | `areaFormApi.ts:25` | Deactivate, never delete — history must keep the name. Refused while an active Cleaner holds the Area (facility-0091). |
+| POST | `/api/admin/areas/{id}/activate` | `AdminAreaEndpoints.cs:37` | `areaFormApi.ts:26` | Re-open. |
 | POST | `/api/admin/areas/{areaId}/points` | `AdminPointEndpoints.cs:19` → `CreateAsync:28` | `pages/areas/areasApi.ts:15` | A point is meaningless without its sign and round windows. |
 | PUT | `/api/admin/points/{id}` | `AdminPointEndpoints.cs:20` → `UpdateAsync:80` | `areasApi.ts:19` | Unchanged windows keep their ids so a live round keeps its records. |
 | POST | `/api/admin/points/{id}/deactivate` | `AdminPointEndpoints.cs:21` → `SetActiveAsync:136` | `areasApi.ts:23` | Leaves the dashboard, cannot be scanned, history kept. |
