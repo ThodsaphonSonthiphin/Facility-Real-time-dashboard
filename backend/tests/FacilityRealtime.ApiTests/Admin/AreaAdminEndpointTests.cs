@@ -448,6 +448,53 @@ public class AreaAdminEndpointTests
     }
 
     [Fact]
+    public async Task An_area_that_is_off_refuses_a_new_cleaner_and_changes_nothing()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var newcomer = await TestData.AddCleanerAsync(factory, "E1009", Shift.Day);
+        await factory.WithDbAsync(async db =>
+        {
+            foreach (var user in await db.Users.Where(u => u.AreaId == area1).ToListAsync())
+            {
+                user.AreaId = null;
+            }
+
+            (await db.Areas.SingleAsync(a => a.Id == area1)).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1009", null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("เปิดใช้งานพื้นที่ก่อน แล้วค่อยใส่แม่บ้าน", await AdminSetupApi.MessageAsync(response));
+        Assert.Null(await AreaOfAsync(factory, "E1009"));
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
+
+    [Fact]
+    public async Task An_area_that_is_off_keeps_the_cleaners_it_already_holds_and_lets_a_shift_go_empty()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Areas.SingleAsync(a => a.Id == area1)).IsActive = false; // data from before facility-0091: E1001 and E1002 still hold it
+            await db.SaveChangesAsync();
+        });
+
+        var kept = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1001", "E1002"));
+        var shiftEmptied = await admin.PutAsJsonAsync($"{Areas}/{area1}", await Ar01FormAsync(factory, "E1001", null));
+
+        Assert.Equal(HttpStatusCode.OK, kept.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, shiftEmptied.StatusCode);
+        Assert.Equal(area1, await AreaOfAsync(factory, "E1001"));
+        Assert.Null(await AreaOfAsync(factory, "E1002"));
+    }
+
+    [Fact]
     public async Task A_deactivated_cleaner_does_not_keep_an_area_on()
     {
         using var factory = new FacilityApiFactory();

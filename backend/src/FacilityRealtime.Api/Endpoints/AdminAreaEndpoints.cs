@@ -136,6 +136,13 @@ public static class AdminAreaEndpoints
         }
 
         var current = await db.Users.Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == area.Id).ToListAsync();
+        // facility-0091 decision 2: an Area that is off takes no new Cleaner; one who already holds it may stay, and a shift may be emptied
+        if (!area.IsActive
+            && new[] { form.DayCleaner, form.NightCleaner }.Any(c => c is not null && c.AreaId != area.Id))
+        {
+            return Bad(AreaRules.OffAreaTakesNoNewCleaner);
+        }
+
         var before = Snapshot(area, current.FirstOrDefault(u => u.Shift == Shift.Day), current.FirstOrDefault(u => u.Shift == Shift.Night));
 
         area.Name = form.Name;

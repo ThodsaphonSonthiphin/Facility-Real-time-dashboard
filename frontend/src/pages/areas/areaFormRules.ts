@@ -25,9 +25,20 @@ export function draftOf(detail?: AreaDetail): AreaDraft {
   };
 }
 
-/** D10: "รายชื่อแสดงเฉพาะแม่บ้านที่ยังไม่มี Area ในกะนั้น", plus this Area's own Cleaner when editing. */
-export function cleanerChoices(cleaners: CleanerOption[], shift: Shift, areaId: number | undefined): CleanerOption[] {
-  return cleaners.filter((cleaner) => cleaner.shift === shift && (cleaner.areaId == null || cleaner.areaId === areaId));
+/**
+ * D10: "รายชื่อแสดงเฉพาะแม่บ้านที่ยังไม่มี Area ในกะนั้น", plus this Area's own Cleaner when editing.
+ * An Area that is off offers only its own Cleaner (facility-0091: the server takes no new one).
+ */
+export function cleanerChoices(
+  cleaners: CleanerOption[],
+  shift: Shift,
+  areaId: number | undefined,
+  areaIsOff = false,
+): CleanerOption[] {
+  return cleaners.filter(
+    (cleaner) =>
+      cleaner.shift === shift && (cleaner.areaId === areaId || (!areaIsOff && cleaner.areaId == null)),
+  );
 }
 
 /** What the page checks before sending; the server checks the rest (code format, slots) and its message is shown. */

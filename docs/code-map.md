@@ -218,7 +218,7 @@ graph TD
 - **Server data → RTK Query.** There is no axios and no plain `fetch` for data. The only two raw `fetch` calls in `src` are `shared/auth/session.ts:43` and `shared/auth/endSession.ts:18`.
 - **Form drafts → local `useState`.** Heaviest users: `pages/areas/SignPanel.tsx` (8), `pages/export/ExportPage.tsx` (6), `pages/areas/PointEditor.tsx` (6).
 - **No React Context anywhere** — grep for `createContext` returns 0 hits.
-- **Refetch policy** is one of two constants from `baseApi.ts`: `freshOnOpen` (phone and setup pages ask again every open) or `livePoll` (admin live pages, 30 s + on focus).
+- **Refetch policy** is one of three constants: `freshOnOpen` (phone and setup pages ask again every open) or `livePoll` (admin live pages, 30 s + on focus), both from `baseApi.ts`, or `namesFreshness` from `shared/api/buildingNames.ts` (30 s, building names only).
 - **SignalR push** is wired in exactly three cache entries via `onCacheEntryAdded → followScanHub`: `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts`.
 
 ---

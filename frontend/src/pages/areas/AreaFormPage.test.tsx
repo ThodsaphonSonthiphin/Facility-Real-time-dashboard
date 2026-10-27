@@ -181,6 +181,22 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     ).toBeInTheDocument();
   });
 
+  it('on an Area that is off, offers no new Cleaner and says why (facility-0091)', async () => {
+    serve({
+      'GET /api/admin/areas/1': () => ({
+        status: 200,
+        body: areaDetail({ area: areaSummary({ isActive: false }) }),
+      }),
+    });
+    await renderApp('/admin/areas/1/edit');
+
+    const day = await screen.findByLabelText('แม่บ้านประจำกะเช้า');
+    // the free Cleaner 650003 is not offered; the one who already holds the shift stays
+    expect(optionTexts(day)).toEqual(['— ยังไม่มี —', 'แม่บ้านทดสอบ (650001)']);
+    expect(optionTexts(screen.getByLabelText('แม่บ้านประจำกะดึก'))).toEqual(['— ยังไม่มี —', 'แม่บ้านกะดึก (650002)']);
+    expect(screen.getByText('พื้นที่นี้ปิดใช้งานอยู่ เปิดใช้งานก่อน แล้วค่อยใส่แม่บ้าน')).toBeInTheDocument();
+  });
+
   it('sends a new Area once: the save is disabled while it is in flight', async () => {
     let answer: (value: { status: number; body: unknown }) => void = () => {};
     const created = areaDetail({

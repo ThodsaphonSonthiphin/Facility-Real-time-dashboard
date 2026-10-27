@@ -30,6 +30,7 @@ flowchart TD
 - กฎใหม่อยู่ที่ `Application/Areas/AreaRules.DeactivateProblem` เรียกจาก `AdminAreaEndpoints.SetActiveAsync` ตอบ 409 พร้อมข้อความที่ระบุชื่อแม่บ้าน ฟอร์มพื้นที่ใช้ `cleanersLeft` (`pages/areas/areaText.ts`) แสดงชื่อชุดเดียวกัน
 - ฝั่งหน้าบ้านมี `shared/api/buildingNames.ts` (`buildingOptionText`, `buildingText`, `useBuildingNames`) เป็นที่เดียวที่สร้างข้อความตึกของ Admin
 - ตัวเลือกตึกของ D7 และ D8 (`BuildingSelect`) ถามรายการสดทุกครั้งที่เปิด
+- ฟอร์มพื้นที่ไม่รับแม่บ้านใหม่ในพื้นที่ที่ปิดอยู่เช่นกัน (`AreaRules.OffAreaTakesNoNewCleaner`, ฝั่งเซิร์ฟเวอร์ตอบ 400 และตัวเลือกในหน้าเหลือเฉพาะแม่บ้านที่ถือกะนั้นอยู่) ผู้ถือพื้นที่ที่ปิดอยู่จึงมาจากข้อมูลที่บันทึกก่อน ADR นี้เท่านั้น
 - ข้อมูลที่บันทึกก่อน ADR นี้อาจมีแม่บ้านประจำพื้นที่ที่ปิดอยู่ มีเฉพาะในฐานข้อมูลทดสอบ ไม่มีการย้ายข้อมูล (migration)
 - ไฟล์ Excel จำนวนคอลัมน์เท่าเดิม ช่อง "ตึก" เปลี่ยนจากรหัสเป็น "รหัส · ชื่อปัจจุบัน"
 - facility-0090 และ facility-0045 ได้บรรทัดแก้ไขชี้มาที่ ADR นี้
