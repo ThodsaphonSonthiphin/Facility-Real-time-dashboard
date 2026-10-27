@@ -5,6 +5,7 @@ import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
 import { apiIdle, attendanceBoard, workingRow } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
+import { expectBehindMoreInfo, expectInView } from '../../test/moreInfo';
 
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
@@ -168,5 +169,19 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
       'href',
       '/admin/export?from=2026-10-15&to=2026-10-15&building=2',
     );
+  });
+
+  it('the page notes wait behind ℹ; the summary tiles keep their lines (owner, 2026-10-27)', async () => {
+    serve();
+    await renderApp('/admin/attendance');
+
+    await screen.findByText('15/10/2026 · กะเช้า 07:00–19:00');
+    expectBehindMoreInfo(
+      'หน้านี้ดูว่าแต่ละพื้นที่มีคนอยู่แล้วหรือยัง ไม่ใช่ระบบลงเวลาทำงานของบริษัท จึงไม่คิดสายหรือกลับก่อน',
+      'เกี่ยวกับหน้านี้',
+    );
+    expectBehindMoreInfo(/^เรียงพื้นที่ที่ยังไม่มีคนขึ้นก่อน/, 'เกี่ยวกับหน้านี้');
+    expectBehindMoreInfo(/^ลืมลงเวลาเลิกงาน/, 'เกี่ยวกับหน้านี้');
+    expectInView('ไม่รวมพื้นที่ที่ปิดกะนี้');
   });
 });

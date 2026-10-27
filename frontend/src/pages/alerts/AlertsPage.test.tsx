@@ -5,6 +5,7 @@ import { adminSession } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { alerts, attendanceBoard, attendanceGpsAlert } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
+import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 function serve(routes: FakeRoutes = {}, list: () => Alert[] = () => alerts) {
   return fakeServer({
@@ -187,5 +188,17 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
     expect(within(item).getByRole('button', { name: 'ยืนยันปิดเตือน' })).toBeDisabled();
     expect(within(item).queryByRole('button', { name: 'คุยแล้ว ปิดเตือน' })).not.toBeInTheDocument();
     expect(server.calls.filter((call) => call.path === '/api/admin/alerts/review')).toHaveLength(1);
+  });
+
+  it('the page notes wait behind ℹ (owner, 2026-10-27)', async () => {
+    serve();
+    await renderApp('/admin/alerts');
+
+    await screen.findAllByRole('article');
+    expectBehindMoreInfo(
+      'ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน',
+      'เกี่ยวกับหน้านี้',
+    );
+    expectBehindMoreInfo('รายการคนทำแทนยังไม่แสดงการตรวจแทนตึกของหัวหน้า', 'เกี่ยวกับหน้านี้');
   });
 });

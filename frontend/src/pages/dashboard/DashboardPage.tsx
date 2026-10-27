@@ -2,6 +2,7 @@ import { Download } from 'lucide-react';
 import { Link } from 'react-router';
 import { livePoll } from '../../shared/api/baseApi';
 import { LiveBadge } from '../../shared/components/LiveBadge';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { buttonClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -39,7 +40,7 @@ export function DashboardPage() {
         </div>
       </header>
       {data && <Filters points={data} />}
-      <p className="text-muted">{RULES_NOTE}</p>
+      <MoreInfo summary="วิธีอ่านการ์ด">{RULES_NOTE}</MoreInfo>
       {isLoading && <p className="text-muted">กำลังโหลดจุด...</p>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && data.length === 0 && (

@@ -61,7 +61,6 @@ export function CoversThisShift({ board, ahead, onNotice }: CoversThisShiftProps
           </li>
         ))}
       </ul>
-      <p className="text-muted">การตรวจแทนตึกของหัวหน้ายังไม่แสดงในหน้านี้</p>
     </section>
   );
 }

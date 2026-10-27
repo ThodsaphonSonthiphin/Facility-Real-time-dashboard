@@ -11,6 +11,7 @@ import {
 import { livePoll } from '../../shared/api/baseApi';
 import type { AttendanceEvent, Shift } from '../../shared/api/types';
 import { LiveBadge } from '../../shared/components/LiveBadge';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { boxClass, buttonClass, linkClass } from '../../shared/components/styles';
 import { Note } from '../../shared/components/Note';
 import { Toast, type Notice } from '../../shared/components/Toast';
@@ -184,10 +185,10 @@ function Tiles({ summary }: { summary: BoardSummary }) {
   );
 }
 
-/** Wireframe D2's notes under the table. */
+/** Wireframe D2's notes under the table, shut until asked (owner, 2026-10-27). */
 function BoardNotes() {
   return (
-    <div className="flex flex-col gap-1 text-muted">
+    <MoreInfo summary="เกี่ยวกับหน้านี้">
       <span>หน้านี้ดูว่าแต่ละพื้นที่มีคนอยู่แล้วหรือยัง ไม่ใช่ระบบลงเวลาทำงานของบริษัท จึงไม่คิดสายหรือกลับก่อน</span>
       <span>
         เรียงพื้นที่ที่ยังไม่มีคนขึ้นก่อน · พื้นที่ที่ทำเฉพาะกะเช้าไม่นับเป็น "ต้องมีคน" ในกะดึก · มอบหมายคนทำแทนได้ที่{' '}
@@ -202,6 +203,6 @@ function BoardNotes() {
         </Link>{' '}
         ให้แอดมินเติม
       </span>
-    </div>
+    </MoreInfo>
   );
 }

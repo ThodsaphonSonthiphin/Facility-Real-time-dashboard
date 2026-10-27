@@ -5,6 +5,7 @@ import { useGetAttendanceBoardQuery } from '../../shared/api/attendanceBoardApi'
 import { livePoll } from '../../shared/api/baseApi';
 import type { Shift } from '../../shared/api/types';
 import { Select } from '../../shared/components/Field';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { Toast, type Notice } from '../../shared/components/Toast';
 import { toggleClass } from '../../shared/components/styles';
@@ -148,9 +149,10 @@ export function AlertsPage() {
             <AlertItem key={`${alert.kind}-${alert.recordId}`} alert={alert} onNotice={setNotice} />
           ))}
         </ul>
-        <p className="text-muted">
-          ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
-        </p>
+        <MoreInfo summary="เกี่ยวกับหน้านี้">
+          <span>ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน</span>
+          <span>รายการคนทำแทนยังไม่แสดงการตรวจแทนตึกของหัวหน้า</span>
+        </MoreInfo>
       </section>
       {boardNow && <CoversThisShift board={boardNow} ahead={ahead} onNotice={setNotice} />}
     </main>

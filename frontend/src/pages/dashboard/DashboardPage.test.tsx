@@ -9,6 +9,7 @@ import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
 import { apiIdle, boardPoints } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
+import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 function serve(answer: PointCard[] = boardPoints, routes: FakeRoutes = {}) {
   return fakeServer({
@@ -183,5 +184,13 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     await settled(server, store);
 
     expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('href', '/admin/export');
+  });
+
+  it('the notes on reading a card wait behind ℹ (owner, 2026-10-27)', async () => {
+    serve();
+    await renderApp('/dashboard');
+
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
+    expectBehindMoreInfo(/^รอบเป็นช่วงเวลา/, 'วิธีอ่านการ์ด');
   });
 });
