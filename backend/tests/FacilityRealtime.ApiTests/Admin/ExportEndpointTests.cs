@@ -108,6 +108,8 @@ public class ExportEndpointTests
             menRestroom);
         var submitted = rows.Single(r => r[5] == "AR01-01" && r[8] == "ตรงเวลา");
         Assert.Equal(("wet_floor", "", "E1001", "สมชาย ใจดี"), (submitted[9], submitted[10], submitted[11], submitted[12]));
+        Assert.Equal("A · ตึก A", submitted[2]);
+        Assert.Equal("A · ตึก A", rows.First(r => r[5] == "AR01-01" && r[8] == "ไม่ได้ทำ")[2]);
         // AR02 works days only: one missed day round, no night rows
         Assert.Equal(new[] { ("เช้า", "ไม่ได้ทำ") }, rows.Where(r => r[5] == "AR02-01").Select(r => (r[1], r[8])));
     }
