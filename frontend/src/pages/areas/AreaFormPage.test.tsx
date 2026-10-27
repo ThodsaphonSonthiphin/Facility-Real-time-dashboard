@@ -53,7 +53,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
 
     await user.type(screen.getByLabelText('รหัสพื้นที่'), 'AR03');
     await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ใหม่');
-    await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
+    await user.selectOptions(screen.getByLabelText('ตึก'), 'A · ตึกทดลอง');
     await user.selectOptions(day, 'แม่บ้านว่าง (650003)');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 
@@ -122,7 +122,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
 
     await user.type(await screen.findByLabelText('รหัสพื้นที่'), 'AR01');
     await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ซ้ำ');
-    await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
+    await user.selectOptions(screen.getByLabelText('ตึก'), 'A · ตึกทดลอง');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('รหัสพื้นที่นี้มีแล้ว');
@@ -199,7 +199,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
 
     await user.type(await screen.findByLabelText('รหัสพื้นที่'), 'AR03');
     await user.type(screen.getByLabelText('ชื่อพื้นที่'), 'Area ใหม่');
-    await user.selectOptions(screen.getByLabelText('ตึก'), 'ตึกทดลอง');
+    await user.selectOptions(screen.getByLabelText('ตึก'), 'A · ตึกทดลอง');
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 
     const saving = await screen.findByRole('button', { name: 'กำลังบันทึก...' });

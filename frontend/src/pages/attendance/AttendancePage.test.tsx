@@ -106,9 +106,9 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
   it('the building picker asks the server for that building', async () => {
     const server = serve();
     const { user, router } = await renderApp('/admin/attendance');
-    await screen.findByRole('option', { name: 'B' });
+    await screen.findByRole('option', { name: 'B · ตึกข้างเคียง' });
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B · ตึกข้างเคียง');
 
     expect(router.state.location.search).toBe('?building=2');
     await waitFor(() => expect(boardCalls(server).at(-1)?.search).toBe('?buildingId=2'));

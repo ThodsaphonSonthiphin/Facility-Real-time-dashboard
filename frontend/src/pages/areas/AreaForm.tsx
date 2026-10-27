@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import type { AreaDetail, Building, CleanerOption } from '../../shared/api/adminSetupApi';
+import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, FieldGroup, Select, TextInput } from '../../shared/components/Field';
@@ -96,7 +97,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
           <option value="">เลือกตึก</option>
           {buildings.map((building) => (
             <option key={building.id} value={String(building.id)}>
-              {building.name}
+              {buildingOptionText(building)}
             </option>
           ))}
         </Select>

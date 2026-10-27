@@ -142,12 +142,12 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'หัวหน้าใหม่');
     await user.type(within(form).getByLabelText('รหัสพนักงาน'), '660002');
     await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0820000002');
-    await within(form).findByRole('option', { name: 'ตึกข้างเคียง' });
-    await user.selectOptions(within(form).getByLabelText('ตึกที่ประจำ'), 'ตึกทดลอง');
+    await within(form).findByRole('option', { name: 'B · ตึกข้างเคียง' });
+    await user.selectOptions(within(form).getByLabelText('ตึกที่ประจำ'), 'A · ตึกทดลอง');
     expect(within(form).getByRole('radio', { name: /^กะเช้า/ })).toBeDisabled();
     expect(within(form).getByText('(มีหัวหน้าแล้ว (หัวหน้าทดสอบ))')).toBeInTheDocument();
 
-    await user.selectOptions(within(form).getByLabelText('ตึกที่ประจำ'), 'ตึกข้างเคียง');
+    await user.selectOptions(within(form).getByLabelText('ตึกที่ประจำ'), 'B · ตึกข้างเคียง');
     await user.click(within(form).getByRole('radio', { name: /^กะดึก/ }));
     await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
 
@@ -271,7 +271,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
 
     // Day is ticked with no building; ตึกทดลอง's Day is held by หัวหน้าทดสอบ, so choosing it must drop Day
     await user.click(within(form).getByRole('radio', { name: /^กะเช้า/ }));
-    await user.selectOptions(await within(form).findByLabelText('ตึกที่ประจำ'), 'ตึกทดลอง');
+    await user.selectOptions(await within(form).findByLabelText('ตึกที่ประจำ'), 'A · ตึกทดลอง');
     expect(within(form).getByRole('radio', { name: /^กะเช้า/ })).not.toBeChecked();
     await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
 

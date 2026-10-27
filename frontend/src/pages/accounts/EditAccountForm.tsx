@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { AreaSummary, Building } from '../../shared/api/adminSetupApi';
+import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
@@ -117,7 +118,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
             <option value="">เลือกตึก</option>
             {buildings.map((building) => (
               <option key={building.id} value={String(building.id)}>
-                {building.name}
+                {buildingOptionText(building)}
               </option>
             ))}
           </Select>

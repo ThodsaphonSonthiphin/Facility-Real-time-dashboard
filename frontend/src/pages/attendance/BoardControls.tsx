@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import type { AttendanceBoard, BoardArgs } from '../../shared/api/attendanceBoardApi';
+import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
@@ -88,7 +89,7 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
           <option value="">ทุกตึก</option>
           {(buildings ?? []).map((building) => (
             <option key={building.id} value={building.id}>
-              {building.code}
+              {buildingOptionText(building)}
             </option>
           ))}
         </Select>

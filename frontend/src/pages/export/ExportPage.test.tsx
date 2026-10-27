@@ -71,8 +71,8 @@ describe('ExportPage (D8, facility-0053)', () => {
     await user.type(fromField(), '01/10/2026');
     await user.clear(toField());
     await user.type(toField(), '07/10/2026');
-    await screen.findByRole('option', { name: 'B' });
-    await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B');
+    await screen.findByRole('option', { name: 'B · ตึกข้างเคียง' });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B · ตึกข้างเคียง');
     await user.click(download());
 
     await screen.findByText(/^ดาวน์โหลดแล้ว/);
@@ -172,7 +172,7 @@ describe('ExportPage (D8, facility-0053)', () => {
 
     expect(fromField()).toHaveValue('15/10/2026');
     expect(toField()).toHaveValue('15/10/2026');
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B'));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B · ตึกข้างเคียง'));
     await user.click(download());
 
     await screen.findByText(/^ดาวน์โหลดแล้ว/);
@@ -187,7 +187,7 @@ describe('ExportPage (D8, facility-0053)', () => {
   it('the form follows the address when the menu link is clicked on the open page', async () => {
     serve();
     const { user } = await renderApp('/admin/export?from=2026-10-15&to=2026-10-15&building=2');
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B'));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B · ตึกข้างเคียง'));
 
     await user.click(within(screen.getByRole('navigation', { name: 'เมนูแอดมิน' })).getByRole('link', { name: 'ส่งออก Excel' }));
 
@@ -215,10 +215,28 @@ describe('ExportPage (D8, facility-0053)', () => {
     await waitFor(() =>
       expect(within(picker).getAllByRole('option').map((option) => option.textContent)).toEqual([
         'ทุกตึก',
-        'A',
-        'B',
-        'C (ปิดใช้งาน)',
+        'A · ตึกทดลอง',
+        'B · ตึกข้างเคียง',
+        'C · ตึกเก่า (ปิดใช้งาน)',
       ]),
     );
+  });
+
+  it('asks for the buildings on every open, so a rename or a building turned off shows (facility-0091)', async () => {
+    let list = managedBuildings;
+    serve({ 'GET /api/admin/buildings/all': () => ({ status: 200, body: list }) });
+    const { user } = await renderApp('/admin/export');
+    const options = () =>
+      within(screen.getByRole('combobox', { name: 'ตึก' }))
+        .getAllByRole('option')
+        .map((option) => option.textContent);
+    await waitFor(() => expect(options()).toContain('B · ตึกข้างเคียง'));
+
+    list = managedBuildings.map((building) => (building.code === 'B' ? { ...building, name: 'อาคารใหม่', isActive: false } : building));
+    await user.click(screen.getByRole('link', { name: 'ตึก' }));
+    await screen.findByRole('heading', { level: 1, name: 'ตึก' });
+    await user.click(screen.getByRole('link', { name: 'ส่งออก Excel' }));
+
+    await waitFor(() => expect(options()).toContain('B · อาคารใหม่ (ปิดใช้งาน)'));
   });
 });
