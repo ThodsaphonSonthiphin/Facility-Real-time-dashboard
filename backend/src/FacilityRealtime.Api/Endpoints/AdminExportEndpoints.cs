@@ -65,10 +65,11 @@ public static class AdminExportEndpoints
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
+        var buildingNames = await db.Buildings.AsNoTracking().ToDictionaryAsync(b => b.Code, b => b.Name);
         var chosen = new List<(ExportSet Set, ExcelSheet Sheet)>();
         if (sets.Contains(ExportSet.Attendance))
         {
-            chosen.Add((ExportSet.Attendance, ExportSheets.Attendance(await ExportQuery.LoadAttendanceAsync(db, first, last, request.BuildingId))));
+            chosen.Add((ExportSet.Attendance, ExportSheets.Attendance(await ExportQuery.LoadAttendanceAsync(db, first, last, request.BuildingId), buildingNames)));
         }
 
         if (sets.Contains(ExportSet.Submissions))
@@ -79,7 +80,8 @@ public static class AdminExportEndpoints
                 first,
                 last,
                 now,
-                settings.ClosesMinutesAfterShift)));
+                settings.ClosesMinutesAfterShift,
+                buildingNames)));
         }
 
         if (sets.Contains(ExportSet.Inspections))
@@ -91,7 +93,7 @@ public static class AdminExportEndpoints
                 now,
                 settings.ClosesMinutesAfterShift);
             chosen.Add((ExportSet.Inspections, ExportSheets.Inspections(
-                inspections, await InspectionHistoryQuery.LoadPointPlacesAsync(db, request.BuildingId), rounds)));
+                inspections, await InspectionHistoryQuery.LoadPointPlacesAsync(db, request.BuildingId), rounds, buildingNames)));
         }
 
         var sheets = chosen.Select(c => c.Sheet).ToList();

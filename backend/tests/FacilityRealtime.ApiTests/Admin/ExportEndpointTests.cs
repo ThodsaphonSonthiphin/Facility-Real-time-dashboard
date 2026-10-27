@@ -61,10 +61,24 @@ public class ExportEndpointTests
             sheet.Row(1).CellsUsed().Select(c => c.GetString()));
         var rows = Rows(sheet);
         Assert.Equal(
-            new[] { "2026-10-08", "เช้า", "A", "AR01", "E1001", "สมชาย ใจดี", "06:58", "", "", "19:02", "แก้โดยแอดมิน: เลิกงาน", "ในรัศมี" },
+            new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "E1001", "สมชาย ใจดี", "06:58", "", "", "19:02", "แก้โดยแอดมิน: เลิกงาน", "ในรัศมี" },
             rows[0]);
         Assert.Equal(new[] { "AR02", "E1003", "07:05", "สแกนเอง", "นอกรัศมี: เข้างาน 900 ม." }, new[] { rows[1][3], rows[1][4], rows[1][6], rows[1][10], rows[1][11] });
         Assert.Equal(2, rows.Count);
+    }
+
+    [Fact]
+    public async Task The_building_cell_shows_the_code_and_the_current_name()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
+        var a = await AdminSetupApi.BuildingIdAsync(factory);
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync($"/api/admin/buildings/{a}", new { name = "อาคารผลิต 1" })).StatusCode);
+
+        using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Attendance"]));
+
+        Assert.Equal("A · อาคารผลิต 1", Rows(Assert.Single(workbook.Worksheets))[0][2]);
     }
 
     [Fact]
