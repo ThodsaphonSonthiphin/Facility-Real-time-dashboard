@@ -10,6 +10,7 @@ One hand, standing at a QR sign, often in a hurry, sometimes outdoors in sun. Mo
 
 - One column, content width up to `--phone-width` (480 px), 16 px side gutter.
 - The primary action sits at the bottom of the content, full width, 56 px high, in thumb reach.
+- A height in the page's flow is measured in `svh` (the screen with the browser's toolbars shown), never `dvh`. A phone hides its toolbar as the page scrolls, `dvh` grows with it, and anything placed by that height slides along with the scroll (the check-in page, owner, 2026-10-27). A fixed layer that covers the screen, such as the Drawer, may use `dvh`.
 - At most one primary (blue) button per screen; other actions are secondary (outlined) or links.
 - Respect the safe areas at top and bottom (`env(safe-area-inset-*)`), so nothing sits under the notch or the home bar.
 
