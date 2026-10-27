@@ -5,6 +5,7 @@ import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
 import { adminSession, managedBuildings } from '../../test/adminFixtures';
 import { fakeDownload } from '../../test/fakeDownload';
 import { fakeServer, type FakeResponse, type FakeRoutes } from '../../test/fakeServer';
+import { actors, firstPage } from '../../test/reportFixtures';
 import { renderApp } from '../../test/renderApp';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -224,19 +225,28 @@ describe('ExportPage (D8, facility-0053)', () => {
 
   it('asks for the buildings on every open, so a rename or a building turned off shows (facility-0091)', async () => {
     let list = managedBuildings;
-    serve({ 'GET /api/admin/buildings/all': () => ({ status: 200, body: list }) });
+    const server = serve({
+      'GET /api/admin/buildings/all': () => ({ status: 200, body: list }),
+      'GET /api/admin/audit-log': () => ({ status: 200, body: firstPage }),
+      'GET /api/admin/audit-log/actors': () => ({ status: 200, body: actors }),
+    });
     const { user } = await renderApp('/admin/export');
     const options = () =>
       within(screen.getByRole('combobox', { name: 'ตึก' }))
         .getAllByRole('option')
         .map((option) => option.textContent);
+    const buildingGets = () => server.calls.filter((call) => call.path === '/api/admin/buildings/all').length;
     await waitFor(() => expect(options()).toContain('B · ตึกข้างเคียง'));
+    const before = buildingGets();
 
+    // The history page never reads the buildings list, so only the picker itself can ask again.
     list = managedBuildings.map((building) => (building.code === 'B' ? { ...building, name: 'อาคารใหม่', isActive: false } : building));
-    await user.click(screen.getByRole('link', { name: 'ตึก' }));
-    await screen.findByRole('heading', { level: 1, name: 'ตึก' });
+    await user.click(screen.getByRole('link', { name: 'ประวัติการแก้ไขของแอดมิน' }));
+    await screen.findByRole('heading', { level: 1, name: 'ประวัติการแก้ไขของแอดมิน' });
+    expect(buildingGets()).toBe(before);
     await user.click(screen.getByRole('link', { name: 'ส่งออก Excel' }));
 
     await waitFor(() => expect(options()).toContain('B · อาคารใหม่ (ปิดใช้งาน)'));
+    expect(buildingGets()).toBe(before + 1);
   });
 });
