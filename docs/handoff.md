@@ -27,7 +27,7 @@ The owner asked for an AI to test in their place. Argent (software-mansion/argen
 - Deferred minors: the live-flow test does not force the push to be the only path (the 30 s poll could satisfy it); `wwwroot` is shared with the owner's 5001 test builds, so e2e deletes it; nothing confirms the API is on `facility_e2e_test` (hardening idea); the CLS margin (0.0169 for the old bug vs the 0.01 limit) depends on machine and font.
 - **State left:** nothing running; `facility_e2e_test` dropped; `wwwroot` deleted.
 - **Ctrl-C checked (agent, 2026-10-28, after the last fix):** SIGINT sent to a run once the API was up; the API, `facility_e2e_test` and `wwwroot` were all gone afterwards and `facility_dashboard` kept its 6 users.
-- **Before push:** `frontend/e2e/support/seed.ts` holds the public dev seed Admin password as a literal; GitGuardian may flag it like PR #108 (mark it a test credential if so). Also, e2e deletes `wwwroot`, which the owner's port-5001 test builds share; a separate web root (`ASPNETCORE_WEBROOT`) would fix that, the owner's choice.
+- **No password literal in the e2e files (owner's wish: no GitGuardian alert):** `seed.ts` reads the seed Admin password from `DbInitializer.cs` at run time. Older docs and `DbInitializer.cs` itself still hold the dev seed password as before (not new in this branch). Also before push: e2e deletes `wwwroot`, which the owner's port-5001 test builds share; a separate web root (`ASPNETCORE_WEBROOT`) would fix that, the owner's choice.
 - **Owner to do:** read the spec and the plan, try `npm run e2e` once; push, PR and merge only on the owner's OK.
 
 ## Layout shift on My Work and D1 (2026-10-28; branch `fix/layout-shift`, merged on the owner's "commit push pr merge")

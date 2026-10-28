@@ -2,6 +2,9 @@
  * facility-0094: the Development seed the end-to-end run starts from, copied from DbInitializer.cs. Made-up people and
  * numbers (the repo is public). The only copy in the tests: change it here when the seed changes.
  */
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 export interface Employee {
   employeeId: string;
   phone: string;
@@ -10,7 +13,14 @@ export interface Employee {
 
 /** The Area every test looks at (its heading starts with this code). */
 export const areaCode = 'AR01';
-export const admin = { username: 'admin', password: 'admin1234' };
+// Read from DbInitializer.cs at run time, so no password text sits in this file (GitGuardian flags password literals)
+const seedSource = readFileSync(
+  fileURLToPath(new URL('../../../backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs', import.meta.url)),
+  'utf8',
+);
+const adminPassword = /Username = "admin"[^\n]*?Hash\("([^"]+)"\)/.exec(seedSource)?.[1];
+if (!adminPassword) throw new Error('seed.ts: could not find the seed Admin password in DbInitializer.cs');
+export const admin = { username: 'admin', password: adminPassword };
 export const supervisor: Employee = { employeeId: 'S2001', phone: '0820000001', name: 'สมปอง ตรวจดี' };
 const dayCleaner: Employee = { employeeId: 'E1001', phone: '0810000001', name: 'สมชาย ใจดี' };
 const nightCleaner: Employee = { employeeId: 'E1002', phone: '0810000002', name: 'สมหญิง รักสะอาด' };
