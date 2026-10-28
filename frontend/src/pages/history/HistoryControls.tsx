@@ -3,14 +3,14 @@ import { Field, Select, TextInput } from '../../shared/components/Field';
 import { RangeFields } from '../../shared/components/RangeFields';
 import type { RangeTexts } from '../../shared/utils/dateRange';
 import type { AuditActor, HistoryArgs } from './historyApi';
-import { auditCategories, categoryLabel } from './historyRules';
+import { auditCategories, categoryLabel, HISTORY_MAX_SEARCH } from './historyRules';
 
 interface HistoryControlsProps {
   args: HistoryArgs;
   actors?: AuditActor[];
   texts: RangeTexts;
   onTexts: (next: RangeTexts) => void;
-  /** Check the typed range and show it. */
+  /** Check the typed range and show it with the typed search. */
   onShow: () => void;
   /** The actor or type changed: ask at once. */
   onArgs: (next: HistoryArgs) => void;
@@ -18,7 +18,7 @@ interface HistoryControlsProps {
   onSearch: (text: string) => void;
 }
 
-/** Wireframe D9's filters: the range (typed), ผู้ทำ and ประเภท (facility-0057 rule 2). */
+/** Wireframe D9's filters: the range (typed), ผู้ทำ, ประเภท (facility-0057 rule 2) and the search, sent with แสดง or Enter. */
 export function HistoryControls({
   args,
   actors,
@@ -79,8 +79,14 @@ export function HistoryControls({
           className="w-60"
           type="search"
           value={search}
+          maxLength={HISTORY_MAX_SEARCH}
           placeholder="ค้นหาชื่อคน จุด หรือรหัส"
           onChange={(event) => onSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              onShow();
+            }
+          }}
         />
       </Field>
     </div>

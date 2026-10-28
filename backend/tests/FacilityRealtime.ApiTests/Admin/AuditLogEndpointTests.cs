@@ -67,6 +67,55 @@ public class AuditLogEndpointTests
         Assert.Equal(new[] { "QR_REGENERATE" }, (await PageAsync(admin, "?from=2026-10-01&to=2026-10-01")).Entries.Select(e => e.Action));
     }
 
+    /// <summary>Plan 12 decision 7, owner 2026-10-28: the search covers every row in the range, not only the rows loaded.</summary>
+    [Fact]
+    public async Task The_search_finds_summary_actor_and_reason_in_every_row()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await factory.WithDbAsync(async db =>
+        {
+            var adminId = (await db.Users.SingleAsync(u => u.Username == "admin")).Id;
+            AuditTrail.Add(db, adminId, ThaiClock.At(8, 9, 0).UtcDateTime, "SIGN_RADIUS", "signs", 1, "รัศมีป้าย AR01-01", null, new { RadiusM = 80 });
+            AuditTrail.Add(db, adminId, ThaiClock.At(8, 9, 1).UtcDateTime, "ATTENDANCE_CORRECT", "attendance", 2, "แก้เวลาเข้า", null, new { V = 1 }, reason: "ลืมสแกน 50%_off");
+            AuditTrail.Add(db, actorId: null, ThaiClock.At(8, 9, 2).UtcDateTime, "ADMIN_FIRST_CREATE", "users", 3, "สร้างแอดมินคนแรก", null, new { V = 1 });
+            await db.SaveChangesAsync();
+        });
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+
+        async Task<string[]> Found(string q) =>
+            (await PageAsync(admin, "?q=" + Uri.EscapeDataString(q))).Entries.Select(e => e.Action).ToArray();
+
+        Assert.Equal(new[] { "SIGN_RADIUS" }, await Found("ar01"));                      // summary, either case
+        Assert.Equal(new[] { "ATTENDANCE_CORRECT" }, await Found("ลืมสแกน"));            // reason
+        // the system as actor (ADMIN_FIRST_CREATE's summary lacks the word); the seed Admin is "ผู้ดูแลระบบ"
+        Assert.Equal(new[] { "ADMIN_FIRST_CREATE", "ATTENDANCE_CORRECT", "SIGN_RADIUS" }, await Found("ระบบ"));
+        Assert.Equal(new[] { "ATTENDANCE_CORRECT", "SIGN_RADIUS" }, await Found("ผู้ดูแล")); // the actor's name
+        Assert.Equal(new[] { "ATTENDANCE_CORRECT" }, await Found("50%_"));               // % and _ are plain text
+        Assert.Empty(await Found("50%off"));                                             // a wildcard % would match
+        Assert.Equal(3, (await Found("  ")).Length);                                        // blank is no search
+    }
+
+    [Fact]
+    public async Task Older_pages_of_a_search_come_with_before_id()
+    {
+        using var factory = new FacilityApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await AddEntryAsync(factory, "SIGN_RADIUS", ThaiClock.At(8, 9, 0));
+        await AddEntryAsync(factory, "COVER_ASSIGN", ThaiClock.At(8, 9, 1));
+        await AddEntryAsync(factory, "SIGN_LOCATION", ThaiClock.At(8, 9, 2));
+        await AddEntryAsync(factory, "SIGN_RADIUS", ThaiClock.At(8, 9, 3));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+
+        var first = await PageAsync(admin, "?q=SIGN_R&limit=1");
+        var second = await PageAsync(admin, $"?q=SIGN_R&limit=1&beforeId={first.NextBeforeId}");
+        var third = await PageAsync(admin, $"?q=SIGN_R&limit=1&beforeId={second.NextBeforeId}");
+
+        Assert.Equal(ThaiClock.At(8, 9, 3).UtcDateTime, Assert.Single(first.Entries).OccurredAt);
+        Assert.Equal(ThaiClock.At(8, 9, 0).UtcDateTime, Assert.Single(second.Entries).OccurredAt);
+        Assert.Empty(third.Entries);
+    }
+
     [Fact]
     public async Task Older_pages_come_with_before_id()
     {
@@ -139,6 +188,7 @@ public class AuditLogEndpointTests
     [InlineData("?limit=501")]
     [InlineData("?from=2026-10-01")]
     [InlineData("?from=2026-01-01&to=2026-10-08")]
+    [InlineData("?q=" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
     public async Task Bad_filters_are_refused(string query)
     {
         using var factory = new FacilityApiFactory();

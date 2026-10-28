@@ -91,6 +91,15 @@ public class MySqlAdminQueryTests
             var older = await AuditLogQuery.LoadAsync(read, new AuditLogFilter(from, to, null, null, newest.Entry.Id, 10));
             Assert.Equal("ALERT_REVIEW", Assert.Single(older).Entry.Action);
             Assert.Single(await AuditLogQuery.ActorsAsync(read));
+
+            // The search runs as LIKE with ! as the escape: %, _, ! and \ are plain text on MySQL too
+            async Task<string[]> Found(string search) =>
+                (await AuditLogQuery.LoadAsync(read, new AuditLogFilter(from, to, null, null, null, 10, search))).Select(r => r.Entry.Action).ToArray();
+            Assert.Equal(new[] { "ALERT_REVIEW" }, await Found("ปิดเตือน"));
+            Assert.Equal(new[] { "SIGN_RADIUS", "ALERT_REVIEW" }, await Found("ผู้ดูแล"));
+            Assert.Empty(await Found("ร_ศมี"));
+            Assert.Empty(await Found(@"\"));
+            Assert.Empty(await Found("!"));
         }
         finally
         {

@@ -41,6 +41,8 @@ export interface HistoryArgs {
   to?: string;
   actorId?: number;
   category?: AuditCategory;
+  /** Plan 12 decision 7: the server searches every row in the range by summary, actor and reason. */
+  q?: string;
 }
 
 /** The first page asks for the newest rows: 0 stands for "no beforeId" (ids start at 1). */
@@ -54,9 +56,9 @@ const historyApi = baseApi.injectEndpoints({
         initialPageParam: NEWEST,
         getNextPageParam: (lastPage) => lastPage.nextBeforeId,
       },
-      query: ({ queryArg: { from, to, actorId, category }, pageParam }) => ({
+      query: ({ queryArg: { from, to, actorId, category, q }, pageParam }) => ({
         url: '/admin/audit-log',
-        params: { from, to, actorId, category, beforeId: pageParam === NEWEST ? undefined : pageParam },
+        params: { from, to, actorId, category, q, beforeId: pageParam === NEWEST ? undefined : pageParam },
       }),
     }),
     getAuditActors: build.query<AuditActor[], void>({

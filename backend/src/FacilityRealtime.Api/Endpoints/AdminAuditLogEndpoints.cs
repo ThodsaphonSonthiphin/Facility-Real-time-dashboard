@@ -14,6 +14,8 @@ public static class AdminAuditLogEndpoints
 
     public const int MaxLimit = 500;
 
+    public const int MaxSearchLength = 100;
+
     public static IEndpointRouteBuilder MapAdminAuditLogEndpoints(this IEndpointRouteBuilder app)
     {
         var admin = app.MapGroup("/api/admin/audit-log").RequireAuthorization(AuthSetup.AdminOnly);
@@ -32,6 +34,7 @@ public static class AdminAuditLogEndpoints
         string? category,
         long? beforeId,
         int? limit,
+        string? q,
         ClaimsPrincipal principal,
         AppDbContext db,
         TimeProvider clock)
@@ -64,7 +67,13 @@ public static class AdminAuditLogEndpoints
             return Bad($"limit ต้องอยู่ระหว่าง 1–{MaxLimit}");
         }
 
-        var rows = await AuditLogQuery.LoadAsync(db, new AuditLogFilter(fromUtc, toUtc, actorId, actions, beforeId, take));
+        var search = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
+        if (search?.Length > MaxSearchLength)
+        {
+            return Bad($"คำค้นยาวได้ไม่เกิน {MaxSearchLength} ตัวอักษร");
+        }
+
+        var rows = await AuditLogQuery.LoadAsync(db, new AuditLogFilter(fromUtc, toUtc, actorId, actions, beforeId, take, search));
         var entries = rows.Select(ToDto).ToList();
         return Results.Ok(new AuditLogPageDto(entries, entries.Count == take ? entries[^1].Id : (long?)null));
     }
