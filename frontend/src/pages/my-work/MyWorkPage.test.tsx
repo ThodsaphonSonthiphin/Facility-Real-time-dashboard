@@ -41,6 +41,25 @@ const fourPoints = [
 ];
 
 describe('MyWorkPage (M9, M14, facility-0052)', () => {
+  it('shows the live line and "อัปเดต" only with the list, so the list never pushes them down (layout shift)', async () => {
+    let answer: () => void = () => {};
+    fakeServer({
+      ...cleanerSession,
+      'GET /api/my-work': () =>
+        new Promise((resolve) => {
+          answer = () => resolve({ status: 200, body: myWork(undefined, [area(fourPoints)]) });
+        }),
+    });
+    await renderApp('/my-work');
+
+    await screen.findByText('กำลังโหลดงาน...');
+    expect(screen.queryByRole('button', { name: /อัปเดต/ })).not.toBeInTheDocument();
+
+    act(() => answer());
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
+    expect(screen.getByRole('button', { name: /อัปเดต/ })).toBeInTheDocument();
+  });
+
   it('shows every point most urgent first, whatever order the server sends, under the shift line', async () => {
     serveMyWork(myWork(undefined, [area(fourPoints)]));
     await renderApp('/my-work');

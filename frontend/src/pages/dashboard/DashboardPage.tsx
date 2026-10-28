@@ -1,5 +1,6 @@
 import { Download } from 'lucide-react';
 import { Link } from 'react-router';
+import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { livePoll } from '../../shared/api/baseApi';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { MoreInfo } from '../../shared/components/MoreInfo';
@@ -23,7 +24,12 @@ const RULES_NOTE =
  * poll keeps the last cards on screen under the error.
  */
 export function DashboardPage() {
-  const { data, error, isLoading } = useGetServicePointsQuery(undefined, livePoll);
+  const { data: points, error, isLoading: pointsLoading } = useGetServicePointsQuery(undefined, livePoll);
+  // The building picker widens when the names arrive; asked here too (one shared request) so the filters, the help
+  // and the cards appear together and nothing already on screen moves (layout shift, measured 2026-10-28)
+  const { isLoading: buildingsLoading } = useGetBuildingsQuery();
+  const isLoading = pointsLoading || buildingsLoading;
+  const data = isLoading ? undefined : points;
   const filters = useAppSelector((state) => state.dashboard);
   const shown = data ? filterPoints(data, filters) : [];
 
@@ -40,7 +46,7 @@ export function DashboardPage() {
         </div>
       </header>
       {data && <Filters points={data} />}
-      <MoreInfo summary="วิธีอ่านการ์ด">{RULES_NOTE}</MoreInfo>
+      {!isLoading && <MoreInfo summary="วิธีอ่านการ์ด">{RULES_NOTE}</MoreInfo>}
       {isLoading && <p className="text-muted">กำลังโหลดจุด...</p>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && data.length === 0 && (
