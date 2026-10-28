@@ -505,7 +505,7 @@ graph LR
 - **Auth on the socket:** the access token goes in the query string, accepted **only** for `/hubs` paths (facility-0011) — browsers cannot set headers on a WebSocket.
 - **Three subscribers:** `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts` — one connection per cache entry.
 - **The safety net:** `livePoll` = 30 s poll + refetch on focus. Pushes are best effort; a failure is logged and swallowed because the record is already committed.
-- **Badge:** `shared/components/LiveBadge.tsx` reads `hubSlice` — green `SignalR Live` or orange `Connecting...`.
+- **Badge:** `shared/components/LiveBadge.tsx` reads `hubSlice` — nothing while live, orange `กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)` otherwise (owner, 2026-10-28).
 
 ### Scan failure table
 

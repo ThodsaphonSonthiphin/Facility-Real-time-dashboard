@@ -47,6 +47,35 @@ public sealed class FrontendHostingTests : IDisposable
         Assert.Equal("public, max-age=31536000, immutable", response.Headers.CacheControl?.ToString());
     }
 
+    [Theory]
+    [InlineData("/assets/index-abc123.js", "gzip")]
+    [InlineData("/assets/index-abc123.js", "br")]
+    [InlineData("/login", "gzip")]
+    public async Task Frontend_files_are_compressed_when_the_browser_accepts_it(string path, string encoding)
+    {
+        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        request.Headers.AcceptEncoding.ParseAdd(encoding);
+
+        var response = await factory.CreateClient().SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal([encoding], response.Content.Headers.ContentEncoding);
+    }
+
+    [Fact]
+    public async Task Api_answers_are_never_compressed()
+    {
+        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/health");
+        request.Headers.AcceptEncoding.ParseAdd("gzip, br");
+
+        var response = await factory.CreateClient().SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Empty(response.Content.Headers.ContentEncoding);
+    }
+
     [Fact]
     public async Task A_file_outside_assets_is_revalidated_not_cached_for_good()
     {

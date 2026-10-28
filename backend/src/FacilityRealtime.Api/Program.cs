@@ -76,6 +76,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // 4. OpenAPI document (served only in Development, below)
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
+// 5. Compression of the frontend's files only (see the pipeline below). Also over https: these files hold no secret.
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
+
 var app = builder.Build();
 
 // facility-0067: the built frontend (frontend/dist, copied into wwwroot by `npm run build:api`) is served from this origin.
@@ -89,6 +92,11 @@ var appFiles = new StaticFileOptions
             : "no-cache";
     },
 };
+// The frontend's files are compressed (the main JS is about a third of its size), which matters for phones on a slow
+// link. API answers and the hub are left alone: an answer holding a token must not be compressed over https (BREACH).
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/api") && !context.Request.Path.StartsWithSegments("/hubs"),
+    frontend => frontend.UseResponseCompression());
 app.UseDefaultFiles();
 app.UseStaticFiles(appFiles);
 app.UseAuthentication();
