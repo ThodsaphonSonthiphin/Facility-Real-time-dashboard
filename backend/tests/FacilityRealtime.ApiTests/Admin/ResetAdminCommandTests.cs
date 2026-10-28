@@ -265,6 +265,21 @@ public class ResetAdminCommandTests
     }
 
     [Fact]
+    public async Task A_bad_username_is_refused_before_anything_is_asked_or_opened()
+    {
+        var console = new FakeConsole("yes");
+        var opened = new List<string>();
+
+        var exitCode = await RunFromCommandLineAsync(console, opened, ["a b"]);
+
+        Assert.Equal(1, exitCode);
+        Assert.Empty(console.ShownPrompts);
+        Assert.Empty(console.HiddenPrompts);
+        Assert.Empty(opened);
+        Assert.Contains(console.Written, line => line.StartsWith("ชื่อผู้ใช้ต้องเป็น"));
+    }
+
+    [Fact]
     public async Task Answering_yes_opens_the_named_database_once()
     {
         var console = new FakeConsole("yes");

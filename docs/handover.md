@@ -58,6 +58,8 @@ sudo chmod -R a+rX,go-w /opt/facility
 sudo chmod 755 /opt/facility/facility.sh
 ```
 
+บน server เครื่องแรก หลังคัดลอกแล้วให้รัน `bash scripts/facility.test.sh` จากสำเนาของ repo เพื่อตรวจ `facility.sh` บนระบบนั้น (ใช้ `stat` ของ GNU) ซึ่งที่ผ่านมาเคยรันบน macOS เท่านั้น
+
 ### 2.4 ไฟล์ค่า
 
 ```bash
@@ -130,13 +132,15 @@ facility.example.com {
 set -e
 umask 077
 mkdir -p /var/backups/facility
-file=/var/backups/facility/facility-$(date +%F).sql
-mysqldump --single-transaction facility > "$file"
-gzip -f "$file"
+file=/var/backups/facility/facility-$(date +%F-%H%M%S).sql
+trap 'rm -f "$file.part"' EXIT
+mysqldump --single-transaction facility > "$file.part"
+mv "$file.part" "$file"
+gzip "$file"
 find /var/backups/facility -name '*.sql.gz' -mtime +14 -delete
 ```
 
-ถ้า dump ล้มเหลว สคริปต์หยุดทันทีและไม่ลบไฟล์เก่า cron รันด้วย root ซึ่งต้องเข้า MySQL ได้โดยไม่ต้องพิมพ์รหัส (Ubuntu ตั้ง root ของ MySQL แบบ `auth_socket` ให้อยู่แล้ว) ควรคัดลอกไฟล์ backup ออกไปเก็บนอก server ด้วย
+ชื่อไฟล์มีวันและเวลา จึงไม่มีรอบไหนเขียนทับ backup ของรอบอื่น (รวมถึงที่ทำมือก่อนอัปเดต) ถ้า dump ล้มเหลว สคริปต์หยุดทันที ลบไฟล์ `.part` ที่ค้าง และไม่ลบไฟล์เก่า cron รันด้วย root ซึ่งต้องเข้า MySQL ได้โดยไม่ต้องพิมพ์รหัส (Ubuntu ตั้ง root ของ MySQL แบบ `auth_socket` ให้อยู่แล้ว) ควรคัดลอกไฟล์ backup ออกไปเก็บนอก server ด้วย
 
 กู้คืน: `sudo systemctl stop facility` แล้ว `sudo sh -c 'gunzip < /var/backups/facility/<ไฟล์>.sql.gz | mysql facility'` แล้ว `sudo systemctl start facility`
 
@@ -149,6 +153,8 @@ find /var/backups/facility -name '*.sql.gz' -mtime +14 -delete
 5. ถ้าต้องถอยกลับ: หยุดระบบ ย้าย `app.previous` กลับเป็น `app` กู้ฐานข้อมูลจาก backup ที่ทำก่อนอัปเดต (ข้อ 2.7) แล้วเริ่มระบบ
 
 ### 2.9 ทดลองบนเครื่องตัวเองก่อน (ไม่มี server)
+
+ทำข้อ 2.2 ก่อน โดยใช้ฐานข้อมูลทดลองที่ชื่อเข้ากับ `facility_*_test` และผู้ใช้ MySQL ของมันเอง
 
 ทำ `npm --prefix frontend ci` และ `npm --prefix frontend run build:api` (สองคำสั่งแรกของข้อ 2.3) ก่อน เพื่อให้มีหน้าเว็บ แล้ว
 

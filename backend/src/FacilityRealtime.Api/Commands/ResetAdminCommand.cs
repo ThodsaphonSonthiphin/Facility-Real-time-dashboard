@@ -16,6 +16,8 @@ public static class ResetAdminCommand
 
     public const string Usage = $"วิธีใช้: {Name} <ชื่อผู้ใช้แอดมิน>";
 
+    private const string BadUsername = "ชื่อผู้ใช้ต้องเป็นตัวอักษรอังกฤษ ตัวเลข . _ หรือ - ยาว 3–100 ตัว ไม่ได้เปลี่ยนอะไร";
+
     /// <summary>
     /// facility-0093 decision 2: names the database before anything touches it, the migration included, and goes on
     /// only after "yes". Shows server, port and database, never the database's user name or password.
@@ -53,6 +55,12 @@ public static class ResetAdminCommand
             return 2;
         }
 
+        if (AccountRules.NormalizeUsername(args[0]) is null)
+        {
+            console.WriteLine(BadUsername);
+            return 1;
+        }
+
         if (!ConfirmDatabase(connectionString, console))
         {
             return 1;
@@ -73,7 +81,7 @@ public static class ResetAdminCommand
 
         if (AccountRules.NormalizeUsername(args[0]) is not { } username)
         {
-            console.WriteLine("ชื่อผู้ใช้ต้องเป็นตัวอักษรอังกฤษ ตัวเลข . _ หรือ - ยาว 3–100 ตัว ไม่ได้เปลี่ยนอะไร");
+            console.WriteLine(BadUsername);
             return 1;
         }
 

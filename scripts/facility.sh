@@ -19,7 +19,7 @@ file_mode() {
 }
 
 load_env() {
-  local file="$1" line key value lineno=0 seen=" "
+  local file="$1" line key value lineno=0
   [ -f "$file" ] || fail "ไม่พบ $file สร้างด้วย: scripts/facility.sh init $file"
   [ "$(file_mode "$file")" = "600" ] || fail "$file ต้องอ่านได้เฉพาะเจ้าของ รัน: chmod 600 $file"
 
@@ -35,20 +35,22 @@ load_env() {
     key="${line%%=*}"
     value="${line#*=}"
     [ "$key" != "$line" ] || fail "$file บรรทัด $lineno: ต้องเขียนเป็น ชื่อ=ค่า"
-    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail "$file บรรทัด $lineno: '$key' ไม่ใช่ชื่อค่า"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail "$file บรรทัด $lineno: ชื่อค่าไม่ถูกต้อง"
     case "$value" in *\"*|*\'*|*\\*) fail "$file บรรทัด $lineno: เขียน $key โดยไม่มีเครื่องหมายคำพูดและไม่มี \\" ;; esac
+    case "$value" in [[:space:]]*|*[[:space:]]) fail "$file บรรทัด $lineno: ค่า $key ห้ามมีช่องว่างหน้าหรือท้าย" ;; esac
     export "$key=$value"
-    if [ -n "$value" ]; then seen="$seen$key "; fi
   done < "$file"
 
   for key in $required; do
-    case "$seen" in *" $key "*) ;; *) fail "$file ไม่มีค่า $key" ;; esac
+    [ -n "${!key:-}" ] || fail "$file ไม่มีค่า $key"
   done
   export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Production}"
 }
 
 run_app() {
   if [ -n "${FACILITY_APP_DLL:-}" ]; then
+    # ASP.NET Core takes its content root (the web pages) from the working directory
+    cd "$(dirname "$FACILITY_APP_DLL")"
     exec dotnet "$FACILITY_APP_DLL" "$@"
   fi
   exec dotnet run --no-launch-profile --project "$repo_root/backend/src/FacilityRealtime.Api" -- "$@"
@@ -90,7 +92,10 @@ init_env() {
   user="$(ask "ผู้ใช้ MySQL ของระบบ (ไม่ใช่ root): ")"; check_value "ผู้ใช้ MySQL" "$user" conn
   password="$(ask_secret "รหัสผ่านของผู้ใช้นี้: ")"; check_value "รหัสผ่าน MySQL" "$password" conn
   dll="$(ask "ที่อยู่ FacilityRealtime.Api.dll (เว้นว่าง = รันจากโค้ดใน repo นี้): ")"
-  if [ -n "$dll" ]; then check_value "ที่อยู่ dll" "$dll"; fi
+  if [ -n "$dll" ]; then
+    check_value "ที่อยู่ dll" "$dll"
+    case "$dll" in /*) [ -f "$dll" ] ;; *) false ;; esac || fail "ที่อยู่ dll ต้องเป็น path เต็มของไฟล์ที่มีอยู่ ไม่ได้เขียนอะไร"
+  fi
   admin="$(ask "ชื่อผู้ใช้แอดมินคนแรก: ")"; check_value "ชื่อผู้ใช้แอดมิน" "$admin"
   name="$(ask "ชื่อที่แสดงของแอดมินคนแรก: ")"; check_value "ชื่อที่แสดง" "$name"
   admin_password="$(ask_secret "รหัสผ่านแอดมินคนแรก (15–100 ตัว): ")"; check_value "รหัสผ่านแอดมิน" "$admin_password"

@@ -13,6 +13,7 @@ printf 'args=%s\n' "$*"
 printf 'conn=%s|\n' "${ConnectionStrings__DefaultConnection:-}"
 printf 'env=%s\n' "${ASPNETCORE_ENVIRONMENT:-}"
 printf 'stale=%s\n' "${FirstAdmin__Password:-none}"
+printf 'pwd=%s\n' "$(pwd -P)"
 EOT
 chmod 755 "$work/bin/dotnet"
 export PATH="$work/bin:$PATH"
@@ -48,8 +49,10 @@ check "a value left in the shell does not count" 0 "stale=none" env FirstAdmin__
 check "reset-admin passes the username" 0 "-- reset-admin first.admin" bash "$script" reset-admin "$good" first.admin
 check "reset-admin needs a username" 2 "วิธีใช้:" bash "$script" reset-admin "$good"
 
-cp "$good" "$work/dll.env"; echo 'FACILITY_APP_DLL=/opt/facility/app/FacilityRealtime.Api.dll' >> "$work/dll.env"
-check "a published dll runs instead of the repo" 0 "args=/opt/facility/app/FacilityRealtime.Api.dll reset-admin first.admin" bash "$script" reset-admin "$work/dll.env" first.admin
+mkdir -p "$work/app" "$work/elsewhere"; : > "$work/app/FacilityRealtime.Api.dll"
+cp "$good" "$work/dll.env"; echo "FACILITY_APP_DLL=$work/app/FacilityRealtime.Api.dll" >> "$work/dll.env"
+check "a published dll runs instead of the repo" 0 "args=$work/app/FacilityRealtime.Api.dll reset-admin first.admin" bash "$script" reset-admin "$work/dll.env" first.admin
+check "a published dll runs from its own folder" 0 "pwd=$(cd "$work/app" && pwd -P)" bash -c 'cd "$1" && bash "$2" start "$3"' _ "$work/elsewhere" "$script" "$work/dll.env"
 
 printf 'Jwt__SigningKey=0123456789abcdef0123456789abcdef\n' > "$work/noconn.env"; chmod 600 "$work/noconn.env"
 check "an env file without the database is refused" 2 "ไม่มีค่า ConnectionStrings__DefaultConnection" env ConnectionStrings__DefaultConnection=Server=x bash "$script" start "$work/noconn.env"
@@ -106,6 +109,17 @@ check "a backslash in the middle of an answer is refused" 2 "ห้ามมี�
 nofile "a backslash leaves nothing" "$work/bs"
 printf "ConnectionStrings__DefaultConnection=Server=x\nJwt__SigningKey=ab'cd\n" > "$work/midq.env"; chmod 600 "$work/midq.env"
 check "a quote in the middle of a value in the env file is refused" 2 "ไม่มีเครื่องหมายคำพูด" bash "$script" start "$work/midq.env"
+
+check "a relative dll path is refused by init" 2 "path เต็ม" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/$'\n\nfirst.admin'/$'\nrelative/App.dll\nfirst.admin'}" "$script" "$work/reldll/r.env"
+nofile "a relative dll path leaves nothing" "$work/reldll"
+printf 'ConnectionStrings__DefaultConnection=Server=x\nJwt__SigningKey=0123456789abcdef0123456789abcdef \n' > "$work/trail.env"; chmod 600 "$work/trail.env"
+check "a value with a space at the end is refused" 2 "ค่า Jwt__SigningKey ห้ามมีช่องว่างหน้าหรือท้าย" bash "$script" start "$work/trail.env"
+printf 'ConnectionStrings__DefaultConnection=Server=x\nJwt__SigningKey=0123456789abcdef0123456789abcdef\nJwt__SigningKey=\n' > "$work/repeat.env"; chmod 600 "$work/repeat.env"
+check "a repeated key with an empty last value is refused" 2 "ไม่มีค่า Jwt__SigningKey" bash "$script" start "$work/repeat.env"
+printf 'my pass=word\nJwt__SigningKey=k\n' > "$work/badname.env"; chmod 600 "$work/badname.env"
+out="$(bash "$script" start "$work/badname.env" 2>&1)"; code=$?
+if [ "$code" -eq 2 ] && [[ "$out" == *"ชื่อค่าไม่ถูกต้อง"* && "$out" != *pass* ]]; then echo "ok:   a bad name is refused without echoing it"
+else echo "FAIL: a bad name is refused without echoing it (exit $code)"; echo "$out" | sed 's/^/    /'; failures=$((failures + 1)); fi
 
 if [ "$failures" -gt 0 ]; then echo "$failures failed"; exit 1; fi
 echo "all passed"
