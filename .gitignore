@@ -11,3 +11,8 @@ backend/src/FacilityRealtime.Api/wwwroot/
 
 # Local run logs (API + cloudflared tunnel)
 .run/
+
+# Env files hold real passwords (scripts/facility.sh init writes one); only the example is kept
+*.env
+.env*
+!.env.example
