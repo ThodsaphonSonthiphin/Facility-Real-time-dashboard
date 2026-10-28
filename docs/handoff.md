@@ -15,6 +15,7 @@ Branch `feat/history-server-search` (from `docs/handoff-cleanup`, PR #109). The 
 - Tests: backend 343 unit + 632 API with the MySQL tests on throwaway `facility_search_test` (dropped), 0 skipped; frontend 457; tsc and eslint clean.
 - **Owner to check in the browser**, then the OK to merge (#109 first).
 - **Test build up (2026-10-28):** `npm run build:api` on this branch, the API in Development on `facility_dashboard` at `http://localhost:5001` (seed Admin `admin`). The owner is trying D9's search and the D5 QR print. For a phone: `cloudflared tunnel --url http://localhost:5001` in the owner's terminal, and print the signs from the tunnel's https address. Afterwards: stop the API and `cloudflared`, delete `wwwroot`.
+- **D5 print passed (owner, 2026-10-28):** the PDF saved from Chrome through the tunnel (1 A4 page, 5 signs) printed on a colleague's printer at work. The first try did not reach the printer; the file was fine (checked), the cause was on the printer side.
 
 ## Safe start, `reset-admin` confirmation, start script and deploy guide (facility-0093, done 2026-10-28; merged to master as PR #108, `447e782`, branch deleted)
 
