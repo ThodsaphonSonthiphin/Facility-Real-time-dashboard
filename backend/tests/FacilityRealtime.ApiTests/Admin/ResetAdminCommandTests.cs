@@ -184,7 +184,9 @@ public class ResetAdminCommandTests
         await factory.WithDbAsync(async db => Assert.False(await db.Users.AnyAsync(u => u.Username == "backup.admin")));
     }
 
-    private const string PilotDatabase = "Server=db.example;Port=3307;Database=facility_pilot;Uid=app;Pwd=s3cret-pass";
+    // Made up at run time so no password-like text sits in the repo (secret scanners flag it).
+    private static readonly string MadeUpLogin = Guid.NewGuid().ToString("N");
+    private static readonly string PilotDatabase = "Server=db.example;Port=3307;Database=facility_pilot;Uid=app;Pwd=" + MadeUpLogin;
 
     [Theory]
     [InlineData("yes")]
@@ -197,7 +199,7 @@ public class ResetAdminCommandTests
         Assert.Contains(console.Written, line => line.Contains("db.example:3307 / facility_pilot"));
         Assert.Single(console.ShownPrompts);
         Assert.Empty(console.HiddenPrompts);
-        Assert.DoesNotContain(console.Written, line => line.Contains("s3cret-pass"));
+        Assert.DoesNotContain(console.Written, line => line.Contains(MadeUpLogin));
         Assert.DoesNotContain(console.Written, line => line.Contains("Uid") || line.Contains("=app"));
     }
 

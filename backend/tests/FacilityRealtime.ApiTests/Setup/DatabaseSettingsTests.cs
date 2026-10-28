@@ -53,16 +53,19 @@ public class DatabaseSettingsTests
         Assert.Contains("Database=facility_dashboard", value);
     }
 
+    // Made up at run time so no password-like text sits in the repo (secret scanners flag it).
+    private static readonly string MadeUpLogin = Guid.NewGuid().ToString("N");
+
     [Theory]
-    [InlineData("Server=db.example;Port=3307;Database=facility_pilot;Uid=app;Pwd=s3cret-pass", "db.example:3307 / facility_pilot")]
-    [InlineData("Host=10.0.0.5;Initial Catalog=facility_pilot;User Id=app;Password=s3cret-pass", "10.0.0.5:3306 / facility_pilot")]
-    [InlineData("Uid=app;Pwd=s3cret-pass", "(ไม่ได้ระบุ):3306 / (ไม่ได้ระบุ)")]
-    public void Describes_server_port_and_database_without_the_login(string connectionString, string expected)
+    [InlineData("Server=db.example;Port=3307;Database=facility_pilot;Uid=app;Pwd=", "db.example:3307 / facility_pilot")]
+    [InlineData("Host=10.0.0.5;Initial Catalog=facility_pilot;User Id=app;Password=", "10.0.0.5:3306 / facility_pilot")]
+    [InlineData("Uid=app;Pwd=", "(ไม่ได้ระบุ):3306 / (ไม่ได้ระบุ)")]
+    public void Describes_server_port_and_database_without_the_login(string connectionWithoutPassword, string expected)
     {
-        var described = DatabaseSettings.Describe(connectionString);
+        var described = DatabaseSettings.Describe(connectionWithoutPassword + MadeUpLogin);
 
         Assert.Equal(expected, described);
-        Assert.DoesNotContain("s3cret-pass", described);
+        Assert.DoesNotContain(MadeUpLogin, described);
         Assert.DoesNotContain("app", described.Replace("(ไม่ได้ระบุ)", ""));
     }
 }
