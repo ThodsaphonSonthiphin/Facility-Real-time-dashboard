@@ -85,18 +85,25 @@ var app = builder.Build();
 // Hashed files under assets/ never change; everything else, index.html included, is revalidated on every load.
 var appFiles = new StaticFileOptions
 {
+    ContentTypeProvider = PrecompressedFiles.ContentTypes(),
     OnPrepareResponse = context =>
     {
         context.Context.Response.Headers.CacheControl = context.Context.Request.Path.StartsWithSegments("/assets")
             ? "public, max-age=31536000, immutable"
             : "no-cache";
+        PrecompressedFiles.LabelCopy(context);
     },
 };
 // The frontend's files are compressed (the main JS is about a third of its size), which matters for phones on a slow
 // link. API answers and the hub are left alone: an answer holding a token must not be compressed over https (BREACH).
+// A file with a copy compressed at build time is sent as that copy; the on-the-fly compression leaves it alone.
 app.UseWhen(
     context => !context.Request.Path.StartsWithSegments("/api") && !context.Request.Path.StartsWithSegments("/hubs"),
-    frontend => frontend.UseResponseCompression());
+    frontend =>
+    {
+        frontend.UseResponseCompression();
+        frontend.UsePrecompressedFiles(app.Environment);
+    });
 app.UseDefaultFiles();
 app.UseStaticFiles(appFiles);
 app.UseAuthentication();

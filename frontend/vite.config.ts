@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { precompress } from './precompress.ts';
 
 /** facility-0068 item 3: the short commit shown on the login pages; "dev" outside a git checkout. */
 function buildCommit(): string {
@@ -18,7 +19,7 @@ function buildCommit(): string {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()], // facility-0086
+  plugins: [react(), tailwindcss(), precompress()], // facility-0086; precompress: facility-0067 amendment
   define: {
     __BUILD_COMMIT__: JSON.stringify(buildCommit()),
   },

@@ -63,6 +63,61 @@ public sealed class FrontendHostingTests : IDisposable
         Assert.Equal([encoding], response.Content.Headers.ContentEncoding);
     }
 
+    [Theory]
+    [InlineData("br", ".br", "app-br")]
+    [InlineData("gzip", ".gz", "app-gz")]
+    [InlineData("gzip, br", ".br", "app-br")]
+    public async Task A_copy_compressed_at_build_time_is_sent_as_the_file(string accept, string suffix, string body)
+    {
+        File.WriteAllText(Path.Combine(_webRoot, "assets", "main-x1.js"), "app-plain");
+        File.WriteAllText(Path.Combine(_webRoot, "assets", "main-x1.js.br"), "app-br");
+        File.WriteAllText(Path.Combine(_webRoot, "assets", "main-x1.js.gz"), "app-gz");
+        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/assets/main-x1.js");
+        request.Headers.AcceptEncoding.ParseAdd(accept);
+
+        var response = await factory.CreateClient().SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal([suffix == ".br" ? "br" : "gzip"], response.Content.Headers.ContentEncoding);
+        Assert.Equal("text/javascript", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(body, await response.Content.ReadAsStringAsync());
+        Assert.Equal("public, max-age=31536000, immutable", response.Headers.CacheControl?.ToString());
+        Assert.Contains("Accept-Encoding", response.Headers.Vary);
+    }
+
+    [Fact]
+    public async Task A_browser_that_accepts_no_compression_gets_the_plain_file()
+    {
+        File.WriteAllText(Path.Combine(_webRoot, "assets", "main-x1.js"), "app-plain");
+        File.WriteAllText(Path.Combine(_webRoot, "assets", "main-x1.js.br"), "app-br");
+        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/assets/main-x1.js");
+        request.Headers.AcceptEncoding.ParseAdd("identity, br;q=0");
+
+        var response = await factory.CreateClient().SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Empty(response.Content.Headers.ContentEncoding);
+        Assert.Equal("app-plain", await response.Content.ReadAsStringAsync());
+        Assert.Contains("Accept-Encoding", response.Headers.Vary);
+    }
+
+    [Fact]
+    public async Task A_compressed_svg_copy_keeps_the_svg_type()
+    {
+        File.WriteAllText(Path.Combine(_webRoot, "favicon.svg.br"), "svg-br");
+        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/favicon.svg");
+        request.Headers.AcceptEncoding.ParseAdd("br");
+
+        var response = await factory.CreateClient().SendAsync(request);
+
+        Assert.Equal(["br"], response.Content.Headers.ContentEncoding);
+        Assert.Equal("image/svg+xml", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("no-cache", response.Headers.CacheControl?.ToString());
+    }
+
     [Fact]
     public async Task Api_answers_are_never_compressed()
     {
