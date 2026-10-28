@@ -127,4 +127,4 @@ npm --prefix frontend test
 - บัญชีทดสอบข้างบนเป็นข้อมูลตัวอย่างเท่านั้น
 
 ### คู่มือสำหรับ server จริง
-- [docs/handover.md](docs/handover.md): สร้างแอดมินคนแรกจากค่าใน server และกู้คืนด้วยคำสั่ง `reset-admin` (ADR facility-0092)
+- [docs/handover.md](docs/handover.md): คู่มือติดตั้งระบบบน server Linux (facility-0093) สร้างแอดมินคนแรกจากค่าใน server และกู้คืนด้วยคำสั่ง `reset-admin` (ADR facility-0092)

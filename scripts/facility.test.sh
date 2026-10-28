@@ -94,11 +94,18 @@ check "two different admin passwords are refused" 2 "ไม่ตรงกัน
 admin-pass-2026-long/admin-pass-2026-long
 other-pass-2026-long}" "$script" "$work/differ/d.env"
 nofile "different passwords leave nothing" "$work/differ"
-check "a display name starting with a quote is refused" 2 "ห้ามขึ้นต้นด้วยเครื่องหมายคำพูด" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/แอดมินคนแรก/\"x}" "$script" "$work/quote/q.env"
+check "a display name starting with a quote is refused" 2 "ห้ามมีเครื่องหมายคำพูด" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/แอดมินคนแรก/\"x}" "$script" "$work/quote/q.env"
 nofile "a refused display name leaves nothing" "$work/quote"
 check "an empty answer is refused" 2 "ต้องตอบทุกข้อ" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/facility_app/}" "$script" "$work/empty/e.env"
 nofile "an empty answer leaves nothing" "$work/empty"
 check "a MySQL password of -n is written as typed" 0 "Pwd=-n;" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\" >/dev/null && cat \"\$3\"" _ "${answers/db-pass-2026/-n}" "$script" "$work/dash/n.env"
+
+check "a quote in the middle of an answer is refused" 2 "ห้ามมีเครื่องหมายคำพูด" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/แอดมินคนแรก/Bob\'s team}" "$script" "$work/mid/m.env"
+nofile "a quote in the middle leaves nothing" "$work/mid"
+check "a backslash in the middle of an answer is refused" 2 "ห้ามมีเครื่องหมายคำพูดหรือ" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers//admin-pass-2026-long/admin\\pass-2026-long}" "$script" "$work/bs/b.env"
+nofile "a backslash leaves nothing" "$work/bs"
+printf "ConnectionStrings__DefaultConnection=Server=x\nJwt__SigningKey=ab'cd\n" > "$work/midq.env"; chmod 600 "$work/midq.env"
+check "a quote in the middle of a value in the env file is refused" 2 "ไม่มีเครื่องหมายคำพูด" bash "$script" start "$work/midq.env"
 
 if [ "$failures" -gt 0 ]; then echo "$failures failed"; exit 1; fi
 echo "all passed"

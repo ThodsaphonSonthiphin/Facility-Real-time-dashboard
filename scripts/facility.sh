@@ -36,7 +36,7 @@ load_env() {
     value="${line#*=}"
     [ "$key" != "$line" ] || fail "$file บรรทัด $lineno: ต้องเขียนเป็น ชื่อ=ค่า"
     [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail "$file บรรทัด $lineno: '$key' ไม่ใช่ชื่อค่า"
-    case "$value" in \"*|\'*) fail "$file บรรทัด $lineno: เขียน $key โดยไม่มีเครื่องหมายคำพูด" ;; esac
+    case "$value" in *\"*|*\'*|*\\*) fail "$file บรรทัด $lineno: เขียน $key โดยไม่มีเครื่องหมายคำพูดและไม่มี \\" ;; esac
     export "$key=$value"
     if [ -n "$value" ]; then seen="$seen$key "; fi
   done < "$file"
@@ -72,10 +72,10 @@ check_value() { # label, value, "conn" if it goes into the connection string
   local label="$1" value="$2"
   [ -n "$value" ] || fail "ต้องตอบทุกข้อ ไม่ได้เขียนอะไร"
   case "$value" in
-    \"*|\'*|*\\*|[[:space:]]*|*[[:space:]]) fail "$label ห้ามขึ้นต้นด้วยเครื่องหมายคำพูด ห้ามมี \\ และห้ามมีช่องว่างหน้าหรือท้าย ไม่ได้เขียนอะไร" ;;
+    *\"*|*\'*|*\\*|[[:space:]]*|*[[:space:]]) fail "$label ห้ามมีเครื่องหมายคำพูดหรือ \\ และห้ามมีช่องว่างหน้าหรือท้าย ไม่ได้เขียนอะไร" ;;
   esac
   if [ "${3:-}" = "conn" ]; then
-    case "$value" in *\;*|*\'*|*\"*) fail "$label ห้ามมี ; ' หรือ \" ไม่ได้เขียนอะไร" ;; esac
+    case "$value" in *\;*) fail "$label ห้ามมี ; ไม่ได้เขียนอะไร" ;; esac
   fi
   return 0
 }

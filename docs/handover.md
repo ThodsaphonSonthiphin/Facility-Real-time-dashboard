@@ -15,19 +15,19 @@
 
 ## 2. ติดตั้งระบบบน server (Linux)
 
-เขียนสำหรับ Ubuntu Server 24.04 LTS ยังไม่ได้เลือก server จริง (facility-0093) ถ้าเลือก Windows Server ต้องเขียนส่วนนี้เพิ่ม
+เขียนสำหรับ Ubuntu Server 24.04 LTS หรือใหม่กว่า ยังไม่ได้เลือก server จริง (facility-0093) ถ้าเลือก Windows Server ต้องเขียนส่วนนี้เพิ่ม
 
 ### 2.1 สิ่งที่ต้องมี
 
 - server Linux ที่เปิด port 80 และ 443 จากอินเทอร์เน็ตได้ (มือถือแม่บ้านใช้เน็ตของตัวเอง facility-0049)
 - domain ที่ชี้มาที่ server เช่น `facility.example.com` ป้าย QR พิมพ์จาก domain นี้ เปลี่ยน domain = พิมพ์ป้ายใหม่ทั้งหมด
-- ASP.NET Core Runtime 10 (`sudo apt install aspnetcore-runtime-10.0`)
+- ASP.NET Core Runtime 10 (`sudo apt install aspnetcore-runtime-10.0`) บน Ubuntu 24.04 ต้องรัน `sudo add-apt-repository ppa:dotnet/backports` และ `sudo apt update` ก่อน
 - MySQL 8 ขึ้นไป
 - Caddy สำหรับ https (`sudo apt install caddy`) ขอและต่ออายุใบรับรองให้เอง
 
 ### 2.2 ฐานข้อมูลและผู้ใช้ MySQL ของระบบ
 
-ระบบใช้ผู้ใช้ MySQL ของตัวเอง ที่มีสิทธิ์แค่ฐานข้อมูลของระบบ ไม่ใช้ root เข้า MySQL ด้วย root แล้วรัน (เปลี่ยน `<รหัสผ่าน>` ห้ามมี `;` `'` `"` หรือ `\` และห้ามมีช่องว่างหน้าหรือท้าย)
+ระบบใช้ผู้ใช้ MySQL ของตัวเอง ที่มีสิทธิ์แค่ฐานข้อมูลของระบบ ไม่ใช้ root เข้า MySQL ด้วย root แล้วรัน (เปลี่ยน `<รหัสผ่าน>` ห้ามมี `;` `'` `"` หรือ `\` ในรหัสผ่าน และห้ามมีช่องว่างหน้าหรือท้าย)
 
 ```sql
 CREATE DATABASE facility CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
@@ -44,13 +44,17 @@ GRANT ALL PRIVILEGES ON facility.* TO 'facility_app'@'localhost';
 ```bash
 npm --prefix frontend ci
 npm --prefix frontend run build:api
-dotnet publish backend/src/FacilityRealtime.Api -c Release -o publish
+dotnet publish backend/src/FacilityRealtime.Api -c Release -o ../facility-publish
 ```
 
-คัดลอกโฟลเดอร์ `publish` ไปที่ `/opt/facility/app` บน server และ `scripts/facility.sh` ไปที่ `/opt/facility/facility.sh` แล้วบน server
+โฟลเดอร์ `../facility-publish` อยู่นอก repo ห้ามเอาเข้า git
+
+บน server สร้างโฟลเดอร์ก่อน `sudo mkdir -p /opt/facility` แล้วคัดลอกโฟลเดอร์ `facility-publish` ไปที่ `/opt/facility/app` และ `scripts/facility.sh` ไปที่ `/opt/facility/facility.sh` แล้วบน server
 
 ```bash
-sudo useradd --system --no-create-home facility
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin facility
+sudo chown -R root:root /opt/facility
+sudo chmod -R a+rX,go-w /opt/facility
 sudo chmod 755 /opt/facility/facility.sh
 ```
 
@@ -60,14 +64,14 @@ sudo chmod 755 /opt/facility/facility.sh
 sudo /opt/facility/facility.sh init /etc/facility/facility.env
 ```
 
-ตอบคำถามทีละข้อ ที่อยู่ `FacilityRealtime.Api.dll` คือ `/opt/facility/app/FacilityRealtime.Api.dll` สคริปต์สุ่ม `Jwt__SigningKey` ให้ ไฟล์ที่ได้อ่านได้เฉพาะ root
+ตอบคำถามทีละข้อ บน server คำถามที่อยู่ `FacilityRealtime.Api.dll` ต้องตอบ `/opt/facility/app/FacilityRealtime.Api.dll` ถ้าเว้นว่าง `facility.sh` ที่คัดลอกมาลำพังหาโปรแกรมไม่เจอ สคริปต์สุ่ม `Jwt__SigningKey` ให้ ไฟล์ที่ได้อ่านได้เฉพาะ root
 
-`init` ไม่รับคำตอบที่ขึ้นต้นด้วยเครื่องหมายคำพูด มี `\` หรือมีช่องว่างหน้าหรือท้าย (และ host, port, ชื่อฐานข้อมูล, ผู้ใช้, รหัสผ่าน MySQL ห้ามมี `;` `'` `"`) สคริปต์บอกว่าให้แก้คำตอบข้อไหน และยังไม่เขียนอะไรลงไฟล์จนกว่าทุกคำตอบจะผ่าน
+`init` ไม่รับคำตอบที่มี `'` `"` หรือ `\` ที่ตำแหน่งใดก็ตาม หรือมีช่องว่างหน้าหรือท้าย (และ host, port, ชื่อฐานข้อมูล, ผู้ใช้, รหัสผ่าน MySQL ห้ามมี `;` ด้วย) สคริปต์บอกว่าให้แก้คำตอบข้อไหน และยังไม่เขียนอะไรลงไฟล์จนกว่าทุกคำตอบจะผ่าน
 
 | ค่า | ความหมาย |
 |---|---|
 | `ConnectionStrings__DefaultConnection` | ที่อยู่ฐานข้อมูล ผู้ใช้ และรหัสผ่านจากข้อ 2.2 |
-| `Jwt__SigningKey` | กุญแจเซ็น token อย่างน้อย 32 ไบต์ เปลี่ยนเมื่อไหร่ ทุกคนต้องเข้าระบบใหม่ |
+| `Jwt__SigningKey` | กุญแจเซ็น token อย่างน้อย 32 ไบต์ เปลี่ยนแล้วแค่ token อายุ 5 นาทีหมดอายุ ทุกเครื่องต่ออายุเงียบ ๆ จากฐานข้อมูล (refresh token เก็บในฐานข้อมูล) ผู้ใช้ไม่รู้สึก |
 | `Jwt__RefreshCookieSecure` | `true` เพราะเปิดผ่าน https |
 | `ASPNETCORE_URLS` | `http://localhost:5001` ระบบรับเฉพาะจากในเครื่อง Caddy ส่งต่อให้ |
 | `ASPNETCORE_ENVIRONMENT` | `Production` ห้ามตั้ง `Development` บน server เพราะ seed มีรหัสแอดมินที่ทุกคนเห็น (facility-0049) |
@@ -123,26 +127,39 @@ facility.example.com {
 
 ```bash
 #!/bin/sh
+set -e
+umask 077
 mkdir -p /var/backups/facility
-mysqldump --single-transaction facility | gzip > /var/backups/facility/facility-$(date +%F).sql.gz
+file=/var/backups/facility/facility-$(date +%F).sql
+mysqldump --single-transaction facility > "$file"
+gzip -f "$file"
 find /var/backups/facility -name '*.sql.gz' -mtime +14 -delete
 ```
 
-cron รันด้วย root ซึ่งต้องเข้า MySQL ได้โดยไม่ต้องพิมพ์รหัส (Ubuntu ตั้ง root ของ MySQL แบบ `auth_socket` ให้อยู่แล้ว) ควรคัดลอกไฟล์ backup ออกไปเก็บนอก server ด้วย
+ถ้า dump ล้มเหลว สคริปต์หยุดทันทีและไม่ลบไฟล์เก่า cron รันด้วย root ซึ่งต้องเข้า MySQL ได้โดยไม่ต้องพิมพ์รหัส (Ubuntu ตั้ง root ของ MySQL แบบ `auth_socket` ให้อยู่แล้ว) ควรคัดลอกไฟล์ backup ออกไปเก็บนอก server ด้วย
 
-กู้คืน: หยุดระบบ (`sudo systemctl stop facility`) แล้ว `gunzip < ไฟล์.sql.gz | sudo mysql facility` แล้วเริ่มระบบ
+กู้คืน: `sudo systemctl stop facility` แล้ว `sudo sh -c 'gunzip < /var/backups/facility/<ไฟล์>.sql.gz | mysql facility'` แล้ว `sudo systemctl start facility`
 
 ### 2.8 อัปเดตเป็นเวอร์ชันใหม่
 
 1. ทำข้อ 2.3 บนเครื่องที่มีโค้ด
-2. `sudo systemctl stop facility` แล้วสำรองฐานข้อมูลตามข้อ 2.7 ทันที
-3. แทนที่ `/opt/facility/app` ด้วยโฟลเดอร์ `publish` ใหม่ แล้ว `sudo systemctl start facility` ระบบ migrate ฐานข้อมูลเองตอนเริ่ม
+2. `sudo systemctl stop facility` แล้วสำรองฐานข้อมูลทันทีด้วย `sudo /etc/cron.daily/facility-backup`
+3. เก็บโฟลเดอร์เก่าไว้ถอยกลับ `sudo mv /opt/facility/app /opt/facility/app.previous` แล้วคัดลอกโฟลเดอร์ใหม่ไปเป็น `/opt/facility/app` คัดลอก `facility.sh` ตัวใหม่ไปทับด้วย แล้วทำ `chown`/`chmod` ตามข้อ 2.3 อีกครั้ง
+4. `sudo systemctl start facility` ระบบ migrate ฐานข้อมูลเองตอนเริ่ม
+5. ถ้าต้องถอยกลับ: หยุดระบบ ย้าย `app.previous` กลับเป็น `app` กู้ฐานข้อมูลจาก backup ที่ทำก่อนอัปเดต (ข้อ 2.7) แล้วเริ่มระบบ
 
 ### 2.9 ทดลองบนเครื่องตัวเองก่อน (ไม่มี server)
+
+ทำ `npm --prefix frontend ci` และ `npm --prefix frontend run build:api` (สองคำสั่งแรกของข้อ 2.3) ก่อน เพื่อให้มีหน้าเว็บ แล้ว
 
 ```bash
 scripts/facility.sh init ~/.facility/trial.env
 scripts/facility.sh start ~/.facility/trial.env
+```
+
+ตอน `init` คำถามที่อยู่ dll ให้เว้นว่าง `start` รันค้างอยู่ในหน้าต่างนั้น จึงเปิด Terminal หน้าต่างที่สองแล้วรัน
+
+```bash
 cloudflared tunnel --url http://localhost:5001
 ```
 
@@ -157,12 +174,14 @@ cloudflared tunnel --url http://localhost:5001
    - `FirstAdmin__Password` รหัสผ่าน ยาว 15–100 ตัว และไม่ใช่รหัสที่คนใช้กันเยอะ
    - `FirstAdmin__DisplayName` ชื่อที่แสดงในระบบ ยาว 1–150 ตัว
 
+   ห้ามใส่ `'` `"` หรือ `\` ในรหัสผ่านและชื่อ และห้ามมีช่องว่างหน้าหรือท้าย
    ห้ามเขียนค่าเหล่านี้ลงไฟล์ `appsettings.json` หรือเก็บใน git
-2. เริ่มระบบ log ต้องมีบรรทัด `Created the first Admin 'first.admin'`
+2. ระบบรันอยู่แล้วหลังข้อ 2.5 ดูใน log (`sudo journalctl -u facility`) ต้องมีบรรทัด `Created the first Admin 'first.admin'`
 3. เข้า `https://<ที่อยู่ระบบ>/login/admin` ด้วยชื่อผู้ใช้และรหัสผ่านนั้น
 4. ลบบรรทัด `FirstAdmin__Password` ออกจากไฟล์ค่า แล้ว `sudo systemctl restart facility` ถ้ายังตั้งค้างไว้ log จะเตือน `FirstAdmin__Password is still set`
 5. ไปหน้า "บัญชีผู้ใช้" กด "รีเซ็ตรหัสผ่าน" ที่บัญชีของตัวเอง แล้วตั้งรหัสใหม่ที่มีแค่คุณรู้ เพราะรหัสเดิมเคยอยู่ในค่าตั้งของ server
 6. เพิ่มแอดมินคนที่สองในหน้า "บัญชีผู้ใช้" (ดูข้อ 5)
+7. เพิ่มตึกในหน้า "ตึก" แล้วจึงเพิ่มพื้นที่และบัญชีแม่บ้านกับหัวหน้า
 
 ค่าทั้งสามมีผลเฉพาะตอนที่ยังไม่มีบัญชีแอดมินเลยสักคน นับคนที่ปิดใช้งานด้วย ถ้ามีแอดมินแล้ว ระบบไม่สร้างซ้ำ ไม่เปลี่ยนรหัส และไม่เปิดบัญชีที่ปิดไว้ ถ้าต้องการกู้คืน ใช้ข้อ 4
 
