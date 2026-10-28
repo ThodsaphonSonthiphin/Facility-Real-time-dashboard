@@ -31,6 +31,9 @@ stop_api() {
   [ -f "$pid_file" ] || return 0
   local pid
   pid="$(cat "$pid_file")"
+  # The pid may be stale (reboot or crash) and now belong to another process. Stop only if its
+  # command line is our API: the run starts it with `exec dotnet .../FacilityRealtime.Api.dll`
+  ps -p "$pid" -o command= 2>/dev/null | grep -q 'FacilityRealtime\.Api' || { rm -f "$pid_file"; return 0; }
   kill "$pid" 2>/dev/null || true
   # Up to 10 s, so the next run finds the port free
   for _ in $(seq 1 20); do
