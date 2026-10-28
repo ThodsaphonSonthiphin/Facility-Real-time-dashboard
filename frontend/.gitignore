@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# facility-0094: Playwright's results, traces and screenshots of the last run
+test-results/
+playwright-report/
