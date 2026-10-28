@@ -504,5 +504,5 @@ The full target schema, including the tables later plans add, is `docs/design/da
 | Vite proxy | API `:5001` `/api/*` | HTTP/JSON | `Authorization: Bearer <JWT>` | `frontend/vite.config.ts` |
 | Vite proxy | API `:5001` `/hubs/scan` | WebSocket (SignalR) | `?access_token=<JWT>` (hub paths only) | `Auth/AuthSetup.cs`, `frontend/src/shared/api/scanHub.ts` (`followScanHub`) |
 | Browser | API `/api/auth/*` | HTTP/JSON | HttpOnly cookie `facility_refresh` | `Endpoints/AuthEndpoints.cs` |
-| API | MySQL `:3306` | MySQL protocol via EF Core | `ConnectionStrings:DefaultConnection` | `appsettings.json` / user-secrets |
+| API | MySQL `:3306` | MySQL protocol via EF Core | `ConnectionStrings:DefaultConnection` | `appsettings.Development.json` (developer machine only); a server sets `ConnectionStrings__DefaultConnection` in its env file (facility-0093, `docs/handover.md`) |
 | API | itself on startup | — | — | `Program.cs` runs `MigrateAsync()` and seeds data |

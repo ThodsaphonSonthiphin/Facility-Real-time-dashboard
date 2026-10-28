@@ -14,18 +14,74 @@ public static class ResetAdminCommand
 {
     public const string Name = "reset-admin";
 
+    public const string Usage = $"วิธีใช้: {Name} <ชื่อผู้ใช้แอดมิน>";
+
+    private const string BadUsername = "ชื่อผู้ใช้ต้องเป็นตัวอักษรอังกฤษ ตัวเลข . _ หรือ - ยาว 3–100 ตัว ไม่ได้เปลี่ยนอะไร";
+
+    /// <summary>
+    /// facility-0093 decision 2: names the database before anything touches it, the migration included, and goes on
+    /// only after "yes". Shows server, port and database, never the database's user name or password.
+    /// </summary>
+    public static bool ConfirmDatabase(string connectionString, IAdminConsole console)
+    {
+        console.WriteLine($"คำสั่งนี้จะเปลี่ยนข้อมูลในฐานข้อมูล {DatabaseSettings.Describe(connectionString)}");
+        if (string.Equals(console.ReadLine("ถ้าถูกต้อง พิมพ์ yes แล้วกด Enter: ")?.Trim(), "yes", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        console.WriteLine("ไม่ได้พิมพ์ yes ไม่ได้เปลี่ยนอะไร");
+        return false;
+    }
+
+    /// <summary>
+    /// facility-0093: the whole command-line path. Usage first, then the database is named and "yes" is asked, and only
+    /// then is the database opened (and migrated) for the rest of the command.
+    /// </summary>
+    /// <param name="args">What follows "reset-admin" on the command line.</param>
+    /// <param name="connectionString">The database the command would change.</param>
+    /// <param name="openMigrated">Opens the database with the connection string and migrates it.</param>
+    public static async Task<int> RunFromCommandLineAsync(
+        string[] args,
+        string connectionString,
+        Func<string, Task<AppDbContext>> openMigrated,
+        IPasswordHasher hasher,
+        TimeProvider clock,
+        IAdminConsole console)
+    {
+        if (args.Length != 1)
+        {
+            console.WriteLine(Usage);
+            return 2;
+        }
+
+        if (AccountRules.NormalizeUsername(args[0]) is null)
+        {
+            console.WriteLine(BadUsername);
+            return 1;
+        }
+
+        if (!ConfirmDatabase(connectionString, console))
+        {
+            return 1;
+        }
+
+        await using var db = await openMigrated(connectionString);
+        return await RunAsync(args, db, hasher, clock, console);
+    }
+
     /// <param name="args">What follows "reset-admin" on the command line.</param>
     public static async Task<int> RunAsync(string[] args, AppDbContext db, IPasswordHasher hasher, TimeProvider clock, IAdminConsole console)
     {
         if (args.Length != 1)
         {
-            console.WriteLine($"วิธีใช้: {Name} <ชื่อผู้ใช้แอดมิน>");
+            console.WriteLine(Usage);
             return 2;
         }
 
         if (AccountRules.NormalizeUsername(args[0]) is not { } username)
         {
-            console.WriteLine("ชื่อผู้ใช้ต้องเป็นตัวอักษรอังกฤษ ตัวเลข . _ หรือ - ยาว 3–100 ตัว ไม่ได้เปลี่ยนอะไร");
+            console.WriteLine(BadUsername);
             return 1;
         }
 

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using FacilityRealtime.Api;
 using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.Commands;
 using FacilityRealtime.Api.Endpoints;
@@ -16,13 +17,22 @@ var builder = WebApplication.CreateBuilder(args);
 
 // facility-0092: `reset-admin <username>` recovers Admin access from the server's console, then exits without serving.
 // It needs only the connection string, so it runs before the auth setup that asks for Jwt:SigningKey.
+// facility-0093: it names the database and waits for "yes" before the migration touches anything.
 if (args.Length > 0 && args[0] == ResetAdminCommand.Name)
 {
     Console.OutputEncoding = Encoding.UTF8;
-    var options = new DbContextOptionsBuilder<AppDbContext>().UseMySQL(ConnectionString(builder.Configuration)).Options;
-    await using var adminDb = new AppDbContext(options);
-    await adminDb.Database.MigrateAsync();
-    Environment.ExitCode = await ResetAdminCommand.RunAsync(args[1..], adminDb, new Pbkdf2PasswordHasher(), TimeProvider.System, new SystemAdminConsole());
+    Environment.ExitCode = await ResetAdminCommand.RunFromCommandLineAsync(
+        args[1..],
+        DatabaseSettings.ConnectionString(builder.Configuration),
+        async connection =>
+        {
+            var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseMySQL(connection).Options);
+            await db.Database.MigrateAsync();
+            return db;
+        },
+        new Pbkdf2PasswordHasher(),
+        TimeProvider.System,
+        new SystemAdminConsole());
     return;
 }
 
@@ -43,7 +53,7 @@ builder.Services.AddFacilityAuth(builder.Configuration);
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
-    var connectionString = ConnectionString(builder.Configuration);
+    var connectionString = DatabaseSettings.ConnectionString(builder.Configuration);
     builder.Services.AddDbContext<AppDbContext>(options => options.UseMySQL(connectionString));
 }
 
@@ -139,11 +149,6 @@ app.MapAdminInspectionSummaryEndpoints();
 app.MapFallbackToFile("{*path:regex(^(?!(api|hubs)(/|$)).*$):nonfile}", "index.html", appFiles);
 
 app.Run();
-
-// One database for serving and for reset-admin (facility-0092)
-static string ConnectionString(IConfiguration configuration) =>
-    configuration.GetConnectionString("DefaultConnection")
-    ?? "Server=localhost;Port=3306;Database=facility_dashboard;Uid=root;Pwd=;CharSet=utf8mb4;";
 
 // Lets WebApplicationFactory<Program> in the API tests reach the entry point
 public partial class Program;
