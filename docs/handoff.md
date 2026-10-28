@@ -14,6 +14,7 @@ Branch `feat/history-server-search` (from `docs/handoff-cleanup`, PR #109). The 
 - On MySQL (`utf8mb4_0900_ai_ci`) the search ignores letter case and Thai tone marks (`ไม่` also finds `ไม้`); SQLite in the tests ignores letter case only.
 - Tests: backend 343 unit + 632 API with the MySQL tests on throwaway `facility_search_test` (dropped), 0 skipped; frontend 457; tsc and eslint clean.
 - **Owner to check in the browser**, then the OK to merge (#109 first).
+- **Test build up (2026-10-28):** `npm run build:api` on this branch, the API in Development on `facility_dashboard` at `http://localhost:5001` (seed Admin `admin`). The owner is trying D9's search and the D5 QR print. For a phone: `cloudflared tunnel --url http://localhost:5001` in the owner's terminal, and print the signs from the tunnel's https address. Afterwards: stop the API and `cloudflared`, delete `wwwroot`.
 
 ## Safe start, `reset-admin` confirmation, start script and deploy guide (facility-0093, done 2026-10-28; merged to master as PR #108, `447e782`, branch deleted)
 
