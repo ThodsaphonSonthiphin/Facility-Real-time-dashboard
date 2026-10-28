@@ -37,8 +37,8 @@ printf '%s\n' '# test settings' '' \
   'Jwt__SigningKey=0123456789abcdef0123456789abcdef' > "$good"
 chmod 600 "$good"
 
-check "no command shows the usage" 2 "usage:" bash "$script"
-check "a missing env file is refused" 2 "not found" bash "$script" start "$work/none.env"
+check "no command shows the usage" 2 "วิธีใช้:" bash "$script"
+check "a missing env file is refused" 2 "ไม่พบ" bash "$script" start "$work/none.env"
 cp "$good" "$work/open.env"; chmod 644 "$work/open.env"
 check "an env file others can read is refused" 2 "chmod 600" bash "$script" start "$work/open.env"
 check "start keeps the ; in the connection string" 0 "conn=Server=localhost;Port=3306;Database=facility_x_test;Uid=app;Pwd=pw|" bash "$script" start "$good"
@@ -46,15 +46,15 @@ check "start runs the repo's API without its launch profile" 0 "args=run --no-la
 check "start is Production unless the file says otherwise" 0 "env=Production" bash "$script" start "$good"
 check "a value left in the shell does not count" 0 "stale=none" env FirstAdmin__Password=left-over bash "$script" start "$good"
 check "reset-admin passes the username" 0 "-- reset-admin first.admin" bash "$script" reset-admin "$good" first.admin
-check "reset-admin needs a username" 2 "usage:" bash "$script" reset-admin "$good"
+check "reset-admin needs a username" 2 "วิธีใช้:" bash "$script" reset-admin "$good"
 
 cp "$good" "$work/dll.env"; echo 'FACILITY_APP_DLL=/opt/facility/app/FacilityRealtime.Api.dll' >> "$work/dll.env"
 check "a published dll runs instead of the repo" 0 "args=/opt/facility/app/FacilityRealtime.Api.dll reset-admin first.admin" bash "$script" reset-admin "$work/dll.env" first.admin
 
 printf 'Jwt__SigningKey=0123456789abcdef0123456789abcdef\n' > "$work/noconn.env"; chmod 600 "$work/noconn.env"
-check "an env file without the database is refused" 2 "has no ConnectionStrings__DefaultConnection" env ConnectionStrings__DefaultConnection=Server=x bash "$script" start "$work/noconn.env"
+check "an env file without the database is refused" 2 "ไม่มีค่า ConnectionStrings__DefaultConnection" env ConnectionStrings__DefaultConnection=Server=x bash "$script" start "$work/noconn.env"
 printf 'ConnectionStrings__DefaultConnection="Server=x"\nJwt__SigningKey=k\n' > "$work/quoted.env"; chmod 600 "$work/quoted.env"
-check "a quoted value is refused" 2 "without quotes" bash "$script" start "$work/quoted.env"
+check "a quoted value is refused" 2 "ไม่มีเครื่องหมายคำพูด" bash "$script" start "$work/quoted.env"
 printf 'ConnectionStrings__DefaultConnection=Server=x;Database=facility_x_test\r\nJwt__SigningKey=0123456789abcdef0123456789abcdef\r\n' > "$work/crlf.env"; chmod 600 "$work/crlf.env"
 check "Windows line ends are dropped" 0 "conn=Server=x;Database=facility_x_test|" bash "$script" start "$work/crlf.env"
 
@@ -63,8 +63,42 @@ answers=$'\n\nfacility_x_test\nfacility_app\ndb-pass-2026\n\nfirst.admin\nแอ
 check "init writes the env file" 0 "chmod 600" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "$answers" "$script" "$work/new/pilot.env"
 check "init's file is readable by its owner only" 0 "600" bash -c 'if [ "$(uname)" = Darwin ]; then stat -f %Lp "$1"; else stat -c %a "$1"; fi' _ "$work/new/pilot.env"
 check "init's file starts the API" 0 "conn=Server=localhost;Port=3306;Database=facility_x_test;Uid=facility_app;Pwd=db-pass-2026;CharSet=utf8mb4;|" bash "$script" start "$work/new/pilot.env"
-check "init never overwrites a file" 2 "already exists" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "$answers" "$script" "$work/new/pilot.env"
-check "init refuses a ; in the database password" 2 "; ' or \"" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/db-pass-2026/db;pass}" "$script" "$work/semi.env"
+check "init never overwrites a file" 2 "มีอยู่แล้ว" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "$answers" "$script" "$work/new/pilot.env"
+check "init refuses a ; in the database password" 2 "ห้ามมี ;" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/db-pass-2026/db;pass}" "$script" "$work/semi.env"
+
+check "a stale ASPNETCORE_ENVIRONMENT does not count" 0 "env=Production" env ASPNETCORE_ENVIRONMENT=Development bash "$script" start "$good"
+printf 'ConnectionStrings__DefaultConnection=Server=x;Database=d\nJwt__SigningKey=\n' > "$work/emptykey.env"; chmod 600 "$work/emptykey.env"
+check "an empty required value is refused" 2 "ไม่มีค่า Jwt__SigningKey" bash "$script" start "$work/emptykey.env"
+ln -s "$good" "$work/link.env"
+check "a symlink to a 600 env file works" 0 "env=Production" bash "$script" start "$work/link.env"
+
+run_init() { # answers, file, then optional extra env (PATH=...)
+  printf '%s' "$1" | bash "$script" init "$2"
+}
+nofile() { # name, directory that must hold nothing
+  if [ -z "$(ls -A "$2" 2>/dev/null)" ]; then echo "ok:   $1"; else
+    echo "FAIL: $1"; ls -A "$2" | sed 's/^/    /'; failures=$((failures + 1)); fi
+}
+out="$(run_init "$answers" "$work/out/o.env" 2>&1)"
+if [[ "$out" != *db-pass-2026* && "$out" != *admin-pass-2026-long* ]]; then echo "ok:   init's console output shows no password"
+else echo "FAIL: init's console output shows a password"; failures=$((failures + 1)); fi
+key="$(sed -n 's/^Jwt__SigningKey=//p' "$work/out/o.env")"
+if [ "${#key}" -ge 32 ] && grep -q '^FirstAdmin__Username=first.admin$' "$work/out/o.env" && grep -q '^FirstAdmin__DisplayName=แอดมินคนแรก$' "$work/out/o.env" && grep -q '^FirstAdmin__Password=admin-pass-2026-long$' "$work/out/o.env"; then
+  echo "ok:   init's file has a signing key and the three FirstAdmin lines"
+else echo "FAIL: init's file lacks a signing key or a FirstAdmin line"; failures=$((failures + 1)); fi
+
+mkdir -p "$work/badbin"; printf '#!/bin/sh\nexit 1\n' > "$work/badbin/openssl"; chmod 755 "$work/badbin/openssl"
+check "init without a signing key is refused" 2 "สร้าง Jwt__SigningKey ไม่ได้" bash -c 'printf "%s" "$1" | PATH="$4:$PATH" bash "$2" init "$3"' _ "$answers" "$script" "$work/nokey/k.env" "$work/badbin"
+nofile "init without a signing key leaves nothing" "$work/nokey"
+check "two different admin passwords are refused" 2 "ไม่ตรงกัน" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/admin-pass-2026-long
+admin-pass-2026-long/admin-pass-2026-long
+other-pass-2026-long}" "$script" "$work/differ/d.env"
+nofile "different passwords leave nothing" "$work/differ"
+check "a display name starting with a quote is refused" 2 "ห้ามขึ้นต้นด้วยเครื่องหมายคำพูด" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/แอดมินคนแรก/\"x}" "$script" "$work/quote/q.env"
+nofile "a refused display name leaves nothing" "$work/quote"
+check "an empty answer is refused" 2 "ต้องตอบทุกข้อ" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\"" _ "${answers/facility_app/}" "$script" "$work/empty/e.env"
+nofile "an empty answer leaves nothing" "$work/empty"
+check "a MySQL password of -n is written as typed" 0 "Pwd=-n;" bash -c "printf '%s' \"\$1\" | bash \"\$2\" init \"\$3\" >/dev/null && cat \"\$3\"" _ "${answers/db-pass-2026/-n}" "$script" "$work/dash/n.env"
 
 if [ "$failures" -gt 0 ]; then echo "$failures failed"; exit 1; fi
 echo "all passed"

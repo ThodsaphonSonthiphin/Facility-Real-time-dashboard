@@ -12,16 +12,16 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 required="ConnectionStrings__DefaultConnection Jwt__SigningKey"
 
 fail() { echo "facility.sh: $*" >&2; exit 2; }
-usage() { fail "usage: scripts/facility.sh init <env-file> | start <env-file> | reset-admin <env-file> <username>"; }
+usage() { fail "วิธีใช้: scripts/facility.sh init <ไฟล์ค่า> | start <ไฟล์ค่า> | reset-admin <ไฟล์ค่า> <ชื่อผู้ใช้>"; }
 
 file_mode() {
-  if [ "$(uname)" = "Darwin" ]; then stat -f %Lp "$1"; else stat -c %a "$1"; fi
+  if [ "$(uname)" = "Darwin" ]; then stat -L -f %Lp "$1"; else stat -L -c %a "$1"; fi
 }
 
 load_env() {
   local file="$1" line key value lineno=0 seen=" "
-  [ -f "$file" ] || fail "$file not found. Create it with: scripts/facility.sh init $file"
-  [ "$(file_mode "$file")" = "600" ] || fail "$file must be readable by its owner only. Run: chmod 600 $file"
+  [ -f "$file" ] || fail "ไม่พบ $file สร้างด้วย: scripts/facility.sh init $file"
+  [ "$(file_mode "$file")" = "600" ] || fail "$file ต้องอ่านได้เฉพาะเจ้าของ รัน: chmod 600 $file"
 
   # Only the file's settings count: drop anything an earlier `export` left in this shell
   for key in $(compgen -e); do
@@ -34,15 +34,15 @@ load_env() {
     case "$line" in ''|'#'*) continue ;; esac
     key="${line%%=*}"
     value="${line#*=}"
-    [ "$key" != "$line" ] || fail "$file line $lineno: expected KEY=VALUE"
-    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail "$file line $lineno: '$key' is not a setting name"
-    case "$value" in \"*|\'*) fail "$file line $lineno: write $key without quotes" ;; esac
+    [ "$key" != "$line" ] || fail "$file บรรทัด $lineno: ต้องเขียนเป็น ชื่อ=ค่า"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail "$file บรรทัด $lineno: '$key' ไม่ใช่ชื่อค่า"
+    case "$value" in \"*|\'*) fail "$file บรรทัด $lineno: เขียน $key โดยไม่มีเครื่องหมายคำพูด" ;; esac
     export "$key=$value"
-    seen="$seen$key "
+    if [ -n "$value" ]; then seen="$seen$key "; fi
   done < "$file"
 
   for key in $required; do
-    case "$seen" in *" $key "*) ;; *) fail "$file has no $key" ;; esac
+    case "$seen" in *" $key "*) ;; *) fail "$file ไม่มีค่า $key" ;; esac
   done
   export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Production}"
 }
@@ -56,54 +56,69 @@ run_app() {
 
 ask() { # prompt, default
   local answer
-  read -r -p "$1" answer || true
-  echo "${answer:-${2:-}}"
+  IFS= read -r -p "$1" answer || true
+  printf '%s\n' "${answer:-${2:-}}"
 }
 
 ask_secret() { # prompt
   local answer
-  read -r -s -p "$1" answer || true
+  IFS= read -r -s -p "$1" answer || true
   echo >&2
-  echo "$answer"
+  printf '%s\n' "$answer"
+}
+
+# Every value init writes must read the same to start and to systemd's EnvironmentFile.
+check_value() { # label, value, "conn" if it goes into the connection string
+  local label="$1" value="$2"
+  [ -n "$value" ] || fail "ต้องตอบทุกข้อ ไม่ได้เขียนอะไร"
+  case "$value" in
+    \"*|\'*|*\\*|[[:space:]]*|*[[:space:]]) fail "$label ห้ามขึ้นต้นด้วยเครื่องหมายคำพูด ห้ามมี \\ และห้ามมีช่องว่างหน้าหรือท้าย ไม่ได้เขียนอะไร" ;;
+  esac
+  if [ "${3:-}" = "conn" ]; then
+    case "$value" in *\;*|*\'*|*\"*) fail "$label ห้ามมี ; ' หรือ \" ไม่ได้เขียนอะไร" ;; esac
+  fi
+  return 0
 }
 
 init_env() {
-  local file="$1" host port database user password dll admin name admin_password again
-  [ ! -e "$file" ] || fail "$file already exists. Edit it, or choose another name"
+  local file="$1" host port database user password dll admin name admin_password again key
+  [ ! -e "$file" ] || fail "$file มีอยู่แล้ว แก้ไฟล์นั้น หรือใช้ชื่ออื่น"
   echo "รหัสผ่านพิมพ์แบบไม่แสดงบนจอ ตรวจว่าแป้นพิมพ์เป็นภาษาอังกฤษก่อนพิมพ์" >&2
-  host="$(ask "MySQL server [localhost]: " localhost)"
-  port="$(ask "MySQL port [3306]: " 3306)"
-  database="$(ask "ชื่อฐานข้อมูล: ")"
-  user="$(ask "ผู้ใช้ MySQL ของระบบ (ไม่ใช่ root): ")"
-  password="$(ask_secret "รหัสผ่านของผู้ใช้นี้: ")"
-  case "$password" in *\;*|*\'*|*\"*) fail "the MySQL password must not contain ; ' or \". Choose another one" ;; esac
+  host="$(ask "MySQL server [localhost]: " localhost)"; check_value "MySQL server" "$host" conn
+  port="$(ask "MySQL port [3306]: " 3306)"; check_value "MySQL port" "$port" conn
+  database="$(ask "ชื่อฐานข้อมูล: ")"; check_value "ชื่อฐานข้อมูล" "$database" conn
+  user="$(ask "ผู้ใช้ MySQL ของระบบ (ไม่ใช่ root): ")"; check_value "ผู้ใช้ MySQL" "$user" conn
+  password="$(ask_secret "รหัสผ่านของผู้ใช้นี้: ")"; check_value "รหัสผ่าน MySQL" "$password" conn
   dll="$(ask "ที่อยู่ FacilityRealtime.Api.dll (เว้นว่าง = รันจากโค้ดใน repo นี้): ")"
-  admin="$(ask "ชื่อผู้ใช้แอดมินคนแรก: ")"
-  name="$(ask "ชื่อที่แสดงของแอดมินคนแรก: ")"
-  admin_password="$(ask_secret "รหัสผ่านแอดมินคนแรก (15–100 ตัว): ")"
+  if [ -n "$dll" ]; then check_value "ที่อยู่ dll" "$dll"; fi
+  admin="$(ask "ชื่อผู้ใช้แอดมินคนแรก: ")"; check_value "ชื่อผู้ใช้แอดมิน" "$admin"
+  name="$(ask "ชื่อที่แสดงของแอดมินคนแรก: ")"; check_value "ชื่อที่แสดง" "$name"
+  admin_password="$(ask_secret "รหัสผ่านแอดมินคนแรก (15–100 ตัว): ")"; check_value "รหัสผ่านแอดมิน" "$admin_password"
   again="$(ask_secret "พิมพ์รหัสผ่านแอดมินอีกครั้ง: ")"
-  [ "$admin_password" = "$again" ] || fail "the two Admin passwords differ. Nothing was written"
-  [ -n "$database" ] && [ -n "$user" ] && [ -n "$admin" ] && [ -n "$name" ] || fail "every question needs an answer. Nothing was written"
+  [ "$admin_password" = "$again" ] || fail "รหัสผ่านแอดมินสองครั้งไม่ตรงกัน ไม่ได้เขียนอะไร"
+  key="$(openssl rand -base64 48)" || fail "สร้าง Jwt__SigningKey ไม่ได้ (ต้องมี openssl) ไม่ได้เขียนอะไร"
+  [ -n "$key" ] || fail "สร้าง Jwt__SigningKey ไม่ได้ (ต้องมี openssl) ไม่ได้เขียนอะไร"
 
   mkdir -p "$(dirname "$file")"
-  (
-    umask 077
-    {
-      echo "# facility-0093: settings for scripts/facility.sh and systemd. Readable by its owner only (chmod 600)."
-      echo "# Remove the FirstAdmin__Password line once that Admin has logged in (docs/handover.md)."
-      echo "ASPNETCORE_ENVIRONMENT=Production"
-      echo "ASPNETCORE_URLS=http://localhost:5001"
-      echo "ConnectionStrings__DefaultConnection=Server=$host;Port=$port;Database=$database;Uid=$user;Pwd=$password;CharSet=utf8mb4;"
-      echo "Jwt__SigningKey=$(openssl rand -base64 48)"
-      echo "Jwt__RefreshCookieSecure=true"
-      echo "FirstAdmin__Username=$admin"
-      echo "FirstAdmin__DisplayName=$name"
-      echo "FirstAdmin__Password=$admin_password"
-      if [ -n "$dll" ]; then echo "FACILITY_APP_DLL=$dll"; fi
-    } > "$file"
-  )
-  chmod 600 "$file"
-  echo "wrote $file (chmod 600). Next: scripts/facility.sh start $file"
+  tmp="$(umask 077; mktemp "$(dirname "$file")/.facility-env.XXXXXX")"
+  trap 'rm -f "$tmp"' EXIT
+  {
+    echo "# facility-0093: settings for scripts/facility.sh and systemd. Readable by its owner only (chmod 600)."
+    echo "# Remove the FirstAdmin__Password line once that Admin has logged in (docs/handover.md)."
+    echo "ASPNETCORE_ENVIRONMENT=Production"
+    echo "ASPNETCORE_URLS=http://localhost:5001"
+    echo "ConnectionStrings__DefaultConnection=Server=$host;Port=$port;Database=$database;Uid=$user;Pwd=$password;CharSet=utf8mb4;"
+    echo "Jwt__SigningKey=$key"
+    echo "Jwt__RefreshCookieSecure=true"
+    echo "FirstAdmin__Username=$admin"
+    echo "FirstAdmin__DisplayName=$name"
+    printf 'FirstAdmin__Password=%s\n' "$admin_password"
+    if [ -n "$dll" ]; then echo "FACILITY_APP_DLL=$dll"; fi
+  } > "$tmp"
+  chmod 600 "$tmp"
+  [ ! -e "$file" ] || fail "$file มีอยู่แล้ว แก้ไฟล์นั้น หรือใช้ชื่ออื่น"
+  mv "$tmp" "$file"
+  echo "เขียน $file แล้ว (chmod 600) ต่อไป: scripts/facility.sh start $file"
 }
 
 [ $# -ge 2 ] || usage
