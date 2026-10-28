@@ -10,20 +10,24 @@ test('an Admin lands on D1 and sees AR01', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /^AR01 / })).toBeVisible();
 });
 
-// Measured 0.04 before bdfd581: the building picker widened when the names came
-// A narrow desk window: on a wide one the picker has room and its widening moves little (0.002 on the old code)
-test.use({ viewport: { width: 700, height: 844 } });
-test('D1 does not move when the building names arrive', async ({ page }) => {
-  await loginAsAdmin(page);
+test.describe('on a narrow window (half a laptop screen)', () => {
+  // On a wide window the picker has room and its widening moves little (0.002 on the old code)
+  test.use({ viewport: { width: 700, height: 844 } });
 
-  await recordLayoutShifts(page);
-  await holdBack(page, '**/api/admin/buildings', 800);
-  await page.goto('/dashboard');
-  await expect(page.getByRole('heading', { name: /^AR01 / })).toBeVisible();
-  // The shift happens when the names land, so wait for a building beyond "ทุกตึก" before measuring
-  await expect(page.getByLabel('ตึก').getByRole('option')).not.toHaveCount(1);
+  // Measured 0.04 in Lighthouse mobile before bdfd581, about 0.017 at 700px here (measured on this Mac; depends on the
+  // system font, so re-run the proof on any new machine)
+  test('D1 does not move when the building names arrive', async ({ page }) => {
+    await loginAsAdmin(page);
 
-  expect(await layoutShiftTotal(page)).toBeLessThan(0.01);
+    await recordLayoutShifts(page);
+    await holdBack(page, '**/api/admin/buildings', 800);
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { name: /^AR01 / })).toBeVisible();
+    // The shift happens when the names land, so wait for a building beyond "ทุกตึก" before measuring
+    await expect(page.getByLabel('ตึก').getByRole('option')).not.toHaveCount(1);
+
+    expect(await layoutShiftTotal(page)).toBeLessThan(0.01);
+  });
 });
 
 // facility-0064 as amended 2026-10-28: the badge flashed on every open. The dropped-hub case is LiveBadge.test.tsx
