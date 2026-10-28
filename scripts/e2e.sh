@@ -40,6 +40,8 @@ stop_api() {
     kill -0 "$pid" 2>/dev/null || break
     sleep 0.5
   done
+  # Still alive after 10 s: force it, so the port is not left taken
+  kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
   rm -f "$pid_file"
 }
 
@@ -67,7 +69,7 @@ run() {
   command -v mysql >/dev/null || fail "ไม่พบคำสั่ง mysql ติดตั้ง MySQL ก่อน (Mac: brew install mysql แล้ว brew services start mysql)"
   sql "SELECT 1" >/dev/null || fail "ต่อ MySQL ด้วย root ไม่ได้ ถ้า root มีรหัสผ่าน ตั้ง E2E_MYSQL_PASSWORD ก่อนรัน"
   if curl -fs "http://localhost:$port/api/health" >/dev/null 2>&1; then
-    fail "มีระบบตอบอยู่ที่พอร์ต $port แล้ว หยุดตัวนั้นก่อน หรือเลือกพอร์ตอื่นด้วย E2E_PORT"
+    fail "มีระบบตอบอยู่ที่พอร์ต $port แล้ว หยุดตัวนั้นก่อน หรือเลือกพอร์ตอื่นด้วย E2E_PORT ถ้าเป็นรอบ e2e ที่ค้าง รัน \`npm run e2e:clean\`"
   fi
 
   mkdir -p "$run_dir"
@@ -91,6 +93,9 @@ run() {
   ) >"$log_file" 2>&1 &
   echo $! >"$pid_file"
   wait_for_api
+  # Proves the API seeded the throwaway database (not some other one)
+  [ "$(sql "SELECT COUNT(*) FROM \`$db_name\`.users")" -gt 0 ] 2>/dev/null ||
+    fail "API เริ่มแล้วแต่ตาราง users ใน $db_name ว่าง ระบบไม่ได้ใส่ข้อมูลตัวอย่างลงฐานข้อมูลเทส ดู log ที่ $log_file"
 
   cd "$repo_root/frontend"
   npx playwright install chromium

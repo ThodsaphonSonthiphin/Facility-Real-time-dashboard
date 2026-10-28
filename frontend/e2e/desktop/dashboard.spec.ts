@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from '../support/login.ts';
+import { areaCode } from '../support/seed.ts';
 import { holdBack, layoutShiftTotal, recordLayoutShifts, textEverShown, watchForText } from '../support/pageWatch.ts';
 
 const badge = 'กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)';
@@ -7,7 +8,7 @@ const badge = 'กำลังเชื่อมต่อ… (อัปเดต
 test('an Admin lands on D1 and sees AR01', async ({ page }) => {
   await loginAsAdmin(page);
   await expect(page.getByRole('heading', { name: 'สถานะจุดทำความสะอาด' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /^AR01 / })).toBeVisible();
+  await expect(page.getByRole('heading', { name: new RegExp(`^${areaCode} `) })).toBeVisible();
 });
 
 test.describe('on a narrow window (half a laptop screen)', () => {
@@ -22,7 +23,7 @@ test.describe('on a narrow window (half a laptop screen)', () => {
     await recordLayoutShifts(page);
     await holdBack(page, '**/api/admin/buildings', 800);
     await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: /^AR01 / })).toBeVisible();
+    await expect(page.getByRole('heading', { name: new RegExp(`^${areaCode} `) })).toBeVisible();
     // The shift happens when the names land, so wait for a building beyond "ทุกตึก" before measuring
     await expect(page.getByLabel('ตึก').getByRole('option')).not.toHaveCount(1);
 
@@ -38,7 +39,7 @@ test('D1 shows no badge while the first live connection is made', async ({ page 
   await holdBack(page, '**/hubs/scan/negotiate*', 1500);
   const negotiated = page.waitForResponse('**/hubs/scan/negotiate*');
   await page.goto('/dashboard');
-  await expect(page.getByRole('heading', { name: /^AR01 / })).toBeVisible();
+  await expect(page.getByRole('heading', { name: new RegExp(`^${areaCode} `) })).toBeVisible();
   await negotiated;
 
   expect(await textEverShown(page)).toBe(false);

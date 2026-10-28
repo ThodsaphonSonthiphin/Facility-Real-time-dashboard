@@ -155,7 +155,7 @@ Three slices plus RTK Query — see [Part 5](#part-5--state-management).
 
 ### e2e (facility-0094)
 
-Playwright, run only by `npm run e2e` (`scripts/e2e.sh` starts the real API on `facility_e2e_test` first). `e2e/phone/` runs at 390 x 844 with GPS at the AR01 check-in sign, `e2e/desktop/` at 1280 px. `e2e/support/seed.ts` is the only copy of the seed values (change it with `DbInitializer.cs`); `pageWatch.ts` measures layout shift, watches for text that must never show and holds requests back. How to run and recover: `docs/handover.md` section 6.
+Playwright, run only by `npm run e2e` (`scripts/e2e.sh` starts the real API on `facility_e2e_test` first). `e2e/phone/` runs at 390 x 844 with GPS at the AR01 check-in sign, `e2e/desktop/` at 1280 px (the D1 layout-shift test at 700 px). `e2e/support/seed.ts` is the only copy of the seed values (change it with `DbInitializer.cs`); `pageWatch.ts` measures layout shift, watches for text that must never show and holds requests back. How to run and recover: `docs/handover.md` section 6.
 
 ---
 

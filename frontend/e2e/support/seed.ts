@@ -8,6 +8,8 @@ export interface Employee {
   name: string;
 }
 
+/** The Area every test looks at (its heading starts with this code). */
+export const areaCode = 'AR01';
 export const admin = { username: 'admin', password: 'admin1234' };
 export const supervisor: Employee = { employeeId: 'S2001', phone: '0820000001', name: 'สมปอง ตรวจดี' };
 const dayCleaner: Employee = { employeeId: 'E1001', phone: '0810000001', name: 'สมชาย ใจดี' };
