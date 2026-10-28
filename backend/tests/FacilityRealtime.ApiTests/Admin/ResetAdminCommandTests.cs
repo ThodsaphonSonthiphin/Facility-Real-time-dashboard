@@ -183,6 +183,35 @@ public class ResetAdminCommandTests
         await factory.WithDbAsync(async db => Assert.False(await db.Users.AnyAsync(u => u.Username == "backup.admin")));
     }
 
+    private const string PilotDatabase = "Server=db.example;Port=3307;Database=facility_pilot;Uid=app;Pwd=s3cret-pass";
+
+    [Theory]
+    [InlineData("yes")]
+    [InlineData(" YES ")]
+    public void Names_the_database_and_goes_on_after_yes(string answer)
+    {
+        var console = new FakeConsole(answer);
+
+        Assert.True(ResetAdminCommand.ConfirmDatabase(PilotDatabase, console));
+        Assert.Contains(console.Written, line => line.Contains("db.example:3307 / facility_pilot"));
+        Assert.Single(console.ShownPrompts);
+        Assert.Empty(console.HiddenPrompts);
+        Assert.DoesNotContain(console.Written, line => line.Contains("s3cret-pass"));
+    }
+
+    [Theory]
+    [InlineData("no")]
+    [InlineData("")]
+    [InlineData("y")]
+    [InlineData(null)]
+    public void Anything_but_yes_stops_before_the_database(string? answer)
+    {
+        var console = new FakeConsole(answer);
+
+        Assert.False(ResetAdminCommand.ConfirmDatabase(PilotDatabase, console));
+        Assert.Equal("ไม่ได้พิมพ์ yes ไม่ได้เปลี่ยนอะไร", console.Written[^1]);
+    }
+
     public static TheoryData<int, string[]> WrongUsage => new()
     {
         { 2, [] },

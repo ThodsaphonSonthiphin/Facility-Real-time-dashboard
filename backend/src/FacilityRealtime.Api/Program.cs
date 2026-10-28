@@ -17,13 +17,29 @@ var builder = WebApplication.CreateBuilder(args);
 
 // facility-0092: `reset-admin <username>` recovers Admin access from the server's console, then exits without serving.
 // It needs only the connection string, so it runs before the auth setup that asks for Jwt:SigningKey.
+// facility-0093: it names the database and waits for "yes" before the migration touches anything.
 if (args.Length > 0 && args[0] == ResetAdminCommand.Name)
 {
     Console.OutputEncoding = Encoding.UTF8;
-    var options = new DbContextOptionsBuilder<AppDbContext>().UseMySQL(DatabaseSettings.ConnectionString(builder.Configuration)).Options;
+    var adminConsole = new SystemAdminConsole();
+    if (args.Length != 2)
+    {
+        adminConsole.WriteLine(ResetAdminCommand.Usage);
+        Environment.ExitCode = 2;
+        return;
+    }
+
+    var adminConnection = DatabaseSettings.ConnectionString(builder.Configuration);
+    if (!ResetAdminCommand.ConfirmDatabase(adminConnection, adminConsole))
+    {
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    var options = new DbContextOptionsBuilder<AppDbContext>().UseMySQL(adminConnection).Options;
     await using var adminDb = new AppDbContext(options);
     await adminDb.Database.MigrateAsync();
-    Environment.ExitCode = await ResetAdminCommand.RunAsync(args[1..], adminDb, new Pbkdf2PasswordHasher(), TimeProvider.System, new SystemAdminConsole());
+    Environment.ExitCode = await ResetAdminCommand.RunAsync(args[1..], adminDb, new Pbkdf2PasswordHasher(), TimeProvider.System, adminConsole);
     return;
 }
 

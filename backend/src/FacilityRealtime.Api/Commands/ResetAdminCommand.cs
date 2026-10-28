@@ -14,12 +14,30 @@ public static class ResetAdminCommand
 {
     public const string Name = "reset-admin";
 
+    public const string Usage = $"วิธีใช้: {Name} <ชื่อผู้ใช้แอดมิน>";
+
+    /// <summary>
+    /// facility-0093 decision 2: names the database before anything touches it, the migration included, and goes on
+    /// only after "yes". Shows server, port and database, never the database's user name or password.
+    /// </summary>
+    public static bool ConfirmDatabase(string connectionString, IAdminConsole console)
+    {
+        console.WriteLine($"คำสั่งนี้จะเปลี่ยนข้อมูลในฐานข้อมูล {DatabaseSettings.Describe(connectionString)}");
+        if (string.Equals(console.ReadLine("ถ้าถูกต้อง พิมพ์ yes แล้วกด Enter: ")?.Trim(), "yes", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        console.WriteLine("ไม่ได้พิมพ์ yes ไม่ได้เปลี่ยนอะไร");
+        return false;
+    }
+
     /// <param name="args">What follows "reset-admin" on the command line.</param>
     public static async Task<int> RunAsync(string[] args, AppDbContext db, IPasswordHasher hasher, TimeProvider clock, IAdminConsole console)
     {
         if (args.Length != 1)
         {
-            console.WriteLine($"วิธีใช้: {Name} <ชื่อผู้ใช้แอดมิน>");
+            console.WriteLine(Usage);
             return 2;
         }
 
