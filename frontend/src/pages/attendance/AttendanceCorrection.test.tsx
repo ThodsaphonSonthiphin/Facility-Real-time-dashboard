@@ -257,7 +257,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
       dayBoard,
     );
     const { user, store } = await renderApp('/admin/attendance');
-    await screen.findByText('SignalR Live');
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement()); // the hub is live
     await apiIdle(store);
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = screen.getByRole('dialog', { name: 'เพิ่ม/แก้เวลา · แม่บ้านทดสอบ · AR01' });

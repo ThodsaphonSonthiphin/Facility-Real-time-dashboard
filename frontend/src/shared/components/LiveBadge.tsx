@@ -2,19 +2,20 @@ import { useAppSelector } from '../../store/hooks';
 import { selectHubStatus } from '../../store/slices/hubSlice';
 
 /**
- * facility-0064 item 1: the Admin pages' corner badge, with today's words in the new look's colours: "SignalR Live"
- * in green while pushes arrive, "Connecting..." in orange otherwise. Meanwhile the poll keeps the page at most 30 s
- * old (facility-0061).
+ * facility-0064 item 1: the Admin pages' corner badge. Nothing shows while pushes arrive; an orange badge shows only
+ * while they do not (owner, 2026-10-28: "SignalR Live" meant nothing to an Admin). Meanwhile the poll keeps the page
+ * at most 30 s old (facility-0061). The status region stays in the page, empty, so a screen reader hears the change.
  */
 export function LiveBadge({ hubKey }: { hubKey: string }) {
   const live = useAppSelector(selectHubStatus(hubKey)) === 'live';
   return (
-    <span
-      role="status"
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${live ? 'border-border bg-surface text-status-passed' : 'border-warn-border bg-warn-bg text-warn-text'}`}
-    >
-      <span aria-hidden="true" className={`size-2 rounded-full ${live ? 'bg-status-passed' : 'bg-status-overdue'}`} />
-      {live ? 'SignalR Live' : 'Connecting...'}
+    <span role="status">
+      {!live && (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-warn-border bg-warn-bg px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-warn-text">
+          <span aria-hidden="true" className="size-2 rounded-full bg-status-overdue" />
+          กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)
+        </span>
+      )}
     </span>
   );
 }

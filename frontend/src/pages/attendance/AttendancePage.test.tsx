@@ -132,7 +132,7 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
   it('a check-in pushed for the shift on screen asks again; one for another shift does not (facility-0027 rule 5)', async () => {
     const server = serve();
     const { store } = await renderApp('/admin/attendance');
-    expect(await screen.findByText('SignalR Live')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement()); // the hub is live
     await waitFor(() => expect(boardCalls(server)).toHaveLength(2)); // the hub's first start asks again
     await apiIdle(store);
 

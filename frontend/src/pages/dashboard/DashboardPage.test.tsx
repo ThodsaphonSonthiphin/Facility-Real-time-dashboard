@@ -60,7 +60,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
   it('a pushed submission or inspection changes its card at once, without asking the server (#26)', async () => {
     const server = serve();
     const { store } = await renderApp('/dashboard');
-    expect(await screen.findByText('SignalR Live')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement()); // the hub is live
     await settled(server, store);
     expect(hub.latest().tokens).toEqual(['token-admin']);
 
@@ -74,7 +74,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
   it('a card for a point the page does not have yet asks the server, for its place in the order', async () => {
     const server = serve();
     const { store } = await renderApp('/dashboard');
-    await screen.findByText('SignalR Live');
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement()); // the hub is live
     await settled(server, store);
 
     act(() => hub.latest().push('ScanRecorded', point({ id: 8, name: 'ห้องใหม่', status: 'PendingInspection' })));
@@ -98,7 +98,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
       },
     });
     const { store } = await renderApp('/dashboard');
-    await screen.findByText('SignalR Live');
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement()); // the hub is live
     await waitFor(() => expect(pointGets(server)).toHaveLength(2));
 
     act(() => hub.latest().push('InspectionRecorded', pushed));
@@ -148,17 +148,17 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     }
   });
 
-  it('the badge says whether pushes arrive, and a reconnect asks the server again (facility-0064)', async () => {
+  it('the badge shows only while pushes do not arrive, and a reconnect asks the server again (facility-0064)', async () => {
     const server = serve();
     const { store } = await renderApp('/dashboard');
-    expect(await screen.findByRole('status')).toHaveTextContent('SignalR Live');
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement());
     await settled(server, store);
 
     act(() => hub.latest().reconnecting());
-    expect(screen.getByRole('status')).toHaveTextContent('Connecting...');
+    expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)');
     act(() => hub.latest().reconnected());
 
-    expect(screen.getByRole('status')).toHaveTextContent('SignalR Live');
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
     await waitFor(() => expect(pointGets(server)).toHaveLength(3));
   });
 
