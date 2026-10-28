@@ -26,7 +26,9 @@ The owner asked for an AI to test in their place. Argent (software-mansion/argen
 - Cannot catch: Safari-only bugs, the `100dvh` scroll bug, real GPS, the D5 paper print.
 - Deferred minors: the live-flow test does not force the push to be the only path (the 30 s poll could satisfy it); `wwwroot` is shared with the owner's 5001 test builds, so e2e deletes it; nothing confirms the API is on `facility_e2e_test` (hardening idea); the CLS margin (0.0169 for the old bug vs the 0.01 limit) depends on machine and font.
 - **State left:** nothing running; `facility_e2e_test` dropped; `wwwroot` deleted.
-- **Owner to do:** read the spec and the plan, try `npm run e2e` once; check by hand that Ctrl-C in the middle of a run cleans up (not yet checked by hand); push, PR and merge only on the owner's OK.
+- **Ctrl-C checked (agent, 2026-10-28, after the last fix):** SIGINT sent to a run once the API was up; the API, `facility_e2e_test` and `wwwroot` were all gone afterwards and `facility_dashboard` kept its 6 users.
+- **Before push:** `frontend/e2e/support/seed.ts` holds the public dev seed Admin password as a literal; GitGuardian may flag it like PR #108 (mark it a test credential if so). Also, e2e deletes `wwwroot`, which the owner's port-5001 test builds share; a separate web root (`ASPNETCORE_WEBROOT`) would fix that, the owner's choice.
+- **Owner to do:** read the spec and the plan, try `npm run e2e` once; push, PR and merge only on the owner's OK.
 
 ## Layout shift on My Work and D1 (2026-10-28; branch `fix/layout-shift`, merged on the owner's "commit push pr merge")
 
