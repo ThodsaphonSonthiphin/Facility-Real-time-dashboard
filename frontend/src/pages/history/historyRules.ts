@@ -66,7 +66,10 @@ export function actionText(action: string): string {
   return Object.hasOwn(actionLabel, action) ? actionLabel[action] : action;
 }
 
-/** ?from&to&actor=<id>&category=<AuditCategory>; anything else is left out, because an empty filter gets 400. */
+/** The server refuses a longer search (AdminAuditLogEndpoints.MaxSearchLength). */
+export const HISTORY_MAX_SEARCH = 100;
+
+/** ?from&to&actor=<id>&category=<AuditCategory>&q; anything else is left out, because an empty filter gets 400. */
 export function readHistoryArgs(params: URLSearchParams): HistoryArgs {
   const args: HistoryArgs = { ...readRange(params) };
   const actor = Number(params.get('actor'));
@@ -77,16 +80,24 @@ export function readHistoryArgs(params: URLSearchParams): HistoryArgs {
   if (category) {
     args.category = category;
   }
+  const q = params.get('q')?.trim();
+  if (q && q.length <= HISTORY_MAX_SEARCH) {
+    args.q = q;
+  }
   return args;
 }
 
-export function toHistoryParams({ from, to, actorId, category }: HistoryArgs): URLSearchParams {
+export function toHistoryParams({ from, to, actorId, category, q }: HistoryArgs): URLSearchParams {
   const params = toRangeParams(from && to ? { from, to } : undefined, undefined);
   if (actorId) {
     params.set('actor', String(actorId));
   }
   if (category) {
     params.set('category', category);
+  }
+  const search = q?.trim();
+  if (search) {
+    params.set('q', search);
   }
   return params;
 }
@@ -217,17 +228,4 @@ export function changeLines({ action, before, after }: Pick<AuditEntry, 'action'
     .map((field) => ({ field, from: valueText(field, was[field]), to: valueText(field, now[field]) }))
     .filter((change) => change.from !== change.to)
     .map((change) => `${Object.hasOwn(fieldLabel, change.field) ? fieldLabel[change.field] : change.field}: ${change.from} → ${change.to}`);
-}
-
-/** The search box (plan 12 decision 7): the rows already loaded whose summary, actor, reason or type matches. */
-export function searchEntries(entries: readonly AuditEntry[], search: string): AuditEntry[] {
-  const text = search.trim().toLowerCase();
-  if (text === '') {
-    return [...entries];
-  }
-  return entries.filter((entry) =>
-    [entry.summary, entry.actorName, entry.reason, actionText(entry.action)].some((value) =>
-      value?.toLowerCase().includes(text),
-    ),
-  );
 }

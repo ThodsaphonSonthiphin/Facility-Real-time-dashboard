@@ -111,7 +111,7 @@ npm --prefix frontend test
 - `POST /api/admin/cover-assignments` มอบหมายแม่บ้านทำแทน Area (`areaId`) หรือหัวหน้าตรวจแทนตึก (`buildingId`, กะไหนก็ได้ยกเว้นตึกและกะของตัวเอง) ใส่ `blockedScanId` เพื่อมอบหมายจากการสแกนที่ถูกบล็อก (ADR facility-0041, 0048)
 - `GET /api/admin/cover-assignments/candidates?areaId=&shiftDate=&shift=` รายชื่อคนที่ทำแทนได้ของ Area และกะนั้น
 - `GET /api/admin/audit-log/actors` รายชื่อผู้ทำสำหรับตัวกรอง
-- `GET /api/admin/audit-log` ประวัติ Admin อ่านอย่างเดียว กรองได้ด้วย `from`, `to` (yyyy-MM-dd), `actorId`, `category` (Attendance, Cover, AlertReview, Setup, QrToken, Account, Export), `beforeId` และ `limit` (1–500 ค่าเริ่ม 100) (ADR facility-0057)
+- `GET /api/admin/audit-log` ประวัติ Admin อ่านอย่างเดียว กรองได้ด้วย `from`, `to` (yyyy-MM-dd), `actorId`, `category` (Attendance, Cover, AlertReview, Setup, QrToken, Account, Export), `q` (คำค้นไม่เกิน 100 ตัวอักษร ค้นในสรุป ชื่อผู้ทำ และเหตุผลของทุกแถวในช่วงวันที่), `beforeId` และ `limit` (1–500 ค่าเริ่ม 100) (ADR facility-0057)
 
 จัดการบัญชีและส่งออก Excel ใน Swagger (login เป็น `admin`, ADR facility-0020, 0053, 0054):
 

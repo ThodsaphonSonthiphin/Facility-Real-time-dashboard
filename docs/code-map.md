@@ -613,8 +613,8 @@ graph LR
 
 | Method | Route | Handler | Why |
 |---|---|---|---|
-| GET | `/api/admin/audit-log` | `AdminAuditLogEndpoints.cs:20` → `ListAsync:28` | Every admin mutation is attributable. Read-only, because rewriting it would defeat the point. Max 92 days, 500 rows. |
-| GET | `/api/admin/audit-log/actors` | `AdminAuditLogEndpoints.cs:21` | Actor filter options. |
+| GET | `/api/admin/audit-log` | `AdminAuditLogEndpoints.cs:22` → `ListAsync:30` | Every admin mutation is attributable. Read-only, because rewriting it would defeat the point. Max 92 days, 500 rows. `q` searches summary, actor name and reason over every row in the range (LIKE, `!` escape), not only the rows loaded. |
+| GET | `/api/admin/audit-log/actors` | `AdminAuditLogEndpoints.cs:23` | Actor filter options. |
 | POST | `/api/admin/export` | `AdminExportEndpoints.cs:24` → `ExportAsync:28` | **POST not GET** precisely because downloading personnel data is itself an audited action. The file omits coordinates, phones, QR tokens and passwords. |
 | GET | `/api/admin/inspection-summary` | `AdminInspectionSummaryEndpoints.cs:26` → `GetAsync:30` | How much of the beat was actually checked — supervisor coverage evidence. |
 

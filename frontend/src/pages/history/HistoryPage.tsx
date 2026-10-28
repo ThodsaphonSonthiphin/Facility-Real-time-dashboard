@@ -9,13 +9,13 @@ import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { thaiToday } from '../../shared/utils/thaiTime';
 import { HistoryControls } from './HistoryControls';
 import { useGetAuditActorsQuery, useGetAuditLogInfiniteQuery, type HistoryArgs } from './historyApi';
-import { HISTORY_MAX_DAYS, readHistoryArgs, searchEntries, toHistoryParams } from './historyRules';
+import { HISTORY_MAX_DAYS, readHistoryArgs, toHistoryParams } from './historyRules';
 import { HistoryTable } from './HistoryTable';
 
 /**
  * facility-0057 rule 2, wireframe D9: every Admin change, newest first, read-only; opening it is not logged. The
- * range, actor and type are in the address; with no range the server's last 7 dates apply. Older pages come on
- * request (plan 12 decision 7).
+ * range, actor, type and search are in the address; with no range the server's last 7 dates apply. The server
+ * searches every row in the range; older pages come on request (plan 12 decision 7).
  */
 export function HistoryPage() {
   const [params, setParams] = useSearchParams();
@@ -25,7 +25,7 @@ export function HistoryPage() {
   const asked = args.from && args.to ? { from: args.from, to: args.to } : undefined;
   const [texts, setTexts] = useState(() => rangeTexts(asked ?? lastSevenDays(thaiToday())));
   const [problem, setProblem] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(args.q ?? '');
   // the fields follow the address when it changes under the open page (menu link, Back)
   const rangeKey = asked ? `${asked.from}_${asked.to}` : '';
   const [seenRange, setSeenRange] = useState(rangeKey);
@@ -34,8 +34,12 @@ export function HistoryPage() {
     setTexts(rangeTexts(asked ?? lastSevenDays(thaiToday())));
     setProblem(null);
   }
+  const [seenSearch, setSeenSearch] = useState(args.q);
+  if (seenSearch !== args.q) {
+    setSeenSearch(args.q);
+    setSearch(args.q ?? '');
+  }
   const entries = log.currentData?.pages.flatMap((page) => page.entries) ?? [];
-  const shown = searchEntries(entries, search);
   const go = (next: HistoryArgs) => setParams(toHistoryParams(next));
 
   const show = () => {
@@ -45,12 +49,13 @@ export function HistoryPage() {
       return;
     }
     setProblem(null);
-    if (asked && `${asked.from}_${asked.to}` === `${range.from}_${range.to}`) {
+    const next = toHistoryParams({ ...args, ...range, q: search });
+    if (next.toString() === params.toString()) {
       // the same address would send no request and add a history entry
       void log.refetch();
       return;
     }
-    go({ ...args, ...range });
+    setParams(next);
   };
 
   return (
@@ -75,16 +80,12 @@ export function HistoryPage() {
       {log.currentData && (
         <>
           <HistoryTable
-            entries={shown}
-            emptyText={entries.length > 0 ? 'ไม่พบรายการที่ตรงกับที่ค้นหา' : 'ไม่มีประวัติในช่วงนี้'}
+            entries={entries}
+            emptyText={args.q ? 'ไม่พบรายการที่ตรงกับที่ค้นหาในช่วงนี้' : 'ไม่มีประวัติในช่วงนี้'}
           />
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-muted">
-              {search.trim() === ''
-                ? `แสดง ${entries.length} รายการ`
-                : `พบ ${shown.length} จาก ${entries.length} รายการที่แสดงอยู่${
-                    log.hasNextPage ? ' · กด "โหลดรายการเก่ากว่านี้" เพื่อค้นรายการที่เก่ากว่า' : ''
-                  }`}
+              {args.q ? `แสดง ${entries.length} รายการที่ตรงกับ "${args.q}"` : `แสดง ${entries.length} รายการ`}
             </span>
             {log.hasNextPage && (
               <Button size="desk" disabled={log.isFetchingNextPage} onClick={() => void log.fetchNextPage()}>

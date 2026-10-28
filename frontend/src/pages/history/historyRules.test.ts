@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { firstPage, olderPage } from '../../test/reportFixtures';
-import { actionText, changeLines, readHistoryArgs, searchEntries, toHistoryParams } from './historyRules';
+import { actionText, changeLines, readHistoryArgs, toHistoryParams } from './historyRules';
 
 describe('historyRules (D9)', () => {
   it('actionText names each action in Thai, and shows an unknown one as stored', () => {
@@ -20,6 +20,9 @@ describe('historyRules (D9)', () => {
       category: 'Cover',
     });
     expect(readHistoryArgs(new URLSearchParams('from=2026-10-01&actor=x&category=Nope'))).toEqual({});
+    expect(readHistoryArgs(new URLSearchParams('q=%20AR01%20'))).toEqual({ q: 'AR01' });
+    expect(readHistoryArgs(new URLSearchParams('q=%20%20'))).toEqual({});
+    expect(readHistoryArgs(new URLSearchParams(`q=${'a'.repeat(101)}`))).toEqual({});
   });
 
   it('toHistoryParams writes what readHistoryArgs reads, leaving out what is not chosen', () => {
@@ -27,6 +30,8 @@ describe('historyRules (D9)', () => {
       'from=2026-10-01&to=2026-10-07&actor=8&category=Cover',
     );
     expect(toHistoryParams({ category: 'Export' }).toString()).toBe('category=Export');
+    expect(toHistoryParams({ category: 'Export', q: ' AR01 ' }).toString()).toBe('category=Export&q=AR01');
+    expect(toHistoryParams({ q: '  ' }).toString()).toBe('');
     expect(toHistoryParams({}).toString()).toBe('');
   });
 
@@ -94,15 +99,6 @@ describe('historyRules (D9)', () => {
     expect(changeLines({ action: 'ACCOUNT_PASSWORD' })).toEqual(['รหัสผ่านเดิม → รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)']);
     expect(changeLines({ action: 'SOMETHING_NEW' })).toEqual([]);
     expect(changeLines({ action: 'SOMETHING_NEW', before: { Extra: 1 }, after: { Extra: 2 } })).toEqual(['Extra: 1 → 2']);
-  });
-
-  it('searchEntries keeps the rows whose summary, actor, reason or type matches, in any letter case', () => {
-    const entries = firstPage.entries;
-    expect(searchEntries(entries, '  ').map((entry) => entry.id)).toEqual([50, 49, 48, 47, 46]);
-    expect(searchEntries(entries, 'แม่บ้านที่อื่น').map((entry) => entry.id)).toEqual([49]);
-    expect(searchEntries(entries, 'ผู้ดูแลคนที่สอง').map((entry) => entry.id)).toEqual([49]);
-    expect(searchEntries(entries, 'gps').map((entry) => entry.id)).toEqual([48]);
-    expect(searchEntries(entries, 'แก้เบอร์').map((entry) => entry.id)).toEqual([47]);
   });
 
   it('changeLines: typed text that looks like a time or date shows as stored, and never throws', () => {

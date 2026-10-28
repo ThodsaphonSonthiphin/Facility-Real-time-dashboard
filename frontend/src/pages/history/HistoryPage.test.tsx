@@ -204,27 +204,34 @@ describe('HistoryPage (D9, facility-0057)', () => {
     expect(changes[3]).toHaveTextContent('เบอร์เดิม → เบอร์ใหม่ (ไม่แสดงเบอร์)');
   });
 
-  it('search narrows the rows already loaded, and says how many of the shown rows match', async () => {
-    serve();
-    const { user } = await renderApp('/admin/history');
+  it('search asks the server for every row in the range with แสดง or Enter, and keeps the words in the address', async () => {
+    const server = serve();
+    const { user, router } = await renderApp('/admin/history?category=Cover');
     await screen.findByText('แสดง 5 รายการ');
     const search = screen.getByRole('searchbox', { name: 'ค้นหา' });
 
     await user.type(search, 'แม่บ้านที่อื่น');
-    expect(mainCells().map((cells) => cells[2])).toEqual(['มอบหมายทำแทน']);
-    expect(
-      screen.getByText('พบ 1 จาก 5 รายการที่แสดงอยู่ · กด "โหลดรายการเก่ากว่านี้" เพื่อค้นรายการที่เก่ากว่า'),
-    ).toBeInTheDocument();
+    expect(logGets(server)).toHaveLength(1); // typing alone asks nothing
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(query(logGets(server).at(-1)!.search)).toMatchObject({ category: 'Cover', q: 'แม่บ้านที่อื่น' }));
+    expect(query(router.state.location.search)).toMatchObject({ category: 'Cover', q: 'แม่บ้านที่อื่น' });
+    expect(await screen.findByText('แสดง 5 รายการที่ตรงกับ "แม่บ้านที่อื่น"')).toBeInTheDocument();
 
     await user.clear(search);
-    await user.type(search, 'ไม่มีคำนี้');
-    expect(screen.getByText('ไม่พบรายการที่ตรงกับที่ค้นหา')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'แสดง' }));
+    await waitFor(() => expect(query(router.state.location.search).q).toBeUndefined());
+    expect(query(logGets(server).at(-1)!.search).q).toBeUndefined();
+  });
 
-    await user.clear(search);
-    await user.click(screen.getByRole('button', { name: 'โหลดรายการเก่ากว่านี้' }));
-    await screen.findByText('แสดง 6 รายการ');
-    await user.type(search, 'ออก QR');
-    expect(screen.getByText('พบ 1 จาก 6 รายการที่แสดงอยู่')).toBeInTheDocument();
-    expect(screen.queryByText(/ค้นหาเฉพาะรายการที่โหลดแล้ว|รายการที่โหลดแล้ว/)).not.toBeInTheDocument();
+  it('a search that finds nothing says so, and the search box follows the address', async () => {
+    serve({ 'GET /api/admin/audit-log': () => ({ status: 200, body: { entries: [] } }) });
+    const { router } = await renderApp('/admin/history?q=ไม่มีคำนี้');
+
+    expect(await screen.findByText('ไม่พบรายการที่ตรงกับที่ค้นหาในช่วงนี้')).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'ค้นหา' })).toHaveValue('ไม่มีคำนี้');
+
+    await router.navigate('/admin/history');
+    await waitFor(() => expect(screen.getByRole('searchbox', { name: 'ค้นหา' })).toHaveValue(''));
   });
 });

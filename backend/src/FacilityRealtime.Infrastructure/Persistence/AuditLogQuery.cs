@@ -3,8 +3,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FacilityRealtime.Infrastructure.Persistence;
 
-/// <summary>OccurredAt in [FromUtc, ToUtc); Actions null = every action; BeforeId gives the next, older page.</summary>
-public sealed record AuditLogFilter(DateTime FromUtc, DateTime ToUtc, int? ActorId, IReadOnlyCollection<string>? Actions, long? BeforeId, int Limit);
+/// <summary>
+/// OccurredAt in [FromUtc, ToUtc); Actions null = every action; BeforeId gives the next, older page; Search null = no
+/// search, else the rows whose summary, actor or reason holds it.
+/// </summary>
+public sealed record AuditLogFilter(
+    DateTime FromUtc, DateTime ToUtc, int? ActorId, IReadOnlyCollection<string>? Actions, long? BeforeId, int Limit, string? Search = null);
 
 public sealed record AuditLogRow(AuditEntry Entry, string ActorName);
 
@@ -28,6 +32,19 @@ public static class AuditLogQuery
         {
             var actions = filter.Actions.ToList();
             query = query.Where(a => actions.Contains(a.Action));
+        }
+
+        if (filter.Search is string search)
+        {
+            // Plan 12 decision 7: every row in the range, not only the rows loaded. % and _ are plain text; the escape is
+            // ! because MySQL reads a backslash inside a string literal as its own escape.
+            var pattern = "%" + search.Replace("!", "!!").Replace("%", "!%").Replace("_", "!_") + "%";
+            var actors = db.Users.Where(u => EF.Functions.Like(u.DisplayName, pattern, "!")).Select(u => u.Id);
+            var systemMatches = SystemActorName.Contains(search, StringComparison.OrdinalIgnoreCase);
+            query = query.Where(a =>
+                EF.Functions.Like(a.Summary, pattern, "!")
+                || (a.Reason != null && EF.Functions.Like(a.Reason, pattern, "!"))
+                || (a.ActorId == null ? systemMatches : actors.Contains(a.ActorId.Value)));
         }
 
         if (filter.BeforeId is long beforeId)
