@@ -113,7 +113,7 @@ Root: `frontend/src/` — 114 `.tsx` files (25 of them tests), of which 64 are p
 | | `types.ts` | Every server DTO shared by pages. 47 imports. Note: the server omits null fields, so test with truthiness. |
 | | `buildingNames.ts` | `buildingOptionText` / `buildingText` / `useBuildingNames`: the Admin pages' `code · current name` for a building (facility-0091). Phones keep the bare code. |
 | | `adminSetupApi.ts`, `attendanceBoardApi.ts`, `alertListApi.ts`, `myWorkApi.ts` | Endpoints shared by more than one page. |
-| | `scanHub.ts` | `followScanHub()` — one SignalR connection per RTK Query cache entry, retry ladder, `onMissed` refetch on every reconnect. |
+| | `scanHub.ts` | `followScanHub()` — one SignalR connection per RTK Query cache entry, retry ladder, `onMissed` refetch on every reconnect. Loads `@microsoft/signalr` by dynamic import, so it is not in the main JS. |
 | | `scanAnswers.ts` | Non-hook helpers: `blockedScanOf` (403 + areaCode = a blocked scan), `isNotSent` (why the send failed). |
 | `shared/auth/` | `session.ts` | Single-flight `refreshSession`, `startSession`, `getValidAccessToken`, `abandonSession`. Raw `fetch` to `/api/auth/refresh` with a 15 s timeout. |
 | | `endSession.ts` | Logout: forget locally → await in-flight refresh → `POST /api/auth/logout`. |
@@ -236,7 +236,8 @@ Solution `backend/FacilityRealtime.slnx` — four projects, no controllers.
 | `Auth/` | `AuthSetup.cs` (JWT bearer, `AdminOnly` policy, SignalR query-string token), `JwtAccessTokenIssuer.cs`, `JwtKeys.cs`, `AuthClaims.cs`, `CurrentUser.cs`. |
 | `Hubs/ScanHub.cs` | Server → client only, **zero hub methods**. Admin connections join the `"admins"` group on connect. |
 | `DTOs/` (14 files) | One request/response record set per feature. |
-| `wwwroot/` | The built frontend, copied in by `npm run build:api`. |
+| `PrecompressedFiles.cs` | Sends a frontend file's build-time `.br`/`.gz` copy when the browser accepts it (facility-0067 amendment). |
+| `wwwroot/` | The built frontend, copied in by `npm run build:api`; `frontend/precompress.ts` writes a `.br` and a `.gz` beside each text file. |
 
 ### `FacilityRealtime.Application` — read this first, it is the rules
 
@@ -539,7 +540,7 @@ graph LR
 | POST | `/api/auth/refresh` | `AuthEndpoints.cs:30` → `RefreshAsync:85` | Access tokens last 5 minutes (privacy on a shared phone), so the browser needs a way to stay logged in. Re-reading the user each refresh is what makes an admin deactivation land within 5 minutes. |
 | POST | `/api/auth/logout` | `AuthEndpoints.cs:31` → `LogoutAsync:133` | Kills the session server-side; otherwise a left-behind cookie keeps minting tokens for 30 days. |
 | GET | `/api/me` | `MeEndpoints.cs:12` | Fresh self state. **No frontend caller found** — see [Part 12](#part-12--things-that-are-unclear). |
-| GET | `/api/health` | `Program.cs:97` | Liveness for curl and tunnel probes. No frontend caller. |
+| GET | `/api/health` | `Program.cs:141` | Liveness for curl and tunnel probes. No frontend caller. |
 
 ### Cleaner
 
@@ -622,8 +623,8 @@ graph LR
 
 | Route | Where | Why |
 |---|---|---|
-| `/hubs/scan` | `Program.cs:94` | The SignalR hub. |
-| any non-`/api`, non-`/hubs`, extension-less path | `Program.cs:119` `MapFallbackToFile` | Serves `index.html` so a printed QR link opens the SPA instead of a 404. |
+| `/hubs/scan` | `Program.cs:138` | The SignalR hub. |
+| any non-`/api`, non-`/hubs`, extension-less path | `Program.cs:164` `MapFallbackToFile` | Serves `index.html` so a printed QR link opens the SPA instead of a 404. |
 
 ### The events, all of them
 

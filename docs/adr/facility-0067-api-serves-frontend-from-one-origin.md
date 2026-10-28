@@ -29,3 +29,13 @@ flowchart TD
 - การเปลี่ยนอยู่ที่การตั้งค่าตอนเริ่มของ API project (เสิร์ฟไฟล์, ลบ `AllowAll`) ไม่เปลี่ยน endpoint, DTO หรือข้อความของ hub จึงไม่ขัดกับ out-of-scope ของ milestone `frontend-restructure`
 - ถ้าวันหนึ่งต้องแยก frontend ไปอีก origin ต้องตัดสินใหม่เรื่อง cookie `SameSite=None`, CORS ที่จำกัด origin และ hub ข้าม origin
 - การ build frontend เข้า `wwwroot` ต้องอยู่ในขั้นตอน deploy ซึ่งยังไม่มี CI (facility-0065)
+
+## Amendment (2026-10-28): ไฟล์ที่บีบไว้ตั้งแต่ตอน build และ SignalR แยกไฟล์
+
+วัดด้วย Lighthouse 13.6.0 (จำลองมือถือ, 4G ช้า, CPU ช้าลง 4 เท่า, cache ว่าง, มัธยฐาน 3 รอบ) บน production build: การบีบอัดสด (`UseResponseCompression`) ใช้ระดับเร็วที่สุด จึงส่ง JS หลัก 212 KB ขณะที่ brotli ระดับ 11 ได้ 138 KB และ `favicon.svg` ไม่ถูกบีบเลย (`image/svg+xml` ไม่อยู่ในชนิดตั้งต้น)
+
+1. ตอน build, plugin `frontend/precompress.ts` เขียน `ชื่อไฟล์.br` (brotli 11) และ `ชื่อไฟล์.gz` (gzip 9) ข้างไฟล์ข้อความทุกไฟล์ (เก็บเฉพาะเมื่อเล็กกว่าไฟล์จริง)
+2. API (`PrecompressedFiles.cs`) ส่งไฟล์ที่บีบไว้แล้วตามที่ browser รับ (br ก่อน gzip) ด้วย `Content-Type` ของไฟล์จริง และ `Vary: Accept-Encoding` การบีบสดจะข้ามคำตอบที่มี `Content-Encoding` อยู่แล้ว ไฟล์ที่ไม่มีไฟล์บีบไว้ และ `index.html` ที่ส่งแทน path ของหน้า ยังใช้การบีบสดแบบเดิม ส่วน `/api` และ `/hubs` ยังไม่บีบเหมือนเดิม (BREACH)
+3. `@microsoft/signalr` ถูกโหลดด้วย dynamic import ใน `followScanHub` เริ่มโหลดพร้อมกับตอนรอคำตอบแรก หน้าก่อน login จึงไม่โหลดเลย ถ้าไฟล์โหลดไม่ได้ สถานะจะเป็น `reconnecting` และหน้ายังทำงานต่อด้วยการถามซ้ำตามเดิม
+
+ผล: ข้อมูลที่โหลดตอนเปิดหน้าก่อน login ลดจาก 226 เหลือ 135 KB, D1 ลดจาก 235 เหลือ 156 KB, LCP ของ D1 ลดจาก 2.54 เหลือ 2.34 วินาที และของ My Work ลดจาก 2.49 เหลือ 2.34 วินาที ส่วน CLS ไม่เปลี่ยน

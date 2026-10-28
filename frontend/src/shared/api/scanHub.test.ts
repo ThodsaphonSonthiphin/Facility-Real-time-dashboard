@@ -253,4 +253,14 @@ describe('followScanHub (#26 hub-cache-bridge, facility-0064)', () => {
 
     expect(hub.connections).toHaveLength(0);
   });
+
+  it('an entry removed while the SignalR file is on its way never connects and leaves no status', async () => {
+    const f = follow();
+    f.loaded();
+    f.remove();
+    await f.done;
+
+    expect(hub.connections).toHaveLength(0);
+    expect(f.connections()).toEqual({});
+  });
 });

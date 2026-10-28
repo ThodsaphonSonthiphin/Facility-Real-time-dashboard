@@ -1,4 +1,3 @@
-import { HubConnectionBuilder } from '@microsoft/signalr';
 import type { Dispatch } from '@reduxjs/toolkit';
 import { hubFollowEnded, hubStatusChanged, type HubStatus } from '../../store/slices/hubSlice';
 import type { AttendanceChanged, PointCard } from './types';
@@ -41,10 +40,31 @@ export async function followScanHub({
   onAttendance,
   onMissed,
 }: ScanHubFollow): Promise<void> {
+  // The SignalR client is a third of the main JS and no page needs it before its first answer, so it comes in its own
+  // file, fetched while that answer is on its way (2026-10-28, measured: a phone's first screen no longer waits for it)
+  const signalR = import('@microsoft/signalr');
+  signalR.catch(() => {}); // handled below; an entry that goes first must not leave an unhandled rejection
   try {
     await cacheDataLoaded;
   } catch {
     return; // the entry went before its first answer
+  }
+  let entryGone = false;
+  void cacheEntryRemoved.then(() => {
+    entryGone = true;
+  });
+  let HubConnectionBuilder: typeof import('@microsoft/signalr').HubConnectionBuilder;
+  try {
+    ({ HubConnectionBuilder } = await signalR);
+  } catch {
+    // The file did not arrive (a new build replaced it, or the link dropped): the page keeps its polling
+    dispatch(hubStatusChanged({ key, status: 'reconnecting' }));
+    await cacheEntryRemoved;
+    dispatch(hubFollowEnded(key));
+    return;
+  }
+  if (entryGone) {
+    return; // the entry went while the file was on its way
   }
   const connection = new HubConnectionBuilder()
     .withUrl('/hubs/scan', { accessTokenFactory: accessToken })
