@@ -32,6 +32,36 @@ public static class ResetAdminCommand
         return false;
     }
 
+    /// <summary>
+    /// facility-0093: the whole command-line path. Usage first, then the database is named and "yes" is asked, and only
+    /// then is the database opened (and migrated) for the rest of the command.
+    /// </summary>
+    /// <param name="args">What follows "reset-admin" on the command line.</param>
+    /// <param name="connectionString">The database the command would change.</param>
+    /// <param name="openMigrated">Opens the database with the connection string and migrates it.</param>
+    public static async Task<int> RunFromCommandLineAsync(
+        string[] args,
+        string connectionString,
+        Func<string, Task<AppDbContext>> openMigrated,
+        IPasswordHasher hasher,
+        TimeProvider clock,
+        IAdminConsole console)
+    {
+        if (args.Length != 1)
+        {
+            console.WriteLine(Usage);
+            return 2;
+        }
+
+        if (!ConfirmDatabase(connectionString, console))
+        {
+            return 1;
+        }
+
+        await using var db = await openMigrated(connectionString);
+        return await RunAsync(args, db, hasher, clock, console);
+    }
+
     /// <param name="args">What follows "reset-admin" on the command line.</param>
     public static async Task<int> RunAsync(string[] args, AppDbContext db, IPasswordHasher hasher, TimeProvider clock, IAdminConsole console)
     {

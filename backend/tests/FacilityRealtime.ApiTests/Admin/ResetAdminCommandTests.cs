@@ -2,6 +2,7 @@ using System.Net;
 using FacilityRealtime.Api.Commands;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.Application.Auth;
+using FacilityRealtime.Infrastructure.Auth;
 using FacilityRealtime.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -197,6 +198,81 @@ public class ResetAdminCommandTests
         Assert.Single(console.ShownPrompts);
         Assert.Empty(console.HiddenPrompts);
         Assert.DoesNotContain(console.Written, line => line.Contains("s3cret-pass"));
+        Assert.DoesNotContain(console.Written, line => line.Contains("Uid") || line.Contains("=app"));
+    }
+
+    /// <summary>Records each time the database is opened, then stops, so no real database is needed.</summary>
+    private sealed class OpenedException : Exception;
+
+    private static Task<int> RunFromCommandLineAsync(FakeConsole console, List<string> opened, string[] args) =>
+        ResetAdminCommand.RunFromCommandLineAsync(
+            args,
+            PilotDatabase,
+            connection =>
+            {
+                opened.Add(connection);
+                throw new OpenedException();
+            },
+            new Pbkdf2PasswordHasher(),
+            TimeProvider.System,
+            console);
+
+    [Fact]
+    public async Task Answering_no_stops_before_the_database_is_opened()
+    {
+        var console = new FakeConsole("no");
+        var opened = new List<string>();
+
+        var exitCode = await RunFromCommandLineAsync(console, opened, ["admin"]);
+
+        Assert.Equal(1, exitCode);
+        Assert.Empty(opened);
+        Assert.Equal("ไม่ได้พิมพ์ yes ไม่ได้เปลี่ยนอะไร", console.Written[^1]);
+    }
+
+    [Fact]
+    public async Task End_of_input_at_the_confirmation_stops_before_the_database_is_opened()
+    {
+        var console = new FakeConsole();
+        var opened = new List<string>();
+
+        var exitCode = await RunFromCommandLineAsync(console, opened, ["admin"]);
+
+        Assert.Equal(1, exitCode);
+        Assert.Empty(opened);
+    }
+
+    public static TheoryData<string[]> NotOneUsername => new()
+    {
+        Array.Empty<string>(),
+        new[] { "admin", "extra" },
+    };
+
+    [Theory]
+    [MemberData(nameof(NotOneUsername))]
+    public async Task Wrong_usage_is_refused_before_anything_is_asked_or_opened(string[] args)
+    {
+        var console = new FakeConsole("yes");
+        var opened = new List<string>();
+
+        var exitCode = await RunFromCommandLineAsync(console, opened, args);
+
+        Assert.Equal(2, exitCode);
+        Assert.Empty(console.ShownPrompts);
+        Assert.Empty(console.HiddenPrompts);
+        Assert.Empty(opened);
+        Assert.Contains(console.Written, line => line == ResetAdminCommand.Usage);
+    }
+
+    [Fact]
+    public async Task Answering_yes_opens_the_named_database_once()
+    {
+        var console = new FakeConsole("yes");
+        var opened = new List<string>();
+
+        await Assert.ThrowsAsync<OpenedException>(() => RunFromCommandLineAsync(console, opened, ["admin"]));
+
+        Assert.Equal(new[] { PilotDatabase }, opened);
     }
 
     [Theory]
