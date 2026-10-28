@@ -32,6 +32,28 @@ async function settled(server: ReturnType<typeof serve>, store: AppStore) {
 const tileNames = (region: HTMLElement) => within(region).getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
 
 describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
+  it('waits for the building names too, then shows the filters, the help and the cards together (layout shift)', async () => {
+    let answerBuildings: () => void = () => {};
+    const server = serve(boardPoints, {
+      'GET /api/admin/buildings': () =>
+        new Promise((resolve) => {
+          answerBuildings = () => resolve({ status: 200, body: buildings });
+        }),
+    });
+    await renderApp('/dashboard');
+
+    await waitFor(() => expect(screen.getByText('กำลังโหลดจุด...')).toBeInTheDocument());
+    await waitFor(() => expect(pointGets(server)).toHaveLength(1)); // the points are in; only the names are out
+    await act(async () => {}); // let that answer land
+    expect(screen.queryByText('วิธีอ่านการ์ด')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'AR01 Area ทดลอง' })).not.toBeInTheDocument();
+
+    act(() => answerBuildings());
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
+    expect(screen.getByText('วิธีอ่านการ์ด')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'ตึก' })).toBeInTheDocument();
+  });
+
   it('shows every point by Area, with its status, round and what happened', async () => {
     serve();
     await renderApp('/dashboard');
@@ -151,8 +173,10 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
   it('the badge shows only while pushes do not arrive, and a reconnect asks the server again (facility-0064)', async () => {
     const server = serve();
     const { store } = await renderApp('/dashboard');
-    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement());
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
+    expect(screen.getByRole('status')).toBeEmptyDOMElement(); // not while the first connection is made (owner, 2026-10-28)
     await settled(server, store);
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
 
     act(() => hub.latest().reconnecting());
     expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)');
@@ -160,6 +184,14 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
 
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
     await waitFor(() => expect(pointGets(server)).toHaveLength(3));
+  });
+
+  it('a first connection that fails shows the badge (facility-0064)', async () => {
+    hub.failNextStarts = 1;
+    serve();
+    await renderApp('/dashboard');
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)'));
   });
 
   it("shows the server's message when the list cannot be read", async () => {

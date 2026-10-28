@@ -202,7 +202,7 @@ graph TD
     Local["Everything else<br/>useState drafts inside the page"]
     Auth -->|"Bearer header"| Base["shared/api/baseApi.ts"]
     Base -->|"401 → refresh → retry"| Session["shared/auth/session.ts"]
-    Hub -->|"LiveBadge green or orange"| Badge["shared/components/LiveBadge.tsx"]
+    Hub -->|"LiveBadge: orange only when down"| Badge["shared/components/LiveBadge.tsx"]
     Reset["listener middleware<br/>on sessionExpired or signedOut"] -->|"resetApiState()"| Api
 ```
 
@@ -497,7 +497,7 @@ graph LR
     C --> E["shared/api/scanHub.ts<br/>onCacheEntryAdded"]
     D --> E
     E --> F["updateCachedData<br/>replacePoint or patchPoint"]
-    F --> G["PointTile re-renders<br/>LiveBadge stays green"]
+    F --> G["PointTile re-renders<br/>LiveBadge stays empty"]
     H["SignalR push fails"] --> I["logged and swallowed<br/>30 s livePoll + onMissed refetch recovers"]
 ```
 
@@ -506,7 +506,7 @@ graph LR
 - **Auth on the socket:** the access token goes in the query string, accepted **only** for `/hubs` paths (facility-0011) — browsers cannot set headers on a WebSocket.
 - **Three subscribers:** `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts` — one connection per cache entry.
 - **The safety net:** `livePoll` = 30 s poll + refetch on focus. Pushes are best effort; a failure is logged and swallowed because the record is already committed.
-- **Badge:** `shared/components/LiveBadge.tsx` reads `hubSlice` — nothing while live, orange `กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)` otherwise (owner, 2026-10-28).
+- **Badge:** `shared/components/LiveBadge.tsx` reads `hubSlice` — orange `กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)` only while `reconnecting` (down, or a first start failed); nothing while live or during the first connect (owner, 2026-10-28).
 
 ### Scan failure table
 

@@ -41,13 +41,16 @@ export function MyWorkPage() {
       {isLoading && <p className="text-muted">กำลังโหลดงาน...</p>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
-      <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
-        <span className="text-md text-muted">{liveLine[hubStatus]}</span>
-        <Button className="w-full" disabled={isFetching} onClick={() => void refetch()}>
-          <RefreshCw aria-hidden="true" className="size-5" />
-          {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
-        </Button>
-      </footer>
+      {/* Not before the first answer: the list then pushed it down the screen (layout shift, measured 2026-10-28) */}
+      {!isLoading && (
+        <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
+          <span className="text-md text-muted">{liveLine[hubStatus]}</span>
+          <Button className="w-full" disabled={isFetching} onClick={() => void refetch()}>
+            <RefreshCw aria-hidden="true" className="size-5" />
+            {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
+          </Button>
+        </footer>
+      )}
     </main>
   );
 }
