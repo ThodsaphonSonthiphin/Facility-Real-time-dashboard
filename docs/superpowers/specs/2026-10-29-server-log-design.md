@@ -38,7 +38,7 @@ So server errors are already logged (decision C needs no new code), SQL statemen
 
 ### 3.1 Security lines (new)
 
-One `Warning` line per event, from one logger category `FacilityRealtime.Security`, so `grep -A1 Security` finds them all.
+One `Warning` line per event, from one logger category `FacilityRealtime.Security`, so `grep -A1 FacilityRealtime.Security` finds them all.
 
 ```mermaid
 sequenceDiagram
@@ -90,7 +90,7 @@ No code change: the Kestrel line plus EF Core's errors already carry the excepti
   ```
 
   `MaxFileSec=1day` starts a new journal file each day, so deletion at 90 days happens day by day instead of waiting for a large file to age out.
-- Every read command becomes `sudo journalctl --namespace=facility -u facility` (§2.5, §3 and the "system does not start" part). Security lines only: add `| grep -A1 Security`.
+- Every read command becomes `sudo journalctl --namespace=facility -u facility` (§2.5, §3 and the "system does not start" part). Security lines only: add `| grep -A1 FacilityRealtime.Security`. If the log is empty because the service died before writing, `systemctl status facility` or `--namespace=+facility` shows systemd's own lines.
 - Needs systemd 245 or later.
 
 ### 3.6 Docs

@@ -13,7 +13,7 @@ The owner asked whether the project needs logging; grilled on 2026-10-29. Spec `
 - SQL statements are out of the log (`Microsoft.EntityFrameworkCore.Database.Command` = Warning). Server errors were already logged (Kestrel's unhandled-exception line) and are unchanged.
 - Deploy guide §2.5: `LogNamespace=facility`, `/etc/systemd/journald@facility.conf` (90 days), read with `sudo journalctl --namespace=facility -u facility`.
 - Measured on the built API (Production, throwaway `facility_logcheck_test`, dropped): 26 startup lines (13 log entries of two lines each; was 510 lines); six logins wrote 5 failed + 1 locked line; the 500 is still logged; 0 SQL lines; 0 typed values.
-- Tests: backend 343 unit + 651 API (5 MySQL-only skipped).
+- Tests: backend 343 unit + 652 API (5 MySQL-only skipped).
 - **On the first Linux server:** check the namespace and the 90 days (cannot be tested on the Mac: no systemd).
 - **Not decided, raise if needed:** IP address in security lines; a Windows server would reopen facility-0096, 0098, 0099.
 - **Owner to do:** say whether to push, open the PR and merge.

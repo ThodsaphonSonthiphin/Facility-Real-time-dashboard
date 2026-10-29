@@ -5,7 +5,7 @@ namespace FacilityRealtime.Api.Auth;
 
 /// <summary>
 /// facility-0095..0097: the Server Log's security lines, one Warning each, all in one category so
-/// `journalctl --namespace=facility -u facility | grep -A1 Security` finds them. An account is named by employee ID, or
+/// `journalctl --namespace=facility -u facility | grep -A1 FacilityRealtime.Security` finds them. An account is named by employee ID, or
 /// by username for an Admin. A login name that matches no account is never written (a phone typed into the wrong
 /// field would land in the journal), and neither is any phone, password, token or GPS value.
 /// </summary>

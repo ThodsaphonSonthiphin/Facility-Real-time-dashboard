@@ -48,6 +48,23 @@ public class SecurityLogTests
     }
 
     [Fact]
+    public async Task A_turned_off_account_with_a_wrong_phone_is_a_wrong_secret()
+    {
+        using var factory = new FacilityApiFactory();
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.EmployeeId == "1000001")).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+
+        // "account turned off" is written only once the secret matched, so it never tells a guesser more
+        await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", "0899999999");
+
+        Assert.Equal(new[] { "Login failed: employee 1000001, wrong secret" }, SecurityLines(factory));
+        NowhereInTheLog(factory, "0899999999");
+    }
+
+    [Fact]
     public async Task A_phone_typed_into_the_employee_id_field_is_never_written()
     {
         using var factory = new FacilityApiFactory();

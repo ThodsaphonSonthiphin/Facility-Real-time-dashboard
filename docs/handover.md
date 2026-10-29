@@ -120,7 +120,9 @@ sudo journalctl --namespace=facility -u facility -f
 
 log ต้องไม่มีข้อผิดพลาด ถ้าขึ้น `ConnectionStrings__DefaultConnection is not set.` ให้ตรวจไฟล์ค่า
 
-ดูเฉพาะเหตุการณ์ด้านความปลอดภัย: `sudo journalctl --namespace=facility -u facility | grep -A1 Security`
+ถ้า log ว่างเปล่า (ระบบล้มก่อนเขียนอะไร) ดูบรรทัดของ systemd เอง: `sudo systemctl status facility` หรือ `sudo journalctl --namespace=+facility -u facility` (`+` รวม journal หลักของ systemd เข้าไปด้วย)
+
+ดูเฉพาะเหตุการณ์ด้านความปลอดภัย: `sudo journalctl --namespace=facility -u facility | grep -A1 FacilityRealtime.Security`
 
 - `Login failed: employee 1000001, wrong secret` ใส่เบอร์ผิด (`account turned off` คือบัญชีถูกปิดใช้งาน)
 - `Login failed: unknown account (employee login)` รหัสพนักงานที่พิมพ์ไม่มีในระบบ ระบบไม่เขียนสิ่งที่พิมพ์ เพราะอาจเป็นเบอร์โทรที่พิมพ์สลับช่อง

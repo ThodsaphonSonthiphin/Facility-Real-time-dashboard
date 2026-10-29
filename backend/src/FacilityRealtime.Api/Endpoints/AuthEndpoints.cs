@@ -122,8 +122,9 @@ public static class AuthEndpoints
 
             case RefreshDecision.ReuseDetected:
                 // ADR facility-0015: two parties hold this token and the server cannot tell which is the owner
-                await db.RevokeSessionAsync(stored.SessionId, now);
+                // written first, so the event is on record even if ending the session fails
                 securityLog.RefreshTokenReused(stored.User);
+                await db.RevokeSessionAsync(stored.SessionId, now);
                 return Unauthorized(http, jwt.Value);
         }
 
