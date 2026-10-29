@@ -1,26 +1,30 @@
 import type { Alert, AlertKind } from '../../shared/api/alertListApi';
 import type { BoardRow } from '../../shared/api/attendanceBoardApi';
-import { buildingText, type BuildingNames } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
-import { addDays } from '../../shared/utils/dateRange';
 import { eventLabel, shiftShortLabel } from '../../shared/utils/labels';
-import { formatDate, formatShiftDate, formatTime, formatWeekday } from '../../shared/utils/thaiTime';
-import type { CoverAssignment, CoverCandidate } from './alertsApi';
+import { addDays } from '../../shared/utils/dateRange';
+import { formatDate, formatShiftDate, formatTime, thaiToday } from '../../shared/utils/thaiTime';
 
-/** Wireframe D3's tabs: "ยังไม่ได้คุย / คุยแล้ว / ทั้งหมด". */
-export type ReviewTab = 'open' | 'reviewed' | 'all';
+/** The design file's D3 tabs, one per kind of alert: a scan refused at a sign, a scan far from its sign, a missing time. */
+export type AlertTab = 'blocked' | 'far' | 'missing';
 
-/** Wireframe D3's type picker: the three GPS flags are one choice. */
-export type AlertGroup = 'all' | 'blocked' | 'far' | 'missing';
+export const alertTabs: readonly AlertTab[] = ['blocked', 'far', 'missing'];
 
-export const alertGroupLabel: Record<AlertGroup, string> = {
-  all: 'ทุกประเภท',
-  blocked: 'สแกนผิดพื้นที่ / ผิดตึก / นอกกะ',
-  far: 'ไกลจากป้าย',
-  missing: 'ไม่ได้ลงเวลา',
+export const alertTabLabel: Record<AlertTab, string> = {
+  blocked: 'สแกนผิดพื้นที่',
+  far: 'ไกลป้าย',
+  missing: 'ลืมลงเวลา',
 };
 
-const groupOf: Record<AlertKind, Exclude<AlertGroup, 'all'>> = {
+/** The line under the tabs: what the kind means and what the Admin does about it (the design file's words). */
+export const alertTabHint: Record<AlertTab, string> = {
+  blocked:
+    'สแกนป้ายที่ไม่ใช่ของตัวเอง ผิดตึก หรือนอกกะ ระบบไม่บันทึกงาน ถ้าพื้นที่ที่สแกนยังไม่มีคน ให้ทำแทนได้ในคลิกเดียว',
+  far: 'ลงเวลา ส่งงาน หรือตรวจงานตอนพิกัดอยู่นอกรัศมีป้าย ระบบบันทึกไว้แต่ติดธง คุยเพื่อดูว่าอยู่ที่จุดจริงหรือ GPS คลาด',
+  missing: 'ลงเวลาไม่ครบ ปิดเตือนด้วยมือไม่ได้ ต้องเติมเวลาที่หน้าการเข้างาน แล้วเตือนจะปิดเอง',
+};
+
+const tabOf: Record<AlertKind, AlertTab> = {
   BlockedScan: 'blocked',
   AttendanceGps: 'far',
   SubmissionGps: 'far',
@@ -28,35 +32,62 @@ const groupOf: Record<AlertKind, Exclude<AlertGroup, 'all'>> = {
   MissingAttendance: 'missing',
 };
 
-export function filterAlerts(alerts: readonly Alert[], tab: ReviewTab, group: AlertGroup): Alert[] {
+export function alertTabOf(alert: Pick<Alert, 'kind'>): AlertTab {
+  return tabOf[alert.kind];
+}
+
+/** The filter inside a tab: "ยังไม่ได้คุย / คุยแล้ว / ทั้งหมด". */
+export type ReviewTab = 'open' | 'reviewed' | 'all';
+
+/** The server sends yesterday and today (AlertQuery); the page shows one of the two. */
+export type AlertDay = 'yesterday' | 'today';
+
+/** Which of the two Thai calendar days the alert happened on; a missing time's moment is its shift's end. */
+export function alertDay(alert: Pick<Alert, 'at'>, today: string): AlertDay | null {
+  const date = thaiToday(new Date(alert.at));
+  if (date === today) {
+    return 'today';
+  }
+  return date === addDays(today, -1) ? 'yesterday' : null;
+}
+
+export function filterAlerts(
+  alerts: readonly Alert[],
+  { tab, review, day, today }: { tab: AlertTab; review: ReviewTab; day: AlertDay; today: string },
+): Alert[] {
   return alerts.filter(
     (alert) =>
-      (tab === 'all' || alert.reviewed === (tab === 'reviewed')) && (group === 'all' || groupOf[alert.kind] === group),
+      alertTabOf(alert) === tab &&
+      alertDay(alert, today) === day &&
+      (review === 'all' || alert.reviewed === (review === 'reviewed')),
   );
 }
 
-/** What happened. A Blocked Scan says why it was refused (blockReason), so a Supervisor's is never "สแกนผิดพื้นที่". */
+/** What happened, in the design file's words. A Blocked Scan says why it was refused (blockReason). */
 export function alertTitle(alert: Alert): string {
   switch (alert.kind) {
     case 'BlockedScan':
       if (alert.blockReason === 'OtherBuilding') {
-        return 'สแกนผิดตึก';
+        return 'สแกนผิดพื้นที่ (ผิดตึก)';
       }
-      return alert.blockReason === 'OutsideShift' ? 'สแกนนอกกะ' : 'สแกนผิดพื้นที่';
+      return alert.blockReason === 'OutsideShift' ? 'สแกนผิดพื้นที่ (นอกกะ)' : 'สแกนผิดพื้นที่';
     case 'AttendanceGps':
-      return 'ลงเวลาไกลจากป้าย';
+      return 'ลงเวลาไกลป้าย';
     case 'SubmissionGps':
-      return 'ส่งงานไกลจากป้าย';
+      return 'ส่งงานไกลป้าย';
     case 'InspectionGps':
-      return 'ตรวจงานไกลจากป้าย';
+      return 'ตรวจงานไกลป้าย';
     case 'MissingAttendance':
-      return `ไม่ได้ลงเวลา${alert.missingEvents.map((event) => eventLabel[event]).join(' และ')}`;
+      return 'ลืมลงเวลา';
   }
 }
 
-/** Who, with Supervisors marked as wireframe D3 does. */
-export function alertWho(alert: Alert): string {
-  return alert.person.role === 'Supervisor' ? `${alert.person.displayName} (หัวหน้า)` : alert.person.displayName;
+const roleLabel: Record<Alert['person']['role'], string> = { Cleaner: 'แม่บ้าน', Supervisor: 'หัวหน้า', Admin: 'แอดมิน' };
+
+/** The line under the person's name: their role, and a Cleaner's own Area. */
+export function alertRole(alert: Alert): string {
+  const { role, areaCode } = alert.person;
+  return role === 'Cleaner' && areaCode ? `${roleLabel[role]} · ${areaCode}` : roleLabel[role];
 }
 
 /** The sign, the place and the distance, as far as the server knows them. */
@@ -68,20 +99,27 @@ export function alertDetail(alert: Alert): string {
       : `ป้ายลงเวลา ${alert.signCode}`
     : null;
   if (alert.kind === 'BlockedScan') {
-    const own =
-      alert.person.role === 'Cleaner' && alert.person.areaCode
-        ? `พื้นที่ของ${alert.person.displayName}คือ ${alert.person.areaCode}`
-        : null;
-    return [sign ? `${sign} ของ ${place}` : place, own, 'ไม่ได้บันทึกงาน'].filter(Boolean).join(' · ');
+    // A cover is suggested only while the Area has nobody (facility-0041 rule 4)
+    const empty = alert.cover?.areaId != null ? `${alert.areaCode} ยังไม่มีคน` : null;
+    return [`สแกน${sign ? `${sign} ของ ${place}` : place}`, empty].filter(Boolean).join(' · ');
   }
   if (alert.kind === 'MissingAttendance') {
     const slot = slotOfShiftEnd(alert.at);
-    return `${shiftShortLabel[slot.shift]} ${formatShiftDate(slot.shiftDate)} · ${place}`;
+    const missing = `ไม่ได้ลงเวลา${alert.missingEvents.map((event) => eventLabel[event]).join(' และ')}`;
+    return `${missing} · ${shiftShortLabel[slot.shift]} ${formatShiftDate(slot.shiftDate)} · ${place}`;
   }
   const distance =
     alert.distanceM == null ? null : `ห่าง ${alert.distanceM} ม.${alert.radiusM == null ? '' : ` (รัศมี ${alert.radiusM} ม.)`}`;
   const accuracy = alert.accuracyM == null ? null : `ความแม่นยำ ±${alert.accuracyM} ม.`;
   return [sign, place, distance, accuracy].filter(Boolean).join(' · ');
+}
+
+/** The design file's "ผลของระบบ": a refused scan saved nothing; a far one was saved with a flag; a missing time waits. */
+export function alertResult(alert: Alert): { text: string; refused: boolean } {
+  if (alert.kind === 'BlockedScan') {
+    return { text: 'ไม่บันทึก', refused: true };
+  }
+  return { text: alert.kind === 'MissingAttendance' ? 'รอเติมเวลา' : 'บันทึก ติดธง', refused: false };
 }
 
 /**
@@ -111,68 +149,9 @@ export function fillLink(alert: Alert): string {
   return `/admin/attendance?${params.toString()}`;
 }
 
-/**
- * One choice of "ให้ใครทำแทน": who, their own Area, their Shift-In, and whether they already scanned this Area's signs.
- * For a shift not started nobody has checked in or scanned, so only who and their Area are shown.
- */
-export function candidateText(candidate: CoverCandidate, ahead = false): string {
-  if (ahead) {
-    return `${candidate.displayName} · ${candidate.areaCode}`;
-  }
-  return [
-    candidate.displayName,
-    candidate.areaCode,
-    candidate.shiftInAt ? `เข้างานแล้ว ${formatTime(candidate.shiftInAt)}` : 'ยังไม่ลงเวลา',
-    candidate.scannedThisAreaAt ? `สแกนป้ายพื้นที่นี้เมื่อ ${formatTime(candidate.scannedThisAreaAt)}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
+export { candidateText, coverNotice } from '../../shared/utils/coverText';
 
-/** What the page says once a cover is made: an Area for a Cleaner, a building for a Supervisor. */
-export function coverNotice(cover: CoverAssignment, names?: BuildingNames): string {
-  return cover.areaCode
-    ? `มอบหมาย ${cover.personName} ทำแทน ${cover.areaCode} แล้ว`
-    : `มอบหมาย ${cover.personName} ตรวจแทนตึก ${cover.buildingCode ? buildingText(cover.buildingCode, names) : ''} แล้ว`;
-}
-
-/** A shift the cover box shows (facility-0075). */
-export interface CoverSlot {
-  shiftDate: string;
-  shift: Shift;
-}
-
-/** facility-0075: covers are assigned up to 7 days ahead, so the night and the weekend never wait for an Admin. */
-export const AHEAD_DAYS = 7;
-
-/** From the shift on the clock to the Night shift 7 days later, in the order they come. */
-export function coverSlots(current: CoverSlot): CoverSlot[] {
-  const slots: CoverSlot[] = [];
-  for (let day = 0; day <= AHEAD_DAYS; day += 1) {
-    const shiftDate = addDays(current.shiftDate, day);
-    for (const shift of ['Day', 'Night'] as const) {
-      // On the first date a Night shift on the clock has already passed that date's Day shift
-      if (day > 0 || current.shift === 'Day' || shift === 'Night') {
-        slots.push({ shiftDate, shift });
-      }
-    }
-  }
-  return slots;
-}
-
-export function sameSlot(a: CoverSlot, b: CoverSlot): boolean {
-  return a.shiftDate === b.shiftDate && a.shift === b.shift;
-}
-
-/** The picker's value, e.g. "2026-10-16:Night". */
-export function slotKey(slot: CoverSlot): string {
-  return `${slot.shiftDate}:${slot.shift}`;
-}
-
-/** "กะดึก ศ. 16/10/2026": the weekday matters, because the Admin thinks "Saturday", not a date. */
-export function slotText(slot: CoverSlot): string {
-  return `${shiftShortLabel[slot.shift]} ${formatWeekday(slot.shiftDate)} ${formatShiftDate(slot.shiftDate)}`;
-}
+export { AHEAD_DAYS, coverSlots, sameSlot, slotKey, slotText, type CoverSlot } from '../../shared/utils/coverSlots';
 
 /** facility-0084: the cover box's search, by the regular Cleaner's name or the Area's code or name. */
 export function matchesSearch(row: BoardRow, search: string): boolean {

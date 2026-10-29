@@ -15,8 +15,15 @@ function serve() {
   });
 }
 
-const tileNames = () => within(screen.getByRole('main')).queryAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+const tileNames = () =>
+  within(screen.getByRole('main'))
+    .queryAllByRole('heading', { level: 3 })
+    .map((h) => h.textContent);
 const legend = () => within(screen.getByRole('list', { name: 'สถานะ' }));
+/** Turns "เรียงพื้นที่ที่มีปัญหาขึ้นก่อน" off, so every Area shows its cards (on, the Areas with nothing wrong fold into a line). */
+const showEveryArea = (user: { click: (element: HTMLElement) => Promise<void> }) =>
+  user.click(screen.getByRole('checkbox', { name: 'เรียงพื้นที่ที่มีปัญหาขึ้นก่อน' }));
+const startState = { buildingCode: '', status: 'all', issueOnly: false, search: '', problemFirst: true };
 
 describe('Dashboard filters (D1, facility-0024)', () => {
   it('the legend counts each status; choosing one shows only those cards, choosing it again shows all', async () => {
@@ -24,15 +31,11 @@ describe('Dashboard filters (D1, facility-0024)', () => {
     const { user } = await renderApp('/dashboard');
     await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
 
-    expect(legend().getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'ยังไม่ถึงรอบ 1',
-      'ยังไม่ทำ 0',
-      'รอตรวจ 2',
-      'ตรวจผ่าน 1',
-      'ต้องแก้ไข 1',
-      'เลยเวลา 1',
-      'นอกเวลา 1',
-    ]);
+    expect(
+      legend()
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['ยังไม่ถึงรอบ 1', 'ยังไม่ทำ 0', 'รอตรวจ 2', 'ตรวจผ่าน 1', 'ต้องแก้ไข 1', 'เลยเวลา 1', 'นอกเวลา 1']);
 
     await user.click(legend().getByRole('button', { name: 'รอตรวจ 2' }));
 
@@ -43,6 +46,7 @@ describe('Dashboard filters (D1, facility-0024)', () => {
     expect(tileNames()).toEqual(['จุดทิ้งขยะ']);
 
     await user.click(legend().getByRole('button', { name: 'ต้องแก้ไข 1' }));
+    await showEveryArea(user);
     expect(tileNames()).toHaveLength(7);
   });
 
@@ -52,6 +56,7 @@ describe('Dashboard filters (D1, facility-0024)', () => {
     await screen.findByRole('option', { name: 'B · ตึกข้างเคียง' });
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B');
+    await showEveryArea(user);
 
     expect(screen.queryByRole('region', { name: 'AR01 Area ทดลอง' })).not.toBeInTheDocument();
     expect(tileNames()).toEqual(['ห้องทำงาน', 'ห้องน้ำ Office', 'ห้องเก็บของ']);
@@ -93,7 +98,7 @@ describe('Dashboard filters (D1, facility-0024)', () => {
     expect(tileNames()).toEqual(['ห้องน้ำชาย', 'ห้องน้ำ Office']);
 
     await user.click(screen.getByRole('button', { name: 'ออกจากระบบ' }));
-    await waitFor(() => expect(store.getState().dashboard).toEqual({ buildingCode: '', status: 'all', issueOnly: false }));
+    await waitFor(() => expect(store.getState().dashboard).toEqual(startState));
   });
 
   it('an expired session also clears the filters (facility-0024)', async () => {
@@ -107,6 +112,48 @@ describe('Dashboard filters (D1, facility-0024)', () => {
       store.dispatch(sessionExpired());
     });
 
-    expect(store.getState().dashboard).toEqual({ buildingCode: '', status: 'all', issueOnly: false });
+    expect(store.getState().dashboard).toEqual(startState);
+  });
+
+  it('with the sort on, the Areas with nothing wrong fold into one line each, and "ดูจุด" opens one', async () => {
+    serve();
+    const { user } = await renderApp('/dashboard');
+
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
+    expect(screen.queryByRole('region', { name: 'AR02 Office ทดลอง' })).not.toBeInTheDocument();
+    const quiet = screen.getByRole('region', { name: 'พื้นที่ที่ไม่มีปัญหา' });
+    expect(within(quiet).getByText('AR02 Office ทดลอง')).toBeInTheDocument();
+    expect(within(quiet).getByText(/^ตึก B .*3 จุด$/)).toBeInTheDocument();
+    expect(within(quiet).getByText('ยังไม่ถึงรอบ 1 · รอตรวจ 1 · นอกเวลา 1')).toBeInTheDocument();
+    expect(tileNames()).toEqual(['ห้องน้ำชาย', 'ห้องน้ำหญิง', 'จุดทิ้งขยะ', 'โถงทางเดิน']);
+
+    await user.click(within(quiet).getByRole('button', { name: 'ดูจุด' }));
+
+    expect(tileNames()).toHaveLength(7);
+    expect(within(quiet).getByRole('button', { name: 'ซ่อนจุด' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('the search narrows the Areas and the points, and a search shows every Area it found as cards', async () => {
+    serve();
+    const { user } = await renderApp('/dashboard');
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
+
+    await user.type(screen.getByRole('searchbox', { name: 'ค้นหา' }), 'office');
+
+    expect(await screen.findByRole('region', { name: 'AR02 Office ทดลอง' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'AR01 Area ทดลอง' })).not.toBeInTheDocument();
+    expect(tileNames()).toEqual(['ห้องทำงาน', 'ห้องน้ำ Office', 'ห้องเก็บของ']);
+  });
+
+  it('"ล้างตัวกรอง" brings back every card when a filter leaves nothing', async () => {
+    serve();
+    const { user, store } = await renderApp('/dashboard');
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
+    await user.click(legend().getByRole('button', { name: 'ยังไม่ทำ 0' }));
+
+    await user.click(screen.getByRole('button', { name: 'ล้างตัวกรอง' }));
+
+    expect(store.getState().dashboard).toEqual(startState);
+    expect(await screen.findByRole('region', { name: 'AR01 Area ทดลอง' })).toBeInTheDocument();
   });
 });

@@ -41,12 +41,33 @@ describe('Dashboard rules (wireframe D1)', () => {
   });
 
   it('keeps the cards of the building, the status and the issue tag together', () => {
-    const names = (filters: Parameters<typeof filterPoints>[1]) => filterPoints(boardPoints, filters).map((p) => p.name);
+    const names = (filters: Parameters<typeof filterPoints>[1]) =>
+      filterPoints(boardPoints, filters).map((p) => p.name);
 
-    expect(names({ buildingCode: '', status: 'all', issueOnly: false })).toHaveLength(7);
-    expect(names({ buildingCode: '', status: 'PendingInspection', issueOnly: false })).toEqual(['ห้องน้ำชาย', 'ห้องน้ำ Office']);
-    expect(names({ buildingCode: 'B', status: 'PendingInspection', issueOnly: false })).toEqual(['ห้องน้ำ Office']);
-    expect(names({ buildingCode: '', status: 'all', issueOnly: true })).toEqual(['ห้องน้ำหญิง']);
-    expect(names({ buildingCode: 'B', status: 'all', issueOnly: true })).toEqual([]);
+    expect(names({ buildingCode: '', status: 'all', issueOnly: false, search: '', problemFirst: true })).toHaveLength(
+      7,
+    );
+    expect(
+      names({ buildingCode: '', status: 'PendingInspection', issueOnly: false, search: '', problemFirst: true }),
+    ).toEqual(['ห้องน้ำชาย', 'ห้องน้ำ Office']);
+    expect(
+      names({ buildingCode: 'B', status: 'PendingInspection', issueOnly: false, search: '', problemFirst: true }),
+    ).toEqual(['ห้องน้ำ Office']);
+    expect(names({ buildingCode: '', status: 'all', issueOnly: true, search: '', problemFirst: true })).toEqual([
+      'ห้องน้ำหญิง',
+    ]);
+    expect(names({ buildingCode: 'B', status: 'all', issueOnly: true, search: '', problemFirst: true })).toEqual([]);
+  });
+
+  it('the search looks in the Area, the point and the Cleaner who last sent it, ignoring case and spaces at the ends', () => {
+    const names = (search: string) =>
+      filterPoints(boardPoints, { buildingCode: '', status: 'all', issueOnly: false, search, problemFirst: true }).map(
+        (p) => p.name,
+      );
+
+    expect(names('  ar02 ')).toEqual(['ห้องทำงาน', 'ห้องน้ำ Office', 'ห้องเก็บของ']);
+    expect(names('ถังขยะ')).toEqual([]);
+    expect(names('จุดทิ้ง')).toEqual(['จุดทิ้งขยะ']);
+    expect(names('แม่บ้านทดสอบ')).toContain('ห้องน้ำชาย');
   });
 });

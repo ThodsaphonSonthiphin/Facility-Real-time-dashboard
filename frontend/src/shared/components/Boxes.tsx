@@ -33,13 +33,28 @@ export function Facts({ items }: { items: readonly { label: ReactNode; value: Re
  * high, 10/12 padding (the design file's Table). The rules sit in `:where()`, which adds no weight, so a class on one
  * cell (`tableCell`) wins over them. `min-w-180` is 720 px, today's table width.
  */
-export function Table({ label, children }: { label?: string; children: ReactNode }) {
-  return (
-    <div className="max-w-full overflow-x-auto rounded-lg border border-border bg-surface">
+export function Table({
+  label,
+  framed = true,
+  minWidth = 'min-w-180',
+  footer,
+  children,
+}: {
+  label?: string;
+  /** Its own white box; turn it off for a table inside a section box that already draws one (D3). */
+  framed?: boolean;
+  /** Below it the table scrolls sideways: 720 px by default, the design file's D3 tables 560 and 900 px. */
+  minWidth?: string;
+  /** A bar under the table inside its box, which does not scroll with it (D2's count, legend and pages). */
+  footer?: ReactNode;
+  children: ReactNode;
+}) {
+  const table = (
+    <div className="max-w-full overflow-x-auto">
       <table
         aria-label={label}
         className={
-          'w-full min-w-180 border-collapse text-sm ' +
+          `w-full ${minWidth} border-collapse text-sm ` +
           '[:where(&_td,&_th)]:border-b [:where(&_td,&_th)]:border-border [:where(&_td,&_th)]:px-3 ' +
           '[:where(&_td,&_th)]:py-2.5 [:where(&_td,&_th)]:text-left [:where(&_td,&_th)]:align-middle ' +
           '[:where(&_td)]:h-11 [:where(&_thead_th)]:bg-surface-2 [:where(&_thead_th)]:text-xs ' +
@@ -48,6 +63,15 @@ export function Table({ label, children }: { label?: string; children: ReactNode
       >
         {children}
       </table>
+    </div>
+  );
+  if (!framed && !footer) {
+    return table;
+  }
+  return (
+    <div className={framed ? 'overflow-hidden rounded-lg border border-border bg-surface' : undefined}>
+      {table}
+      {footer && <div className="border-t border-border">{footer}</div>}
     </div>
   );
 }

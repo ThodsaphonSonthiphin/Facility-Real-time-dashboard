@@ -1,17 +1,6 @@
-import { Check, Clock, Hourglass, Minus, RotateCcw, type LucideIcon } from 'lucide-react';
 import type { PointStatus } from '../api/types';
 import { pointStatusLabel } from '../utils/labels';
-
-/** Each status's icon (DESIGN_SPEC §2); the three with nothing to do share the minus, as they share one grey. */
-const statusIcon: Record<PointStatus, LucideIcon> = {
-  Rework: RotateCcw,
-  Overdue: Clock,
-  PendingInspection: Hourglass,
-  Passed: Check,
-  NotYetDone: Minus,
-  BeforeFirstRound: Minus,
-  OffHours: Minus,
-};
+import { statusIcon } from './styles';
 
 /** The light chip: the status's words in its colour on its pale background, with its border. */
 const softTone: Record<PointStatus, string> = {

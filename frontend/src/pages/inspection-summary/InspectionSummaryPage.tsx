@@ -5,6 +5,7 @@ import { BuildingSelect } from '../../shared/components/BuildingSelect';
 import { Button } from '../../shared/components/Button';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
+import { PageLoading } from '../../shared/components/PageState';
 import { RangeFields } from '../../shared/components/RangeFields';
 import { buttonClass } from '../../shared/components/styles';
 import {
@@ -60,12 +61,12 @@ export function InspectionSummaryPage() {
   };
 
   return (
-    <main className="flex flex-col gap-4 text-sm text-text">
-      <header className="flex flex-col gap-0.5">
+    <main className="flex flex-col gap-6 text-sm text-text">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold">สรุปการตรวจของหัวหน้า</h1>
         <span className="text-text-2">{summary ? rangeLine(summary, Boolean(asked)) : 'แอดมินเท่านั้น'}</span>
-        <h1 className="text-xl font-bold">สรุปการตรวจของหัวหน้า</h1>
       </header>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface px-4 py-3">
         <RangeFields value={texts} onChange={setTexts} onEnter={show} />
         <Button size="desk" onClick={show}>
           แสดง
@@ -80,8 +81,12 @@ export function InspectionSummaryPage() {
         </Link>
       </div>
       {problem && <Note tone="error">{problem}</Note>}
-      {isFetching && !summary && <p className="text-text-2">กำลังโหลด...</p>}
-      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
+      {isFetching && !summary && <PageLoading lines={3} />}
+      {error && (
+        <Note tone="error" onRetry={() => void refetch()}>
+          {getErrorMessage(error)}
+        </Note>
+      )}
       {summary && <SummaryTable rows={summary.rows} />}
       <SummaryNotes />
     </main>

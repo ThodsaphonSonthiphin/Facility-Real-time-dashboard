@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { boardRows, breakRow, coveredRow, correctedRow, emptyRow, workingRow } from '../../test/liveFixtures';
+import { boardRows, breakRow, coveredRow, emptyRow, workingRow } from '../../test/liveFixtures';
 import {
-  correctionProblem,
-  coverLine,
+  changedEvents,
+  correctionReason,
+  draftProblems,
+  reasonProblem,
+  coverDetail,
   firstEvent,
-  flagText,
   readBoardArgs,
   readFill,
   searchRows,
@@ -38,23 +40,43 @@ describe('attendance rules (wireframe D2)', () => {
     expect(searchRows(boardRows, '  ')).toHaveLength(6);
   });
 
-  it('names the scans outside the radius, and each cover with its own Area and check-in', () => {
-    expect(flagText(workingRow)).toBe('เข้างาน ห่างป้าย 85 ม.');
-    expect(flagText(emptyRow)).toBe('');
-    expect(flagText(correctedRow)).toBe(''); // no GPS verdict is not a flag
-    expect(coverLine(coveredRow.covers[0])).toBe('ทำแทน: แม่บ้านที่อื่น (AR03) · แอดมินมอบหมาย 07:10 · เข้างาน 06:50');
-    expect(coverLine({ ...coveredRow.covers[0], ownAreaCode: undefined, shiftInAt: undefined })).toBe(
-      'ทำแทน: แม่บ้านที่อื่น · แอดมินมอบหมาย 07:10 · ยังไม่ลงเวลา',
+  it('describes each cover with its own Area and check-in', () => {
+    expect(coverDetail(coveredRow.covers[0])).toBe('พื้นที่ของตัวเอง AR03 · แอดมินมอบหมาย 07:10 · เข้างาน 06:50');
+    expect(coverDetail({ ...coveredRow.covers[0], ownAreaCode: undefined, shiftInAt: undefined })).toBe(
+      'แอดมินมอบหมาย 07:10 · ยังไม่ลงเวลา',
     );
   });
 
-  it('checks a correction before sending: a time "HH:mm" and a reason (facility-0051)', () => {
-    expect(correctionProblem({ time: '07:05', reason: 'มือถือแบตหมด' })).toBeNull();
-    expect(correctionProblem({ time: ' 23:59 ', reason: 'ลืม' })).toBeNull();
-    expect(correctionProblem({ time: '7:05', reason: 'ลืม' })).toBe('เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05');
-    expect(correctionProblem({ time: '24:00', reason: 'ลืม' })).toBe('เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05');
-    expect(correctionProblem({ time: '07:05', reason: '   ' })).toBe('ต้องกรอกเหตุผล');
-    expect(correctionProblem({ time: '07:05', reason: 'ก'.repeat(501) })).toBe('เหตุผลยาวได้ไม่เกิน 500 ตัวอักษร');
+  it('checks a correction before sending: each changed time "HH:mm" and in order, and a reason (facility-0051)', () => {
+    const times = (values: Partial<Record<'ShiftIn' | 'BreakOut' | 'BreakIn' | 'ShiftOut', [string, string?]>>) => ({
+      ShiftIn: { old: values.ShiftIn?.[0] ?? '', value: values.ShiftIn?.[1] ?? values.ShiftIn?.[0] ?? '' },
+      BreakOut: { old: values.BreakOut?.[0] ?? '', value: values.BreakOut?.[1] ?? values.BreakOut?.[0] ?? '' },
+      BreakIn: { old: values.BreakIn?.[0] ?? '', value: values.BreakIn?.[1] ?? values.BreakIn?.[0] ?? '' },
+      ShiftOut: { old: values.ShiftOut?.[0] ?? '', value: values.ShiftOut?.[1] ?? values.ShiftOut?.[0] ?? '' },
+    });
+    const ok = times({ ShiftIn: ['06:58'], BreakOut: ['09:45', '09:30'], BreakIn: ['', ' 10:00 '] });
+    expect(changedEvents(ok)).toEqual(['BreakOut', 'BreakIn']);
+    expect(draftProblems(ok, 'Day')).toEqual({});
+    expect(draftProblems(times({ BreakOut: ['', '7:05'] }), 'Day')).toEqual({ BreakOut: 'เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05' });
+    expect(draftProblems(times({ ShiftIn: ['06:58', ''] }), 'Day')).toEqual({ ShiftIn: 'ลบเวลาไม่ได้ ใส่เวลาใหม่ หรือกดคืนค่า' });
+    expect(draftProblems(times({ BreakOut: ['09:30'], BreakIn: ['', '09:20'] }), 'Day')).toEqual({
+      BreakIn: 'ต้องหลังเวลาออกพัก (09:30)',
+    });
+    expect(draftProblems(times({ BreakOut: ['', '10:30'], BreakIn: ['10:00'] }), 'Day')).toEqual({
+      BreakOut: 'ต้องก่อนเวลากลับจากพัก (10:00)',
+    });
+    // A Night shift runs past midnight: 06:55 comes after 18:55
+    expect(draftProblems(times({ ShiftIn: ['18:55'], ShiftOut: ['', '06:55'] }), 'Night')).toEqual({});
+    expect(draftProblems(times({ ShiftIn: ['18:55'], ShiftOut: ['', '18:50'] }), 'Night')).toEqual({
+      ShiftOut: 'ต้องหลังเวลาเข้างาน (18:55)',
+    });
+
+    expect(reasonProblem(null, '')).toBe('เลือกเหตุผลอย่างน้อย 1 ข้อ');
+    expect(reasonProblem('อื่น ๆ', '  ')).toBe('เลือก "อื่น ๆ" ต้องเขียนรายละเอียด');
+    expect(reasonProblem('มือถือแบตหมด', '')).toBeNull();
+    expect(reasonProblem('อื่น ๆ', 'ก'.repeat(495))).toBe('เหตุผลยาวได้ไม่เกิน 500 ตัวอักษร');
+    expect(correctionReason('มือถือแบตหมด', ' หัวหน้ายืนยัน ')).toBe('มือถือแบตหมด · หัวหน้ายืนยัน');
+    expect(correctionReason('ลืมลงเวลา', '')).toBe('ลืมลงเวลา');
   });
 
   it('the form opens on the event asked for, else the first one not scanned', () => {

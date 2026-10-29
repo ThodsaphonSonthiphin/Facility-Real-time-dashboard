@@ -11,9 +11,11 @@ import {
   reviewedAlert,
 } from '../../test/liveFixtures';
 import {
+  alertDay,
   alertDetail,
+  alertResult,
+  alertRole,
   alertTitle,
-  alertWho,
   candidateText,
   coverNotice,
   coverSlots,
@@ -60,33 +62,47 @@ describe('alert rules (wireframe D3)', () => {
     expect(matchesSearch(noCleanerRow, 'แม่บ้าน')).toBe(false);
   });
 
-  it('splits by talked-about or not, and puts the three GPS flags under one type', () => {
-    expect(filterAlerts(alerts, 'open', 'all')).toHaveLength(4);
-    expect(filterAlerts(alerts, 'reviewed', 'all')).toEqual([reviewedAlert]);
-    expect(filterAlerts(alerts, 'all', 'far')).toEqual([inspectionGpsAlert, attendanceGpsAlert, reviewedAlert]);
-    expect(filterAlerts(alerts, 'open', 'blocked')).toEqual([blockedAlert]);
-    expect(filterAlerts(alerts, 'open', 'missing')).toEqual([missingAlert]);
+  it('splits by kind, by day and by talked-about or not; the three GPS flags are one kind', () => {
+    const today = '2026-10-15';
+    expect(alertDay(attendanceGpsAlert, today)).toBe('today'); // 06:52 Thai time
+    expect(alertDay(reviewedAlert, today)).toBe('yesterday');
+    expect(alertDay(reviewedAlert, '2026-10-16')).toBeNull();
+    expect(filterAlerts(alerts, { tab: 'far', review: 'open', day: 'today', today })).toEqual([
+      inspectionGpsAlert,
+      attendanceGpsAlert,
+    ]);
+    expect(filterAlerts(alerts, { tab: 'far', review: 'reviewed', day: 'today', today })).toEqual([]);
+    expect(filterAlerts(alerts, { tab: 'far', review: 'all', day: 'yesterday', today })).toEqual([reviewedAlert]);
+    expect(filterAlerts(alerts, { tab: 'blocked', review: 'open', day: 'today', today })).toEqual([blockedAlert]);
+    expect(filterAlerts(alerts, { tab: 'missing', review: 'all', day: 'today', today })).toEqual([missingAlert]);
   });
 
-  it("names a Blocked Scan by why it was refused, never the old 'สแกนนอก Area' for a Supervisor", () => {
+  it("names an alert in the design file's words; a Blocked Scan says why it was refused", () => {
     expect(alertTitle(blockedAlert)).toBe('สแกนผิดพื้นที่');
-    expect(alertTitle({ ...blockedAlert, blockReason: 'OtherBuilding' })).toBe('สแกนผิดตึก');
-    expect(alertTitle({ ...blockedAlert, blockReason: 'OutsideShift' })).toBe('สแกนนอกกะ');
-    expect(alertTitle({ ...missingAlert, missingEvents: ['BreakIn', 'ShiftOut'] })).toBe('ไม่ได้ลงเวลากลับจากพัก และเลิกงาน');
-    expect(alertWho(inspectionGpsAlert)).toBe('หัวหน้าทดสอบ (หัวหน้า)');
+    expect(alertTitle({ ...blockedAlert, blockReason: 'OtherBuilding' })).toBe('สแกนผิดพื้นที่ (ผิดตึก)');
+    expect(alertTitle({ ...blockedAlert, blockReason: 'OutsideShift' })).toBe('สแกนผิดพื้นที่ (นอกกะ)');
+    expect(alertTitle(inspectionGpsAlert)).toBe('ตรวจงานไกลป้าย');
+    expect(alertTitle(missingAlert)).toBe('ลืมลงเวลา');
+    expect(alertRole(inspectionGpsAlert)).toBe('หัวหน้า');
+    expect(alertRole(blockedAlert)).toBe('แม่บ้าน · AR03');
+    expect(alertResult(blockedAlert)).toEqual({ text: 'ไม่บันทึก', refused: true });
+    expect(alertResult(attendanceGpsAlert)).toEqual({ text: 'บันทึก ติดธง', refused: false });
+    expect(alertResult(missingAlert)).toEqual({ text: 'รอเติมเวลา', refused: false });
   });
 
   it('says where it happened, as far as the server knows', () => {
-    expect(alertDetail(blockedAlert)).toBe(
-      'ป้าย AR12-02 ห้องน้ำหญิง ของ AR12 Area สิบสอง · พื้นที่ของแม่บ้านที่อื่นคือ AR03 · ไม่ได้บันทึกงาน',
-    );
+    expect(alertDetail(blockedAlert)).toBe('สแกนป้าย AR12-02 ห้องน้ำหญิง ของ AR12 Area สิบสอง · AR12 ยังไม่มีคน');
+    expect(alertDetail({ ...blockedAlert, cover: undefined })).toBe('สแกนป้าย AR12-02 ห้องน้ำหญิง ของ AR12 Area สิบสอง');
     expect(alertDetail(attendanceGpsAlert)).toBe(
       'ป้ายลงเวลา AR01-IN · AR01 Area ทดลอง · ห่าง 85 ม. (รัศมี 50 ม.) · ความแม่นยำ ±40 ม.',
     );
     expect(alertDetail({ ...attendanceGpsAlert, accuracyM: undefined, radiusM: undefined })).toBe(
       'ป้ายลงเวลา AR01-IN · AR01 Area ทดลอง · ห่าง 85 ม.',
     );
-    expect(alertDetail(missingAlert)).toBe('กะดึก 14/10/2026 · AR01 Area ทดลอง');
+    expect(alertDetail(missingAlert)).toBe('ไม่ได้ลงเวลาเลิกงาน · กะดึก 14/10/2026 · AR01 Area ทดลอง');
+    expect(alertDetail({ ...missingAlert, missingEvents: ['BreakIn', 'ShiftOut'] })).toBe(
+      'ไม่ได้ลงเวลากลับจากพัก และเลิกงาน · กะดึก 14/10/2026 · AR01 Area ทดลอง',
+    );
   });
 
   it("works out a missing-attendance alert's shift from its time, the shift's end (facility-0040)", () => {

@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
 import { Table } from '../../shared/components/Boxes';
-import { Note } from '../../shared/components/Note';
+import { PageEmpty } from '../../shared/components/PageState';
+import { tableCell } from '../../shared/components/styles';
 import { useBuildingNames } from '../../shared/api/buildingNames';
 import type { SummaryRow } from './summaryApi';
 import { inspectedShare, placeText, pointsText } from './summaryRules';
@@ -9,7 +9,11 @@ import { inspectedShare, placeText, pointsText } from './summaryRules';
 export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
   const names = useBuildingNames();
   if (rows.length === 0) {
-    return <Note tone="info">ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก</Note>;
+    return (
+      <div className="rounded-lg border border-border bg-surface">
+        <PageEmpty title="ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก">เลือกตึกอื่น หรือเลือกทุกตึกเพื่อดูทุกคน</PageEmpty>
+      </div>
+    );
   }
   return (
     <Table label="การตรวจของหัวหน้าแต่ละคน">
@@ -18,24 +22,24 @@ export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
           <th scope="col">หัวหน้า</th>
           <th scope="col">ตึก · กะ</th>
           <th scope="col">จุดที่ตรวจแล้ว</th>
-          <th scope="col">
-            <Count>จำนวนครั้งที่ตรวจ</Count>
+          <th scope="col" className={tableCell.num}>
+            จำนวนครั้งที่ตรวจ
           </th>
-          <th scope="col">
-            <Count>งานที่แม่บ้านส่ง</Count>
+          <th scope="col" className={tableCell.num}>
+            งานที่แม่บ้านส่ง
           </th>
-          <th scope="col">
-            <Count>ตรวจแล้ว</Count>
+          <th scope="col" className={tableCell.num}>
+            ตรวจแล้ว
           </th>
           <th scope="col">สัดส่วนที่ตรวจ</th>
-          <th scope="col">
-            <Count>ไม่ได้ตรวจ</Count>
+          <th scope="col" className={tableCell.num}>
+            ไม่ได้ตรวจ
           </th>
-          <th scope="col">
-            <Count>ให้แก้ไข</Count>
+          <th scope="col" className={tableCell.num}>
+            ให้แก้ไข
           </th>
-          <th scope="col">
-            <Count>ตรวจตอนอยู่ไกลป้าย</Count>
+          <th scope="col" className={tableCell.num}>
+            ตรวจตอนอยู่ไกลป้าย
           </th>
         </tr>
       </thead>
@@ -56,40 +60,20 @@ export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
             >
               {pointsText(row)}
             </td>
-            <td>
-              <Count>{row.inspections}</Count>
-            </td>
-            <td>
-              <Count>{row.submitted}</Count>
-            </td>
-            <td>
-              <Count>{row.submittedInspected}</Count>
-            </td>
+            <td className={tableCell.num}>{row.inspections}</td>
+            <td className={tableCell.num}>{row.submitted}</td>
+            <td className={tableCell.num}>{row.submittedInspected}</td>
             <td>
               <Share row={row} />
             </td>
-            <td>
-              <Count>{row.notInspected}</Count>
-            </td>
-            <td>
-              <Count>{row.reworks}</Count>
-            </td>
-            <td>
-              <Count>{row.gpsFlagged}</Count>
-            </td>
+            <td className={tableCell.num}>{row.notInspected}</td>
+            <td className={tableCell.num}>{row.reworks}</td>
+            <td className={tableCell.num}>{row.gpsFlagged}</td>
           </tr>
         ))}
       </tbody>
     </Table>
   );
-}
-
-/**
- * A count, or its column's heading, on the right of its cell, so the heading sits over the numbers (pages/admin.md);
- * Table sets every cell's alignment, so the span carries its own.
- */
-function Count({ children }: { children: ReactNode }) {
-  return <span className="block text-right tabular-nums">{children}</span>;
 }
 
 /**

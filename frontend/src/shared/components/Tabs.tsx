@@ -12,6 +12,8 @@ interface TabsProps<T extends string> {
    * with `role="tabpanel"`, that `id` and `aria-labelledby` set to the tab's.
    */
   idPrefix: string;
+  /** Leave out the list's own rule under the tabs, for a row that draws one across the page (D3's tabs and filter). */
+  ruled?: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ interface TabsProps<T extends string> {
  * 1 px rule (`-mb-px`). Only the chosen tab is in the Tab order; the arrow keys, Home and End move between tabs and
  * choose at once (WAI-ARIA tabs, automatic activation), as D4's tabs did.
  */
-export function Tabs<T extends string>({ label, tabs, value, onChange, idPrefix }: TabsProps<T>) {
+export function Tabs<T extends string>({ label, tabs, value, onChange, idPrefix, ruled = true }: TabsProps<T>) {
   const list = useRef<HTMLDivElement>(null);
 
   const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -41,7 +43,13 @@ export function Tabs<T extends string>({ label, tabs, value, onChange, idPrefix 
   };
 
   return (
-    <div ref={list} role="tablist" aria-label={label} className="flex gap-1 border-b border-border" onKeyDown={onKey}>
+    <div
+      ref={list}
+      role="tablist"
+      aria-label={label}
+      className={ruled ? 'flex gap-1 border-b border-border' : 'flex flex-wrap gap-1'}
+      onKeyDown={onKey}
+    >
       {tabs.map((one) => (
         <button
           key={one.id}

@@ -1,7 +1,7 @@
-import type { AlertKind } from '../../shared/api/alertListApi';
-import { boardTag } from '../../shared/api/attendanceBoardApi';
-import { baseApi } from '../../shared/api/baseApi';
-import type { Shift } from '../../shared/api/types';
+import type { AlertKind } from './alertListApi';
+import { boardTag } from './attendanceBoardApi';
+import { baseApi } from './baseApi';
+import type { Shift } from './types';
 
 /** ReviewAlertRequest: "คุยแล้ว ปิดเตือน". note is optional and kept as the history row's reason. */
 export interface ReviewRequest {
