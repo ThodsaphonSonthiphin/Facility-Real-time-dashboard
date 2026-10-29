@@ -17,8 +17,8 @@ interface ResultScreenProps {
   title: ReactNode;
   /** Under the title: the lines, the notes and the box, centred. */
   children?: ReactNode;
-  /** The one main action in the white bar at the bottom (and a second, outlined one, if any). */
-  bottom: ReactNode;
+  /** The one main action in the white bar at the bottom (and a second, outlined one, if any); none shows no bar. */
+  bottom?: ReactNode;
 }
 
 /**
@@ -37,9 +37,11 @@ export function ResultScreen({ tone, icon, title, children, bottom }: ResultScre
         <h1 className={`text-3xl font-bold ${look.title}`}>{title}</h1>
         {children}
       </main>
-      <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border bg-surface px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] print:hidden">
-        {bottom}
-      </div>
+      {bottom && (
+        <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border bg-surface px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] print:hidden">
+          {bottom}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router';
+import { useParams, useSearchParams } from 'react-router';
 import {
   useGetAreaQuery,
   useSetSignLocationMutation,
@@ -8,19 +8,16 @@ import {
 } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { Button } from '../../shared/components/Button';
+import { LogoutButton } from '../../shared/components/LogoutButton';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
-import { boxClass, focusRing, linkClass } from '../../shared/components/styles';
+import { PageLoading } from '../../shared/components/PageState';
+import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
+import { boxClass, focusRing } from '../../shared/components/styles';
 import type { GpsFix } from '../../shared/geo/readLocation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { formatCoordinates, signPlaceLabel } from '../../shared/utils/labels';
-import {
-  accuracyVerdict,
-  CAPTURE_MS,
-  startCapture,
-  type CaptureProgress,
-  type CaptureResult,
-} from './captureLocation';
+import { accuracyVerdict, CAPTURE_MS, startCapture, type CaptureProgress, type CaptureResult } from './captureLocation';
 
 type Phase =
   | { kind: 'idle' }
@@ -37,8 +34,8 @@ const SECONDS = CAPTURE_MS / 1000;
 
 // A row of the sign list: a 48 px target that says which sign is the one being read
 const rowClass = `flex min-h-12 w-full flex-col items-start gap-1 rounded-lg border px-3 py-2.5 text-left ${focusRing}`;
-const rowIdleClass = 'border-border-control bg-surface text-text hover:border-accent';
-const rowChosenClass = 'border-accent bg-accent-subtle text-text';
+const rowIdleClass = 'm-px border-border-control bg-surface text-text hover:border-accent';
+const rowChosenClass = 'border-2 border-accent bg-accent-subtle text-text';
 
 /** The Area's signs that can be scanned: the check-in sign and the active points (D4's order). */
 function captureSigns(detail: AreaDetail): CaptureSign[] {
@@ -63,16 +60,19 @@ export function CapturePage() {
 
   return (
     // M17 is used at the sign, so it takes the phone sizes (pages/admin.md, #79)
-    <main className="flex flex-col gap-4 text-base text-text">
-      <Link className={linkClass} to={`/admin/areas/${areaId}`}>
-        ‹ กลับไปหน้าจัดการพื้นที่และป้าย
-      </Link>
-      {detail && (
-        <span className="text-sm tracking-wide text-text-2">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>
-      )}
-      <h1 className="text-2xl font-bold">เก็บพิกัดป้าย</h1>
+    <PhoneScreen
+      header={
+        <PhoneHeader back={{ to: `/admin/areas/${areaId}`, label: 'กลับไปหน้าจัดการพื้นที่และป้าย' }}>
+          {detail && (
+            <span className="text-sm text-text-2">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>
+          )}
+          <h1 className="text-2xl font-bold">เก็บพิกัดป้าย</h1>
+          <span className="text-sm text-text-2">ยืนชิดป้าย เลือกป้าย แล้วกดใช้ตำแหน่ง</span>
+        </PhoneHeader>
+      }
+    >
       {area.error && <Note tone="error">{getErrorMessage(area.error)}</Note>}
-      {!detail && !area.error && <p className="text-text-2">กำลังโหลด...</p>}
+      {!detail && !area.error && <PageLoading>กำลังโหลด...</PageLoading>}
       {detail && (
         <CaptureWorkspace
           key={selected?.sign.id ?? 'none'}
@@ -84,7 +84,8 @@ export function CapturePage() {
       <MoreInfo size="phone" summary="เกี่ยวกับหน้านี้">
         ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติการแก้ไขของแอดมิน
       </MoreInfo>
-    </main>
+      <LogoutButton />
+    </PhoneScreen>
   );
 }
 

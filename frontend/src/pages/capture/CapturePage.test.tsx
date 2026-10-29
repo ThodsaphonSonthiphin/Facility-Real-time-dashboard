@@ -149,7 +149,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' }));
     await wait(5_000);
-    fireEvent.click(screen.getByRole('link', { name: '‹ กลับไปหน้าจัดการพื้นที่และป้าย' }));
+    fireEvent.click(screen.getByRole('link', { name: 'กลับไปหน้าจัดการพื้นที่และป้าย' }));
     await waitFor(() => expect(gps.cleared).toBe(2));
   });
 
