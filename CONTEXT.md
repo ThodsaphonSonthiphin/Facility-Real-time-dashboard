@@ -152,7 +152,7 @@ _Avoid_: Manual Punch, Override, Adjustment
 _Avoid_: History, Activity Feed, Change Log
 
 **Server Log**:
-ข้อความที่ server เขียนลง journal ของเครื่อง (`journalctl -u facility`) ให้คนดูแล server อ่าน ไม่มีหน้าในระบบ เก็บเหตุการณ์ด้านความปลอดภัย (login ผิด, ถูกล็อก, token ถูกใช้ซ้ำ) และข้อผิดพลาดของ server ไม่ใช่ Audit Log ซึ่งเป็นการแก้ของ Admin ที่ Admin อ่านใน D9 (facility-0095, 0096)
+ข้อความที่ server เขียนลง journal ของเครื่อง (`journalctl --namespace=facility -u facility`) ให้คนดูแล server อ่าน ไม่มีหน้าในระบบ เก็บเหตุการณ์ด้านความปลอดภัย (login ผิด, ถูกล็อก, token ถูกใช้ซ้ำ) และข้อผิดพลาดของ server ไม่ใช่ Audit Log ซึ่งเป็นการแก้ของ Admin ที่ Admin อ่านใน D9 (facility-0095, 0096)
 _Avoid_: Audit Log, Activity Log, Access Log
 
 **My Work**:

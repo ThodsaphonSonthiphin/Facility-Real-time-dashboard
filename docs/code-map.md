@@ -293,15 +293,15 @@ There are two login screens because the three roles authenticate differently: cl
 | 6 | `store/slices/authSlice.ts:27-33` | `setCredentials` copies `user`, `accessToken`, `expiresAt` into **memory**. |
 | 7 | `shared/components/ProtectedRoute.tsx` + `shared/auth/roles.ts` | Next navigation: `state.from` if there was one, else `homeOf(role)`. |
 
-### What LoginAsync actually does, lines 46 to 82
+### What LoginAsync actually does, lines 47 to 93
 
-1. Pick the credential mode — `byEmployeeId` if `request.EmployeeId` is non-empty (line 46).
-2. Over-long login name → bare `401`, nothing recorded (49–53).
-3. **Role-separated lookup** (55–57): employee mode matches `EmployeeId` **and** `Role != Admin`; admin mode matches `Username` **and** `Role == Admin`. This is the only thing stopping someone logging into the wrong form.
-4. **Throttle** (61–67): key is `user:{id}` if the account matched, otherwise the typed name. 5 failures in 15 minutes → `429`.
-5. **Dummy hash** (69): `hasher.Verify(secret, user?.SecretHash ?? DummyPasswordHash)` — an unknown account still pays one full PBKDF2 run, so timing cannot reveal whether an account exists.
-6. `user is null || !user.IsActive || !secretMatches` → `401` with **no body and no cookie** (70–73). Wrong password, unknown id and deactivated account are indistinguishable **by design**.
-7. Success → reset throttle, insert a `RefreshToken` row storing **only the SHA-256 hash** (77–79), write the cookie (81), return `{ accessToken, expiresAt, user }` (82).
+1. Pick the credential mode — `byEmployeeId` if `request.EmployeeId` is non-empty (line 47).
+2. Over-long login name → bare `401`, nothing recorded (50–55).
+3. **Role-separated lookup** (57–59): employee mode matches `EmployeeId` **and** `Role != Admin`; admin mode matches `Username` **and** `Role == Admin`. This is the only thing stopping someone logging into the wrong form.
+4. **Throttle** (63–70): key is `user:{id}` if the account matched, otherwise the typed name. 5 failures in 15 minutes → `429`.
+5. **Dummy hash** (72): `hasher.Verify(secret, user?.SecretHash ?? DummyPasswordHash)` — an unknown account still pays one full PBKDF2 run, so timing cannot reveal whether an account exists.
+6. Two branches, both → `401` with **no body and no cookie**: `user is null` (73–77) and `!user.IsActive || !secretMatches` (79–84). Each writes its own Server Log line first. Wrong password, unknown id and deactivated account are indistinguishable **by design**.
+7. Success → reset throttle, insert a `RefreshToken` row storing **only the SHA-256 hash** (89–90), write the cookie (92), return `{ accessToken, expiresAt, user }` (93).
 
 ### The two tokens
 
