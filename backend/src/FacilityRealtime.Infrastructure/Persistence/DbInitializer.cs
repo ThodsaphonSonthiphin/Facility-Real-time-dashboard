@@ -45,10 +45,10 @@ public static class DbInitializer
 
         db.Users.AddRange(
             new User { Role = UserRole.Admin, Username = "admin", DisplayName = "ผู้ดูแลระบบ", SecretHash = hasher.Hash("admin1234"), CreatedAt = now },
-            Employee(UserRole.Cleaner, "E1001", "0810000001", "สมชาย ใจดี", area1, null, Shift.Day),
-            Employee(UserRole.Cleaner, "E1002", "0810000002", "สมหญิง รักสะอาด", area1, null, Shift.Night),
-            Employee(UserRole.Cleaner, "E1003", "0810000003", "สมศรี มีสุข", area2, null, Shift.Day),
-            Employee(UserRole.Supervisor, "S2001", "0820000001", "สมปอง ตรวจดี", null, buildingA, Shift.Day));
+            Employee(UserRole.Cleaner, "1000001", "0810000001", "สมชาย ใจดี", area1, null, Shift.Day),
+            Employee(UserRole.Cleaner, "1000002", "0810000002", "สมหญิง รักสะอาด", area1, null, Shift.Night),
+            Employee(UserRole.Cleaner, "1000003", "0810000003", "สมศรี มีสุข", area2, null, Shift.Day),
+            Employee(UserRole.Supervisor, "2000001", "0820000001", "สมปอง ตรวจดี", null, buildingA, Shift.Day));
 
         await db.SaveChangesAsync();
 

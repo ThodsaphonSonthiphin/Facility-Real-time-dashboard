@@ -49,7 +49,7 @@ public class MySqlReadTests
                 });
                 await write.SaveChangesAsync();
                 var checkInSign = await write.Signs.SingleAsync(s => s.QrToken == "token-checkin-ar01");
-                var cleaner = await write.Users.SingleAsync(u => u.EmployeeId == "E1001");
+                var cleaner = await write.Users.SingleAsync(u => u.EmployeeId == "1000001");
                 var area2 = await write.Areas.SingleAsync(a => a.Code == "AR02");
                 write.ShiftAttendances.Add(new ShiftAttendance
                 {

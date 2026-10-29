@@ -16,7 +16,7 @@ public record ScanCreatedModel(
 
 /// <summary>
 /// Seeded men's restroom (token-restroom-m1, AR01): Day rounds 07:00-09:00 and 16:00-18:00, Night 20:00-22:00 and 03:00-05:00.
-/// E1001 = AR01 Day cleaner, E1002 = AR01 Night cleaner, E1003 = AR02 Day cleaner. Log in before moving the clock.
+/// 1000001 = AR01 Day cleaner, 1000002 = AR01 Night cleaner, 1000003 = AR02 Day cleaner. Log in before moving the clock.
 /// </summary>
 public class ScanRecordEndpointTests
 {
@@ -73,7 +73,7 @@ public class ScanRecordEndpointTests
         using var factory = new FacilityApiFactory();
         var (client, _, _) = who == "admin"
             ? await AuthApi.LoggedInAdminAsync(factory)
-            : await AuthApi.LoggedInAsEmployeeAsync(factory, "S2001", "0820000001");
+            : await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 10));
 
         var response = await client.PostAsJsonAsync("/api/scan-records", Body());
@@ -234,7 +234,7 @@ public class ScanRecordEndpointTests
     public async Task Night_cleaner_after_midnight_is_late_for_the_previous_evenings_round()
     {
         using var factory = new FacilityApiFactory();
-        var (night, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1002", "0810000002");
+        var (night, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000002", "0810000002");
 
         var created = await CheckInAndScanAtAsync(factory, night, ThaiClock.At(9, 2, 0));
 
@@ -266,7 +266,7 @@ public class ScanRecordEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        var coverId = await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
+        var coverId = await TestData.AddCoverAsync(factory, "1000001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
 
         var created = await CheckInAndScanAtAsync(factory, cleaner, ThaiClock.At(8, 8, 30), Body(qrToken: MeetingRoomToken));
 
@@ -282,7 +282,7 @@ public class ScanRecordEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day, cancelled: true);
+        await TestData.AddCoverAsync(factory, "1000001", "AR02", new DateOnly(2026, 10, 8), Shift.Day, cancelled: true);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 8, 0));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
@@ -298,7 +298,7 @@ public class ScanRecordEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, coverDay), coverShift);
+        await TestData.AddCoverAsync(factory, "1000001", "AR02", new DateOnly(2026, 10, coverDay), coverShift);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 8, 0));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
@@ -488,7 +488,7 @@ public class ScanRecordEndpointTests
         // facility-0058 as amended 2026-10-26: the Cleaners of the point's own Area get it too (CleanerLiveTests)
         using var factory = new FacilityApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        var (_, otherAreaAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1003", "0810000003");
+        var (_, otherAreaAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000003", "0810000003");
         var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
         await using var cleanerHub = await HubClient.ConnectAsync(factory, otherAreaAuth.AccessToken);

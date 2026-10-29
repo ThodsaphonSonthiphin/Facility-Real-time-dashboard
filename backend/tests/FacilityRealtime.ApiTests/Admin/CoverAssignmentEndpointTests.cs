@@ -53,7 +53,7 @@ public class CoverAssignmentEndpointTests
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
 
-        var response = await AssignAsync(factory, admin, "E1001", "AR02", 8, "Day");
+        var response = await AssignAsync(factory, admin, "1000001", "AR02", 8, "Day");
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var cover = (await response.Content.ReadFromJsonAsync<CoverModel>())!;
@@ -72,18 +72,18 @@ public class CoverAssignmentEndpointTests
         using var factory = new FacilityApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
-        var response = await AssignAsync(factory, cleaner, "E1001", "AR02", 8, "Day");
+        var response = await AssignAsync(factory, cleaner, "1000001", "AR02", 8, "Day");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Theory]
-    [InlineData("E1001", "AR01", 8, "Day")]     // the Cleaner's own Area
-    [InlineData("E1001", "AR02", 8, "Night")]   // not the Cleaner's regular shift
-    [InlineData("S2001", "AR02", 8, "Day")]     // not a Cleaner
-    [InlineData("E1002", "AR02", 8, "Night")]   // AR02 works days only
-    [InlineData("E1001", "AR02", 7, "Day")]     // that shift already ended
-    [InlineData("E1002", "AR02", 8, "Day")]     // Night Cleaner, Day Area: refused only by the regular-shift rule
+    [InlineData("1000001", "AR01", 8, "Day")]     // the Cleaner's own Area
+    [InlineData("1000001", "AR02", 8, "Night")]   // not the Cleaner's regular shift
+    [InlineData("2000001", "AR02", 8, "Day")]     // not a Cleaner
+    [InlineData("1000002", "AR02", 8, "Night")]   // AR02 works days only
+    [InlineData("1000001", "AR02", 7, "Day")]     // that shift already ended
+    [InlineData("1000002", "AR02", 8, "Day")]     // Night Cleaner, Day Area: refused only by the regular-shift rule
     public async Task Invalid_covers_are_refused(string employeeId, string areaCode, int day, string shift)
     {
         using var factory = new FacilityApiFactory();
@@ -102,9 +102,9 @@ public class CoverAssignmentEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
-        await AssignAsync(factory, admin, "E1001", "AR02", 8, "Day");
+        await AssignAsync(factory, admin, "1000001", "AR02", 8, "Day");
 
-        var again = await AssignAsync(factory, admin, "E1001", "AR02", 8, "Day");
+        var again = await AssignAsync(factory, admin, "1000001", "AR02", 8, "Day");
 
         Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
     }
@@ -115,7 +115,7 @@ public class CoverAssignmentEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
-        var cover = (await (await AssignAsync(factory, admin, "E1001", "AR02", 8, "Day")).Content.ReadFromJsonAsync<CoverModel>())!;
+        var cover = (await (await AssignAsync(factory, admin, "1000001", "AR02", 8, "Day")).Content.ReadFromJsonAsync<CoverModel>())!;
 
         var cancel = await admin.DeleteAsync($"{Path}/{cover.Id}");
         var again = await admin.DeleteAsync($"{Path}/{cover.Id}");
@@ -138,7 +138,7 @@ public class CoverAssignmentEndpointTests
 
         var response = await admin.PostAsJsonAsync(Path, new
         {
-            userId = await UserIdAsync(factory, "E1001"),
+            userId = await UserIdAsync(factory, "1000001"),
             areaId = await AreaIdAsync(factory, "AR02"),
             shiftDate = new DateOnly(2026, 10, 8),
         });
@@ -155,11 +155,11 @@ public class CoverAssignmentEndpointTests
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
         await factory.WithDbAsync(async db =>
         {
-            (await db.Users.SingleAsync(u => u.EmployeeId == "E1001")).IsActive = false;
+            (await db.Users.SingleAsync(u => u.EmployeeId == "1000001")).IsActive = false;
             await db.SaveChangesAsync();
         });
 
-        var response = await AssignAsync(factory, admin, "E1001", "AR02", 8, "Day");
+        var response = await AssignAsync(factory, admin, "1000001", "AR02", 8, "Day");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Empty(await AuditAsync(factory));
@@ -177,7 +177,7 @@ public class CoverAssignmentEndpointTests
             await db.SaveChangesAsync();
         });
 
-        var response = await AssignAsync(factory, admin, "E1001", "AR02", 8, "Day");
+        var response = await AssignAsync(factory, admin, "1000001", "AR02", 8, "Day");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Empty(await AuditAsync(factory));
@@ -194,7 +194,7 @@ public class CoverAssignmentEndpointTests
 
         var response = await admin.PostAsJsonAsync(Path, new
         {
-            userId = unknownUser ? 99999 : await UserIdAsync(factory, "E1001"),
+            userId = unknownUser ? 99999 : await UserIdAsync(factory, "1000001"),
             areaId = unknownUser ? await AreaIdAsync(factory, "AR02") : 99999,
             shiftDate = new DateOnly(2026, 10, 8),
             shift = "Day",
@@ -210,10 +210,10 @@ public class CoverAssignmentEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
-        var first = (await (await AssignAsync(factory, admin, "E1001", "AR02", 8, "Day")).Content.ReadFromJsonAsync<CoverModel>())!;
+        var first = (await (await AssignAsync(factory, admin, "1000001", "AR02", 8, "Day")).Content.ReadFromJsonAsync<CoverModel>())!;
         await admin.DeleteAsync($"{Path}/{first.Id}");
 
-        var again = await AssignAsync(factory, admin, "E1001", "AR02", 8, "Day");
+        var again = await AssignAsync(factory, admin, "1000001", "AR02", 8, "Day");
 
         Assert.Equal(HttpStatusCode.Created, again.StatusCode);
     }
@@ -224,8 +224,8 @@ public class CoverAssignmentEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
-        var first = await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
-        var second = await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
+        var first = await TestData.AddCoverAsync(factory, "1000001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
+        var second = await TestData.AddCoverAsync(factory, "1000001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
 
         var cancel = await admin.DeleteAsync($"{Path}/{first}");
 

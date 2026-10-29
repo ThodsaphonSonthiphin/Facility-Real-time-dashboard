@@ -48,7 +48,7 @@ public class MyWorkEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
+        await TestData.AddCoverAsync(factory, "1000001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
         var work = (await cleaner.GetFromJsonAsync<MyWorkModel>("/api/my-work"))!;
@@ -85,7 +85,7 @@ public class MyWorkEndpointTests
     public async Task Night_cleaner_before_the_shift_sees_the_night_slot_not_the_running_day_shift()
     {
         using var factory = new FacilityApiFactory();
-        var (cleaner, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1002", "0810000002");
+        var (cleaner, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000002", "0810000002");
         await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 10));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 18, 30));
 
@@ -96,10 +96,10 @@ public class MyWorkEndpointTests
     }
 
     [Theory]
-    [InlineData("E1003", "2026-10-08", Shift.Day, false)]
-    [InlineData("E1001", "2026-10-08", Shift.Day, true)]
-    [InlineData("E1001", "2026-10-07", Shift.Day, false)]
-    [InlineData("E1001", "2026-10-08", Shift.Night, false)]
+    [InlineData("1000003", "2026-10-08", Shift.Day, false)]
+    [InlineData("1000001", "2026-10-08", Shift.Day, true)]
+    [InlineData("1000001", "2026-10-07", Shift.Day, false)]
+    [InlineData("1000001", "2026-10-08", Shift.Night, false)]
     public async Task Covers_that_do_not_apply_to_this_cleaner_and_shift_are_not_listed(string employeeId, string shiftDate, Shift shift, bool cancelled)
     {
         using var factory = new FacilityApiFactory();
@@ -113,8 +113,8 @@ public class MyWorkEndpointTests
     }
 
     [Theory]
-    [InlineData("E1001", "0810000001", 5, "Day", 6, 20)]     // 05:00: before the Day window
-    [InlineData("E1002", "0810000002", 14, "Night", 18, 8)]  // 14:00: between two Night windows
+    [InlineData("1000001", "0810000001", 5, "Day", 6, 20)]     // 05:00: before the Day window
+    [InlineData("1000002", "0810000002", 14, "Night", 18, 8)]  // 14:00: between two Night windows
     public async Task Outside_the_window_my_work_still_names_the_own_shift_and_its_window(
         string employeeId, string phone, int thaiHour, string shift, int opensHour, int closesHour)
     {

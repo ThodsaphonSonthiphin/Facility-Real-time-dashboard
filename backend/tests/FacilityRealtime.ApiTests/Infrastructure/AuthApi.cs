@@ -16,8 +16,8 @@ public static class AuthApi
     public static HttpClient CreateApiClient(this FacilityApiFactory factory) =>
         factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, AllowAutoRedirect = false });
 
-    /// <summary>facility-0054: Cleaner and Supervisor Accounts log in with employee ID + phone. Defaults to seeded cleaner E1001.</summary>
-    public static Task<HttpResponseMessage> LoginAsync(HttpClient client, string employeeId = "E1001", string phone = "0810000001") =>
+    /// <summary>facility-0054: Cleaner and Supervisor Accounts log in with employee ID + phone. Defaults to seeded cleaner 1000001.</summary>
+    public static Task<HttpResponseMessage> LoginAsync(HttpClient client, string employeeId = "1000001", string phone = "0810000001") =>
         client.PostAsJsonAsync("/api/auth/login", new { employeeId, phone });
 
     /// <summary>The Admin Account keeps username + password.</summary>
@@ -43,7 +43,7 @@ public static class AuthApi
     public static Task<HttpResponseMessage> LogoutAsync(HttpClient client, string? refreshToken) =>
         PostWithCookieAsync(client, "/api/auth/logout", refreshToken);
 
-    /// <summary>Logs in as seeded cleaner E1001 and returns a client that already sends the access token.</summary>
+    /// <summary>Logs in as seeded cleaner 1000001 and returns a client that already sends the access token.</summary>
     public static Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> LoggedInAsync(FacilityApiFactory factory) =>
         LoggedInWithAsync(factory, client => LoginAsync(client));
 

@@ -14,7 +14,7 @@ public class CoverFromAlertTests
 
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
 
-    /// <summary>E1001 (AR01, Day) checks in at 06:50 and scans AR02's check-in sign at 09:10; returns that Blocked Scan's id.</summary>
+    /// <summary>1000001 (AR01, Day) checks in at 06:50 and scans AR02's check-in sign at 09:10; returns that Blocked Scan's id.</summary>
     private static async Task<long> BlockedAtAr02Async(FacilityApiFactory factory, HttpClient cleaner)
     {
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
@@ -105,7 +105,7 @@ public class CoverFromAlertTests
         Assert.Equal(HttpStatusCode.NoContent, (await AdminAttendanceApi.ReviewAsync(admin, "BlockedScan", blockedId)).StatusCode);
 
         var response = await AssignAsync(
-            admin, await AdminSetupApi.UserIdAsync(factory, "E1001"), await AdminSetupApi.AreaIdAsync(factory, "AR02"), blockedId);
+            admin, await AdminSetupApi.UserIdAsync(factory, "1000001"), await AdminSetupApi.AreaIdAsync(factory, "AR02"), blockedId);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal(new[] { "ALERT_REVIEW", "COVER_ASSIGN" }, (await AdminSetupApi.AuditAsync(factory)).Select(a => a.Action));
@@ -120,7 +120,7 @@ public class CoverFromAlertTests
         await AddAreaAsync(factory, "AR03");
         var blockedId = await BlockedAtAr02Async(factory, cleaner);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 30));
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var otherArea = await AssignAsync(admin, e1001, await AdminSetupApi.AreaIdAsync(factory, "AR03"), blockedId);
         var unknown = await AssignAsync(admin, e1001, await AdminSetupApi.AreaIdAsync(factory, "AR02"), blockedId + 100);
@@ -147,8 +147,8 @@ public class CoverFromAlertTests
 
         var candidates = await CandidatesAsync(admin, query);
 
-        // E1003 is AR02's own Cleaner and E1002 works nights: neither is offered
-        Assert.Equal(new[] { "E1001", "E1009" }, candidates.Select(c => c.EmployeeId));
+        // 1000003 is AR02's own Cleaner and 1000002 works nights: neither is offered
+        Assert.Equal(new[] { "1000001", "E1009" }, candidates.Select(c => c.EmployeeId));
         Assert.Equal(ThaiClock.At(8, 9, 10).UtcDateTime, candidates[0].ScannedThisAreaAt);
         Assert.Equal(ThaiClock.At(8, 6, 50).UtcDateTime, candidates[0].ShiftInAt);
         Assert.Equal("AR01", candidates[0].AreaCode);
@@ -156,7 +156,7 @@ public class CoverFromAlertTests
         Assert.Null(candidates[1].ScannedThisAreaAt);
 
         await TestData.AddCoverAsync(factory, "E1009", "AR02", Oct8, Shift.Day);
-        Assert.Equal(new[] { "E1001" }, (await CandidatesAsync(admin, query)).Select(c => c.EmployeeId));
+        Assert.Equal(new[] { "1000001" }, (await CandidatesAsync(admin, query)).Select(c => c.EmployeeId));
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class CoverFromAlertTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AddAreaAsync(factory, "AR03");
         var e1009 = await TestData.AddCleanerAsync(factory, "E1009", Shift.Day, "AR03");
-        var blockedId = await BlockedAtAr02Async(factory, cleaner);   // E1001's scan
+        var blockedId = await BlockedAtAr02Async(factory, cleaner);   // 1000001's scan
         factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 30));
 
         var response = await AssignAsync(admin, e1009, await AdminSetupApi.AreaIdAsync(factory, "AR02"), blockedId);
@@ -187,7 +187,7 @@ public class CoverFromAlertTests
         factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 30));
 
         var response = await AssignAsync(
-            admin, await AdminSetupApi.UserIdAsync(factory, "E1001"), await AdminSetupApi.AreaIdAsync(factory, "AR02"), blockedId, new DateOnly(2026, 10, 9));
+            admin, await AdminSetupApi.UserIdAsync(factory, "1000001"), await AdminSetupApi.AreaIdAsync(factory, "AR02"), blockedId, new DateOnly(2026, 10, 9));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.CoverAssignments.ToListAsync()));
@@ -271,9 +271,9 @@ public class CoverFromAlertTests
 
         var candidates = await CandidatesAsync(admin, query);
 
-        // E1001 is the seeded AR01 Cleaner with neither a scan nor a check-in
+        // 1000001 is the seeded AR01 Cleaner with neither a scan nor a check-in
         Assert.Equal(
-            new[] { "E1012", "E1011", "E1014", "E1013", "E1001", "E1015", "E1016" },
+            new[] { "E1012", "E1011", "E1014", "E1013", "1000001", "E1015", "E1016" },
             candidates.Select(c => c.EmployeeId));
     }
 

@@ -27,7 +27,7 @@ public class InspectionAlertTests
 
         Assert.Equal("InspectionGps", alert.Kind);
         Assert.Equal(inspectionId, alert.RecordId);
-        Assert.Equal("S2001", alert.Person.EmployeeId);
+        Assert.Equal("2000001", alert.Person.EmployeeId);
         Assert.Equal("Supervisor", alert.Person.Role);
         Assert.Equal("AR01", alert.AreaCode);
         Assert.Equal("AR01-01", alert.SignCode);
@@ -170,7 +170,7 @@ public class InspectionAlertTests
         await InspectionApi.ScanAsync(supervisor);
         await factory.WithDbAsync(async db =>
         {
-            (await db.Users.SingleAsync(u => u.EmployeeId == "S2001")).Shift = Shift.Night;
+            (await db.Users.SingleAsync(u => u.EmployeeId == "2000001")).Shift = Shift.Night;
             await db.SaveChangesAsync();
         });
 

@@ -131,7 +131,7 @@ public class ProtectedEndpointTests
             SigningCredentials = new SigningCredentials(JwtKeys.SigningKey(settings), SecurityAlgorithms.HmacSha256),
         });
 
-    private static async Task<User> SeededUserAsync(FacilityApiFactory factory, string employeeId = "E1001")
+    private static async Task<User> SeededUserAsync(FacilityApiFactory factory, string employeeId = "1000001")
     {
         User? user = null;
         await factory.WithDbAsync(async db => user = await db.Users.SingleAsync(u => u.EmployeeId == employeeId));

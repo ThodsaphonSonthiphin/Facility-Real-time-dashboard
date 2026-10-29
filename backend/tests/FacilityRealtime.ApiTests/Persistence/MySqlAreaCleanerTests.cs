@@ -51,16 +51,16 @@ public class MySqlAreaCleanerTests
             await using (var write = new AppDbContext(options))
             {
                 var newcomer = await write.Users.SingleAsync(u => u.EmployeeId == "E1009");
-                var night = await write.Users.SingleAsync(u => u.EmployeeId == "E1002");
+                var night = await write.Users.SingleAsync(u => u.EmployeeId == "1000002");
                 await using var transaction = await write.Database.BeginTransactionAsync();
                 await AreaCleaners.ApplyAsync(write, area1Id, newcomer, night);
                 await transaction.CommitAsync();
             }
 
             await using var read = new AppDbContext(options);
-            Assert.Null((await read.Users.SingleAsync(u => u.EmployeeId == "E1001")).AreaId);
+            Assert.Null((await read.Users.SingleAsync(u => u.EmployeeId == "1000001")).AreaId);
             Assert.Equal(area1Id, (await read.Users.SingleAsync(u => u.EmployeeId == "E1009")).AreaId);
-            Assert.Equal(area1Id, (await read.Users.SingleAsync(u => u.EmployeeId == "E1002")).AreaId);
+            Assert.Equal(area1Id, (await read.Users.SingleAsync(u => u.EmployeeId == "1000002")).AreaId);
         }
         finally
         {

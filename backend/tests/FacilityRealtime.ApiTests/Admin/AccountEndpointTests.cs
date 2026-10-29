@@ -21,11 +21,11 @@ public class AccountEndpointTests
         var accounts = JsonSerializer.Deserialize<List<AccountModel>>(raw, JsonSerializerOptions.Web)!;
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(new[] { "admin", "S2001", "E1001", "E1002", "E1003" }, accounts.Select(a => a.LoginName));
+        Assert.Equal(new[] { "admin", "2000001", "1000001", "1000002", "1000003" }, accounts.Select(a => a.LoginName));
         Assert.Equal(new[] { "Admin", "Supervisor", "Cleaner", "Cleaner", "Cleaner" }, accounts.Select(a => a.Role));
-        var e1001 = accounts.Single(a => a.LoginName == "E1001");
+        var e1001 = accounts.Single(a => a.LoginName == "1000001");
         Assert.Equal(("AR01", "Day", true), (e1001.AreaCode, e1001.Shift, e1001.IsActive));
-        Assert.Equal("A", accounts.Single(a => a.LoginName == "S2001").BuildingCode);
+        Assert.Equal("A", accounts.Single(a => a.LoginName == "2000001").BuildingCode);
         Assert.EndsWith("Z", JsonDocument.Parse(raw).RootElement[0].GetProperty("createdAt").GetString());
         Assert.DoesNotContain("0810000001", raw);
         Assert.DoesNotContain("pbkdf2", raw);
@@ -119,12 +119,15 @@ public class AccountEndpointTests
     }
 
     [Theory]
-    [InlineData("e1001")]
-    [InlineData("E1001")]
+    [InlineData("1000001")]
+    [InlineData("e9001")]
+    [InlineData("E9001")]
     public async Task A_used_employee_id_is_refused_whatever_the_letter_case(string employeeId)
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        // the seed's IDs are digits only, like the factory's; a letter ID shows the check ignores case
+        Assert.Equal(HttpStatusCode.Created, (await AccountApi.CreateCleanerAsync(admin, "E9001", "0000000013", areaId: null)).StatusCode);
 
         var response = await AccountApi.CreateCleanerAsync(admin, employeeId, "0000000014", areaId: null);
 
@@ -226,7 +229,7 @@ public class AccountEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "S2001", "0820000001");
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
 
         Assert.Equal(HttpStatusCode.Forbidden, (await cleaner.GetAsync(AccountApi.Path)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await supervisor.GetAsync(AccountApi.Path)).StatusCode);

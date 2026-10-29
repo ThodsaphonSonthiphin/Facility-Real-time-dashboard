@@ -42,7 +42,7 @@ public class InspectionSummaryEndpointTests
         var summary = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08"))!;
 
         Assert.Equal(new DateOnly(2026, 10, 8), summary.From);
-        Assert.Equal(new[] { "S2001", "S2002" }, summary.Rows.Select(r => r.EmployeeId));
+        Assert.Equal(new[] { "2000001", "S2002" }, summary.Rows.Select(r => r.EmployeeId));
         var day = summary.Rows[0];
         Assert.Equal(("A", "Day"), (day.BuildingCode, day.Shift));
         Assert.Equal(
@@ -109,7 +109,7 @@ public class InspectionSummaryEndpointTests
 
         var summary = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08"))!;
 
-        Assert.Contains("S2001", summary.Rows.Select(r => r.EmployeeId));
+        Assert.Contains("2000001", summary.Rows.Select(r => r.EmployeeId));
         Assert.DoesNotContain("S2002", summary.Rows.Select(r => r.EmployeeId));
     }
 
@@ -124,8 +124,8 @@ public class InspectionSummaryEndpointTests
         var one = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08"))!;
         var two = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-07&to=2026-10-08"))!;
 
-        Assert.Equal(0, one.Rows.Single(r => r.EmployeeId == "S2001").Inspections);
-        Assert.Equal(1, two.Rows.Single(r => r.EmployeeId == "S2001").Inspections);
+        Assert.Equal(0, one.Rows.Single(r => r.EmployeeId == "2000001").Inspections);
+        Assert.Equal(1, two.Rows.Single(r => r.EmployeeId == "2000001").Inspections);
     }
 
     [Fact]
@@ -135,12 +135,12 @@ public class InspectionSummaryEndpointTests
         using var _ = factory;
         await InspectionApi.AddBuildingBAsync(factory);
         var scan = await TestData.AddScanAsync(factory, InspectionApi.BuildingBPoint, ThaiClock.At(8, 8, 30));
-        await TestData.AddInspectionAsync(factory, scan, InspectionResult.Passed, ThaiClock.At(8, 8, 40), supervisorEmployeeId: "S2001");
+        await TestData.AddInspectionAsync(factory, scan, InspectionResult.Passed, ThaiClock.At(8, 8, 40), supervisorEmployeeId: "2000001");
         var buildingA = await AdminSetupApi.BuildingIdAsync(factory, "A");
 
         var summary = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08&buildingId={buildingA}"))!;
 
-        Assert.Equal(1, summary.Rows.Single(r => r.EmployeeId == "S2001").Inspections);
+        Assert.Equal(1, summary.Rows.Single(r => r.EmployeeId == "2000001").Inspections);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class InspectionSummaryEndpointTests
 
         var summary = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08"))!;
 
-        var row = summary.Rows.Single(r => r.EmployeeId == "S2001");
+        var row = summary.Rows.Single(r => r.EmployeeId == "2000001");
         Assert.Equal((0, 0, 0), (row.Submitted, row.SubmittedInspected, row.NotInspected));
     }
 
@@ -171,7 +171,7 @@ public class InspectionSummaryEndpointTests
         using var factory = new FacilityApiFactory();
         var (client, _, _) = who == "cleaner"
             ? await AuthApi.LoggedInAsync(factory)
-            : await AuthApi.LoggedInAsEmployeeAsync(factory, "S2001", "0820000001");
+            : await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
 
         var response = await client.GetAsync(Path);
 

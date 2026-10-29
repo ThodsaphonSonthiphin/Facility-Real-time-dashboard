@@ -26,7 +26,7 @@ public class AttendanceCorrectionEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
 
         var response = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "06:58", "มือถือแบตหมด หัวหน้ายืนยันว่ามาทำงาน");
 
@@ -34,7 +34,7 @@ public class AttendanceCorrectionEndpointTests
         var added = (await response.Content.ReadFromJsonAsync<BoardEventModel>())!;
         Assert.Equal("AdminAdd", added.Source);
         Assert.Equal(ThaiClock.At(8, 6, 58).UtcDateTime, added.OccurredAt);
-        var stored = Assert.Single(await EventsAsync(factory, "E1003"));
+        var stored = Assert.Single(await EventsAsync(factory, "1000003"));
         Assert.Null(stored.SignId);
         Assert.Null(stored.WithinRadius);
         Assert.Equal(await AdminSetupApi.AreaIdAsync(factory, "AR02"), stored.AreaId);
@@ -57,12 +57,12 @@ public class AttendanceCorrectionEndpointTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var response = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Day", "ShiftIn", "06:45", "เน็ตหลุด สแกนช้า");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var stored = Assert.Single(await EventsAsync(factory, "E1001"));
+        var stored = Assert.Single(await EventsAsync(factory, "1000001"));
         Assert.Equal(AttendanceSource.AdminEdit, stored.Source);
         Assert.Equal(ThaiClock.At(8, 6, 45).UtcDateTime, stored.OccurredAt);
         // A scanned event keeps its sign and GPS verdict
@@ -78,16 +78,16 @@ public class AttendanceCorrectionEndpointTests
     public async Task A_missing_night_shift_out_is_filled_on_the_next_morning()
     {
         using var factory = new FacilityApiFactory();
-        var (night, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1002", "0810000002");
+        var (night, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000002", "0810000002");
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, night, ThaiClock.At(8, 18, 55));
         factory.Clock.SetUtcNow(ThaiClock.At(9, 9, 0));
-        var e1002 = await AdminSetupApi.UserIdAsync(factory, "E1002");
+        var e1002 = await AdminSetupApi.UserIdAsync(factory, "1000002");
 
         var response = await AdminAttendanceApi.CorrectAsync(admin, e1002, Oct8, "Night", "ShiftOut", "07:00", "ลืมสแกนเลิกงาน");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var shiftOut = (await EventsAsync(factory, "E1002")).Single(a => a.EventType == AttendanceEvent.ShiftOut);
+        var shiftOut = (await EventsAsync(factory, "1000002")).Single(a => a.EventType == AttendanceEvent.ShiftOut);
         Assert.Equal(ThaiClock.At(9, 7, 0).UtcDateTime, shiftOut.OccurredAt);
         Assert.Equal(AttendanceSource.AdminAdd, shiftOut.Source);
     }
@@ -95,7 +95,7 @@ public class AttendanceCorrectionEndpointTests
     [Theory]
     [InlineData("Day", "ShiftOut", "05:00", "ลืมสแกน")]    // before the window opens at 06:00
     [InlineData("Day", "ShiftOut", "13:00", "ลืมสแกน")]    // still in the future at 12:00
-    [InlineData("Night", "ShiftIn", "20:00", "ลืมสแกน")]   // not E1001's regular shift
+    [InlineData("Night", "ShiftIn", "20:00", "ลืมสแกน")]   // not 1000001's regular shift
     [InlineData("Day", "BreakIn", "10:00", "ลืมสแกน")]     // no Break-Out before it
     [InlineData("Day", "BreakOut", "06:30", "ลืมสแกน")]    // before the 06:50 Shift-In
     [InlineData("Day", "ShiftOut", "7:00", "ลืมสแกน")]     // not HH:mm
@@ -108,12 +108,12 @@ public class AttendanceCorrectionEndpointTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 12, 0));
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var response = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, shift, eventType, time, reason);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Single(await EventsAsync(factory, "E1001"));
+        Assert.Single(await EventsAsync(factory, "1000001"));
         Assert.Empty(await AdminSetupApi.AuditAsync(factory));
     }
 
@@ -123,7 +123,7 @@ public class AttendanceCorrectionEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var supervisor = await AdminSetupApi.UserIdAsync(factory, "S2001");
+        var supervisor = await AdminSetupApi.UserIdAsync(factory, "2000001");
 
         var response = await AdminAttendanceApi.CorrectAsync(admin, supervisor, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");
 
@@ -136,7 +136,7 @@ public class AttendanceCorrectionEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
 
         var first = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");
         var again = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");
@@ -155,13 +155,13 @@ public class AttendanceCorrectionEndpointTests
         factory.Clock.SetUtcNow(ThaiClock.At(8, 6, 50).AddSeconds(23));
         Assert.Equal(HttpStatusCode.OK, (await AttendanceApi.RecordAsync(cleaner, "ShiftIn")).StatusCode);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var response = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Day", "ShiftIn", "06:50", "ลืมสแกน");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(await AdminSetupApi.AuditAsync(factory));
-        var stored = Assert.Single(await EventsAsync(factory, "E1001"));
+        var stored = Assert.Single(await EventsAsync(factory, "1000001"));
         Assert.Equal(AttendanceSource.Scan, stored.Source);
         Assert.Equal(ThaiClock.At(8, 6, 50).AddSeconds(23).UtcDateTime, stored.OccurredAt);
     }
@@ -173,12 +173,12 @@ public class AttendanceCorrectionEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 21, 0));
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001"); // a Day Cleaner
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001"); // a Day Cleaner
 
         var response = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Night", "ShiftIn", "20:00", "ลืมสแกน");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        await AssertNothingChangedAsync(factory, "E1001");
+        await AssertNothingChangedAsync(factory, "1000001");
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class AttendanceCorrectionEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
         await factory.WithDbAsync(async db =>
         {
             (await db.Users.SingleAsync(u => u.Id == e1003)).IsActive = false;
@@ -197,7 +197,7 @@ public class AttendanceCorrectionEndpointTests
         var response = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        await AssertNothingChangedAsync(factory, "E1003");
+        await AssertNothingChangedAsync(factory, "1000003");
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public class AttendanceCorrectionEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var supervisor = await AdminSetupApi.UserIdAsync(factory, "S2001");
+        var supervisor = await AdminSetupApi.UserIdAsync(factory, "2000001");
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
         await factory.WithDbAsync(async db =>
         {
@@ -219,7 +219,7 @@ public class AttendanceCorrectionEndpointTests
         var response = await AdminAttendanceApi.CorrectAsync(admin, supervisor, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        await AssertNothingChangedAsync(factory, "S2001");
+        await AssertNothingChangedAsync(factory, "2000001");
     }
 
     [Fact]
@@ -230,12 +230,12 @@ public class AttendanceCorrectionEndpointTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 22, 0));
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var response = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Day", "ShiftOut", "21:00", "ลืมสแกน");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Single(await EventsAsync(factory, "E1001"));
+        Assert.Single(await EventsAsync(factory, "1000001"));
         Assert.Empty(await AdminSetupApi.AuditAsync(factory));
     }
 
@@ -245,12 +245,12 @@ public class AttendanceCorrectionEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
 
         var response = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "05:00", "ลืมสแกน");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        await AssertNothingChangedAsync(factory, "E1003");
+        await AssertNothingChangedAsync(factory, "1000003");
     }
 
     [Fact]
@@ -268,7 +268,7 @@ public class AttendanceCorrectionEndpointTests
         });
         await Task.Delay(200);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
 
         await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");

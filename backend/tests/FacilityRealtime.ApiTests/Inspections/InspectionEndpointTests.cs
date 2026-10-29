@@ -45,7 +45,7 @@ public class InspectionEndpointTests
         Assert.Equal(scanId, created.ScanRecordId);
         Assert.True(created.WithinRadius);
         var stored = await StoredAsync(factory, created.InspectionId);
-        Assert.Equal("S2001", stored.Supervisor!.EmployeeId);
+        Assert.Equal("2000001", stored.Supervisor!.EmployeeId);
         Assert.Null(stored.Defect);
         Assert.Null(stored.CoverAssignmentId);
         Assert.Equal(13.756300m, stored.Latitude);
@@ -240,7 +240,7 @@ public class InspectionEndpointTests
         using var factory = new FacilityApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
-        var coverId = await TestData.AddSupervisorCoverAsync(factory, "S2001", "B", Oct8, Shift.Day);
+        var coverId = await TestData.AddSupervisorCoverAsync(factory, "2000001", "B", Oct8, Shift.Day);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.BuildingBPoint, ThaiClock.At(8, 8, 30));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 40));
 
@@ -273,7 +273,7 @@ public class InspectionEndpointTests
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         // facility-0058 as amended 2026-10-26: AR01's own Cleaners get it too (CleanerLiveTests); AR02's Cleaner does not
-        var (_, cleanerAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1003", "0810000003");
+        var (_, cleanerAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000003", "0810000003");
         await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
         await using var cleanerHub = await HubClient.ConnectAsync(factory, cleanerAuth.AccessToken);
         var cleanerGot = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);

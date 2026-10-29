@@ -22,16 +22,16 @@ public class ExportQueryTests
     public async Task Attendance_rows_carry_the_person_and_place_inside_the_date_range_only()
     {
         using var factory = new FacilityApiFactory();
-        await TestData.AddAttendanceAsync(factory, "E1001", new DateOnly(2026, 10, 7), Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(7, 6, 57));
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftOut, ThaiClock.At(8, 19, 2), AttendanceSource.AdminAdd);
-        await TestData.AddAttendanceAsync(factory, "E1001", new DateOnly(2026, 10, 10), Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(10, 6, 59));
+        await TestData.AddAttendanceAsync(factory, "1000001", new DateOnly(2026, 10, 7), Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(7, 6, 57));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftOut, ThaiClock.At(8, 19, 2), AttendanceSource.AdminAdd);
+        await TestData.AddAttendanceAsync(factory, "1000001", new DateOnly(2026, 10, 10), Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(10, 6, 59));
 
         var rows = await QueryAsync(factory, db => ExportQuery.LoadAttendanceAsync(db, Oct8, Oct9, buildingId: null));
 
         Assert.Equal(new[] { AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut }, rows.Select(r => r.EventType));
         var shiftIn = rows[0];
-        Assert.Equal(("E1001", "สมชาย ใจดี", "A", "AR01", Oct8, Shift.Day), (shiftIn.EmployeeId, shiftIn.DisplayName, shiftIn.BuildingCode, shiftIn.AreaCode, shiftIn.ShiftDate, shiftIn.Shift));
+        Assert.Equal(("1000001", "สมชาย ใจดี", "A", "AR01", Oct8, Shift.Day), (shiftIn.EmployeeId, shiftIn.DisplayName, shiftIn.BuildingCode, shiftIn.AreaCode, shiftIn.ShiftDate, shiftIn.Shift));
         Assert.Equal((AttendanceSource.Scan, (short?)12, (bool?)true), (shiftIn.Source, shiftIn.DistanceM, shiftIn.WithinRadius));
         Assert.Equal(ThaiClock.At(8, 6, 58).UtcDateTime, DateTime.SpecifyKind(shiftIn.OccurredAtUtc, DateTimeKind.Utc));
         Assert.Equal((AttendanceSource.AdminAdd, (bool?)null), (rows[1].Source, rows[1].WithinRadius));
@@ -54,7 +54,7 @@ public class ExportQueryTests
     public async Task The_building_filter_leaves_out_other_buildings()
     {
         using var factory = new FacilityApiFactory();
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
         await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 10));
         var buildingB = await TestData.AddBuildingAsync(factory, "B");
         var buildingA = await QueryAsync(factory, db => db.Buildings.Where(b => b.Code == "A").Select(b => b.Id).SingleAsync());
@@ -78,7 +78,7 @@ public class ExportQueryTests
         Assert.Equal((new TimeOnly(7, 0), new TimeOnly(9, 0), Placement.OnTime), (row.RoundStart!.Value, row.RoundEnd!.Value, row.Placement));
         Assert.NotNull(row.RoundWindowId);
         Assert.Equal((CleaningStatus.Issue, "wet_floor", false), (row.Status, row.IssueTags, row.IsCover));
-        Assert.Equal(("E1001", "สมชาย ใจดี"), (row.EmployeeId, row.DisplayName));
+        Assert.Equal(("1000001", "สมชาย ใจดี"), (row.EmployeeId, row.DisplayName));
         Assert.False(string.IsNullOrEmpty(row.PointName));
     }
 

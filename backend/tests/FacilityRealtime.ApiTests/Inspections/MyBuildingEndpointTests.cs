@@ -95,7 +95,7 @@ public class MyBuildingEndpointTests
         using var factory = new FacilityApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
-        await TestData.AddSupervisorCoverAsync(factory, "S2001", "B", new DateOnly(2026, 10, 8), Shift.Day);
+        await TestData.AddSupervisorCoverAsync(factory, "2000001", "B", new DateOnly(2026, 10, 8), Shift.Day);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
         var page = (await supervisor.GetFromJsonAsync<MyBuildingModel>(Path))!;
@@ -111,7 +111,7 @@ public class MyBuildingEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
-        await TestData.AddSupervisorCoverAsync(factory, "S2001", "A", new DateOnly(2026, 10, 8), Shift.Night);
+        await TestData.AddSupervisorCoverAsync(factory, "2000001", "A", new DateOnly(2026, 10, 8), Shift.Night);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
 
         var page = (await supervisor.GetFromJsonAsync<MyBuildingModel>(Path))!;

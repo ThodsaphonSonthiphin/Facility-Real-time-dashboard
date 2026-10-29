@@ -57,7 +57,7 @@ public class AuditLogEndpointTests
         await AddEntryAsync(factory, "COVER_ASSIGN", ThaiClock.At(8, 9, 5));
         await AddEntryAsync(factory, "QR_REGENERATE", ThaiClock.At(1, 9, 0));   // before the default 7 days
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
-        var cleanerId = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var cleanerId = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         Assert.Equal(new[] { "COVER_ASSIGN", "SIGN_RADIUS" }, (await PageAsync(admin)).Entries.Select(e => e.Action));
         Assert.Equal(new[] { "SIGN_RADIUS" }, (await PageAsync(admin, "?category=setup")).Entries.Select(e => e.Action));

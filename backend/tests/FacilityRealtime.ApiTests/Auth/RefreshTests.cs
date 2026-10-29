@@ -20,7 +20,7 @@ public class RefreshTests
         var second = AuthApi.RefreshCookieValue(response);
         Assert.False(string.IsNullOrEmpty(second));
         Assert.NotEqual(first, second);
-        Assert.Equal("E1001", (await AuthApi.ReadAuthAsync(response)).User.Username);
+        Assert.Equal("1000001", (await AuthApi.ReadAuthAsync(response)).User.Username);
     }
 
     [Fact]

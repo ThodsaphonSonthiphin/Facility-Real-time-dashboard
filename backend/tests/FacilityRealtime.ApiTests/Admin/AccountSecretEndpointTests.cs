@@ -23,17 +23,17 @@ public class AccountSecretEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var (_, _, cleanerRefresh) = await AuthApi.LoggedInAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var response = await PhoneAsync(admin, e1001, "000 000 0031");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.LoginAsync(factory.CreateApiClient(), "E1001", "0810000001")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await AuthApi.LoginAsync(factory.CreateApiClient(), "E1001", "0000000031")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", "0810000001")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", "0000000031")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.RefreshAsync(factory.CreateApiClient(), cleanerRefresh)).StatusCode);
         var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
         Assert.Equal(("ACCOUNT_PHONE", (long?)e1001, (string?)null, (string?)null), (entry.Action, entry.EntityId, entry.BeforeJson, entry.AfterJson));
-        Assert.Equal("แก้เบอร์โทรของ E1001 สมชาย ใจดี", entry.Summary);
+        Assert.Equal("แก้เบอร์โทรของ 1000001 สมชาย ใจดี", entry.Summary);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class AccountSecretEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var (_, _, cleanerRefresh) = await AuthApi.LoggedInAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var response = await PhoneAsync(admin, e1001, "081-000-0001");
 
@@ -59,7 +59,7 @@ public class AccountSecretEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var response = await PhoneAsync(admin, e1001, phone);
 
@@ -72,10 +72,10 @@ public class AccountSecretEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var s2001 = await AdminSetupApi.UserIdAsync(factory, "S2001");
+        var s2001 = await AdminSetupApi.UserIdAsync(factory, "2000001");
 
         Assert.Equal(HttpStatusCode.NoContent, (await PhoneAsync(admin, s2001, "0000000041")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await AuthApi.LoginAsync(factory.CreateApiClient(), "S2001", "0000000041")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await AuthApi.LoginAsync(factory.CreateApiClient(), "2000001", "0000000041")).StatusCode);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class AccountSecretEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var phone = await PhoneAsync(admin, adminAuth.User.Id, "0000000051");
         var password = await PasswordAsync(admin, e1001, "new-password-1");
@@ -143,7 +143,7 @@ public class AccountSecretEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
         var created = await AccountApi.ReadAsync(await AccountApi.CreateCleanerAsync(admin, "E2001", "0000000071", areaId: null));
         await PhoneAsync(admin, e1001, "0000000072");
         var newAdmin = await AccountApi.ReadAsync(await AccountApi.CreateAdminAsync(admin, "admin2", "temporary-pass-71"));

@@ -30,7 +30,7 @@ public class SupervisorLiveTests
         await InspectionApi.AddBuildingBAsync(factory);
         await TestData.AddSupervisorAsync(factory, "S2002", "0820000002", "A", Shift.Night);
         await TestData.AddSupervisorAsync(factory, "S2003", "0820000003", "B", Shift.Day);
-        var (_, dayA, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "S2001", "0820000001");
+        var (_, dayA, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
         var (_, nightA, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "S2002", "0820000002");
         var (_, dayB, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "S2003", "0820000003");
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
@@ -103,7 +103,7 @@ public class SupervisorLiveTests
 
     private static async Task AssertOnlyTheControlGetsItAsync(FacilityApiFactory factory, (string Id, string Phone)[] outsiders, string deactivate)
     {
-        var (_, control, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "S2001", "0820000001");
+        var (_, control, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
         var tokens = new List<(string Id, string Token)>();
         foreach (var (id, phone) in outsiders)
         {

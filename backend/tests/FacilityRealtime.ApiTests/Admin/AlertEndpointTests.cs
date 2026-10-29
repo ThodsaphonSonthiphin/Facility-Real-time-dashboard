@@ -14,7 +14,7 @@ public class AlertEndpointTests
 {
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
 
-    /// <summary>E1001 (AR01, Day) checks in at 06:50, then scans AR02's check-in sign at 07:10 and is blocked.</summary>
+    /// <summary>1000001 (AR01, Day) checks in at 06:50, then scans AR02's check-in sign at 07:10 and is blocked.</summary>
     private static async Task BlockedAtAr02Async(FacilityApiFactory factory, HttpClient cleaner)
     {
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
@@ -57,7 +57,7 @@ public class AlertEndpointTests
 
         Assert.Equal("BlockedScan", alert.Kind);
         Assert.Equal(ThaiClock.At(8, 7, 10).UtcDateTime, alert.At);
-        Assert.Equal("E1001", alert.Person.EmployeeId);
+        Assert.Equal("1000001", alert.Person.EmployeeId);
         Assert.Equal("Cleaner", alert.Person.Role);
         Assert.Equal("AR01", alert.Person.AreaCode);
         Assert.Equal("AR02", alert.AreaCode);
@@ -75,7 +75,7 @@ public class AlertEndpointTests
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await BlockedAtAr02Async(factory, cleaner);
-        await TestData.AddCoverAsync(factory, "E1001", "AR02", Oct8, Shift.Day);
+        await TestData.AddCoverAsync(factory, "1000001", "AR02", Oct8, Shift.Day);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
 
         Assert.Null(Assert.Single(await AdminAttendanceApi.AlertsAsync(admin)).Cover);
@@ -190,7 +190,7 @@ public class AlertEndpointTests
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await BlockedAtAr02Async(factory, cleaner);
-        await TestData.AddCoverAsync(factory, "E1001", "AR02", Oct8, Shift.Day, cancelled: true);
+        await TestData.AddCoverAsync(factory, "1000001", "AR02", Oct8, Shift.Day, cancelled: true);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
 
         Assert.NotNull(Assert.Single(await AdminAttendanceApi.AlertsAsync(admin)).Cover);

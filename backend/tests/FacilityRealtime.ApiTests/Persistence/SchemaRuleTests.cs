@@ -102,7 +102,7 @@ public class SchemaRuleTests
         await factory.WithDbAsync(async db =>
         {
             var area = await db.Areas.SingleAsync(a => a.Code == "AR01");
-            db.Users.Add(Account(UserRole.Cleaner, "E1901", areaId: area.Id, shift: Shift.Day)); // E1001 holds AR01 Day
+            db.Users.Add(Account(UserRole.Cleaner, "E1901", areaId: area.Id, shift: Shift.Day)); // 1000001 holds AR01 Day
 
             await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
         });
@@ -116,7 +116,7 @@ public class SchemaRuleTests
 
         await factory.WithDbAsync(async db =>
         {
-            var current = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var current = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
             current.IsActive = false;
             await db.SaveChangesAsync();
 
@@ -137,7 +137,7 @@ public class SchemaRuleTests
         await factory.WithDbAsync(async db =>
         {
             var building = await db.Buildings.SingleAsync(b => b.Code == "A");
-            db.Users.Add(Account(UserRole.Supervisor, "S2901", buildingId: building.Id, shift: Shift.Day)); // S2001 holds A Day
+            db.Users.Add(Account(UserRole.Supervisor, "S2901", buildingId: building.Id, shift: Shift.Day)); // 2000001 holds A Day
 
             await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
         });
@@ -189,7 +189,7 @@ public class SchemaRuleTests
 
         await factory.WithDbAsync(async db =>
         {
-            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
             var sign = await db.Signs.SingleAsync(s => s.QrToken == "token-checkin-ar01");
             ShiftAttendance Entry() => new()
             {
@@ -278,7 +278,7 @@ public class SchemaRuleTests
 
         await factory.WithDbAsync(async db =>
         {
-            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "S2001");
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "2000001");
             var admin = await db.Users.SingleAsync(u => u.Username == "admin");
             db.CoverAssignments.Add(new CoverAssignment
             {
@@ -302,8 +302,8 @@ public class SchemaRuleTests
 
         await factory.WithDbAsync(async db =>
         {
-            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "S2001");
-            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "2000001");
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
             var admin = await db.Users.SingleAsync(u => u.Username == "admin");
             var building = await db.Buildings.SingleAsync(b => b.Code == "A");
             var sign = await db.Signs.SingleAsync(s => s.QrToken == "token-restroom-m1");
