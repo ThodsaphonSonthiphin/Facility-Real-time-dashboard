@@ -6,9 +6,11 @@ import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
-import { toggleClass } from '../../shared/components/styles';
+import { Segmented } from '../../shared/components/Segmented';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import { parseShiftDate } from '../../shared/utils/thaiTime';
+
+const shiftOptions = (['Day', 'Night'] as const).map((shift) => ({ value: shift, label: shiftShortLabel[shift] }));
 
 interface BoardControlsProps {
   board?: AttendanceBoard;
@@ -40,21 +42,13 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
 
   return (
     <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-      <div className="inline-flex gap-1" role="group" aria-label="กะ">
-        {(['Day', 'Night'] as const).map((shift) => (
-          <button
-            key={shift}
-            type="button"
-            data-tap=""
-            className={toggleClass}
-            aria-pressed={board?.shift === shift}
-            disabled={!board}
-            onClick={() => board && onSlot(board.shiftDate, shift)}
-          >
-            {shiftShortLabel[shift]}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="กะ"
+        options={shiftOptions}
+        value={board?.shift}
+        disabled={!board}
+        onChange={(shift) => board && onSlot(board.shiftDate, shift)}
+      />
       {/* The date and its buttons are one group, so the eye goes from the date to what it does (owner, #78) */}
       <div className="flex flex-wrap items-end gap-1">
         <Field label="วันที่">

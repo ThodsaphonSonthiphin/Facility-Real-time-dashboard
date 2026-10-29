@@ -1,5 +1,6 @@
+import { X } from 'lucide-react';
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
-import { boxClass } from './styles';
+import { Button } from './Button';
 
 interface DialogProps {
   /** The id of the heading that names the dialog; give it `tabIndex={-1}`: it takes the keyboard when the form opens. */
@@ -54,8 +55,9 @@ function DialogFrame({ labelledBy, describedBy, role, onClose, className, childr
         event.preventDefault();
         onClose();
       }}
-      // text-text: a dialog does not inherit the colour (the browser sets its own)
-      className={`text-text backdrop:bg-text/40 ${className}`}
+      // text-text: a dialog does not inherit the colour (the browser sets its own). The design file's dim page behind and
+      // overlay shadow; preflight already removes the browser's frame, and border-0 repeats it on purpose
+      className={`border-0 bg-surface text-text shadow-overlay backdrop:bg-backdrop ${className}`}
     >
       {children}
     </dialog>
@@ -63,8 +65,9 @@ function DialogFrame({ labelledBy, describedBy, role, onClose, className, childr
 }
 
 /**
- * The page's own box in the middle of the page, 640 px: D2's correction form, D3's cover form. `w-160` is 640 px, the
- * form's old width; the calc keeps a 16 px gutter on a narrow window; no token describes that.
+ * The page's own box in the middle of the page: D2's correction form, D3's cover form, a confirm. 480 px wide at most
+ * (DESIGN_SPEC §5; owner, 2026-10-29: D2's and D3's forms too, which were 640 px); the calc keeps a 16 px gutter on a
+ * narrow window, which no token describes. 8 px corners, 24/20 padding (the design file's dialog body).
  */
 export function Modal({ labelledBy, describedBy, role, onClose, children }: DialogProps) {
   return (
@@ -73,7 +76,7 @@ export function Modal({ labelledBy, describedBy, role, onClose, children }: Dial
       describedBy={describedBy}
       role={role}
       onClose={onClose}
-      className={`m-auto w-160 max-w-[calc(100%-2rem)] ${boxClass}`}
+      className="m-auto w-120 max-w-[calc(100%-2rem)] rounded-lg px-6 py-5"
     >
       {children}
     </DialogFrame>
@@ -83,17 +86,58 @@ export function Modal({ labelledBy, describedBy, role, onClose, children }: Dial
 /**
  * A panel sliding in from the right edge, full height, scrolling on its own (owner, 2026-10-23): the Area's table
  * stays visible on the left while a point or the Area itself is edited on the right. `w-120` is 480 px, half a 1280 px
- * screen's content beside the 300 px Area list; no token describes that. No border at all (owner, 2026-10-26):
- * preflight already removes the browser's <dialog> frame, and `border-0` repeats it on purpose.
+ * screen's content beside the 300 px Area list, and the design file's Drawer; no token describes that.
  */
 export function Drawer({ labelledBy, onClose, children }: DialogProps) {
   return (
     <DialogFrame
       labelledBy={labelledBy}
       onClose={onClose}
-      className="m-0 ml-auto h-dvh max-h-none w-120 max-w-[calc(100%-1rem)] overflow-y-auto rounded-none border-0 bg-surface px-4 py-3.5"
+      className="m-0 ml-auto h-dvh max-h-none w-120 max-w-[calc(100%-1rem)] overflow-y-auto rounded-none px-6 py-5"
     >
       {children}
     </DialogFrame>
+  );
+}
+
+/**
+ * The design file's dialog head: the name (with the `id` the dialog's `labelledBy` points at, taking the keyboard when
+ * it opens), an optional line under it, and "ปิด" in words on the right. It reaches the dialog's edges and draws the
+ * line under itself, so put it first inside a Modal or Drawer.
+ */
+export function DialogHeader({
+  id,
+  title,
+  detail,
+  onClose,
+  closeDisabled = false,
+}: {
+  id: string;
+  title: ReactNode;
+  detail?: ReactNode;
+  onClose: () => void;
+  /** While a send is in flight, as the dialog's own Escape. */
+  closeDisabled?: boolean;
+}) {
+  return (
+    <div className="-mx-6 -mt-5 mb-5 flex items-start justify-between gap-3 border-b border-border px-6 py-4">
+      <div className="flex min-w-0 flex-col">
+        <h2 id={id} tabIndex={-1} className="text-lg font-bold">
+          {title}
+        </h2>
+        {detail && <span className="text-xs text-text-2">{detail}</span>}
+      </div>
+      <Button variant="link" size="desk" disabled={closeDisabled} onClick={onClose}>
+        <X aria-hidden="true" className="size-4" />
+        ปิด
+      </Button>
+    </div>
+  );
+}
+
+/** The design file's dialog foot: its buttons on the right, ยกเลิก before the main one; put it last. */
+export function DialogFooter({ children }: { children: ReactNode }) {
+  return (
+    <div className="-mx-6 mt-5 -mb-5 flex flex-wrap justify-end gap-2 border-t border-border px-6 py-3">{children}</div>
   );
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Spinner } from './PageState';
 import { boxClass } from './styles';
 
 /** A white box with a thin border, for a group of things on a page. */
@@ -28,8 +29,9 @@ export function Facts({ items }: { items: readonly { label: ReactNode; value: Re
 
 /**
  * A table that scrolls sideways inside its own box, never the page (facility-0087, `pages/admin.md`). Its cells are
- * styled from here with `[&_td]`-style variants, so pages write plain `<th>` and `<td>`; `min-w-180` is 720 px,
- * today's table width.
+ * styled from here, so pages write plain `<th>` and `<td>`: a 13/600 grey head on surface-2, 14 px rows at least 44 px
+ * high, 10/12 padding (the design file's Table). The rules sit in `:where()`, which adds no weight, so a class on one
+ * cell (`tableCell`) wins over them. `min-w-180` is 720 px, today's table width.
  */
 export function Table({ label, children }: { label?: string; children: ReactNode }) {
   return (
@@ -38,10 +40,10 @@ export function Table({ label, children }: { label?: string; children: ReactNode
         aria-label={label}
         className={
           'w-full min-w-180 border-collapse text-sm ' +
-          '[&_td]:border-b [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-left [&_td]:align-top ' +
-          '[&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:align-top ' +
-          '[&_thead_th]:text-xs [&_thead_th]:font-semibold [&_thead_th]:text-text-2 ' +
-          '[&_tbody_tr:last-child>*]:border-b-0'
+          '[:where(&_td,&_th)]:border-b [:where(&_td,&_th)]:border-border [:where(&_td,&_th)]:px-3 ' +
+          '[:where(&_td,&_th)]:py-2.5 [:where(&_td,&_th)]:text-left [:where(&_td,&_th)]:align-middle ' +
+          '[:where(&_td)]:h-11 [:where(&_thead_th)]:bg-surface-2 [:where(&_thead_th)]:text-xs ' +
+          '[:where(&_thead_th)]:font-semibold [:where(&_thead_th)]:text-text-2 [:where(&_tbody_tr:last-child>*)]:border-b-0'
         }
       >
         {children}
@@ -50,7 +52,15 @@ export function Table({ label, children }: { label?: string; children: ReactNode
   );
 }
 
-/** The one line shown while a page waits for its first answer. */
+/**
+ * The one line shown while a page waits for its first answer, with the spinner (DESIGN_SPEC §6) and `aria-busy`. No
+ * skeleton: what comes next differs from page to page, and the line keeps its old height.
+ */
 export function Splash({ children }: { children: ReactNode }) {
-  return <p className="px-5 py-12 text-center text-base text-text-2">{children}</p>;
+  return (
+    <p aria-busy="true" className="flex items-center justify-center gap-2 px-5 py-12 text-base text-text-2">
+      <Spinner />
+      {children}
+    </p>
+  );
 }

@@ -29,6 +29,8 @@
   --color-text-3: #344054; /* menu items not chosen */
   --color-border: #e0e5eb; /* dividers only */
   --color-border-control: #858f9e; /* 3.3:1: control borders need 3:1 (#78) */
+  /* The page behind a Modal or Drawer (DESIGN_SPEC §5); not in design-tokens.css, which writes it inline */
+  --color-backdrop: rgb(16 24 40 / 0.45);
 
   /* Accent: only what can be pressed (rule 2) */
   --color-accent: #2457c5; /* 6.5:1 */
