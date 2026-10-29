@@ -37,17 +37,18 @@ export function Badge({ kind, children }: { kind: BadgeKind; children: ReactNode
 
 /**
  * The small [✎ แก้] before a time an Admin corrected (DESIGN_SPEC §5 Table): 20 px, on the same line as the time. Its
- * `title` and the words read by a screen reader both say แก้โดยแอดมิน.
+ * `title` and its accessible name both say แก้โดยแอดมิน; the visible word is the short "แก้".
  */
 export function EditedMark() {
   return (
     <span
+      role="img"
+      aria-label="แก้โดยแอดมิน"
       title="แก้โดยแอดมิน"
       className="inline-flex min-h-5 items-center gap-0.5 rounded-sm border border-idle-border bg-idle-bg px-1.5 text-xs font-semibold whitespace-nowrap text-idle"
     >
       <Pencil aria-hidden="true" className="size-3 shrink-0" />
-      <span aria-hidden="true">แก้</span>
-      <span className="sr-only">แก้โดยแอดมิน</span>
+      แก้
     </span>
   );
 }

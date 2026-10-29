@@ -15,6 +15,14 @@ interface DialogProps {
 }
 
 /**
+ * The design file's widths: 480 px for most forms and D3's cover form; 600 px for D2's correction form, whose table of
+ * four times needs the room; 520 px for D2's cover Drawer (ฟอร์มแก้เวลา, ฟอร์มมอบหมายทำแทน). No token describes them.
+ */
+const modalWidths = { md: 'w-120', lg: 'w-150' } as const;
+const drawerWidths = { md: 'w-120', lg: 'w-130' } as const;
+type Width = keyof typeof modalWidths;
+
+/**
  * A form over the page (the browser's own modal `<dialog>`): the page behind cannot be used and does not move, so the
  * Admin keeps their place in the table (owner, #78). Rendered while open; the parent unmounts it to close it.
  * `Modal` is the box in the middle of the page, `Drawer` the one on its right edge.
@@ -66,17 +74,18 @@ function DialogFrame({ labelledBy, describedBy, role, onClose, className, childr
 
 /**
  * The page's own box in the middle of the page: D2's correction form, D3's cover form, a confirm. 480 px wide at most
- * (DESIGN_SPEC §5; owner, 2026-10-29: D2's and D3's forms too, which were 640 px); the calc keeps a 16 px gutter on a
- * narrow window, which no token describes. 8 px corners, 24/20 padding (the design file's dialog body).
+ * (DESIGN_SPEC §5), 600 px with `width="lg"` (the owner's later design file draws D2's correction form so); the calc
+ * keeps a 16 px gutter on a narrow window, which no token describes. 8 px corners, 24/20 padding (the design file's
+ * dialog body). It scrolls inside itself when the screen is too short.
  */
-export function Modal({ labelledBy, describedBy, role, onClose, children }: DialogProps) {
+export function Modal({ labelledBy, describedBy, role, width = 'md', onClose, children }: DialogProps & { width?: Width }) {
   return (
     <DialogFrame
       labelledBy={labelledBy}
       describedBy={describedBy}
       role={role}
       onClose={onClose}
-      className="m-auto w-120 max-w-[calc(100%-2rem)] rounded-lg px-6 py-5"
+      className={`m-auto ${modalWidths[width]} max-w-[calc(100%-2rem)] rounded-lg px-6 py-5`}
     >
       {children}
     </DialogFrame>
@@ -86,14 +95,14 @@ export function Modal({ labelledBy, describedBy, role, onClose, children }: Dial
 /**
  * A panel sliding in from the right edge, full height, scrolling on its own (owner, 2026-10-23): the Area's table
  * stays visible on the left while a point or the Area itself is edited on the right. `w-120` is 480 px, half a 1280 px
- * screen's content beside the 300 px Area list, and the design file's Drawer; no token describes that.
+ * screen's content beside the 300 px Area list, and the design file's Drawer; `width="lg"` is D2's 520 px cover form.
  */
-export function Drawer({ labelledBy, onClose, children }: DialogProps) {
+export function Drawer({ labelledBy, width = 'md', onClose, children }: DialogProps & { width?: Width }) {
   return (
     <DialogFrame
       labelledBy={labelledBy}
       onClose={onClose}
-      className="m-0 ml-auto h-dvh max-h-none w-120 max-w-[calc(100%-1rem)] overflow-y-auto rounded-none px-6 py-5"
+      className={`m-0 ml-auto h-dvh max-h-none ${drawerWidths[width]} max-w-[calc(100%-1rem)] overflow-y-auto rounded-none px-6 py-5 open:flex open:flex-col`}
     >
       {children}
     </DialogFrame>
@@ -135,9 +144,9 @@ export function DialogHeader({
   );
 }
 
-/** The design file's dialog foot: its buttons on the right, ยกเลิก before the main one; put it last. */
+/** The design file's dialog foot: its buttons on the right, ยกเลิก before the main one; put it last. In a Drawer it sits at the bottom of the screen. */
 export function DialogFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="-mx-6 mt-5 -mb-5 flex flex-wrap justify-end gap-2 border-t border-border px-6 py-3">{children}</div>
+    <div className="-mx-6 mt-auto -mb-5 flex flex-wrap justify-end gap-2 border-t border-border bg-surface px-6 py-3">{children}</div>
   );
 }

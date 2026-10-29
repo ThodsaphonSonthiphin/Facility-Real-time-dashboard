@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { shiftInIfOffered } from '../support/attendance.ts';
+import { showEveryArea } from '../support/dashboard.ts';
 import { phone } from '../support/devices.ts';
 import { loginAsAdmin, loginAsEmployee } from '../support/login.ts';
 import { beforeFirstNightRound, cleanerOnShift, restroomName, restroomToken } from '../support/seed.ts';
@@ -9,6 +10,7 @@ test('a submission from the phone shows on D1 without a reload', async ({ page, 
   const cleaner = cleanerOnShift();
 
   await loginAsAdmin(page);
+  await showEveryArea(page); // AR01 has nothing wrong, so D1 folds it into a line until its cards are asked for
   const tile = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: restroomName }) });
   await expect(tile).toBeVisible();
   await expect(tile).not.toContainText(cleaner.name);

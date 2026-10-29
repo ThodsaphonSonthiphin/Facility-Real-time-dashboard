@@ -70,36 +70,92 @@ export function eventOf(row: BoardRow, type: AttendanceEvent): BoardEvent | unde
   return row.events.find((event) => event.eventType === type);
 }
 
-/** facility-0035: the scans recorded outside their sign's radius. No verdict (an Admin's time, a sign with no location) is no flag. */
-export function flagText(row: BoardRow): string {
-  return row.events
-    .filter((event) => event.withinRadius === false)
-    .map((event) => `${eventLabel[event.eventType]} ห่างป้าย ${event.distanceM ?? '?'} ม.`)
-    .join(' · ');
-}
-
-/** A cover under the Area's Cleaner (wireframe D2): who, their own Area, when the Admin assigned them, and their Shift-In. */
-export function coverLine(cover: BoardCover): string {
+/** The line under a cover's name and its ทำแทน badge (the design file's D2): their own Area, when assigned, their Shift-In. */
+export function coverDetail(cover: BoardCover): string {
   return [
-    `ทำแทน: ${cover.displayName}${cover.ownAreaCode ? ` (${cover.ownAreaCode})` : ''}`,
+    cover.ownAreaCode ? `พื้นที่ของตัวเอง ${cover.ownAreaCode}` : null,
     `แอดมินมอบหมาย ${formatTime(cover.assignedAt)}`,
     cover.shiftInAt ? `เข้างาน ${formatTime(cover.shiftInAt)}` : 'ยังไม่ลงเวลา',
-  ].join(' · ');
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 /** facility-0051: AdminAttendanceEndpoints.MaxReasonLength. */
 export const MAX_REASON = 500;
 
-/** Checked before sending; the server checks the window, the order and the future, and its message is shown as is. */
-export function correctionProblem({ time, reason }: { time: string; reason: string }): string | null {
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time.trim())) {
-    return 'เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05';
+/** The design file's reasons for a correction; อื่น ๆ needs the details written out. */
+export const correctionReasons = ['มือถือแบตหมด', 'ไม่มีอินเทอร์เน็ต', 'ลืมลงเวลา', 'สแกนป้ายไม่ได้', 'อื่น ๆ'] as const;
+export type CorrectionReason = (typeof correctionReasons)[number];
+export const OTHER_REASON: CorrectionReason = 'อื่น ๆ';
+
+/** The reason the server keeps in the history: the choice, then the details when there are any. */
+export function correctionReason(choice: CorrectionReason, detail: string): string {
+  const text = detail.trim();
+  return text === '' ? choice : `${choice} · ${text}`;
+}
+
+/** What is wrong with the reason, checked before sending. */
+export function reasonProblem(choice: CorrectionReason | null, detail: string): string | null {
+  if (!choice) {
+    return 'เลือกเหตุผลอย่างน้อย 1 ข้อ';
   }
-  const text = reason.trim();
-  if (text === '') {
-    return 'ต้องกรอกเหตุผล';
+  if (choice === OTHER_REASON && detail.trim() === '') {
+    return 'เลือก "อื่น ๆ" ต้องเขียนรายละเอียด';
   }
-  return text.length > MAX_REASON ? `เหตุผลยาวได้ไม่เกิน ${MAX_REASON} ตัวอักษร` : null;
+  return correctionReason(choice, detail).length > MAX_REASON ? `เหตุผลยาวได้ไม่เกิน ${MAX_REASON} ตัวอักษร` : null;
+}
+
+const isClock = (text: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(text);
+
+/** One time of the form: the one recorded ('' when none) and the one typed. */
+export type DraftTimes = Record<AttendanceEvent, { old: string; value: string }>;
+
+/** The times the form will send: typed, and not the same as the one recorded. */
+export function changedEvents(times: DraftTimes): AttendanceEvent[] {
+  return attendanceEvents.filter((type) => times[type].value.trim() !== times[type].old);
+}
+
+const shiftStart: Record<Shift, number> = { Day: 7 * 60, Night: 19 * 60 };
+
+/** Minutes from 6 hours before the shift starts, so a Night shift's times after midnight still come after 19:00. */
+function inShift(time: string, shift: Shift): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return (hours * 60 + minutes - shiftStart[shift] + 6 * 60 + 24 * 60) % (24 * 60);
+}
+
+/**
+ * What is wrong with each time typed, checked before sending: the form (HH:mm), a recorded time left empty (it cannot
+ * be deleted), and the order เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน, said on the time that was changed. The server
+ * checks the window and the future, and its message is shown as is.
+ */
+export function draftProblems(times: DraftTimes, shift: Shift): Partial<Record<AttendanceEvent, string>> {
+  const problems: Partial<Record<AttendanceEvent, string>> = {};
+  const changed = new Set(changedEvents(times));
+  for (const type of changed) {
+    const value = times[type].value.trim();
+    if (value === '') {
+      problems[type] = 'ลบเวลาไม่ได้ ใส่เวลาใหม่ หรือกดคืนค่า';
+    } else if (!isClock(value)) {
+      problems[type] = 'เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05';
+    }
+  }
+  let before: { type: AttendanceEvent; time: string } | null = null;
+  for (const type of attendanceEvents) {
+    const time = changed.has(type) && !problems[type] ? times[type].value.trim() : times[type].old;
+    if (time === '' || !isClock(time)) {
+      continue;
+    }
+    if (before && inShift(time, shift) <= inShift(before.time, shift)) {
+      if (changed.has(type)) {
+        problems[type] ??= `ต้องหลังเวลา${eventLabel[before.type]} (${before.time})`;
+      } else if (changed.has(before.type)) {
+        problems[before.type] ??= `ต้องก่อนเวลา${eventLabel[type]} (${time})`;
+      }
+    }
+    before = { type, time };
+  }
+  return problems;
 }
 
 /** The event the form opens on: the one asked for, else the first one the Cleaner has not scanned, else Shift-In. */

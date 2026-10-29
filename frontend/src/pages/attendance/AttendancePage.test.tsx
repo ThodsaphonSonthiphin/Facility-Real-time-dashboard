@@ -1,9 +1,9 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { adminSession, buildings, managedBuildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
-import { apiIdle, attendanceBoard, workingRow } from '../../test/liveFixtures';
+import { apiIdle, attendanceBoard, emptyRow, workingRow } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
 import { expectBehindMoreInfo, expectInView } from '../../test/moreInfo';
 
@@ -33,24 +33,30 @@ function rowOf(code: string): HTMLElement {
   return row;
 }
 
-/** The row's cells after the Area: Cleaner, status, the four times, the flag. */
-const cells = (code: string) => within(rowOf(code)).getAllByRole('cell').slice(0, 7).map((cell) => cell.textContent);
+/** The row's cells after the Area: Cleaner, status, the four times. */
+const cells = (code: string) => within(rowOf(code)).getAllByRole('cell').slice(0, 6).map((cell) => cell.textContent);
+
+/** The bar under the table, once the board is in. */
+const loaded = (shown = 'แสดง 1–6 จาก 6 พื้นที่') => screen.findByText(shown);
 
 describe('AttendancePage (D2, facility-0027, 0050)', () => {
   it("shows the clock's shift: Areas with nobody first, each Cleaner's four times, covers and flags", async () => {
     serve();
     await renderApp('/admin/attendance');
 
-    expect(await screen.findByText('15/10/2026 · กะเช้า 07:00–19:00')).toBeInTheDocument();
+    await loaded();
+    expect(screen.getByLabelText('วันที่')).toHaveValue('2026-10-15');
+    expect(screen.getByRole('button', { name: 'กะเช้า 07:00–19:00' })).toHaveAttribute('aria-pressed', 'true');
     expect(
       within(screen.getByRole('list', { name: 'สรุปกะนี้' }))
         .getAllByRole('listitem')
         .map((tile) => tile.textContent),
     ).toEqual([
-      'พื้นที่ที่ต้องมีคนกะนี้6ไม่รวมพื้นที่ที่ปิดกะนี้',
-      'มีคนแล้ว3รวมพักเบรก',
-      'ยังไม่มีคน2ต้องหาคนทำแทน',
-      'มีคนทำแทน1แอดมินมอบหมายเฉพาะกะนี้',
+      'พื้นที่ที่ต้องมีคน6',
+      'มีคนแล้ว3',
+      'ยังไม่มีคน2',
+      'มีคนทำแทน1',
+      'พักเบรก1',
     ]);
     expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual([
       'AR09 Area เก้าตึก A · ตึกทดลอง',
@@ -61,12 +67,18 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
       'AR07 Area เจ็ดตึก A · ตึกทดลอง',
     ]);
     expect(cells('AR09')[0]).toBe('ไม่มีแม่บ้านประจำ');
-    expect(cells('AR12')).toEqual(['แม่บ้านลายังไม่ลงเวลา', 'ยังไม่มีคน', '–', '–', '–', '–', '']);
-    expect(cells('AR01')).toEqual(['แม่บ้านทดสอบ', 'ทำงานอยู่', '06:52', '–', '–', '–', 'เข้างาน ห่างป้าย 85 ม.']);
-    expect(within(rowOf('AR02')).getByText('ทำแทน: แม่บ้านที่อื่น (AR03) · แอดมินมอบหมาย 07:10 · เข้างาน 06:50')).toBeInTheDocument();
+    expect(cells('AR12')).toEqual(['แม่บ้านลายังไม่ลงเวลา', 'ยังไม่มีคน', '–', '–', '–', '–']);
+    // A scan outside its sign's radius carries the distance beside its time (facility-0035)
+    expect(cells('AR01')).toEqual(['แม่บ้านทดสอบ', 'ทำงานอยู่', '06:5285 ม.', '–', '–', '–']);
+    expect(within(rowOf('AR01')).getByRole('img', { name: 'ไกลป้าย 85 ม.' })).toBeInTheDocument();
+    expect(within(rowOf('AR02')).getByText('ทำแทน')).toBeInTheDocument();
+    expect(within(rowOf('AR02')).getByText('พื้นที่ของตัวเอง AR03 · แอดมินมอบหมาย 07:10 · เข้างาน 06:50')).toBeInTheDocument();
+    expect(within(rowOf('AR12')).getAllByRole('button').map((button) => button.textContent)).toEqual(['แก้เวลา', 'หาคนทำแทน']);
     expect(cells('AR02')[1]).toBe('มีคนทำแทน');
-    expect(cells('AR05')[2]).toBe('07:02แก้โดยแอดมิน');
-    expect(cells('AR07')).toEqual(['แม่บ้านพัก', 'พักเบรก', '06:55', '09:30', '–', '–', '']);
+    // the [แก้] mark comes before the time (DESIGN_SPEC §5 Table); its name is แก้โดยแอดมิน
+    expect(cells('AR05')[2]).toBe('แก้07:02');
+    expect(within(rowOf('AR05')).getByRole('img', { name: 'แก้โดยแอดมิน' })).toBeInTheDocument();
+    expect(cells('AR07')).toEqual(['แม่บ้านพัก', 'พักเบรก', '06:55', '09:30', '–', '–']);
     // facility-0059: no link to a sign page
     expect(within(screen.getByRole('table')).queryAllByRole('link')).toHaveLength(0);
   });
@@ -74,35 +86,49 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
   it('กะดึก shows the night of the same date, and the address keeps it', async () => {
     const server = serve();
     const { user, router } = await renderApp('/admin/attendance');
-    await screen.findByText('15/10/2026 · กะเช้า 07:00–19:00');
+    await loaded();
 
-    await user.click(screen.getByRole('button', { name: 'กะดึก' }));
+    await user.click(screen.getByRole('button', { name: 'กะดึก 19:00–07:00' }));
 
-    expect(await screen.findByText('15/10/2026 · กะดึก 19:00–07:00')).toBeInTheDocument();
+    expect(await screen.findByText('แสดง 1–1 จาก 1 พื้นที่')).toBeInTheDocument();
     expect(router.state.location.search).toBe('?date=2026-10-15&shift=Night');
     expect(boardCalls(server).at(-1)?.search).toBe('?shiftDate=2026-10-15&shift=Night');
-    expect(screen.getByRole('button', { name: 'กะดึก' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'กะดึก 19:00–07:00' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('a typed date opens that date; a wrong one is refused before asking; กะปัจจุบัน goes back to the clock', async () => {
+  it('a date picked in the calendar opens that date at once, on the shift shown', async () => {
     serve();
     const { user, router } = await renderApp('/admin/attendance');
-    await screen.findByText('15/10/2026 · กะเช้า 07:00–19:00');
-    const date = screen.getByRole('textbox', { name: 'วันที่' });
+    await loaded();
 
-    await user.type(date, '31/02/2026');
-    await user.click(screen.getByRole('button', { name: 'ดูวันที่นี้' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('วันที่ต้องเป็นแบบ วว/ดด/ปปปป เช่น 15/10/2026');
-    expect(router.state.location.search).toBe('');
-
-    await user.clear(date);
-    await user.type(date, '14/10/2026');
-    await user.click(screen.getByRole('button', { name: 'ดูวันที่นี้' }));
+    fireEvent.change(screen.getByLabelText('วันที่'), { target: { value: '2026-10-14' } });
     expect(router.state.location.search).toBe('?date=2026-10-14&shift=Day');
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
-    await user.click(await screen.findByRole('button', { name: 'กะปัจจุบัน' }));
-    expect(router.state.location.search).toBe('');
+    await user.click(screen.getByRole('button', { name: 'กะดึก 19:00–07:00' }));
+    expect(router.state.location.search).toBe('?date=2026-10-15&shift=Night');
+  });
+
+  it('shows 25 Areas a page; ก่อนหน้า and ถัดไป move, and a search starts again at the first page', async () => {
+    const many = Array.from({ length: 30 }, (_, at) => ({
+      ...emptyRow,
+      areaId: 100 + at,
+      areaCode: `AR${100 + at}`,
+      areaName: `Area ${100 + at}`,
+    }));
+    serve({ 'GET /api/admin/attendance': () => ({ status: 200, body: attendanceBoard(many) }) });
+    const { user } = await renderApp('/admin/attendance');
+
+    await loaded('แสดง 1–25 จาก 30 พื้นที่');
+    expect(screen.getAllByRole('rowheader')).toHaveLength(25);
+    expect(screen.getByRole('button', { name: 'ก่อนหน้า' })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'ถัดไป' }));
+    expect(screen.getByText('แสดง 26–30 จาก 30 พื้นที่')).toBeInTheDocument();
+    expect(screen.getAllByRole('rowheader')[0]).toHaveTextContent(/^AR125 /);
+    expect(screen.getByRole('button', { name: 'ถัดไป' })).toBeDisabled();
+
+    await user.type(screen.getByRole('searchbox', { name: 'ค้นหาพื้นที่หรือแม่บ้าน' }), 'Area 1');
+    expect(screen.getByText('แสดง 1–25 จาก 30 พื้นที่')).toBeInTheDocument();
   });
 
   it('the building picker asks the server for that building', async () => {
@@ -119,13 +145,13 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
   it('search keeps the Areas whose name, Cleaner or cover matches', async () => {
     serve();
     const { user } = await renderApp('/admin/attendance');
-    await screen.findByText('15/10/2026 · กะเช้า 07:00–19:00');
+    await loaded();
 
-    await user.type(screen.getByRole('searchbox', { name: 'ค้นหา' }), 'ที่อื่น');
+    await user.type(screen.getByRole('searchbox', { name: 'ค้นหาพื้นที่หรือแม่บ้าน' }), 'ที่อื่น');
     expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual(['AR02 Office ทดลองตึก B · ตึกข้างเคียง']);
 
-    await user.clear(screen.getByRole('searchbox', { name: 'ค้นหา' }));
-    await user.type(screen.getByRole('searchbox', { name: 'ค้นหา' }), 'ไม่มีชื่อนี้');
+    await user.clear(screen.getByRole('searchbox', { name: 'ค้นหาพื้นที่หรือแม่บ้าน' }));
+    await user.type(screen.getByRole('searchbox', { name: 'ค้นหาพื้นที่หรือแม่บ้าน' }), 'ไม่มีชื่อนี้');
     expect(screen.getByText('ไม่พบพื้นที่ที่ตรงกับที่ค้นหา')).toBeInTheDocument();
   });
 
@@ -163,7 +189,7 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
   it('"ส่งออก Excel" opens the export of the shift date and building on screen', async () => {
     serve();
     await renderApp('/admin/attendance?building=2');
-    await screen.findByText('15/10/2026 · กะเช้า 07:00–19:00');
+    await loaded();
 
     expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute(
       'href',
@@ -171,17 +197,13 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     );
   });
 
-  it('the page notes wait behind ℹ; the summary tiles keep their lines (owner, 2026-10-27)', async () => {
+  it('the one-line note is in view; the longer notes wait behind ℹ (the design file)', async () => {
     serve();
     await renderApp('/admin/attendance');
 
-    await screen.findByText('15/10/2026 · กะเช้า 07:00–19:00');
-    expectBehindMoreInfo(
-      'หน้านี้ดูว่าแต่ละพื้นที่มีคนอยู่แล้วหรือยัง ไม่ใช่ระบบลงเวลาทำงานของบริษัท จึงไม่คิดสายหรือกลับก่อน',
-      'เกี่ยวกับหน้านี้',
-    );
+    await loaded();
+    expectInView('ไม่ใช่ระบบลงเวลาทำงาน และไม่คิดสาย');
     expectBehindMoreInfo(/^เรียงพื้นที่ที่ยังไม่มีคนขึ้นก่อน/, 'เกี่ยวกับหน้านี้');
     expectBehindMoreInfo(/^ลืมลงเวลาเลิกงาน/, 'เกี่ยวกับหน้านี้');
-    expectInView('ไม่รวมพื้นที่ที่ปิดกะนี้');
   });
 });

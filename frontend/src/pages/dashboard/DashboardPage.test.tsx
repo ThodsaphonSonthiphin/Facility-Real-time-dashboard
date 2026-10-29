@@ -21,7 +21,8 @@ function serve(answer: PointCard[] = boardPoints, routes: FakeRoutes = {}) {
   });
 }
 
-const pointGets = (server: ReturnType<typeof serve>) => server.calls.filter((call) => call.path === '/api/service-points');
+const pointGets = (server: ReturnType<typeof serve>) =>
+  server.calls.filter((call) => call.path === '/api/service-points');
 
 /** The hub's first start asks again (facility-0064): wait for that answer, or it could land after a patch. */
 async function settled(server: ReturnType<typeof serve>, store: AppStore) {
@@ -29,7 +30,10 @@ async function settled(server: ReturnType<typeof serve>, store: AppStore) {
   await apiIdle(store);
 }
 
-const tileNames = (region: HTMLElement) => within(region).getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+const tileNames = (region: HTMLElement) =>
+  within(region)
+    .getAllByRole('heading', { level: 3 })
+    .map((h) => h.textContent);
 
 describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
   it('waits for the building names too, then shows the filters, the help and the cards together (layout shift)', async () => {
@@ -56,7 +60,9 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
 
   it('shows every point by Area, with its status, round and what happened', async () => {
     serve();
-    await renderApp('/dashboard');
+    const { user } = await renderApp('/dashboard');
+    // the Areas with nothing wrong are folded by default; this test reads every card
+    await user.click(await screen.findByRole('checkbox', { name: 'เรียงพื้นที่ที่มีปัญหาขึ้นก่อน' }));
 
     const ar01 = await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
     expect(tileNames(ar01)).toEqual(['ห้องน้ำชาย', 'ห้องน้ำหญิง', 'จุดทิ้งขยะ', 'โถงทางเดิน']);
@@ -76,7 +82,11 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     expect(screen.getByText('ส่งงาน 09:20 · แม่บ้านทดสอบ · ส่งช้า')).toBeInTheDocument();
     expect(screen.getByText('จุดนี้ไม่มีรอบในกะนี้')).toBeInTheDocument();
     // facility-0059: only the sign's QR opens a point, so the one link on the board is the export (D8)
-    expect(within(screen.getByRole('main')).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin/export']);
+    expect(
+      within(screen.getByRole('main'))
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(['/admin/export']);
   });
 
   it('a pushed submission or inspection changes its card at once, without asking the server (#26)', async () => {
@@ -133,7 +143,8 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
 
   it('a point not yet done shows the round it can still be sent in', async () => {
     serve([point({ id: 9, name: 'ห้องพัก', status: 'NotYetDone' })]);
-    await renderApp('/dashboard');
+    const { user } = await renderApp('/dashboard');
+    await user.click(await screen.findByRole('button', { name: 'ดูจุด' })); // nothing wrong there, so the Area is folded
 
     expect(await screen.findByText('ยังไม่ส่งงาน · ส่งได้ถึง 12:00')).toBeInTheDocument();
     expect(screen.getByText('รอบ 10:00–12:00')).toBeInTheDocument();
@@ -215,7 +226,10 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     const { store } = await renderApp('/dashboard');
     await settled(server, store);
 
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('href', '/admin/export');
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute(
+      'href',
+      '/admin/export',
+    );
   });
 
   it('the notes on reading a card wait behind ℹ (owner, 2026-10-27)', async () => {

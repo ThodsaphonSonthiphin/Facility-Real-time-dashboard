@@ -63,10 +63,10 @@ export function ExportPage() {
   };
 
   return (
-    <main className="flex flex-col gap-4 text-sm text-text">
-      <header className="flex flex-col gap-0.5">
+    <main className="flex flex-col gap-6 text-sm text-text">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold">ส่งออก Excel</h1>
         <span className="text-text-2">แอดมินเท่านั้น · ช่วงทดลองใช้ไฟล์ Excel แทนหน้ารายงาน</span>
-        <h1 className="text-xl font-bold">ส่งออก Excel</h1>
       </header>
       {/* The choices take the wider column, the download the narrower, as in the wireframe; no token describes the
           1.4 : 1 track list */}
@@ -78,7 +78,7 @@ export function ExportPage() {
           {exportSets.map((set) => (
             <label
               key={set}
-              className="flex cursor-pointer items-start gap-3 rounded-lg border border-border px-3.5 py-3 has-checked:border-accent"
+              className="flex cursor-pointer items-start gap-3 rounded-lg border border-border-control bg-surface px-4 py-3 has-checked:border-2 has-checked:border-accent has-checked:bg-accent-subtle has-checked:px-[15px] has-checked:py-[11px] has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
             >
               <input
                 type="checkbox"
@@ -106,7 +106,7 @@ export function ExportPage() {
           {typeof range === 'string' ? (
             <p className="text-text-2">กรอกช่วงวันให้ถูกต้องก่อน</p>
           ) : (
-            <div className="flex flex-col gap-1 rounded-lg bg-bg px-3.5 py-3 wrap-anywhere">
+            <div className="flex flex-col gap-1 rounded-md bg-surface-2 px-4 py-3 wrap-anywhere">
               <strong>{fileNameFor(range)}</strong>
               <span className="text-text-2">
                 {sets.length === 0
@@ -121,7 +121,7 @@ export function ExportPage() {
             </Button>
           </div>
           {notice && (
-            <Note tone={notice.kind === 'ok' ? 'info' : 'error'} status={notice.kind === 'ok'}>
+            <Note tone={notice.kind === 'ok' ? 'success' : 'error'} status={notice.kind === 'ok'}>
               {notice.text}
             </Note>
           )}

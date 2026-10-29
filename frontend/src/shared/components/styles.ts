@@ -4,20 +4,29 @@
  * class is written out in full, so Tailwind finds it.
  */
 
+import { Check, Clock, Hourglass, Minus, RotateCcw, type LucideIcon } from 'lucide-react';
 import type { PointStatus } from '../api/types';
 
-/**
- * A Point Status's colour as a background, for StatusChip and for a mark beside the status's words (D1's legend).
- * facility-0087 rule 3: the three statuses with nothing to do share one grey.
- */
-export const statusBg: Record<PointStatus, string> = {
-  Rework: 'bg-rework',
-  Overdue: 'bg-overdue',
-  PendingInspection: 'bg-pending',
-  Passed: 'bg-passed',
-  NotYetDone: 'bg-idle',
-  BeforeFirstRound: 'bg-idle',
-  OffHours: 'bg-idle',
+/** Each status's icon (DESIGN_SPEC §2); the three with nothing to do share the minus, as they share one grey. */
+export const statusIcon: Record<PointStatus, LucideIcon> = {
+  Rework: RotateCcw,
+  Overdue: Clock,
+  PendingInspection: Hourglass,
+  Passed: Check,
+  NotYetDone: Minus,
+  BeforeFirstRound: Minus,
+  OffHours: Minus,
+};
+
+/** A Point Status's colour as text, for a heading that names it (D1's status cards); statusBg is the same as a background. */
+export const statusText: Record<PointStatus, string> = {
+  Rework: 'text-rework',
+  Overdue: 'text-overdue',
+  PendingInspection: 'text-pending',
+  Passed: 'text-passed',
+  NotYetDone: 'text-idle',
+  BeforeFirstRound: 'text-idle',
+  OffHours: 'text-idle',
 };
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'link';

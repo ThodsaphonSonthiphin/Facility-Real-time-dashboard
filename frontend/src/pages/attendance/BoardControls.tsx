@@ -1,16 +1,13 @@
-import { useState } from 'react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import type { AttendanceBoard, BoardArgs } from '../../shared/api/attendanceBoardApi';
 import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
-import { Button } from '../../shared/components/Button';
-import { Field, Select, TextInput } from '../../shared/components/Field';
-import { Note } from '../../shared/components/Note';
+import { SearchBox } from '../../shared/components/CandidateChoices';
+import { Select, TextInput } from '../../shared/components/Field';
 import { Segmented } from '../../shared/components/Segmented';
-import { shiftShortLabel } from '../../shared/utils/labels';
-import { parseShiftDate } from '../../shared/utils/thaiTime';
+import { shiftLabel } from '../../shared/utils/labels';
 
-const shiftOptions = (['Day', 'Night'] as const).map((shift) => ({ value: shift, label: shiftShortLabel[shift] }));
+const shiftOptions = (['Day', 'Night'] as const).map((shift) => ({ value: shift, label: shiftLabel[shift] }));
 
 interface BoardControlsProps {
   board?: AttendanceBoard;
@@ -19,29 +16,20 @@ interface BoardControlsProps {
   onSearch: (text: string) => void;
   /** Show this shift of this date. */
   onSlot: (shiftDate: string, shift: Shift) => void;
-  /** Back to the shift on the clock. */
-  onNow: () => void;
   onBuilding: (buildingId: number | undefined) => void;
 }
 
-/** Wireframe D2's controls: the shift, a typed date (plan 11 decision 13), the building and the search. */
-export function BoardControls({ board, args, search, onSearch, onSlot, onNow, onBuilding }: BoardControlsProps) {
+/**
+ * The design file's D2 filter row: the shift, the date (the browser's calendar, owner 2026-10-29), the building, each
+ * with its label beside it, then the search (kept on the owner's word, at the end of the row). A date picked shows that
+ * date at once; the shift on the clock is its date and shift.
+ */
+export function BoardControls({ board, args, search, onSearch, onSlot, onBuilding }: BoardControlsProps) {
   const { data: buildings } = useGetBuildingsQuery();
-  const [dateText, setDateText] = useState('');
-  const [dateError, setDateError] = useState<string | null>(null);
-
-  const showDate = () => {
-    const date = parseShiftDate(dateText);
-    if (!date) {
-      setDateError('วันที่ต้องเป็นแบบ วว/ดด/ปปปป เช่น 15/10/2026');
-      return;
-    }
-    setDateError(null);
-    onSlot(date, board?.shift ?? 'Day');
-  };
+  const date = board?.shiftDate ?? args.shiftDate ?? '';
 
   return (
-    <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+    <section aria-label="ตัวกรอง" className="flex flex-wrap items-center gap-3">
       <Segmented
         label="กะ"
         options={shiftOptions}
@@ -49,32 +37,23 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
         disabled={!board}
         onChange={(shift) => board && onSlot(board.shiftDate, shift)}
       />
-      {/* The date and its buttons are one group, so the eye goes from the date to what it does (owner, #78) */}
-      <div className="flex flex-wrap items-end gap-1">
-        <Field label="วันที่">
-          <TextInput
-            size="desk"
-            value={dateText}
-            placeholder="วว/ดด/ปปปป"
-            inputMode="numeric"
-            onChange={(event) => setDateText(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                showDate();
-              }
-            }}
-          />
-        </Field>
-        <Button size="desk" onClick={showDate}>
-          ดูวันที่นี้
-        </Button>
-        {args.shiftDate && (
-          <Button size="desk" onClick={onNow}>
-            กะปัจจุบัน
-          </Button>
-        )}
-      </div>
-      <Field label="ตึก">
+      <label className="inline-flex items-center gap-2">
+        วันที่
+        <TextInput
+          size="desk"
+          type="date"
+          value={date}
+          disabled={!board}
+          onChange={(event) => {
+            // A date box gives "" while a part of the date is cleared; only a whole date is shown
+            if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) {
+              onSlot(event.target.value, board?.shift ?? 'Day');
+            }
+          }}
+        />
+      </label>
+      <label className="inline-flex items-center gap-2">
+        ตึก
         <Select
           size="desk"
           value={args.buildingId ?? ''}
@@ -87,21 +66,8 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onNow, on
             </option>
           ))}
         </Select>
-      </Field>
-      <Field label="ค้นหา">
-        <TextInput
-          size="desk"
-          type="search"
-          value={search}
-          placeholder="ชื่อพื้นที่หรือแม่บ้าน"
-          onChange={(event) => onSearch(event.target.value)}
-        />
-      </Field>
-      {dateError && (
-        <div className="basis-full">
-          <Note tone="error">{dateError}</Note>
-        </div>
-      )}
-    </div>
+      </label>
+      <SearchBox label="ค้นหาพื้นที่หรือแม่บ้าน" value={search} onChange={onSearch} className="ml-auto w-60" />
+    </section>
   );
 }

@@ -53,8 +53,8 @@ export const legendOrder: readonly PointStatus[] = [
 
 /** ต้องแก้ไข and เลยเวลา need someone, so their tile is framed in the status colour as well as the chip (#77). */
 export const tileFrame: Partial<Record<PointStatus, string>> = {
-  Rework: 'border-2 border-rework',
-  Overdue: 'border-2 border-overdue',
+  Rework: 'border-2 border-rework-border',
+  Overdue: 'border-2 border-overdue-border',
 };
 
 /** The cards of one building; '' is every building. */
@@ -70,9 +70,34 @@ export function statusCounts(points: readonly PointCard[]): Record<PointStatus, 
   return counts;
 }
 
-/** The cards to show: the building, then the status and the issue tag (the legend counts inside the building). */
+/** The words the search looks in: the Area, the point and the Cleaner who last sent it. */
+function searchText(point: PointCard): string {
+  return [point.areaCode, point.areaName, point.name, point.lastScan?.cleanerName]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+/**
+ * The cards to show: the building, then the status, the issue tag and the search (the legend counts inside the
+ * building only, so a search never changes them).
+ */
 export function filterPoints(points: readonly PointCard[], filters: DashboardState): PointCard[] {
+  const wanted = filters.search.trim().toLowerCase();
   return inBuilding(points, filters.buildingCode).filter(
-    (point) => (filters.status === 'all' || point.status === filters.status) && (!filters.issueOnly || Boolean(point.issue)),
+    (point) =>
+      (filters.status === 'all' || point.status === filters.status) &&
+      (!filters.issueOnly || Boolean(point.issue)) &&
+      (wanted === '' || searchText(point).includes(wanted)),
   );
+}
+
+/** An Area needs someone when a point is ต้องแก้ไข or เลยเวลา, or a Cleaner reported an issue at one. */
+export function hasProblem(group: AreaGroup): boolean {
+  return group.points.some((point) => point.status === 'Rework' || point.status === 'Overdue' || Boolean(point.issue));
+}
+
+/** Whether the filters leave the page whole: folding Areas away would hide what a filter or a search found. */
+export function isUnfiltered(filters: DashboardState): boolean {
+  return filters.status === 'all' && !filters.issueOnly && filters.search.trim() === '';
 }

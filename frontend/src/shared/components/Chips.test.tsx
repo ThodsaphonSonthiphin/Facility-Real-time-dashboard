@@ -21,7 +21,7 @@ describe('chips, flags and notes (Enterprise Light, #122)', () => {
   it('the edited mark says who changed the time', () => {
     render(<EditedMark />);
 
-    expect(screen.getByTitle('แก้โดยแอดมิน')).toHaveTextContent('แก้โดยแอดมิน');
+    expect(screen.getByRole('img', { name: 'แก้โดยแอดมิน' })).toHaveTextContent('แก้');
   });
 
   it('an error note offers ลองอีกครั้ง only when it can be tried again', async () => {
