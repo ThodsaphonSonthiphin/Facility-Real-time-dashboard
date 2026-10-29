@@ -131,6 +131,66 @@ public class SecurityLogTests
     }
 
     [Fact]
+    public async Task An_unknown_admin_username_is_written_without_what_was_typed()
+    {
+        using var factory = new FacilityApiFactory();
+        var typed = $"nobody-{Guid.NewGuid():N}"; // built at run time: no login literal in the repo
+
+        await AuthApi.AdminLoginAsync(factory.CreateApiClient(), typed, $"wrong-{Guid.NewGuid():N}");
+
+        Assert.Equal(new[] { "Login failed: unknown account (admin login)" }, SecurityLines(factory));
+        NowhereInTheLog(factory, typed);
+    }
+
+    [Fact]
+    public async Task A_locked_admin_is_written_with_the_username_and_never_the_password()
+    {
+        using var factory = new FacilityApiFactory();
+        var client = factory.CreateApiClient();
+        var typed = $"wrong-{Guid.NewGuid():N}"; // built at run time: no password literal in the repo
+        for (var i = 0; i < 5; i++)
+        {
+            await AuthApi.AdminLoginAsync(client, "admin", typed);
+        }
+
+        var refused = await AuthApi.AdminLoginAsync(client, "admin", typed);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+        Assert.Equal("Login refused while locked: admin admin", SecurityLines(factory).Last());
+        NowhereInTheLog(factory, typed);
+    }
+
+    [Fact]
+    public async Task A_locked_unknown_admin_username_is_written_without_what_was_typed()
+    {
+        using var factory = new FacilityApiFactory();
+        var client = factory.CreateApiClient();
+        var typed = $"nobody-{Guid.NewGuid():N}"; // built at run time: no login literal in the repo
+        for (var i = 0; i < 6; i++)
+        {
+            await AuthApi.AdminLoginAsync(client, typed, $"wrong-{Guid.NewGuid():N}");
+        }
+
+        Assert.Equal("Login refused while locked: unknown account (admin login)", SecurityLines(factory).Last());
+        NowhereInTheLog(factory, typed);
+    }
+
+    [Fact]
+    public async Task An_admins_reused_refresh_token_names_the_admin_username()
+    {
+        using var factory = new FacilityApiFactory();
+        var (client, _, first) = await AuthApi.LoggedInAdminAsync(factory);
+        await AuthApi.RefreshAsync(client, first);
+
+        factory.Clock.Advance(TimeSpan.FromSeconds(31)); // past the 30 s grace of facility-0015
+        var replay = await AuthApi.RefreshAsync(client, first);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, replay.StatusCode);
+        Assert.Equal(new[] { "Refresh token reused, session ended: admin admin" }, SecurityLines(factory));
+        NowhereInTheLog(factory, first);
+    }
+
+    [Fact]
     public async Task A_successful_login_writes_no_security_line()
     {
         using var factory = new FacilityApiFactory();
