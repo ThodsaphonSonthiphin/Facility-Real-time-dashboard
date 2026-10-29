@@ -13,7 +13,8 @@ import { focusRing } from './styles';
  *
  * `wide` is the Admin's desk (wireframes D1–D11): the menu in a 240 px sidebar from 1024 px, above the page on a
  * narrower screen, and the page in the middle, at most 1216 px with 24 px around it. Without it the page is the phone
- * column (M0–M17): a white bar with who is logged in, then the page, which scrolls with the window.
+ * column (M0–M17): a white bar with who is logged in, then the page, which scrolls with the window. A Cleaner's pages
+ * have no bar: each carries its own header (`PhoneScreen`), and ออกจากระบบ is at the end of My Work (design file's Main).
  */
 export function AppLayout({ wide = false }: { wide?: boolean }) {
   const user = useAppSelector((state) => state.auth.currentUser);
@@ -50,20 +51,25 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
     );
   }
 
+  const ownHeader = user?.role === 'cleaner';
   return (
     <div className="mx-auto flex min-h-svh max-w-mobile flex-col print:max-w-none">
       {/* The top inset keeps the bar clear of a phone's notch (DESIGN_SPEC §4); no token describes it */}
-      <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 text-sm text-text-2 print:hidden">
-        <span className="font-semibold text-text">
-          {user?.fullName}
-          {user && <span className="font-normal text-text-2"> · {roleLabel[user.role]}</span>}
-        </span>
-        <Button size="phone" onClick={logOut}>
-          ออกจากระบบ
-        </Button>
-      </header>
-      {/* The bottom inset keeps the last button above a phone's home bar */}
-      <div className="flex flex-1 flex-col gap-4 px-4 pt-4 pb-[max(24px,env(safe-area-inset-bottom))] print:p-0">
+      {!ownHeader && (
+        <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 text-sm text-text-2 print:hidden">
+          <span className="font-semibold text-text">
+            {user?.fullName}
+            {user && <span className="font-normal text-text-2"> · {roleLabel[user.role]}</span>}
+          </span>
+          <Button size="phone" onClick={logOut}>
+            ออกจากระบบ
+          </Button>
+        </header>
+      )}
+      {/* The bottom inset keeps the last button above a phone's home bar; a page with its own header takes the top inset */}
+      <div
+        className={`flex flex-1 flex-col gap-4 px-4 pb-[max(24px,env(safe-area-inset-bottom))] print:p-0 ${ownHeader ? 'pt-[max(16px,env(safe-area-inset-top))]' : 'pt-4'}`}
+      >
         <Outlet />
       </div>
     </div>

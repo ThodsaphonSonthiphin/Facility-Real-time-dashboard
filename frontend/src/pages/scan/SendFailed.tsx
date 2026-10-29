@@ -1,9 +1,11 @@
+import { RefreshCw, WifiOff } from 'lucide-react';
+import { Link } from 'react-router';
 import type { PointCard } from '../../shared/api/types';
 import { Panel } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
-import { noteClass } from '../../shared/components/styles';
+import { ResultScreen } from '../../shared/components/ResultScreen';
+import { buttonClass, noteClass } from '../../shared/components/styles';
 import { formatTime } from '../../shared/utils/thaiTime';
-import { PointHeading } from './PointHeading';
 import { describeDraft, type ScanDraft } from './scanRules';
 
 interface SendFailedProps {
@@ -20,32 +22,46 @@ interface SendFailedProps {
  */
 export function SendFailed({ point, draft, triedAt, sending, onResend }: SendFailedProps) {
   return (
-    <main className="flex flex-col gap-4 text-base text-text">
-      <PointHeading point={point} />
-      {/* A region with its own heading (wireframe M12), in the error note's colours */}
-      <section aria-labelledby="scan-failed-title" className={`flex flex-col gap-0.5 ${noteClass('error')}`}>
-        <h2 id="scan-failed-title" className="text-lg font-bold">
-          ยังไม่ได้บันทึก
-        </h2>
-        <span>{`ส่งงานไม่สำเร็จ เพราะไม่มีสัญญาณหรือเซิร์ฟเวอร์ไม่ตอบ · ลองล่าสุด ${formatTime(triedAt)}`}</span>
-      </section>
-      <Panel title="สิ่งที่คุณเลือกไว้ (ยังอยู่ในหน้านี้)">
-        <p>{describeDraft(draft)}</p>
-      </Panel>
-      <Panel title="ทำอย่างไรต่อ">
-        <ol className="m-0 list-decimal pl-5">
-          <li>อย่าปิดหน้านี้</li>
-          <li>เดินไปตรงที่มีสัญญาณ</li>
-          <li>กด "ส่งใหม่"</li>
-        </ol>
-        <p className="text-sm text-text-2">
-          เวลาที่บันทึกคือเวลาที่ส่งสำเร็จ ถ้าพ้นเวลารอบจะนับเป็นส่งช้า ถ้าเดินออกไกลจากป้าย การส่งงานจะขึ้นว่าไกลป้าย
-        </p>
-        <p className="text-sm text-text-2">ระบบไม่เก็บงานไว้ในมือถือแล้วส่งเองทีหลัง</p>
-      </Panel>
-      <Button variant="primary" size="main" disabled={sending} onClick={onResend}>
-        {sending ? 'กำลังส่ง...' : 'ส่งใหม่'}
-      </Button>
-    </main>
+    <ResultScreen
+      tone="err"
+      icon={<WifiOff aria-hidden="true" className="size-14" strokeWidth={2.25} />}
+      title="ส่งไม่สำเร็จ"
+      bottom={
+        <>
+          <Button variant="primary" size="main" disabled={sending} onClick={onResend}>
+            <RefreshCw aria-hidden="true" className="size-6" />
+            {sending ? 'กำลังส่ง...' : 'ส่งใหม่'}
+          </Button>
+          <Link className={buttonClass('secondary', 'phone')} data-tap="" to="/my-work">
+            กลับไปงานของฉัน
+          </Link>
+        </>
+      }
+    >
+      <span className="text-xl font-semibold">{point.name}</span>
+      <div className="flex w-full flex-col gap-4 text-left">
+        {/* A region with its own heading (wireframe M12), in the error note's colours */}
+        <section aria-labelledby="scan-failed-title" className={`flex flex-col gap-0.5 ${noteClass('error')}`}>
+          <h2 id="scan-failed-title" className="text-lg font-bold">
+            ยังไม่ได้บันทึก
+          </h2>
+          <span>{`ส่งงานไม่สำเร็จ เพราะไม่มีสัญญาณหรือเซิร์ฟเวอร์ไม่ตอบ · ลองล่าสุด ${formatTime(triedAt)}`}</span>
+        </section>
+        <Panel title="สิ่งที่คุณเลือกไว้ (ยังอยู่ในหน้านี้)">
+          <p>{describeDraft(draft)}</p>
+        </Panel>
+        <Panel title="ทำอย่างไรต่อ">
+          <ol className="m-0 list-decimal pl-5">
+            <li>อย่าปิดหน้านี้</li>
+            <li>เดินไปตรงที่มีสัญญาณ</li>
+            <li>กด "ส่งใหม่"</li>
+          </ol>
+          <p className="text-sm text-text-2">
+            เวลาที่บันทึกคือเวลาที่ส่งสำเร็จ ถ้าพ้นเวลารอบจะนับเป็นส่งช้า ถ้าเดินออกไกลจากป้าย การส่งงานจะขึ้นว่าไกลป้าย
+          </p>
+          <p className="text-sm text-text-2">ระบบไม่เก็บงานไว้ในมือถือแล้วส่งเองทีหลัง</p>
+        </Panel>
+      </div>
+    </ResultScreen>
   );
 }

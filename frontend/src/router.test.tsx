@@ -144,7 +144,8 @@ describe('routing (facility-0026, 0058)', () => {
     const { user, router, store } = await renderApp('/my-work');
     expect(screen.getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'ออกจากระบบ' }));
+    // A Cleaner's ออกจากระบบ is at the end of My Work, which shows it once the work has loaded (the design file's Main)
+    await user.click(await screen.findByRole('button', { name: 'ออกจากระบบ' }));
 
     expect(router.state.location.pathname).toBe('/login');
     expect(router.state.location.state).toBeNull();

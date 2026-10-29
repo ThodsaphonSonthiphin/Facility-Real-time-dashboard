@@ -5,37 +5,44 @@ import { StatusChip } from '../../shared/components/StatusChip';
 import { issueText } from '../../shared/utils/pointText';
 import { detailOf, whatToDo, whereText, type WorkItem } from './workRules';
 
-// The card's frame and heading take the point's status colour; ยังไม่ทำ has nothing wrong, so it stays neutral
-const tone: Partial<Record<PointStatus, string>> = {
-  Rework: 'border-rework text-rework',
-  Overdue: 'border-overdue text-overdue',
+// The card's frame, band and heading take the point's status colour; ยังไม่ทำ has nothing wrong, so it stays neutral
+const tone: Partial<Record<PointStatus, { frame: string; band: string; heading: string }>> = {
+  Rework: { frame: 'border-rework-border', band: 'bg-rework-bg', heading: 'text-rework-strong' },
+  Overdue: { frame: 'border-overdue-border', band: 'bg-overdue-bg', heading: 'text-overdue-strong' },
 };
+const neutral = { frame: 'border-border', band: 'bg-idle-bg', heading: 'text-text' };
 
 /**
- * Variant B's large card "ทำอันนี้ก่อน" (#68, `pages/phone.md`): the most urgent point the Cleaner has to act on.
- * Names, defects and notes are rendered as React text only (facility-0066). It is not a link (facility-0059).
+ * Variant B's large card "ทำอันนี้ก่อน" (#68, `pages/phone.md`), as the design file's Main: a band in the status colour
+ * with the heading and the filled chip, then the point, what the Supervisor said and the order to scan. The most urgent
+ * point the Cleaner has to act on. Names, defects and notes are rendered as React text only (facility-0066). It is
+ * not a link (facility-0059).
  */
 export function NextJob({ item }: { item: WorkItem }) {
   const { point } = item;
   const issue = issueText(point);
-  const colour = tone[point.status] ?? 'border-text text-text';
+  const look = tone[point.status] ?? neutral;
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} className={`flex flex-col gap-2.5 rounded-lg border-2 bg-surface px-4 py-4.5 ${colour}`}>
-      <h2 id={headingId} className="text-sm font-bold tracking-wide">
-        ทำอันนี้ก่อน
-      </h2>
-      <div className="flex items-start justify-between gap-3 text-text">
-        <h3 className="text-2xl font-bold">{point.name}</h3>
-        <StatusChip status={point.status} size="lg" />
+    <section aria-labelledby={headingId} className={`overflow-hidden rounded-lg border bg-surface ${look.frame}`}>
+      <div className={`flex items-center justify-between gap-2 px-4 py-2 ${look.band}`}>
+        <h2 id={headingId} className={`text-base font-bold ${look.heading}`}>
+          ทำอันนี้ก่อน
+        </h2>
+        <StatusChip status={point.status} size="lg" solid />
       </div>
-      <span className="text-text-2">{whereText(item)}</span>
-      <span className="text-lg text-text">{detailOf(point)}</span>
-      {issue && <span className="text-sm font-semibold text-rework">{issue}</span>}
-      <span className="flex items-center gap-2 rounded-lg bg-bg px-3 py-2.5 font-semibold text-text">
-        <QrCode aria-hidden="true" className="size-5 shrink-0" />
-        {whatToDo(point.status)}
-      </span>
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex flex-col">
+          <h3 className="text-2xl font-bold">{point.name}</h3>
+          <span className="text-text-2 tabular-nums">{whereText(item)}</span>
+        </div>
+        <span className="flex gap-3 rounded-md bg-bg p-3 text-text">{detailOf(point)}</span>
+        {issue && <span className="text-sm font-semibold text-rework">{issue}</span>}
+        <span className="flex items-center gap-3 border-t border-border pt-3 text-lg font-bold text-text">
+          <QrCode aria-hidden="true" className="size-6 shrink-0" />
+          {whatToDo(point.status)}
+        </span>
+      </div>
     </section>
   );
 }
