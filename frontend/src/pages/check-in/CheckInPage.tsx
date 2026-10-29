@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Clock } from 'lucide-react';
+import { useParams } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import { blockedScanOf, isNotSent, statusOf } from '../../shared/api/scanAnswers';
@@ -9,8 +10,9 @@ import { Button } from '../../shared/components/Button';
 import { LocationHelp } from '../../shared/components/LocationHelp';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
+import { PageLoading } from '../../shared/components/PageState';
+import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
 import { StatusScreen } from '../../shared/components/StatusScreen';
-import { buttonClass } from '../../shared/components/styles';
 import { readLocation, type LocationProblem } from '../../shared/geo/readLocation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { eventLabel, shiftLabel } from '../../shared/utils/labels';
@@ -93,57 +95,60 @@ export function CheckInPage() {
   }
   if (outcome?.kind === 'location') {
     const { problem, eventType } = outcome;
-    return <LocationHelp problem={problem} action="ลงเวลา" busy={pressed !== null} onRetry={() => void press(eventType)} />;
+    return (
+      <LocationHelp problem={problem} action="ลงเวลา" busy={pressed !== null} onRetry={() => void press(eventType)} />
+    );
   }
   if (outcome?.kind === 'blocked') {
     return <BlockedScanScreen blocked={outcome.blocked} sign="check-in" ownAreaName={ownArea?.areaName} />;
   }
 
+  const buttons = liveAttendance && liveAttendance.nextEvents.length > 0 ? liveAttendance.nextEvents : null;
   return (
-    // flex-1: the rest of the screen under the shell's bar, so the buttons sit low, in thumb reach. The shell is
-    // min-h-svh, not dvh: a phone hides its toolbar while the page scrolls, dvh grows with it, and the buttons slid
-    // along with the scroll (owner, 2026-10-27)
-    <main className="flex flex-1 flex-col gap-4 text-base text-text">
-      <header className="flex flex-col gap-1">
-        <span className="text-sm tracking-wide text-text-2">ป้ายลงเวลา</span>
-        <h1 className="text-2xl font-bold">ลงเวลา</h1>
-        {attendance?.shift && <p className="text-lg font-semibold">{shiftLabel[attendance.shift]}</p>}
-        {ownArea && <p className="text-sm text-text-2">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
-      </header>
-      {(workQuery.isLoading || signQuery.isLoading) && <p className="text-sm text-text-2">กำลังโหลด...</p>}
+    // The shell is min-h-svh, not dvh: a phone hides its toolbar while the page scrolls, dvh grows with it, and the
+    // buttons slid along with the scroll (owner, 2026-10-27). PhoneScreen's page is flex-1 and its bar ends the screen,
+    // so the buttons sit low, in thumb reach
+    <PhoneScreen
+      header={
+        <PhoneHeader back={{ to: '/my-work', label: 'งานของฉัน' }}>
+          <span className="px-0 text-sm text-text-2">ป้ายลงเวลา</span>
+          <h1 className="text-2xl font-bold">ลงเวลา</h1>
+          {attendance?.shift && <p className="text-lg font-semibold">{shiftLabel[attendance.shift]}</p>}
+          {ownArea && (
+            <p className="text-sm text-text-2">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>
+          )}
+        </PhoneHeader>
+      }
+      bottom={// At most one blue button per screen (pages/phone.md): the next event, 56 px; the others are outlined, 48 px
+      buttons?.map((eventType, index) => (
+        <Button
+          key={eventType}
+          variant={index === 0 ? 'primary' : 'secondary'}
+          size={index === 0 ? 'main' : 'phone'}
+          className={index === 0 ? '' : 'w-full'}
+          disabled={pressed !== null}
+          onClick={() => void press(eventType)}
+        >
+          {index === 0 && <Clock aria-hidden="true" className="size-6" />}
+          {pressed === eventType ? 'กำลังบันทึก...' : eventLabel[eventType]}
+        </Button>
+      ))}
+    >
+      {(workQuery.isLoading || signQuery.isLoading) && <PageLoading lines={4}>กำลังโหลด...</PageLoading>}
       {loadError != null && <Note tone="error">{getErrorMessage(loadError)}</Note>}
       {attendance && !attendance.shift && <OffShiftNote ownShift={work?.ownShift} />}
-      {attendance?.shift && <AttendanceTimeline attendance={attendance} />}
+      {attendance?.shift && <AttendanceTimeline attendance={attendance} next={buttons?.[0]} />}
       {outcome?.kind === 'answered' && (
         <AnsweredNote eventType={outcome.eventType} state={outcome.state} accuracyM={outcome.accuracyM} />
       )}
       {outcome?.kind === 'failed' && <Note tone="error">{outcome.message}</Note>}
       {liveAttendance?.shift && liveAttendance.nextEvents.length === 0 && (
-        <Note tone="info">ลงเวลาครบแล้วสำหรับกะนี้</Note>
-      )}
-      {liveAttendance && liveAttendance.nextEvents.length > 0 && (
-        // At most one blue button per screen (pages/phone.md): the next event; the others are outlined, all 56 px
-        <div className="mt-auto flex flex-col gap-2.5">
-          {liveAttendance.nextEvents.map((eventType, index) => (
-            <Button
-              key={eventType}
-              variant={index === 0 ? 'primary' : 'secondary'}
-              size="main"
-              disabled={pressed !== null}
-              onClick={() => void press(eventType)}
-            >
-              {pressed === eventType ? 'กำลังบันทึก...' : eventLabel[eventType]}
-            </Button>
-          ))}
-        </div>
+        <Note tone="success">ลงเวลาครบแล้วสำหรับกะนี้</Note>
       )}
       <MoreInfo size="phone" summary="เกี่ยวกับการลงเวลา">
         ระบบแสดงปุ่มถัดไปให้เองตามลำดับ · กดซ้ำภายใน 5 นาทีไม่นับ · ไม่คิดสายหรือกลับก่อน
       </MoreInfo>
-      <Link className={buttonClass('secondary', 'phone')} data-tap="" to="/my-work">
-        ดูงานของฉัน
-      </Link>
-    </main>
+    </PhoneScreen>
   );
 }
 
@@ -194,7 +199,7 @@ function AnsweredNote({ eventType, state, accuracyM }: AnsweredNoteProps) {
     );
   }
   return (
-    <Note tone="info" status>
+    <Note tone="success" status>
       {`บันทึกเวลา${label}แล้ว ${time}`}
     </Note>
   );

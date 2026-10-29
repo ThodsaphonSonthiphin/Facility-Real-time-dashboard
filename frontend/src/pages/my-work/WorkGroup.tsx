@@ -15,17 +15,21 @@ export function WorkGroup({ title, items }: { title: string; items: readonly Wor
   }
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
-      <h2 id={headingId} className="text-sm font-bold tracking-wide text-text-2">
-        {title}
-      </h2>
-      <ul className="m-0 list-none divide-y divide-border rounded-lg border border-border bg-surface p-0">
+      {/* The count sits beside the heading, not in it, so the group's name stays the words alone */}
+      <div className="flex items-baseline gap-2">
+        <h2 id={headingId} className="text-lg font-semibold">
+          {title}
+        </h2>
+        <span className="text-sm text-text-2">{items.length}</span>
+      </div>
+      <ul className="m-0 list-none divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface p-0">
         {items.map((item) => {
           const issue = issueText(item.point);
           return (
-            <li key={item.point.id} className="flex min-h-14 items-center justify-between gap-3 px-3.5 py-3">
+            <li key={item.point.id} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
               <div className="flex min-w-0 flex-col">
-                <h3 className="text-lg font-semibold">{item.point.name}</h3>
-                <span className="text-sm text-text-2">{whereText(item)}</span>
+                <h3 className="text-base font-semibold">{item.point.name}</h3>
+                <span className="text-sm text-text-2 tabular-nums">{whereText(item)}</span>
                 {/* A ต้องแก้ไข row also says what to fix (owner, 2026-10-22), as the large card does */}
                 {item.point.status === 'Rework' && (
                   <span className="text-sm font-semibold text-rework">{detailOf(item.point)}</span>

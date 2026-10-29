@@ -2,17 +2,20 @@ import type { PointCard } from '../../shared/api/types';
 import { StatusChip } from '../../shared/components/StatusChip';
 import { formatClock, formatRound } from '../../shared/utils/thaiTime';
 
-/** The top of M4 and M12: where the point is, its name, its status and its round. */
+/**
+ * The title block of M4 and M12 inside a `PhoneHeader` (the design file's Submit): where the point is, its name, its
+ * round and its status.
+ */
 export function PointHeading({ point }: { point: PointCard }) {
   return (
-    <header className="flex flex-col gap-1">
-      <span className="text-sm tracking-wide text-text-2">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
+    <div className="flex flex-col gap-1">
+      <span className="text-sm text-text-2">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
       <h1 className="text-2xl font-bold">{point.name}</h1>
-      <p className="flex flex-wrap items-center gap-2 text-sm">
+      <p className="flex flex-wrap items-center gap-2">
+        <span className="tabular-nums">{roundLine(point)}</span>
         <StatusChip status={point.status} />
-        <span>{roundLine(point)}</span>
       </p>
-    </header>
+    </div>
   );
 }
 

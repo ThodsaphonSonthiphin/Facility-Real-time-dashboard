@@ -1,10 +1,11 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import type { AreaDetail } from '../../shared/api/adminSetupApi';
 import { Button } from '../../shared/components/Button';
 import { Drawer } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
-import { boxClass, buttonClass, linkClass, tabClass, tabListClass } from '../../shared/components/styles';
+import { boxClass, buttonClass, linkClass } from '../../shared/components/styles';
+import { Tabs } from '../../shared/components/Tabs';
 import { Toast, type Notice } from '../../shared/components/Toast';
 import { useBuildingNames, buildingText } from '../../shared/api/buildingNames';
 import { AreaEditorDrawer } from './AreaEditorDrawer';
@@ -52,25 +53,6 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
     { id: 'points', label: `จุดทำความสะอาด (${detail.points.length})` },
     { id: 'check-in', label: 'ป้ายลงเวลา' },
   ];
-  // A tablist's keyboard: arrows move between the tabs, Home/End to the ends (the tab that is on is the only stop)
-  const onTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    const at = tabs.findIndex((one) => one.id === tab);
-    const to =
-      event.key === 'ArrowRight'
-        ? (at + 1) % tabs.length
-        : event.key === 'ArrowLeft'
-          ? (at - 1 + tabs.length) % tabs.length
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? tabs.length - 1
-              : -1;
-    if (to === -1) return;
-    event.preventDefault();
-    setTab(tabs[to].id);
-    document.getElementById(`area-tab-${tabs[to].id}`)?.focus();
-  };
-
   return (
     <section className="flex flex-col gap-3" aria-labelledby="areas-detail-title">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -100,24 +82,7 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
       {!area.isActive && (
         <Note tone="warn">พื้นที่นี้ปิดใช้งาน ป้ายทุกป้ายสแกนไม่ได้ เปิดใช้งานได้ที่ "แก้ไขพื้นที่"</Note>
       )}
-      <div role="tablist" aria-label="ส่วนของพื้นที่" className={tabListClass} onKeyDown={onTabKey}>
-        {tabs.map((one) => (
-          <button
-            key={one.id}
-            id={`area-tab-${one.id}`}
-            type="button"
-            role="tab"
-            data-tap=""
-            aria-selected={tab === one.id}
-            aria-controls={tab === one.id ? `area-panel-${one.id}` : undefined}
-            tabIndex={tab === one.id ? 0 : -1}
-            className={tabClass}
-            onClick={() => setTab(one.id)}
-          >
-            {one.label}
-          </button>
-        ))}
-      </div>
+      <Tabs label="ส่วนของพื้นที่" tabs={tabs} value={tab} onChange={setTab} idPrefix="area" />
       <div role="tabpanel" id={`area-panel-${tab}`} aria-labelledby={`area-tab-${tab}`} className="flex flex-col gap-3">
         {tab === 'points' ? <PointTable detail={detail} onEdit={open} /> : <CheckInSign detail={detail} />}
       </div>

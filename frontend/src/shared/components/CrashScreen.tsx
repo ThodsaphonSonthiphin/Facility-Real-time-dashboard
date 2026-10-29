@@ -1,3 +1,4 @@
+import { CircleX } from 'lucide-react';
 import { useEffect } from 'react';
 import { useRouteError } from 'react-router';
 import { Button } from './Button';
@@ -16,6 +17,7 @@ export function CrashScreen() {
 
   return (
     <main className={statusScreenClass.main}>
+      <CircleX aria-hidden="true" className="size-8 self-center text-rework" />
       <h1 className={statusScreenClass.title}>เกิดข้อผิดพลาด</h1>
       <p className="text-text-2">หน้านี้แสดงผลไม่ได้ กดโหลดใหม่เพื่อลองอีกครั้ง</p>
       <Button variant="primary" size="main" onClick={() => window.location.reload()}>

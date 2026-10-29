@@ -1,13 +1,17 @@
-import { RefreshCw } from 'lucide-react';
+import { ArrowRightLeft, Check, LogOut, Moon, RefreshCw } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { MY_WORK_HUB, useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import type { AttendanceState, MyWork, OwnShift, Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Note } from '../../shared/components/Note';
+import { PageLoading } from '../../shared/components/PageState';
+import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
+import { endSession } from '../../shared/auth/endSession';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { formatClock, formatTime } from '../../shared/utils/thaiTime';
-import { useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectHubStatus, type HubStatus } from '../../store/slices/hubSlice';
 import { NextJob } from './NextJob';
 import { WorkGroup } from './WorkGroup';
@@ -31,14 +35,38 @@ export function MyWorkPage() {
   const { data, error, isLoading, isFetching, refetch } = useGetMyWorkQuery(undefined, freshOnOpen);
   const shift = data?.attendance.shift;
   const hubStatus = useAppSelector(selectHubStatus(MY_WORK_HUB));
+  const user = useAppSelector((state) => state.auth.currentUser);
+  const dispatch = useAppDispatch();
+  const own = data?.areas.find((one) => !one.isCover);
+  const where = own
+    ? `${own.areaCode} ${own.areaName}${own.points[0] ? ` · ตึก ${own.points[0].buildingCode}` : ''}`
+    : '';
+
+  // The header takes its place before the answer comes (name, and lines kept as tall as their words), so nothing under
+  // it moves when the answer lands (layout shift, measured 2026-10-28)
+  const header = (
+    <PhoneHeader>
+      <h1 className="sr-only">งานของฉัน</h1>
+      <span className="text-lg font-bold">{user?.fullName}</span>
+      <span className="min-h-6 text-sm text-text-2">{where}</span>
+      <span className="min-h-6 text-sm text-text-2">{data && shift ? attendanceLine(shift, data.attendance) : ''}</span>
+    </PhoneHeader>
+  );
 
   return (
-    <main className="flex flex-col gap-4 text-base text-text">
-      <header className="flex flex-col gap-0.5">
-        <h1 className="text-2xl font-bold">งานของฉัน</h1>
-        {data && shift && <p className="text-sm text-text-2">{attendanceLine(shift, data.attendance)}</p>}
-      </header>
-      {isLoading && <p className="text-text-2">กำลังโหลดงาน...</p>}
+    <PhoneScreen
+      header={header}
+      bottom={
+        // The mockup's error state keeps its one action in the bar: try again
+        error ? (
+          <Button variant="primary" size="main" disabled={isFetching} onClick={() => void refetch()}>
+            <RefreshCw aria-hidden="true" className="size-6" />
+            {isFetching ? 'กำลังโหลด...' : 'ลองอีกครั้ง'}
+          </Button>
+        ) : undefined
+      }
+    >
+      {isLoading && <PageLoading lines={3}>กำลังโหลดงาน...</PageLoading>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
       {/* Not before the first answer: the list then pushed it down the screen (layout shift, measured 2026-10-28) */}
@@ -49,9 +77,13 @@ export function MyWorkPage() {
             <RefreshCw aria-hidden="true" className="size-5" />
             {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
           </Button>
+          <Button variant="link" className="self-center" onClick={() => void endSession(dispatch)}>
+            <LogOut aria-hidden="true" className="size-4" />
+            ออกจากระบบ
+          </Button>
         </footer>
       )}
-    </main>
+    </PhoneScreen>
   );
 }
 
@@ -73,18 +105,45 @@ function attendanceLine(shift: Shift, attendance: AttendanceState): string {
  */
 function OffShift({ ownShift }: { ownShift?: OwnShift }) {
   return (
-    <Note tone="info" title="ตอนนี้ไม่อยู่ในกะของคุณ">
+    <StateCard icon={<Moon aria-hidden="true" className="size-8" />} tone="idle" title="ตอนนี้ไม่อยู่ในกะของคุณ">
       {ownShift && <span>{shiftLabel[ownShift.shift]}</span>}
       {ownShift && <span>{`ลงเวลาเข้างานได้ตั้งแต่ ${formatClock(ownShift.opensAt)}`}</span>}
-    </Note>
+    </StateCard>
+  );
+}
+
+const tones = {
+  idle: { frame: 'border-border', circle: 'bg-idle-bg text-idle' },
+  passed: { frame: 'border-passed-border', circle: 'bg-passed-bg text-passed' },
+} as const;
+
+/** The design file's centred card for a page state: a 64 px circle with its icon, a 20/700 line, then the words. */
+function StateCard({
+  icon,
+  tone,
+  title,
+  children,
+}: {
+  icon: ReactNode;
+  tone: 'idle' | 'passed';
+  title: string;
+  children?: ReactNode;
+}) {
+  const look = tones[tone];
+  return (
+    <section
+      className={`flex flex-col items-center gap-3 rounded-lg border bg-surface px-4 py-6 text-center ${look.frame}`}
+    >
+      <span className={`flex size-16 items-center justify-center rounded-full ${look.circle}`}>{icon}</span>
+      <strong className="text-xl">{title}</strong>
+      {children && <div className="flex flex-col gap-1 text-text-2">{children}</div>}
+    </section>
   );
 }
 
 function WorkList({ work }: { work: MyWork }) {
   if (work.areas.length === 0) {
-    return (
-      <Note tone="info">ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับพื้นที่ หรือพื้นที่ยังไม่มีจุด แจ้งแอดมิน</Note>
-    );
+    return <Note tone="info">ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับพื้นที่ หรือพื้นที่ยังไม่มีจุด แจ้งแอดมิน</Note>;
   }
   const covered = work.areas.filter((area) => area.isCover);
   const ordered = byUrgency(work.areas);
@@ -94,11 +153,21 @@ function WorkList({ work }: { work: MyWork }) {
   return (
     <>
       {covered.length > 0 && (
-        <Note tone="info">
+        // The design file's cover line: purple, the colour of ทำแทน
+        <p className="flex items-start gap-2 rounded-md border border-break-border bg-break-bg px-3 py-2 text-sm text-break">
+          <ArrowRightLeft aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           {`วันนี้ทำแทน ${covered.map((area) => area.areaName).join(', ')} ด้วย · สิทธิ์หมดเองเมื่อหมดกะ`}
-        </Note>
+        </p>
       )}
-      {next ? <NextJob item={next} /> : <Note tone="info">ส่งครบทุกจุดที่ต้องทำตอนนี้แล้ว</Note>}
+      {next ? (
+        <NextJob item={next} />
+      ) : (
+        <StateCard
+          icon={<Check aria-hidden="true" className="size-9" />}
+          tone="passed"
+          title="ส่งครบทุกจุดที่ต้องทำตอนนี้แล้ว"
+        />
+      )}
       <Progress
         passed={ordered.filter((item) => item.point.status === 'Passed').length}
         pending={ordered.filter((item) => item.point.status === 'PendingInspection').length}
@@ -112,18 +181,25 @@ function WorkList({ work }: { work: MyWork }) {
 }
 
 /**
- * "x จาก y จุด ส่งแล้ว", where ส่งแล้ว is รอตรวจ and ตรวจผ่าน, and a bar of the same shares in their status colours;
- * the words carry it, the bar is for the eye only.
+ * "x จาก y จุด ส่งแล้ว", where ส่งแล้ว is รอตรวจ and ตรวจผ่าน, and a dark grey bar of that share (DESIGN_SPEC §7: grey,
+ * never blue or green, since blue is for what can be pressed and green for a status). The words carry it; the bar is a
+ * `progressbar` with the same numbers for a screen reader.
  */
 function Progress({ passed, pending, total }: { passed: number; pending: number; total: number }) {
-  const share = (n: number) => `${(100 * n) / total}%`;
+  const sent = passed + pending;
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm">{`${passed + pending} จาก ${total} จุด ส่งแล้ว`}</span>
-      {/* The shares are data, not tokens, so the widths are inline styles */}
-      <div aria-hidden="true" className="flex h-2.5 overflow-hidden rounded-full bg-border">
-        <div className="h-full bg-passed" style={{ width: share(passed) }} />
-        <div className="h-full bg-pending" style={{ width: share(pending) }} />
+    <div className="flex flex-col gap-2">
+      <span className="text-base">{`${sent} จาก ${total} จุด ส่งแล้ว`}</span>
+      <div
+        role="progressbar"
+        aria-label="ความคืบหน้า"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={sent}
+        className="h-2 overflow-hidden rounded-sm bg-border"
+      >
+        {/* The share is data, not a token, so the width is an inline style */}
+        <div className="h-full rounded-sm bg-text" style={{ width: `${(100 * sent) / total}%` }} />
       </div>
     </div>
   );
