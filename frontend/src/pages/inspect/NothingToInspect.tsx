@@ -1,7 +1,9 @@
+import { List } from 'lucide-react';
 import { Link } from 'react-router';
 import type { PointCard } from '../../shared/api/types';
 import { Panel } from '../../shared/components/Boxes';
 import { Note } from '../../shared/components/Note';
+import { PhoneScreen } from '../../shared/components/PhoneScreen';
 import { StatusChip } from '../../shared/components/StatusChip';
 import { buttonClass, noteClass } from '../../shared/components/styles';
 import { formatRound, formatTime } from '../../shared/utils/thaiTime';
@@ -17,8 +19,15 @@ import type { InspectionVisit } from './inspectApi';
 export function NothingToInspect({ visit, notice }: { visit: InspectionVisit; notice: string | null }) {
   const { point } = visit;
   return (
-    <main className="flex flex-col gap-4 text-base text-text">
-      <InspectHeading visit={visit} />
+    <PhoneScreen
+      header={<InspectHeading visit={visit} />}
+      bottom={
+        <Link className={buttonClass('primary', 'main')} data-tap="" to="/my-building">
+          <List aria-hidden="true" className="size-6" />
+          กลับไปตึกของฉัน
+        </Link>
+      }
+    >
       {notice && (
         <Note tone="warn" status>
           {notice}
@@ -38,11 +47,8 @@ export function NothingToInspect({ visit, notice }: { visit: InspectionVisit; no
         {point.rework && <p>{`ให้แก้ ${formatTime(point.rework.requestedAt)}: “${point.rework.defect}”`}</p>}
       </Panel>
       <DistanceLine visit={visit} />
-      <Link className={buttonClass('primary', 'main')} data-tap="" to="/my-building">
-        กลับไปตึกของฉัน
-      </Link>
       <p className="text-center text-sm text-text-2">ไม่มีปุ่มตรวจจนกว่าแม่บ้านจะส่งงานในรอบนี้</p>
-    </main>
+    </PhoneScreen>
   );
 }
 

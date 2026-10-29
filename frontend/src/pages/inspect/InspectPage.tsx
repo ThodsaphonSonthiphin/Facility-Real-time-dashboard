@@ -1,3 +1,4 @@
+import { RefreshCw, WifiOff } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
@@ -9,14 +10,19 @@ import { Button } from '../../shared/components/Button';
 import { LocationHelp } from '../../shared/components/LocationHelp';
 import { Note } from '../../shared/components/Note';
 import { StatusScreen } from '../../shared/components/StatusScreen';
-import { helpScreenClass } from '../../shared/components/styles';
+import { ResultScreen } from '../../shared/components/ResultScreen';
 import { readLocation, type LocationProblem } from '../../shared/geo/readLocation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { InspectForm } from './InspectForm';
 import { InspectResult } from './InspectResult';
 import { InspectSendFailed } from './InspectSendFailed';
 import { NothingToInspect } from './NothingToInspect';
-import { useOpenInspectionQuery, useRecordInspectionMutation, type InspectionRecorded, type InspectionVisit } from './inspectApi';
+import {
+  useOpenInspectionQuery,
+  useRecordInspectionMutation,
+  type InspectionRecorded,
+  type InspectionVisit,
+} from './inspectApi';
 import { emptyDraft, locationProblemOf, requestOf, type InspectDraft } from './inspectRules';
 
 type Outcome =
@@ -83,7 +89,13 @@ export function InspectPage() {
   }
   if (outcome?.kind === 'not-sent' && visit) {
     return (
-      <InspectSendFailed visit={visit} draft={draft} triedAt={outcome.triedAt} sending={sending} onResend={() => void send()} />
+      <InspectSendFailed
+        visit={visit}
+        draft={draft}
+        triedAt={outcome.triedAt}
+        sending={sending}
+        onResend={() => void send()}
+      />
     );
   }
   // Decide only on a fresh answer: the cache may hold this sign's scan from an earlier visit
@@ -123,15 +135,23 @@ function OpenFailed({ error, onRetry }: { error: unknown; onRetry: () => void })
   }
   if (isNotSent(error)) {
     return (
-      <main className={helpScreenClass.main}>
-        <h1 className={helpScreenClass.title}>เปิดงานตรวจไม่ได้</h1>
-        <Note tone="error" alert={false}>
-          เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ยังไม่ได้ตรวจงาน เดินไปตรงที่มีสัญญาณ แล้วกดลองอีกครั้ง
-        </Note>
-        <Button variant="primary" size="main" onClick={onRetry}>
-          ลองอีกครั้ง
-        </Button>
-      </main>
+      <ResultScreen
+        tone="err"
+        icon={<WifiOff aria-hidden="true" className="size-14" strokeWidth={2.25} />}
+        title="เปิดงานตรวจไม่ได้"
+        bottom={
+          <Button variant="primary" size="main" onClick={onRetry}>
+            <RefreshCw aria-hidden="true" className="size-6" />
+            ลองอีกครั้ง
+          </Button>
+        }
+      >
+        <div className="w-full text-left">
+          <Note tone="error" alert={false}>
+            เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ยังไม่ได้ตรวจงาน เดินไปตรงที่มีสัญญาณ แล้วกดลองอีกครั้ง
+          </Note>
+        </div>
+      </ResultScreen>
     );
   }
   return (
@@ -144,7 +164,11 @@ function OpenFailed({ error, onRetry }: { error: unknown; onRetry: () => void })
   );
 }
 
-function outcomeOf(answer: { data?: InspectionRecorded; error?: unknown }, visit: InspectionVisit, triedAt: Date): Outcome {
+function outcomeOf(
+  answer: { data?: InspectionRecorded; error?: unknown },
+  visit: InspectionVisit,
+  triedAt: Date,
+): Outcome {
   if (answer.data) {
     return { kind: 'recorded', result: answer.data, visit };
   }

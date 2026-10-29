@@ -166,9 +166,3 @@ export const statusScreenClass = {
   main: 'mx-auto flex max-w-mobile flex-col gap-3 px-5 py-12 text-center text-base',
   title: 'text-xl font-bold',
 };
-
-/** The phone's full-page help of BlockedScanScreen and LocationHelp: what went wrong and what to do next. */
-export const helpScreenClass = {
-  main: 'flex flex-col gap-4 text-base text-text',
-  title: 'text-2xl font-bold',
-};

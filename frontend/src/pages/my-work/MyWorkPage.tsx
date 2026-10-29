@@ -1,17 +1,17 @@
-import { ArrowRightLeft, Check, LogOut, Moon, RefreshCw } from 'lucide-react';
+import { ArrowRightLeft, Check, Moon, RefreshCw } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { MY_WORK_HUB, useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import type { AttendanceState, MyWork, OwnShift, Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
+import { LogoutButton } from '../../shared/components/LogoutButton';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
-import { endSession } from '../../shared/auth/endSession';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { formatClock, formatTime } from '../../shared/utils/thaiTime';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { useAppSelector } from '../../store/hooks';
 import { selectHubStatus, type HubStatus } from '../../store/slices/hubSlice';
 import { NextJob } from './NextJob';
 import { WorkGroup } from './WorkGroup';
@@ -36,7 +36,6 @@ export function MyWorkPage() {
   const shift = data?.attendance.shift;
   const hubStatus = useAppSelector(selectHubStatus(MY_WORK_HUB));
   const user = useAppSelector((state) => state.auth.currentUser);
-  const dispatch = useAppDispatch();
   const own = data?.areas.find((one) => !one.isCover);
   const where = own
     ? `${own.areaCode} ${own.areaName}${own.points[0] ? ` · ตึก ${own.points[0].buildingCode}` : ''}`
@@ -77,10 +76,7 @@ export function MyWorkPage() {
             <RefreshCw aria-hidden="true" className="size-5" />
             {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
           </Button>
-          <Button variant="link" className="self-center" onClick={() => void endSession(dispatch)}>
-            <LogOut aria-hidden="true" className="size-4" />
-            ออกจากระบบ
-          </Button>
+          <LogoutButton />
         </footer>
       )}
     </PhoneScreen>
