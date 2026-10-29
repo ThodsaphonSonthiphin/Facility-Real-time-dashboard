@@ -17,7 +17,7 @@ export function CrashScreen() {
   return (
     <main className={statusScreenClass.main}>
       <h1 className={statusScreenClass.title}>เกิดข้อผิดพลาด</h1>
-      <p className="text-muted">หน้านี้แสดงผลไม่ได้ กดโหลดใหม่เพื่อลองอีกครั้ง</p>
+      <p className="text-text-2">หน้านี้แสดงผลไม่ได้ กดโหลดใหม่เพื่อลองอีกครั้ง</p>
       <Button variant="primary" size="main" onClick={() => window.location.reload()}>
         โหลดใหม่
       </Button>

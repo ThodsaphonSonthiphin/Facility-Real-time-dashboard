@@ -75,9 +75,9 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
     <section className="flex flex-col gap-3" aria-labelledby="areas-detail-title">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <span className="text-muted">{`พื้นที่ที่เลือก · ตึก ${buildingText(area.buildingCode, names)}`}</span>
+          <span className="text-text-2">{`พื้นที่ที่เลือก · ตึก ${buildingText(area.buildingCode, names)}`}</span>
           <h2 id="areas-detail-title" className="text-xl font-bold">{`${area.code} ${area.name}`}</h2>
-          <p className="text-muted">{areaLine(detail)}</p>
+          <p className="text-text-2">{areaLine(detail)}</p>
         </div>
         {/* The page's actions sit away from the name, on the right: they are not part of it (owner, 2026-10-23) */}
         <div className="flex flex-wrap items-center gap-2">
@@ -150,7 +150,7 @@ function CheckInSign({ detail }: { detail: AreaDetail }) {
           </div>
         )}
       </div>
-      <p className="text-muted">{`${checkInSign.code} · เข้างาน ออกพัก กลับจากพัก เลิกงาน · ${signPlaceText(checkInSign)}`}</p>
+      <p className="text-text-2">{`${checkInSign.code} · เข้างาน ออกพัก กลับจากพัก เลิกงาน · ${signPlaceText(checkInSign)}`}</p>
       <SignPanel key={checkInSign.id} areaId={area.id} sign={checkInSign} label="ป้ายลงเวลา" canIssueQr={area.isActive} />
     </section>
   );

@@ -90,7 +90,7 @@ export function InspectForm({ visit, submission, draft, onChange, sending, notic
           {sending ? 'กำลังบันทึก...' : 'บันทึกผลตรวจ'}
         </Button>
       </form>
-      <p className="text-center text-md text-muted">ไม่สะอาด = แม่บ้านเห็นสิ่งที่ต้องแก้ทันที แก้แล้วส่งงานใหม่ · ตรวจกี่ครั้งก็ได้</p>
+      <p className="text-center text-sm text-text-2">ไม่สะอาด = แม่บ้านเห็นสิ่งที่ต้องแก้ทันที แก้แล้วส่งงานใหม่ · ตรวจกี่ครั้งก็ได้</p>
     </main>
   );
 }

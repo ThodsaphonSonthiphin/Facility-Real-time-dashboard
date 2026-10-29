@@ -34,7 +34,7 @@ export function AreaFormPage() {
       {buildings.data && cleaners.data && (id === undefined || detail) ? (
         <AreaForm key={id ?? 'new'} detail={detail} buildings={buildings.data} cleaners={cleaners.data} />
       ) : (
-        !error && <p className="text-muted">กำลังโหลด...</p>
+        !error && <p className="text-text-2">กำลังโหลด...</p>
       )}
       {detail && <AreaActiveSection detail={detail} />}
       <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>

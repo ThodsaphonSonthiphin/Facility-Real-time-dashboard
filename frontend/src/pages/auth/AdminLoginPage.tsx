@@ -27,11 +27,11 @@ export function AdminLoginPage() {
     // An Admin page (facility-0087): body text-sm, 36 px controls, one card in the middle of the screen
     <main className="flex min-h-screen items-center justify-center p-6 text-sm text-text">
       <form
-        className="flex w-full max-w-100 flex-col gap-3 rounded border border-border bg-surface p-7"
+        className="flex w-full max-w-100 flex-col gap-3 rounded-lg border border-border bg-surface p-7"
         onSubmit={onSubmit}
       >
         <header className="flex flex-col gap-0.5">
-          <span className="text-xs tracking-wide text-muted">ระบบลงเวลาและตรวจงานแม่บ้าน</span>
+          <span className="text-xs tracking-wide text-text-2">ระบบลงเวลาและตรวจงานแม่บ้าน</span>
           <h1 className="text-xl font-bold">แอดมินเข้าสู่ระบบ</h1>
         </header>
         {returnsToPage && <Note tone="info">เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที</Note>}
@@ -59,7 +59,7 @@ export function AdminLoginPage() {
         <Button type="submit" variant="primary" size="desk" className="mt-1 w-full" disabled={isLoading}>
           {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
         </Button>
-        <footer className="flex flex-col gap-1 text-center text-xs text-muted">
+        <footer className="flex flex-col gap-1 text-center text-xs text-text-2">
           <span>
             แม่บ้านและหัวหน้าเข้าด้วยรหัสพนักงาน + เบอร์โทรบนมือถือ ·{' '}
             <Link className={inlineLinkClass} to="/login" state={location.state}>

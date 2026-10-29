@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ตึกของฉัน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-redo" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></symbol>
+<symbol id="i-hour" viewBox="0 0 24 24"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"></path><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"></path></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"></path></symbol>
+<symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></symbol>
+<symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"></rect><rect x="16" y="3" width="5" height="5" rx="1"></rect><rect x="3" y="16" width="5" height="5" rx="1"></rect><path d="M21 16h-3a2 2 0 0 0-2 2v3"></path><path d="M21 21v.01"></path><path d="M12 7v3a2 2 0 0 1-2 2H7"></path><path d="M3 12h.01"></path><path d="M12 3h.01"></path><path d="M12 16v.01"></path><path d="M16 12h1"></path><path d="M21 12v.01"></path><path d="M12 21v-1"></path></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></symbol>
+</svg>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 16px; line-height: 1.5; overflow: hidden">
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E0E5EB; padding: max(12px, env(safe-area-inset-top)) 16px 16px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+      <div style="display: flex; flex-direction: column">
+        <span style="font-size: 18px; font-weight: 700">ประภา มั่นคง</span>
+        <span style="font-size: 14px; color: #667085">หัวหน้า · ตึก A อาคารผลิต 1</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end"><span style="font-size: 14px; font-weight: 600">กะเช้า</span><span style="font-size: 14px; color: #667085; font-variant-numeric: tabular-nums">07:00–19:00</span></div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <div style="border: 1px solid #B4DCE8; background: #EBF6FA; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600; color: #0B6E8A; display: flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-hour"></use></svg>รอตรวจ</span><span style="font-size: 24px; font-weight: 700; line-height: 1.3">4</span></div>
+      <div style="border: 1px solid #E0E5EB; background: #FFFFFF; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600; color: #16803C; display: flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-check"></use></svg>ตรวจแล้ว</span><span style="font-size: 24px; font-weight: 700; line-height: 1.3">21</span></div>
+      <div style="border: 1px solid #E0E5EB; background: #FFFFFF; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600; color: #B42318; display: flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-redo"></use></svg>รอแม่บ้านแก้</span><span style="font-size: 24px; font-weight: 700; line-height: 1.3">1</span></div>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 20px">
+    <sc-if value="{{off}}" hint-placeholder-val="{{false}}">
+      <div role="status" style="display: flex; gap: 12px; padding: 12px 16px; border-radius: 8px; background: #F2F4F7; border: 1px solid #E0E5EB"><svg class="i" aria-hidden="true" style="color: #5B6474; margin-top: 2px"><use href="#i-moon"></use></svg><span><b>นอกกะของคุณ</b><br>ดูได้อย่างเดียว ตรวจงานไม่ได้ กะของคุณ 07:00–19:00</span></div>
+    </sc-if>
+    <div role="group" aria-label="แสดง" style="display: flex; border: 1px solid #858F9E; border-radius: 6px; overflow: hidden">
+      <sc-for list="{{views}}" as="v" hint-placeholder-count="2">
+        <button type="button" aria-pressed="{{v.pressed}}" onClick="{{v.pick}}" style="{{v.style}}">{{v.label}}</button>
+      </sc-for>
+    </div>
+    <sc-for list="{{areas}}" as="a" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; flex-direction: column"><h2 style="margin: 0; font-size: 16px; font-weight: 700">{{a.code}} {{a.name}}</h2><span style="font-size: 14px; color: #667085">{{a.person}}</span></div>
+        <div style="display: flex; flex-direction: column; gap: 1px; background: #E0E5EB; border: 1px solid #E0E5EB; border-radius: 8px; overflow: hidden">
+          <sc-for list="{{a.points}}" as="p" hint-placeholder-count="3">
+            <div style="background: #FFFFFF; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+                <span style="font-size: 16px; font-weight: 600">{{p.name}}</span>
+                <span style="{{p.chip}}"><svg class="i is" aria-hidden="true"><use href="#{{p.icon}}"></use></svg>{{p.label}}</span>
+              </div>
+              <span style="font-size: 14px; color: #667085; font-variant-numeric: tabular-nums">{{p.meta}}</span>
+              <sc-if value="{{p.hasIssue}}" hint-placeholder-val="{{false}}"><span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 4px; background: #FFFFFF; border: 1px solid #F6C9C4; color: #B42318; font-size: 13px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-wrench"></use></svg>{{p.issue}}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+  </main>
+
+  <sc-if value="{{on}}" hint-placeholder-val="{{true}}">
+    <div style="background: #FFFFFF; border-top: 1px solid #E0E5EB; padding: 12px 16px max(12px, env(safe-area-inset-bottom))">
+      <a href="Inspect.dc.html" style="height: 56px; border-radius: 6px; background: #2457C5; color: #FFFFFF; text-decoration: none; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#i-qr"></use></svg>สแกน QR เพื่อตรวจ</a>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["ในกะ","นอกกะ"],"default":"ในกะ"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { view: 'wait' }; }
+renderVals() {
+const off = (this.props.state ?? 'ในกะ') === 'นอกกะ';
+const ST = {
+  rework: ['รอแม่บ้านแก้', '#B42318', '#FEF3F2', '#F6C9C4', 'i-redo'],
+  over: ['เลยเวลา', '#B45309', '#FEF6EC', '#F5D6B0', 'i-clock'],
+  wait: ['รอตรวจ', '#0B6E8A', '#EBF6FA', '#B4DCE8', 'i-hour'],
+  pass: ['ตรวจผ่าน', '#16803C', '#EDF7F0', '#B9DFC6', 'i-check'],
+  idle: ['ยังไม่ทำ', '#5B6474', '#F2F4F7', '#E0E5EB', 'i-minus']
+};
+const pt = (name, k, meta, issue) => ({ k: k, name: name, meta: meta, label: ST[k][0], icon: ST[k][4], issue: issue || '', hasIssue: !!issue,
+  chip: 'display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap; height: 28px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; color: ' + ST[k][1] + '; background: ' + ST[k][2] + '; border: 1px solid ' + ST[k][3] });
+const ALL = [
+  { code: 'AR01', name: 'ห้องน้ำชั้น 1', person: 'สมใจ ใจดี', points: [pt('ห้องน้ำหญิง', 'wait', 'ส่ง 10:05 · รอ 37 นาที', 'ก๊อกอ่างที่ 2 รั่ว'), pt('ห้องน้ำชาย', 'rework', 'ให้แก้ 10:31'), pt('ห้องเก็บอุปกรณ์', 'pass', 'ตรวจผ่าน 09:02'), pt('โถงทางเดิน', 'over', 'รอบ 07:30–09:00 ยังไม่ส่ง')] },
+  { code: 'AR02', name: 'โถงชั้น 1', person: 'สุดา แสงทอง', points: [pt('โถงหน้าลิฟต์', 'wait', 'ส่ง 10:22 · รอ 20 นาที'), pt('ทางเข้าด้านข้าง', 'wait', 'ส่ง 10:25 · รอ 17 นาที'), pt('ประตูหนีไฟ', 'pass', 'ตรวจผ่าน 09:40')] },
+  { code: 'AR03', name: 'สำนักงานชั้น 1', person: 'จันทร์เพ็ญ มีสุข', points: [pt('ห้องน้ำสำนักงาน', 'wait', 'ส่ง 10:38 · รอ 4 นาที'), pt('ห้องประชุมเล็ก', 'idle', 'รอบ 11:00–12:00')] }
+];
+const v = this.state.view;
+const areas = ALL.map((a) => ({ code: a.code, name: a.name, person: a.person, points: a.points.filter((p) => v === 'all' || p.k === 'wait') })).filter((a) => a.points.length);
+const views = [['wait', 'รอตรวจ (4)'], ['all', 'ทุกจุด (25)']].map((x, i) => {
+  const onv = v === x[0];
+  return { label: x[1], pressed: onv ? 'true' : 'false', pick: () => this.setState({ view: x[0] }), style: 'flex: 1; height: 44px; border: 0; ' + (i ? 'border-left: 1px solid #858F9E; ' : '') + 'font-size: 16px; font-weight: 600; cursor: pointer; background: ' + (onv ? '#EEF3FC' : '#FFFFFF') + '; color: ' + (onv ? '#1D4AA8' : '#202936') + '; box-shadow: ' + (onv ? 'inset 0 -3px 0 #2457C5' : 'none') };
+});
+return { off: off, on: !off, areas: areas, views: views };
+}
+}
+</script>
+</body>
+</html>

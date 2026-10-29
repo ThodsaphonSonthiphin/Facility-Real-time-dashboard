@@ -65,7 +65,7 @@ export function ExportPage() {
   return (
     <main className="flex flex-col gap-4 text-sm text-text">
       <header className="flex flex-col gap-0.5">
-        <span className="text-muted">แอดมินเท่านั้น · ช่วงทดลองใช้ไฟล์ Excel แทนหน้ารายงาน</span>
+        <span className="text-text-2">แอดมินเท่านั้น · ช่วงทดลองใช้ไฟล์ Excel แทนหน้ารายงาน</span>
         <h1 className="text-xl font-bold">ส่งออก Excel</h1>
       </header>
       {/* The choices take the wider column, the download the narrower, as in the wireframe; no token describes the
@@ -78,17 +78,17 @@ export function ExportPage() {
           {exportSets.map((set) => (
             <label
               key={set}
-              className="flex cursor-pointer items-start gap-3 rounded border border-border px-3.5 py-3 has-checked:border-primary"
+              className="flex cursor-pointer items-start gap-3 rounded-lg border border-border px-3.5 py-3 has-checked:border-accent"
             >
               <input
                 type="checkbox"
-                className={`mt-0.5 size-5 shrink-0 accent-primary ${focusRing}`}
+                className={`mt-0.5 size-5 shrink-0 accent-accent ${focusRing}`}
                 checked={sets.includes(set)}
                 onChange={() => toggle(set)}
               />
               <span className="flex flex-col gap-0.5">
                 <strong>{setTitle[set]}</strong>
-                <span className="text-muted">{setDetail[set]}</span>
+                <span className="text-text-2">{setDetail[set]}</span>
               </span>
             </label>
           ))}
@@ -97,18 +97,18 @@ export function ExportPage() {
             <RangeFields value={texts} onChange={setTexts} />
             <BuildingSelect value={buildingId} onChange={setBuildingId} includeOff />
           </div>
-          <p className="text-muted">เลือกได้ 1–31 วัน นับตามวันที่ของกะ</p>
+          <p className="text-text-2">เลือกได้ 1–31 วัน นับตามวันที่ของกะ</p>
         </section>
         <section className={sectionClass} aria-labelledby="export-download">
           <h2 id="export-download" className={titleClass}>
             3. ดาวน์โหลด
           </h2>
           {typeof range === 'string' ? (
-            <p className="text-muted">กรอกช่วงวันให้ถูกต้องก่อน</p>
+            <p className="text-text-2">กรอกช่วงวันให้ถูกต้องก่อน</p>
           ) : (
-            <div className="flex flex-col gap-1 rounded bg-bg px-3.5 py-3 wrap-anywhere">
+            <div className="flex flex-col gap-1 rounded-lg bg-bg px-3.5 py-3 wrap-anywhere">
               <strong>{fileNameFor(range)}</strong>
-              <span className="text-muted">
+              <span className="text-text-2">
                 {sets.length === 0
                   ? 'ยังไม่ได้เลือกข้อมูล'
                   : `${sets.length} แผ่นงาน · ${sets.map((set) => setTitle[set]).join(' + ')}`}
@@ -125,7 +125,7 @@ export function ExportPage() {
               {notice.text}
             </Note>
           )}
-          <p className="text-muted">ไฟล์ที่ดาวน์โหลดแล้วห้ามส่งต่อนอกบริษัท</p>
+          <p className="text-text-2">ไฟล์ที่ดาวน์โหลดแล้วห้ามส่งต่อนอกบริษัท</p>
           <MoreInfo summary="เกี่ยวกับไฟล์นี้">
             <span>ไม่มีพิกัดตำแหน่งดิบ มีแค่ระยะห่างจากป้าย และผลในรัศมี / นอกรัศมี</span>
             <span>การส่งออกเก็บลงประวัติการแก้ไขของแอดมิน (ใคร เมื่อไร ชุดไหน ช่วงวันไหน)</span>

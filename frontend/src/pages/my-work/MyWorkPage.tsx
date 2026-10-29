@@ -36,15 +36,15 @@ export function MyWorkPage() {
     <main className="flex flex-col gap-4 text-base text-text">
       <header className="flex flex-col gap-0.5">
         <h1 className="text-2xl font-bold">งานของฉัน</h1>
-        {data && shift && <p className="text-md text-muted">{attendanceLine(shift, data.attendance)}</p>}
+        {data && shift && <p className="text-sm text-text-2">{attendanceLine(shift, data.attendance)}</p>}
       </header>
-      {isLoading && <p className="text-muted">กำลังโหลดงาน...</p>}
+      {isLoading && <p className="text-text-2">กำลังโหลดงาน...</p>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
       {/* Not before the first answer: the list then pushed it down the screen (layout shift, measured 2026-10-28) */}
       {!isLoading && (
         <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
-          <span className="text-md text-muted">{liveLine[hubStatus]}</span>
+          <span className="text-sm text-text-2">{liveLine[hubStatus]}</span>
           <Button className="w-full" disabled={isFetching} onClick={() => void refetch()}>
             <RefreshCw aria-hidden="true" className="size-5" />
             {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
@@ -119,11 +119,11 @@ function Progress({ passed, pending, total }: { passed: number; pending: number;
   const share = (n: number) => `${(100 * n) / total}%`;
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-md">{`${passed + pending} จาก ${total} จุด ส่งแล้ว`}</span>
+      <span className="text-sm">{`${passed + pending} จาก ${total} จุด ส่งแล้ว`}</span>
       {/* The shares are data, not tokens, so the widths are inline styles */}
       <div aria-hidden="true" className="flex h-2.5 overflow-hidden rounded-full bg-border">
-        <div className="h-full bg-status-passed" style={{ width: share(passed) }} />
-        <div className="h-full bg-status-pending" style={{ width: share(pending) }} />
+        <div className="h-full bg-passed" style={{ width: share(passed) }} />
+        <div className="h-full bg-pending" style={{ width: share(pending) }} />
       </div>
     </div>
   );

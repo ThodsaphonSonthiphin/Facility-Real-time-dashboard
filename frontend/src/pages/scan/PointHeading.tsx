@@ -6,9 +6,9 @@ import { formatClock, formatRound } from '../../shared/utils/thaiTime';
 export function PointHeading({ point }: { point: PointCard }) {
   return (
     <header className="flex flex-col gap-1">
-      <span className="text-md tracking-wide text-muted">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
+      <span className="text-sm tracking-wide text-text-2">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
       <h1 className="text-2xl font-bold">{point.name}</h1>
-      <p className="flex flex-wrap items-center gap-2 text-md">
+      <p className="flex flex-wrap items-center gap-2 text-sm">
         <StatusChip status={point.status} />
         <span>{roundLine(point)}</span>
       </p>

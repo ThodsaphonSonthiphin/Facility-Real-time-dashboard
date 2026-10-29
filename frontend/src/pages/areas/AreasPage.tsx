@@ -29,7 +29,7 @@ export function AreasPage() {
         <AreaList areas={areas.data} selectedId={selectedId} loading={areas.isLoading} />
         <div className="flex min-w-0 flex-col gap-3">
           {areas.data?.length === 0 && <Note tone="info">ยังไม่มีพื้นที่ กด "+ เพิ่มพื้นที่" เพื่อเริ่ม</Note>}
-          {detail.isFetching && !detail.currentData && <p className="text-muted">กำลังโหลดพื้นที่...</p>}
+          {detail.isFetching && !detail.currentData && <p className="text-text-2">กำลังโหลดพื้นที่...</p>}
           {detail.currentData && <AreaDetailPanel key={detail.currentData.area.id} detail={detail.currentData} />}
         </div>
       </div>

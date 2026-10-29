@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ส่งงาน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-check-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></symbol>
+<symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></symbol>
+<symbol id="i-redo" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></symbol>
+<symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M14.54 21.69a.5.5 0 0 0 .94-.03l6.5-19a.5.5 0 0 0-.64-.64l-19 6.5a.5.5 0 0 0-.03.94l7.93 3.18a2 2 0 0 1 1.11 1.11z"></path><path d="m21.85 2.15-10.94 10.94"></path></symbol>
+<symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></symbol>
+</svg>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 16px; line-height: 1.5; overflow: hidden">
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E0E5EB; padding: max(8px, env(safe-area-inset-top)) 8px 12px; display: flex; flex-direction: column; gap: 4px">
+    <a href="Main.dc.html" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 8px; font-size: 16px; font-weight: 600; text-decoration: none"><svg class="i" aria-hidden="true"><use href="#i-chev-l"></use></svg>งานของฉัน</a>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 0 8px">
+      <span style="font-size: 14px; color: #667085">ส่งงาน · AR01 ห้องน้ำชั้น 1</span>
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.35">ห้องน้ำชาย</h1>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <span style="font-size: 16px; font-variant-numeric: tabular-nums">รอบ 10:00–12:00</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; color: #B42318; background: #FEF3F2; border: 1px solid #F6C9C4"><svg class="i is" aria-hidden="true"><use href="#i-redo"></use></svg>ต้องแก้ไข</span>
+      </div>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; gap: 12px; background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 12px">
+      <svg class="i" aria-hidden="true" style="color: #667085; margin-top: 2px"><use href="#i-msg"></use></svg>
+      <span><b>หัวหน้าบอกว่า</b> พื้นยังเปียก มีคราบที่อ่างล้างมือ</span>
+    </div>
+
+    <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px">
+      <legend style="padding: 0; font-size: 18px; font-weight: 700; margin-bottom: 12px">ผลการทำความสะอาด</legend>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <button type="button" aria-pressed="{{okPressed}}" onClick="{{pickOk}}" style="{{okStyle}}"><svg class="i" aria-hidden="true" style="width: 36px; height: 36px"><use href="#i-check-c"></use></svg>เรียบร้อย</button>
+        <button type="button" aria-pressed="{{badPressed}}" onClick="{{pickBad}}" style="{{badStyle}}"><svg class="i" aria-hidden="true" style="width: 36px; height: 36px"><use href="#i-wrench"></use></svg>พบปัญหา</button>
+      </div>
+    </fieldset>
+
+    <sc-if value="{{isBad}}" hint-placeholder-val="{{true}}">
+      <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px">
+        <legend style="padding: 0; font-size: 16px; font-weight: 700; margin-bottom: 8px">ปัญหาที่พบ <span style="font-weight: 400; color: #667085">เลือกได้หลายข้อ</span></legend>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{tags}}" as="t" hint-placeholder-count="7">
+            <button type="button" aria-pressed="{{t.pressed}}" onClick="{{t.toggle}}" style="{{t.style}}"><sc-if value="{{t.on}}" hint-placeholder-val="{{false}}"><svg class="i is" aria-hidden="true"><use href="#i-check"></use></svg></sc-if>{{t.label}}</button>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <label for="note" style="font-size: 16px; font-weight: 600">หมายเหตุ (ไม่ใส่ก็ได้)</label>
+          <textarea id="note" rows="3" placeholder="เช่น ก๊อกอ่างที่ 2 น้ำหยดตลอด" style="padding: 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 16px; color: #202936; resize: none">ก๊อกอ่างที่ 2 น้ำหยดตลอด</textarea>
+        </div>
+      </fieldset>
+    </sc-if>
+  </main>
+
+  <div style="background: #FFFFFF; border-top: 1px solid #E0E5EB; padding: 12px 16px max(12px, env(safe-area-inset-bottom))">
+    <sc-if value="{{chosen}}" hint-placeholder-val="{{true}}">
+      <a href="Result.dc.html" style="height: 56px; border-radius: 6px; background: #2457C5; color: #FFFFFF; text-decoration: none; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#i-send"></use></svg>ส่งงาน</a>
+    </sc-if>
+    <sc-if value="{{notChosen}}" hint-placeholder-val="{{false}}">
+      <button type="button" disabled style="width: 100%; height: 56px; border: 0; border-radius: 6px; background: #E0E5EB; color: #667085; font-size: 18px; font-weight: 700">เลือก เรียบร้อย หรือ พบปัญหา ก่อน</button>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"choice":{"editor":"enum","options":["ยังไม่เลือก","เรียบร้อย","พบปัญหา"],"default":"พบปัญหา"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { pick: null, tags: { 'ก๊อกรั่ว': true } }; }
+renderVals() {
+const propPick = this.props.choice === 'เรียบร้อย' ? 'ok' : this.props.choice === 'ยังไม่เลือก' ? null : 'bad';
+const pick = this.state.pick === null ? propPick : this.state.pick;
+const choice = (on) => 'height: 112px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 20px; font-weight: 700; cursor: pointer; ' + (on ? 'background: #EEF3FC; color: #1D4AA8; border: 3px solid #2457C5' : 'background: #FFFFFF; color: #202936; border: 1px solid #858F9E; margin: 2px');
+const TAGS = ['ก๊อกรั่ว', 'ท่ออุดตัน', 'ไฟดับ', 'สบู่หมด', 'กระดาษหมด', 'ของชำรุด', 'อื่น ๆ'];
+const tags = TAGS.map((t) => {
+  const on = !!this.state.tags[t];
+  return { label: t, on: on, pressed: on ? 'true' : 'false',
+    toggle: () => { const n = Object.assign({}, this.state.tags); n[t] = !on; this.setState({ tags: n }); },
+    style: 'min-height: 48px; padding: 0 16px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600; cursor: pointer; ' + (on ? 'background: #EEF3FC; color: #1D4AA8; border: 2px solid #2457C5' : 'background: #FFFFFF; color: #202936; border: 1px solid #858F9E; margin: 1px') };
+});
+return { tags: tags, isBad: pick === 'bad', chosen: !!pick, notChosen: !pick,
+  okPressed: pick === 'ok' ? 'true' : 'false', badPressed: pick === 'bad' ? 'true' : 'false',
+  okStyle: choice(pick === 'ok'), badStyle: choice(pick === 'bad'),
+  pickOk: () => this.setState({ pick: 'ok' }), pickBad: () => this.setState({ pick: 'bad' }) };
+}
+}
+</script>
+</body>
+</html>

@@ -38,7 +38,7 @@ export function BuildingsPage() {
             + เพิ่มตึก
           </Button>
         </div>
-        {buildings.isLoading && <p className="text-muted">กำลังโหลดตึก...</p>}
+        {buildings.isLoading && <p className="text-text-2">กำลังโหลดตึก...</p>}
         {buildings.data?.length === 0 && <Note tone="info">ยังไม่มีตึก กด "+ เพิ่มตึก" เพื่อเริ่ม</Note>}
         {list.length > 0 && <BuildingTable buildings={list} onEdit={(building) => setOpen({ kind: 'edit', id: building.id })} />}
       </section>

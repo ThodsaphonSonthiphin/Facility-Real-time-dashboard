@@ -27,9 +27,9 @@ export function LoginPage() {
     // A phone page (facility-0087): body text-base, the one main action at the bottom in thumb reach. The bottom
     // padding grows with the phone's home-bar inset so the button never sits under it (pages/phone.md); no token
     // covers env(), hence the arbitrary value
-    <main className="mx-auto flex min-h-screen max-w-phone flex-col gap-4 px-4 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-base text-text">
+    <main className="mx-auto flex min-h-screen max-w-mobile flex-col gap-4 px-4 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-base text-text">
       <header className="flex flex-col gap-0.5">
-        <span className="text-xs tracking-wide text-muted">ระบบลงเวลาและตรวจงานแม่บ้าน</span>
+        <span className="text-xs tracking-wide text-text-2">ระบบลงเวลาและตรวจงานแม่บ้าน</span>
         <h1 className="text-2xl font-bold">เข้าสู่ระบบ</h1>
       </header>
       {returnsToPage && <Note tone="info">เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที</Note>}
@@ -61,7 +61,7 @@ export function LoginPage() {
           {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
         </Button>
       </form>
-      <footer className="flex flex-col gap-1 text-center text-xs text-muted">
+      <footer className="flex flex-col gap-1 text-center text-xs text-text-2">
         <span>เปลี่ยนเบอร์โทร: แจ้งแอดมินให้แก้ · ไม่มีการสมัครเอง</span>
         <span>
           แอดมินเข้าด้วยชื่อผู้ใช้และรหัสผ่าน ·{' '}

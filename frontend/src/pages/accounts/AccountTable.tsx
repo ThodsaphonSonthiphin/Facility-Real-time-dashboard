@@ -39,7 +39,7 @@ export function AccountTable({ accounts, me, busy, onAction }: AccountTableProps
       </thead>
       <tbody>
         {accounts.map((account) => (
-          <tr key={account.id} className={account.isActive ? undefined : 'text-muted'}>
+          <tr key={account.id} className={account.isActive ? undefined : 'text-text-2'}>
             <th scope="row">{account.displayName}</th>
             <td>{account.loginName}</td>
             <td>{accountRoleLabel[account.role]}</td>

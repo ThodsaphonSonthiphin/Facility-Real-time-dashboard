@@ -8,7 +8,7 @@ describe('summaryRules (D7)', () => {
     expect(pointsText(summaryRow({ pointsInspected: 9 }))).toBe('9 จาก 12 จุด · ไม่ได้ตรวจ 3 จุด');
   });
 
-  it('inspectedShare is the rounded share of submitted work inspected, none when nothing was submitted', () => {
+  it('inspectedShare is the rounded-lg share of submitted work inspected, none when nothing was submitted', () => {
     expect(inspectedShare(summaryRow())).toBe(57);
     expect(inspectedShare(summaryRow({ submitted: 150, submittedInspected: 40 }))).toBe(27);
     expect(inspectedShare(summaryRow({ submitted: 0, submittedInspected: 0 }))).toBeNull();

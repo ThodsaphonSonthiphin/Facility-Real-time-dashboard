@@ -41,7 +41,7 @@ export function NothingToInspect({ visit, notice }: { visit: InspectionVisit; no
       <Link className={buttonClass('primary', 'main')} data-tap="" to="/my-building">
         กลับไปตึกของฉัน
       </Link>
-      <p className="text-center text-md text-muted">ไม่มีปุ่มตรวจจนกว่าแม่บ้านจะส่งงานในรอบนี้</p>
+      <p className="text-center text-sm text-text-2">ไม่มีปุ่มตรวจจนกว่าแม่บ้านจะส่งงานในรอบนี้</p>
     </main>
   );
 }

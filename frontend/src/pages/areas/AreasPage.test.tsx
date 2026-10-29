@@ -48,7 +48,8 @@ describe('AreasPage (D4, facility-0045)', () => {
     expect(
       screen.getByText('ทำ 2 กะ (เช้า + ดึก) · แม่บ้านประจำ: เช้า แม่บ้านทดสอบ · ดึก แม่บ้านกะดึก · ป้าย 1 + 2'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'พิมพ์ป้าย' })).toHaveAttribute('href', '/admin/print?area=1');
+    // within main: the Admin menu has its own พิมพ์ป้าย (#121), to the page with no Area chosen
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'พิมพ์ป้าย' })).toHaveAttribute('href', '/admin/print?area=1');
     // Tab 1 is the point list, and the tab itself carries the count; the check-in sign has its own tab
     expect(screen.getByRole('tab', { name: 'จุดทำความสะอาด (2)' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'ป้ายลงเวลา' })).toHaveAttribute('aria-selected', 'false');
@@ -155,7 +156,7 @@ describe('AreasPage (D4, facility-0045)', () => {
     expect(
       await screen.findByText('พื้นที่นี้ปิดใช้งาน ป้ายทุกป้ายสแกนไม่ได้ เปิดใช้งานได้ที่ "แก้ไขพื้นที่"'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'พิมพ์ป้าย' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: 'พิมพ์ป้าย' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'พิมพ์' })).not.toBeInTheDocument();
     // the capture link lives in Tab 2, which offers nothing either
     await user.click(screen.getByRole('tab', { name: 'ป้ายลงเวลา' }));

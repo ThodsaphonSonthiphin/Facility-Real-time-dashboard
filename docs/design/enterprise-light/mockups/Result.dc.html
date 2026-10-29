@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ผลการส่ง</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></symbol>
+<symbol id="i-plus-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path><path d="M12 8v8"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-pin-off" viewBox="0 0 24 24"><path d="M12.75 7.09a3 3 0 0 1 2.16 2.16"></path><path d="M17.07 17.07 12 22s-8-6-8-12a7.94 7.94 0 0 1 1.07-3.98"></path><path d="M8.16 3.16A8 8 0 0 1 20 10a12 12 0 0 1-1.13 4.83"></path><path d="m2 2 20 20"></path></symbol>
+<symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"></path><path d="M8.5 16.43a5 5 0 0 1 7 0"></path><path d="M5 12.86a10 10 0 0 1 5.17-2.69"></path><path d="M19 12.86a10 10 0 0 0-2-1.52"></path><path d="M2 8.82a15 15 0 0 1 4.18-2.64"></path><path d="M22 8.82a15 15 0 0 0-11.29-3.76"></path><path d="m2 2 20 20"></path></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></symbol>
+</svg>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #FFFFFF; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 16px; line-height: 1.5; overflow: hidden">
+  <div style="{{band}}"></div>
+  <main role="status" style="flex: 1; overflow-y: auto; padding: 40px 24px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center">
+    <span style="{{circle}}"><svg class="i" aria-hidden="true" style="width: 56px; height: 56px; stroke-width: 2.25"><use href="#{{icon}}"></use></svg></span>
+    <h1 style="{{titleStyle}}">{{title}}</h1>
+    <span style="font-size: 20px; font-weight: 600">{{line1}}</span>
+    <span style="font-size: 18px; color: #344054">{{line2}}</span>
+    <div style="width: 100%; background: #F4F6F8; border-radius: 8px; padding: 16px; text-align: left; font-size: 16px; display: flex; flex-direction: column; gap: 4px">
+      <b>{{boxTitle}}</b>
+      <span>{{boxBody}}</span>
+    </div>
+  </main>
+  <div style="border-top: 1px solid #E0E5EB; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 8px">
+    <sc-if value="{{retry}}" hint-placeholder-val="{{false}}">
+      <button type="button" style="width: 100%; height: 56px; border: 0; border-radius: 6px; background: #2457C5; color: #FFFFFF; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#i-refresh"></use></svg>ส่งอีกครั้ง</button>
+      <a href="Main.dc.html" style="height: 48px; border: 1px solid #858F9E; border-radius: 6px; color: #202936; text-decoration: none; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center">กลับไปงานของฉัน</a>
+    </sc-if>
+    <sc-if value="{{noRetry}}" hint-placeholder-val="{{true}}">
+      <a href="Main.dc.html" style="height: 56px; border-radius: 6px; background: #2457C5; color: #FFFFFF; text-decoration: none; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#i-list"></use></svg>กลับไปงานของฉัน</a>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["ส่งสำเร็จ","ส่งช้า","ส่งเพิ่ม","ไกลป้าย","ส่งไม่สำเร็จ","สแกนผิดพื้นที่","ยังไม่ได้ลงเวลา","ปิด Location"],"default":"ส่งสำเร็จ"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const k = this.props.kind ?? 'ส่งสำเร็จ';
+const C = {
+  ok: ['#16803C', '#EDF7F0', '#0F5C2B'],
+  warn: ['#B45309', '#FEF6EC', '#8A3F06'],
+  err: ['#B42318', '#FEF3F2', '#912018'],
+  neu: ['#5B6474', '#F2F4F7', '#344054']
+};
+const K = {
+  'ส่งสำเร็จ': ['ok', 'i-check', 'ส่งงานแล้ว', 'ห้องน้ำชาย', 'รอบ 10:00–12:00 · ส่ง 10:48', 'ต่อไป', 'รอหัวหน้าตรวจ ไปทำจุดถัดไปได้เลย'],
+  'ส่งช้า': ['warn', 'i-clock', 'ส่งแล้ว แต่ช้า', 'ห้องน้ำชาย', 'ช้า 25 นาที · รอบจบ 12:00', 'ยังนับเป็นรอบนี้', 'หัวหน้าจะเห็นป้าย "ส่งช้า 25 นาที"'],
+  'ส่งเพิ่ม': ['neu', 'i-plus-c', 'ส่งเพิ่มแล้ว', 'ห้องน้ำชาย', 'ไม่นับรอบ', 'ทำไมไม่นับ', 'รอบนี้ส่งไปแล้ว หรือยังไม่ถึงรอบ ระบบเก็บไว้เป็นงานเพิ่ม'],
+  'ไกลป้าย': ['warn', 'i-pin', 'ส่งแล้ว แต่ไกลป้าย', 'ห้องน้ำชาย', 'มือถืออยู่ห่างป้าย 120 ม.', 'ระบบรับงานไว้แล้ว', 'แต่ติดธง "ไกลป้าย" ให้แอดมินดู ครั้งหน้ายืนใกล้ป้ายตอนสแกน'],
+  'ส่งไม่สำเร็จ': ['err', 'i-wifi-off', 'ส่งไม่สำเร็จ', 'ไม่มีอินเทอร์เน็ต', 'งานยังไม่ถูกบันทึก', 'สิ่งที่กรอกไว้ยังอยู่', 'เดินไปที่สัญญาณดีขึ้น แล้วกด "ส่งอีกครั้ง"'],
+  'สแกนผิดพื้นที่': ['err', 'i-ban', 'สแกนผิดพื้นที่', 'จุดนี้เป็นของ AR02 โถงชั้น 1', 'ระบบไม่ได้บันทึก', 'พื้นที่ของคุณ', 'AR01 ห้องน้ำชั้น 1 · ตึก A ถ้าแอดมินให้ทำแทน ให้บอกหัวหน้า'],
+  'ยังไม่ได้ลงเวลา': ['warn', 'i-clock', 'ยังไม่ได้ลงเวลา', 'ต้องลงเวลาเข้างานก่อน', 'ระบบยังไม่ได้บันทึกงานนี้', 'ทำแบบนี้', 'สแกนป้ายลงเวลาของพื้นที่ กด "เข้างาน" แล้วกลับมาสแกนจุดนี้อีกครั้ง'],
+  'ปิด Location': ['err', 'i-pin-off', 'ปิด Location อยู่', 'ต้องเปิด Location ก่อน', 'ระบบยังไม่ได้บันทึกงานนี้', 'ทำแบบนี้', 'ปัดหน้าจอลงจากด้านบน กดเปิด "ตำแหน่ง" แล้วสแกน QR อีกครั้ง']
+};
+const d = K[k] || K['ส่งสำเร็จ'];
+const c = C[d[0]];
+return { icon: d[1], title: d[2], line1: d[3], line2: d[4], boxTitle: d[5], boxBody: d[6],
+  retry: k === 'ส่งไม่สำเร็จ', noRetry: k !== 'ส่งไม่สำเร็จ',
+  band: 'height: max(8px, env(safe-area-inset-top)); background: ' + c[0] + '; flex: none',
+  circle: 'width: 112px; height: 112px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: 16px; background: ' + c[1] + '; color: ' + c[0],
+  titleStyle: 'margin: 0; font-size: 30px; font-weight: 700; line-height: 1.3; color: ' + c[2] };
+}
+}
+</script>
+</body>
+</html>

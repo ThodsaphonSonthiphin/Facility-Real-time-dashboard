@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>จัดการพื้นที่และป้าย</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+th{font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid #E0E5EB;font-size:13px;color:#667085;background:#F9FAFB;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #E0E5EB;vertical-align:top}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></symbol>
+<symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-bld" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></symbol>
+<symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5v14"></path></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></symbol>
+<symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"></rect><rect x="16" y="3" width="5" height="5" rx="1"></rect><rect x="3" y="16" width="5" height="5" rx="1"></rect><path d="M21 16h-3a2 2 0 0 0-2 2v3"></path><path d="M21 21v.01"></path><path d="M12 7v3a2 2 0 0 1-2 2H7"></path><path d="M3 12h.01"></path><path d="M12 3h.01"></path><path d="M12 16v.01"></path><path d="M16 12h1"></path><path d="M21 12v.01"></path><path d="M12 21v-1"></path></symbol>
+<symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"></path><path d="M18.4 6.6a9 9 0 1 1-12.77.04"></path></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></symbol>
+<symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></symbol>
+</svg>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="เมนูหลัก" style="flex: 1 1 240px; background: #FFFFFF; border-right: 1px solid #E0E5EB; padding: 20px 12px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; padding: 0 12px">
+      <span style="font-size: 16px; font-weight: 700">ระบบตรวจงานแม่บ้าน</span>
+      <span style="font-size: 13px; color: #667085">แอดมิน</span>
+    </div>
+    <sc-for list="{{nav}}" as="g" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; font-weight: 600; color: #667085; padding: 0 12px 4px">{{g.title}}</span>
+        <sc-for list="{{g.items}}" as="it" hint-placeholder-count="5">
+          <a href="{{it.href}}" aria-current="{{it.current}}" style="{{it.style}}"><svg class="i" aria-hidden="true"><use href="#{{it.icon}}"></use></svg><span style="flex: 1">{{it.label}}</span><sc-if value="{{it.hasBadge}}" hint-placeholder-val="{{false}}"><span style="min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; background: #B42318; color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{it.badge}}</span></sc-if></a>
+        </sc-for>
+      </div>
+    </sc-for>
+    <div style="margin-top: auto; border-top: 1px solid #E0E5EB; padding: 16px 12px 0; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 14px; font-weight: 600">ผู้ดูแลระบบ 01</span>
+      <a href="AdminLogin.dc.html" style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; text-decoration: none; min-height: 36px"><svg class="i is" aria-hidden="true"><use href="#i-logout"></use></svg>ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div style="flex: 999 1 640px; min-width: 0; padding: 24px; display: flex; justify-content: center">
+  <main style="width: 100%; max-width: 1216px; display: flex; flex-direction: column; gap: 24px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.3">พื้นที่และป้าย</h1>
+        <span style="font-size: 14px; color: #667085">71 พื้นที่ · 412 จุด · 6 ตึก</span>
+      </div>
+      <a href="AreaNew.dc.html" style="height: 36px; padding: 0 16px; border-radius: 6px; background: #2457C5; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><svg class="i is" aria-hidden="true"><use href="#i-plus"></use></svg>เพิ่มพื้นที่</a>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <section aria-label="รายการพื้นที่" style="flex: 1 1 280px; max-width: 100%; background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column">
+        <div style="padding: 12px; border-bottom: 1px solid #E0E5EB; display: flex; flex-direction: column; gap: 8px">
+          <label style="position: relative; display: flex; align-items: center"><span style="position: absolute; left: 10px; color: #667085; display: flex"><svg class="i is" aria-hidden="true"><use href="#i-search"></use></svg></span><input type="search" aria-label="ค้นหาพื้นที่" placeholder="ค้นหารหัสหรือชื่อพื้นที่" style="width: 100%; height: 36px; padding: 0 12px 0 34px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></label>
+          <select aria-label="ตึก" style="height: 36px; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936; background: #FFFFFF"><option>ทุกตึก</option><option>A อาคารผลิต 1</option><option>B อาคารผลิต 2</option></select>
+        </div>
+        <ul style="list-style: none; margin: 0; padding: 4px; display: flex; flex-direction: column">
+          <sc-for list="{{list}}" as="a" hint-placeholder-count="8">
+            <li><button type="button" aria-current="{{a.current}}" onClick="{{a.pick}}" style="{{a.style}}">
+              <span style="display: flex; flex-direction: column; min-width: 0"><b style="font-size: 14px">{{a.code}} {{a.name}}</b><span style="font-size: 13px; color: #667085">ตึก {{a.bld}} · {{a.n}} จุด</span></span>
+              <sc-if value="{{a.off}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px; color: #5B6474; background: #F2F4F7; border-radius: 4px; padding: 0 6px; flex: none">ปิดใช้งาน</span></sc-if>
+            </button></li>
+          </sc-for>
+        </ul>
+        <div style="padding: 8px 12px; border-top: 1px solid #E0E5EB; font-size: 13px; color: #667085">แสดง 8 จาก 71 · เลื่อนเพื่อดูเพิ่ม</div>
+      </section>
+
+      <section aria-label="รายละเอียดพื้นที่" style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px">
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><h2 style="margin: 0; font-size: 20px; font-weight: 700">AR01 ห้องน้ำชั้น 1</h2><span style="display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 4px; background: #EDF7F0; border: 1px solid #B9DFC6; color: #16803C; font-size: 13px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-check"></use></svg>ใช้งานอยู่</span></div>
+              <span style="color: #667085">ตึก A อาคารผลิต 1 · 2 กะ · 5 จุด</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <button type="button" onClick="{{openArea}}" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; color: #202936; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer"><svg class="i is" aria-hidden="true"><use href="#i-pencil"></use></svg>แก้ไขพื้นที่</button>
+              <a href="PrintSigns.dc.html" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; color: #202936; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><svg class="i is" aria-hidden="true"><use href="#i-print"></use></svg>พิมพ์ป้าย</a>
+              <button type="button" style="height: 36px; padding: 0 12px; border: 1px solid #B42318; border-radius: 6px; background: #FFFFFF; color: #B42318; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><svg class="i is" aria-hidden="true"><use href="#i-power"></use></svg>ปิดใช้งาน</button>
+            </div>
+          </div>
+          <dl style="margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding-top: 16px; border-top: 1px solid #E0E5EB">
+            <div style="display: flex; flex-direction: column"><dt style="font-size: 13px; color: #667085">แม่บ้านกะเช้า</dt><dd style="margin: 0; font-weight: 600">สมใจ ใจดี</dd></div>
+            <div style="display: flex; flex-direction: column"><dt style="font-size: 13px; color: #667085">แม่บ้านกะดึก</dt><dd style="margin: 0; font-weight: 600">อำไพ ศรีเมือง</dd></div>
+            <div style="display: flex; flex-direction: column"><dt style="font-size: 13px; color: #667085">ป้ายลงเวลา</dt><dd style="margin: 0; font-weight: 600">AR01-IN · รัศมี 30 ม.</dd></div>
+            <div style="display: flex; flex-direction: column"><dt style="font-size: 13px; color: #667085">พิกัดป้ายลงเวลา</dt><dd style="margin: 0; font-weight: 600; display: flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true" style="color: #16803C"><use href="#i-check"></use></svg>เก็บแล้ว ±6 ม.</dd></div>
+          </dl>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; overflow: hidden">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #E0E5EB; gap: 12px; flex-wrap: wrap">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 700">จุดในพื้นที่ · 5</h3>
+            <button type="button" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; color: #202936; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><svg class="i is" aria-hidden="true"><use href="#i-plus"></use></svg>เพิ่มจุด</button>
+          </div>
+          <div style="overflow-x: auto">
+            <table style="width: 100%; min-width: 760px; border-collapse: collapse; font-size: 14px">
+              <thead><tr><th>จุด</th><th>รอบกะเช้า</th><th>รอบกะดึก</th><th>รัศมี</th><th>พิกัด</th><th><span style="position: absolute; width: 1px; height: 1px; overflow: hidden">การกระทำ</span></th></tr></thead>
+              <tbody>
+                <sc-for list="{{points}}" as="p" hint-placeholder-count="5">
+                  <tr>
+                    <td><div style="display: flex; flex-direction: column"><b>{{p.name}}</b><span style="font-size: 13px; color: #667085; font-family: ui-monospace, Menlo, Consolas, monospace">{{p.code}}</span></div></td>
+                    <td style="font-variant-numeric: tabular-nums">{{p.am}}</td>
+                    <td style="font-variant-numeric: tabular-nums">{{p.pm}}</td>
+                    <td style="font-variant-numeric: tabular-nums; white-space: nowrap">{{p.r}}</td>
+                    <td><span style="{{p.gpsStyle}}">{{p.gps}}</span></td>
+                    <td style="text-align: right; white-space: nowrap">
+                      <button type="button" onClick="{{openPoint}}" style="height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: pointer"><svg class="i is" aria-hidden="true"><use href="#i-pencil"></use></svg>แก้</button>
+                      <button type="button" style="height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-qr"></use></svg>ออก QR ใหม่</button>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding: 12px 16px; font-size: 13px; color: #667085">"ออก QR ใหม่" ทำให้ป้ายเก่าใช้ไม่ได้ทันที ต้องพิมพ์และติดป้ายใหม่ · เก็บพิกัดด้วยมือถือที่ป้าย (หน้า 8)</div>
+        </div>
+      </section>
+    </div>
+  </main>
+  </div>
+
+  <sc-if value="{{drawerPoint}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(16, 24, 40, 0.45); display: flex; justify-content: flex-end">
+      <aside role="dialog" aria-modal="true" aria-labelledby="dp-t" style="background: #FFFFFF; width: 100%; max-width: 480px; height: 100%; box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18); display: flex; flex-direction: column">
+        <div style="padding: 16px 24px; border-bottom: 1px solid #E0E5EB; display: flex; justify-content: space-between; align-items: center">
+          <div style="display: flex; flex-direction: column"><b id="dp-t" style="font-size: 18px">แก้จุด: ห้องน้ำชาย</b><span style="font-size: 13px; color: #667085">AR01-01 · AR01 ห้องน้ำชั้น 1</span></div>
+          <button type="button" onClick="{{close}}" style="height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; cursor: pointer"><svg class="i is" aria-hidden="true"><use href="#i-x"></use></svg>ปิด</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 20px">
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="pn" style="font-weight: 600">ชื่อจุด</label><input id="pn" value="ห้องน้ำชาย" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"><span style="font-size: 13px; color: #667085">เปลี่ยนชื่อแล้วต้องพิมพ์ป้ายใหม่ เพราะชื่อพิมพ์อยู่บนป้าย</span></div>
+          <sc-for list="{{shifts}}" as="sh" hint-placeholder-count="2">
+            <fieldset style="border: 1px solid #E0E5EB; border-radius: 8px; margin: 0; padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 8px">
+              <legend style="padding: 0 4px; font-weight: 600">รอบ{{sh.label}}</legend>
+              <sc-for list="{{sh.rounds}}" as="w" hint-placeholder-count="3">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <input type="time" aria-label="เริ่ม" value="{{w.a}}" style="height: 36px; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936">
+                  <span style="color: #667085">ถึง</span>
+                  <input type="time" aria-label="สิ้นสุด" value="{{w.b}}" style="height: 36px; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936">
+                  <button type="button" style="height: 36px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: auto"><svg class="i is" aria-hidden="true"><use href="#i-trash"></use></svg>ลบ</button>
+                </div>
+              </sc-for>
+              <button type="button" style="align-self: flex-start; height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-plus"></use></svg>เพิ่มรอบ</button>
+            </fieldset>
+          </sc-for>
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="pr" style="font-weight: 600">รัศมีป้าย (เมตร)</label><input id="pr" type="number" value="30" style="width: 140px; height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"><span style="font-size: 13px; color: #667085">สแกนไกลกว่านี้ ระบบรับงานแต่ติดธง "ไกลป้าย" (10–200 ม.)</span></div>
+        </div>
+        <div style="padding: 12px 24px; border-top: 1px solid #E0E5EB; display: flex; justify-content: flex-end; gap: 8px">
+          <button type="button" onClick="{{close}}" style="height: 36px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #202936; cursor: pointer">ยกเลิก</button>
+          <button type="button" style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #2457C5; color: #FFFFFF; font-size: 14px; font-weight: 600">บันทึกจุด</button>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{drawerArea}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(16, 24, 40, 0.45); display: flex; justify-content: flex-end">
+      <aside role="dialog" aria-modal="true" aria-labelledby="da-t" style="background: #FFFFFF; width: 100%; max-width: 480px; height: 100%; box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18); display: flex; flex-direction: column">
+        <div style="padding: 16px 24px; border-bottom: 1px solid #E0E5EB; display: flex; justify-content: space-between; align-items: center">
+          <b id="da-t" style="font-size: 18px">แก้ไขพื้นที่ AR01</b>
+          <button type="button" onClick="{{close}}" style="height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; cursor: pointer"><svg class="i is" aria-hidden="true"><use href="#i-x"></use></svg>ปิด</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 20px">
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="an" style="font-weight: 600">ชื่อพื้นที่</label><input id="an" value="ห้องน้ำชั้น 1" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="ab" style="font-weight: 600">ตึก</label><select id="ab" style="height: 36px; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936; background: #FFFFFF"><option>A อาคารผลิต 1</option></select></div>
+          <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px"><legend style="padding: 0; font-weight: 600; margin-bottom: 4px">กะที่ใช้งาน</legend><label style="display: inline-flex; align-items: center; gap: 8px"><input type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2457C5">กะเช้า 07:00–19:00</label><label style="display: inline-flex; align-items: center; gap: 8px"><input type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2457C5">กะดึก 19:00–07:00</label></fieldset>
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="ar" style="font-weight: 600">รัศมีป้ายลงเวลา (เมตร)</label><input id="ar" type="number" value="30" style="width: 140px; height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 600">รหัสพื้นที่</span><span style="color: #667085">AR01 · แก้ไม่ได้ เพราะพิมพ์อยู่บนป้ายแล้ว</span></div>
+        </div>
+        <div style="padding: 12px 24px; border-top: 1px solid #E0E5EB; display: flex; justify-content: flex-end; gap: 8px">
+          <button type="button" onClick="{{close}}" style="height: 36px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #202936; cursor: pointer">ยกเลิก</button>
+          <button type="button" style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #2457C5; color: #FFFFFF; font-size: 14px; font-weight: 600">บันทึก</button>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"drawer":{"editor":"enum","options":["ไม่มี","แก้ไขพื้นที่","แก้จุด"],"default":"ไม่มี"},"$preview":{"width":1280,"height":1120}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { sel: 'AR01', open: null }; }
+renderVals() {
+const ACTIVE = 'area';
+const NAV = [['ติดตามงาน', [['dash', 'สถานะจุด', 'i-grid', 'Dashboard.dc.html'], ['att', 'การเข้างาน', 'i-users', 'Attendance.dc.html'], ['alert', 'รายการที่ขึ้นเตือน', 'i-alert', 'Alerts.dc.html', '7'], ['sum', 'สรุปการตรวจ', 'i-clip', 'InspectSummary.dc.html'], ['exp', 'ส่งออก Excel', 'i-dl', 'Export.dc.html']]], ['ตั้งค่า', [['area', 'พื้นที่และป้าย', 'i-pin', 'Areas.dc.html'], ['bld', 'ตึก', 'i-bld', 'Buildings.dc.html'], ['print', 'พิมพ์ป้าย', 'i-print', 'PrintSigns.dc.html'], ['acc', 'บัญชีผู้ใช้', 'i-user', 'Accounts.dc.html'], ['log', 'ประวัติการแก้ไข', 'i-hist', 'AuditLog.dc.html']]]];
+const navBase = 'display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; ';
+const nav = NAV.map((g) => ({ title: g[0], items: g[1].map((x) => ({ label: x[1], icon: x[2], href: x[3], badge: x[4] || '', hasBadge: !!x[4], current: x[0] === ACTIVE ? 'page' : undefined, style: navBase + (x[0] === ACTIVE ? 'background: #EEF3FC; color: #2457C5; font-weight: 600' : 'color: #344054; font-weight: 500') })) }));
+const L = [['AR01', 'ห้องน้ำชั้น 1', 'A', 5], ['AR02', 'โถงชั้น 1', 'A', 4], ['AR03', 'สำนักงานชั้น 1', 'A', 6], ['AR07', 'ทางเดินชั้น 2', 'B', 3], ['AR08', 'ห้องประชุมชั้น 2', 'B', 5], ['AR09', 'บันไดหนีไฟ', 'B', 2, true], ['AR14', 'โรงอาหาร', 'C', 4], ['AR15', 'ครัวโรงอาหาร', 'C', 7]];
+const list = L.map((a) => {
+  const on = this.state.sel === a[0];
+  return { code: a[0], name: a[1], bld: a[2], n: a[3], off: !!a[4], current: on ? 'true' : undefined, pick: () => this.setState({ sel: a[0] }),
+    style: 'width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; cursor: pointer; border: 0; color: #202936; background: ' + (on ? '#EEF3FC' : 'transparent') + '; box-shadow: ' + (on ? 'inset 0 0 0 1px #2457C5' : 'none') };
+});
+const ok = 'display: inline-flex; align-items: center; white-space: nowrap; min-height: 24px; line-height: 1.4; padding: 2px 8px; border-radius: 4px; font-size: 13px; font-weight: 600; background: #EDF7F0; color: #16803C; border: 1px solid #B9DFC6';
+const miss = 'display: inline-flex; align-items: center; white-space: nowrap; min-height: 24px; line-height: 1.4; padding: 2px 8px; border-radius: 4px; font-size: 13px; font-weight: 600; background: #FFFFFF; color: #B45309; border: 1px solid #F5D6B0';
+const points = [
+  ['ห้องน้ำชาย', 'AR01-01', '07:00–09:00 · 10:00–12:00 · 13:00–15:00 · 16:00–18:00', '20:00–22:00 · 02:00–04:00', '30 ม.', 'เก็บแล้ว ±5 ม.', ok],
+  ['ห้องน้ำหญิง', 'AR01-02', '07:00–09:00 · 10:00–12:00 · 13:00–15:00 · 16:00–18:00', '20:00–22:00 · 02:00–04:00', '30 ม.', 'เก็บแล้ว ±4 ม.', ok],
+  ['จุดทิ้งขยะ', 'AR01-03', '10:00–12:00 · 15:00–16:00', 'ไม่มีรอบ', '30 ม.', 'เก็บแล้ว ±8 ม.', ok],
+  ['โถงทางเดิน', 'AR01-04', '07:30–09:00', '21:00–22:00', '50 ม.', 'ยังไม่เก็บ', miss],
+  ['ห้องเก็บอุปกรณ์', 'AR01-05', '08:00–09:00', 'ไม่มีรอบ', '30 ม.', 'เก็บแล้ว ±6 ม.', ok]
+].map((p) => ({ name: p[0], code: p[1], am: p[2], pm: p[3], r: p[4], gps: p[5], gpsStyle: p[6] }));
+const shifts = [
+  { label: 'กะเช้า', rounds: [{ a: '07:00', b: '09:00' }, { a: '10:00', b: '12:00' }, { a: '13:00', b: '15:00' }, { a: '16:00', b: '18:00' }] },
+  { label: 'กะดึก', rounds: [{ a: '20:00', b: '22:00' }, { a: '02:00', b: '04:00' }] }
+];
+const d = this.state.open || (this.props.drawer === 'แก้ไขพื้นที่' ? 'area' : this.props.drawer === 'แก้จุด' ? 'point' : null);
+return { nav: nav, list: list, points: points, shifts: shifts,
+  drawerArea: d === 'area', drawerPoint: d === 'point',
+  openArea: () => this.setState({ open: 'area' }), openPoint: () => this.setState({ open: 'point' }), close: () => this.setState({ open: 'none' }) };
+}
+}
+</script>
+</body>
+</html>

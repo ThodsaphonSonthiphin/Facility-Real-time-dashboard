@@ -31,7 +31,7 @@ export function ShiftChoice({ name, value, blockOf, disabled, onChange }: ShiftC
             />
             <span>
               {shiftLabel[shift]}
-              {block && <span className="text-muted">{` (${block})`}</span>}
+              {block && <span className="text-text-2">{` (${block})`}</span>}
             </span>
           </label>
         );

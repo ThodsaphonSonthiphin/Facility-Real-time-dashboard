@@ -81,7 +81,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
   return (
     <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
       <h2 id={titleId} className={formTitleClass}>{`แก้ไขบัญชี · ${account.displayName}`}</h2>
-      <p className="text-muted">{`${accountRoleLabel[account.role]} · ${account.loginName} (บทบาทและรหัสแก้ไม่ได้)`}</p>
+      <p className="text-text-2">{`${accountRoleLabel[account.role]} · ${account.loginName} (บทบาทและรหัสแก้ไม่ได้)`}</p>
       <Field label="ชื่อที่แสดง">
         <TextInput
           size="desk"

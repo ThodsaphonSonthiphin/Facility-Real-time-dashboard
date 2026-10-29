@@ -26,7 +26,7 @@ const noTyped: Typed = { start: '', end: '' };
 // it (owner, 2026-10-23). The pill is the target's room.
 const removeClass =
   `inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent ` +
-  `text-info-text hover:text-primary-strong ${focusRing}`;
+  `text-accent hover:text-accent-hover ${focusRing}`;
 
 interface PointEditorProps {
   area: AreaSummary;
@@ -127,7 +127,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
               onRemove={(draft) => setWindows((all) => all.filter((w) => !sameWindow(w, draft)))}
             />
           ))}
-          <p className="text-muted">
+          <p className="text-text-2">
             ช่วงห้ามซ้อนกันและต้องอยู่ในกะ · ส่งหลังช่วงจบนับเป็นส่งช้า · พื้นที่ที่ทำเฉพาะกะเช้าจะไม่มีช่องกะดึก
           </p>
         </div>
@@ -142,7 +142,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
         <div className="flex flex-col items-start gap-2">
           {point.isActive ? (
             <>
-              <p className="text-muted">ปิดใช้งานแล้วจุดและป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>
+              <p className="text-text-2">ปิดใช้งานแล้วจุดและป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>
               <Button size="desk" disabled={sending} onClick={() => void toggle(false)}>
                 ปิดใช้งานจุดนี้
               </Button>
@@ -206,11 +206,11 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
   return (
     <FieldGroup legend={label} disabled={disabled}>
       <ul className="m-0 flex list-none flex-wrap gap-x-3 gap-y-3 p-0" aria-label={`ช่วงรอบ${label}`}>
-        {mine.length === 0 && <li className="text-muted">ยังไม่มีช่วงรอบ</li>}
+        {mine.length === 0 && <li className="text-text-2">ยังไม่มีช่วงรอบ</li>}
         {mine.map((w) => (
           <li
             key={`${w.start}-${w.end}`}
-            className="inline-flex items-center gap-2 rounded-full border border-info-border bg-info-bg py-0.5 pr-0.5 pl-2.5 text-xs"
+            className="inline-flex items-center gap-2 rounded-full border border-accent bg-accent-subtle py-0.5 pr-0.5 pl-2.5 text-xs"
           >
             <span>{`${w.start}–${w.end}`}</span>
             <button

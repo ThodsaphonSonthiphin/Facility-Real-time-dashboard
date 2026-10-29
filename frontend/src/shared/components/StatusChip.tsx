@@ -11,7 +11,7 @@ const sizes = {
 export function StatusChip({ status, size = 'md' }: { status: PointStatus; size?: keyof typeof sizes }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full font-semibold whitespace-nowrap text-on-primary ${statusBg[status]} ${sizes[size]}`}
+      className={`inline-flex items-center rounded-full font-semibold whitespace-nowrap text-on-accent ${statusBg[status]} ${sizes[size]}`}
     >
       {pointStatusLabel[status]}
     </span>

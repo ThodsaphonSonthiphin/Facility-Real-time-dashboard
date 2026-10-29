@@ -35,7 +35,7 @@ export function Field({ label, help, children }: FieldProps) {
         {control}
       </label>
       {help && (
-        <span id={helpId} className="text-muted">
+        <span id={helpId} className="text-text-2">
           {help}
         </span>
       )}
@@ -59,7 +59,7 @@ export function FieldGroup({
   children: ReactNode;
 }) {
   return (
-    <fieldset className="flex flex-col gap-2 rounded border border-border p-2.5" disabled={disabled}>
+    <fieldset className="flex flex-col gap-2 rounded-lg border border-border p-2.5" disabled={disabled}>
       <legend className="px-1 font-semibold">{legend}</legend>
       {children}
     </fieldset>
@@ -90,10 +90,10 @@ export function ChoiceTile({ children, ...input }: ChoiceProps) {
   return (
     <label
       className={
-        'flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded border-2 border-input-border ' +
-        'bg-surface p-3 text-center text-lg font-bold has-checked:border-primary has-checked:bg-info-bg ' +
-        'has-checked:text-info-text has-focus-visible:outline-3 has-focus-visible:outline-offset-2 ' +
-        'has-focus-visible:outline-primary has-disabled:cursor-not-allowed has-disabled:opacity-50'
+        'flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-border-control ' +
+        'bg-surface p-3 text-center text-lg font-bold has-checked:border-accent has-checked:bg-accent-subtle ' +
+        'has-checked:text-accent has-focus-visible:outline-3 has-focus-visible:outline-offset-2 ' +
+        'has-focus-visible:outline-accent has-disabled:cursor-not-allowed has-disabled:opacity-50'
       }
     >
       <input type="radio" className="sr-only" {...input} />
@@ -107,10 +107,10 @@ export function ToggleChip({ children, ...input }: ChoiceProps) {
   return (
     <label
       className={
-        'inline-flex min-h-12 cursor-pointer items-center gap-1.5 rounded-full border border-input-border bg-surface ' +
-        'px-4 text-base has-checked:border-primary has-checked:bg-primary has-checked:font-semibold ' +
-        'has-checked:text-on-primary has-focus-visible:outline-3 has-focus-visible:outline-offset-2 ' +
-        'has-focus-visible:outline-primary has-disabled:cursor-not-allowed has-disabled:opacity-50'
+        'inline-flex min-h-12 cursor-pointer items-center gap-1.5 rounded-full border border-border-control bg-surface ' +
+        'px-4 text-base has-checked:border-accent has-checked:bg-accent has-checked:font-semibold ' +
+        'has-checked:text-on-accent has-focus-visible:outline-3 has-focus-visible:outline-offset-2 ' +
+        'has-focus-visible:outline-accent has-disabled:cursor-not-allowed has-disabled:opacity-50'
       }
     >
       <input type="checkbox" className="sr-only" {...input} />

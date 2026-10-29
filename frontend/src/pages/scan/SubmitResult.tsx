@@ -28,9 +28,9 @@ export function SubmitResult({ point, draft, result }: SubmitResultProps) {
   return (
     <main className="flex flex-col gap-4 text-base text-text">
       <header className="flex flex-col gap-1.5">
-        <span className="text-md text-muted">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
+        <span className="text-sm text-text-2">{`${point.areaName} · ตึก ${point.buildingCode}`}</span>
         <h1 className="text-2xl font-bold">{`${title[result.placement]} ${formatTime(result.submittedAt)}`}</h1>
-        <p className="text-md text-muted">{`${point.name} · ${describeDraft(draft)}`}</p>
+        <p className="text-sm text-text-2">{`${point.name} · ${describeDraft(draft)}`}</p>
         <p className="flex flex-wrap items-center gap-2 text-lg">
           สถานะของจุดนี้ <StatusChip status={result.newPointStatus} size="lg" />
         </p>
@@ -49,7 +49,7 @@ export function SubmitResult({ point, draft, result }: SubmitResultProps) {
           {`ไกลป้าย: ห่างป้าย ${result.distanceM} ม. แอดมินจะเห็นรายการนี้ ถ้าคุณอยู่ที่จุดนี้จริง แจ้งแอดมินได้เลย`}
         </Note>
       )}
-      {result.withinRadius === true && <p className="text-md text-muted">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
+      {result.withinRadius === true && <p className="text-sm text-text-2">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
       <Link className={buttonClass('primary', 'main')} data-tap="" to="/my-work">
         ดูงานของฉัน
       </Link>

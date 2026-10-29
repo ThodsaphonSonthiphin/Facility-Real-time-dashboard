@@ -38,7 +38,7 @@ export function InspectSendFailed({ visit, draft, triedAt, sending, onResend }: 
           <li>เดินไปตรงที่มีสัญญาณ</li>
           <li>กด "ส่งใหม่"</li>
         </ol>
-        <p className="text-md text-muted">ระบบไม่เก็บผลตรวจไว้ในมือถือแล้วส่งเองทีหลัง</p>
+        <p className="text-sm text-text-2">ระบบไม่เก็บผลตรวจไว้ในมือถือแล้วส่งเองทีหลัง</p>
       </Panel>
       <Button variant="primary" size="main" disabled={sending} onClick={onResend}>
         {sending ? 'กำลังส่ง...' : 'ส่งใหม่'}

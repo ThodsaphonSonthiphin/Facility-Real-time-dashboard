@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ส่งออก Excel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></symbol>
+<symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-bld" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></symbol>
+<symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M8 13h2"></path><path d="M14 13h2"></path><path d="M8 17h2"></path><path d="M14 17h2"></path></symbol>
+<symbol id="i-check-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></symbol>
+</svg>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="เมนูหลัก" style="flex: 1 1 240px; background: #FFFFFF; border-right: 1px solid #E0E5EB; padding: 20px 12px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; padding: 0 12px">
+      <span style="font-size: 16px; font-weight: 700">ระบบตรวจงานแม่บ้าน</span>
+      <span style="font-size: 13px; color: #667085">แอดมิน</span>
+    </div>
+    <sc-for list="{{nav}}" as="g" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; font-weight: 600; color: #667085; padding: 0 12px 4px">{{g.title}}</span>
+        <sc-for list="{{g.items}}" as="it" hint-placeholder-count="5">
+          <a href="{{it.href}}" aria-current="{{it.current}}" style="{{it.style}}"><svg class="i" aria-hidden="true"><use href="#{{it.icon}}"></use></svg><span style="flex: 1">{{it.label}}</span><sc-if value="{{it.hasBadge}}" hint-placeholder-val="{{false}}"><span style="min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; background: #B42318; color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{it.badge}}</span></sc-if></a>
+        </sc-for>
+      </div>
+    </sc-for>
+    <div style="margin-top: auto; border-top: 1px solid #E0E5EB; padding: 16px 12px 0; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 14px; font-weight: 600">ผู้ดูแลระบบ 01</span>
+      <a href="AdminLogin.dc.html" style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; text-decoration: none; min-height: 36px"><svg class="i is" aria-hidden="true"><use href="#i-logout"></use></svg>ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div style="flex: 999 1 640px; min-width: 0; padding: 24px; display: flex; justify-content: center">
+  <main style="width: 100%; max-width: 1216px; display: flex; flex-direction: column; gap: 24px">
+    <header style="display: flex; flex-direction: column; gap: 4px">
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.3">ส่งออก Excel</h1>
+      <span style="font-size: 14px; color: #667085">เลือกชุดข้อมูล ช่วงวัน และตึก แล้วดาวน์โหลดเป็นไฟล์ .xlsx</span>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+      <form style="flex: 999 1 480px; min-width: 0; background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; display: flex; flex-direction: column">
+        <fieldset style="border: 0; margin: 0; padding: 24px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid #E0E5EB">
+          <legend style="float: left; padding: 0; font-size: 16px; font-weight: 700; margin-bottom: 4px">1. ชุดข้อมูล</legend>
+          <div style="clear: both; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px">
+            <sc-for list="{{sets}}" as="o" hint-placeholder-count="4">
+              <label style="{{o.box}}"><input type="radio" name="set" checked="{{o.on}}" onChange="{{o.pick}}" style="width: 18px; height: 18px; margin: 2px 0 0; accent-color: #2457C5; flex: none"><span style="display: flex; flex-direction: column"><b>{{o.label}}</b><span style="font-size: 13px; color: #667085">{{o.desc}}</span></span></label>
+            </sc-for>
+          </div>
+        </fieldset>
+        <fieldset style="border: 0; margin: 0; padding: 24px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid #E0E5EB">
+          <legend style="float: left; padding: 0; font-size: 16px; font-weight: 700; margin-bottom: 4px">2. ช่วงวัน</legend>
+          <div style="clear: both; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="d1" style="font-weight: 600">ตั้งแต่</label><input id="d1" type="date" value="{{d1}}" style="height: 36px; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></div>
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="d2" style="font-weight: 600">ถึง</label><input id="d2" type="date" value="2026-10-29" aria-invalid="{{tooLong}}" aria-describedby="d-help" style="{{d2Style}}"></div>
+          </div>
+          <span id="d-help" style="{{helpStyle}}">{{help}}</span>
+        </fieldset>
+        <fieldset style="border: 0; margin: 0; padding: 24px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid #E0E5EB">
+          <legend style="float: left; padding: 0; font-size: 16px; font-weight: 700; margin-bottom: 4px">3. ตึก</legend>
+          <div style="clear: both; border: 1px solid #E0E5EB; border-radius: 6px; overflow: hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 12px; background: #F9FAFB; border-bottom: 1px solid #E0E5EB">
+              <label style="display: inline-flex; align-items: center; gap: 8px; min-height: 36px; font-weight: 600"><input type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2457C5">ทุกตึก</label>
+              <span style="font-size: 13px; color: #667085">เลือกแล้ว 6 จาก 6 ตึก</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0 16px; padding: 4px 12px">
+              <sc-for list="{{blds}}" as="b" hint-placeholder-count="6">
+                <label style="display: flex; align-items: center; gap: 8px; min-height: 40px; min-width: 0"><input type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2457C5; flex: none"><span style="flex: none; width: 64px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; color: #344054">{{b.code}}</span><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap" title="{{b.name}}">{{b.name}}</span></label>
+              </sc-for>
+            </div>
+          </div>
+        </fieldset>
+        <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px">
+          <div role="note" style="display: flex; gap: 12px; padding: 12px 16px; border-radius: 6px; background: #FEF6EC; border: 1px solid #F5D6B0">
+            <svg class="i" aria-hidden="true" style="color: #B45309"><use href="#i-shield"></use></svg>
+            <div style="display: flex; flex-direction: column"><b>ไฟล์นี้มีข้อมูลส่วนบุคคล</b><span>มีชื่อ รหัสพนักงาน และเวลาของแม่บ้าน ใช้เฉพาะงานที่เกี่ยวข้อง เก็บในที่ที่มีการควบคุมสิทธิ์ และลบเมื่อไม่ใช้ การส่งออกทุกครั้งถูกบันทึกในประวัติการแก้ไข</span></div>
+          </div>
+          <label style="display: inline-flex; align-items: flex-start; gap: 8px"><input type="checkbox" style="width: 18px; height: 18px; margin: 2px 0 0; accent-color: #2457C5; flex: none">เข้าใจแล้ว และจะเก็บไฟล์ตามข้อกำหนดข้อมูลส่วนบุคคล</label>
+          <sc-if value="{{done}}" hint-placeholder-val="{{false}}">
+            <div role="status" style="display: flex; gap: 12px; padding: 12px 16px; border-radius: 6px; background: #EDF7F0; border: 1px solid #B9DFC6"><svg class="i" aria-hidden="true" style="color: #16803C"><use href="#i-check-c"></use></svg><span><b>สร้างไฟล์แล้ว</b> งานที่ส่งและผลตรวจ_23-29ต.ค.2569.xlsx · 2,846 แถว · เริ่มดาวน์โหลดแล้ว</span></div>
+          </sc-if>
+          <div style="display: flex; justify-content: flex-end">
+            <sc-if value="{{busy}}" hint-placeholder-val="{{false}}">
+              <button type="button" disabled style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #2457C5; opacity: 0.7; color: #FFFFFF; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><span style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.5); border-top-color: #FFFFFF; animation: spin 0.9s linear infinite"></span>กำลังสร้างไฟล์…</button>
+            </sc-if>
+            <sc-if value="{{idle}}" hint-placeholder-val="{{true}}">
+              <button type="button" disabled="{{tooLongBool}}" style="{{btnStyle}}"><svg class="i is" aria-hidden="true"><use href="#i-dl"></use></svg>ดาวน์โหลด Excel</button>
+            </sc-if>
+          </div>
+        </div>
+      </form>
+
+      <aside style="flex: 1 1 280px; background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+        <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700"><svg class="i" aria-hidden="true" style="color: #667085"><use href="#i-file"></use></svg>สรุปไฟล์</span>
+        <dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 14px">
+          <dt style="color: #667085">ชุดข้อมูล</dt><dd style="margin: 0; font-weight: 600">{{setLabel}}</dd>
+          <dt style="color: #667085">ช่วงวัน</dt><dd style="margin: 0; font-weight: 600">{{range}}</dd>
+          <dt style="color: #667085">ตึก</dt><dd style="margin: 0; font-weight: 600">ทุกตึก (6)</dd>
+          <dt style="color: #667085">ประมาณ</dt><dd style="margin: 0; font-weight: 600">{{rowsEst}}</dd>
+        </dl>
+        <span style="font-size: 13px; color: #667085">เลือกได้ 1–31 วันต่อไฟล์</span>
+      </aside>
+    </div>
+  </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"view":{"editor":"enum","options":["ปกติ","ช่วงวันเกิน 31 วัน","กำลังสร้างไฟล์","สำเร็จ"],"default":"ปกติ"},"$preview":{"width":1280,"height":880}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { set: 0 }; }
+renderVals() {
+const view = this.props.view ?? 'ปกติ';
+const ACTIVE = 'exp';
+const NAV = [['ติดตามงาน', [['dash', 'สถานะจุด', 'i-grid', 'Dashboard.dc.html'], ['att', 'การเข้างาน', 'i-users', 'Attendance.dc.html'], ['alert', 'รายการที่ขึ้นเตือน', 'i-alert', 'Alerts.dc.html', '7'], ['sum', 'สรุปการตรวจ', 'i-clip', 'InspectSummary.dc.html'], ['exp', 'ส่งออก Excel', 'i-dl', 'Export.dc.html']]], ['ตั้งค่า', [['area', 'พื้นที่และป้าย', 'i-pin', 'Areas.dc.html'], ['bld', 'ตึก', 'i-bld', 'Buildings.dc.html'], ['print', 'พิมพ์ป้าย', 'i-print', 'PrintSigns.dc.html'], ['acc', 'บัญชีผู้ใช้', 'i-user', 'Accounts.dc.html'], ['log', 'ประวัติการแก้ไข', 'i-hist', 'AuditLog.dc.html']]]];
+const navBase = 'display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; ';
+const nav = NAV.map((g) => ({ title: g[0], items: g[1].map((x) => ({ label: x[1], icon: x[2], href: x[3], badge: x[4] || '', hasBadge: !!x[4], current: x[0] === ACTIVE ? 'page' : undefined, style: navBase + (x[0] === ACTIVE ? 'background: #EEF3FC; color: #2457C5; font-weight: 600' : 'color: #344054; font-weight: 500') })) }));
+const SETS = [
+  ['งานที่ส่งและผลตรวจ', 'ทุกครั้งที่ส่งงาน ผลตรวจ ปัญหาที่แจ้ง ธงไกลป้าย', 2846],
+  ['การเข้างาน', 'เวลาลง 4 จังหวะ การแก้เวลา และการทำแทน', 994],
+  ['รายการที่ขึ้นเตือน', 'สแกนผิดพื้นที่ ไกลป้าย ลืมลงเวลา', 61],
+  ['สรุปการตรวจ', 'ตัวเลขรายหัวหน้า', 42]
+];
+const sets = SETS.map((s, i) => {
+  const on = this.state.set === i;
+  return { label: s[0], desc: s[1], on: on, pick: () => this.setState({ set: i }),
+    box: 'display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: 6px; cursor: pointer; background: ' + (on ? '#EEF3FC' : '#FFFFFF') + '; border: ' + (on ? '2px solid #2457C5' : '1px solid #858F9E') + '; margin: ' + (on ? '0' : '1px') };
+});
+const too = view === 'ช่วงวันเกิน 31 วัน';
+const cur = SETS[this.state.set];
+const blds = [['PRD-01', 'อาคารผลิต 1'], ['PRD-02', 'อาคารผลิต 2'], ['CNT-01', 'โรงอาหารกลาง'], ['OFC-01', 'อาคารสำนักงาน'], ['LBY-01', 'ล็อบบี้ทางเข้าหลัก'], ['WHS-01', 'คลังสินค้าและวัตถุดิบ']].map((b) => ({ code: b[0], name: b[1] }));
+return { nav: nav, sets: sets, blds: blds,
+  d1: too ? '2026-09-15' : '2026-10-23',
+  tooLong: too ? 'true' : 'false', tooLongBool: too,
+  d2Style: 'height: 36px; padding: 0 8px; border-radius: 6px; font-size: 14px; color: #202936; border: ' + (too ? '2px solid #B42318' : '1px solid #858F9E'),
+  help: too ? 'ช่วงที่เลือกยาว 45 วัน เลือกได้ไม่เกิน 31 วันต่อไฟล์ ลองแบ่งเป็น 2 ไฟล์' : '7 วัน (เลือกได้ 1–31 วัน)',
+  helpStyle: 'font-size: 13px; ' + (too ? 'color: #B42318; font-weight: 600' : 'color: #667085'),
+  busy: view === 'กำลังสร้างไฟล์', idle: view !== 'กำลังสร้างไฟล์', done: view === 'สำเร็จ',
+  btnStyle: 'height: 36px; padding: 0 16px; border: 0; border-radius: 6px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; ' + (too ? 'background: #E0E5EB; color: #667085' : 'background: #2457C5; color: #FFFFFF; cursor: pointer'),
+  setLabel: cur[0], range: too ? '15 ก.ย. – 29 ต.ค. 2569 (45 วัน)' : '23–29 ต.ค. 2569 (7 วัน)',
+  rowsEst: too ? '–' : cur[2].toLocaleString('en-US') + ' แถว'
+};
+}
+}
+</script>
+</body>
+</html>

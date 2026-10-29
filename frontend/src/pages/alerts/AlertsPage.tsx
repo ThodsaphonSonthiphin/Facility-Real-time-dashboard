@@ -74,7 +74,7 @@ export function AlertsPage() {
   return (
     <main className="flex flex-col gap-4 text-sm text-text">
       <header className="flex flex-col gap-0.5">
-        <span className="text-muted">เมื่อวานและวันนี้ · แอดมินเท่านั้น</span>
+        <span className="text-text-2">เมื่อวานและวันนี้ · แอดมินเท่านั้น</span>
         <h1 className="text-xl font-bold">รายการที่ขึ้นเตือน</h1>
       </header>
       {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
@@ -140,7 +140,7 @@ export function AlertsPage() {
             </Select>
           </label>
         </div>
-        {alerts.isLoading && <p className="text-muted">กำลังโหลด...</p>}
+        {alerts.isLoading && <p className="text-text-2">กำลังโหลด...</p>}
         {alerts.error && <Note tone="error">{getErrorMessage(alerts.error)}</Note>}
         {alerts.data && shown.length === 0 && <Note tone="info">ไม่มีรายการ</Note>}
         <ul className={listClass}>

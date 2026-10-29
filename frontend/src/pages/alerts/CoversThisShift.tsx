@@ -37,18 +37,18 @@ export function CoversThisShift({ board, ahead, onNotice }: CoversThisShiftProps
       <h2 id="alerts-covers" className={sectionTitleClass}>
         {`${ahead ? `คนทำแทน${slotText(board)}` : 'คนทำแทนกะนี้'} (${covers.length})`}
       </h2>
-      {covers.length === 0 && <p className="text-muted">{ahead ? `ยังไม่มีคนทำแทน${slotText(board)}` : 'ยังไม่มีคนทำแทนกะนี้'}</p>}
+      {covers.length === 0 && <p className="text-text-2">{ahead ? `ยังไม่มีคนทำแทน${slotText(board)}` : 'ยังไม่มีคนทำแทนกะนี้'}</p>}
       <ul className={listClass}>
         {covers.map(({ row, cover }) => (
           <li key={cover.id} className={rowClass}>
             <span>
               <strong>{cover.displayName}</strong>
               {` ทำแทน ${row.areaCode}`}
-              <span className="text-muted">
+              <span className="text-text-2">
                 {` · แทน ${row.cleaner ? row.cleaner.displayName : 'ไม่มีแม่บ้านประจำ'} · แอดมินมอบหมาย ${ahead ? formatDayTime(cover.assignedAt) : formatTime(cover.assignedAt)}`}
               </span>
             </span>
-            <span className="text-muted">หมดสิทธิ์เมื่อจบกะ</span>
+            <span className="text-text-2">หมดสิทธิ์เมื่อจบกะ</span>
             <Button
               variant="link"
               size="desk"

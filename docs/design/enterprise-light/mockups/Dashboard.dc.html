@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>สถานะจุด</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></symbol>
+<symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-bld" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></symbol>
+<symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></symbol>
+<symbol id="i-redo" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></symbol>
+<symbol id="i-hour" viewBox="0 0 24 24"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"></path><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"></path></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"></path></symbol>
+<symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4"></path><path d="M20 7H4"></path><path d="m8 21-4-4 4-4"></path><path d="M4 17h16"></path></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></symbol>
+<symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+<symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></symbol>
+<symbol id="i-x-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></symbol>
+<symbol id="i-user-x" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="m17 8 5 5"></path><path d="m22 8-5 5"></path></symbol>
+</svg>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="เมนูหลัก" style="flex: 1 1 240px; background: #FFFFFF; border-right: 1px solid #E0E5EB; padding: 20px 12px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; padding: 0 12px">
+      <span style="font-size: 16px; font-weight: 700">ระบบตรวจงานแม่บ้าน</span>
+      <span style="font-size: 13px; color: #667085">แอดมิน</span>
+    </div>
+    <sc-for list="{{nav}}" as="g" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; font-weight: 600; color: #667085; padding: 0 12px 4px">{{g.title}}</span>
+        <sc-for list="{{g.items}}" as="it" hint-placeholder-count="5">
+          <a href="{{it.href}}" aria-current="{{it.current}}" style="{{it.style}}"><svg class="i" aria-hidden="true"><use href="#{{it.icon}}"></use></svg><span style="flex: 1">{{it.label}}</span><sc-if value="{{it.hasBadge}}" hint-placeholder-val="{{false}}"><span style="min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; background: #B42318; color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{it.badge}}</span></sc-if></a>
+        </sc-for>
+      </div>
+    </sc-for>
+    <div style="margin-top: auto; border-top: 1px solid #E0E5EB; padding: 16px 12px 0; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 14px; font-weight: 600">ผู้ดูแลระบบ 01</span>
+      <a href="AdminLogin.dc.html" style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; text-decoration: none; min-height: 36px"><svg class="i is" aria-hidden="true"><use href="#i-logout"></use></svg>ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div style="flex: 999 1 640px; min-width: 0; padding: 24px; display: flex; justify-content: center">
+  <main style="width: 100%; max-width: 1216px; display: flex; flex-direction: column; gap: 24px">
+
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.3">สถานะจุด</h1>
+        <span style="font-size: 14px; color: #667085">กะเช้า 07:00–19:00 · พฤ. 29 ต.ค. 2569 · 71 พื้นที่ · 412 จุด</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <sc-if value="{{live}}" hint-placeholder-val="{{true}}">
+          <span role="status" style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 6px; background: #FFFFFF; border: 1px solid #E0E5EB; font-size: 14px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #16803C"></span><b style="color: #16803C">เชื่อมต่อสด</b><span style="color: #667085">อัปเดต 10:42:05</span></span>
+        </sc-if>
+        <sc-if value="{{offline}}" hint-placeholder-val="{{false}}">
+          <span role="status" style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 6px; background: #FEF6EC; border: 1px solid #F5D6B0; font-size: 14px; color: #202936"><svg class="i is" aria-hidden="true" style="color: #B45309"><use href="#i-alert"></use></svg><b style="color: #B45309">ขาดการเชื่อมต่อ</b><span>กำลังลองใหม่ · ข้อมูลล่าสุด 10:38</span></span>
+        </sc-if>
+        <a href="Export.dc.html" style="height: 36px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; color: #202936; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><svg class="i is" aria-hidden="true"><use href="#i-dl"></use></svg>ส่งออก Excel</a>
+      </div>
+    </header>
+
+    <section aria-label="กรองตามสถานะ" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px">
+      <sc-for list="{{stats}}" as="st" hint-placeholder-count="6">
+        <button type="button" aria-pressed="{{st.pressed}}" onClick="{{st.pick}}" style="{{st.box}}">
+          <span style="{{st.head}}"><svg class="i is" aria-hidden="true"><use href="#{{st.icon}}"></use></svg>{{st.label}}</span>
+          <span style="font-size: 30px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; color: #202936">{{st.n}}</span>
+          <span style="font-size: 13px; color: #667085">{{st.sub}}</span>
+        </button>
+      </sc-for>
+    </section>
+
+    <section aria-label="ตัวกรอง" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 12px 16px">
+      <label for="f-bld" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; flex: 0 1 auto; min-width: 0">ตึก
+        <select id="f-bld" value="{{bldVal}}" onChange="{{pickBld}}" style="height: 36px; width: 340px; max-width: 100%; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; font-weight: 400; color: #202936; background: #FFFFFF; text-overflow: ellipsis">
+          <sc-for list="{{blds}}" as="b" hint-placeholder-count="7">
+            <option value="{{b.v}}">{{b.text}}</option>
+          </sc-for>
+        </select>
+      </label>
+      <button type="button" aria-pressed="{{issueOn}}" onClick="{{toggleIssue}}" style="{{issueStyle}}"><svg class="i is" aria-hidden="true" style="color: #B42318"><use href="#i-wrench"></use></svg>มีปัญหาที่แจ้ง <b>3</b></button>
+      <label for="q" style="position: relative; display: flex; align-items: center; flex: 1 1 220px; min-width: 200px">
+        <span style="position: absolute; left: 10px; color: #667085; display: flex"><svg class="i is" aria-hidden="true"><use href="#i-search"></use></svg></span>
+        <input id="q" type="search" placeholder="ค้นหาพื้นที่ จุด หรือชื่อแม่บ้าน" aria-label="ค้นหา" style="width: 100%; height: 36px; padding: 0 12px 0 34px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936; background: #FFFFFF">
+      </label>
+      <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; min-height: 36px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #2457C5; margin: 0">เรียงพื้นที่ที่มีปัญหาขึ้นก่อน</label>
+    </section>
+
+    <sc-if value="{{loading}}" hint-placeholder-val="{{false}}">
+      <div aria-busy="true" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; align-items: center; gap: 8px; color: #667085"><span style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid #E0E5EB; border-top-color: #2457C5; animation: spin 0.9s linear infinite"></span>กำลังโหลดสถานะจุด…</div>
+        <div style="height: 20px; width: 280px; border-radius: 4px; background: #E9EDF1"></div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px"><div style="height: 120px; border-radius: 8px; background: #E9EDF1"></div><div style="height: 120px; border-radius: 8px; background: #E9EDF1"></div><div style="height: 120px; border-radius: 8px; background: #E9EDF1"></div><div style="height: 120px; border-radius: 8px; background: #E9EDF1"></div></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{error}}" hint-placeholder-val="{{false}}">
+      <div role="alert" style="display: flex; gap: 12px; align-items: flex-start; background: #FEF3F2; border: 1px solid #F6C9C4; border-radius: 8px; padding: 16px">
+        <svg class="i" aria-hidden="true" style="color: #B42318"><use href="#i-x-c"></use></svg>
+        <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start">
+          <b style="font-size: 16px">โหลดสถานะจุดไม่สำเร็จ</b>
+          <span>เซิร์ฟเวอร์ไม่ตอบกลับ ข้อมูลบนหน้านี้อาจไม่ใช่ล่าสุด กด "ลองอีกครั้ง" ถ้ายังไม่ได้ภายใน 5 นาที ให้แจ้งผู้ดูแลระบบ</span>
+          <button type="button" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #202936; display: inline-flex; gap: 8px; align-items: center"><svg class="i is" aria-hidden="true"><use href="#i-refresh"></use></svg>ลองอีกครั้ง</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+        <svg class="i" aria-hidden="true" style="width: 32px; height: 32px; color: #858F9E"><use href="#i-inbox"></use></svg>
+        <b style="font-size: 16px">ไม่มีจุดที่ตรงกับตัวกรอง</b>
+        <span style="color: #667085">ลองเลือกตึกอื่น หรือล้างตัวกรองเพื่อดูทุกจุด</span>
+        <button type="button" onClick="{{clear}}" style="margin-top: 8px; height: 36px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #202936">ล้างตัวกรอง</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{showAreas}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; flex-direction: column; gap: 24px">
+        <sc-for list="{{areas}}" as="a" hint-placeholder-count="4">
+          <section style="display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px">
+              <h2 style="margin: 0; font-size: 18px; font-weight: 600">{{a.code}} {{a.name}}</h2>
+              <span style="font-size: 14px; color: #667085">ตึก {{a.bldName}} · {{a.count}} จุด</span>
+              <sc-if value="{{a.hasPerson}}" hint-placeholder-val="{{true}}"><span style="font-size: 14px; display: inline-flex; align-items: center; gap: 6px"><svg class="i is" aria-hidden="true" style="color: #667085"><use href="#i-user"></use></svg>{{a.person}}</span></sc-if>
+              <sc-if value="{{a.noPerson}}" hint-placeholder-val="{{false}}"><span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 4px; background: #FFFFFF; border: 1px solid #F5D6B0; color: #B45309; font-size: 13px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-user-x"></use></svg>ยังไม่มีคนเข้างาน</span></sc-if>
+              <sc-if value="{{a.isCover}}" hint-placeholder-val="{{false}}"><span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 4px; background: #FFFFFF; border: 1px solid #D9CFF2; color: #6941C6; font-size: 13px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-swap"></use></svg>ทำแทน</span></sc-if>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px">
+              <sc-for list="{{a.points}}" as="p" hint-placeholder-count="4">
+                <article style="{{p.card}}">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px">
+                    <span style="font-size: 14px; font-weight: 600">{{p.name}}</span>
+                    <span style="{{p.chip}}"><svg class="i is" aria-hidden="true"><use href="#{{p.icon}}"></use></svg>{{p.label}}</span>
+                  </div>
+                  <span style="font-size: 13px; color: #667085; font-variant-numeric: tabular-nums">{{p.round}}</span>
+                  <span style="font-size: 14px">{{p.last}}</span>
+                  <sc-if value="{{p.hasTags}}" hint-placeholder-val="{{false}}">
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px">
+                      <sc-for list="{{p.tags}}" as="t" hint-placeholder-count="1">
+                        <span style="{{t.style}}"><svg class="i is" aria-hidden="true"><use href="#{{t.icon}}"></use></svg>{{t.text}}</span>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </article>
+              </sc-for>
+            </div>
+          </section>
+        </sc-for>
+
+        <section style="display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: baseline; gap: 12px">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 600">พื้นที่ที่ไม่มีปัญหา</h2>
+            <span style="font-size: 14px; color: #667085">66 พื้นที่ · ย่อไว้ 1 บรรทัด</span>
+          </div>
+          <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; overflow: hidden">
+            <sc-for list="{{okAreas}}" as="o" hint-placeholder-count="5">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 16px; border-bottom: 1px solid #E0E5EB; min-height: 48px">
+                <span style="font-weight: 600; min-width: 220px">{{o.code}} {{o.name}}</span>
+                <span style="color: #667085; min-width: 260px">ตึก {{o.bldName}} · {{o.count}} จุด</span>
+                <span style="flex: 1; color: #344054">{{o.sum}}</span>
+                <button type="button" style="height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px">ดูจุด<svg class="i is" aria-hidden="true"><use href="#i-chev-d"></use></svg></button>
+              </div>
+            </sc-for>
+            <button type="button" style="width: 100%; height: 44px; border: 0; background: #F9FAFB; color: #2457C5; font-size: 14px; font-weight: 600">แสดงอีก 61 พื้นที่</button>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+  </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"view":{"editor":"enum","options":["ปกติ","กำลังโหลด","ผิดพลาด","ขาดการเชื่อมต่อ"],"default":"ปกติ"},"$preview":{"width":1280,"height":1500}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { status: 'all', bld: 'all', issue: false }; }
+renderVals() {
+const view = this.props.view ?? 'ปกติ';
+const ACTIVE = 'dash';
+const NAV = [['ติดตามงาน', [['dash', 'สถานะจุด', 'i-grid', 'Dashboard.dc.html'], ['att', 'การเข้างาน', 'i-users', 'Attendance.dc.html'], ['alert', 'รายการที่ขึ้นเตือน', 'i-alert', 'Alerts.dc.html', '7'], ['sum', 'สรุปการตรวจ', 'i-clip', 'InspectSummary.dc.html'], ['exp', 'ส่งออก Excel', 'i-dl', 'Export.dc.html']]], ['ตั้งค่า', [['area', 'พื้นที่และป้าย', 'i-pin', 'Areas.dc.html'], ['bld', 'ตึก', 'i-bld', 'Buildings.dc.html'], ['print', 'พิมพ์ป้าย', 'i-print', 'PrintSigns.dc.html'], ['acc', 'บัญชีผู้ใช้', 'i-user', 'Accounts.dc.html'], ['log', 'ประวัติการแก้ไข', 'i-hist', 'AuditLog.dc.html']]]];
+const navBase = 'display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; ';
+const nav = NAV.map((g) => ({ title: g[0], items: g[1].map((x) => ({ label: x[1], icon: x[2], href: x[3], badge: x[4] || '', hasBadge: !!x[4], current: x[0] === ACTIVE ? 'page' : undefined, style: navBase + (x[0] === ACTIVE ? 'background: #EEF3FC; color: #2457C5; font-weight: 600' : 'color: #344054; font-weight: 500') })) }));
+
+const ST = {
+  rework: ['ต้องแก้ไข', '#B42318', '#FEF3F2', '#F6C9C4', 'i-redo'],
+  over: ['เลยเวลา', '#B45309', '#FEF6EC', '#F5D6B0', 'i-clock'],
+  wait: ['รอตรวจ', '#0B6E8A', '#EBF6FA', '#B4DCE8', 'i-hour'],
+  pass: ['ตรวจผ่าน', '#16803C', '#EDF7F0', '#B9DFC6', 'i-check'],
+  idle: ['ยังไม่ทำ', '#5B6474', '#F2F4F7', '#E0E5EB', 'i-minus']
+};
+const chip = (k) => 'display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap; height: 28px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; color: ' + ST[k][1] + '; background: ' + ST[k][2] + '; border: 1px solid ' + ST[k][3];
+const TAG = {
+  issue: ['i-wrench', '#B42318', '#F6C9C4'],
+  far: ['i-pin', '#B45309', '#F5D6B0'],
+  late: ['i-clock', '#B45309', '#F5D6B0'],
+  cover: ['i-swap', '#6941C6', '#D9CFF2']
+};
+const tag = (k, text) => ({ text: text, icon: TAG[k][0], style: 'display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 4px; background: #FFFFFF; font-size: 13px; font-weight: 600; color: ' + TAG[k][1] + '; border: 1px solid ' + TAG[k][2] });
+const pt = (name, k, round, last, tags) => ({ k: k, name: name, label: k === 'idle' ? 'ยังไม่ทำ' : ST[k][0], icon: ST[k][4], chip: chip(k), round: round, last: last, tags: tags || [], hasTags: !!(tags && tags.length), issue: !!(tags && tags.some((t) => t.icon === 'i-wrench')),
+  card: 'background: #FFFFFF; border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; border: 1px solid ' + (k === 'rework' ? '#F6C9C4' : k === 'over' ? '#F5D6B0' : '#E0E5EB') });
+const ALL = [
+  { code: 'AR01', name: 'ห้องน้ำชั้น 1', bld: 'A', person: 'สมใจ ใจดี · เข้างาน 06:52', points: [
+    pt('ห้องน้ำชาย', 'rework', 'รอบ 10:00–12:00', 'ให้แก้ 10:31 · ประภา (หัวหน้า)'),
+    pt('โถงทางเดิน', 'over', 'รอบ 07:30–09:00', 'เลยมา 1 ชม. 12 นาที'),
+    pt('ห้องน้ำหญิง', 'wait', 'รอบ 10:00–12:00', 'ส่ง 10:05 · สมใจ', [tag('issue', 'ก๊อกอ่างที่ 2 รั่ว')]),
+    pt('จุดทิ้งขยะ', 'idle', 'รอบ 10:00–12:00', 'เหลือ 1 ชม. 18 นาที'),
+    pt('ห้องเก็บอุปกรณ์', 'pass', 'รอบ 08:00–09:00', 'ตรวจผ่าน 09:02')
+  ]},
+  { code: 'AR07', name: 'ทางเดินชั้น 2', bld: 'B', person: '', points: [
+    pt('ทางเดินฝั่งเหนือ', 'over', 'รอบ 08:00–10:00', 'เลยมา 42 นาที'),
+    pt('ทางเดินฝั่งใต้', 'over', 'รอบ 08:00–10:00', 'เลยมา 42 นาที'),
+    pt('ห้องน้ำชั้น 2', 'over', 'รอบ 09:00–10:00', 'เลยมา 42 นาที')
+  ]},
+  { code: 'AR14', name: 'โรงอาหาร', bld: 'C', person: 'บุญมี รักงาน · เข้างาน 06:58', points: [
+    pt('ห้องน้ำโรงอาหาร', 'rework', 'รอบ 09:00–11:00', 'ให้แก้ 10:12 · ศิริพร (หัวหน้า)', [tag('far', 'ตรวจไกลป้าย 85 ม.')]),
+    pt('โต๊ะอาหารโซน 1', 'over', 'รอบ 09:00–10:20', 'เลยมา 22 นาที'),
+    pt('อ่างล้างมือ', 'wait', 'รอบ 09:00–10:00', 'ส่ง 10:30 · บุญมี', [tag('late', 'ส่งช้า 30 นาที')]),
+    pt('จุดทิ้งขยะ', 'pass', 'รอบ 08:00–10:00', 'ตรวจผ่าน 09:40')
+  ]},
+  { code: 'AR22', name: 'ห้องน้ำชั้น 3', bld: 'D', person: 'วันเพ็ญ ศรีสุข · เข้างาน 07:04', cover: true, points: [
+    pt('ห้องน้ำชาย', 'wait', 'รอบ 10:00–12:00', 'ส่ง 10:20 · วันเพ็ญ', [tag('cover', 'ทำแทน')]),
+    pt('ห้องน้ำหญิง', 'wait', 'รอบ 10:00–12:00', 'ส่ง 10:26 · วันเพ็ญ', [tag('cover', 'ทำแทน')]),
+    pt('ห้องน้ำคนพิการ', 'over', 'รอบ 08:00–10:00', 'เลยมา 42 นาที')
+  ]},
+  { code: 'AR31', name: 'ล็อบบี้', bld: 'E', person: 'มาลี สุขใจ · เข้างาน 06:47', points: [
+    pt('โถงต้อนรับ', 'wait', 'รอบ 10:00–11:00', 'ส่ง 10:38 · มาลี'),
+    pt('ห้องน้ำล็อบบี้', 'wait', 'รอบ 10:00–11:00', 'ส่ง 10:33 · มาลี', [tag('issue', 'สบู่หมด')]),
+    pt('ทางเข้าหลัก', 'pass', 'รอบ 08:00–09:00', 'ตรวจผ่าน 08:55')
+  ]}
+];
+const BN = { A: 'PRD-01 อาคารผลิต 1', B: 'PRD-02 อาคารผลิต 2', C: 'CNT-01 โรงอาหารกลาง', D: 'OFC-01 อาคารสำนักงาน', E: 'LBY-01 ล็อบบี้ทางเข้าหลัก', F: 'WHS-01 คลังสินค้าและวัตถุดิบ' };
+const s = this.state;
+const areas = ALL.filter((a) => s.bld === 'all' || a.bld === s.bld).map((a) => {
+  const pts = a.points.filter((p) => (s.status === 'all' || p.k === s.status) && (!s.issue || p.issue));
+  return { code: a.code, name: a.name, bld: a.bld, bldName: BN[a.bld], count: a.points.length, person: a.person, hasPerson: !!a.person, noPerson: !a.person, isCover: !!a.cover, points: pts };
+}).filter((a) => a.points.length > 0);
+
+const statDefs = [
+  ['all', 'ทุกสถานะ', null, '412', '71 พื้นที่'],
+  ['rework', 'ต้องแก้ไข', 'rework', '2', 'ด่วนที่สุด'],
+  ['over', 'เลยเวลา', 'over', '6', '2 พื้นที่ไม่มีคน'],
+  ['wait', 'รอตรวจ', 'wait', '6', 'นานสุด 37 นาที'],
+  ['pass', 'ตรวจผ่าน', 'pass', '184', 'รอบนี้'],
+  ['idle', 'ไม่มีอะไรต้องทำ', 'idle', '214', 'ยังไม่ทำ · ยังไม่ถึงรอบ · นอกเวลา']
+];
+const stats = statDefs.map((d) => {
+  const on = s.status === d[0];
+  const col = d[2] ? ST[d[2]][1] : '#344054';
+  return { label: d[1], icon: d[2] ? ST[d[2]][4] : 'i-grid', n: d[3], sub: d[4], pressed: on ? 'true' : 'false',
+    pick: () => this.setState({ status: on ? 'all' : d[0] }),
+    head: 'display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: ' + col,
+    box: 'text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-radius: 8px; background: ' + (on ? '#EEF3FC' : '#FFFFFF') + '; border: ' + (on ? '2px solid #2457C5' : '1px solid #E0E5EB') + '; margin: ' + (on ? '0' : '1px') };
+});
+const bldDefs = [['all', 'ทุกตึก (6)', 8], ['A', BN.A, 2], ['B', BN.B, 3], ['C', BN.C, 2], ['D', BN.D, 1], ['E', BN.E, 0], ['F', BN.F, 0]];
+const blds = bldDefs.map((b) => ({ v: b[0], text: b[1] + (b[2] ? ' · มีปัญหา ' + b[2] + ' จุด' : ' · ไม่มีปัญหา') }));
+const okAreas = [
+  ['AR02', 'โถงชั้น 1', 'A', 4, 'ตรวจผ่าน 3 · ยังไม่ถึงรอบ 1'],
+  ['AR03', 'สำนักงานชั้น 1', 'A', 6, 'ตรวจผ่าน 4 · ยังไม่ทำ 2'],
+  ['AR08', 'ห้องประชุมชั้น 2', 'B', 5, 'ตรวจผ่าน 2 · ยังไม่ถึงรอบ 3'],
+  ['AR15', 'ครัวโรงอาหาร', 'C', 7, 'ตรวจผ่าน 7'],
+  ['AR23', 'ทางเดินชั้น 3', 'D', 4, 'ตรวจผ่าน 1 · ยังไม่ทำ 3']
+].map((o) => ({ code: o[0], name: o[1], bld: o[2], bldName: BN[o[2]], count: o[3], sum: o[4] }));
+const normal = view === 'ปกติ' || view === 'ขาดการเชื่อมต่อ';
+return {
+  nav: nav, stats: stats, blds: blds, areas: areas, okAreas: okAreas,
+  bldVal: s.bld, pickBld: (e) => this.setState({ bld: e.target.value }),
+  live: view !== 'ขาดการเชื่อมต่อ', offline: view === 'ขาดการเชื่อมต่อ',
+  loading: view === 'กำลังโหลด', error: view === 'ผิดพลาด',
+  empty: normal && areas.length === 0, showAreas: normal && areas.length > 0,
+  issueOn: s.issue ? 'true' : 'false',
+  toggleIssue: () => this.setState({ issue: !s.issue }),
+  issueStyle: 'height: 36px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: #202936; background: ' + (s.issue ? '#EEF3FC' : '#FFFFFF') + '; border: ' + (s.issue ? '2px solid #2457C5' : '1px solid #858F9E'),
+  clear: () => this.setState({ status: 'all', bld: 'all', issue: false })
+};
+}
+}
+</script>
+</body>
+</html>

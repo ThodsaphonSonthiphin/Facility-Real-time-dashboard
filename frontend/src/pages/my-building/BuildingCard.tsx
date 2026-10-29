@@ -15,20 +15,20 @@ interface BuildingCardProps {
 export function BuildingCard({ point, canInspect }: BuildingCardProps) {
   const issue = issueText(point);
   return (
-    <li className={`flex flex-col gap-1 rounded bg-surface px-3.5 py-3 ${statusFrame[point.status] ?? 'border border-border'}`}>
+    <li className={`flex flex-col gap-1 rounded-lg bg-surface px-3.5 py-3 ${statusFrame[point.status] ?? 'border border-border'}`}>
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-lg font-semibold">{point.name}</h3>
         <StatusChip status={point.status} />
       </div>
-      <span className="text-md text-muted tabular-nums">{[point.areaName, roundText(point)].filter(Boolean).join(' · ')}</span>
+      <span className="text-sm text-text-2 tabular-nums">{[point.areaName, roundText(point)].filter(Boolean).join(' · ')}</span>
       <span>{detailOf(point)}</span>
       {canInspect && point.status === 'PendingInspection' && (
-        <span className="flex items-center gap-2 rounded bg-bg px-3 py-2 font-semibold">
+        <span className="flex items-center gap-2 rounded-lg bg-bg px-3 py-2 font-semibold">
           <QrCode aria-hidden="true" className="size-5 shrink-0" />
           ไปที่จุดนี้แล้วสแกน QR เพื่อตรวจ
         </span>
       )}
-      {issue && <span className="text-md font-semibold text-error-text">{issue}</span>}
+      {issue && <span className="text-sm font-semibold text-rework">{issue}</span>}
     </li>
   );
 }

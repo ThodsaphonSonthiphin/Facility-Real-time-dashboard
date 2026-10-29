@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>เข้าสู่ระบบ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-x-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></symbol>
+<symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="m10 17 5-5-5-5"></path><path d="M15 12H3"></path></symbol>
+</svg>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 16px; line-height: 1.5; overflow: hidden">
+  <main style="flex: 1; overflow-y: auto; padding: max(48px, env(safe-area-inset-top)) 16px 16px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 14px; font-weight: 600; color: #667085">ระบบตรวจงานแม่บ้าน</span>
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.35">เข้าสู่ระบบ</h1>
+      <span style="color: #667085">ใช้รหัสพนักงานและเบอร์โทรของคุณ</span>
+    </div>
+    <sc-if value="{{wrong}}" hint-placeholder-val="{{false}}">
+      <div role="alert" style="display: flex; gap: 12px; padding: 12px 16px; border-radius: 8px; background: #FEF3F2; border: 1px solid #F6C9C4"><svg class="i" aria-hidden="true" style="color: #B42318; margin-top: 2px"><use href="#i-x-c"></use></svg><span><b>รหัสพนักงานหรือเบอร์โทรไม่ตรงกัน</b><br>ตรวจตัวเลขอีกครั้ง ถ้ายังเข้าไม่ได้ ให้บอกหัวหน้า</span></div>
+    </sc-if>
+    <form style="display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="emp" style="font-size: 16px; font-weight: 600">รหัสพนักงาน (7 หลัก)</label>
+        <input id="emp" inputmode="numeric" pattern="[0-9]*" maxlength="7" autocomplete="username" value="{{emp}}" disabled="{{busy}}" style="height: 56px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; font-size: 22px; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; color: #202936; background: #FFFFFF">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="tel" style="font-size: 16px; font-weight: 600">เบอร์โทร</label>
+        <input id="tel" type="tel" inputmode="tel" autocomplete="tel" value="{{tel}}" disabled="{{busy}}" aria-invalid="{{wrongAttr}}" style="{{telStyle}}">
+      </div>
+    </form>
+    <span style="font-size: 14px; color: #667085">ยังไม่มีบัญชี ให้หัวหน้าหรือแอดมินสร้างให้ (สมัครเองไม่ได้)</span>
+  </main>
+  <div style="background: #FFFFFF; border-top: 1px solid #E0E5EB; padding: 12px 16px max(12px, env(safe-area-inset-bottom))">
+    <a href="Main.dc.html" aria-disabled="{{busy}}" style="height: 56px; border-radius: 6px; background: #2457C5; color: #FFFFFF; text-decoration: none; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px">
+      <sc-if value="{{busy}}" hint-placeholder-val="{{false}}"><span style="width: 18px; height: 18px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.45); border-top-color: #FFFFFF; animation: spin 0.9s linear infinite"></span></sc-if>
+      <sc-if value="{{idle}}" hint-placeholder-val="{{true}}"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#i-login"></use></svg></sc-if>{{btn}}
+    </a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["ปกติ","ข้อมูลไม่ตรง","กำลังเข้า"],"default":"ปกติ"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const s = this.props.state ?? 'ปกติ';
+const wrong = s === 'ข้อมูลไม่ตรง';
+const busy = s === 'กำลังเข้า';
+return { wrong: wrong, busy: busy, idle: !busy, wrongAttr: wrong ? 'true' : 'false',
+  emp: s === 'ปกติ' ? '' : '6600112', tel: s === 'ปกติ' ? '' : '0000000011',
+  btn: busy ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ',
+  telStyle: 'height: 56px; padding: 0 16px; border-radius: 6px; font-size: 22px; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; color: #202936; background: #FFFFFF; border: ' + (wrong ? '2px solid #B42318' : '1px solid #858F9E') };
+}
+}
+</script>
+</body>
+</html>

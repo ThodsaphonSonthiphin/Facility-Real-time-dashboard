@@ -241,7 +241,7 @@ describe('ExportPage (D8, facility-0053)', () => {
 
     // The history page never reads the buildings list, so only the picker itself can ask again.
     list = managedBuildings.map((building) => (building.code === 'B' ? { ...building, name: 'อาคารใหม่', isActive: false } : building));
-    await user.click(screen.getByRole('link', { name: 'ประวัติการแก้ไขของแอดมิน' }));
+    await user.click(screen.getByRole('link', { name: 'ประวัติการแก้ไข' }));
     await screen.findByRole('heading', { level: 1, name: 'ประวัติการแก้ไขของแอดมิน' });
     expect(buildingGets()).toBe(before);
     await user.click(screen.getByRole('link', { name: 'ส่งออก Excel' }));

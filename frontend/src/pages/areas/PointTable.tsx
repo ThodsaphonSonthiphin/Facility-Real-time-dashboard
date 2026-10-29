@@ -31,7 +31,7 @@ export function PointTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (ta
         </div>
       )}
       {points.length === 0 ? (
-        <p className="text-muted">พื้นที่นี้ยังไม่มีจุดทำความสะอาด</p>
+        <p className="text-text-2">พื้นที่นี้ยังไม่มีจุดทำความสะอาด</p>
       ) : (
         <Table label="จุดทำความสะอาดของพื้นที่นี้">
           <thead>
@@ -44,10 +44,10 @@ export function PointTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (ta
           </thead>
           <tbody>
             {points.map((point) => (
-              <tr key={point.id} className={point.isActive ? undefined : 'text-muted'}>
+              <tr key={point.id} className={point.isActive ? undefined : 'text-text-2'}>
                 <th scope="row" className="font-normal">
                   <strong>{point.sign.code}</strong> {point.name}
-                  <span className="block text-muted">
+                  <span className="block text-text-2">
                     {point.isActive ? 'จุดทำความสะอาด' : 'จุดทำความสะอาด · ปิดใช้งาน'}
                   </span>
                 </th>

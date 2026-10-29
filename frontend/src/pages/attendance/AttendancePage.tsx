@@ -81,7 +81,7 @@ export function AttendancePage() {
     <main className="flex flex-col gap-4 text-sm text-text">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          {board && <span className="text-muted">{slotLine(board)}</span>}
+          {board && <span className="text-text-2">{slotLine(board)}</span>}
           <h1 className="text-xl font-bold">การเข้างาน</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -108,7 +108,7 @@ export function AttendancePage() {
         onBuilding={(buildingId) => go({ ...args, buildingId })}
       />
       {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
-      {isLoading && <p className="text-muted">กำลังโหลด...</p>}
+      {isLoading && <p className="text-text-2">กำลังโหลด...</p>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {board && fill && !fillRow && !editing && (
         <Note tone="info">ไม่พบแม่บ้านคนนี้ในกะนี้ อาจย้ายพื้นที่หรือปิดใช้งานแล้ว</Note>
@@ -164,22 +164,22 @@ function Tiles({ summary }: { summary: BoardSummary }) {
       <li className={tileClass}>
         <span>พื้นที่ที่ต้องมีคนกะนี้</span>
         <strong className={countClass}>{summary.required}</strong>
-        <span className="text-muted">ไม่รวมพื้นที่ที่ปิดกะนี้</span>
+        <span className="text-text-2">ไม่รวมพื้นที่ที่ปิดกะนี้</span>
       </li>
       <li className={tileClass}>
         <span>มีคนแล้ว</span>
         <strong className={countClass}>{summary.present}</strong>
-        <span className="text-muted">รวมพักเบรก</span>
+        <span className="text-text-2">รวมพักเบรก</span>
       </li>
-      <li className="flex flex-col rounded border-2 border-status-rework bg-error-bg px-4 py-3.5">
+      <li className="flex flex-col rounded-lg border-2 border-rework bg-rework-bg px-4 py-3.5">
         <span>ยังไม่มีคน</span>
-        <strong className={`${countClass} text-status-rework`}>{summary.empty}</strong>
-        <span className="text-muted">ต้องหาคนทำแทน</span>
+        <strong className={`${countClass} text-rework`}>{summary.empty}</strong>
+        <span className="text-text-2">ต้องหาคนทำแทน</span>
       </li>
       <li className={tileClass}>
         <span>มีคนทำแทน</span>
         <strong className={countClass}>{summary.covered}</strong>
-        <span className="text-muted">แอดมินมอบหมายเฉพาะกะนี้</span>
+        <span className="text-text-2">แอดมินมอบหมายเฉพาะกะนี้</span>
       </li>
     </ul>
   );

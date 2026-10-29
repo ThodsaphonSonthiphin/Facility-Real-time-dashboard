@@ -70,13 +70,19 @@ describe('routing (facility-0026, 0058)', () => {
       'รายการที่ขึ้นเตือน',
       'สรุปการตรวจ',
       'ส่งออก Excel',
-      'จัดการพื้นที่และป้าย',
+      'พื้นที่และป้าย',
       'ตึก',
+      'พิมพ์ป้าย',
       'บัญชีผู้ใช้',
-      'ประวัติการแก้ไขของแอดมิน',
+      'ประวัติการแก้ไข',
     ]);
+    // Two groups (DESIGN_SPEC §4, #121): following the work, then setting it up
+    expect(within(menu).getAllByRole('list')).toHaveLength(2);
+    expect(within(menu).getByRole('list', { name: 'ติดตามงาน' })).toBeInTheDocument();
+    expect(within(menu).getByRole('list', { name: 'ตั้งค่า' })).toBeInTheDocument();
     expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
-    expect(within(menu).getByRole('link', { name: 'จัดการพื้นที่และป้าย' })).toHaveAttribute('href', '/admin/areas');
+    expect(within(menu).getByRole('link', { name: 'พื้นที่และป้าย' })).toHaveAttribute('href', '/admin/areas');
+    expect(within(menu).getByRole('link', { name: 'พิมพ์ป้าย' })).toHaveAttribute('href', '/admin/print');
   });
 
   it('a phone page has no Admin menu', async () => {

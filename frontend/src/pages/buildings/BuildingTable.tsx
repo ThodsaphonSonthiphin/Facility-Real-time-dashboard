@@ -26,7 +26,7 @@ export function BuildingTable({ buildings, onEdit }: BuildingTableProps) {
       </thead>
       <tbody>
         {buildings.map((building) => (
-          <tr key={building.id} className={building.isActive ? undefined : 'text-muted'}>
+          <tr key={building.id} className={building.isActive ? undefined : 'text-text-2'}>
             <th scope="row">{building.code}</th>
             <td>{building.name}</td>
             <td>{building.activeAreaCount}</td>

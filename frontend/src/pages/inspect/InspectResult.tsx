@@ -19,9 +19,9 @@ export function InspectResult({ visit, draft, result }: InspectResultProps) {
   return (
     <main className="flex flex-col gap-4 text-base text-text">
       <header className="flex flex-col gap-1.5">
-        <span className="text-md tracking-wide text-muted">{`ตรวจงาน · ${point.areaName} · ตึก ${point.buildingCode}`}</span>
+        <span className="text-sm tracking-wide text-text-2">{`ตรวจงาน · ${point.areaName} · ตึก ${point.buildingCode}`}</span>
         <h1 className="text-2xl font-bold">{`บันทึกผลตรวจแล้ว ${formatTime(result.inspectedAt)}`}</h1>
-        <p className="text-md text-muted">
+        <p className="text-sm text-text-2">
           {[point.name, point.currentRound ? `รอบ ${formatRound(point.currentRound)}` : null].filter(Boolean).join(' · ')}
         </p>
       </header>
@@ -47,7 +47,7 @@ export function InspectResult({ visit, draft, result }: InspectResultProps) {
         </section>
       )}
       {result.withinRadius === false && <Note tone="warn">{`ไกลป้าย: ห่างป้าย ${result.distanceM} ม. แอดมินจะเห็นรายการนี้`}</Note>}
-      {result.withinRadius === true && <p className="text-md text-muted">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
+      {result.withinRadius === true && <p className="text-sm text-text-2">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>}
       <Link className={buttonClass('primary', 'main')} data-tap="" to="/my-building">
         กลับไปตึกของฉัน
       </Link>

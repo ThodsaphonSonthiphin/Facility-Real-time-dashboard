@@ -136,7 +136,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
               onChange={(event) => set({ password: event.target.value })}
             />
           </Field>
-          <p className="text-muted">แอดมิน: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว 15–100 ตัวอักษร เป็นวลียาว ๆ ได้ (บอกเองด้วยวาจาหรือกระดาษ)</p>
+          <p className="text-text-2">แอดมิน: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว 15–100 ตัวอักษร เป็นวลียาว ๆ ได้ (บอกเองด้วยวาจาหรือกระดาษ)</p>
         </>
       ) : (
         <>
@@ -207,7 +207,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
             disabled={isLoading}
             onChange={(shift) => set({ shift })}
           />
-          <p className="text-muted">
+          <p className="text-text-2">
             {draft.role === 'Cleaner'
               ? 'พื้นที่ละ 1 คนต่อกะ · ถ้ากะนี้มีคนประจำแล้วจะเลือกไม่ได้ · พื้นที่ที่ทำเฉพาะกะเช้าเลือกได้แค่กะเช้า · ยังไม่กำหนดพื้นที่ได้ เลือกทีหลังที่ปุ่ม "แก้ไข"'
               : 'หัวหน้าประจำตึกและกะ ตึกละ 1 คนต่อกะ · ตรวจได้เฉพาะในกะตัวเอง · ไม่ต้องลงเวลา'}

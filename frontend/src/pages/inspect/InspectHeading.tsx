@@ -5,9 +5,9 @@ export function InspectHeading({ visit }: { visit: InspectionVisit }) {
   const { point } = visit;
   return (
     <header className="flex flex-col gap-1">
-      <span className="text-md tracking-wide text-muted">{`ตรวจงาน · ${point.areaName} · ตึก ${point.buildingCode}`}</span>
+      <span className="text-sm tracking-wide text-text-2">{`ตรวจงาน · ${point.areaName} · ตึก ${point.buildingCode}`}</span>
       <h1 className="text-2xl font-bold">{point.name}</h1>
-      {visit.isCover && <p className="text-md text-muted">{`ตรวจแทนตึก ${point.buildingCode} ในกะนี้ (แอดมินมอบหมาย)`}</p>}
+      {visit.isCover && <p className="text-sm text-text-2">{`ตรวจแทนตึก ${point.buildingCode} ในกะนี้ (แอดมินมอบหมาย)`}</p>}
     </header>
   );
 }

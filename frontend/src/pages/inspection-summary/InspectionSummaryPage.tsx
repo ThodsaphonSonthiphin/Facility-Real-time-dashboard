@@ -62,7 +62,7 @@ export function InspectionSummaryPage() {
   return (
     <main className="flex flex-col gap-4 text-sm text-text">
       <header className="flex flex-col gap-0.5">
-        <span className="text-muted">{summary ? rangeLine(summary, Boolean(asked)) : 'แอดมินเท่านั้น'}</span>
+        <span className="text-text-2">{summary ? rangeLine(summary, Boolean(asked)) : 'แอดมินเท่านั้น'}</span>
         <h1 className="text-xl font-bold">สรุปการตรวจของหัวหน้า</h1>
       </header>
       <div className="flex flex-wrap items-end gap-2">
@@ -80,7 +80,7 @@ export function InspectionSummaryPage() {
         </Link>
       </div>
       {problem && <Note tone="error">{problem}</Note>}
-      {isFetching && !summary && <p className="text-muted">กำลังโหลด...</p>}
+      {isFetching && !summary && <p className="text-text-2">กำลังโหลด...</p>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {summary && <SummaryTable rows={summary.rows} />}
       <SummaryNotes />

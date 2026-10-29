@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ตรวจงาน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-check-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></symbol>
+<symbol id="i-x-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></symbol>
+<symbol id="i-hour" viewBox="0 0 24 24"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"></path><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"></path></symbol>
+<symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></symbol>
+<symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+<symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"></path><path d="M7 3v4a1 1 0 0 0 1 1h7"></path></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></symbol>
+</svg>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 16px; line-height: 1.5; overflow: hidden">
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E0E5EB; padding: max(8px, env(safe-area-inset-top)) 8px 12px; display: flex; flex-direction: column; gap: 4px">
+    <a href="SupHome.dc.html" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 8px; font-size: 16px; font-weight: 600; text-decoration: none"><svg class="i" aria-hidden="true"><use href="#i-chev-l"></use></svg>ตึกของฉัน</a>
+    <div style="display: flex; flex-direction: column; padding: 0 8px">
+      <span style="font-size: 14px; color: #667085">ตรวจงาน · {{where}}</span>
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.35">{{point}}</h1>
+      <span style="font-size: 16px; font-variant-numeric: tabular-nums">รอบ 10:00–12:00</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 20px">
+    <sc-if value="{{normal}}" hint-placeholder-val="{{true}}">
+      <section aria-label="งานที่ส่ง" style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px"><h2 style="margin: 0; font-size: 16px; font-weight: 700">งานที่ส่งในรอบนี้</h2><span style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; color: #0B6E8A; background: #EBF6FA; border: 1px solid #B4DCE8"><svg class="i is" aria-hidden="true"><use href="#i-hour"></use></svg>รอตรวจ</span></div>
+        <dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 16px">
+          <dt style="color: #667085">ส่งเมื่อ</dt><dd style="margin: 0; font-weight: 600">10:05 (37 นาทีที่แล้ว)</dd>
+          <dt style="color: #667085">ผู้ส่ง</dt><dd style="margin: 0; font-weight: 600">สมใจ ใจดี</dd>
+        </dl>
+        <div style="display: flex; gap: 8px; padding: 12px; border-radius: 6px; background: #FEF3F2; border: 1px solid #F6C9C4"><svg class="i" aria-hidden="true" style="color: #B42318; margin-top: 2px"><use href="#i-wrench"></use></svg><span><b>แจ้งปัญหา:</b> ก๊อกรั่ว<br><span style="color: #344054">"ก๊อกอ่างที่ 2 น้ำหยดตลอด"</span></span></div>
+      </section>
+
+      <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px">
+        <legend style="padding: 0; font-size: 18px; font-weight: 700; margin-bottom: 12px">ผลการตรวจ</legend>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <button type="button" aria-pressed="{{okP}}" onClick="{{pickOk}}" style="{{okStyle}}"><svg class="i" aria-hidden="true" style="width: 36px; height: 36px"><use href="#i-check-c"></use></svg>สะอาด</button>
+          <button type="button" aria-pressed="{{badP}}" onClick="{{pickBad}}" style="{{badStyle}}"><svg class="i" aria-hidden="true" style="width: 36px; height: 36px"><use href="#i-x-c"></use></svg>ไม่สะอาด</button>
+        </div>
+      </fieldset>
+
+      <sc-if value="{{isBad}}" hint-placeholder-val="{{true}}">
+        <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px">
+          <legend style="padding: 0; font-size: 16px; font-weight: 700; margin-bottom: 8px">ข้อบกพร่อง <span style="font-weight: 400; color: #667085">เลือกได้หลายข้อ</span></legend>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{defects}}" as="d" hint-placeholder-count="6">
+              <button type="button" aria-pressed="{{d.pressed}}" onClick="{{d.toggle}}" style="{{d.style}}"><sc-if value="{{d.on}}" hint-placeholder-val="{{false}}"><svg class="i is" aria-hidden="true"><use href="#i-check"></use></svg></sc-if>{{d.label}}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px"><label for="msg" style="font-weight: 600">ข้อความถึงแม่บ้าน</label><textarea id="msg" rows="2" style="padding: 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 16px; color: #202936; resize: none">มีคราบที่อ่างล้างมือ</textarea><span style="font-size: 14px; color: #667085">แม่บ้านจะเห็นข้อความนี้ในการ์ด "ทำอันนี้ก่อน"</span></div>
+        </fieldset>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{info}}" hint-placeholder-val="{{false}}">
+      <div role="status" style="{{infoBox}}">
+        <span style="{{infoCircle}}"><svg class="i" aria-hidden="true" style="width: 32px; height: 32px"><use href="#{{infoIcon}}"></use></svg></span>
+        <b style="font-size: 20px">{{infoTitle}}</b>
+        <span>{{infoBody}}</span>
+      </div>
+    </sc-if>
+  </main>
+
+  <div style="background: #FFFFFF; border-top: 1px solid #E0E5EB; padding: 12px 16px max(12px, env(safe-area-inset-bottom))">
+    <sc-if value="{{normal}}" hint-placeholder-val="{{true}}">
+      <button type="button" style="width: 100%; height: 56px; border: 0; border-radius: 6px; background: #2457C5; color: #FFFFFF; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#i-save"></use></svg>บันทึกผลตรวจ</button>
+    </sc-if>
+    <sc-if value="{{info}}" hint-placeholder-val="{{false}}">
+      <a href="SupHome.dc.html" style="height: 56px; border-radius: 6px; background: #2457C5; color: #FFFFFF; text-decoration: none; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#i-list"></use></svg>กลับไปตึกของฉัน</a>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["ปกติ","ยังไม่มีงานให้ตรวจ","ตรวจเสร็จ","ผิดตึก","นอกกะ"],"default":"ปกติ"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { pick: 'bad', d: { 'มีคราบ': true } }; }
+renderVals() {
+const s = this.props.state ?? 'ปกติ';
+const pick = this.state.pick;
+const choice = (on) => 'height: 112px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 20px; font-weight: 700; cursor: pointer; ' + (on ? 'background: #EEF3FC; color: #1D4AA8; border: 3px solid #2457C5' : 'background: #FFFFFF; color: #202936; border: 1px solid #858F9E; margin: 2px');
+const D = ['พื้นเปียก', 'มีคราบ', 'ขยะไม่ได้เก็บ', 'มีกลิ่น', 'ของใช้ไม่ได้เติม', 'อื่น ๆ'];
+const defects = D.map((t) => {
+  const on = !!this.state.d[t];
+  return { label: t, on: on, pressed: on ? 'true' : 'false', toggle: () => { const n = Object.assign({}, this.state.d); n[t] = !on; this.setState({ d: n }); },
+    style: 'min-height: 48px; padding: 0 16px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600; cursor: pointer; ' + (on ? 'background: #EEF3FC; color: #1D4AA8; border: 2px solid #2457C5' : 'background: #FFFFFF; color: #202936; border: 1px solid #858F9E; margin: 1px') };
+});
+const C = { ok: ['#16803C', '#EDF7F0', '#B9DFC6'], neu: ['#5B6474', '#F2F4F7', '#E0E5EB'], err: ['#B42318', '#FEF3F2', '#F6C9C4'] };
+const I = {
+  'ยังไม่มีงานให้ตรวจ': ['neu', 'i-inbox', 'ยังไม่มีงานให้ตรวจ', 'แม่บ้านยังไม่ได้ส่งงานของจุดนี้ในรอบ 10:00–12:00 ลองกลับมาสแกนอีกครั้งหลังแม่บ้านส่ง'],
+  'ตรวจเสร็จ': ['ok', 'i-check-c', 'บันทึกผลตรวจแล้ว', 'ไม่สะอาด · มีคราบ · 10:43 แม่บ้านจะเห็นในการ์ด "ทำอันนี้ก่อน" ทันที'],
+  'ผิดตึก': ['err', 'i-ban', 'จุดนี้อยู่ตึก D', 'คุณดูแลตึก A จึงตรวจจุดนี้ไม่ได้ ระบบไม่ได้บันทึก'],
+  'นอกกะ': ['neu', 'i-moon', 'นอกกะของคุณ', 'ตรวจได้เฉพาะกะเช้า 07:00–19:00 ตอนนี้ดูได้อย่างเดียว']
+};
+const info = I[s];
+const c = info ? C[info[0]] : C.neu;
+return { normal: !info, info: !!info, isBad: pick === 'bad', defects: defects,
+  where: s === 'ผิดตึก' ? 'AR22 ห้องน้ำชั้น 3 · ตึก D' : 'AR01 ห้องน้ำชั้น 1 · ตึก A',
+  point: s === 'ผิดตึก' ? 'ห้องน้ำชาย' : 'ห้องน้ำหญิง',
+  okP: pick === 'ok' ? 'true' : 'false', badP: pick === 'bad' ? 'true' : 'false', okStyle: choice(pick === 'ok'), badStyle: choice(pick === 'bad'),
+  pickOk: () => this.setState({ pick: 'ok' }), pickBad: () => this.setState({ pick: 'bad' }),
+  infoIcon: info ? info[1] : 'i-inbox', infoTitle: info ? info[2] : '', infoBody: info ? info[3] : '',
+  infoBox: 'background: #FFFFFF; border-radius: 8px; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; border: 1px solid ' + c[2],
+  infoCircle: 'width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: ' + c[1] + '; color: ' + c[0] };
+}
+}
+</script>
+</body>
+</html>

@@ -30,15 +30,15 @@ export function MyBuildingPage() {
   return (
     <main className="flex flex-col gap-4 text-base text-text">
       <header className="flex flex-col gap-1">
-        {data && <span className="text-md tracking-wide text-muted">{`ตอนนี้ ${shiftLabel[data.shift]}`}</span>}
+        {data && <span className="text-sm tracking-wide text-text-2">{`ตอนนี้ ${shiftLabel[data.shift]}`}</span>}
         <h1 className="text-2xl font-bold">ตึกของฉัน</h1>
-        {data && <p className="text-md text-muted">{countLine(data)}</p>}
+        {data && <p className="text-sm text-text-2">{countLine(data)}</p>}
       </header>
-      {isLoading && <p className="text-md text-muted">กำลังโหลดจุด...</p>}
+      {isLoading && <p className="text-sm text-text-2">กำลังโหลดจุด...</p>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && <BuildingList building={data} />}
       <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
-        <span className="text-md text-muted">{liveLine[hubStatus]}</span>
+        <span className="text-sm text-text-2">{liveLine[hubStatus]}</span>
         <Button className="w-full" disabled={isFetching} onClick={() => void refetch()}>
           <RefreshCw aria-hidden="true" className="size-5" />
           {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
@@ -64,11 +64,11 @@ function BuildingList({ building }: { building: MyBuilding }) {
   return (
     <>
       {/* รอตรวจ in its own cyan so what waits for the Supervisor stands out (#76); every count says its words */}
-      <ul className="m-0 grid list-none grid-cols-3 gap-2 p-0 text-center text-md" aria-label="สรุปการตรวจ">
-        <li className={`${tileClass} ${statusFrame.PendingInspection} text-status-pending`}>
+      <ul className="m-0 grid list-none grid-cols-3 gap-2 p-0 text-center text-sm" aria-label="สรุปการตรวจ">
+        <li className={`${tileClass} ${statusFrame.PendingInspection} text-pending`}>
           <strong className={countClass}>{count('PendingInspection')}</strong> รอตรวจ
         </li>
-        <li className={`${tileClass} ${statusFrame.Rework} text-status-rework`}>
+        <li className={`${tileClass} ${statusFrame.Rework} text-rework`}>
           <strong className={countClass}>{count('Rework')}</strong> รอแม่บ้านแก้
         </li>
         <li className={`${tileClass} border border-border`}>
@@ -79,12 +79,12 @@ function BuildingList({ building }: { building: MyBuilding }) {
         const headingId = `building-${section.buildingId}`;
         return (
           <section key={section.buildingId} className="flex flex-col gap-2" aria-labelledby={headingId}>
-            <h2 id={headingId} className="text-md font-bold tracking-wide text-muted">
+            <h2 id={headingId} className="text-sm font-bold tracking-wide text-text-2">
               {section.isCover ? `${section.buildingName} (ตรวจแทนกะนี้)` : section.buildingName}
             </h2>
             {!section.canInspect && <Note tone="warn">ตอนนี้ไม่ใช่กะของคุณ ดูได้ แต่สแกนตรวจไม่ได้</Note>}
             {section.points.length === 0 ? (
-              <p className="text-md text-muted">ตึกนี้ยังไม่มีจุด</p>
+              <p className="text-sm text-text-2">ตึกนี้ยังไม่มีจุด</p>
             ) : (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {inspectionOrder(section.points).map((point) => (
@@ -100,5 +100,5 @@ function BuildingList({ building }: { building: MyBuilding }) {
 }
 
 // The base of one summary count; each tile adds its own border
-const tileClass = 'flex flex-col gap-0.5 rounded bg-surface px-1 py-2';
+const tileClass = 'flex flex-col gap-0.5 rounded-lg bg-surface px-1 py-2';
 const countClass = 'text-2xl font-bold tabular-nums';

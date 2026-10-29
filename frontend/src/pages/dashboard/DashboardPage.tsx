@@ -47,7 +47,7 @@ export function DashboardPage() {
       </header>
       {data && <Filters points={data} />}
       {!isLoading && <MoreInfo summary="วิธีอ่านการ์ด">{RULES_NOTE}</MoreInfo>}
-      {isLoading && <p className="text-muted">กำลังโหลดจุด...</p>}
+      {isLoading && <p className="text-text-2">กำลังโหลดจุด...</p>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {data && data.length === 0 && (
         <Note tone="info">ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการพื้นที่และป้าย</Note>
@@ -67,7 +67,7 @@ function AreaSection({ group }: { group: AreaGroup }) {
     <section className="flex flex-col gap-2" aria-labelledby={headingId}>
       <div className="flex flex-wrap items-baseline gap-2.5">
         <h2 id={headingId} className="text-base font-bold">{`${group.areaCode} ${group.areaName}`}</h2>
-        <span className="text-muted">{`ตึก ${buildingText(group.buildingCode, names)} · ${group.points.length} จุด`}</span>
+        <span className="text-text-2">{`ตึก ${buildingText(group.buildingCode, names)} · ${group.points.length} จุด`}</span>
       </div>
       {/* auto-fill tiles at least 230 px wide (the mockup's): four across at 1280 px; no token describes a track list */}
       <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-2 p-0">

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>เพิ่มพื้นที่</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></symbol>
+<symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-bld" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></symbol>
+<symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5v14"></path></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></symbol>
+<symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+<symbol id="i-x-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></symbol>
+</svg>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="เมนูหลัก" style="flex: 1 1 240px; background: #FFFFFF; border-right: 1px solid #E0E5EB; padding: 20px 12px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; padding: 0 12px">
+      <span style="font-size: 16px; font-weight: 700">ระบบตรวจงานแม่บ้าน</span>
+      <span style="font-size: 13px; color: #667085">แอดมิน</span>
+    </div>
+    <sc-for list="{{nav}}" as="g" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; font-weight: 600; color: #667085; padding: 0 12px 4px">{{g.title}}</span>
+        <sc-for list="{{g.items}}" as="it" hint-placeholder-count="5">
+          <a href="{{it.href}}" aria-current="{{it.current}}" style="{{it.style}}"><svg class="i" aria-hidden="true"><use href="#{{it.icon}}"></use></svg><span style="flex: 1">{{it.label}}</span><sc-if value="{{it.hasBadge}}" hint-placeholder-val="{{false}}"><span style="min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; background: #B42318; color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{it.badge}}</span></sc-if></a>
+        </sc-for>
+      </div>
+    </sc-for>
+    <div style="margin-top: auto; border-top: 1px solid #E0E5EB; padding: 16px 12px 0; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 14px; font-weight: 600">ผู้ดูแลระบบ 01</span>
+      <a href="AdminLogin.dc.html" style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; text-decoration: none; min-height: 36px"><svg class="i is" aria-hidden="true"><use href="#i-logout"></use></svg>ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div style="flex: 999 1 640px; min-width: 0; padding: 24px; display: flex; justify-content: center">
+  <main style="width: 100%; max-width: 880px; display: flex; flex-direction: column; gap: 24px">
+    <header style="display: flex; flex-direction: column; gap: 8px">
+      <a href="Areas.dc.html" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; text-decoration: none; min-height: 32px"><svg class="i is" aria-hidden="true"><use href="#i-chev-l"></use></svg>พื้นที่และป้าย</a>
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.3">เพิ่มพื้นที่</h1>
+      <span style="font-size: 14px; color: #667085">พื้นที่ = งานของแม่บ้าน 1 คนต่อกะ มีป้ายลงเวลา 1 ป้าย และจุดหลายจุด</span>
+    </header>
+
+    <sc-if value="{{err}}" hint-placeholder-val="{{false}}">
+      <div role="alert" style="display: flex; gap: 12px; padding: 12px 16px; border-radius: 6px; background: #FEF3F2; border: 1px solid #F6C9C4"><svg class="i" aria-hidden="true" style="color: #B42318"><use href="#i-x-c"></use></svg><span><b>ยังบันทึกไม่ได้ มี 2 ช่องที่ต้องแก้</b><br><a href="#n-name">ชื่อพื้นที่</a> · <a href="#pt-2">รอบของจุดที่ 2</a></span></div>
+    </sc-if>
+
+    <form style="display: flex; flex-direction: column; gap: 16px">
+      <section style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 700">1. ข้อมูลพื้นที่</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px">
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="n-code" style="font-weight: 600">รหัสพื้นที่</label><input id="n-code" value="AR72" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936; font-family: ui-monospace, Menlo, Consolas, monospace"><span style="font-size: 13px; color: #667085">ระบบเสนอรหัสถัดไปให้ แก้ไม่ได้หลังบันทึก</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="n-name" style="font-weight: 600">ชื่อพื้นที่ <span style="color: #B42318">*</span></label><input id="n-name" value="" aria-invalid="{{errAttr}}" aria-describedby="n-name-h" placeholder="เช่น ห้องน้ำชั้น 2" style="{{nameStyle}}"><span id="n-name-h" style="{{nameHelpStyle}}">{{nameHelp}}</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="n-bld" style="font-weight: 600">ตึก <span style="color: #B42318">*</span></label><select id="n-bld" style="height: 36px; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936; background: #FFFFFF"><option>F คลังสินค้า</option></select></div>
+        </div>
+        <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 24px"><legend style="padding: 0; font-weight: 600; margin-bottom: 8px">กะที่ใช้งาน</legend><label style="display: inline-flex; align-items: center; gap: 8px; min-height: 36px"><input type="checkbox" checked="" style="width: 18px; height: 18px; margin: 0; accent-color: #2457C5">กะเช้า 07:00–19:00</label><label style="display: inline-flex; align-items: center; gap: 8px; min-height: 36px"><input type="checkbox" checked="" style="width: 18px; height: 18px; margin: 0; accent-color: #2457C5">กะดึก 19:00–07:00</label></fieldset>
+      </section>
+
+      <section style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 700">2. ป้ายลงเวลา</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="n-r" style="font-weight: 600">รัศมี (เมตร)</label><input id="n-r" type="number" value="30" style="width: 140px; height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></div>
+          <span style="flex: 1 1 280px; color: #667085; padding-top: 28px">ระบบสร้างป้าย AR72-IN ให้อัตโนมัติ เก็บพิกัดทีหลังด้วยมือถือที่ป้าย</span>
+        </div>
+      </section>
+
+      <section style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px"><h2 style="margin: 0; font-size: 16px; font-weight: 700">3. จุด · 2</h2><span style="color: #667085; font-size: 13px">รอบใส่ได้หลายช่วง คั่นด้วยปุ่ม "เพิ่มรอบ"</span></div>
+        <sc-for list="{{points}}" as="p" hint-placeholder-count="2">
+          <div id="{{p.id}}" style="border: 1px solid #E0E5EB; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end">
+              <div style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 4px"><label style="font-weight: 600">ชื่อจุดที่ {{p.n}}</label><input value="{{p.name}}" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></div>
+              <span style="font-size: 13px; color: #667085; font-family: ui-monospace, Menlo, Consolas, monospace; padding-bottom: 8px">{{p.code}}</span>
+              <button type="button" style="height: 36px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-trash"></use></svg>ลบจุด</button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+              <div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; font-weight: 600; color: #667085">รอบกะเช้า</span><div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{p.am}}" as="w" hint-placeholder-count="2"><span style="display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 6px; background: #F2F4F7; border: 1px solid #E0E5EB; font-size: 14px; font-variant-numeric: tabular-nums">{{w}}</span></sc-for><button type="button" style="height: 28px; padding: 0 8px; border: 1px dashed #858F9E; border-radius: 6px; background: #FFFFFF; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-plus"></use></svg>เพิ่มรอบ</button></div></div>
+              <div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; font-weight: 600; color: #667085">รอบกะดึก</span><div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{p.pm}}" as="w" hint-placeholder-count="1"><span style="display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 6px; background: #F2F4F7; border: 1px solid #E0E5EB; font-size: 14px; font-variant-numeric: tabular-nums">{{w}}</span></sc-for><button type="button" style="height: 28px; padding: 0 8px; border: 1px dashed #858F9E; border-radius: 6px; background: #FFFFFF; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-plus"></use></svg>เพิ่มรอบ</button></div></div>
+            </div>
+            <sc-if value="{{p.bad}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px; color: #B42318; font-weight: 600">ยังไม่มีรอบเลย ใส่อย่างน้อย 1 รอบในกะที่เปิดใช้</span></sc-if>
+          </div>
+        </sc-for>
+        <button type="button" style="align-self: flex-start; height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; color: #202936; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><svg class="i is" aria-hidden="true"><use href="#i-plus"></use></svg>เพิ่มจุด</button>
+      </section>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px; padding: 16px 0">
+        <a href="Areas.dc.html" style="height: 36px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; color: #202936; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center">ยกเลิก</a>
+        <button type="submit" style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #2457C5; color: #FFFFFF; font-size: 14px; font-weight: 600">บันทึกพื้นที่</button>
+      </div>
+    </form>
+  </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["ปกติ","มีข้อผิดพลาด"],"default":"ปกติ"},"$preview":{"width":1280,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() {
+const err = (this.props.state ?? 'ปกติ') === 'มีข้อผิดพลาด';
+const ACTIVE = 'area';
+const NAV = [['ติดตามงาน', [['dash', 'สถานะจุด', 'i-grid', 'Dashboard.dc.html'], ['att', 'การเข้างาน', 'i-users', 'Attendance.dc.html'], ['alert', 'รายการที่ขึ้นเตือน', 'i-alert', 'Alerts.dc.html', '7'], ['sum', 'สรุปการตรวจ', 'i-clip', 'InspectSummary.dc.html'], ['exp', 'ส่งออก Excel', 'i-dl', 'Export.dc.html']]], ['ตั้งค่า', [['area', 'พื้นที่และป้าย', 'i-pin', 'Areas.dc.html'], ['bld', 'ตึก', 'i-bld', 'Buildings.dc.html'], ['print', 'พิมพ์ป้าย', 'i-print', 'PrintSigns.dc.html'], ['acc', 'บัญชีผู้ใช้', 'i-user', 'Accounts.dc.html'], ['log', 'ประวัติการแก้ไข', 'i-hist', 'AuditLog.dc.html']]]];
+const navBase = 'display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; ';
+const nav = NAV.map((g) => ({ title: g[0], items: g[1].map((x) => ({ label: x[1], icon: x[2], href: x[3], badge: x[4] || '', hasBadge: !!x[4], current: x[0] === ACTIVE ? 'page' : undefined, style: navBase + (x[0] === ACTIVE ? 'background: #EEF3FC; color: #2457C5; font-weight: 600' : 'color: #344054; font-weight: 500') })) }));
+const points = [
+  { id: 'pt-1', n: 1, name: 'ห้องน้ำพนักงาน', code: 'AR72-01', am: ['08:00–10:00', '13:00–15:00'], pm: ['21:00–23:00'], bad: false },
+  { id: 'pt-2', n: 2, name: 'ทางเดินหน้าคลัง', code: 'AR72-02', am: err ? [] : ['09:00–10:00'], pm: [], bad: err }
+];
+return { nav: nav, err: err, errAttr: err ? 'true' : 'false', points: points,
+  nameStyle: 'height: 36px; padding: 0 12px; border-radius: 6px; font-size: 14px; color: #202936; border: ' + (err ? '2px solid #B42318' : '1px solid #858F9E'),
+  nameHelp: err ? 'ต้องใส่ชื่อพื้นที่' : 'แสดงบนป้ายและหน้าแม่บ้าน',
+  nameHelpStyle: 'font-size: 13px; ' + (err ? 'color: #B42318; font-weight: 600' : 'color: #667085') };
+}
+}
+</script>
+</body>
+</html>

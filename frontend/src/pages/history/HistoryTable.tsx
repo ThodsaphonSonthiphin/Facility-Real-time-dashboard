@@ -39,7 +39,7 @@ export function HistoryTable({ entries, emptyText }: HistoryTableProps) {
             <td>
               <Changes entry={entry} />
             </td>
-            <td className="text-muted">{entry.reason ?? '–'}</td>
+            <td className="text-text-2">{entry.reason ?? '–'}</td>
           </tr>
         ))}
       </tbody>

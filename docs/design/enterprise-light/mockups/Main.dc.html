@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>งานของฉัน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+.il{width:28px;height:28px}
+.ix{width:48px;height:48px;stroke-width:1.75}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-redo" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></symbol>
+<symbol id="i-hour" viewBox="0 0 24 24"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"></path><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"></path></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"></path></symbol>
+<symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></symbol>
+<symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"></rect><rect x="16" y="3" width="5" height="5" rx="1"></rect><rect x="3" y="16" width="5" height="5" rx="1"></rect><path d="M21 16h-3a2 2 0 0 0-2 2v3"></path><path d="M21 21v.01"></path><path d="M12 7v3a2 2 0 0 1-2 2H7"></path><path d="M3 12h.01"></path><path d="M12 3h.01"></path><path d="M12 16v.01"></path><path d="M16 12h1"></path><path d="M21 12v.01"></path><path d="M12 21v-1"></path></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4"></path><path d="M20 7H4"></path><path d="m8 21-4-4 4-4"></path><path d="M4 17h16"></path></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></symbol>
+<symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"></path><path d="M8.5 16.43a5 5 0 0 1 7 0"></path><path d="M5 12.86a10 10 0 0 1 5.17-2.69"></path><path d="M19 12.86a10 10 0 0 0-2-1.52"></path><path d="M2 8.82a15 15 0 0 1 4.18-2.64"></path><path d="M22 8.82a15 15 0 0 0-11.29-3.76"></path><path d="m2 2 20 20"></path></symbol>
+<symbol id="i-check-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></symbol>
+</svg>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 16px; line-height: 1.5; overflow: hidden">
+
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E0E5EB; padding: max(12px, env(safe-area-inset-top)) 16px 16px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+      <div style="display: flex; flex-direction: column; min-width: 0">
+        <span style="font-size: 18px; font-weight: 700">สมใจ ใจดี</span>
+        <span style="font-size: 14px; color: #667085">AR01 ห้องน้ำชั้น 1 · ตึก A</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end; flex: none">
+        <span style="font-size: 14px; font-weight: 600">กะเช้า</span>
+        <span style="font-size: 14px; color: #667085; font-variant-numeric: tabular-nums">07:00–19:00</span>
+      </div>
+    </div>
+    <sc-if value="{{cover}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; gap: 8px; align-items: flex-start; background: #F4F1FB; border: 1px solid #D9CFF2; color: #4E2F9B; border-radius: 6px; padding: 8px 12px; font-size: 14px">
+        <svg class="i is" aria-hidden="true" style="margin-top: 3px"><use href="#i-swap"></use></svg>
+        <span><b>วันนี้ทำแทน</b> AR05 ทางเดินชั้น 2 · ตึก B (แอดมินมอบหมาย เฉพาะกะนี้)</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{showProgress}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <span style="font-size: 16px">ส่งแล้ว <b style="font-size: 18px">{{sent}} จาก {{total}}</b> จุด</span>
+          <span style="font-size: 13px; color: #667085">อัปเดต 10:42</span>
+        </div>
+        <div role="progressbar" aria-label="ความคืบหน้า" aria-valuemin="0" aria-valuemax="{{total}}" aria-valuenow="{{sent}}" style="height: 8px; border-radius: 4px; background: #E0E5EB; overflow: hidden">
+          <div style="{{barStyle}}"></div>
+        </div>
+      </div>
+    </sc-if>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 24px">
+
+    <sc-if value="{{showUrgent}}" hint-placeholder-val="{{true}}">
+      <section aria-label="ทำอันนี้ก่อน" style="background: #FFFFFF; border: 1px solid #F6C9C4; border-radius: 8px; overflow: hidden">
+        <div style="background: #FEF3F2; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px">
+          <span style="font-size: 16px; font-weight: 700; color: #912018">ทำอันนี้ก่อน</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 6px; background: #B42318; color: #FFFFFF; font-size: 16px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-redo"></use></svg>ต้องแก้ไข</span>
+        </div>
+        <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; flex-direction: column">
+            <span style="font-size: 24px; font-weight: 700; line-height: 1.35">ห้องน้ำชาย</span>
+            <span style="font-size: 16px; color: #667085; font-variant-numeric: tabular-nums">รอบ 10:00–12:00 · ให้แก้เมื่อ 10:31</span>
+          </div>
+          <div style="display: flex; gap: 12px; background: #F4F6F8; border-radius: 6px; padding: 12px">
+            <svg class="i" aria-hidden="true" style="color: #667085; margin-top: 2px"><use href="#i-msg"></use></svg>
+            <span style="font-size: 16px"><b>หัวหน้าบอกว่า</b><br>พื้นยังเปียก มีคราบที่อ่างล้างมือ</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; border-top: 1px solid #E0E5EB; padding-top: 12px; font-size: 18px; font-weight: 700">
+            <svg class="i il" aria-hidden="true"><use href="#i-qr"></use></svg>
+            สแกน QR ที่จุดนี้เพื่อส่งงาน
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{showDone}}" hint-placeholder-val="{{false}}">
+      <section style="background: #FFFFFF; border: 1px solid #B9DFC6; border-radius: 8px; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+        <span style="width: 64px; height: 64px; border-radius: 50%; background: #EDF7F0; color: #16803C; display: flex; align-items: center; justify-content: center"><svg class="i ix" aria-hidden="true" style="width: 36px; height: 36px"><use href="#i-check"></use></svg></span>
+        <span style="font-size: 20px; font-weight: 700">ส่งครบทุกจุดที่ต้องทำตอนนี้แล้ว</span>
+        <span style="font-size: 16px; color: #667085">รอบถัดไปเริ่ม 13:00 · ห้องประชุมชั้น 1</span>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{showOff}}" hint-placeholder-val="{{false}}">
+      <section style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+        <span style="width: 64px; height: 64px; border-radius: 50%; background: #F2F4F7; color: #5B6474; display: flex; align-items: center; justify-content: center"><svg class="i" aria-hidden="true" style="width: 32px; height: 32px"><use href="#i-moon"></use></svg></span>
+        <span style="font-size: 20px; font-weight: 700">ตอนนี้ไม่ใช่เวลากะของคุณ</span>
+        <div style="display: flex; flex-direction: column; gap: 4px; background: #F4F6F8; border-radius: 6px; padding: 12px 16px; width: 100%">
+          <span style="font-size: 14px; color: #667085">กะของคุณ</span>
+          <span style="font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums">กะเช้า 07:00–19:00</span>
+        </div>
+        <span style="font-size: 16px; color: #667085">ลงเวลาเข้างานได้ตั้งแต่ 06:00 ที่ป้ายลงเวลา</span>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{showLoading}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 16px" aria-busy="true">
+        <div style="display: flex; align-items: center; gap: 12px; color: #667085; font-size: 16px">
+          <span style="width: 20px; height: 20px; border-radius: 50%; border: 3px solid #E0E5EB; border-top-color: #2457C5; animation: spin 0.9s linear infinite"></span>
+          กำลังโหลดงานของคุณ…
+        </div>
+        <div style="height: 196px; border-radius: 8px; background: #E9EDF1"></div>
+        <div style="height: 20px; width: 40%; border-radius: 4px; background: #E9EDF1"></div>
+        <div style="height: 72px; border-radius: 8px; background: #E9EDF1"></div>
+        <div style="height: 72px; border-radius: 8px; background: #E9EDF1"></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{showError}}" hint-placeholder-val="{{false}}">
+      <section role="alert" style="background: #FEF3F2; border: 1px solid #F6C9C4; border-radius: 8px; padding: 16px; display: flex; gap: 12px">
+        <svg class="i il" aria-hidden="true" style="color: #B42318"><use href="#i-wifi-off"></use></svg>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 18px; font-weight: 700; color: #912018">โหลดงานไม่สำเร็จ</span>
+          <span style="font-size: 16px">อินเทอร์เน็ตอาจหลุด ลองเดินไปที่สัญญาณดีขึ้น แล้วกด "โหลดใหม่" ด้านล่าง</span>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; gap: 8px; align-items: baseline">{{g.title}} <span style="font-size: 14px; font-weight: 400; color: #667085">{{g.count}} จุด</span></h2>
+        <div style="display: flex; flex-direction: column; gap: 1px; background: #E0E5EB; border: 1px solid #E0E5EB; border-radius: 8px; overflow: hidden">
+          <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="2">
+            <div style="background: #FFFFFF; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+                <span style="font-size: 16px; font-weight: 600">{{r.name}}</span>
+                <span style="{{r.chip}}"><svg class="i is" aria-hidden="true"><use href="#{{r.icon}}"></use></svg>{{r.label}}</span>
+              </div>
+              <span style="font-size: 14px; color: #667085; font-variant-numeric: tabular-nums">{{r.meta}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+
+    <sc-if value="{{showLogout}}" hint-placeholder-val="{{true}}">
+      <button type="button" style="align-self: center; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 0; background: transparent; color: #2457C5; font-size: 16px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-logout"></use></svg>ออกจากระบบ</button>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{showScan}}" hint-placeholder-val="{{true}}">
+    <div style="background: #FFFFFF; border-top: 1px solid #E0E5EB; padding: 12px 16px max(12px, env(safe-area-inset-bottom))">
+      <a href="Submit.dc.html" style="height: 56px; border-radius: 6px; background: #2457C5; color: #FFFFFF; text-decoration: none; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#i-qr"></use></svg>สแกน QR</a>
+    </div>
+  </sc-if>
+  <sc-if value="{{showError}}" hint-placeholder-val="{{false}}">
+    <div style="background: #FFFFFF; border-top: 1px solid #E0E5EB; padding: 12px 16px max(12px, env(safe-area-inset-bottom))">
+      <button type="button" style="width: 100%; height: 56px; border: 0; border-radius: 6px; background: #2457C5; color: #FFFFFF; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px"><svg class="i" aria-hidden="true"><use href="#i-refresh"></use></svg>โหลดใหม่</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["งานด่วน","ทำแทน","ครบแล้ว","นอกกะ","กำลังโหลด","ผิดพลาด"],"default":"งานด่วน"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const s = this.props.state ?? 'งานด่วน';
+const ST = {
+  rework: ['ต้องแก้ไข', '#B42318', '#FEF3F2', '#F6C9C4', 'i-redo'],
+  over: ['เลยเวลา', '#B45309', '#FEF6EC', '#F5D6B0', 'i-clock'],
+  wait: ['รอตรวจ', '#0B6E8A', '#EBF6FA', '#B4DCE8', 'i-hour'],
+  pass: ['ตรวจผ่าน', '#16803C', '#EDF7F0', '#B9DFC6', 'i-check'],
+  todo: ['ยังไม่ทำ', '#5B6474', '#F2F4F7', '#E0E5EB', 'i-minus'],
+  notyet: ['ยังไม่ถึงรอบ', '#5B6474', '#F2F4F7', '#E0E5EB', 'i-minus']
+};
+const row = (name, k, meta) => ({
+  name: name, meta: meta, label: ST[k][0], icon: ST[k][4],
+  chip: 'display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap; height: 28px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; color: ' + ST[k][1] + '; background: ' + ST[k][2] + '; border: 1px solid ' + ST[k][3]
+});
+const todo = [
+  row('โถงทางเดิน', 'over', 'รอบ 07:30–09:00 · เลยมา 1 ชม. 12 นาที'),
+  row('จุดทิ้งขยะ', 'todo', 'รอบ 10:00–12:00 · เหลือ 1 ชม. 18 นาที')
+];
+const sent = [
+  row('ห้องน้ำหญิง', 'wait', 'ส่ง 10:05 · รอหัวหน้าตรวจ'),
+  row('ห้องเก็บอุปกรณ์', 'pass', 'ส่ง 08:40 · ตรวจผ่าน 09:02')
+];
+const later = [row('ห้องประชุมชั้น 1', 'notyet', 'รอบแรก 13:00–14:00')];
+const urgent = s === 'งานด่วน' || s === 'ทำแทน';
+const done = s === 'ครบแล้ว';
+let groups = [];
+if (urgent) {
+  const t = s === 'ทำแทน' ? todo.concat([row('ทางเดินชั้น 2 (ทำแทน)', 'todo', 'รอบ 10:00–12:00 · เหลือ 1 ชม. 18 นาที')]) : todo;
+  groups = [
+    { title: 'ต้องทำต่อ', count: t.length, rows: t },
+    { title: 'ส่งแล้ว', count: sent.length, rows: sent },
+    { title: 'ยังไม่ต้องทำ', count: later.length, rows: later }
+  ];
+}
+if (done) {
+  const all = [row('ห้องน้ำชาย', 'wait', 'ส่ง 10:48 · รอหัวหน้าตรวจ'), row('โถงทางเดิน', 'wait', 'ส่ง 10:55 · ส่งช้า 1 ชม. 55 นาที'), row('จุดทิ้งขยะ', 'pass', 'ส่ง 10:20 · ตรวจผ่าน 10:36')].concat(sent);
+  groups = [
+    { title: 'ส่งแล้ว', count: all.length, rows: all },
+    { title: 'ยังไม่ต้องทำ', count: later.length, rows: later }
+  ];
+}
+const sentN = done ? 5 : 2;
+return {
+  cover: s === 'ทำแทน',
+  showUrgent: urgent,
+  showDone: done,
+  showOff: s === 'นอกกะ',
+  showLoading: s === 'กำลังโหลด',
+  showError: s === 'ผิดพลาด',
+  showProgress: urgent || done,
+  showScan: urgent || done,
+  showLogout: s !== 'กำลังโหลด',
+  sent: sentN,
+  total: 5,
+  barStyle: 'height: 100%; background: #202936; border-radius: 4px; width: ' + (sentN / 5 * 100) + '%',
+  groups: groups
+};
+}
+}
+</script>
+</body>
+</html>

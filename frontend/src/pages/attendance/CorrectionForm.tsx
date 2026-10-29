@@ -69,7 +69,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
           <h2 id={headingId} tabIndex={-1} className="text-base font-bold">
             {`เพิ่ม/แก้เวลา · ${cleaner.displayName} · ${row.areaCode}`}
           </h2>
-          <span className="text-muted">{`${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)}`}</span>
+          <span className="text-text-2">{`${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)}`}</span>
         </div>
         <div className="flex flex-wrap gap-3">
           <Field label="รายการ">
@@ -98,7 +98,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
         <Field label="เหตุผล (ต้องกรอก)">
           <TextInput size="desk" value={reason} maxLength={MAX_REASON} onChange={(event) => setReason(event.target.value)} />
         </Field>
-        <span className="text-muted">
+        <span className="text-text-2">
           ระบบเก็บค่าเดิม ผู้แก้ และเวลาที่แก้ไว้ในประวัติ · รายการนี้จะมีป้าย "แก้โดยแอดมิน" · แม่บ้านและหัวหน้าแก้เองไม่ได้
         </span>
         {problem && <Note tone="error">{problem}</Note>}

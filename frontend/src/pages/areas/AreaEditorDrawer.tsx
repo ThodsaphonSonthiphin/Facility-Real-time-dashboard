@@ -48,7 +48,7 @@ export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerP
             onCancel={onClose}
           />
         ) : (
-          !error && <p className="text-muted">กำลังโหลด...</p>
+          !error && <p className="text-text-2">กำลังโหลด...</p>
         )}
         <AreaActiveSection detail={detail} />
         <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>

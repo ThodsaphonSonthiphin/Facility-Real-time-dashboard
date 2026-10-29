@@ -77,7 +77,7 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
         </div>
         <form className={`flex flex-col gap-3 ${boxClass}`} onSubmit={(event) => void submit(event)}>
           {building ? (
-            <p className="text-muted">{`รหัสตึก ${building.code} (แก้ไม่ได้)`}</p>
+            <p className="text-text-2">{`รหัสตึก ${building.code} (แก้ไม่ได้)`}</p>
           ) : (
             <Field label="รหัสตึก" help="ตัวอักษรอังกฤษหรือตัวเลข 1–20 ตัว เช่น B2 · แก้ทีหลังไม่ได้">
               <TextInput

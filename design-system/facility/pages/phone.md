@@ -16,7 +16,7 @@ One hand, standing at a QR sign, often in a hurry, sometimes outdoors in sun. Mo
 
 ## Type and density
 
-- Body 17 px minimum; headings clearly larger; standard density (16–64 px spacing).
+- Body 16 px minimum (owner, 2026-10-29); headings clearly larger; standard density (16–64 px spacing).
 - Short lines; break long Thai sentences rather than shrinking them.
 
 ## Interaction

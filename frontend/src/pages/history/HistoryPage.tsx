@@ -61,7 +61,7 @@ export function HistoryPage() {
   return (
     <main className="flex flex-col gap-4 text-sm text-text">
       <header className="flex flex-col gap-0.5">
-        <span className="text-muted">แอดมินเท่านั้น · อ่านอย่างเดียว</span>
+        <span className="text-text-2">แอดมินเท่านั้น · อ่านอย่างเดียว</span>
         <h1 className="text-xl font-bold">ประวัติการแก้ไขของแอดมิน</h1>
       </header>
       <HistoryControls
@@ -75,7 +75,7 @@ export function HistoryPage() {
         onSearch={setSearch}
       />
       {problem && <Note tone="error">{problem}</Note>}
-      {log.isFetching && !log.currentData && <p className="text-muted">กำลังโหลด...</p>}
+      {log.isFetching && !log.currentData && <p className="text-text-2">กำลังโหลด...</p>}
       {log.error && <Note tone="error">{getErrorMessage(log.error)}</Note>}
       {log.currentData && (
         <>
@@ -84,7 +84,7 @@ export function HistoryPage() {
             emptyText={args.q ? 'ไม่พบรายการที่ตรงกับที่ค้นหาในช่วงนี้' : 'ไม่มีประวัติในช่วงนี้'}
           />
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-muted">
+            <span className="text-text-2">
               {args.q ? `แสดง ${entries.length} รายการที่ตรงกับ "${args.q}"` : `แสดง ${entries.length} รายการ`}
             </span>
             {log.hasNextPage && (

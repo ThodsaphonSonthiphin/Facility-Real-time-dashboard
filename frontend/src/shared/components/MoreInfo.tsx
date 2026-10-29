@@ -5,7 +5,7 @@ import { focusRing } from './styles';
 /** desk: the Admin pages, 36 px; phone: 48 px and the phone's icon and text sizes (MASTER.md). */
 const sizeClass = {
   desk: { summary: 'min-h-9', icon: 'size-4', body: '' },
-  phone: { summary: 'min-h-12 text-md', icon: 'size-5', body: 'text-md' },
+  phone: { summary: 'min-h-12 text-sm', icon: 'size-5', body: 'text-sm' },
 } as const;
 
 /**
@@ -27,12 +27,12 @@ export function MoreInfo({
   return (
     <details className="group max-w-[80ch]">
       <summary
-        className={`inline-flex ${classes.summary} cursor-pointer list-none items-center gap-1.5 rounded text-primary hover:text-primary-strong ${focusRing}`}
+        className={`inline-flex ${classes.summary} cursor-pointer list-none items-center gap-1.5 rounded-lg text-accent hover:text-accent-hover ${focusRing}`}
       >
         <Info aria-hidden="true" className={classes.icon} />
         <span className="underline">{summary}</span>
       </summary>
-      <div className={`flex flex-col gap-1.5 pb-1 text-muted ${classes.body}`}>{children}</div>
+      <div className={`flex flex-col gap-1.5 pb-1 text-text-2 ${classes.body}`}>{children}</div>
     </details>
   );
 }

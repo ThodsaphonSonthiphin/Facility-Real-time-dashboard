@@ -12,8 +12,8 @@ export function LiveBadge({ hubKey }: { hubKey: string }) {
   return (
     <span role="status">
       {down && (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-warn-border bg-warn-bg px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-warn-text">
-          <span aria-hidden="true" className="size-2 rounded-full bg-status-overdue" />
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-overdue-border bg-overdue-bg px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-overdue">
+          <span aria-hidden="true" className="size-2 rounded-full bg-overdue" />
           กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)
         </span>
       )}
