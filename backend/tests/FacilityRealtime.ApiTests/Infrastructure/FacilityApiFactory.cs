@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace FacilityRealtime.ApiTests.Infrastructure;
 
@@ -22,6 +23,9 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
 
     public TestTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
+
+    /// <summary>Every line the API logged (Server Log, facility-0095).</summary>
+    public LogCapture Logs { get; } = new();
 
     /// <summary>Set before the first request: a test-only hook to add or replace services (e.g. an EF interceptor).</summary>
     public Action<IServiceCollection>? ConfigureTestServices { get; init; }
@@ -44,6 +48,7 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
             _connection.Open();
             services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
             services.AddSingleton<TimeProvider>(Clock);
+            services.AddSingleton<ILoggerProvider>(Logs);
             // 600,000 iterations per login would make the API suite slow; the format is identical
             services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher(iterations: 1_000));
             ConfigureTestServices?.Invoke(services);
