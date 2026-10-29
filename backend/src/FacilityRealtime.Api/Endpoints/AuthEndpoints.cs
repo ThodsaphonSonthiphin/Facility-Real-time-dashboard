@@ -40,7 +40,8 @@ public static class AuthEndpoints
         IAccessTokenIssuer issuer,
         LoginThrottle throttle,
         TimeProvider clock,
-        IOptions<JwtSettings> jwt)
+        IOptions<JwtSettings> jwt,
+        SecurityLog securityLog)
     {
         // facility-0054: Cleaners and Supervisors use employee ID + phone; the Admin keeps username + password
         var byEmployeeId = !string.IsNullOrWhiteSpace(request.EmployeeId);
@@ -49,6 +50,7 @@ public static class AuthEndpoints
         if (loginName.Length > MaxLoginNameLength)
         {
             // Longer than any login column, so no account can match; nothing is counted or kept in memory
+            securityLog.LoginFailedUnknownAccount(byEmployeeId);
             return Results.Unauthorized();
         }
 
@@ -63,12 +65,21 @@ public static class AuthEndpoints
             : (byEmployeeId ? "employee:" : "admin:") + loginName;
         if (!throttle.TryBeginAttempt(throttleKey))
         {
+            securityLog.LoginRefusedWhileLocked(user, byEmployeeId);
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
         var secretMatches = hasher.Verify(secret, user?.SecretHash ?? DummyPasswordHash);
-        if (user is null || !user.IsActive || !secretMatches)
+        if (user is null)
         {
+            securityLog.LoginFailedUnknownAccount(byEmployeeId);
+            return Results.Unauthorized();
+        }
+
+        if (!user.IsActive || !secretMatches)
+        {
+            // facility-0097: the journal tells the two apart; the phone still gets the same 401 for both
+            securityLog.LoginFailed(user, secretMatches);
             return Results.Unauthorized();
         }
 
@@ -87,7 +98,8 @@ public static class AuthEndpoints
         AppDbContext db,
         IAccessTokenIssuer issuer,
         TimeProvider clock,
-        IOptions<JwtSettings> jwt)
+        IOptions<JwtSettings> jwt,
+        SecurityLog securityLog)
     {
         var presented = http.Request.Cookies[RefreshCookieName];
         if (string.IsNullOrEmpty(presented))
@@ -110,6 +122,8 @@ public static class AuthEndpoints
 
             case RefreshDecision.ReuseDetected:
                 // ADR facility-0015: two parties hold this token and the server cannot tell which is the owner
+                // written first, so the event is on record even if ending the session fails
+                securityLog.RefreshTokenReused(stored.User);
                 await db.RevokeSessionAsync(stored.SessionId, now);
                 return Unauthorized(http, jwt.Value);
         }

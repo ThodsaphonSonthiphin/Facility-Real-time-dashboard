@@ -37,3 +37,5 @@ flowchart TD
 - สคริปต์ใช้ bash และทดสอบด้วย `scripts/facility.test.sh` (ใช้ `dotnet` ปลอม) ใช้ได้ทั้ง macOS (bash 3.2) และ Linux ไม่ได้รันใน pre-commit
 - ถ้าเลือก Windows Server ภายหลัง ต้องเพิ่มคู่มือส่วน IIS และวิธีตั้งค่าแทนไฟล์ค่าของสคริปต์
 - `facility_dashboard` บน Mac ของเจ้าของถูกเปลี่ยนรหัสแอดมินไปแล้วหนึ่งครั้ง (ข้อมูลทดสอบ) ADR นี้ไม่ได้กู้คืน
+
+> **แก้ไข 2026-10-29 (facility-0099):** service เขียน log ลง journal namespace `facility` ที่เก็บ 90 วัน (`/etc/systemd/journald@facility.conf`) คำสั่งอ่าน log ในคู่มือเป็น `sudo journalctl --namespace=facility -u facility`

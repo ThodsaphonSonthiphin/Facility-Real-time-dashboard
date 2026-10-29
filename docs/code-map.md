@@ -289,19 +289,19 @@ There are two login screens because the three roles authenticate differently: cl
 | 2 | `pages/auth/useLogin.ts` | The hook both login pages share: `submit` → `login(body).unwrap()` → `dispatch(setCredentials(response))`. Maps errors: 401 → the page's own Thai message, 429 → throttle message, otherwise `getErrorMessage()`. |
 | 3 | `pages/auth/authApi.ts:7` | `POST /auth/login` — the RTK Query mutation. |
 | 4 | `shared/api/baseApi.ts:14-25` | `prepareHeaders` attaches `Authorization: Bearer <accessToken>` if one exists. |
-| 5 | `backend/.../Endpoints/AuthEndpoints.cs:35-83` | `LoginAsync` — see the numbered steps below. |
+| 5 | `backend/.../Endpoints/AuthEndpoints.cs:35-94` | `LoginAsync` — see the numbered steps below. |
 | 6 | `store/slices/authSlice.ts:27-33` | `setCredentials` copies `user`, `accessToken`, `expiresAt` into **memory**. |
 | 7 | `shared/components/ProtectedRoute.tsx` + `shared/auth/roles.ts` | Next navigation: `state.from` if there was one, else `homeOf(role)`. |
 
-### What LoginAsync actually does, lines 46 to 82
+### What LoginAsync actually does, lines 47 to 93
 
-1. Pick the credential mode — `byEmployeeId` if `request.EmployeeId` is non-empty (line 46).
-2. Over-long login name → bare `401`, nothing recorded (49–53).
-3. **Role-separated lookup** (55–57): employee mode matches `EmployeeId` **and** `Role != Admin`; admin mode matches `Username` **and** `Role == Admin`. This is the only thing stopping someone logging into the wrong form.
-4. **Throttle** (61–67): key is `user:{id}` if the account matched, otherwise the typed name. 5 failures in 15 minutes → `429`.
-5. **Dummy hash** (69): `hasher.Verify(secret, user?.SecretHash ?? DummyPasswordHash)` — an unknown account still pays one full PBKDF2 run, so timing cannot reveal whether an account exists.
-6. `user is null || !user.IsActive || !secretMatches` → `401` with **no body and no cookie** (70–73). Wrong password, unknown id and deactivated account are indistinguishable **by design**.
-7. Success → reset throttle, insert a `RefreshToken` row storing **only the SHA-256 hash** (77–79), write the cookie (81), return `{ accessToken, expiresAt, user }` (82).
+1. Pick the credential mode — `byEmployeeId` if `request.EmployeeId` is non-empty (line 47).
+2. Over-long login name → bare `401` and an unknown-account Server Log line, nothing counted by the throttle (50–55).
+3. **Role-separated lookup** (57–59): employee mode matches `EmployeeId` **and** `Role != Admin`; admin mode matches `Username` **and** `Role == Admin`. This is the only thing stopping someone logging into the wrong form.
+4. **Throttle** (63–70): key is `user:{id}` if the account matched, otherwise the typed name. 5 failures in 15 minutes → `429`.
+5. **Dummy hash** (72): `hasher.Verify(secret, user?.SecretHash ?? DummyPasswordHash)` — an unknown account still pays one full PBKDF2 run, so timing cannot reveal whether an account exists.
+6. Two branches, both → `401` with **no body and no cookie**: `user is null` (73–77) and `!user.IsActive || !secretMatches` (79–84). Each writes its own Server Log line first. Wrong password, unknown id and deactivated account are indistinguishable **by design**.
+7. Success → reset throttle, insert a `RefreshToken` row storing **only the SHA-256 hash** (89–90), write the cookie (92), return `{ accessToken, expiresAt, user }` (93).
 
 ### The two tokens
 
@@ -332,7 +332,7 @@ There are two login screens because the three roles authenticate differently: cl
 - `rejected` (401/403) → `dispatch(sessionExpired())` → listener middleware resets the whole API cache → `ProtectedRoute` sees `currentUser === null` → redirect to `/login` **with** `state.from`, so the person lands back where they were.
 - `offline` (network down, 5xx, non-JSON 200, 15 s timeout) → **session kept**. A phone losing signal must not log the person out.
 
-**Server side of refresh** — `AuthEndpoints.cs:85-131` with `RefreshTokenRules.Decide`: rotate normally; reuse after the 30 s grace revokes the **whole session** (two holders means theft); re-reading the user each refresh is what makes an admin deactivation take effect within 5 minutes (ADR facility-0012).
+**Server side of refresh** — `AuthEndpoints.cs:96-145` with `RefreshTokenRules.Decide`: rotate normally; reuse after the 30 s grace revokes the **whole session** (two holders means theft); re-reading the user each refresh is what makes an admin deactivation take effect within 5 minutes (ADR facility-0012).
 
 **Logout** — `shared/auth/endSession.ts`: forget locally → `abandonSession()` (bumps `sessionEpoch` so an in-flight refresh cannot log you back in) → `POST /api/auth/logout`.
 
@@ -363,7 +363,7 @@ sequenceDiagram
 | Failure | Handled where | User sees |
 |---|---|---|
 | Empty field | HTML5 `required` | native browser bubble, request never sent |
-| Wrong employee id **or** wrong phone | `AuthEndpoints.cs:70-73` → 401 | `รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง` |
+| Wrong employee id **or** wrong phone | `AuthEndpoints.cs:73-84` → 401 | `รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง` |
 | Wrong admin credentials | same 401 path | `ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง` |
 | Deactivated account | same 401 path, indistinguishable on purpose | same message as wrong credentials |
 | 5 failures in 15 min | `LoginThrottle` → 429 | `กรอกผิดหลายครั้ง รอสักครู่แล้วลองใหม่` |
@@ -371,9 +371,11 @@ sequenceDiagram
 | Access token expired mid-session | `baseApi.ts:39-41` refresh + retry | nothing — silent retry |
 | Refresh refused | `session.ts:63-66` → `sessionExpired()` | bounced to `/login` with `state.from` kept |
 | Refresh offline / 5xx / timeout | `session.ts` → `'offline'` | nothing, session kept |
-| Reused refresh token after 30 s grace | `AuthEndpoints.cs:111-115` revokes session | bounced to login |
-| Deactivated while a refresh is in flight | `AuthEndpoints.cs:118-122` revokes **all** that user's sessions | bounced to login; every other device dies too |
+| Reused refresh token after 30 s grace | `AuthEndpoints.cs:123-128` revokes session | bounced to login |
+| Deactivated while a refresh is in flight | `AuthEndpoints.cs:132-136` revokes **all** that user's sessions | bounced to login; every other device dies too |
 | Role changed | re-read on refresh; guard `ProtectedRoute.tsx:21-30` | `ไม่มีสิทธิ์เปิดหน้านี้` with a link home |
+
+**Server Log lines** (facility-0095..0097): `Api/Auth/SecurityLog.cs`, called from `AuthEndpoints.LoginAsync` (failed, unknown account, refused while locked) and `RefreshAsync` (reused token). Category `FacilityRealtime.Security`, level Warning; the phone sees the same 401/429 as before. SQL statements stay out because `appsettings.json` sets `Microsoft.EntityFrameworkCore.Database.Command` to `Warning`.
 
 ---
 
@@ -541,8 +543,8 @@ graph LR
 | Method | Route | Handler | Why |
 |---|---|---|---|
 | POST | `/api/auth/login` | `AuthEndpoints.cs:29` → `LoginAsync:35` | Three roles authenticate differently — staff use employee id + phone, admins use username + password. Without it, GPS-stamped scans would be anonymous. The throttle and dummy hash exist so an attacker cannot tell "no such account" from "wrong phone". |
-| POST | `/api/auth/refresh` | `AuthEndpoints.cs:30` → `RefreshAsync:85` | Access tokens last 5 minutes (privacy on a shared phone), so the browser needs a way to stay logged in. Re-reading the user each refresh is what makes an admin deactivation land within 5 minutes. |
-| POST | `/api/auth/logout` | `AuthEndpoints.cs:31` → `LogoutAsync:133` | Kills the session server-side; otherwise a left-behind cookie keeps minting tokens for 30 days. |
+| POST | `/api/auth/refresh` | `AuthEndpoints.cs:30` → `RefreshAsync:96` | Access tokens last 5 minutes (privacy on a shared phone), so the browser needs a way to stay logged in. Re-reading the user each refresh is what makes an admin deactivation land within 5 minutes. |
+| POST | `/api/auth/logout` | `AuthEndpoints.cs:31` → `LogoutAsync:147` | Kills the session server-side; otherwise a left-behind cookie keeps minting tokens for 30 days. |
 | GET | `/api/me` | `MeEndpoints.cs:12` | Fresh self state. **No frontend caller found** — see [Part 12](#part-12--things-that-are-unclear). |
 | GET | `/api/health` | `Program.cs:141` | Liveness for curl and tunnel probes. No frontend caller. |
 

@@ -98,18 +98,38 @@ EnvironmentFile=/etc/facility/facility.env
 ExecStart=/usr/bin/dotnet /opt/facility/app/FacilityRealtime.Api.dll
 Restart=always
 RestartSec=5
+LogNamespace=facility
 
 [Install]
 WantedBy=multi-user.target
 ```
 
+สร้าง `/etc/systemd/journald@facility.conf` ให้ log ของระบบเก็บ 90 วันแล้วลบเอง (facility-0098, 0099) ค่านี้ใช้กับ log ของระบบนี้เท่านั้น log ของโปรแกรมอื่นบนเครื่องไม่ถูกแตะ ต้องใช้ systemd 245 ขึ้นไป (ดูด้วย `systemctl --version`)
+
+```ini
+[Journal]
+MaxRetentionSec=90day
+MaxFileSec=1day
+```
+
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now facility
-sudo journalctl -u facility -f
+sudo journalctl --namespace=facility -u facility -f
 ```
 
 log ต้องไม่มีข้อผิดพลาด ถ้าขึ้น `ConnectionStrings__DefaultConnection is not set.` ให้ตรวจไฟล์ค่า
+
+ถ้า log ว่างเปล่า (ระบบล้มก่อนเขียนอะไร) ดูบรรทัดของ systemd เอง: `sudo systemctl status facility` หรือ `sudo journalctl --namespace=+facility -u facility` (`+` รวม journal หลักของ systemd เข้าไปด้วย)
+
+ดูเฉพาะเหตุการณ์ด้านความปลอดภัย: `sudo journalctl --namespace=facility -u facility | grep -A1 FacilityRealtime.Security`
+
+- `Login failed: employee 1000001, wrong secret` ใส่เบอร์ผิด (`account turned off` คือบัญชีถูกปิดใช้งาน)
+- `Login failed: unknown account (employee login)` รหัสพนักงานที่พิมพ์ไม่มีในระบบ ระบบไม่เขียนสิ่งที่พิมพ์ เพราะอาจเป็นเบอร์โทรที่พิมพ์สลับช่อง
+- `Login refused while locked: ...` ผิด 5 ครั้งแล้ว ถูกล็อก 15 นาที ทุกครั้งที่ลองระหว่างล็อกขึ้นหนึ่งบรรทัด
+- `Refresh token reused, session ended: ...` มีคนใช้ token เดิมซ้ำ ระบบให้บัญชีนั้นเข้าระบบใหม่ (facility-0015)
+
+log ไม่มีเบอร์โทร รหัสผ่าน token หรือพิกัด (facility-0097)
 
 ### 2.6 https (Caddy)
 
@@ -182,7 +202,7 @@ cloudflared tunnel --url http://localhost:5001
 
    ห้ามใส่ `'` `"` หรือ `\` ในรหัสผ่านและชื่อ และห้ามมีช่องว่างหน้าหรือท้าย
    ห้ามเขียนค่าเหล่านี้ลงไฟล์ `appsettings.json` หรือเก็บใน git
-2. ระบบรันอยู่แล้วหลังข้อ 2.5 ดูใน log (`sudo journalctl -u facility`) ต้องมีบรรทัด `Created the first Admin 'first.admin'`
+2. ระบบรันอยู่แล้วหลังข้อ 2.5 ดูใน log (`sudo journalctl --namespace=facility -u facility`) ต้องมีบรรทัด `Created the first Admin 'first.admin'`
 3. เข้า `https://<ที่อยู่ระบบ>/login/admin` ด้วยชื่อผู้ใช้และรหัสผ่านนั้น
 4. ลบบรรทัด `FirstAdmin__Password` ออกจากไฟล์ค่า แล้ว `sudo systemctl restart facility` ถ้ายังตั้งค้างไว้ log จะเตือน `FirstAdmin__Password is still set`
 5. ไปหน้า "บัญชีผู้ใช้" กด "รีเซ็ตรหัสผ่าน" ที่บัญชีของตัวเอง แล้วตั้งรหัสใหม่ที่มีแค่คุณรู้ เพราะรหัสเดิมเคยอยู่ในค่าตั้งของ server
