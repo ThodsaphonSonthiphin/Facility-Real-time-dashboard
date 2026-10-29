@@ -36,9 +36,9 @@ interface CaptureSign {
 const SECONDS = CAPTURE_MS / 1000;
 
 // A row of the sign list: a 48 px target that says which sign is the one being read
-const rowClass = `flex min-h-12 w-full flex-col items-start gap-1 rounded border px-3 py-2.5 text-left ${focusRing}`;
-const rowIdleClass = 'border-input-border bg-surface text-text hover:border-primary';
-const rowChosenClass = 'border-primary bg-info-bg text-text';
+const rowClass = `flex min-h-12 w-full flex-col items-start gap-1 rounded-lg border px-3 py-2.5 text-left ${focusRing}`;
+const rowIdleClass = 'border-border-control bg-surface text-text hover:border-accent';
+const rowChosenClass = 'border-accent bg-accent-subtle text-text';
 
 /** The Area's signs that can be scanned: the check-in sign and the active points (D4's order). */
 function captureSigns(detail: AreaDetail): CaptureSign[] {
@@ -68,11 +68,11 @@ export function CapturePage() {
         ‹ กลับไปหน้าจัดการพื้นที่และป้าย
       </Link>
       {detail && (
-        <span className="text-md tracking-wide text-muted">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>
+        <span className="text-sm tracking-wide text-text-2">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>
       )}
       <h1 className="text-2xl font-bold">เก็บพิกัดป้าย</h1>
       {area.error && <Note tone="error">{getErrorMessage(area.error)}</Note>}
-      {!detail && !area.error && <p className="text-muted">กำลังโหลด...</p>}
+      {!detail && !area.error && <p className="text-text-2">กำลังโหลด...</p>}
       {detail && (
         <CaptureWorkspace
           key={selected?.sign.id ?? 'none'}
@@ -173,7 +173,7 @@ function CaptureWorkspace({ signs, selected, onChoose }: CaptureWorkspaceProps) 
                   onClick={() => onChoose(target.sign.id)}
                 >
                   <strong className="font-semibold">{`${target.sign.code} ${target.title}`}</strong>
-                  <span className="text-md text-muted">
+                  <span className="text-sm text-text-2">
                     {isSelected && phase.kind === 'reading' ? 'กำลังเก็บ' : signPlaceLabel(target.sign)}
                   </span>
                 </button>
@@ -206,7 +206,7 @@ function SignCapture({ target, phase, problem, saving, onStart, onSave }: SignCa
   return (
     <section className={`flex flex-col gap-2.5 ${boxClass}`} aria-labelledby="capture-sign-title">
       <h2 id="capture-sign-title" className="text-lg font-bold">{`${sign.code} ${title}`}</h2>
-      <p className="text-md text-muted">{`รัศมี ${sign.radiusM} ม. · ตอนนี้: ${signPlaceLabel(sign)}`}</p>
+      <p className="text-sm text-text-2">{`รัศมี ${sign.radiusM} ม. · ตอนนี้: ${signPlaceLabel(sign)}`}</p>
       {phase.kind === 'reading' && (
         <>
           <p className="text-xl font-bold" role="status">

@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ระบบดีไซน์</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-redo" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></symbol>
+<symbol id="i-hour" viewBox="0 0 24 24"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"></path><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"></path></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"></path></symbol>
+<symbol id="i-coffee" viewBox="0 0 24 24"><path d="M10 2v2"></path><path d="M14 2v2"></path><path d="M6 2v2"></path><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"></path></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><path d="M4 22v-7"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4"></path><path d="M20 7H4"></path><path d="m8 21-4-4 4-4"></path><path d="M4 17h16"></path></symbol>
+<symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></symbol>
+<symbol id="i-check-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></symbol>
+<symbol id="i-x-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5v14"></path></symbol>
+<symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></symbol>
+</svg>
+<div style="background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 14px; line-height: 1.5; padding: 32px 24px 48px">
+<div style="max-width: 1216px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px">
+
+  <header style="display: flex; flex-direction: column; gap: 4px">
+    <span style="font-size: 13px; font-weight: 600; color: #667085">ระยะที่ 2 · ข้อเสนอ Design System</span>
+    <h1 style="margin: 0; font-size: 30px; font-weight: 700; line-height: 1.3">Professional Enterprise Light</h1>
+    <p style="margin: 0; font-size: 16px; color: #667085; max-width: 760px">พื้นเทาอ่อน เนื้อหาบนพื้นขาว ตัวหนังสือเข้ม สีน้ำเงินใช้กับสิ่งที่กดได้เท่านั้น สีแดง ส้ม เขียว ฟ้าเขียว ใช้บอกสถานะเท่านั้น ระยะห่างทุกจุดมาจากสเกล 4 px</p>
+  </header>
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <h2 style="margin: 0; font-size: 20px; font-weight: 700">1. สี</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px">
+      <sc-for list="{{neutrals}}" as="c" hint-placeholder-count="9">
+        <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column">
+          <div style="{{c.sw}}"></div>
+          <div style="padding: 12px; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 14px; font-weight: 600">{{c.name}}</span>
+            <span style="font-size: 13px; color: #667085; font-family: ui-monospace, Menlo, Consolas, monospace">{{c.token}} · {{c.hex}}</span>
+            <span style="font-size: 13px; color: #667085">{{c.use}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <h3 style="margin: 8px 0 0; font-size: 16px; font-weight: 700">สีสถานะ (ใช้ร่วมกับคำและไอคอนเสมอ)</h3>
+    <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; overflow-x: auto">
+      <table style="width: 100%; min-width: 760px; border-collapse: collapse; font-size: 14px">
+        <thead>
+          <tr style="background: #F9FAFB; text-align: left; color: #667085; font-size: 13px">
+            <th style="padding: 10px 16px; font-weight: 600; border-bottom: 1px solid #E0E5EB">ชิป</th>
+            <th style="padding: 10px 16px; font-weight: 600; border-bottom: 1px solid #E0E5EB">ความหมาย</th>
+            <th style="padding: 10px 16px; font-weight: 600; border-bottom: 1px solid #E0E5EB">Token</th>
+            <th style="padding: 10px 16px; font-weight: 600; border-bottom: 1px solid #E0E5EB">ตัวหนังสือ / พื้น / ขอบ</th>
+            <th style="padding: 10px 16px; font-weight: 600; border-bottom: 1px solid #E0E5EB">Contrast</th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{statuses}}" as="s" hint-placeholder-count="6">
+            <tr>
+              <td style="padding: 10px 16px; border-bottom: 1px solid #E0E5EB"><span style="{{s.chip}}"><svg class="i is" aria-hidden="true"><use href="#{{s.icon}}"></use></svg>{{s.label}}</span></td>
+              <td style="padding: 10px 16px; border-bottom: 1px solid #E0E5EB">{{s.mean}}</td>
+              <td style="padding: 10px 16px; border-bottom: 1px solid #E0E5EB; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px">{{s.token}}</td>
+              <td style="padding: 10px 16px; border-bottom: 1px solid #E0E5EB; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px">{{s.hexes}}</td>
+              <td style="padding: 10px 16px; border-bottom: 1px solid #E0E5EB; font-variant-numeric: tabular-nums">{{s.ratio}}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px">
+    <section style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 700">2. ตัวหนังสือ</h2>
+      <span style="font-size: 13px; color: #667085">system-ui ของเครื่อง · line-height 1.5 (สระบนล่างภาษาไทยไม่ชนกัน) · หัวข้อ 1.3</span>
+      <div style="display: flex; flex-direction: column">
+        <sc-for list="{{type}}" as="t" hint-placeholder-count="7">
+          <div style="display: flex; align-items: baseline; gap: 16px; padding: 8px 0; border-bottom: 1px solid #E0E5EB">
+            <span style="width: 72px; flex: none; font-size: 13px; color: #667085; font-family: ui-monospace, Menlo, Consolas, monospace">{{t.px}}</span>
+            <span style="{{t.style}}">{{t.sample}}</span>
+            <span style="margin-left: auto; font-size: 13px; color: #667085; text-align: right">{{t.use}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 700">3. ระยะห่าง (ทีละ 4 px)</h2>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <sc-for list="{{space}}" as="sp" hint-placeholder-count="9">
+          <div style="display: flex; align-items: center; gap: 16px">
+            <span style="width: 72px; flex: none; font-size: 13px; color: #667085; font-family: ui-monospace, Menlo, Consolas, monospace">{{sp.name}}</span>
+            <span style="{{sp.bar}}"></span>
+            <span style="font-size: 13px; color: #667085">{{sp.use}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <h3 style="margin: 8px 0 0; font-size: 16px; font-weight: 700">Container และ Gutter</h3>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; font-size: 13px">
+        <div style="background: #F4F6F8; border-radius: 6px; padding: 12px; display: flex; flex-direction: column"><b style="font-size: 14px">คอมพิวเตอร์ ≥1024</b>เมนูข้าง 240 · เนื้อหากว้างสุด 1216 · ขอบซ้ายขวา 24</div>
+        <div style="background: #F4F6F8; border-radius: 6px; padding: 12px; display: flex; flex-direction: column"><b style="font-size: 14px">แท็บเล็ต 768–1023</b>เมนูข้างย่อเป็นแถบบน · ขอบ 24</div>
+        <div style="background: #F4F6F8; border-radius: 6px; padding: 12px; display: flex; flex-direction: column"><b style="font-size: 14px">มือถือ &lt;768</b>คอลัมน์เดียว กว้างสุด 480 · ขอบ 16</div>
+      </div>
+    </section>
+  </div>
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <h2 style="margin: 0; font-size: 20px; font-weight: 700">4. ส่วนประกอบ</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px">
+
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700">Button</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+          <button type="button" style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #2457C5; color: #FFFFFF; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><svg class="i is" aria-hidden="true"><use href="#i-plus"></use></svg>ปุ่มหลัก</button>
+          <button type="button" style="height: 36px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; color: #202936; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><svg class="i is" aria-hidden="true"><use href="#i-dl"></use></svg>ปุ่มรอง</button>
+          <button type="button" style="height: 36px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600">ปุ่มข้อความ</button>
+          <button type="button" style="height: 36px; padding: 0 16px; border: 1px solid #B42318; border-radius: 6px; background: #FFFFFF; color: #B42318; font-size: 14px; font-weight: 600">ปิดใช้งาน</button>
+          <button type="button" disabled style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #E0E5EB; color: #667085; font-size: 14px; font-weight: 600">กดไม่ได้</button>
+        </div>
+        <ul style="margin: 0; padding-left: 20px; color: #667085; font-size: 13px; display: flex; flex-direction: column; gap: 2px">
+          <li>ปุ่มหลักได้ 1 ปุ่มต่อหน้าจอ · คอมพิวเตอร์สูง 36 · มือถือ 48 · ปุ่มส่งงาน/ลงเวลา 56 เต็มความกว้าง</li>
+          <li>ไอคอนอยู่คู่กับคำเสมอ ไม่มีปุ่มไอคอนอย่างเดียว · มุมโค้ง 6 ไม่ใช้ทรงแคปซูล</li>
+          <li>ปุ่มทำลายข้อมูลเป็นปุ่มขอบแดง แล้วยืนยันใน Modal</li>
+        </ul>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700">Form</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <label for="ds-a" style="font-size: 14px; font-weight: 600">ชื่อพื้นที่</label>
+            <input id="ds-a" value="ห้องน้ำชั้น 1" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936; background: #FFFFFF">
+            <span style="font-size: 13px; color: #667085">แสดงบนป้ายและหน้าแม่บ้าน</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <label for="ds-b" style="font-size: 14px; font-weight: 600">รัศมีป้าย (เมตร)</label>
+            <input id="ds-b" value="5000" aria-invalid="true" aria-describedby="ds-b-err" style="height: 36px; padding: 0 12px; border: 2px solid #B42318; border-radius: 6px; font-size: 14px; color: #202936; background: #FFFFFF">
+            <span id="ds-b-err" style="font-size: 13px; color: #B42318; display: flex; gap: 4px; align-items: center"><svg class="i is" aria-hidden="true"><use href="#i-alert"></use></svg>ใส่ได้ 10–200 เมตร</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <label for="ds-c" style="font-size: 14px; font-weight: 600">ตึก</label>
+            <select id="ds-c" style="height: 36px; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; background: #FFFFFF; color: #202936"><option>A · อาคารผลิต 1</option></select>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <label for="ds-d" style="font-size: 14px; font-weight: 600; color: #667085">รหัสพื้นที่</label>
+            <input id="ds-d" value="AR01" disabled style="height: 36px; padding: 0 12px; border: 1px solid #E0E5EB; border-radius: 6px; font-size: 14px; color: #667085; background: #F4F6F8">
+            <span style="font-size: 13px; color: #667085">แก้ไม่ได้หลังสร้าง</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700">Badge (ป้ายแยก ไม่ใช่สถานะ)</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 4px; background: #FFFFFF; border: 1px solid #F6C9C4; color: #B42318; font-size: 13px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-wrench"></use></svg>มีปัญหาที่แจ้ง</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 4px; background: #FFFFFF; border: 1px solid #F5D6B0; color: #B45309; font-size: 13px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-pin"></use></svg>ไกลป้าย</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 4px; background: #FFFFFF; border: 1px solid #F5D6B0; color: #B45309; font-size: 13px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-clock"></use></svg>ส่งช้า 20 นาที</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 4px; background: #FFFFFF; border: 1px solid #D9CFF2; color: #6941C6; font-size: 13px; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-swap"></use></svg>ทำแทน</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 4px; background: #F2F4F7; border: 1px solid #E0E5EB; color: #5B6474; font-size: 13px; font-weight: 600">แก้โดยแอดมิน</span>
+        </div>
+        <span style="font-size: 13px; color: #667085">สถานะ = พื้นสีอ่อน สูง 28 · ป้ายแยก = พื้นขาวขอบสี สูง 24 · มองต่างกันได้แม้อยู่ติดกัน</span>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700">Alert</h3>
+        <sc-for list="{{alerts}}" as="al" hint-placeholder-count="4">
+          <div role="status" style="{{al.box}}">
+            <svg class="i" aria-hidden="true" style="{{al.ic}}"><use href="#{{al.icon}}"></use></svg>
+            <div style="display: flex; flex-direction: column"><b style="font-size: 14px">{{al.title}}</b><span style="font-size: 14px">{{al.body}}</span></div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700">Table</h3>
+        <div style="border: 1px solid #E0E5EB; border-radius: 8px; overflow-x: auto">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px">
+            <thead><tr style="background: #F9FAFB; text-align: left; font-size: 13px; color: #667085"><th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #E0E5EB">พื้นที่</th><th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #E0E5EB">แม่บ้าน</th><th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #E0E5EB; text-align: right">เข้างาน</th></tr></thead>
+            <tbody>
+              <tr><td style="padding: 10px 12px; border-bottom: 1px solid #E0E5EB"><b>AR01</b> ห้องน้ำชั้น 1</td><td style="padding: 10px 12px; border-bottom: 1px solid #E0E5EB">สมใจ ใจดี</td><td style="padding: 10px 12px; border-bottom: 1px solid #E0E5EB; text-align: right; font-variant-numeric: tabular-nums">06:52</td></tr>
+              <tr><td style="padding: 10px 12px"><b>AR02</b> โถงชั้น 1</td><td style="padding: 10px 12px; color: #667085">ยังไม่มีคน</td><td style="padding: 10px 12px; text-align: right; color: #667085">–</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul style="margin: 0; padding-left: 20px; color: #667085; font-size: 13px; display: flex; flex-direction: column; gap: 2px">
+          <li>หัวตาราง 13 px พื้น #F9FAFB · แถว 14 px สูงอย่างน้อย 44 · ตัวเลขชิดขวา ใช้ tabular-nums</li>
+          <li>จัดแนว: ข้อความชิดซ้าย · ตัวเลขและเวลาชิดขวา · ชิปสถานะกว้างเท่ากัน 124 px จัดกลางทั้งหัวและเซลล์ · ปุ่มชิดขวา ตำแหน่งตายตัวทุกแถว</li>
+          <li>ตารางกว้างอยู่ในกล่องเลื่อนแนวนอน ไม่ให้ทั้งหน้าเลื่อน</li>
+        </ul>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700">Modal และ Drawer</h3>
+        <div style="background: #8A93A3; border-radius: 8px; padding: 24px; display: flex; justify-content: center">
+          <div role="dialog" aria-label="ตัวอย่าง Modal" style="background: #FFFFFF; border-radius: 8px; box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18); width: 100%; max-width: 360px; display: flex; flex-direction: column">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #E0E5EB; display: flex; justify-content: space-between; align-items: center"><b style="font-size: 16px">ปิดใช้งานบัญชีนี้?</b><button type="button" style="height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; display: inline-flex; gap: 4px; align-items: center"><svg class="i is" aria-hidden="true"><use href="#i-x"></use></svg>ปิด</button></div>
+            <div style="padding: 16px 20px; font-size: 14px">วันเพ็ญ ศรีสุข จะเข้าระบบไม่ได้ ข้อมูลเดิมยังอยู่ เปิดใช้ใหม่ได้ภายหลัง</div>
+            <div style="padding: 12px 20px; border-top: 1px solid #E0E5EB; display: flex; justify-content: flex-end; gap: 8px"><button type="button" style="height: 36px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #202936">ยกเลิก</button><button type="button" style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #B42318; color: #FFFFFF; font-size: 14px; font-weight: 600">ปิดใช้งาน</button></div>
+          </div>
+        </div>
+        <span style="font-size: 13px; color: #667085">Modal กว้าง 480 สำหรับยืนยัน/ฟอร์มสั้น · Drawer ขวากว้าง 480 สำหรับแก้ไขโดยไม่ทิ้งหน้าเดิม · Esc ปิดได้ โฟกัสวนอยู่ข้างใน</span>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <h2 style="margin: 0; font-size: 20px; font-weight: 700">5. สถานะของหน้า (ทุกหน้าต้องมี)</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px" aria-busy="true">
+        <b style="font-size: 14px">กำลังโหลด</b>
+        <div style="display: flex; align-items: center; gap: 8px; color: #667085"><span style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid #E0E5EB; border-top-color: #2457C5; animation: spin 0.9s linear infinite"></span>กำลังโหลด…</div>
+        <div style="height: 12px; border-radius: 4px; background: #E9EDF1"></div>
+        <div style="height: 12px; width: 70%; border-radius: 4px; background: #E9EDF1"></div>
+        <div style="height: 12px; width: 85%; border-radius: 4px; background: #E9EDF1"></div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start">
+        <b style="font-size: 14px">ผิดพลาด</b>
+        <span style="display: flex; gap: 8px; color: #B42318; font-weight: 600"><svg class="i" aria-hidden="true"><use href="#i-x-c"></use></svg>โหลดข้อมูลไม่สำเร็จ</span>
+        <span style="color: #667085">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ข้อมูลที่เห็นอาจไม่ใช่ล่าสุด ลองอีกครั้ง ถ้ายังไม่ได้ให้แจ้งผู้ดูแลระบบ</span>
+        <button type="button" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #202936; display: inline-flex; gap: 8px; align-items: center"><svg class="i is" aria-hidden="true"><use href="#i-refresh"></use></svg>ลองอีกครั้ง</button>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center">
+        <b style="font-size: 14px; align-self: flex-start">ว่าง</b>
+        <svg class="i" aria-hidden="true" style="width: 32px; height: 32px; color: #858F9E"><use href="#i-inbox"></use></svg>
+        <span style="font-weight: 600">ยังไม่มีรายการที่ขึ้นเตือน</span>
+        <span style="color: #667085">เมื่อมีการสแกนผิดพื้นที่หรือไกลป้าย จะขึ้นที่นี่</span>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+        <b style="font-size: 14px">ปิดใช้</b>
+        <div style="display: flex; gap: 8px; background: #F2F4F7; border-radius: 6px; padding: 12px; color: #5B6474"><svg class="i" aria-hidden="true"><use href="#i-lock"></use></svg><span>พื้นที่นี้ปิดใช้งานแล้ว แม่บ้านสแกนป้ายนี้ไม่ได้ เปิดใช้ใหม่ได้ที่ปุ่มด้านบน</span></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1560}}'>
+class Component extends DCLogic {
+renderVals() {
+const sw = (hex, border) => 'height: 56px; background: ' + hex + (border ? '; border-bottom: 1px solid #E0E5EB' : '');
+const neutrals = [
+  ['พื้นหลัง', 'bg', '#F4F6F8', 'พื้นทั้งหน้า', true],
+  ['พื้นเนื้อหา', 'surface', '#FFFFFF', 'การ์ด ตาราง ฟอร์ม', true],
+  ['พื้นหัวตาราง', 'surface-2', '#F9FAFB', 'หัวตาราง แถวที่เลือกไม่ได้', true],
+  ['ตัวหนังสือหลัก', 'text', '#202936', '14.5:1 บนขาว'],
+  ['ตัวหนังสือรอง', 'text-2', '#667085', '4.8:1 บนขาว'],
+  ['เส้นแบ่ง', 'border', '#E0E5EB', 'เส้นการ์ดและแถว (ตกแต่ง)'],
+  ['ขอบช่องกรอก', 'border-control', '#858F9E', '3.3:1 ขอบปุ่มรองและช่องกรอก'],
+  ['สีหลัก', 'accent', '#2457C5', 'ปุ่มหลัก ลิงก์ โฟกัส 6.5:1'],
+  ['สีหลักตอนชี้', 'accent-hover', '#1D4AA8', 'hover / pressed'],
+  ['พื้นสีหลัก', 'accent-subtle', '#EEF3FC', 'เมนูที่เลือก ตัวเลือกที่เลือก', true]
+].map((r) => ({ name: r[0], token: r[1], hex: r[2], use: r[3], sw: sw(r[2], r[4]) }));
+const chip = (c, bg, bd) => 'display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; height: 28px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; color: ' + c + '; background: ' + bg + '; border: 1px solid ' + bd;
+const statuses = [
+  ['ต้องแก้ไข', 'i-redo', 'หัวหน้าตรวจแล้วไม่สะอาด ต้องทำใหม่ (ด่วนที่สุด)', 'error', '#B42318', '#FEF3F2', '#F6C9C4', '6.5:1'],
+  ['เลยเวลา', 'i-clock', 'พ้นเวลารอบแล้วยังไม่ส่ง', 'warning', '#B45309', '#FEF6EC', '#F5D6B0', '5.0:1'],
+  ['รอตรวจ', 'i-hour', 'แม่บ้านส่งแล้ว รอหัวหน้าตรวจ', 'info (เพิ่ม)', '#0B6E8A', '#EBF6FA', '#B4DCE8', '5.8:1'],
+  ['ตรวจผ่าน', 'i-check', 'หัวหน้าตรวจแล้วสะอาด', 'success', '#16803C', '#EDF7F0', '#B9DFC6', '5.0:1'],
+  ['ยังไม่ทำ', 'i-minus', 'ยังไม่ทำ / ยังไม่ถึงรอบ / นอกเวลา (ไม่มีอะไรต้องทำ)', 'neutral (เพิ่ม)', '#5B6474', '#F2F4F7', '#E0E5EB', '6.0:1'],
+  ['พัก', 'i-coffee', 'แม่บ้านพักเบรก (หน้าการเข้างาน)', 'break (เพิ่ม)', '#6941C6', '#F4F1FB', '#D9CFF2', '6.6:1']
+].map((r) => ({ label: r[0], icon: r[1], mean: r[2], token: r[3], hexes: r[4] + ' / ' + r[5] + ' / ' + r[6], ratio: r[7], chip: chip(r[4], r[5], r[6]) }));
+const type = [
+  ['30 / 700', 'font-size: 30px; font-weight: 700; line-height: 1.3', 'สถานะจุด', 'หัวหน้าเว็บ (ใช้ไม่บ่อย)'],
+  ['24 / 700', 'font-size: 24px; font-weight: 700; line-height: 1.3', 'การเข้างาน', 'หัวหน้าเพจ · ชื่อจุดบนมือถือ'],
+  ['20 / 700', 'font-size: 20px; font-weight: 700; line-height: 1.3', 'ตึก A · กะเช้า', 'หัวข้อส่วน · ผลการส่ง'],
+  ['18 / 600', 'font-size: 18px; font-weight: 600', 'AR01 ห้องน้ำชั้น 1', 'หัวกลุ่ม · ปุ่มมือถือ'],
+  ['16 / 400', 'font-size: 16px', 'ส่งแล้ว 2 จาก 5 จุด', 'เนื้อหามือถือ'],
+  ['14 / 400', 'font-size: 14px', 'รอบ 10:00–12:00', 'เนื้อหาคอมพิวเตอร์'],
+  ['13 / 400', 'font-size: 13px; color: #667085', 'อัปเดต 10:42', 'ข้อมูลรอง เล็กสุดที่ใช้']
+].map((r) => ({ px: r[0], style: r[1], sample: r[2], use: r[3] }));
+const space = [[4, 'ไอคอนกับคำ'], [8, 'ระหว่างชิป ปุ่ม'], [12, 'ในแถวรายการ'], [16, 'ขอบมือถือ ในการ์ด'], [20, 'ในการ์ดใหญ่'], [24, 'ขอบคอมพิวเตอร์ ระหว่างการ์ด'], [32, 'ระหว่างส่วน'], [48, 'ระหว่างกลุ่มใหญ่'], [64, 'ใช้น้อย']].map((r) => ({ name: 'space-' + r[0], use: r[0] + ' px · ' + r[1], bar: 'flex: none; height: 12px; border-radius: 2px; background: #2457C5; opacity: 0.85; width: ' + (r[0] * 2) + 'px' }));
+const ab = (c, bg, bd) => 'display: flex; gap: 12px; padding: 12px 16px; border-radius: 6px; color: #202936; background: ' + bg + '; border: 1px solid ' + bd;
+const alerts = [
+  ['i-info', 'ข้อมูล', 'ระบบนี้ไม่ใช่ระบบลงเวลาทำงาน และไม่คิดสาย', '#0B6E8A', '#EBF6FA', '#B4DCE8'],
+  ['i-check-c', 'สำเร็จ', 'บันทึกการแก้เวลาแล้ว · ติดป้าย "แก้โดยแอดมิน"', '#16803C', '#EDF7F0', '#B9DFC6'],
+  ['i-alert', 'คำเตือน', 'ไฟล์มีชื่อและเบอร์โทรพนักงาน เก็บในที่ปลอดภัย', '#B45309', '#FEF6EC', '#F5D6B0'],
+  ['i-x-c', 'ผิดพลาด', 'บันทึกไม่สำเร็จ ลองอีกครั้ง ข้อมูลที่กรอกยังอยู่', '#B42318', '#FEF3F2', '#F6C9C4']
+].map((r) => ({ icon: r[0], title: r[1], body: r[2], box: ab(r[3], r[4], r[5]), ic: 'color: ' + r[3] + '; margin-top: 1px' }));
+return { neutrals: neutrals, statuses: statuses, type: type, space: space, alerts: alerts };
+}
+}
+</script>
+</body>
+</html>

@@ -15,7 +15,7 @@ export function OffDuty({ reason, point }: { reason: OffDutyReason; point: Point
   return (
     <main className="flex flex-col gap-4 text-base text-text">
       <header className="flex flex-col gap-1">
-        <span className="text-md tracking-wide text-muted">{`ป้ายจุดทำความสะอาด · ${point.name} · ${point.areaName}`}</span>
+        <span className="text-sm tracking-wide text-text-2">{`ป้ายจุดทำความสะอาด · ${point.name} · ${point.areaName}`}</span>
         <h1 className="text-2xl font-bold">{text[reason].title}</h1>
       </header>
       <Note tone="error" alert={false} title="ไม่ได้บันทึกงาน">
@@ -24,7 +24,7 @@ export function OffDuty({ reason, point }: { reason: OffDutyReason; point: Point
       {reason === 'not-checked-in' && (
         <>
           <p>เดินไปที่ป้ายลงเวลา สแกนด้วยกล้องมือถือ กด "เข้างาน" แล้วกลับมาสแกนจุดนี้ใหม่</p>
-          <p className="text-md text-muted">
+          <p className="text-sm text-text-2">
             ถ้าลงเวลาไม่ได้ (มือถือแบตหมด ไม่มีเน็ต) แจ้งแอดมินให้เพิ่มเวลาเข้างานให้ แอดมินต้องใส่เหตุผลทุกครั้ง
           </p>
         </>

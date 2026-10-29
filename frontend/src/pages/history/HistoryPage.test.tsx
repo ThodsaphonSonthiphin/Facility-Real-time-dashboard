@@ -166,11 +166,11 @@ describe('HistoryPage (D9, facility-0057)', () => {
     expect(await screen.findByText('ไม่มีประวัติในช่วงนี้')).toBeInTheDocument();
   });
 
-  it('is in the Admin menu as ประวัติการแก้ไขของแอดมิน', async () => {
+  it('is in the Admin menu as ประวัติการแก้ไข', async () => {
     serve();
     await renderApp('/admin/history');
     const menu = await screen.findByRole('navigation', { name: 'เมนูแอดมิน' });
-    expect(within(menu).getByRole('link', { name: 'ประวัติการแก้ไขของแอดมิน' })).toHaveAttribute('aria-current', 'page');
+    expect(within(menu).getByRole('link', { name: 'ประวัติการแก้ไข' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('the typed range follows the address when the menu link opens the page again', async () => {
@@ -179,7 +179,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
     await screen.findByText('แสดง 5 รายการ');
     expect(fromField()).toHaveValue('01/10/2026');
 
-    await user.click(within(screen.getByRole('navigation', { name: 'เมนูแอดมิน' })).getByRole('link', { name: 'ประวัติการแก้ไขของแอดมิน' }));
+    await user.click(within(screen.getByRole('navigation', { name: 'เมนูแอดมิน' })).getByRole('link', { name: 'ประวัติการแก้ไข' }));
 
     await waitFor(() => expect(fromField()).toHaveValue(formatShiftDate(addDays(thaiToday(), -6))));
     expect(toField()).toHaveValue(formatShiftDate(thaiToday()));

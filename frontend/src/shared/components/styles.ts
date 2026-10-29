@@ -11,13 +11,13 @@ import type { PointStatus } from '../api/types';
  * facility-0087 rule 3: the three statuses with nothing to do share one grey.
  */
 export const statusBg: Record<PointStatus, string> = {
-  Rework: 'bg-status-rework',
-  Overdue: 'bg-status-overdue',
-  PendingInspection: 'bg-status-pending',
-  Passed: 'bg-status-passed',
-  NotYetDone: 'bg-status-idle',
-  BeforeFirstRound: 'bg-status-idle',
-  OffHours: 'bg-status-idle',
+  Rework: 'bg-rework',
+  Overdue: 'bg-overdue',
+  PendingInspection: 'bg-pending',
+  Passed: 'bg-passed',
+  NotYetDone: 'bg-idle',
+  BeforeFirstRound: 'bg-idle',
+  OffHours: 'bg-idle',
 };
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'link';
@@ -26,17 +26,17 @@ export type ButtonSize = 'phone' | 'main' | 'desk';
 export type InputSize = 'phone' | 'desk';
 
 /** The keyboard focus ring of every control (MASTER.md: visible focus on every control). */
-export const focusRing = 'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary';
+export const focusRing = 'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent';
 
-const buttonBase = `inline-flex items-center justify-center gap-2 rounded border font-semibold cursor-pointer ${focusRing} disabled:cursor-not-allowed disabled:opacity-50`;
+const buttonBase = `inline-flex items-center justify-center gap-2 rounded-lg border font-semibold cursor-pointer ${focusRing} disabled:cursor-not-allowed disabled:opacity-50`;
 
 // Blue means "can be pressed" (facility-0087 rule 2). danger confirms what cannot be undone: the error note's red as
 // text and border on white, never a status colour (owner, 2026-10-22)
 const buttonVariants: Record<ButtonVariant, string> = {
-  primary: 'border-primary bg-primary text-on-primary no-underline hover:border-primary-strong hover:bg-primary-strong',
-  secondary: 'border-input-border bg-surface text-text no-underline hover:border-primary',
-  danger: 'border-error-text bg-surface text-error-text no-underline hover:bg-error-bg',
-  link: 'border-transparent bg-transparent text-primary underline hover:text-primary-strong',
+  primary: 'border-accent bg-accent text-on-accent no-underline hover:border-accent-hover hover:bg-accent-hover',
+  secondary: 'border-border-control bg-surface text-text no-underline hover:border-accent',
+  danger: 'border-rework bg-surface text-rework no-underline hover:bg-rework-bg',
+  link: 'border-transparent bg-transparent text-accent underline hover:text-accent-hover',
 };
 
 const buttonSizes: Record<ButtonSize, string> = {
@@ -60,7 +60,7 @@ export function buttonClass(variant: ButtonVariant = 'secondary', size: ButtonSi
   return `${buttonBase} ${buttonVariants[variant]} ${buttonSizes[size]} ${padding}`;
 }
 
-const inputBase = `rounded border border-input-border bg-surface text-text ${focusRing} disabled:opacity-50`;
+const inputBase = `rounded-lg border border-border-control bg-surface text-text ${focusRing} disabled:opacity-50`;
 
 const inputSizes: Record<InputSize, string> = {
   phone: 'min-h-12 px-3 text-base',
@@ -87,8 +87,8 @@ export function textAreaClass(size: InputSize = 'phone'): string {
  * the one that is on gets a blue frame, since blue means "can be pressed". Give it `data-tap` for the press feedback.
  */
 export const toggleClass =
-  'inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded border border-input-border bg-surface px-2.5 text-text ' +
-  'ring-primary ring-inset enabled:hover:border-primary aria-pressed:border-primary aria-pressed:ring-1 ' +
+  'inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-border-control bg-surface px-2.5 text-text ' +
+  'ring-accent ring-inset enabled:hover:border-accent aria-pressed:border-accent aria-pressed:ring-1 ' +
   `disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`;
 
 /**
@@ -100,12 +100,12 @@ export const tabListClass = 'flex gap-6 border-b border-border';
 
 export const tabClass =
   'inline-flex min-h-9 -mb-px cursor-pointer items-center gap-1.5 border-x-0 border-t-0 border-b-2 border-transparent ' +
-  'bg-transparent px-0.5 pb-2 font-semibold text-muted hover:text-primary ' +
-  'aria-selected:border-primary aria-selected:text-primary ' +
+  'bg-transparent px-0.5 pb-2 font-semibold text-text-2 hover:text-accent ' +
+  'aria-selected:border-accent aria-selected:text-accent ' +
   `${focusRing}`;
 
 /** A text link. */
-export const linkClass = `text-primary underline hover:text-primary-strong ${focusRing}`;
+export const linkClass = `text-accent underline hover:text-accent-hover ${focusRing}`;
 
 /**
  * A text link inside a sentence on a phone page: its tap area is 48 px high, but its words and the lines around them stay
@@ -117,22 +117,22 @@ export type NoteTone = 'info' | 'warn' | 'error';
 
 /** A note's border, background and text colours, for a note box and for a chip in a note's colours (D3's alert kinds). */
 export const noteTones: Record<NoteTone, string> = {
-  info: 'border-info-border bg-info-bg text-info-text',
-  warn: 'border-warn-border bg-warn-bg text-warn-text',
-  error: 'border-error-border bg-error-bg text-error-text',
+  info: 'border-pending-border bg-pending-bg text-pending',
+  warn: 'border-overdue-border bg-overdue-bg text-overdue',
+  error: 'border-rework-border bg-rework-bg text-rework',
 };
 
 /** A note box's frame and colours, for Note and for a box that must be a `<section>` with its own heading. */
 export function noteClass(tone: NoteTone): string {
-  return `rounded border px-3.5 py-2.5 ${noteTones[tone]}`;
+  return `rounded-lg border px-3.5 py-2.5 ${noteTones[tone]}`;
 }
 
 /** The white box with a thin border that Panel and Facts share. */
-export const boxClass = 'rounded border border-border bg-surface px-4 py-3.5';
+export const boxClass = 'rounded-lg border border-border bg-surface px-4 py-3.5';
 
 /** The full-page message of StatusScreen and CrashScreen. */
 export const statusScreenClass = {
-  main: 'mx-auto flex max-w-phone flex-col gap-3 px-5 py-12 text-center text-base',
+  main: 'mx-auto flex max-w-mobile flex-col gap-3 px-5 py-12 text-center text-base',
   title: 'text-xl font-bold',
 };
 

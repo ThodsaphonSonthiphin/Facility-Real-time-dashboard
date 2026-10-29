@@ -8,7 +8,7 @@ An Admin at a desk with a mouse and keyboard, on a computer screen, watching man
 
 ## Layout
 
-- Content width up to `--desk-width` (1216 px); must still work at 1280 px wide without horizontal page scroll (wide tables scroll inside their own box).
+- The menu is a 240 px sidebar from 1024 px, above the page when narrower (`../MASTER.md` Layout). Content width up to `--container-content` (1216 px) with 24 px around it; must still work at 1280 px wide without horizontal page scroll (wide tables scroll inside their own box).
 - Same light theme as the phone; no dark theme.
 
 ## Type and density

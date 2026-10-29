@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>บัญชีผู้ใช้</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+th{font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid #E0E5EB;font-size:13px;color:#667085;background:#F9FAFB;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #E0E5EB;vertical-align:middle;height:56px}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></symbol>
+<symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-bld" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></symbol>
+<symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5v14"></path></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></symbol>
+<symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"></path><path d="M18.4 6.6a9 9 0 1 1-12.77.04"></path></symbol>
+<symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"></path></symbol>
+</svg>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="เมนูหลัก" style="flex: 1 1 240px; background: #FFFFFF; border-right: 1px solid #E0E5EB; padding: 20px 12px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; padding: 0 12px">
+      <span style="font-size: 16px; font-weight: 700">ระบบตรวจงานแม่บ้าน</span>
+      <span style="font-size: 13px; color: #667085">แอดมิน</span>
+    </div>
+    <sc-for list="{{nav}}" as="g" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; font-weight: 600; color: #667085; padding: 0 12px 4px">{{g.title}}</span>
+        <sc-for list="{{g.items}}" as="it" hint-placeholder-count="5">
+          <a href="{{it.href}}" aria-current="{{it.current}}" style="{{it.style}}"><svg class="i" aria-hidden="true"><use href="#{{it.icon}}"></use></svg><span style="flex: 1">{{it.label}}</span><sc-if value="{{it.hasBadge}}" hint-placeholder-val="{{false}}"><span style="min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; background: #B42318; color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{it.badge}}</span></sc-if></a>
+        </sc-for>
+      </div>
+    </sc-for>
+    <div style="margin-top: auto; border-top: 1px solid #E0E5EB; padding: 16px 12px 0; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 14px; font-weight: 600">ผู้ดูแลระบบ 01</span>
+      <a href="AdminLogin.dc.html" style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; text-decoration: none; min-height: 36px"><svg class="i is" aria-hidden="true"><use href="#i-logout"></use></svg>ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div style="flex: 999 1 640px; min-width: 0; padding: 24px; display: flex; justify-content: center">
+  <main style="width: 100%; max-width: 1216px; display: flex; flex-direction: column; gap: 24px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.3">บัญชีผู้ใช้</h1>
+        <span style="font-size: 14px; color: #667085">สร้างทีละคน แม่บ้านผูกกับพื้นที่ หัวหน้าผูกกับตึกและกะ</span>
+      </div>
+      <button type="button" onClick="{{openNew}}" style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #2457C5; color: #FFFFFF; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer"><svg class="i is" aria-hidden="true"><use href="#i-plus"></use></svg>สร้างบัญชี</button>
+    </header>
+
+    <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid #E0E5EB">
+        <div role="tablist" aria-label="ประเภทบัญชี" style="display: flex; gap: 4px">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+            <button type="button" role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}<span style="{{t.countStyle}}">{{t.n}}</span></button>
+          </sc-for>
+        </div>
+        <label style="position: relative; display: flex; align-items: center; padding: 8px 0"><span style="position: absolute; left: 10px; color: #667085; display: flex"><svg class="i is" aria-hidden="true"><use href="#i-search"></use></svg></span><input type="search" aria-label="ค้นหาบัญชี" placeholder="ค้นหาชื่อหรือรหัสพนักงาน" style="width: 280px; max-width: 100%; height: 36px; padding: 0 12px 0 34px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></label>
+      </div>
+      <div style="overflow-x: auto">
+        <table style="width: 100%; min-width: 880px; border-collapse: collapse; font-size: 14px">
+          <thead><tr><th>ชื่อ</th><th>{{idCol}}</th><th>เบอร์โทร</th><th>{{bindCol}}</th><th style="text-align: center; width: 148px">สถานะ</th><th><span style="position: absolute; width: 1px; height: 1px; overflow: hidden">การกระทำ</span></th></tr></thead>
+          <tbody>
+            <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+              <tr style="{{r.rowStyle}}">
+                <td><b style="{{r.nameStyle}}">{{r.name}}</b></td>
+                <td style="font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px">{{r.id}}</td>
+                <td style="font-variant-numeric: tabular-nums">{{r.phone}}</td>
+                <td>{{r.bind}}</td>
+                <td style="text-align: center"><span style="{{r.chip}}"><svg class="i is" aria-hidden="true"><use href="#{{r.icon}}"></use></svg>{{r.state}}</span></td>
+                <td style="white-space: nowrap; width: 1%"><div style="display: grid; grid-template-columns: 64px 84px 120px; align-items: center; gap: 4px">
+                  <button type="button" style="height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-pencil"></use></svg>แก้</button>
+                  <button type="button" style="height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-rotate"></use></svg>รีเซ็ต</button>
+                  <sc-if value="{{r.active}}" hint-placeholder-val="{{true}}"><button type="button" onClick="{{openOff}}" style="width: 120px; height: 32px; padding: 0 10px; border: 1px solid #B42318; border-radius: 6px; background: #FFFFFF; color: #B42318; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer"><svg class="i is" aria-hidden="true"><use href="#i-power"></use></svg>ปิดใช้งาน</button></sc-if>
+                  <sc-if value="{{r.inactive}}" hint-placeholder-val="{{false}}"><button type="button" style="width: 120px; height: 32px; padding: 0 10px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; color: #202936; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px"><svg class="i is" aria-hidden="true"><use href="#i-power"></use></svg>เปิดใช้</button></sc-if>
+                </div></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding: 12px 16px; font-size: 14px; color: #667085">แสดง 1–6 จาก {{total}}</div>
+    </div>
+  </main>
+  </div>
+
+  <sc-if value="{{showOff}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(16, 24, 40, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="off-t" aria-describedby="off-d" style="background: #FFFFFF; border-radius: 8px; box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18); width: 100%; max-width: 480px; display: flex; flex-direction: column">
+        <div style="padding: 20px 24px 0; display: flex; flex-direction: column; gap: 8px">
+          <b id="off-t" style="font-size: 18px">ปิดใช้งานบัญชีของ สุดา แสงทอง?</b>
+          <span id="off-d">เข้าระบบไม่ได้ทันที งานและเวลาที่บันทึกไว้ยังอยู่ครบ เปิดใช้ใหม่ได้ภายหลัง พื้นที่ AR02 โถงชั้น 1 จะไม่มีแม่บ้านกะเช้าจนกว่าจะผูกคนใหม่หรือมอบหมายทำแทน</span>
+        </div>
+        <div style="padding: 20px 24px; display: flex; justify-content: flex-end; gap: 8px">
+          <button type="button" onClick="{{close}}" style="height: 36px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #202936; cursor: pointer">ยกเลิก</button>
+          <button type="button" style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #B42318; color: #FFFFFF; font-size: 14px; font-weight: 600">ปิดใช้งาน</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{showNew}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(16, 24, 40, 0.45); display: flex; justify-content: flex-end">
+      <aside role="dialog" aria-modal="true" aria-labelledby="new-t" style="background: #FFFFFF; width: 100%; max-width: 480px; height: 100%; box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18); display: flex; flex-direction: column">
+        <div style="padding: 16px 24px; border-bottom: 1px solid #E0E5EB; display: flex; justify-content: space-between; align-items: center">
+          <b id="new-t" style="font-size: 18px">สร้างบัญชี</b>
+          <button type="button" onClick="{{close}}" style="height: 32px; padding: 0 8px; border: 0; background: transparent; color: #2457C5; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; cursor: pointer"><svg class="i is" aria-hidden="true"><use href="#i-x"></use></svg>ปิด</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 20px">
+          <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px"><legend style="padding: 0; font-weight: 600; margin-bottom: 4px">ประเภท</legend>
+            <div style="display: flex; border: 1px solid #858F9E; border-radius: 6px; overflow: hidden; align-self: flex-start">
+              <button type="button" aria-pressed="true" style="height: 34px; padding: 0 14px; border: 0; background: #2457C5; color: #FFFFFF; font-size: 14px; font-weight: 600">แม่บ้าน</button>
+              <button type="button" aria-pressed="false" style="height: 34px; padding: 0 14px; border: 0; border-left: 1px solid #858F9E; background: #FFFFFF; color: #202936; font-size: 14px; font-weight: 600">หัวหน้า</button>
+              <button type="button" aria-pressed="false" style="height: 34px; padding: 0 14px; border: 0; border-left: 1px solid #858F9E; background: #FFFFFF; color: #202936; font-size: 14px; font-weight: 600">แอดมิน</button>
+            </div>
+          </fieldset>
+          <div style="display: flex; flex-direction: column; gap: 4px"><label for="nn" style="font-weight: 600">ชื่อ-นามสกุล</label><input id="nn" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="ni" style="font-weight: 600">รหัสพนักงาน</label><input id="ni" inputmode="numeric" maxlength="7" placeholder="7 หลัก" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></div>
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="np" style="font-weight: 600">เบอร์โทร</label><input id="np" inputmode="tel" placeholder="00000000xx" style="height: 36px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936"></div>
+          </div>
+          <span style="font-size: 13px; color: #667085; margin-top: -12px">แม่บ้านเข้าระบบด้วยรหัสพนักงาน + เบอร์โทร</span>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="na" style="font-weight: 600">พื้นที่</label><select id="na" style="height: 36px; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936; background: #FFFFFF"><option>AR02 โถงชั้น 1 · ตึก A</option></select></div>
+            <div style="display: flex; flex-direction: column; gap: 4px"><label for="ns" style="font-weight: 600">กะ</label><select id="ns" style="height: 36px; padding: 0 8px; border: 1px solid #858F9E; border-radius: 6px; font-size: 14px; color: #202936; background: #FFFFFF"><option>กะเช้า</option><option>กะดึก</option></select></div>
+          </div>
+        </div>
+        <div style="padding: 12px 24px; border-top: 1px solid #E0E5EB; display: flex; justify-content: flex-end; gap: 8px">
+          <button type="button" onClick="{{close}}" style="height: 36px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #202936; cursor: pointer">ยกเลิก</button>
+          <button type="button" style="height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: #2457C5; color: #FFFFFF; font-size: 14px; font-weight: 600">สร้างบัญชี</button>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dialog":{"editor":"enum","options":["ไม่มี","สร้างบัญชี","ยืนยันปิดใช้งาน"],"default":"ไม่มี"},"$preview":{"width":1280,"height":1000}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { tab: 'cleaner', open: null }; }
+renderVals() {
+const ACTIVE = 'acc';
+const NAV = [['ติดตามงาน', [['dash', 'สถานะจุด', 'i-grid', 'Dashboard.dc.html'], ['att', 'การเข้างาน', 'i-users', 'Attendance.dc.html'], ['alert', 'รายการที่ขึ้นเตือน', 'i-alert', 'Alerts.dc.html', '7'], ['sum', 'สรุปการตรวจ', 'i-clip', 'InspectSummary.dc.html'], ['exp', 'ส่งออก Excel', 'i-dl', 'Export.dc.html']]], ['ตั้งค่า', [['area', 'พื้นที่และป้าย', 'i-pin', 'Areas.dc.html'], ['bld', 'ตึก', 'i-bld', 'Buildings.dc.html'], ['print', 'พิมพ์ป้าย', 'i-print', 'PrintSigns.dc.html'], ['acc', 'บัญชีผู้ใช้', 'i-user', 'Accounts.dc.html'], ['log', 'ประวัติการแก้ไข', 'i-hist', 'AuditLog.dc.html']]]];
+const navBase = 'display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; ';
+const nav = NAV.map((g) => ({ title: g[0], items: g[1].map((x) => ({ label: x[1], icon: x[2], href: x[3], badge: x[4] || '', hasBadge: !!x[4], current: x[0] === ACTIVE ? 'page' : undefined, style: navBase + (x[0] === ACTIVE ? 'background: #EEF3FC; color: #2457C5; font-weight: 600' : 'color: #344054; font-weight: 500') })) }));
+const on = 'display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 124px; white-space: nowrap; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; background: #EDF7F0; color: #16803C; border: 1px solid #B9DFC6';
+const off = 'display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 124px; white-space: nowrap; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; background: #F2F4F7; color: #5B6474; border: 1px solid #E0E5EB';
+const D = {
+  cleaner: [['สมใจ ใจดี', '6600112', '0000000011', 'AR01 ห้องน้ำชั้น 1 · กะเช้า', true], ['สุดา แสงทอง', '6600145', '0000000012', 'AR02 โถงชั้น 1 · กะเช้า', true], ['อำไพ ศรีเมือง', '6600187', '0000000013', 'AR01 ห้องน้ำชั้น 1 · กะดึก', true], ['บุญมี รักงาน', '6600203', '0000000014', 'AR14 โรงอาหาร · กะเช้า', true], ['วันเพ็ญ ศรีสุข', '6600219', '0000000015', 'AR21 ห้องน้ำชั้น 2 · กะเช้า', true], ['กมล ทองดี', '6600251', '0000000016', 'ยังไม่ผูกพื้นที่', false]],
+  sup: [['ประภา มั่นคง', '5500031', '0000000021', 'ตึก A · กะเช้า', true], ['สมพร ดีเลิศ', '5500042', '0000000022', 'ตึก A · กะดึก', true], ['ธนา พงษ์ไพร', '5500058', '0000000023', 'ตึก B · กะเช้า', true], ['ศิริพร ใจงาม', '5500061', '0000000024', 'ตึก C · กะเช้า', true], ['อรุณี แก้วใส', '5500077', '0000000025', 'ตึก D · กะเช้า', true], ['ชัยวัฒน์ ศรีงาม', '5500083', '0000000026', 'ตึก E · กะเช้า', true]],
+  admin: [['ผู้ดูแลระบบ 01', 'admin01', '0000000031', 'ทุกตึก', true], ['ผู้ดูแลระบบ 02', 'admin02', '0000000032', 'ทุกตึก', true]]
+};
+const T = [['cleaner', 'แม่บ้าน', 168], ['sup', 'หัวหน้า', 12], ['admin', 'แอดมิน', 2]];
+const tab = this.state.tab;
+const tabs = T.map((t) => {
+  const a = tab === t[0];
+  return { label: t[1], n: t[2], selected: a ? 'true' : 'false', pick: () => this.setState({ tab: t[0] }),
+    style: 'height: 52px; padding: 0 12px; border: 0; background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; margin-bottom: -1px; color: ' + (a ? '#2457C5' : '#344054') + '; border-bottom: 2px solid ' + (a ? '#2457C5' : 'transparent'),
+    countStyle: 'min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; background: ' + (a ? '#EEF3FC' : '#F2F4F7') + '; color: ' + (a ? '#2457C5' : '#5B6474') };
+});
+const rows = D[tab].map((r) => ({ name: r[0], id: r[1], phone: r[2], bind: r[3], active: r[4], inactive: !r[4], state: r[4] ? 'ใช้งานอยู่' : 'ปิดใช้งาน', chip: r[4] ? on : off, icon: r[4] ? 'i-check' : 'i-minus', rowStyle: r[4] ? '' : 'background: #F9FAFB', nameStyle: r[4] ? '' : 'color: #667085' }));
+const d = this.state.open || (this.props.dialog === 'สร้างบัญชี' ? 'new' : this.props.dialog === 'ยืนยันปิดใช้งาน' ? 'off' : null);
+return { nav: nav, tabs: tabs, rows: rows, total: T.find((t) => t[0] === tab)[2],
+  idCol: tab === 'admin' ? 'ชื่อผู้ใช้' : 'รหัสพนักงาน', bindCol: tab === 'cleaner' ? 'พื้นที่ · กะ' : 'ตึก · กะ',
+  showOff: d === 'off', showNew: d === 'new',
+  openOff: () => this.setState({ open: 'off' }), openNew: () => this.setState({ open: 'new' }), close: () => this.setState({ open: 'none' }) };
+}
+}
+</script>
+</body>
+</html>

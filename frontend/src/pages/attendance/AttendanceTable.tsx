@@ -15,14 +15,14 @@ interface AttendanceTableProps {
 
 // The Area's state in the status colours, always with its words; พัก has its own (MASTER.md, facility-0087)
 const stateBg: Record<AreaAttendanceState, string> = {
-  Empty: 'bg-status-rework',
-  Working: 'bg-status-passed',
-  OnBreak: 'bg-status-break',
-  Done: 'bg-status-idle',
-  Covered: 'bg-status-pending',
+  Empty: 'bg-rework',
+  Working: 'bg-passed',
+  OnBreak: 'bg-break',
+  Done: 'bg-idle',
+  Covered: 'bg-pending',
 };
 
-const subClass = 'block text-xs font-normal text-muted';
+const subClass = 'block text-xs font-normal text-text-2';
 
 /** Wireframe D2's table, in the server's order: Areas with nobody first (facility-0050). Names are React text only. */
 export function AttendanceTable({ rows, onCorrect }: AttendanceTableProps) {
@@ -49,7 +49,7 @@ export function AttendanceTable({ rows, onCorrect }: AttendanceTableProps) {
       <tbody>
         {rows.map((row) => (
           // An Area with nobody is tinted across the row, as in the old look; [&>*] reaches its th and td cells
-          <tr key={row.areaId} className={row.state === 'Empty' ? '[&>*]:bg-error-bg' : undefined}>
+          <tr key={row.areaId} className={row.state === 'Empty' ? '[&>*]:bg-rework-bg' : undefined}>
             <th scope="row">
               {`${row.areaCode} ${row.areaName}`}
               <span className={subClass}>{`ตึก ${buildingText(row.buildingCode, names)}`}</span>
@@ -59,7 +59,7 @@ export function AttendanceTable({ rows, onCorrect }: AttendanceTableProps) {
             </td>
             <td>
               <span
-                className={`inline-block rounded-full px-2.5 py-0.5 font-semibold whitespace-nowrap text-on-primary ${stateBg[row.state]}`}
+                className={`inline-block rounded-full px-2.5 py-0.5 font-semibold whitespace-nowrap text-on-accent ${stateBg[row.state]}`}
               >
                 {areaStateLabel[row.state]}
               </span>
@@ -113,7 +113,7 @@ function EventTime({ event }: { event?: BoardEvent }) {
     <>
       {formatTime(event.occurredAt)}
       {event.source !== 'Scan' && (
-        <span className="ml-1.5 rounded border border-warn-border bg-warn-bg px-1.5 text-xs whitespace-nowrap text-warn-text">
+        <span className="ml-1.5 rounded-lg border border-overdue-border bg-overdue-bg px-1.5 text-xs whitespace-nowrap text-overdue">
           แก้โดยแอดมิน
         </span>
       )}

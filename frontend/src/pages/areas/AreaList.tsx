@@ -11,9 +11,9 @@ interface AreaListProps {
 }
 
 // A row of the list: the whole row is the link; the open Area carries a blue frame, since blue means "pressed/current"
-const itemClass = `flex flex-col gap-1 rounded border px-2.5 py-2 text-text no-underline ${focusRing}`;
-const itemChosenClass = 'border-primary bg-info-bg';
-const itemIdleClass = 'border-transparent hover:border-input-border';
+const itemClass = `flex flex-col gap-1 rounded-lg border px-2.5 py-2 text-text no-underline ${focusRing}`;
+const itemChosenClass = 'border-accent bg-accent-subtle';
+const itemIdleClass = 'border-transparent hover:border-border-control';
 
 /** Wireframe D4, left: every Area, deactivated ones too; the open one is marked. */
 export function AreaList({ areas, selectedId, loading }: AreaListProps) {
@@ -26,7 +26,7 @@ export function AreaList({ areas, selectedId, loading }: AreaListProps) {
           + เพิ่มพื้นที่
         </Link>
       </div>
-      {loading && <p className="text-muted">กำลังโหลดพื้นที่...</p>}
+      {loading && <p className="text-text-2">กำลังโหลดพื้นที่...</p>}
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {areas?.map((area) => {
           const selected = area.id === selectedId;
@@ -37,8 +37,8 @@ export function AreaList({ areas, selectedId, loading }: AreaListProps) {
                 className={`${itemClass} ${selected ? itemChosenClass : itemIdleClass}`}
                 aria-current={selected ? 'true' : undefined}
               >
-                <span className={area.isActive ? 'font-semibold' : 'font-semibold text-muted'}>{`${area.code} ${area.name}`}</span>
-                <span className="text-muted">{areaMeta(area, names)}</span>
+                <span className={area.isActive ? 'font-semibold' : 'font-semibold text-text-2'}>{`${area.code} ${area.name}`}</span>
+                <span className="text-text-2">{areaMeta(area, names)}</span>
               </Link>
             </li>
           );

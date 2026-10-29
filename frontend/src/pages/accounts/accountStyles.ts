@@ -10,4 +10,4 @@ export const formTitleClass = 'text-lg font-semibold';
  */
 export const radioLabelClass =
   'inline-flex min-h-9 items-center gap-2 has-disabled:cursor-not-allowed has-disabled:opacity-50';
-export const radioClass = `accent-primary ${focusRing}`;
+export const radioClass = `accent-accent ${focusRing}`;

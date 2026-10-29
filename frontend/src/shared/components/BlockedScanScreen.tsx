@@ -25,7 +25,7 @@ const notSaved: Record<BlockedScanScreenProps['sign'], string> = {
 export function BlockedScanScreen({ blocked, sign, ownAreaName }: BlockedScanScreenProps) {
   return (
     <main className={helpScreenClass.main}>
-      <span className="text-md tracking-wide text-muted">{sign === 'check-in' ? 'ป้ายลงเวลา' : 'ป้ายจุดทำความสะอาด'}</span>
+      <span className="text-sm tracking-wide text-text-2">{sign === 'check-in' ? 'ป้ายลงเวลา' : 'ป้ายจุดทำความสะอาด'}</span>
       <h1 className={helpScreenClass.title}>{blocked.message}</h1>
       <Note tone="error" alert={false}>
         {notSaved[sign]}

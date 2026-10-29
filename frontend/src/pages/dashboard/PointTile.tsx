@@ -12,15 +12,15 @@ export function PointTile({ point }: { point: PointCard }) {
   const round = roundText(point);
   const issue = issueText(point);
   return (
-    <li className={`flex min-w-0 flex-col gap-0.5 rounded bg-surface px-3 py-2.5 ${tileFrame[point.status] ?? 'border border-border'}`}>
+    <li className={`flex min-w-0 flex-col gap-0.5 rounded-lg bg-surface px-3 py-2.5 ${tileFrame[point.status] ?? 'border border-border'}`}>
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-md font-bold">{point.name}</h3>
+        <h3 className="text-sm font-bold">{point.name}</h3>
         <StatusChip status={point.status} />
       </div>
-      {round && <span className="text-muted tabular-nums">{round}</span>}
+      {round && <span className="text-text-2 tabular-nums">{round}</span>}
       <span>{detailText(point)}</span>
       {issue && (
-        <span className="mt-1 self-start rounded border border-error-border bg-error-bg px-2 py-0.5 font-semibold text-error-text">
+        <span className="mt-1 self-start rounded-lg border border-rework-border bg-rework-bg px-2 py-0.5 font-semibold text-rework">
           {issue}
         </span>
       )}

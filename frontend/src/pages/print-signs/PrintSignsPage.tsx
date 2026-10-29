@@ -67,7 +67,7 @@ export function PrintSignsPage() {
                   <input
                     type="radio"
                     name="print-size"
-                    className={`accent-primary ${focusRing}`}
+                    className={`accent-accent ${focusRing}`}
                     checked={size === each}
                     onChange={() => setSize(each)}
                   />
@@ -87,14 +87,14 @@ export function PrintSignsPage() {
         </div>
         {signs.length > 0 && <p>{summaryLine(signs, size)}</p>}
         {signId !== undefined && which !== 'all' && (
-          <p className="text-muted">
+          <p className="text-text-2">
             พิมพ์ป้ายเดียว{' '}
             <Link className={linkClass} to={`/admin/print?area=${which}`}>
               พิมพ์ทั้งพื้นที่ ›
             </Link>
           </p>
         )}
-        <p className="text-muted">{`ที่อยู่บนป้าย: ${window.location.origin}`}</p>
+        <p className="text-text-2">{`ที่อยู่บนป้าย: ${window.location.origin}`}</p>
         {window.location.protocol !== 'https:' && (
           <Note tone="warn">
             ที่อยู่นี้ไม่ใช่ https มือถือจะอ่านตำแหน่งไม่ได้ตอนสแกน พิมพ์จากที่อยู่ https ของเซิร์ฟเวอร์
@@ -116,7 +116,7 @@ export function PrintSignsPage() {
         </section>
       ))}
       <div className="flex flex-col gap-1.5 print:hidden">
-        <p className="text-muted">ติดเสร็จให้สแกนทดสอบ 1 ครั้ง หน้าจอต้องขึ้นชื่อจุดตรงกับป้าย</p>
+        <p className="text-text-2">ติดเสร็จให้สแกนทดสอบ 1 ครั้ง หน้าจอต้องขึ้นชื่อจุดตรงกับป้าย</p>
         <MoreInfo summary="เกี่ยวกับ QR">ระบบสร้าง QR ในเครื่องนี้เอง ไม่ส่งรหัสออกไปเว็บภายนอก</MoreInfo>
       </div>
     </main>

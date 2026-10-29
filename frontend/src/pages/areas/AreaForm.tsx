@@ -77,7 +77,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
           />
         </Field>
       ) : (
-        <p className="text-muted">{`รหัสพื้นที่ ${detail.area.code} (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)`}</p>
+        <p className="text-text-2">{`รหัสพื้นที่ ${detail.area.code} (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)`}</p>
       )}
       <Field label="ชื่อพื้นที่">
         <TextInput
@@ -109,7 +109,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
             <label key={pattern} className="inline-flex min-h-9 items-center gap-2">
               <input
                 type="radio"
-                className={`accent-primary ${focusRing}`}
+                className={`accent-accent ${focusRing}`}
                 name="areaform-pattern"
                 checked={draft.shiftPattern === pattern}
                 onChange={() => set({ shiftPattern: pattern })}
@@ -135,7 +135,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
           onChange={(nightCleanerId) => set({ nightCleanerId })}
         />
       )}
-      <p className="text-muted">
+      <p className="text-text-2">
         พื้นที่ละ 1 คนต่อกะ · รายชื่อแสดงเฉพาะแม่บ้านที่ยังไม่มีพื้นที่ในกะนั้น · เปลี่ยนเป็น "เฉพาะกะเช้า"
         แล้วช่องกะดึกและเวลารอบกะดึกหายไป
       </p>

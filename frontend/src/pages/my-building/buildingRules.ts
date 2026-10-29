@@ -49,6 +49,6 @@ export function inspectionOrder(points: readonly PointCard[]): PointCard[] {
 
 /** What waits for the Supervisor (รอตรวจ) or for the Cleaner (ต้องแก้ไข) is framed in its status colour (#76). */
 export const statusFrame: Partial<Record<PointStatus, string>> = {
-  PendingInspection: 'border-2 border-status-pending',
-  Rework: 'border-2 border-status-rework',
+  PendingInspection: 'border-2 border-pending',
+  Rework: 'border-2 border-rework',
 };

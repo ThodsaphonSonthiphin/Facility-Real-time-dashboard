@@ -84,7 +84,7 @@ function SignLocation({ areaId, sign }: { areaId: number; sign: AdminSign }) {
       <Link className={linkClass} to={`/admin/areas/${areaId}/capture?sign=${sign.id}`}>
         เก็บพิกัดที่ป้ายด้วยมือถือ (M17) ›
       </Link>
-      <p className="text-muted">
+      <p className="text-text-2">
         เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย แล้วกด "ใช้ตำแหน่งตรงนี้" ระบบอ่านตำแหน่งต่อเนื่อง 30 วินาที แล้วใช้ค่ากลาง
         ให้ยืนนิ่งจนครบเวลา
       </p>
@@ -104,7 +104,7 @@ function SignLocation({ areaId, sign }: { areaId: number; sign: AdminSign }) {
               บันทึกพิกัดที่ปักจากแผนที่
             </Button>
           </div>
-          <p className="text-muted">
+          <p className="text-text-2">
             คัดลอกพิกัดจากแอปแผนที่ พิกัดที่ปักจากแผนที่จะขึ้นว่า "ยังไม่ได้วัดที่ป้ายจริง" จนกว่าจะมาวัดที่ป้าย
           </p>
         </>
@@ -156,7 +156,7 @@ function SignRadius({ sign }: { sign: AdminSign }) {
           บันทึกรัศมี
         </Button>
       </div>
-      <p className="text-muted">สแกนห่างจากป้ายเกินรัศมีจะขึ้นว่าไกลป้าย ค่าเริ่ม 50 ม.</p>
+      <p className="text-text-2">สแกนห่างจากป้ายเกินรัศมีจะขึ้นว่าไกลป้าย ค่าเริ่ม 50 ม.</p>
       <NoteLine note={note} />
     </section>
   );
@@ -187,7 +187,7 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
         QR ของป้าย
       </h4>
       <p>{`สร้าง QR ล่าสุด ${formatDate(sign.qrIssuedAt)} ${formatTime(sign.qrIssuedAt)}`}</p>
-      {!canIssueQr && <p className="text-muted">ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้</p>}
+      {!canIssueQr && <p className="text-text-2">ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้</p>}
       {canIssueQr && !asking && (
         <div>
           <Button

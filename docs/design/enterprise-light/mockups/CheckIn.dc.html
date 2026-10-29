@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ลงเวลา</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-check-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-pin-off" viewBox="0 0 24 24"><path d="M12.75 7.09a3 3 0 0 1 2.16 2.16"></path><path d="M17.07 17.07 12 22s-8-6-8-12a7.94 7.94 0 0 1 1.07-3.98"></path><path d="M8.16 3.16A8 8 0 0 1 20 10a12 12 0 0 1-1.13 4.83"></path><path d="m2 2 20 20"></path></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></symbol>
+<symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></symbol>
+</svg>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 16px; line-height: 1.5; overflow: hidden">
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E0E5EB; padding: max(8px, env(safe-area-inset-top)) 8px 12px; display: flex; flex-direction: column; gap: 4px">
+    <a href="Main.dc.html" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 8px; font-size: 16px; font-weight: 600; text-decoration: none"><svg class="i" aria-hidden="true"><use href="#i-chev-l"></use></svg>งานของฉัน</a>
+    <div style="display: flex; flex-direction: column; padding: 0 8px">
+      <span style="font-size: 14px; color: #667085">ป้ายลงเวลา · AR01 ห้องน้ำชั้น 1 · ตึก A</span>
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.35">ลงเวลา</h1>
+      <span style="font-size: 14px; color: #667085">สมใจ ใจดี · กะเช้า 07:00–19:00 · ตอนนี้ 10:42</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+    <sc-if value="{{nearOk}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #16803C; font-weight: 600"><svg class="i is" aria-hidden="true"><use href="#i-pin"></use></svg>อยู่ใกล้ป้าย (ห่าง 12 ม.)</div>
+    </sc-if>
+
+    <sc-if value="{{showFar}}" hint-placeholder-val="{{false}}">
+      <div role="status" style="display: flex; gap: 12px; padding: 12px 16px; border-radius: 8px; background: #FEF6EC; border: 1px solid #F5D6B0"><svg class="i" aria-hidden="true" style="color: #B45309; margin-top: 2px"><use href="#i-pin"></use></svg><span><b>คุณอยู่ห่างป้าย 140 ม.</b><br>ลงเวลาได้ แต่ระบบจะติดธง "ไกลป้าย" ให้แอดมินเห็น ถ้าอยู่ที่ป้ายจริง ลองรอ GPS 10 วินาทีแล้วกดอีกครั้ง</span></div>
+    </sc-if>
+    <sc-if value="{{showOutside}}" hint-placeholder-val="{{false}}">
+      <div role="status" style="display: flex; gap: 12px; padding: 12px 16px; border-radius: 8px; background: #FEF6EC; border: 1px solid #F5D6B0"><svg class="i" aria-hidden="true" style="color: #B45309; margin-top: 2px"><use href="#i-clock"></use></svg><span><b>ยังไม่ถึงช่วงลงเวลา</b><br>ลงเวลาได้ 06:00–20:00 (ก่อนและหลังกะ 60 นาที) ตอนนี้ 05:21</span></div>
+    </sc-if>
+
+    <sc-if value="{{showSteps}}" hint-placeholder-val="{{true}}">
+      <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; background: #E0E5EB; border: 1px solid #E0E5EB; border-radius: 8px; overflow: hidden">
+        <sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+          <li style="{{s.row}}">
+            <span style="{{s.dot}}"><sc-if value="{{s.done}}" hint-placeholder-val="{{false}}"><svg class="i is" aria-hidden="true"><use href="#i-check"></use></svg></sc-if><sc-if value="{{s.notDone}}" hint-placeholder-val="{{true}}">{{s.n}}</sc-if></span>
+            <div style="flex: 1; display: flex; flex-direction: column">
+              <span style="font-size: 18px; font-weight: 600">{{s.label}}</span>
+              <span style="{{s.subStyle}}">{{s.sub}}</span>
+            </div>
+            <sc-if value="{{s.later}}" hint-placeholder-val="{{false}}">
+              <button type="button" onClick="{{s.pick}}" disabled="{{locked}}" style="height: 48px; padding: 0 16px; border: 1px solid #858F9E; border-radius: 6px; background: #FFFFFF; color: #202936; font-size: 16px; font-weight: 600; cursor: pointer">ลงเวลา</button>
+            </sc-if>
+          </li>
+        </sc-for>
+      </ol>
+    </sc-if>
+
+    <sc-if value="{{showAll}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; gap: 12px; padding: 16px; border-radius: 8px; background: #EDF7F0; border: 1px solid #B9DFC6"><svg class="i" aria-hidden="true" style="color: #16803C; width: 28px; height: 28px"><use href="#i-check-c"></use></svg><span><b style="font-size: 18px">ลงเวลาครบ 4 จังหวะแล้ว</b><br>เลิกงาน 19:02 · พรุ่งนี้ลงเข้างานได้ตั้งแต่ 06:00</span></div>
+    </sc-if>
+
+    <sc-if value="{{showInvalid}}" hint-placeholder-val="{{false}}">
+      <div role="alert" style="background: #FFFFFF; border: 1px solid #F6C9C4; border-radius: 8px; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+        <span style="width: 64px; height: 64px; border-radius: 50%; background: #FEF3F2; color: #B42318; display: flex; align-items: center; justify-content: center"><svg class="i" aria-hidden="true" style="width: 32px; height: 32px"><use href="#i-ban"></use></svg></span>
+        <b style="font-size: 20px">ป้ายนี้ใช้ไม่ได้แล้ว</b>
+        <span>แอดมินออก QR ใหม่หรือปิดพื้นที่นี้แล้ว ระบบไม่ได้บันทึกเวลา<br><b>บอกหัวหน้าให้เปลี่ยนป้าย</b></span>
+        <span style="font-size: 14px; color: #667085">รหัสป้าย AR01-IN (รุ่นเก่า)</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{showNoLoc}}" hint-placeholder-val="{{false}}">
+      <div role="alert" style="background: #FFFFFF; border: 1px solid #F6C9C4; border-radius: 8px; padding: 24px 16px; display: flex; flex-direction: column; gap: 12px">
+        <span style="align-self: center; width: 64px; height: 64px; border-radius: 50%; background: #FEF3F2; color: #B42318; display: flex; align-items: center; justify-content: center"><svg class="i" aria-hidden="true" style="width: 32px; height: 32px"><use href="#i-pin-off"></use></svg></span>
+        <b style="font-size: 20px; text-align: center">ต้องเปิด Location ก่อนลงเวลา</b>
+        <ol style="margin: 0; padding-left: 24px; display: flex; flex-direction: column; gap: 4px">
+          <li>ปัดหน้าจอลงจากด้านบน</li>
+          <li>กดเปิด "ตำแหน่ง" หรือ "Location"</li>
+          <li>กลับมาที่หน้านี้ แล้วกดปุ่มด้านล่าง</li>
+        </ol>
+      </div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{showPrimary}}" hint-placeholder-val="{{true}}">
+    <div style="background: #FFFFFF; border-top: 1px solid #E0E5EB; padding: 12px 16px max(12px, env(safe-area-inset-bottom))">
+      <button type="button" onClick="{{next}}" disabled="{{locked}}" style="{{primaryStyle}}"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#{{primaryIcon}}"></use></svg>{{primaryLabel}}</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["ปกติ","ลงครบแล้ว","นอกช่วงลงเวลา","ป้ายใช้ไม่ได้","ไกลป้าย","ปิด Location"],"default":"ปกติ"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { step: 1 }; }
+renderVals() {
+const st = this.props.state ?? 'ปกติ';
+const all = st === 'ลงครบแล้ว';
+const outside = st === 'นอกช่วงลงเวลา';
+const step = all ? 4 : outside ? 0 : this.state.step;
+const L = ['เข้างาน', 'ออกพัก', 'กลับจากพัก', 'เลิกงาน'];
+const T = ['06:52', '10:42', '11:42', '19:02'];
+const steps = L.map((l, i) => {
+  const done = i < step;
+  const isNext = i === step;
+  return { n: i + 1, label: l, done: done, notDone: !done, later: !done && !isNext,
+    sub: done ? 'ลงแล้ว ' + T[i] : isNext ? 'จังหวะถัดไป' : 'ยังไม่ลง',
+    subStyle: 'font-size: 14px; ' + (done ? 'color: #16803C; font-weight: 600' : isNext ? 'color: #2457C5; font-weight: 600' : 'color: #667085'),
+    row: 'display: flex; align-items: center; gap: 12px; padding: 12px 16px; min-height: 72px; background: ' + (isNext ? '#EEF3FC' : '#FFFFFF'),
+    dot: 'width: 32px; height: 32px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; ' + (done ? 'background: #16803C; color: #FFFFFF' : isNext ? 'background: #2457C5; color: #FFFFFF' : 'background: #F2F4F7; color: #5B6474; border: 1px solid #E0E5EB'),
+    pick: () => this.setState({ step: i + 1 }) };
+});
+const noLoc = st === 'ปิด Location';
+const invalid = st === 'ป้ายใช้ไม่ได้';
+const far = st === 'ไกลป้าย';
+const showSteps = !invalid && !noLoc;
+const label = noLoc ? 'เปิด Location แล้ว ลองอีกครั้ง' : 'ลงเวลา ' + (L[step] || '');
+return { steps: steps,
+  nearOk: st === 'ปกติ' || all, showFar: far, showOutside: outside, showSteps: showSteps, showAll: all, showInvalid: invalid, showNoLoc: noLoc,
+  locked: outside,
+  showPrimary: !all && !invalid && step < 4,
+  primaryLabel: label, primaryIcon: noLoc ? 'i-refresh' : 'i-clock',
+  primaryStyle: 'width: 100%; height: 56px; border: 0; border-radius: 6px; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px; ' + (outside ? 'background: #E0E5EB; color: #667085' : 'background: #2457C5; color: #FFFFFF; cursor: pointer'),
+  next: () => this.setState({ step: Math.min(4, this.state.step + 1) }) };
+}
+}
+</script>
+</body>
+</html>

@@ -37,10 +37,10 @@ export function AlertItem({ alert, onNotice }: AlertItemProps) {
     <li>
       <article
         aria-label={`${title} · ${alertWho(alert)}`}
-        className="flex flex-col gap-1.5 rounded border border-border px-3.5 py-3"
+        className="flex flex-col gap-1.5 rounded-lg border border-border px-3.5 py-3"
       >
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="text-muted tabular-nums">{formatDayTime(alert.at)}</span>
+          <span className="text-text-2 tabular-nums">{formatDayTime(alert.at)}</span>
           <strong>{alertWho(alert)}</strong>
         </div>
         {/* self-start: its own line in every card, not only when the name is long */}
@@ -49,7 +49,7 @@ export function AlertItem({ alert, onNotice }: AlertItemProps) {
         <div className="flex flex-wrap items-center gap-2.5">
           {alert.cover && !alert.reviewed && <CoverButton alert={alert} cover={alert.cover} onNotice={onNotice} />}
           {alert.reviewed && (
-            <span className="text-muted">{alert.reviewedAt ? `คุยแล้ว ${formatDayTime(alert.reviewedAt)}` : 'คุยแล้ว'}</span>
+            <span className="text-text-2">{alert.reviewedAt ? `คุยแล้ว ${formatDayTime(alert.reviewedAt)}` : 'คุยแล้ว'}</span>
           )}
           {alert.kind === 'MissingAttendance' && (
             // facility-0051: it closes once the time is filled, on the attendance page

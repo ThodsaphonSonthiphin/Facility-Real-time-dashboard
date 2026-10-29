@@ -60,7 +60,7 @@ export function Toast({ notice, onClose }: ToastProps) {
 
   return (
     <div
-      className={`fixed top-4 right-4 left-4 z-10 mx-auto flex max-w-96 items-center gap-2.5 rounded border py-1 pr-1 pl-3.5 shadow-sm transition-opacity starting:opacity-0 motion-reduce:transition-none ${noteTones[tone]} ${fading ? 'opacity-0' : 'opacity-100'}`}
+      className={`fixed top-4 right-4 left-4 z-10 mx-auto flex max-w-96 items-center gap-2.5 rounded-lg border py-1 pr-1 pl-3.5 shadow-sm transition-opacity starting:opacity-0 motion-reduce:transition-none ${noteTones[tone]} ${fading ? 'opacity-0' : 'opacity-100'}`}
       onMouseEnter={() => {
         setPointerOn(true);
         setFading(false);
@@ -80,7 +80,7 @@ export function Toast({ notice, onClose }: ToastProps) {
         type="button"
         data-tap=""
         aria-label="ปิดข้อความ"
-        className={`inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded border-0 bg-transparent text-current ${focusRing}`}
+        className={`inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-current ${focusRing}`}
         onClick={onClose}
       >
         <X aria-hidden="true" className="size-4" />

@@ -47,9 +47,9 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, o
         {ahead ? `พื้นที่ของกะที่ยังไม่เริ่ม (${rows.length})` : `พื้นที่ที่ยังไม่มีคน (${rows.length})`}
       </h2>
       {ahead && board ? (
-        <span className="text-muted">{`${slotText(board)} ยังไม่เริ่ม จึงแสดงทุกพื้นที่ที่ทำกะนี้พร้อมแม่บ้านประจำ`}</span>
+        <span className="text-text-2">{`${slotText(board)} ยังไม่เริ่ม จึงแสดงทุกพื้นที่ที่ทำกะนี้พร้อมแม่บ้านประจำ`}</span>
       ) : (
-        <span className="text-muted">
+        <span className="text-text-2">
           ข้อมูลเดียวกับ{' '}
           <Link className={linkClass} to="/admin/attendance">
             การเข้างาน
@@ -90,7 +90,7 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, chosen, o
               <strong>{`${row.areaCode} ${row.areaName}`}</strong>
               {` · ตึก ${buildingText(row.buildingCode, names)}`}
             </span>
-            <span className="text-muted">{cleanerText(row, ahead)}</span>
+            <span className="text-text-2">{cleanerText(row, ahead)}</span>
             {row.covers.length > 0 ? (
               // Owner, 2026-10-22: a covered Area ahead names who covers and has no assign button, as on the shift on
               // the clock, where it leaves the list. To change who, cancel in the covers box first

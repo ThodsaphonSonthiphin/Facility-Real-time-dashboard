@@ -60,7 +60,7 @@ export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProp
             ? `แม่บ้านประจำ: ${row.cleaner.displayName}${ahead ? '' : ' · ยังไม่ลงเวลา'}`
             : 'พื้นที่นี้ไม่มีแม่บ้านประจำกะนี้'}
         </span>
-        {candidates.isLoading && <p className="text-muted">กำลังโหลดรายชื่อ...</p>}
+        {candidates.isLoading && <p className="text-text-2">กำลังโหลดรายชื่อ...</p>}
         {candidates.error && <Note tone="error">{getErrorMessage(candidates.error)}</Note>}
         {candidates.data && list.length === 0 && <Note tone="info">ไม่มีแม่บ้านกะนี้ที่ทำแทนได้</Note>}
         {list.length > 0 && (
@@ -74,10 +74,10 @@ export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProp
             </Select>
           </Field>
         )}
-        <span className="text-muted">
+        <span className="text-text-2">
           {`มีผลเฉพาะ${shiftShortLabel[board.shift]} ${formatShiftDate(board.shiftDate)} · หมดสิทธิ์เองเมื่อจบกะ ไม่ต้องกดยกเลิก`}
         </span>
-        <span className="text-muted">
+        <span className="text-text-2">
           แม่บ้านที่ทำแทนลงเวลาที่ป้ายของพื้นที่ตัวเองตามปกติ แล้วสแกนจุดของพื้นที่นี้ได้ · งานที่สแกนจะบันทึกว่า "ทำแทน"
         </span>
         {problem && <Note tone="error">{problem}</Note>}

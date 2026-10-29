@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>รายการที่ขึ้นเตือน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+th{font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid #E0E5EB;font-size:13px;color:#667085;background:#F9FAFB;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #E0E5EB;vertical-align:top}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></symbol>
+<symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-bld" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></symbol>
+<symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></symbol>
+</svg>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 14px; line-height: 1.5">
+
+  <nav aria-label="เมนูหลัก" style="flex: 1 1 240px; background: #FFFFFF; border-right: 1px solid #E0E5EB; padding: 20px 12px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; padding: 0 12px">
+      <span style="font-size: 16px; font-weight: 700">ระบบตรวจงานแม่บ้าน</span>
+      <span style="font-size: 13px; color: #667085">แอดมิน</span>
+    </div>
+    <sc-for list="{{nav}}" as="g" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; font-weight: 600; color: #667085; padding: 0 12px 4px">{{g.title}}</span>
+        <sc-for list="{{g.items}}" as="it" hint-placeholder-count="5">
+          <a href="{{it.href}}" aria-current="{{it.current}}" style="{{it.style}}"><svg class="i" aria-hidden="true"><use href="#{{it.icon}}"></use></svg><span style="flex: 1">{{it.label}}</span><sc-if value="{{it.hasBadge}}" hint-placeholder-val="{{false}}"><span style="min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; background: #B42318; color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{it.badge}}</span></sc-if></a>
+        </sc-for>
+      </div>
+    </sc-for>
+    <div style="margin-top: auto; border-top: 1px solid #E0E5EB; padding: 16px 12px 0; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 14px; font-weight: 600">ผู้ดูแลระบบ 01</span>
+      <a href="AdminLogin.dc.html" style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; text-decoration: none; min-height: 36px"><svg class="i is" aria-hidden="true"><use href="#i-logout"></use></svg>ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div style="flex: 999 1 640px; min-width: 0; padding: 24px; display: flex; justify-content: center">
+  <main style="width: 100%; max-width: 1216px; display: flex; flex-direction: column; gap: 24px">
+
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.3">รายการที่ขึ้นเตือน</h1>
+        <span style="font-size: 14px; color: #667085">การสแกนที่ระบบไม่บันทึก หรือบันทึกแต่ติดธง ของเมื่อวานและวันนี้</span>
+      </div>
+      <div role="group" aria-label="วัน" style="display: flex; border: 1px solid #858F9E; border-radius: 6px; overflow: hidden">
+        <sc-for list="{{days}}" as="d" hint-placeholder-count="2">
+          <button type="button" aria-pressed="{{d.pressed}}" onClick="{{d.pick}}" style="{{d.style}}">{{d.label}}</button>
+        </sc-for>
+      </div>
+    </header>
+
+    <div style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; overflow: hidden">
+      <div role="tablist" aria-label="ประเภท" style="display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px; border-bottom: 1px solid #E0E5EB">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+          <button type="button" role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}"><svg class="i is" aria-hidden="true"><use href="#{{t.icon}}"></use></svg>{{t.label}}<span style="{{t.countStyle}}">{{t.n}}</span></button>
+        </sc-for>
+      </div>
+      <div style="padding: 12px 16px; display: flex; gap: 8px; color: #344054; background: #F9FAFB; border-bottom: 1px solid #E0E5EB"><svg class="i is" aria-hidden="true" style="color: #667085; margin-top: 3px"><use href="#i-info"></use></svg><span>{{hint}}</span></div>
+
+      <sc-if value="{{hasRows}}" hint-placeholder-val="{{true}}">
+        <div style="overflow-x: auto">
+          <table style="width: 100%; min-width: 820px; border-collapse: collapse; font-size: 14px">
+            <thead><tr><th>เวลา</th><th>ผู้สแกน</th><th>{{col3}}</th><th>{{col4}}</th><th>ผลของระบบ</th></tr></thead>
+            <tbody>
+              <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+                <tr>
+                  <td style="font-variant-numeric: tabular-nums; white-space: nowrap">{{r.time}}</td>
+                  <td><div style="display: flex; flex-direction: column"><b>{{r.who}}</b><span style="font-size: 13px; color: #667085">{{r.role}}</span></div></td>
+                  <td>{{r.c3}}</td>
+                  <td>{{r.c4}}</td>
+                  <td><span style="{{r.resStyle}}">{{r.res}}</span></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </sc-if>
+      <sc-if value="{{noRows}}" hint-placeholder-val="{{false}}">
+        <div style="padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+          <svg class="i" aria-hidden="true" style="width: 32px; height: 32px; color: #858F9E"><use href="#i-inbox"></use></svg>
+          <b style="font-size: 16px">ไม่มีรายการ{{emptyLabel}}</b>
+          <span style="color: #667085">ทุกคนลงเวลาครบในวันนี้ ถ้ามีคนลืมจะขึ้นที่นี่</span>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { tab: 'wrong', day: 'today' }; }
+renderVals() {
+const ACTIVE = 'alert';
+const NAV = [['ติดตามงาน', [['dash', 'สถานะจุด', 'i-grid', 'Dashboard.dc.html'], ['att', 'การเข้างาน', 'i-users', 'Attendance.dc.html'], ['alert', 'รายการที่ขึ้นเตือน', 'i-alert', 'Alerts.dc.html', '7'], ['sum', 'สรุปการตรวจ', 'i-clip', 'InspectSummary.dc.html'], ['exp', 'ส่งออก Excel', 'i-dl', 'Export.dc.html']]], ['ตั้งค่า', [['area', 'พื้นที่และป้าย', 'i-pin', 'Areas.dc.html'], ['bld', 'ตึก', 'i-bld', 'Buildings.dc.html'], ['print', 'พิมพ์ป้าย', 'i-print', 'PrintSigns.dc.html'], ['acc', 'บัญชีผู้ใช้', 'i-user', 'Accounts.dc.html'], ['log', 'ประวัติการแก้ไข', 'i-hist', 'AuditLog.dc.html']]]];
+const navBase = 'display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; ';
+const nav = NAV.map((g) => ({ title: g[0], items: g[1].map((x) => ({ label: x[1], icon: x[2], href: x[3], badge: x[4] || '', hasBadge: !!x[4], current: x[0] === ACTIVE ? 'page' : undefined, style: navBase + (x[0] === ACTIVE ? 'background: #EEF3FC; color: #2457C5; font-weight: 600' : 'color: #344054; font-weight: 500') })) }));
+const s = this.state;
+const blocked = 'display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 4px; font-size: 13px; font-weight: 600; background: #F2F4F7; color: #5B6474; border: 1px solid #E0E5EB';
+const flagged = 'display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 4px; font-size: 13px; font-weight: 600; background: #FFFFFF; color: #B45309; border: 1px solid #F5D6B0';
+const D = {
+  today: {
+    wrong: [
+      ['10:14', 'สุดา แสงทอง', 'แม่บ้าน · AR02 โถงชั้น 1', 'AR01 ห้องน้ำหญิง (ตึก A)', 'สแกนผิดพื้นที่', 'ไม่บันทึก', blocked],
+      ['09:51', 'ประภา มั่นคง', 'หัวหน้า · ตึก A', 'AR22 ห้องน้ำชาย (ตึก D)', 'สแกนผิดตึก', 'ไม่บันทึก', blocked],
+      ['06:31', 'กมล ทองดี', 'แม่บ้าน · AR40 คลังสินค้า', 'AR40 ป้ายลงเวลา', 'นอกกะ (กะดึก)', 'ไม่บันทึก', blocked],
+      ['06:12', 'บุญมี รักงาน', 'แม่บ้าน · AR14 โรงอาหาร', 'AR15 จุดล้างภาชนะ (ตึก C)', 'สแกนผิดพื้นที่', 'ไม่บันทึก', blocked]
+    ],
+    far: [
+      ['10:30', 'บุญมี รักงาน', 'แม่บ้าน · AR14 โรงอาหาร', 'อ่างล้างมือ · ส่งงาน', '120 ม. (รัศมี 30 ม.)', 'บันทึก ติดธง', flagged],
+      ['10:12', 'ศิริพร ใจงาม', 'หัวหน้า · ตึก C', 'ห้องน้ำโรงอาหาร · ตรวจงาน', '85 ม. (รัศมี 30 ม.)', 'บันทึก ติดธง', flagged]
+    ],
+    forgot: [
+      ['–', 'กมล ทองดี', 'แม่บ้าน · AR40 คลังสินค้า', 'กะดึก 28 ต.ค.', 'ไม่ได้ลงเวลาเลิกงาน', 'รอแอดมินแก้เวลา', flagged]
+    ]
+  },
+  yesterday: {
+    wrong: [['15:40', 'มาลี สุขใจ', 'แม่บ้าน · AR31 ล็อบบี้', 'AR32 ห้องประชุมใหญ่ (ตึก E)', 'สแกนผิดพื้นที่', 'ไม่บันทึก', blocked]],
+    far: [['13:05', 'สมใจ ใจดี', 'แม่บ้าน · AR01 ห้องน้ำชั้น 1', 'โถงทางเดิน · ส่งงาน', '48 ม. (รัศมี 30 ม.)', 'บันทึก ติดธง', flagged]],
+    forgot: []
+  }
+};
+const TABS = [
+  ['wrong', 'สแกนผิดพื้นที่', 'i-ban', 'สถานที่ที่สแกน', 'เหตุผล', 'สแกนป้ายที่ไม่ใช่ของตัวเอง ผิดตึก หรือนอกกะ ระบบไม่บันทึกงาน แสดงไว้เพื่อให้ตามว่าทำไมพลาด'],
+  ['far', 'ไกลป้าย', 'i-pin', 'จุดและการกระทำ', 'ระยะจากป้าย', 'สแกนแล้วพิกัดมือถืออยู่ไกลป้ายเกินรัศมี ระบบรับงานไว้แต่ติดธง ควรตรวจว่าอยู่ที่จุดจริงหรือ GPS คลาด'],
+  ['forgot', 'ลืมลงเวลา', 'i-clock', 'กะ', 'ที่ขาด', 'ลงเวลาไม่ครบ 4 จังหวะ แก้เวลาได้ที่หน้า การเข้างาน (ต้องใส่เหตุผล)']
+];
+const data = D[s.day];
+const tabs = TABS.map((t) => {
+  const on = s.tab === t[0];
+  return { label: t[1], icon: t[2], n: data[t[0]].length, selected: on ? 'true' : 'false', pick: () => this.setState({ tab: t[0] }),
+    style: 'height: 48px; padding: 0 12px; border: 0; background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; margin-bottom: -1px; color: ' + (on ? '#2457C5' : '#344054') + '; border-bottom: 2px solid ' + (on ? '#2457C5' : 'transparent'),
+    countStyle: 'min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; background: ' + (on ? '#EEF3FC' : '#F2F4F7') + '; color: ' + (on ? '#2457C5' : '#5B6474') };
+});
+const cur = TABS.find((t) => t[0] === s.tab);
+const rows = data[s.tab].map((r) => ({ time: r[0], who: r[1], role: r[2], c3: r[3], c4: r[4], res: r[5], resStyle: r[6] }));
+const days = [['yesterday', 'เมื่อวาน 28 ต.ค.'], ['today', 'วันนี้ 29 ต.ค.']].map((d, i) => {
+  const on = s.day === d[0];
+  return { label: d[1], pressed: on ? 'true' : 'false', pick: () => this.setState({ day: d[0] }), style: 'height: 34px; padding: 0 14px; border: 0; ' + (i ? 'border-left: 1px solid #858F9E; ' : '') + 'font-size: 14px; font-weight: 600; cursor: pointer; background: ' + (on ? '#2457C5' : '#FFFFFF') + '; color: ' + (on ? '#FFFFFF' : '#202936') };
+});
+return { nav: nav, tabs: tabs, days: days, rows: rows, hasRows: rows.length > 0, noRows: rows.length === 0, col3: cur[3], col4: cur[4], hint: cur[5], emptyLabel: cur[1] };
+}
+}
+</script>
+</body>
+</html>

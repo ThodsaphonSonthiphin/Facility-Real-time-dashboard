@@ -18,7 +18,7 @@ export function Facts({ items }: { items: readonly { label: ReactNode; value: Re
     <dl className={`m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 ${boxClass}`}>
       {items.map((item, index) => (
         <div key={index} className="contents">
-          <dt className="text-muted">{item.label}</dt>
+          <dt className="text-text-2">{item.label}</dt>
           <dd className="m-0 font-semibold">{item.value}</dd>
         </div>
       ))}
@@ -33,14 +33,14 @@ export function Facts({ items }: { items: readonly { label: ReactNode; value: Re
  */
 export function Table({ label, children }: { label?: string; children: ReactNode }) {
   return (
-    <div className="max-w-full overflow-x-auto rounded border border-border bg-surface">
+    <div className="max-w-full overflow-x-auto rounded-lg border border-border bg-surface">
       <table
         aria-label={label}
         className={
           'w-full min-w-180 border-collapse text-sm ' +
           '[&_td]:border-b [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-left [&_td]:align-top ' +
           '[&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:align-top ' +
-          '[&_thead_th]:text-xs [&_thead_th]:font-semibold [&_thead_th]:text-muted ' +
+          '[&_thead_th]:text-xs [&_thead_th]:font-semibold [&_thead_th]:text-text-2 ' +
           '[&_tbody_tr:last-child>*]:border-b-0'
         }
       >
@@ -52,5 +52,5 @@ export function Table({ label, children }: { label?: string; children: ReactNode
 
 /** The one line shown while a page waits for its first answer. */
 export function Splash({ children }: { children: ReactNode }) {
-  return <p className="px-5 py-12 text-center text-base text-muted">{children}</p>;
+  return <p className="px-5 py-12 text-center text-base text-text-2">{children}</p>;
 }

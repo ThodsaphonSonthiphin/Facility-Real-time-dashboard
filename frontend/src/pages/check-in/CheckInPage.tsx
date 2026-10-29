@@ -100,17 +100,17 @@ export function CheckInPage() {
   }
 
   return (
-    // min-h: the screen less the shell above and below the page (pt-3 + the 48 px bar + gap-4 + pb-6 = 100 px), so the
-    // buttons sit low, in thumb reach; no token describes that height. svh, not dvh: a phone hides its toolbar while the
-    // page scrolls, dvh grows with it, and the buttons slid along with the scroll (owner, 2026-10-27)
-    <main className="flex min-h-[calc(100svh-6.25rem)] flex-col gap-4 text-base text-text">
+    // flex-1: the rest of the screen under the shell's bar, so the buttons sit low, in thumb reach. The shell is
+    // min-h-svh, not dvh: a phone hides its toolbar while the page scrolls, dvh grows with it, and the buttons slid
+    // along with the scroll (owner, 2026-10-27)
+    <main className="flex flex-1 flex-col gap-4 text-base text-text">
       <header className="flex flex-col gap-1">
-        <span className="text-md tracking-wide text-muted">ป้ายลงเวลา</span>
+        <span className="text-sm tracking-wide text-text-2">ป้ายลงเวลา</span>
         <h1 className="text-2xl font-bold">ลงเวลา</h1>
         {attendance?.shift && <p className="text-lg font-semibold">{shiftLabel[attendance.shift]}</p>}
-        {ownArea && <p className="text-md text-muted">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
+        {ownArea && <p className="text-sm text-text-2">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>}
       </header>
-      {(workQuery.isLoading || signQuery.isLoading) && <p className="text-md text-muted">กำลังโหลด...</p>}
+      {(workQuery.isLoading || signQuery.isLoading) && <p className="text-sm text-text-2">กำลังโหลด...</p>}
       {loadError != null && <Note tone="error">{getErrorMessage(loadError)}</Note>}
       {attendance && !attendance.shift && <OffShiftNote ownShift={work?.ownShift} />}
       {attendance?.shift && <AttendanceTimeline attendance={attendance} />}

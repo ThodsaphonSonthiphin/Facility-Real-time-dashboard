@@ -44,13 +44,13 @@ export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
           <tr key={row.supervisorId}>
             <th scope="row">
               {row.displayName}
-              <span className="block text-xs font-normal text-muted">{row.employeeId}</span>
+              <span className="block text-xs font-normal text-text-2">{row.employeeId}</span>
             </th>
             <td>{placeText(row, names)}</td>
             <td
               className={
                 row.pointsInspected < row.pointsTotal
-                  ? 'font-semibold whitespace-nowrap text-warn-text tabular-nums'
+                  ? 'font-semibold whitespace-nowrap text-overdue tabular-nums'
                   : 'tabular-nums'
               }
             >
@@ -103,7 +103,7 @@ function Share({ row }: { row: SummaryRow }) {
   }
   return (
     <span className="inline-flex items-center gap-2 text-xs tabular-nums">
-      <progress className="h-2 w-30 accent-muted" max={100} value={share} aria-label={`ตรวจ ${share}% ของงานที่ส่ง`} />
+      <progress className="h-2 w-30 accent-text-2" max={100} value={share} aria-label={`ตรวจ ${share}% ของงานที่ส่ง`} />
       {`${share}%`}
     </span>
   );

@@ -10,7 +10,7 @@ export function DistanceLine({ visit }: { visit: InspectionVisit }) {
   const accuracy = `±${Math.round(visit.accuracyM)} ม.`;
   if (visit.withinRadius === true) {
     return (
-      <p className={`flex items-center justify-between gap-2 text-md text-muted ${boxClass}`}>
+      <p className={`flex items-center justify-between gap-2 text-sm text-text-2 ${boxClass}`}>
         <span>{`ห่างป้าย ${visit.distanceM} ม. · ${accuracy}`}</span>
         {/* Plain words, not a chip: green is only ever a Point Status (MASTER.md "Colour") */}
         <span className="font-semibold whitespace-nowrap text-text">อยู่ในรัศมี</span>

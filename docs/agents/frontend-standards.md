@@ -5,11 +5,11 @@ The rules `code-review` checks on any frontend change (its Standards axis). The 
 ## Styling (Tailwind 4, facility-0086)
 
 - Style with Tailwind utility classes. `frontend/src/index.css` is the only CSS file: no per-page or per-component `.css` file.
-- Colours, sizes and radii come from the `@theme` tokens in `frontend/src/index.css`: write `bg-primary`, `text-muted`, `rounded` and so on.
+- Colours, sizes and radii come from the `@theme` tokens in `frontend/src/index.css`: write `bg-accent`, `text-text-2`, `rounded-md` and so on.
   - Never `bg-[var(--color-…)]` for a registered token.
   - Never a raw Tailwind palette class (`bg-blue-600`) or a raw hex in a component.
   - Arbitrary values (`w-[37px]`) only with a comment saying why no token fits.
-- Class names are complete strings in the source. Never build one (`` `bg-${x}` ``); map a variant to a full class (`{ warn: 'bg-warn-bg', … }`).
+- Class names are complete strings in the source. Never build one (`` `bg-${x}` ``); map a variant to a full class (`{ warn: 'bg-overdue-bg', … }`).
 - Shared pieces (button, field, note, chip, table, bar) are React components in `frontend/src/shared/components` (listed in MASTER.md). No `@apply`. No UI library.
 - A page sets its body text size once on its root: `text-base` on a phone page, `text-sm` on an Admin page. Components inherit it; the shell sets none.
 - Two classes on one element must never set the same property (`underline` and `no-underline`, `px-0` and `px-4`): which one wins depends on Tailwind's output order.
@@ -20,10 +20,10 @@ The rules `code-review` checks on any frontend change (its Standards axis). The 
 ## Look and accessibility (facility-0087)
 
 - Text contrast at least 4.5:1; icons and control borders at least 3:1.
-- Font sizes: phone body at least 17 px, Admin body at least 14 px, nothing below 13 px.
+- Font sizes: phone body at least 16 px, Admin body at least 14 px, nothing below 13 px.
 - Targets: phone at least 48 px high, primary phone actions 56 px and full width; Admin at least 36 px.
 - A status is always shown with its words (`StatusChip`), never by colour alone.
-- Blue means "can be pressed". Do not use primary blue for status or decoration.
+- Blue means "can be pressed". Do not use the accent blue for status or decoration; status colours only for a status.
 - Every control has a visible focus style and an accessible name; labels are visible, not placeholder-only.
 - Loading, error, empty and disabled states are shown (see MASTER.md).
 - Device font only (facility-0072); never load a web font.

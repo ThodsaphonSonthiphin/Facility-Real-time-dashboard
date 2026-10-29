@@ -105,7 +105,7 @@ export function AccountsPage() {
               {notice.text}
             </Note>
           )}
-          {accounts.isLoading && <p className="text-muted">กำลังโหลดบัญชี...</p>}
+          {accounts.isLoading && <p className="text-text-2">กำลังโหลดบัญชี...</p>}
           {accounts.data && (
             <AccountTable
               accounts={filterAccounts(list, filter, search)}

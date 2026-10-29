@@ -38,10 +38,10 @@ export function SendFailed({ point, draft, triedAt, sending, onResend }: SendFai
           <li>เดินไปตรงที่มีสัญญาณ</li>
           <li>กด "ส่งใหม่"</li>
         </ol>
-        <p className="text-md text-muted">
+        <p className="text-sm text-text-2">
           เวลาที่บันทึกคือเวลาที่ส่งสำเร็จ ถ้าพ้นเวลารอบจะนับเป็นส่งช้า ถ้าเดินออกไกลจากป้าย การส่งงานจะขึ้นว่าไกลป้าย
         </p>
-        <p className="text-md text-muted">ระบบไม่เก็บงานไว้ในมือถือแล้วส่งเองทีหลัง</p>
+        <p className="text-sm text-text-2">ระบบไม่เก็บงานไว้ในมือถือแล้วส่งเองทีหลัง</p>
       </Panel>
       <Button variant="primary" size="main" disabled={sending} onClick={onResend}>
         {sending ? 'กำลังส่ง...' : 'ส่งใหม่'}

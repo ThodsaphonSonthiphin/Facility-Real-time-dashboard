@@ -13,7 +13,7 @@ export function StatusScreen({ title, detail, linkTo, linkText }: StatusScreenPr
   return (
     <main className={statusScreenClass.main}>
       <h1 className={statusScreenClass.title}>{title}</h1>
-      {detail && <p className="text-muted">{detail}</p>}
+      {detail && <p className="text-text-2">{detail}</p>}
       {linkTo && linkText && (
         <Link className={buttonClass('primary', 'main')} data-tap="" to={linkTo}>
           {linkText}

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>เก็บพิกัดป้าย</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.is{width:16px;height:16px}
+button,a,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid #2457C5;outline-offset:2px}
+a{color:#2457C5}a:hover{color:#1D4AA8}
+</style>
+</helmet>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<symbol id="i-cross" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M22 12h-4"></path><path d="M6 12H2"></path><path d="M12 6V2"></path><path d="M12 22v-4"></path></symbol>
+<symbol id="i-check-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></symbol>
+<symbol id="i-pin-off" viewBox="0 0 24 24"><path d="M12.75 7.09a3 3 0 0 1 2.16 2.16"></path><path d="M17.07 17.07 12 22s-8-6-8-12a7.94 7.94 0 0 1 1.07-3.98"></path><path d="M8.16 3.16A8 8 0 0 1 20 10a12 12 0 0 1-1.13 4.83"></path><path d="m2 2 20 20"></path></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></symbol>
+</svg>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F4F6F8; color: #202936; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; font-size: 16px; line-height: 1.5; overflow: hidden">
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E0E5EB; padding: max(12px, env(safe-area-inset-top)) 16px 16px; display: flex; flex-direction: column">
+    <span style="font-size: 14px; color: #667085">แอดมิน · ผู้ดูแลระบบ 01</span>
+    <h1 style="margin: 0; font-size: 24px; font-weight: 700; line-height: 1.35">เก็บพิกัดป้าย</h1>
+    <span style="font-size: 14px; color: #667085">ยืนชิดป้าย เลือกป้าย แล้วกดใช้ตำแหน่ง</span>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="sign" style="font-weight: 600">ป้าย</label>
+      <select id="sign" style="height: 56px; padding: 0 12px; border: 1px solid #858F9E; border-radius: 6px; font-size: 16px; color: #202936; background: #FFFFFF"><option>AR01-04 โถงทางเดิน · ยังไม่เก็บ</option><option>AR01-IN ป้ายลงเวลา · เก็บแล้ว</option><option>AR01-01 ห้องน้ำชาย · เก็บแล้ว</option></select>
+      <span style="font-size: 14px; color: #667085">AR01 ห้องน้ำชั้น 1 · ตึก A · ยังไม่เก็บ 1 จาก 6 ป้าย</span>
+    </div>
+
+    <sc-if value="{{denied}}" hint-placeholder-val="{{false}}">
+      <div role="alert" style="background: #FFFFFF; border: 1px solid #F6C9C4; border-radius: 8px; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+        <span style="width: 64px; height: 64px; border-radius: 50%; background: #FEF3F2; color: #B42318; display: flex; align-items: center; justify-content: center"><svg class="i" aria-hidden="true" style="width: 32px; height: 32px"><use href="#i-pin-off"></use></svg></span>
+        <b style="font-size: 20px">เบราว์เซอร์ไม่ให้ใช้ตำแหน่ง</b>
+        <span>เปิดสิทธิ์ตำแหน่งให้เว็บนี้ในตั้งค่าเบราว์เซอร์ แล้วกด "ลองอีกครั้ง"</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{hasFix}}" hint-placeholder-val="{{true}}">
+      <section aria-label="ตำแหน่งตอนนี้" style="background: #FFFFFF; border: 1px solid #E0E5EB; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 16px; font-weight: 700">ตำแหน่งตอนนี้</h2><span style="font-size: 13px; color: #667085">อัปเดต 2 วินาทีที่แล้ว</span></div>
+        <div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 14px; color: #667085">ความแม่นยำ</span><span style="{{accStyle}}">±{{acc}} ม.</span></div>
+        <div aria-hidden="true" style="height: 8px; border-radius: 4px; background: #E0E5EB; overflow: hidden"><div style="{{bar}}"></div></div>
+        <span style="{{accNoteStyle}}"><svg class="i is" aria-hidden="true"><use href="#{{accIcon}}"></use></svg>{{accNote}}</span>
+        <dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; font-size: 14px; padding-top: 12px; border-top: 1px solid #E0E5EB">
+          <dt style="color: #667085">ละติจูด</dt><dd style="margin: 0; font-variant-numeric: tabular-nums">13.7xxxx</dd>
+          <dt style="color: #667085">ลองจิจูด</dt><dd style="margin: 0; font-variant-numeric: tabular-nums">100.5xxxx</dd>
+        </dl>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{saved}}" hint-placeholder-val="{{false}}">
+      <div role="status" style="display: flex; gap: 12px; padding: 16px; border-radius: 8px; background: #EDF7F0; border: 1px solid #B9DFC6"><svg class="i" aria-hidden="true" style="color: #16803C; width: 28px; height: 28px"><use href="#i-check-c"></use></svg><span><b style="font-size: 18px">บันทึกพิกัดแล้ว</b><br>AR01-04 โถงทางเดิน · ±6 ม. · เลือกป้ายถัดไปได้เลย</span></div>
+    </sc-if>
+  </main>
+
+  <div style="background: #FFFFFF; border-top: 1px solid #E0E5EB; padding: 12px 16px max(12px, env(safe-area-inset-bottom))">
+    <button type="button" disabled="{{btnOff}}" style="{{btnStyle}}"><svg class="i" aria-hidden="true" style="width: 24px; height: 24px"><use href="#{{btnIcon}}"></use></svg>{{btnLabel}}</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["พร้อม","ความแม่นยำต่ำ","บันทึกแล้ว","ไม่ได้รับสิทธิ์ตำแหน่ง"],"default":"พร้อม"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const s = this.props.state ?? 'พร้อม';
+const poor = s === 'ความแม่นยำต่ำ';
+const denied = s === 'ไม่ได้รับสิทธิ์ตำแหน่ง';
+const acc = poor ? 42 : 6;
+const c = poor ? '#B45309' : '#16803C';
+return { denied: denied, hasFix: !denied, saved: s === 'บันทึกแล้ว', acc: acc,
+  accStyle: 'font-size: 30px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; color: ' + c,
+  bar: 'height: 100%; border-radius: 4px; background: ' + c + '; width: ' + (poor ? '25%' : '90%'),
+  accIcon: poor ? 'i-alert' : 'i-check-c',
+  accNote: poor ? 'ยังไม่แม่นพอ (ต้องต่ำกว่า 15 ม.) ออกมาที่โล่งหรือรอสักครู่' : 'แม่นพอแล้ว ใช้ตำแหน่งนี้ได้',
+  accNoteStyle: 'display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: ' + c,
+  btnOff: poor,
+  btnIcon: denied ? 'i-refresh' : 'i-cross',
+  btnLabel: denied ? 'ลองอีกครั้ง' : poor ? 'รอความแม่นยำต่ำกว่า 15 ม.' : 'ใช้ตำแหน่งตอนนี้',
+  btnStyle: 'width: 100%; height: 56px; border: 0; border-radius: 6px; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px; ' + (poor ? 'background: #E0E5EB; color: #667085' : 'background: #2457C5; color: #FFFFFF') };
+}
+}
+</script>
+</body>
+</html>
