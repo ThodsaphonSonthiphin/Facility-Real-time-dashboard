@@ -11,7 +11,7 @@ namespace FacilityRealtime.ApiTests.Infrastructure;
 /// <summary>Writes Scan and Inspection Records straight to the database, for tests that are about reading them.</summary>
 public static class TestData
 {
-    /// <summary>A Scan Record by cleaner E1001 in the round that is current at <paramref name="at"/> (placement OnTime).</summary>
+    /// <summary>A Scan Record by cleaner 1000001 in the round that is current at <paramref name="at"/> (placement OnTime).</summary>
     public static async Task<long> AddScanAsync(
         FacilityApiFactory factory,
         string qrToken,
@@ -24,7 +24,7 @@ public static class TestData
         await factory.WithDbAsync(async db =>
         {
             var sign = await db.Signs.SingleAsync(s => s.QrToken == qrToken);
-            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
             var slot = ShiftCalendar.SlotAt(at.UtcDateTime);
             var windows = await db.PointRoundWindows
                 .Where(w => w.ServicePointId == sign.ServicePointId && w.Shift == slot.Shift)
@@ -57,13 +57,13 @@ public static class TestData
         return id;
     }
 
-    /// <summary>An Inspection Record, by Supervisor S2001 unless another is named. GPS and cover stay empty unless given.</summary>
+    /// <summary>An Inspection Record, by Supervisor 2000001 unless another is named. GPS and cover stay empty unless given.</summary>
     public static Task AddInspectionAsync(
         FacilityApiFactory factory,
         long scanRecordId,
         InspectionResult result,
         DateTimeOffset at,
-        string supervisorEmployeeId = "S2001",
+        string supervisorEmployeeId = "2000001",
         bool? withinRadius = null,
         short? distanceM = null,
         int? coverAssignmentId = null) =>

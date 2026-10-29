@@ -21,9 +21,9 @@ const seedSource = readFileSync(
 const adminPassword = /Username = "admin"[^\n]*?Hash\("([^"]+)"\)/.exec(seedSource)?.[1];
 if (!adminPassword) throw new Error('seed.ts: could not find the seed Admin password in DbInitializer.cs');
 export const admin = { username: 'admin', password: adminPassword };
-export const supervisor: Employee = { employeeId: 'S2001', phone: '0820000001', name: 'สมปอง ตรวจดี' };
-const dayCleaner: Employee = { employeeId: 'E1001', phone: '0810000001', name: 'สมชาย ใจดี' };
-const nightCleaner: Employee = { employeeId: 'E1002', phone: '0810000002', name: 'สมหญิง รักสะอาด' };
+export const supervisor: Employee = { employeeId: '2000001', phone: '0820000001', name: 'สมปอง ตรวจดี' };
+const dayCleaner: Employee = { employeeId: '1000001', phone: '0810000001', name: 'สมชาย ใจดี' };
+const nightCleaner: Employee = { employeeId: '1000002', phone: '0810000002', name: 'สมหญิง รักสะอาด' };
 
 /** AR01's check-in sign, and where the phone stands (the sign's own location, so the distance is 0). */
 export const checkInToken = 'token-checkin-ar01';

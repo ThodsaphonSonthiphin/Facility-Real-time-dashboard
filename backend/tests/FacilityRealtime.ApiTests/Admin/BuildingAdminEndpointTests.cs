@@ -8,7 +8,7 @@ namespace FacilityRealtime.ApiTests.Admin;
 
 /// <summary>
 /// facility-0090: the buildings page. Seed: building A ("ตึก A") with the active Areas AR01 and AR02 and the active
-/// Supervisor S2001 (day). <c>TestData.AddBuildingAsync</c> adds an empty building named "ตึก {code}".
+/// Supervisor 2000001 (day). <c>TestData.AddBuildingAsync</c> adds an empty building named "ตึก {code}".
 /// </summary>
 public class BuildingAdminEndpointTests
 {

@@ -24,9 +24,9 @@ public class CleanerLiveTests
     {
         using var factory = new FacilityApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
-        var (_, day, _) = await AuthApi.LoggedInAsync(factory); // E1001, AR01 day
-        var (_, night, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1002", "0810000002"); // AR01 night
-        var (_, other, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1003", "0810000003"); // AR02 day
+        var (_, day, _) = await AuthApi.LoggedInAsync(factory); // 1000001, AR01 day
+        var (_, night, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000002", "0810000002"); // AR01 night
+        var (_, other, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000003", "0810000003"); // AR02 day
         await using var dayHub = await HubClient.ConnectAsync(factory, day.AccessToken);
         await using var nightHub = await HubClient.ConnectAsync(factory, night.AccessToken);
         await using var otherHub = await HubClient.ConnectAsync(factory, other.AccessToken);

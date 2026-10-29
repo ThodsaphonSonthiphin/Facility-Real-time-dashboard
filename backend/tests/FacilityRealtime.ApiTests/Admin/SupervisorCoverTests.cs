@@ -10,7 +10,7 @@ namespace FacilityRealtime.ApiTests.Admin;
 
 /// <summary>
 /// facility-0048 rule 2 and its amendment: the Admin lets a Supervisor inspect another building, or their own building
-/// outside their shift, for one shift. Seeded S2001 is the Day Supervisor of building A.
+/// outside their shift, for one shift. Seeded 2000001 is the Day Supervisor of building A.
 /// </summary>
 public class SupervisorCoverTests
 {
@@ -21,7 +21,7 @@ public class SupervisorCoverTests
         FacilityApiFactory factory, HttpClient admin, string buildingCode, string shift, long? blockedScanId = null) =>
         await admin.PostAsJsonAsync(Path, new
         {
-            userId = await AdminSetupApi.UserIdAsync(factory, "S2001"),
+            userId = await AdminSetupApi.UserIdAsync(factory, "2000001"),
             buildingId = await AdminSetupApi.BuildingIdAsync(factory, buildingCode),
             shiftDate = Oct8,
             shift,
@@ -82,7 +82,7 @@ public class SupervisorCoverTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
-        var userId = await AdminSetupApi.UserIdAsync(factory, "S2001");
+        var userId = await AdminSetupApi.UserIdAsync(factory, "2000001");
 
         var noBuilding = await admin.PostAsJsonAsync(Path, new { userId, shiftDate = Oct8, shift = "Night" });
         var withArea = await admin.PostAsJsonAsync(Path, new
@@ -104,7 +104,7 @@ public class SupervisorCoverTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
-        var userId = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var userId = await AdminSetupApi.UserIdAsync(factory, "1000001");
 
         var withBuilding = await admin.PostAsJsonAsync(Path, new
         {
@@ -231,7 +231,7 @@ public class SupervisorCoverTests
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
         await factory.WithDbAsync(async db =>
         {
-            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
             var sign = await db.Signs.SingleAsync(s => s.Code == "BR01-01");
             db.BlockedScans.Add(new BlockedScan
             {
@@ -257,7 +257,7 @@ public class SupervisorCoverTests
 
         var response = await admin.PostAsJsonAsync(Path, new
         {
-            userId = await AdminSetupApi.UserIdAsync(factory, "S2001"),
+            userId = await AdminSetupApi.UserIdAsync(factory, "2000001"),
             buildingId = 9999,
             shiftDate = Oct8,
             shift = "Day",

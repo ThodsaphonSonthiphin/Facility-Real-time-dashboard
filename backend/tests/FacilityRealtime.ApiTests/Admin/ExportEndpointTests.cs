@@ -48,9 +48,9 @@ public class ExportEndpointTests
     {
         var (factory, admin) = await StartAsync();
         using var _ = factory;
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftOut, ThaiClock.At(8, 19, 2), AttendanceSource.AdminAdd);
-        await TestData.AddAttendanceAsync(factory, "E1003", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 7, 5), distanceM: 900, withinRadius: false);
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftOut, ThaiClock.At(8, 19, 2), AttendanceSource.AdminAdd);
+        await TestData.AddAttendanceAsync(factory, "1000003", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 7, 5), distanceM: 900, withinRadius: false);
 
         using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Attendance"]));
 
@@ -61,9 +61,9 @@ public class ExportEndpointTests
             sheet.Row(1).CellsUsed().Select(c => c.GetString()));
         var rows = Rows(sheet);
         Assert.Equal(
-            new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "E1001", "สมชาย ใจดี", "06:58", "", "", "19:02", "แก้โดยแอดมิน: เลิกงาน", "ในรัศมี" },
+            new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "1000001", "สมชาย ใจดี", "06:58", "", "", "19:02", "แก้โดยแอดมิน: เลิกงาน", "ในรัศมี" },
             rows[0]);
-        Assert.Equal(new[] { "AR02", "E1003", "07:05", "สแกนเอง", "นอกรัศมี: เข้างาน 900 ม." }, new[] { rows[1][3], rows[1][4], rows[1][6], rows[1][10], rows[1][11] });
+        Assert.Equal(new[] { "AR02", "1000003", "07:05", "สแกนเอง", "นอกรัศมี: เข้างาน 900 ม." }, new[] { rows[1][3], rows[1][4], rows[1][6], rows[1][10], rows[1][11] });
         Assert.Equal(2, rows.Count);
     }
 
@@ -72,7 +72,7 @@ public class ExportEndpointTests
     {
         var (factory, admin) = await StartAsync();
         using var _ = factory;
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
         var a = await AdminSetupApi.BuildingIdAsync(factory);
         Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync($"/api/admin/buildings/{a}", new { name = "อาคารผลิต 1" })).StatusCode);
 
@@ -107,7 +107,7 @@ public class ExportEndpointTests
             },
             menRestroom);
         var submitted = rows.Single(r => r[5] == "AR01-01" && r[8] == "ตรงเวลา");
-        Assert.Equal(("wet_floor", "", "E1001", "สมชาย ใจดี"), (submitted[9], submitted[10], submitted[11], submitted[12]));
+        Assert.Equal(("wet_floor", "", "1000001", "สมชาย ใจดี"), (submitted[9], submitted[10], submitted[11], submitted[12]));
         Assert.Equal("A · ตึก A", submitted[2]);
         Assert.Equal("A · ตึก A", rows.First(r => r[5] == "AR01-01" && r[8] == "ไม่ได้ทำ")[2]);
         // AR02 works days only: one missed day round, no night rows
@@ -162,10 +162,10 @@ public class ExportEndpointTests
         var (factory, admin) = await StartAsync();
         using var _ = factory;
         const string women = "token-restroom-f1";
-        await AddRecordAsync(factory, women, "E1001", Placement.Late, 7, ThaiClock.At(8, 9, 15), lateMinutes: 15,
+        await AddRecordAsync(factory, women, "1000001", Placement.Late, 7, ThaiClock.At(8, 9, 15), lateMinutes: 15,
             status: CleaningStatus.Issue, issueTags: null, distanceM: 12, withinRadius: true);
-        await AddRecordAsync(factory, women, "E1001", Placement.OffRound, null, ThaiClock.At(8, 12, 0));
-        await AddRecordAsync(factory, women, "E1001", Placement.Rework, 16, ThaiClock.At(8, 16, 30), distanceM: 900, withinRadius: false);
+        await AddRecordAsync(factory, women, "1000001", Placement.OffRound, null, ThaiClock.At(8, 12, 0));
+        await AddRecordAsync(factory, women, "1000001", Placement.Rework, 16, ThaiClock.At(8, 16, 30), distanceM: 900, withinRadius: false);
 
         using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Submissions"]));
 
@@ -188,7 +188,7 @@ public class ExportEndpointTests
     {
         var (factory, admin) = await StartAsync();
         using var _ = factory;
-        await AddRecordAsync(factory, "token-restroom-m1", "E1001", Placement.OffRound, null, ThaiClock.At(8, 12, 0));
+        await AddRecordAsync(factory, "token-restroom-m1", "1000001", Placement.OffRound, null, ThaiClock.At(8, 12, 0));
 
         using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Submissions"]));
 
@@ -252,7 +252,7 @@ public class ExportEndpointTests
     {
         var (factory, admin) = await StartAsync();
         using var _ = factory;
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
         await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 10));
 
         var response = await ExportAsync(admin, "2026-10-08", "2026-10-09", ["Attendance", "Submissions"]);
@@ -272,7 +272,7 @@ public class ExportEndpointTests
     {
         var (factory, admin) = await StartAsync();
         using var _ = factory;
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
 
         await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Attendance"]);
 
@@ -294,7 +294,7 @@ public class ExportEndpointTests
     {
         var (factory, admin) = await StartAsync();
         using var _ = factory;
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
         var buildingB = await TestData.AddBuildingAsync(factory, "B");
 
         using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Attendance", "Submissions"], buildingB));
@@ -310,10 +310,10 @@ public class ExportEndpointTests
         using var _ = factory;
         await factory.WithDbAsync(async db =>
         {
-            (await db.Users.SingleAsync(u => u.EmployeeId == "E1001")).DisplayName = "=1+1";
+            (await db.Users.SingleAsync(u => u.EmployeeId == "1000001")).DisplayName = "=1+1";
             await db.SaveChangesAsync();
         });
-        await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
 
         using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Attendance"]));
 

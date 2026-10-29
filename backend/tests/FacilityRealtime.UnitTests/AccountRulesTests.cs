@@ -6,7 +6,7 @@ namespace FacilityRealtime.UnitTests;
 public class AccountRulesTests
 {
     [Theory]
-    [InlineData(" E1001 ", "E1001")]
+    [InlineData(" 1000001 ", "1000001")]
     [InlineData("emp-0042", "emp-0042")]
     [InlineData("A", "A")]
     [InlineData("12345678901234567890", "12345678901234567890")]
@@ -18,7 +18,7 @@ public class AccountRulesTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("E 1001")]
-    [InlineData("E1001!")]
+    [InlineData("1000001!")]
     [InlineData("รหัส1")]
     [InlineData("123456789012345678901")]
     public void Bad_employee_ids_are_refused(string? typed) => Assert.Null(AccountRules.NormalizeEmployeeId(typed));

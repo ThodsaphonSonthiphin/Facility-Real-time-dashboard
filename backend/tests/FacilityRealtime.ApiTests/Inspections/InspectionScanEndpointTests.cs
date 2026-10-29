@@ -9,7 +9,7 @@ namespace FacilityRealtime.ApiTests.Inspections;
 
 /// <summary>
 /// facility-0047 rule 7, 0048: the Supervisor's scan. Seeded men's restroom (AR01, building A): Day rounds 07:00-09:00 and
-/// 16:00-18:00, Night 20:00-22:00 and 03:00-05:00. TestData.AddScanAsync writes a submission by Cleaner E1001.
+/// 16:00-18:00, Night 20:00-22:00 and 03:00-05:00. TestData.AddScanAsync writes a submission by Cleaner 1000001.
 /// </summary>
 public class InspectionScanEndpointTests
 {
@@ -197,7 +197,7 @@ public class InspectionScanEndpointTests
         using var factory = new FacilityApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
-        await TestData.AddSupervisorCoverAsync(factory, "S2001", "B", Oct8, Shift.Day);
+        await TestData.AddSupervisorCoverAsync(factory, "2000001", "B", Oct8, Shift.Day);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
         var scan = await InspectionApi.ScannedAsync(supervisor, InspectionApi.BuildingBPoint);
@@ -212,7 +212,7 @@ public class InspectionScanEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
-        await TestData.AddSupervisorCoverAsync(factory, "S2001", "A", Oct8, Shift.Night);
+        await TestData.AddSupervisorCoverAsync(factory, "2000001", "A", Oct8, Shift.Night);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
 
         var scan = await InspectionApi.ScannedAsync(supervisor);
@@ -228,7 +228,7 @@ public class InspectionScanEndpointTests
         using var factory = new FacilityApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
-        await TestData.AddSupervisorCoverAsync(factory, "S2001", "B", Oct8, coverShift, cancelled);
+        await TestData.AddSupervisorCoverAsync(factory, "2000001", "B", Oct8, coverShift, cancelled);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
         var response = await InspectionApi.ScanAsync(supervisor, InspectionApi.BuildingBPoint);

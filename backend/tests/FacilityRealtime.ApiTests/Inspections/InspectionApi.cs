@@ -17,7 +17,7 @@ public record InspectionCreatedModel(
     long InspectionId, int ServicePointId, long ScanRecordId, string Result, string NewPointStatus, int? DistanceM, bool? WithinRadius, DateTime InspectedAt);
 
 /// <summary>
-/// The Supervisor's phone. Seeded S2001 (phone 0820000001) is the Day Supervisor of building A, which holds AR01 (both
+/// The Supervisor's phone. Seeded 2000001 (phone 0820000001) is the Day Supervisor of building A, which holds AR01 (both
 /// restrooms) and AR02 (the meeting room). Log in before moving the clock.
 /// </summary>
 public static class InspectionApi
@@ -25,7 +25,7 @@ public static class InspectionApi
     public const string MenRestroom = "token-restroom-m1";
     public const string BuildingBPoint = "token-br01-01";
 
-    public static async Task<HttpClient> SupervisorAsync(FacilityApiFactory factory, string employeeId = "S2001", string phone = "0820000001") =>
+    public static async Task<HttpClient> SupervisorAsync(FacilityApiFactory factory, string employeeId = "2000001", string phone = "0820000001") =>
         (await AuthApi.LoggedInAsEmployeeAsync(factory, employeeId, phone)).Client;
 
     public static Task<HttpResponseMessage> ScanAsync(

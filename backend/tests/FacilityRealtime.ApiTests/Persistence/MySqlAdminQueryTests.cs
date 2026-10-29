@@ -35,7 +35,7 @@ public class MySqlAdminQueryTests
             await using (var write = new AppDbContext(options))
             {
                 await DbInitializer.SeedAsync(write, new Pbkdf2PasswordHasher(iterations: 1_000));
-                var cleaner = await write.Users.SingleAsync(u => u.EmployeeId == "E1001");
+                var cleaner = await write.Users.SingleAsync(u => u.EmployeeId == "1000001");
                 var admin = await write.Users.SingleAsync(u => u.Username == "admin");
                 var checkIn = await write.Signs.SingleAsync(s => s.Code == "AR01-IN");
                 var otherAreaSign = await write.Signs.SingleAsync(s => s.Code == "AR02-IN");

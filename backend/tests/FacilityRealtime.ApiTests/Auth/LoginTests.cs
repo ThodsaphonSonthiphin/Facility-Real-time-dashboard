@@ -20,7 +20,7 @@ public class LoginTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await AuthApi.ReadAuthAsync(response);
-        Assert.Equal("E1001", body.User.Username);
+        Assert.Equal("1000001", body.User.Username);
         Assert.Equal("สมชาย ใจดี", body.User.FullName);
         Assert.Equal("cleaner", body.User.Role);
         var expected = factory.Clock.GetUtcNow().UtcDateTime.AddMinutes(5);
@@ -35,7 +35,7 @@ public class LoginTests
     {
         using var factory = new FacilityApiFactory();
 
-        var response = await AuthApi.LoginAsync(factory.CreateApiClient(), "E1001", phone);
+        var response = await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", phone);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -45,9 +45,9 @@ public class LoginTests
     {
         using var factory = new FacilityApiFactory();
 
-        var body = await AuthApi.ReadAuthAsync(await AuthApi.LoginAsync(factory.CreateApiClient(), "S2001", "0820000001"));
+        var body = await AuthApi.ReadAuthAsync(await AuthApi.LoginAsync(factory.CreateApiClient(), "2000001", "0820000001"));
 
-        Assert.Equal("S2001", body.User.Username);
+        Assert.Equal("2000001", body.User.Username);
         Assert.Equal("supervisor", body.User.Role);
     }
 
@@ -60,7 +60,7 @@ public class LoginTests
 
         var jwt = new JsonWebToken(body.AccessToken);
         Assert.Equal(body.User.Id.ToString(), jwt.GetClaim("sub").Value);
-        Assert.Equal("E1001", jwt.GetClaim("preferred_username").Value);
+        Assert.Equal("1000001", jwt.GetClaim("preferred_username").Value);
         Assert.Equal("สมชาย ใจดี", jwt.GetClaim("name").Value);
         Assert.Equal("cleaner", jwt.GetClaim("role").Value);
         Assert.Equal(TimeSpan.FromMinutes(5), jwt.ValidTo - jwt.IssuedAt);
@@ -106,7 +106,7 @@ public class LoginTests
     }
 
     [Theory]
-    [InlineData("E1001", "0899999999")]
+    [InlineData("1000001", "0899999999")]
     [InlineData("E9999", "0810000001")]
     public async Task Wrong_employee_id_or_phone_is_401_and_sets_no_cookie(string employeeId, string phone)
     {
@@ -134,7 +134,7 @@ public class LoginTests
         using var factory = new FacilityApiFactory();
         await factory.WithDbAsync(async db =>
         {
-            (await db.Users.SingleAsync(u => u.EmployeeId == "E1001")).Username = "e1001-web";
+            (await db.Users.SingleAsync(u => u.EmployeeId == "1000001")).Username = "e1001-web";
             await db.SaveChangesAsync();
         });
 
@@ -167,7 +167,7 @@ public class LoginTests
         using var factory = new FacilityApiFactory();
         await factory.WithDbAsync(async db =>
         {
-            (await db.Users.SingleAsync(u => u.EmployeeId == "E1001")).IsActive = false;
+            (await db.Users.SingleAsync(u => u.EmployeeId == "1000001")).IsActive = false;
             await db.SaveChangesAsync();
         });
 
@@ -183,11 +183,11 @@ public class LoginTests
         var client = factory.CreateApiClient();
         for (var i = 0; i < 5; i++)
         {
-            Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.LoginAsync(client, "E1001", "0899999999")).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.LoginAsync(client, "1000001", "0899999999")).StatusCode);
         }
 
         var lockedEvenWithTheRightPhone = await AuthApi.LoginAsync(client);
-        var otherEmployee = await AuthApi.LoginAsync(client, "E1003", "0810000003");
+        var otherEmployee = await AuthApi.LoginAsync(client, "1000003", "0810000003");
         factory.Clock.Advance(TimeSpan.FromMinutes(15));
         var afterTheLock = await AuthApi.LoginAsync(client);
 
@@ -204,13 +204,13 @@ public class LoginTests
         var statuses = new List<HttpStatusCode>();
         for (var i = 0; i < 4; i++)
         {
-            statuses.Add((await AuthApi.LoginAsync(client, "E1001", "0899999999")).StatusCode);
+            statuses.Add((await AuthApi.LoginAsync(client, "1000001", "0899999999")).StatusCode);
         }
 
         statuses.Add((await AuthApi.LoginAsync(client)).StatusCode);
         for (var i = 0; i < 4; i++)
         {
-            statuses.Add((await AuthApi.LoginAsync(client, "E1001", "0899999999")).StatusCode);
+            statuses.Add((await AuthApi.LoginAsync(client, "1000001", "0899999999")).StatusCode);
         }
 
         Assert.Equal(new[]

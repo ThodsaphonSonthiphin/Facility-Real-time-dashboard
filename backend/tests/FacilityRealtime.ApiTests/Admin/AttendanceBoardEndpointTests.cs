@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace FacilityRealtime.ApiTests.Admin;
 
 /// <summary>
-/// Wireframe D2, facility-0027/0050. Seed: AR01 (Day and Night; E1001 Day, E1002 Night) and AR02 (Day only; E1003).
+/// Wireframe D2, facility-0027/0050. Seed: AR01 (Day and Night; 1000001 Day, 1000002 Night) and AR02 (Day only; 1000003).
 /// Log in before moving the clock.
 /// </summary>
 public class AttendanceBoardEndpointTests
@@ -37,7 +37,7 @@ public class AttendanceBoardEndpointTests
         Assert.False(board.ShiftEnded);
         Assert.Equal(new[] { "AR01", "AR02" }, board.Rows.Select(r => r.AreaCode));
         Assert.All(board.Rows, r => Assert.Equal("Empty", r.State));
-        Assert.Equal("E1001", board.Rows[0].Cleaner!.EmployeeId);
+        Assert.Equal("1000001", board.Rows[0].Cleaner!.EmployeeId);
         Assert.Equal("A", board.Rows[0].BuildingCode);
         Assert.Equal(new BoardSummaryModel(2, 0, 2, 0), board.Summary);
     }
@@ -87,7 +87,7 @@ public class AttendanceBoardEndpointTests
         Assert.Equal("Night", board.Shift);
         var row = Assert.Single(board.Rows);
         Assert.Equal("AR01", row.AreaCode);
-        Assert.Equal("E1002", row.Cleaner!.EmployeeId);
+        Assert.Equal("1000002", row.Cleaner!.EmployeeId);
     }
 
     [Fact]
@@ -97,18 +97,18 @@ public class AttendanceBoardEndpointTests
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
-        await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
-        await TestData.AddCoverAsync(factory, "E1001", "AR02", new DateOnly(2026, 10, 8), Shift.Day, cancelled: true);
+        await TestData.AddCoverAsync(factory, "1000001", "AR02", new DateOnly(2026, 10, 8), Shift.Day);
+        await TestData.AddCoverAsync(factory, "1000001", "AR02", new DateOnly(2026, 10, 8), Shift.Day, cancelled: true);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
 
         var board = await AdminAttendanceApi.BoardAsync(admin);
 
         var ar02 = board.Rows.Single(r => r.AreaCode == "AR02");
         Assert.Equal("Covered", ar02.State);
-        Assert.Equal("E1003", ar02.Cleaner!.EmployeeId);
+        Assert.Equal("1000003", ar02.Cleaner!.EmployeeId);
         Assert.Empty(ar02.Events);
         var cover = Assert.Single(ar02.Covers);
-        Assert.Equal("E1001", cover.EmployeeId);
+        Assert.Equal("1000001", cover.EmployeeId);
         Assert.Equal("AR01", cover.OwnAreaCode);
         Assert.Equal(ThaiClock.At(8, 6, 50).UtcDateTime, cover.ShiftInAt);
         Assert.Equal(new BoardSummaryModel(2, 1, 0, 1), board.Summary);

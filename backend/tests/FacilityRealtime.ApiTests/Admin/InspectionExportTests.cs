@@ -63,13 +63,13 @@ public class InspectionExportTests
         var rows = Rows(sheet);
         Assert.Equal(4, rows.Count);
         Assert.Equal(
-            new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "ห้องน้ำชาย ชั้น 1", "AR01-01", "07:00–09:00", "08:20", "ต้องแก้ไข", "พื้นยังเปียก", "", "S2001", "สมปอง ตรวจดี", "-" },
+            new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "ห้องน้ำชาย ชั้น 1", "AR01-01", "07:00–09:00", "08:20", "ต้องแก้ไข", "พื้นยังเปียก", "", "2000001", "สมปอง ตรวจดี", "-" },
             rows[0]);
         Assert.Equal(
             new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "ห้องน้ำชาย ชั้น 1", "AR01-01", "07:00–09:00", "", "ไม่ได้แก้", "", "", "", "", "" },
             rows[1]);
         Assert.Equal(
-            new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "ห้องน้ำชาย ชั้น 1", "AR01-01", "16:00–18:00", "16:30", "สะอาด", "", "", "S2001", "สมปอง ตรวจดี", "นอกรัศมี 120 ม." },
+            new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "ห้องน้ำชาย ชั้น 1", "AR01-01", "16:00–18:00", "16:30", "สะอาด", "", "", "2000001", "สมปอง ตรวจดี", "นอกรัศมี 120 ม." },
             rows[2]);
         Assert.Equal(
             new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "ห้องน้ำหญิง ชั้น 1", "AR01-02", "16:00–18:00", "", "ไม่ได้ตรวจ", "", "", "", "", "" },
@@ -82,7 +82,7 @@ public class InspectionExportTests
         var (factory, admin) = await StartAsync(ThaiClock.At(9, 12, 0));
         using var _ = factory;
         await InspectionApi.AddBuildingBAsync(factory);
-        var coverId = await TestData.AddSupervisorCoverAsync(factory, "S2001", "B", new DateOnly(2026, 10, 8), Shift.Day);
+        var coverId = await TestData.AddSupervisorCoverAsync(factory, "2000001", "B", new DateOnly(2026, 10, 8), Shift.Day);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.BuildingBPoint, ThaiClock.At(8, 8, 30));
         await TestData.AddInspectionAsync(factory, scanId, InspectionResult.Passed, ThaiClock.At(8, 8, 40), coverAssignmentId: coverId);
 

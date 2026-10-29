@@ -22,7 +22,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
         var ar03 = await TestData.AddAreaAsync(factory, "AR03");
 
@@ -30,7 +30,7 @@ public class AccountEditEndpointTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var edited = await AccountApi.ReadAsync(response);
-        Assert.Equal(("สมศรี ย้ายที่", "AR03", "E1003"), (edited.DisplayName, edited.AreaCode, edited.LoginName));
+        Assert.Equal(("สมศรี ย้ายที่", "AR03", "1000003"), (edited.DisplayName, edited.AreaCode, edited.LoginName));
         var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
         Assert.Equal(("ACCOUNT_UPDATE", (long?)e1003), (entry.Action, entry.EntityId));
         Assert.Contains($"\"AreaId\":{ar02}", entry.BeforeJson);
@@ -42,7 +42,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
         var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
 
         var response = await EditAsync(admin, e1001, new { displayName = " สมชาย ใจดี ", areaId = ar01, shift = "Day" });
@@ -56,7 +56,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
         var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
 
         var response = await EditAsync(admin, e1003, new { displayName = "สมศรี มีสุข", areaId = ar01, shift = "Day" });
@@ -71,7 +71,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var s2001 = await AdminSetupApi.UserIdAsync(factory, "S2001");
+        var s2001 = await AdminSetupApi.UserIdAsync(factory, "2000001");
         var buildingB = await TestData.AddBuildingAsync(factory, "B");
 
         var response = await EditAsync(admin, s2001, new { displayName = "สมปอง ตรวจดี", buildingId = buildingB, shift = "Night" });
@@ -87,7 +87,7 @@ public class AccountEditEndpointTests
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var (_, _, cleanerRefresh) = await AuthApi.LoggedInAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
         var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
 
         var response = await DeactivateAsync(admin, e1001);
@@ -128,7 +128,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1002 = await AdminSetupApi.UserIdAsync(factory, "E1002");
+        var e1002 = await AdminSetupApi.UserIdAsync(factory, "1000002");
 
         await DeactivateAsync(admin, e1002);
         var again = await DeactivateAsync(admin, e1002);
@@ -142,7 +142,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
         await DeactivateAsync(admin, e1001);
 
         var response = await ActivateAsync(admin, e1001);
@@ -159,7 +159,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var s2001 = await AdminSetupApi.UserIdAsync(factory, "S2001");
+        var s2001 = await AdminSetupApi.UserIdAsync(factory, "2000001");
         var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
         await DeactivateAsync(admin, s2001);
         Assert.Equal(HttpStatusCode.Created, (await AccountApi.CreateSupervisorAsync(admin, "S2002", "0000000021", buildingA, "Day", "หัวหน้าแทน ทดสอบ")).StatusCode);
@@ -176,7 +176,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var s2001 = await AdminSetupApi.UserIdAsync(factory, "S2001");
+        var s2001 = await AdminSetupApi.UserIdAsync(factory, "2000001");
         var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
         await DeactivateAsync(admin, s2001);
         Assert.Equal(HttpStatusCode.Created, (await AccountApi.CreateSupervisorAsync(admin, "S2002", "0000000021", buildingA, "Day", "หัวหน้าแทน ทดสอบ")).StatusCode);
@@ -195,7 +195,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
         // only data from before facility-0091 has a Cleaner on an Area that is off
         await factory.WithDbAsync(async db =>
@@ -216,7 +216,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
         await factory.WithDbAsync(async db =>
         {
@@ -235,7 +235,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
         var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
 
         var response = await EditAsync(admin, e1001, new { displayName = "สมชาย ใจดี", shift = "Day" });
@@ -253,7 +253,7 @@ public class AccountEditEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
         var ar03 = await TestData.AddAreaAsync(factory, "AR03");
         await DeactivateAsync(admin, e1001);
 

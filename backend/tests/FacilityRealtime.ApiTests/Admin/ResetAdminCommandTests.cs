@@ -131,14 +131,14 @@ public class ResetAdminCommandTests
         using var factory = new FacilityApiFactory();
         var console = new FakeConsole(NewPassword, NewPassword);
 
-        var exitCode = await RunAsync(factory, console, "e1001");
+        var exitCode = await RunAsync(factory, console, "1000001");
 
         Assert.Equal(1, exitCode);
         Assert.Empty(console.HiddenPrompts);
         Assert.Contains(console.Written, line => line.Contains("รหัสพนักงานของแม่บ้าน"));
         await factory.WithDbAsync(async db =>
         {
-            Assert.False(await db.Users.AnyAsync(u => u.Username == "e1001"));
+            Assert.False(await db.Users.AnyAsync(u => u.Username == "1000001"));
             Assert.Empty(await db.AuditLog.ToListAsync());
         });
     }

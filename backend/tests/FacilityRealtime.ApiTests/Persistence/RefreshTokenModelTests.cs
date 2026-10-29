@@ -34,13 +34,13 @@ public class RefreshTokenModelTests
 
         await factory.WithDbAsync(async db =>
         {
-            var user = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var user = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
             user.IsActive = false;
             await db.SaveChangesAsync();
         });
 
         var isActive = true;
-        await factory.WithDbAsync(async db => isActive = (await db.Users.AsNoTracking().SingleAsync(u => u.EmployeeId == "E1001")).IsActive);
+        await factory.WithDbAsync(async db => isActive = (await db.Users.AsNoTracking().SingleAsync(u => u.EmployeeId == "1000001")).IsActive);
         Assert.False(isActive);
     }
 

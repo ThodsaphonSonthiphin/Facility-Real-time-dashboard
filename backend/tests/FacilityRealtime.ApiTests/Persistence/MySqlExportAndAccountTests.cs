@@ -35,7 +35,7 @@ public class MySqlExportAndAccountTests
             await using (var write = new AppDbContext(options))
             {
                 await DbInitializer.SeedAsync(write, new Pbkdf2PasswordHasher(iterations: 1_000));
-                var cleaner = await write.Users.SingleAsync(u => u.EmployeeId == "E1001");
+                var cleaner = await write.Users.SingleAsync(u => u.EmployeeId == "1000001");
                 var restroom = await write.Signs.SingleAsync(s => s.Code == "AR01-01");
                 var window = await write.PointRoundWindows.FirstAsync(w => w.ServicePointId == restroom.ServicePointId && w.Shift == Shift.Day);
                 write.ShiftAttendances.Add(new ShiftAttendance
@@ -52,7 +52,10 @@ public class MySqlExportAndAccountTests
                 await write.SaveChangesAsync();
 
                 // users.employee_id is unique ignoring case on MySQL, as AccountChecks assumes
-                write.Users.Add(new User { Role = UserRole.Cleaner, EmployeeId = "e1001", DisplayName = "ซ้ำ", SecretHash = "x", Shift = Shift.Night, CreatedAt = shiftIn });
+                // (the seed's IDs are digits only, so a letter ID of its own)
+                write.Users.Add(new User { Role = UserRole.Cleaner, EmployeeId = "E9001", DisplayName = "ตัวจริง", SecretHash = "x", Shift = Shift.Night, CreatedAt = shiftIn });
+                await write.SaveChangesAsync();
+                write.Users.Add(new User { Role = UserRole.Cleaner, EmployeeId = "e9001", DisplayName = "ซ้ำ", SecretHash = "x", Shift = Shift.Night, CreatedAt = shiftIn });
                 await Assert.ThrowsAsync<DbUpdateException>(() => write.SaveChangesAsync());
             }
 
@@ -61,7 +64,7 @@ public class MySqlExportAndAccountTests
             int deactivatedId;
             await using (var deactivate = new AppDbContext(options))
             {
-                var user = await deactivate.Users.SingleAsync(u => u.EmployeeId == "E1002");
+                var user = await deactivate.Users.SingleAsync(u => u.EmployeeId == "1000002");
                 deactivatedId = user.Id;
                 if (!await deactivate.RefreshTokens.AnyAsync(t => t.UserId == user.Id))
                 {
@@ -92,10 +95,10 @@ public class MySqlExportAndAccountTests
             var attendance = await ExportQuery.LoadAttendanceAsync(read, oct8, oct8, buildingA);
             var submissions = await ExportQuery.LoadSubmissionsAsync(read, oct8, oct8.AddDays(1), null);
             var points = await ExportQuery.LoadPointsAsync(read, buildingA);
-            var upperMatches = await read.Users.AnyAsync(u => u.EmployeeId != null && u.EmployeeId.ToUpper() == "E1001");
+            var upperMatches = await read.Users.AnyAsync(u => u.EmployeeId != null && u.EmployeeId.ToUpper() == "1000001");
 
             var shiftInRow = Assert.Single(attendance);
-            Assert.Equal(("E1001", "AR01", AttendanceSource.AdminAdd, (bool?)null), (shiftInRow.EmployeeId, shiftInRow.AreaCode, shiftInRow.Source, shiftInRow.WithinRadius));
+            Assert.Equal(("1000001", "AR01", AttendanceSource.AdminAdd, (bool?)null), (shiftInRow.EmployeeId, shiftInRow.AreaCode, shiftInRow.Source, shiftInRow.WithinRadius));
             var submission = Assert.Single(submissions);
             Assert.Equal(("AR01-01", Placement.OnTime, false, (bool?)true), (submission.SignCode, submission.Placement, submission.IsCover, submission.WithinRadius));
             Assert.Contains(points, p => p.SignCode == "AR01-01" && p.Windows.Count > 0);

@@ -19,7 +19,7 @@ public record AttendanceRefusedModel(string Message, List<string> NextEvents);
 
 public record BlockedScanModel(string Message, string AreaCode, string AreaName);
 
-/// <summary>E1001 is AR01's Day cleaner, E1002 its Night cleaner; AR01's check-in sign is at TestGps.Near. Log in before moving the clock.</summary>
+/// <summary>1000001 is AR01's Day cleaner, 1000002 its Night cleaner; AR01's check-in sign is at TestGps.Near. Log in before moving the clock.</summary>
 public class AttendanceEndpointTests
 {
     private static async Task<AttendanceStateModel> RecordAtAsync(FacilityApiFactory factory, HttpClient client, DateTimeOffset at, string eventType)
@@ -85,7 +85,7 @@ public class AttendanceEndpointTests
     public async Task Night_shift_out_next_morning_belongs_to_the_night_that_started_yesterday()
     {
         using var factory = new FacilityApiFactory();
-        var (night, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1002", "0810000002");
+        var (night, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000002", "0810000002");
         await RecordAtAsync(factory, night, ThaiClock.At(8, 19, 0), "ShiftIn");
 
         var state = await RecordAtAsync(factory, night, ThaiClock.At(9, 7, 50), "ShiftOut");
@@ -99,7 +99,7 @@ public class AttendanceEndpointTests
     public async Task Night_attendance_closes_an_hour_after_the_shift()
     {
         using var factory = new FacilityApiFactory();
-        var (night, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1002", "0810000002");
+        var (night, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000002", "0810000002");
         await RecordAtAsync(factory, night, ThaiClock.At(8, 19, 0), "ShiftIn");
         factory.Clock.SetUtcNow(ThaiClock.At(9, 8, 1));
 
@@ -288,7 +288,7 @@ public class AttendanceEndpointTests
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
         await factory.WithDbAsync(async db =>
         {
-            (await db.Users.SingleAsync(u => u.EmployeeId == "E1001")).IsActive = false;
+            (await db.Users.SingleAsync(u => u.EmployeeId == "1000001")).IsActive = false;
             await db.SaveChangesAsync();
         });
 

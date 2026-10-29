@@ -14,7 +14,7 @@ public class AuditTrailTests
 
         await factory.WithDbAsync(async db =>
         {
-            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "E1001");
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
 
             Assert.Throws<ArgumentException>(() =>
                 AuditTrail.Add(db, cleaner.Id, DateTime.UtcNow, "TEST", "users", cleaner.Id, "test", before: cleaner, after: null));

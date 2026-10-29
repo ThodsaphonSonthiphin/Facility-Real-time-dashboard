@@ -20,7 +20,7 @@ public class SignAdminEndpointTests
     {
         using var factory = new FacilityApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        var (e1003, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1003", "0810000003");
+        var (e1003, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000003", "0810000003");
 
         var response = await LocateAsync(factory, admin, "AR02-IN", 13.757, 100.502, 17.2, "Site");
 

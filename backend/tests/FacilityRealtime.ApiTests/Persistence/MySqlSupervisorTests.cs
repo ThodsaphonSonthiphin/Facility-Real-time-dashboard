@@ -39,8 +39,8 @@ public class MySqlSupervisorTests
             await using (var write = new AppDbContext(options))
             {
                 await DbInitializer.SeedAsync(write, new Pbkdf2PasswordHasher(iterations: 1_000));
-                var cleaner = await write.Users.SingleAsync(u => u.EmployeeId == "E1001");
-                var supervisor = await write.Users.SingleAsync(u => u.EmployeeId == "S2001");
+                var cleaner = await write.Users.SingleAsync(u => u.EmployeeId == "1000001");
+                var supervisor = await write.Users.SingleAsync(u => u.EmployeeId == "2000001");
                 var admin = await write.Users.SingleAsync(u => u.Username == "admin");
                 var sign = await write.Signs.SingleAsync(s => s.Code == "AR01-01");
                 var window = (await write.PointRoundWindows.Where(w => w.ServicePointId == sign.ServicePointId && w.Shift == Shift.Day).ToListAsync())
@@ -98,7 +98,7 @@ public class MySqlSupervisorTests
                 Assert.Equal(new TimeOnly(7, 0), Assert.Single(submissions).RoundStart);
 
                 var inspection = Assert.Single(await InspectionHistoryQuery.LoadInspectionsAsync(read, oct8, oct8, buildingAId));
-                Assert.Equal(("S2001", true, false, "พื้นยังเปียก"), (inspection.EmployeeId, inspection.IsCover, inspection.WithinRadius!.Value, inspection.Defect));
+                Assert.Equal(("2000001", true, false, "พื้นยังเปียก"), (inspection.EmployeeId, inspection.IsCover, inspection.WithinRadius!.Value, inspection.Defect));
                 Assert.Equal("AR01-01", inspection.SignCode);
                 Assert.Empty(await InspectionHistoryQuery.LoadInspectionsAsync(read, oct8, oct8, buildingBId));
 
@@ -112,7 +112,7 @@ public class MySqlSupervisorTests
 
                 var from = new DateTime(2026, 10, 7, 17, 0, 0, DateTimeKind.Utc); // 8 Oct 00:00 Thai
                 var alerts = await AlertQuery.LoadAsync(read, from, from.AddDays(1), at.AddHours(13), new AttendanceSettings());
-                Assert.Contains(alerts, a => a.Kind == AlertKind.InspectionGps && a.Person.EmployeeId == "S2001" && a.Sign!.Code == "AR01-01");
+                Assert.Contains(alerts, a => a.Kind == AlertKind.InspectionGps && a.Person.EmployeeId == "2000001" && a.Sign!.Code == "AR01-01");
                 var blocked = Assert.Single(alerts, a => a.Kind == AlertKind.BlockedScan);
                 Assert.Equal(BlockReason.OutsideShift, blocked.BlockReason);
                 Assert.Equal(new ShiftSlot(oct8, Shift.Night), blocked.CoverSlot);
