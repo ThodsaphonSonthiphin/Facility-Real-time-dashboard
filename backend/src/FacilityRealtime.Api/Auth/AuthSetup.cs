@@ -23,6 +23,7 @@ public static class AuthSetup
             .ValidateOnStart();
 
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
+        services.AddSingleton<SecurityLog>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
 
