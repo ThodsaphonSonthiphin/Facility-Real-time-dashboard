@@ -23,7 +23,10 @@ public sealed record SupervisorTally(
     int NotInspected,
     int Inspections,
     int Reworks,
-    int GpsFlagged);
+    int GpsFlagged)
+{
+    public IReadOnlyList<int> UninspectedPointIds { get; init; } = [];
+}
 
 /// <summary>facility-0048 rule 5: the numbers the Admin weighs a Supervisor by. The system shows them; it does not judge.</summary>
 public static class InspectionSummary
@@ -83,7 +86,11 @@ public static class InspectionSummary
                 rounds.Count(r => r.Outcome == RoundOutcome.NotInspected && InBeat(r.PointId, r.Slot.Shift) && !LatestAfterShift(r)),
                 own.Count,
                 own.Count(i => i.Result == InspectionResult.Rework),
-                own.Count(i => i.WithinRadius == false));
+                own.Count(i => i.WithinRadius == false))
+            {
+                UninspectedPointIds = beatPoints.Except(own.Where(i => i.Slot.Shift == supervisor.Shift)
+                    .Select(i => i.PointId)).ToList(),
+            };
         }).ToList();
     }
 }

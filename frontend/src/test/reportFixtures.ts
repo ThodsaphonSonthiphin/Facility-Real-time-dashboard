@@ -22,6 +22,7 @@ export function summaryRow(overrides: Partial<SummaryRow> = {}): SummaryRow {
     inspections: 101,
     reworks: 11,
     gpsFlagged: 3,
+    uninspectedPoints: [],
     ...overrides,
   };
 }
@@ -44,6 +45,11 @@ export const summary: InspectionSummary = {
       inspections: 41,
       reworks: 2,
       gpsFlagged: 1,
+      uninspectedPoints: [
+        { pointId: 1, areaCode: 'AR01', pointName: 'ห้องน้ำทดสอบ', signCode: 'AR01-01' },
+        { pointId: 2, areaCode: 'AR01', pointName: 'ทางเดินทดสอบ', signCode: 'AR01-02' },
+        { pointId: 3, areaCode: 'AR02', pointName: 'ห้องประชุมทดสอบ', signCode: 'AR02-01' },
+      ],
     }),
     summaryRow({
       supervisorId: 33,
@@ -52,6 +58,12 @@ export const summary: InspectionSummary = {
       buildingCode: 'B',
       pointsInspected: 0,
       pointsTotal: 10,
+      uninspectedPoints: Array.from({ length: 10 }, (_, index) => ({
+        pointId: 10 + index,
+        areaCode: 'BR01',
+        pointName: `จุดทดสอบ ${index + 1}`,
+        signCode: `BR01-${String(index + 1).padStart(2, '0')}`,
+      })),
       submitted: 0,
       submittedInspected: 0,
       notInspected: 0,

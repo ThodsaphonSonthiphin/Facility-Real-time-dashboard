@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Facts } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
+import { DialogHeader } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { useBuildingNames } from '../../shared/api/buildingNames';
@@ -14,7 +15,7 @@ import {
   PHONE_PROBLEM,
   placeText,
 } from './accountRules';
-import { formClass, formTitleClass } from './accountStyles';
+import { formClass } from './accountStyles';
 import { useChangePhoneMutation, useResetPasswordMutation, type Account } from './accountsApi';
 
 interface SecretFormProps {
@@ -54,7 +55,7 @@ export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
 
   return (
     <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
-      <h2 id={titleId} className={formTitleClass}>{`แก้เบอร์โทร · ${account.displayName}`}</h2>
+      <DialogHeader id={titleId} title={`แก้เบอร์โทร · ${account.displayName}`} onClose={onCancel} closeDisabled={isLoading} />
       {/* facility-0081: who the form is for; the owner found 19 px bold too large (2026-10-26), so the normal size */}
       <Facts
         items={[
@@ -125,7 +126,12 @@ export function PasswordForm({ account, isSelf, onDone, onCancel }: SecretFormPr
 
   return (
     <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
-      <h2 id={titleId} className={formTitleClass}>{`รีเซ็ตรหัสผ่าน · ${account.displayName}`}</h2>
+      <DialogHeader
+        id={titleId}
+        title={`รีเซ็ตรหัสผ่าน · ${account.displayName}`}
+        onClose={onCancel}
+        closeDisabled={isLoading}
+      />
       <Field
         label="รหัสผ่านชั่วคราวใหม่"
         help="15–100 ตัวอักษร เป็นวลียาว ๆ ได้ บอกเองด้วยวาจาหรือกระดาษ · ถ้าใส่รหัสเดิม ระบบไม่เปลี่ยนอะไร"
@@ -149,12 +155,12 @@ export function PasswordForm({ account, isSelf, onDone, onCancel }: SecretFormPr
 /** บันทึก… and ยกเลิก under the phone and password forms. */
 function FormButtons({ sending, label, onCancel }: { sending: boolean; label: string; onCancel: () => void }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+      <Button size="desk" disabled={sending} onClick={onCancel}>
+        ยกเลิก
+      </Button>
       <Button type="submit" variant="primary" size="desk" disabled={sending}>
         {sending ? 'กำลังบันทึก...' : label}
-      </Button>
-      <Button size="desk" onClick={onCancel}>
-        ยกเลิก
       </Button>
     </div>
   );

@@ -39,21 +39,25 @@ export function DeactivateConfirm({ account, onDone, onCancel }: DeactivateConfi
       role="alertdialog"
       onClose={() => !isLoading && onCancel()}
     >
-      <div className="flex flex-col gap-3">
-        <h2 id={titleId} tabIndex={-1} className="text-lg font-semibold">{`ปิดใช้งานบัญชี ${account.displayName}?`}</h2>
-        <div id={`${titleId}-detail`} className="flex flex-col gap-1">
-          <p>{`${account.displayName} เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดภายใน 5 นาที ประวัติยังอยู่ เปิดใช้งานกลับได้`}</p>
-          {account.role === 'Cleaner' && account.areaCode && account.shift && (
-            <p>{`${account.areaCode} ${shiftShortLabel[account.shift]} จะว่าง เปิดใช้งานกลับแล้วต้องเลือกพื้นที่ใหม่`}</p>
-          )}
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2">
+          <h2 id={titleId} tabIndex={-1} className="text-lg font-bold">
+            {`ปิดใช้งานบัญชี ${account.displayName}?`}
+          </h2>
+          <div id={`${titleId}-detail`} className="flex flex-col gap-1 text-text-2">
+            <p>{`${account.displayName} เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดภายใน 5 นาที ประวัติยังอยู่ เปิดใช้งานกลับได้`}</p>
+            {account.role === 'Cleaner' && account.areaCode && account.shift && (
+              <p>{`${account.areaCode} ${shiftShortLabel[account.shift]} จะว่าง เปิดใช้งานกลับแล้วต้องเลือกพื้นที่ใหม่`}</p>
+            )}
+          </div>
         </div>
         {problem && <Note tone="error">{problem}</Note>}
-        <div className="flex flex-wrap gap-2">
-          <Button variant="danger" size="desk" disabled={isLoading} onClick={() => void confirm()}>
-            {isLoading ? 'กำลังปิดใช้งาน...' : 'ยืนยัน ปิดใช้งาน'}
-          </Button>
+        <div className="flex flex-wrap justify-end gap-2">
           <Button size="desk" disabled={isLoading} onClick={onCancel}>
             ยกเลิก
+          </Button>
+          <Button variant="danger" size="desk" disabled={isLoading} onClick={() => void confirm()}>
+            {isLoading ? 'กำลังปิดใช้งาน...' : 'ปิดใช้งาน'}
           </Button>
         </div>
       </div>

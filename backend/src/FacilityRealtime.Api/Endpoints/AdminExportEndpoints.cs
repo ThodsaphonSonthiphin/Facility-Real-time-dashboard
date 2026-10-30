@@ -54,6 +54,21 @@ public static class AdminExportEndpoints
             return Bad("ต้องเลือกข้อมูลอย่างน้อย 1 ชุด");
         }
 
+        if (request.BuildingId is not null && request.BuildingIds is not null)
+        {
+            return Bad("เลือก buildingId หรือ buildingIds อย่างใดอย่างหนึ่ง");
+        }
+
+        var buildingIds = request.BuildingIds?.Distinct().ToList();
+        if (buildingIds is not null && (buildingIds.Count == 0 || buildingIds.Any(id => id <= 0)))
+        {
+            return Bad("ต้องเลือกตึกอย่างน้อย 1 ตึก และรหัสตึกต้องมากกว่า 0");
+        }
+        if (buildingIds is not null && await db.Buildings.CountAsync(b => buildingIds.Contains(b.Id)) != buildingIds.Count)
+        {
+            return Bad("ไม่พบตึกนี้");
+        }
+
         string? buildingCode = null;
         if (request.BuildingId is { } buildingId)
         {
@@ -69,14 +84,14 @@ public static class AdminExportEndpoints
         var chosen = new List<(ExportSet Set, ExcelSheet Sheet)>();
         if (sets.Contains(ExportSet.Attendance))
         {
-            chosen.Add((ExportSet.Attendance, ExportSheets.Attendance(await ExportQuery.LoadAttendanceAsync(db, first, last, request.BuildingId), buildingNames)));
+            chosen.Add((ExportSet.Attendance, ExportSheets.Attendance(await ExportQuery.LoadAttendanceAsync(db, first, last, request.BuildingId, buildingIds), buildingNames)));
         }
 
         if (sets.Contains(ExportSet.Submissions))
         {
             chosen.Add((ExportSet.Submissions, ExportSheets.Submissions(
-                await ExportQuery.LoadSubmissionsAsync(db, first, last, request.BuildingId),
-                await ExportQuery.LoadPointsAsync(db, request.BuildingId),
+                await ExportQuery.LoadSubmissionsAsync(db, first, last, request.BuildingId, buildingIds),
+                await ExportQuery.LoadPointsAsync(db, request.BuildingId, buildingIds),
                 first,
                 last,
                 now,
@@ -86,32 +101,39 @@ public static class AdminExportEndpoints
 
         if (sets.Contains(ExportSet.Inspections))
         {
-            var inspections = await InspectionHistoryQuery.LoadInspectionsAsync(db, first, last, request.BuildingId);
+            var inspections = await InspectionHistoryQuery.LoadInspectionsAsync(db, first, last, request.BuildingId, buildingIds);
             var rounds = InspectionHistory.FinishedRounds(
-                await InspectionHistoryQuery.LoadRoundSubmissionsAsync(db, first, last, request.BuildingId),
+                await InspectionHistoryQuery.LoadRoundSubmissionsAsync(db, first, last, request.BuildingId, buildingIds),
                 inspections.Select(i => new InspectionFact(i.ScanRecordId, i.Result, i.InspectedAtUtc)).ToList(),
                 now,
                 settings.ClosesMinutesAfterShift);
             chosen.Add((ExportSet.Inspections, ExportSheets.Inspections(
-                inspections, await InspectionHistoryQuery.LoadPointPlacesAsync(db, request.BuildingId), rounds, buildingNames)));
+                inspections, await InspectionHistoryQuery.LoadPointPlacesAsync(db, request.BuildingId, buildingIds), rounds, buildingNames)));
         }
 
         var sheets = chosen.Select(c => c.Sheet).ToList();
         var file = ExcelWorkbook.Write(sheets);
         var from = ThaiLabels.Date(first);
         var to = ThaiLabels.Date(last);
-        AuditTrail.Add(
-            db, admin.Id, now, "EXPORT_EXCEL", "export", null,
-            $"ส่งออก Excel {string.Join(" + ", sheets.Select(s => s.Name))} วันที่ {from} ถึง {to} {(buildingCode is null ? "ทุกตึก" : "ตึก " + buildingCode)}",
-            before: null,
-            after: new
+        object snapshot = buildingIds is null
+            ? new
             {
-                From = from,
-                To = to,
-                BuildingId = request.BuildingId,
+                From = from, To = to, BuildingId = request.BuildingId,
                 Sets = chosen.Select(c => c.Set.ToString()).ToList(),
                 Rows = sheets.Select(s => s.Rows.Count).ToList(),
-            });
+            }
+            : new
+            {
+                From = from, To = to, BuildingIds = buildingIds,
+                Sets = chosen.Select(c => c.Set.ToString()).ToList(),
+                Rows = sheets.Select(s => s.Rows.Count).ToList(),
+            };
+        var place = buildingIds is not null ? $"ตึกที่เลือก {buildingIds.Count} ตึก" : buildingCode is null ? "ทุกตึก" : "ตึก " + buildingCode;
+        AuditTrail.Add(
+            db, admin.Id, now, "EXPORT_EXCEL", "export", null,
+            $"ส่งออก Excel {string.Join(" + ", sheets.Select(s => s.Name))} วันที่ {from} ถึง {to} {place}",
+            before: null,
+            after: snapshot);
         await db.SaveChangesAsync();
 
         return Results.File(file, XlsxType, $"facility_{from}_{to}.xlsx");

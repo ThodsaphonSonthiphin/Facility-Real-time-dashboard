@@ -19,6 +19,15 @@ export interface SummaryRow {
   inspections: number;
   reworks: number;
   gpsFlagged: number;
+  uninspectedPoints: UninspectedPoint[];
+}
+
+/** Safe public point identity; signCode is printed text, never the sign's QR token. */
+export interface UninspectedPoint {
+  pointId: number;
+  areaCode: string;
+  pointName: string;
+  signCode: string;
 }
 
 /** InspectionSummaryDto: from and to are the Thai shift dates the server counted, both included. */

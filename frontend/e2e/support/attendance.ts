@@ -7,6 +7,10 @@ import { checkInToken } from './seed.ts';
  */
 export async function shiftInIfOffered(page: Page): Promise<void> {
   await page.goto(`/check-in/${checkInToken}`);
+  // The page draws its buttons only from a fresh answer, and the hub asks for one again on its first connect
+  // (facility-0064): the buttons appear, vanish while that second answer is on its way, then come back. Waiting for
+  // the network to settle keeps the decision below out of that gap (it made live-flow fail 3 runs of 4 on 2026-10-30).
+  await page.waitForLoadState('networkidle');
   await expect(page.getByRole('button', { name: /^(เข้างาน|ออกพัก|กลับจากพัก|เลิกงาน)$/ }).first()).toBeVisible();
 
   const shiftIn = page.getByRole('button', { name: 'เข้างาน', exact: true });

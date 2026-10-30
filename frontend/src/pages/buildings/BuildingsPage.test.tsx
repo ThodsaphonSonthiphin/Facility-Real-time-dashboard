@@ -1,7 +1,7 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ManagedBuilding } from '../../shared/api/adminSetupApi';
-import { adminSession, managedBuildings } from '../../test/adminFixtures';
+import { account, accounts, adminSession, managedBuildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
 import { expectBehindMoreInfo } from '../../test/moreInfo';
@@ -12,6 +12,7 @@ function serve(routes: FakeRoutes = {}) {
   return fakeServer({
     ...adminSession,
     'GET /api/admin/buildings/all': () => ({ status: 200, body: managedBuildings }),
+    'GET /api/admin/accounts': () => ({ status: 200, body: accounts }),
     ...routes,
   });
 }
@@ -31,15 +32,64 @@ async function openEditor(user: Awaited<ReturnType<typeof renderApp>>['user'], b
 }
 
 describe('BuildingsPage (facility-0090)', () => {
+
+  it('groups actual active Supervisor names by shift/building and excludes other roles and inactive accounts', async () => {
+    serve({ 'GET /api/admin/accounts': () => ({ status: 200, body: [
+      ...accounts,
+      account({ id: 40, role: 'Supervisor', buildingId: 1, shift: 'Night', displayName: 'หัวหน้าดึกตัวอย่าง' }),
+      account({ id: 41, role: 'Supervisor', buildingId: 2, shift: 'Day', displayName: 'หัวหน้าตึกข้างเคียง' }),
+      account({ id: 42, role: 'Supervisor', buildingId: 1, isActive: false, displayName: 'หัวหน้าปิดบัญชี' }),
+      account({ id: 43, role: 'Cleaner', buildingId: 1, displayName: 'แม่บ้านไม่นับเป็นหัวหน้า' }),
+    ] }) });
+    await renderApp('/admin/buildings');
+    const row = await screen.findByRole('row', { name: /^A / });
+    expect(await within(row).findByText('เช้า · หัวหน้าทดสอบ')).toBeInTheDocument();
+    expect(within(row).getByText('ดึก · หัวหน้าดึกตัวอย่าง')).toBeInTheDocument();
+    expect(within(row).queryByText(/หัวหน้าตึกข้างเคียง|หัวหน้าปิดบัญชี|แม่บ้านไม่นับเป็นหัวหน้า/)).not.toBeInTheDocument();
+    expect(within(screen.getByRole('row', { name: /^B / })).getByText('เช้า · หัวหน้าตึกข้างเคียง')).toBeInTheDocument();
+  });
+
+  it('distinguishes a pending names request from an empty assignment', async () => {
+    let resolve: () => void = () => undefined;
+    const pending = new Promise<void>((done) => { resolve = done; });
+    serve({ 'GET /api/admin/accounts': async () => {
+      await pending;
+      return { status: 200, body: [] };
+    } });
+    await renderApp('/admin/buildings');
+    const row = await screen.findByRole('row', { name: /^A / });
+    expect(within(row).getByText('กำลังโหลดหัวหน้า...')).toBeInTheDocument();
+    expect(within(row).queryByText('ยังไม่มีหัวหน้า')).not.toBeInTheDocument();
+    resolve();
+    expect(await within(row).findByText('ยังไม่มีหัวหน้า')).toBeInTheDocument();
+  });
+
+  it('shows unavailable names and supports retry without preventing building management', async () => {
+    let failed = true;
+    serve({ 'GET /api/admin/accounts': () => failed
+      ? ({ status: 500, body: { message: 'โหลดไม่ได้' } })
+      : ({ status: 200, body: accounts }) });
+    const { user } = await renderApp('/admin/buildings');
+    expect(await screen.findByText('โหลดรายชื่อหัวหน้าไม่ได้')).toBeInTheDocument();
+    const row = screen.getByRole('row', { name: /^A / });
+    expect(within(row).getByText('โหลดรายชื่อไม่ได้')).toBeInTheDocument();
+    expect(within(row).queryByText('ยังไม่มีหัวหน้า')).not.toBeInTheDocument();
+    failed = false;
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+    expect(await within(row).findByText('เช้า · หัวหน้าทดสอบ')).toBeInTheDocument();
+    await openEditor(user, a);
+    expect(screen.getByRole('button', { name: 'ปิดใช้งานตึกนี้' })).toBeDisabled();
+  });
+
   it('lists every building, off ones too, with its open Areas and its status in words', async () => {
     serve();
     await renderApp('/admin/buildings');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'ตึก' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { level: 2, name: 'ตึกทั้งหมด (3)' })).toBeInTheDocument();
-    expect(cellsOf('A')).toEqual(['ตึกทดลอง', '2', 'ใช้งาน', 'แก้ไข']);
-    expect(cellsOf('B')).toEqual(['ตึกข้างเคียง', '0', 'ใช้งาน', 'แก้ไข']);
-    expect(cellsOf('C')).toEqual(['ตึกเก่า', '0', 'ปิดใช้งาน', 'แก้ไข']);
+    await waitFor(() => expect(cellsOf('A')).toEqual(['ตึกทดลอง', '2', 'เช้า · หัวหน้าทดสอบ', 'ใช้งาน', 'แก้ไข']));
+    expect(cellsOf('B')).toEqual(['ตึกข้างเคียง', '0', 'ยังไม่มีหัวหน้า', 'ใช้งาน', 'แก้ไข']);
+    expect(cellsOf('C')).toEqual(['ตึกเก่า', '0', 'ยังไม่มีหัวหน้า', 'ปิดใช้งาน', 'แก้ไข']);
     const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
     expect(within(menu).getByRole('link', { name: 'ตึก' })).toHaveAttribute('aria-current', 'page');
   });
@@ -53,7 +103,7 @@ describe('BuildingsPage (facility-0090)', () => {
     });
     const { user } = await renderApp('/admin/buildings');
 
-    await user.click(await screen.findByRole('button', { name: '+ เพิ่มตึก' }));
+    await user.click(await screen.findByRole('button', { name: 'เพิ่มตึก' }));
     const drawer = screen.getByRole('dialog', { name: 'เพิ่มตึก' });
     expect(within(drawer).getByText('ตัวอักษรอังกฤษหรือตัวเลข 1–20 ตัว เช่น B2 · แก้ทีหลังไม่ได้')).toBeInTheDocument();
     await user.type(within(drawer).getByRole('textbox', { name: 'รหัสตึก' }), ' b2 ');
@@ -69,7 +119,7 @@ describe('BuildingsPage (facility-0090)', () => {
     const server = serve();
     const { user } = await renderApp('/admin/buildings');
 
-    await user.click(await screen.findByRole('button', { name: '+ เพิ่มตึก' }));
+    await user.click(await screen.findByRole('button', { name: 'เพิ่มตึก' }));
     const drawer = screen.getByRole('dialog', { name: 'เพิ่มตึก' });
     await user.click(within(drawer).getByRole('button', { name: 'บันทึก' }));
     expect(within(drawer).getByText('ใส่รหัสตึกก่อน')).toBeInTheDocument();
@@ -84,7 +134,7 @@ describe('BuildingsPage (facility-0090)', () => {
     serve({ 'POST /api/admin/buildings': () => ({ status: 409, body: { message: 'รหัสตึกนี้มีแล้ว' } }) });
     const { user } = await renderApp('/admin/buildings');
 
-    await user.click(await screen.findByRole('button', { name: '+ เพิ่มตึก' }));
+    await user.click(await screen.findByRole('button', { name: 'เพิ่มตึก' }));
     const drawer = screen.getByRole('dialog', { name: 'เพิ่มตึก' });
     await user.type(within(drawer).getByRole('textbox', { name: 'รหัสตึก' }), 'C');
     await user.type(within(drawer).getByRole('textbox', { name: 'ชื่อตึก' }), 'ตึกใหม่');
@@ -99,7 +149,8 @@ describe('BuildingsPage (facility-0090)', () => {
     const { user } = await renderApp('/admin/buildings');
 
     const drawer = await openEditor(user, a);
-    expect(within(drawer).getByText('รหัสตึก A (แก้ไม่ได้)')).toBeInTheDocument();
+    expect(within(drawer).getByText('A')).toBeInTheDocument();
+    expect(within(drawer).getByText('แก้ไม่ได้')).toBeInTheDocument();
     expect(within(drawer).queryByRole('textbox', { name: 'รหัสตึก' })).not.toBeInTheDocument();
     const name = within(drawer).getByRole('textbox', { name: 'ชื่อตึก' });
     expect(name).toHaveValue('ตึกทดลอง');
@@ -161,7 +212,8 @@ describe('BuildingsPage (facility-0090)', () => {
     serve({ 'GET /api/admin/buildings/all': () => ({ status: 200, body: [] }) });
     await renderApp('/admin/buildings');
 
-    expect(await screen.findByText('ยังไม่มีตึก กด "+ เพิ่มตึก" เพื่อเริ่ม')).toBeInTheDocument();
+    expect(await screen.findByText('ยังไม่มีตึก')).toBeInTheDocument();
+    expect(screen.getByText('เริ่มจากปุ่ม "เพิ่มตึก" ด้านบน')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'ตึกทั้งหมด (0)' })).toBeInTheDocument();
   });
 

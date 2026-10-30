@@ -4,18 +4,21 @@ import { baseApi } from '../../shared/api/baseApi';
 const printSignsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     /**
-     * The Areas to print: one Area by id, or "all" (facility-0021 item 6: every active one, not only what is on
+     * The Areas to print: one Area by id, a "building:<id>" group, or "all" (facility-0021 item 6: every active one, not only what is on
      * screen). The server has no all-signs endpoint, so "all" asks for each active Area's detail.
      */
     getPrintAreas: build.query<AreaDetail[], string>({
       async queryFn(which, _api, _extraOptions, baseQuery) {
         let ids: number[];
-        if (which === 'all') {
+        if (which === 'all' || which.startsWith('building:')) {
           const list = await baseQuery('/admin/areas');
           if (list.error) {
             return { error: list.error };
           }
-          ids = (list.data as AreaSummary[]).filter((area) => area.isActive).map((area) => area.id);
+          const buildingId = which.startsWith('building:') ? Number(which.slice('building:'.length)) : undefined;
+          ids = (list.data as AreaSummary[])
+            .filter((area) => area.isActive && (buildingId === undefined || area.buildingId === buildingId))
+            .map((area) => area.id);
         } else {
           ids = [Number(which)];
         }

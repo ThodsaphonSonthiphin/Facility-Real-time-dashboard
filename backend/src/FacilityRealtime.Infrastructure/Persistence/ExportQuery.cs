@@ -47,15 +47,15 @@ public sealed record ExportPoint(
     int Id, string BuildingCode, string AreaCode, ShiftPattern ShiftPattern, string PointName, string SignCode, IReadOnlyList<ExportWindow> Windows);
 
 /// <summary>
-/// facility-0053: what the Excel export reads, by Thai shift date (both ends included) and optionally one building.
+/// facility-0053: what the Excel export reads, by Thai shift date (both ends included) and optional building selection.
 /// In Infrastructure so a [MySqlFact] can run it on the Oracle provider.
 /// </summary>
 public static class ExportQuery
 {
-    public static Task<List<AttendanceExportRow>> LoadAttendanceAsync(AppDbContext db, DateOnly first, DateOnly last, int? buildingId) =>
+    public static Task<List<AttendanceExportRow>> LoadAttendanceAsync(AppDbContext db, DateOnly first, DateOnly last, int? buildingId, IReadOnlyCollection<int>? buildingIds = null) =>
         (from a in db.ShiftAttendances.AsNoTracking()
          join area in db.Areas on a.AreaId equals area.Id
-         where a.ShiftDate >= first && a.ShiftDate <= last && (buildingId == null || area.BuildingId == buildingId)
+         where a.ShiftDate >= first && a.ShiftDate <= last && (buildingId == null || area.BuildingId == buildingId) && (buildingIds == null || buildingIds.Contains(area.BuildingId))
          orderby a.ShiftDate, a.Shift, area.Code, a.UserId, a.OccurredAt
          select new AttendanceExportRow(
              a.UserId,
@@ -72,10 +72,11 @@ public static class ExportQuery
              a.WithinRadius))
         .ToListAsync();
 
-    public static Task<List<SubmissionExportRow>> LoadSubmissionsAsync(AppDbContext db, DateOnly first, DateOnly last, int? buildingId) =>
+    public static Task<List<SubmissionExportRow>> LoadSubmissionsAsync(AppDbContext db, DateOnly first, DateOnly last, int? buildingId, IReadOnlyCollection<int>? buildingIds = null) =>
         db.ScanRecords.AsNoTracking()
             .Where(s => s.ShiftDate >= first && s.ShiftDate <= last
-                && (buildingId == null || s.ServicePoint!.Area!.BuildingId == buildingId))
+                && (buildingId == null || s.ServicePoint!.Area!.BuildingId == buildingId)
+                && (buildingIds == null || buildingIds.Contains(s.ServicePoint!.Area!.BuildingId)))
             .OrderBy(s => s.ShiftDate).ThenBy(s => s.Shift).ThenBy(s => s.SubmittedAt)
             .Select(s => new SubmissionExportRow(
                 s.ShiftDate,
@@ -100,10 +101,10 @@ public static class ExportQuery
             .ToListAsync();
 
     /// <summary>Points as they are set up now (decision 12): active points of active Areas, by Area code then card order.</summary>
-    public static async Task<List<ExportPoint>> LoadPointsAsync(AppDbContext db, int? buildingId)
+    public static async Task<List<ExportPoint>> LoadPointsAsync(AppDbContext db, int? buildingId, IReadOnlyCollection<int>? buildingIds = null)
     {
         var points = await db.ServicePoints.AsNoTracking()
-            .Where(p => p.IsActive && p.Area!.IsActive && (buildingId == null || p.Area.BuildingId == buildingId))
+            .Where(p => p.IsActive && p.Area!.IsActive && (buildingId == null || p.Area.BuildingId == buildingId) && (buildingIds == null || buildingIds.Contains(p.Area.BuildingId)))
             .Select(p => new { p.Id, BuildingCode = p.Area!.Building!.Code, AreaCode = p.Area.Code, p.Area.ShiftPattern, p.Name, p.SortOrder })
             .ToListAsync();
         var ids = points.Select(p => p.Id).ToList();

@@ -4,18 +4,9 @@ import type { Shift } from '../../shared/api/types';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import type { Account, AccountRole, CreateAccountRequest, UpdateAccountBody } from './accountsApi';
 
-export type AccountFilter = 'all' | AccountRole | 'inactive';
+export type AccountActiveFilter = 'all' | 'active' | 'inactive';
 
-export const accountFilters: readonly AccountFilter[] = ['all', 'Cleaner', 'Supervisor', 'Admin', 'inactive'];
-
-/** Wireframe D6's tabs. */
-export const filterLabel: Record<AccountFilter, string> = {
-  all: 'ทั้งหมด',
-  Cleaner: 'แม่บ้าน',
-  Supervisor: 'หัวหน้า',
-  Admin: 'แอดมิน',
-  inactive: 'ปิดใช้งาน',
-};
+export const accountRoles: readonly AccountRole[] = ['Cleaner', 'Supervisor', 'Admin'];
 
 export const accountRoleLabel: Record<AccountRole, string> = {
   Cleaner: 'แม่บ้าน',
@@ -23,29 +14,24 @@ export const accountRoleLabel: Record<AccountRole, string> = {
   Admin: 'แอดมิน',
 };
 
-function inFilter(account: Account, filter: AccountFilter): boolean {
-  if (filter === 'all') {
-    return true;
-  }
-  return filter === 'inactive' ? !account.isActive : account.role === filter;
-}
-
-/** facility-0056: about 180 rows, filtered on the page. The search covers the name and the login name. */
-export function filterAccounts(accounts: Account[], filter: AccountFilter, search: string): Account[] {
+/** facility-0056: role, active state and search independently narrow the locally loaded list. */
+export function filterAccounts(accounts: Account[], role: AccountRole, active: AccountActiveFilter, search: string): Account[] {
   const needle = search.trim().toLowerCase();
   return accounts.filter(
     (account) =>
-      inFilter(account, filter) &&
+      account.role === role &&
+      (active === 'all' || account.isActive === (active === 'active')) &&
       (needle === '' ||
         account.displayName.toLowerCase().includes(needle) ||
         account.loginName.toLowerCase().includes(needle)),
   );
 }
 
-export function filterCounts(accounts: Account[]): Record<AccountFilter, number> {
+/** Counts always describe the complete role, including inactive accounts, independently of the filters. */
+export function filterCounts(accounts: Account[]): Record<AccountRole, number> {
   return Object.fromEntries(
-    accountFilters.map((filter) => [filter, accounts.filter((account) => inFilter(account, filter)).length]),
-  ) as Record<AccountFilter, number>;
+    accountRoles.map((role) => [role, accounts.filter((account) => account.role === role).length]),
+  ) as Record<AccountRole, number>;
 }
 
 /** D6's "ประจำที่" column. */

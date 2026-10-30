@@ -94,7 +94,8 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     const { user, router } = await renderApp('/admin/areas/1/edit');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' })).toBeInTheDocument();
-    expect(screen.getByText('รหัสพื้นที่ AR01 (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)')).toBeInTheDocument();
+    expect(screen.getByText('AR01')).toBeInTheDocument();
+    expect(screen.getByText('แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย')).toBeInTheDocument();
     expect(screen.getByLabelText('ชื่อพื้นที่')).toHaveValue('Area ทดลอง');
     expect(screen.getByLabelText('ตึก')).toHaveValue('1');
     expect(screen.getByLabelText('แม่บ้านประจำกะเช้า')).toHaveValue('21');
@@ -155,7 +156,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     const { user } = await renderApp('/admin/areas/1/edit');
 
     expect(await screen.findByText('ป้ายลงเวลา AR01-IN ระบบสร้างให้เองตอนเพิ่มพื้นที่')).toBeInTheDocument();
-    expect(screen.getByText('จุดทำความสะอาด 2 จุด · เพิ่มหรือแก้ที่หน้า จัดการพื้นที่และป้าย')).toBeInTheDocument();
+    expect(screen.getByText('จุดทำความสะอาด 2 จุด · เพิ่มหรือแก้ที่หน้า พื้นที่และป้าย')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'ปิดใช้งานพื้นที่นี้' }));
 
     expect(await screen.findByText('ปิดใช้งาน AR01 แล้ว')).toBeInTheDocument();

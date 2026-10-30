@@ -16,7 +16,13 @@ public record InspectionSummaryRowDto(
     int NotInspected,
     int Inspections,
     int Reworks,
-    int GpsFlagged);
+    int GpsFlagged)
+{
+    public IReadOnlyList<UninspectedPointDto> UninspectedPoints { get; init; } = [];
+}
+
+/// <summary>Public point identity only; never the QR token or location.</summary>
+public record UninspectedPointDto(int PointId, string AreaCode, string PointName, string SignCode);
 
 /// <summary>facility-0048 rule 5: From and To are the Thai shift dates covered, both included.</summary>
 public record InspectionSummaryDto(DateOnly From, DateOnly To, IReadOnlyList<InspectionSummaryRowDto> Rows);

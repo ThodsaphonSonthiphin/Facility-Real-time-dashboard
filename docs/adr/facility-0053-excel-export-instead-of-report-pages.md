@@ -28,3 +28,7 @@ flowchart TD
 - การส่งออกเป็นการกระทำของ Admin ที่ต้องเก็บประวัติ (facility-0051)
 
 > **แก้ไข 2026-10-21 (แผน 12):** หน้าส่งออก Excel อยู่ที่ `/admin/export` ในเมนู Admin และมีลิงก์ "ส่งออก Excel" จาก Dashboard, หน้าการเข้างาน (วันที่ของกะและตึกที่แสดง) และหน้าสรุปการตรวจ (ช่วงวันและตึกที่แสดง) เลือกชุดข้อมูล (ค่าเริ่ม การลงเวลา + การส่งงาน) ช่วงวัน 1–31 วัน และตึก แล้วกด "ดาวน์โหลด .xlsx" เบราว์เซอร์บันทึกไฟล์ด้วยชื่อที่เซิร์ฟเวอร์ตั้ง (`facility_<from>_<to>.xlsx`) ไฟล์ไม่ผ่าน store ของหน้า หน้าไม่แสดงจำนวนแถวก่อนดาวน์โหลด เพราะ API ไม่ส่งมา
+
+## Superseded navigation and building selection (2026-10-30)
+
+[facility-0100](facility-0100-admin-pages-follow-approved-design.md) supersedes the page shortcuts: Export is reached from the Admin menu only. Existing single-building export URLs remain supported; requests may also explicitly select multiple buildings with `buildingIds`. Multiple dataset worksheets and the 31-day limit remain.

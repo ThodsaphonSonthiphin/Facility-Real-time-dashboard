@@ -1,13 +1,12 @@
 import type { AreaDetail } from '../../shared/api/adminSetupApi';
-import { useGetBuildingsQuery, useGetCleanersQuery } from '../../shared/api/adminSetupApi';
-import { freshOnOpen } from '../../shared/api/baseApi';
-import { Button } from '../../shared/components/Button';
 import { MoreInfo } from '../../shared/components/MoreInfo';
-import { Drawer } from '../../shared/components/Modal';
+import { DialogHeader, Drawer } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { AreaActiveSection } from './AreaActiveSection';
 import { AreaForm } from './AreaForm';
+import { CheckInSignManagement } from './CheckInSignManagement';
+import { useAreaEditorDrawer } from './useAreaEditorDrawer';
 
 interface AreaEditorDrawerProps {
   detail: AreaDetail;
@@ -21,22 +20,13 @@ interface AreaEditorDrawerProps {
  * Area's table stays visible on the left. The building and Cleaner lists are asked for only while it is open.
  */
 export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerProps) {
-  const buildings = useGetBuildingsQuery(undefined, freshOnOpen);
-  const cleaners = useGetCleanersQuery(undefined, freshOnOpen);
-  const error = buildings.error ?? cleaners.error;
+  const { buildings, cleaners, error } = useAreaEditorDrawer();
   const titleId = 'area-editor-title';
 
   return (
     <Drawer labelledBy={titleId} onClose={onClose}>
-      <div className="flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-2">
-          <h2 id={titleId} tabIndex={-1} className="text-lg font-semibold">
-            {`แก้ไขพื้นที่ · ${detail.area.code} ${detail.area.name}`}
-          </h2>
-          <Button size="desk" onClick={onClose}>
-            ปิด
-          </Button>
-        </div>
+      <div className="flex flex-col gap-5">
+        <DialogHeader id={titleId} title={`แก้ไขพื้นที่ · ${detail.area.code} ${detail.area.name}`} onClose={onClose} />
         {error && <Note tone="error">{getErrorMessage(error)}</Note>}
         {buildings.data && cleaners.data ? (
           <AreaForm
@@ -44,12 +34,14 @@ export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerP
             detail={detail}
             buildings={buildings.data}
             cleaners={cleaners.data}
+            framed={false}
             onSaved={(saved) => onSaved(`บันทึกพื้นที่ ${saved.area.code} ${saved.area.name} แล้ว`)}
             onCancel={onClose}
           />
         ) : (
           !error && <p className="text-text-2">กำลังโหลด...</p>
         )}
+        <CheckInSignManagement detail={detail} />
         <AreaActiveSection detail={detail} />
         <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
       </div>

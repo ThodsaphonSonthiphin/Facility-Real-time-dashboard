@@ -6,7 +6,7 @@ import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, FieldGroup, Select, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
-import { boxClass, buttonClass, focusRing } from '../../shared/components/styles';
+import { buttonClass, focusRing } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftPatternLabel, shiftShortLabel } from '../../shared/utils/labels';
 import { useCreateAreaMutation, useUpdateAreaMutation } from './areaFormApi';
@@ -21,12 +21,18 @@ interface AreaFormProps {
   onSaved?: (saved: AreaDetail) => void;
   /** Given: "ยกเลิก" closes the form (D4's Drawer) instead of linking back to the Area's page. */
   onCancel?: () => void;
+  /** Its own white box on D10's page; off inside the Drawer, which already is one. */
+  framed?: boolean;
 }
 
 const SHIFT_PATTERNS = ['DayAndNight', 'DayOnly'] as const;
 
+// D10's own card. The Drawer presents the same fields without a box inside a box.
+const cardClass = 'flex flex-col gap-4 rounded-lg border border-border bg-surface px-4 py-4 sm:px-6 sm:py-5';
+const bareClass = 'flex flex-col gap-4';
+
 /** Wireframe D10's form. A save opens the Area on the D4 page. The page keys it by Area id. */
-export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: AreaFormProps) {
+export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel, framed = true }: AreaFormProps) {
   const navigate = useNavigate();
   const isNew = !detail;
   const areaId = detail?.area.id;
@@ -62,63 +68,74 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
   };
 
   return (
-    <form className={`flex flex-col gap-3 ${boxClass}`} onSubmit={(event) => void submit(event)}>
-      {isNew ? (
-        <Field
-          label="รหัสพื้นที่"
-          help="ตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03 · พิมพ์บนทุกป้ายของพื้นที่ แก้ทีหลังไม่ได้"
-        >
+    <form className={framed ? cardClass : bareClass} onSubmit={(event) => void submit(event)}>
+      <h2 className="text-base font-bold">ข้อมูลพื้นที่</h2>
+      {problem && <Note tone="error">{problem}</Note>}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {isNew ? (
+          <Field
+            label="รหัสพื้นที่"
+            help="ตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03 · พิมพ์บนทุกป้ายของพื้นที่ แก้ทีหลังไม่ได้"
+          >
+            <TextInput
+              size="desk"
+              value={draft.code}
+              maxLength={20}
+              disabled={sending}
+              onChange={(event) => set({ code: event.target.value })}
+            />
+          </Field>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">รหัสพื้นที่</span>
+            <span className="font-mono">{detail.area.code}</span>
+            <span className="text-xs text-text-2">แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย</span>
+          </div>
+        )}
+        <Field label="ชื่อพื้นที่">
           <TextInput
             size="desk"
-            value={draft.code}
-            maxLength={20}
+            value={draft.name}
+            maxLength={150}
             disabled={sending}
-            onChange={(event) => set({ code: event.target.value })}
+            onChange={(event) => set({ name: event.target.value })}
           />
         </Field>
-      ) : (
-        <p className="text-text-2">{`รหัสพื้นที่ ${detail.area.code} (แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย)`}</p>
-      )}
-      <Field label="ชื่อพื้นที่">
-        <TextInput
-          size="desk"
-          value={draft.name}
-          maxLength={150}
-          disabled={sending}
-          onChange={(event) => set({ name: event.target.value })}
-        />
-      </Field>
-      <Field label="ตึก">
-        <Select
-          size="desk"
-          value={draft.buildingId}
-          disabled={sending}
-          onChange={(event) => set({ buildingId: event.target.value })}
-        >
-          <option value="">เลือกตึก</option>
-          {buildings.map((building) => (
-            <option key={building.id} value={String(building.id)}>
-              {buildingOptionText(building)}
-            </option>
-          ))}
-        </Select>
-      </Field>
-      <FieldGroup legend="รูปแบบกะ" disabled={sending}>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {SHIFT_PATTERNS.map((pattern) => (
-            <label key={pattern} className="inline-flex min-h-9 items-center gap-2">
-              <input
-                type="radio"
-                className={`accent-accent ${focusRing}`}
-                name="areaform-pattern"
-                checked={draft.shiftPattern === pattern}
-                onChange={() => set({ shiftPattern: pattern })}
-              />
-              {shiftPatternLabel[pattern]}
-            </label>
-          ))}
-        </div>
-      </FieldGroup>
+        <Field label="ตึก">
+          <Select
+            size="desk"
+            value={draft.buildingId}
+            disabled={sending}
+            onChange={(event) => set({ buildingId: event.target.value })}
+          >
+            <option value="">เลือกตึก</option>
+            {buildings.map((building) => (
+              <option key={building.id} value={String(building.id)}>
+                {buildingOptionText(building)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <FieldGroup legend="รูปแบบกะ" disabled={sending}>
+          <div className="flex flex-wrap gap-2">
+            {SHIFT_PATTERNS.map((pattern) => (
+              <label
+                key={pattern}
+                className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-border-control px-3 has-checked:border-accent has-checked:bg-accent-subtle has-checked:font-semibold has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
+              >
+                <input
+                  type="radio"
+                  className={`size-4 accent-accent ${focusRing}`}
+                  name="areaform-pattern"
+                  checked={draft.shiftPattern === pattern}
+                  onChange={() => set({ shiftPattern: pattern })}
+                />
+                {shiftPatternLabel[pattern]}
+              </label>
+            ))}
+          </div>
+        </FieldGroup>
+      </div>
       <CleanerSelect
         shift="Day"
         value={draft.dayCleanerId}
@@ -143,13 +160,9 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
       {losesNightRounds && (
         <Note tone="warn">บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่</Note>
       )}
-      {problem && <Note tone="error">{problem}</Note>}
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant="primary" size="desk" disabled={sending}>
-          {sending ? 'กำลังบันทึก...' : 'บันทึก'}
-        </Button>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
         {onCancel ? (
-          <Button size="desk" onClick={onCancel}>
+          <Button size="desk" disabled={sending} onClick={onCancel}>
             ยกเลิก
           </Button>
         ) : (
@@ -161,6 +174,9 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel }: Are
             ยกเลิก
           </Link>
         )}
+        <Button type="submit" variant="primary" size="desk" disabled={sending}>
+          {sending ? 'กำลังบันทึก...' : 'บันทึก'}
+        </Button>
       </div>
     </form>
   );

@@ -3,9 +3,8 @@ import type { ManagedBuilding } from '../../shared/api/adminSetupApi';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { MoreInfo } from '../../shared/components/MoreInfo';
-import { Drawer } from '../../shared/components/Modal';
+import { DialogHeader, Drawer } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
-import { boxClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { draftProblem, stillInside } from './buildingRules';
 import { useCreateBuildingMutation, useRenameBuildingMutation, useSetBuildingActiveMutation } from './buildingsApi';
@@ -66,18 +65,22 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
 
   return (
     <Drawer labelledBy={titleId} onClose={onClose}>
-      <div className="flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-2">
-          <h2 id={titleId} tabIndex={-1} className="text-lg font-semibold">
-            {building ? `แก้ไขตึก · ${building.code} ${building.name}` : 'เพิ่มตึก'}
-          </h2>
-          <Button size="desk" onClick={onClose}>
-            ปิด
-          </Button>
-        </div>
-        <form className={`flex flex-col gap-3 ${boxClass}`} onSubmit={(event) => void submit(event)}>
+      <div className="flex flex-col gap-5">
+        <DialogHeader
+          id={titleId}
+          title={building ? `แก้ไขตึก · ${building.code} ${building.name}` : 'เพิ่มตึก'}
+          detail="ตึกเก็บพื้นที่และบัญชีหัวหน้า · ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน"
+          onClose={onClose}
+          closeDisabled={sending}
+        />
+        <form className="flex flex-col gap-4" onSubmit={(event) => void submit(event)}>
+          {problem && <Note tone="error">{problem}</Note>}
           {building ? (
-            <p className="text-text-2">{`รหัสตึก ${building.code} (แก้ไม่ได้)`}</p>
+            <div className="flex flex-col gap-1">
+              <span className="font-semibold">รหัสตึก</span>
+              <span className="font-mono">{building.code}</span>
+              <span className="text-xs text-text-2">แก้ไม่ได้</span>
+            </div>
           ) : (
             <Field label="รหัสตึก" help="ตัวอักษรอังกฤษหรือตัวเลข 1–20 ตัว เช่น B2 · แก้ทีหลังไม่ได้">
               <TextInput
@@ -98,19 +101,21 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
               onChange={(event) => setName(event.target.value)}
             />
           </Field>
-          {problem && <Note tone="error">{problem}</Note>}
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" variant="primary" size="desk" disabled={sending}>
-              บันทึก
-            </Button>
+          <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
             <Button size="desk" disabled={sending} onClick={onClose}>
               ยกเลิก
+            </Button>
+            <Button type="submit" variant="primary" size="desk" disabled={sending}>
+              บันทึก
             </Button>
           </div>
         </form>
         {building && (
-          <section className={`flex flex-col gap-2 ${boxClass}`} aria-labelledby="building-active-title">
-            <h3 id="building-active-title" className="text-base font-semibold">
+          <section
+            className="flex flex-col gap-2 rounded-md border border-border p-3"
+            aria-labelledby="building-active-title"
+          >
+            <h3 id="building-active-title" className="text-base font-bold">
               {building.isActive ? 'ปิดใช้งานตึก' : 'เปิดใช้งานตึก'}
             </h3>
             {!building.isActive && <Note tone="warn">ตึกนี้ปิดใช้งานอยู่ เปิดพื้นที่หรือบัญชีหัวหน้าในตึกนี้ไม่ได้</Note>}
@@ -118,7 +123,9 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
               <Note tone="warn">{`${left} ปิดพื้นที่ และย้ายหรือปิดบัญชีหัวหน้าก่อน จึงจะปิดตึกได้`}</Note>
             )}
             {building.isActive && !left && (
-              <p>ตึกหายจากฟอร์มและหน้าข้อมูลสด ยังเลือกได้ในสรุปการตรวจและส่งออก Excel ประวัติยังอยู่ เปิดกลับได้ ไม่มีปุ่มลบ</p>
+              <p className="text-text-2">
+                ตึกหายจากฟอร์มและหน้าข้อมูลสด ยังเลือกได้ในสรุปการตรวจและส่งออก Excel ประวัติยังอยู่ เปิดกลับได้ ไม่มีปุ่มลบ
+              </p>
             )}
             {switchProblem && <Note tone="error">{switchProblem}</Note>}
             <div>

@@ -39,12 +39,13 @@ public sealed record PointPlace(
 public static class InspectionHistoryQuery
 {
     /// <summary>Scan Records placed in a round (not Off-Round), with the round copied onto them.</summary>
-    public static async Task<List<RoundSubmission>> LoadRoundSubmissionsAsync(AppDbContext db, DateOnly first, DateOnly last, int? buildingId)
+    public static async Task<List<RoundSubmission>> LoadRoundSubmissionsAsync(AppDbContext db, DateOnly first, DateOnly last, int? buildingId, IReadOnlyCollection<int>? buildingIds = null)
     {
         var rows = await db.ScanRecords.AsNoTracking()
             .Where(s => s.ShiftDate >= first && s.ShiftDate <= last && s.Placement != Placement.OffRound
                 && s.RoundStart != null && s.RoundEnd != null
-                && (buildingId == null || s.ServicePoint!.Area!.BuildingId == buildingId))
+                && (buildingId == null || s.ServicePoint!.Area!.BuildingId == buildingId)
+                && (buildingIds == null || buildingIds.Contains(s.ServicePoint!.Area!.BuildingId)))
             .Select(s => new { s.Id, s.ServicePointId, s.ShiftDate, s.Shift, s.RoundStart, s.RoundEnd, s.SubmittedAt })
             .ToListAsync();
         return rows
@@ -59,10 +60,11 @@ public static class InspectionHistoryQuery
     }
 
     /// <summary>Inspections of the Scan Records in the range, oldest first.</summary>
-    public static Task<List<InspectionExportRow>> LoadInspectionsAsync(AppDbContext db, DateOnly first, DateOnly last, int? buildingId) =>
+    public static Task<List<InspectionExportRow>> LoadInspectionsAsync(AppDbContext db, DateOnly first, DateOnly last, int? buildingId, IReadOnlyCollection<int>? buildingIds = null) =>
         db.InspectionRecords.AsNoTracking()
             .Where(i => i.ScanRecord!.ShiftDate >= first && i.ScanRecord.ShiftDate <= last
-                && (buildingId == null || i.ScanRecord.ServicePoint!.Area!.BuildingId == buildingId))
+                && (buildingId == null || i.ScanRecord.ServicePoint!.Area!.BuildingId == buildingId)
+                && (buildingIds == null || buildingIds.Contains(i.ScanRecord.ServicePoint!.Area!.BuildingId)))
             .OrderBy(i => i.InspectedAt).ThenBy(i => i.Id)
             .Select(i => new InspectionExportRow(
                 i.Id,
@@ -88,10 +90,11 @@ public static class InspectionHistoryQuery
             .ToListAsync();
 
     /// <summary>Every point of the building (or of all), active or not, so deactivated points still name their history.</summary>
-    public static async Task<List<PointPlace>> LoadPointPlacesAsync(AppDbContext db, int? buildingId)
+    public static async Task<List<PointPlace>> LoadPointPlacesAsync(AppDbContext db, int? buildingId, IReadOnlyCollection<int>? buildingIds = null)
     {
         var points = await db.ServicePoints.AsNoTracking()
-            .Where(p => buildingId == null || p.Area!.BuildingId == buildingId)
+            .Where(p => (buildingId == null || p.Area!.BuildingId == buildingId)
+                && (buildingIds == null || buildingIds.Contains(p.Area!.BuildingId)))
             .Select(p => new
             {
                 p.Id,

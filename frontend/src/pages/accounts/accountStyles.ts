@@ -1,8 +1,10 @@
-import { boxClass, focusRing } from '../../shared/components/styles';
+import { focusRing } from '../../shared/components/styles';
 
-/** D6's side panel forms: add, edit, phone and password, each a white box with its heading. */
-export const formClass = `flex flex-col gap-2.5 ${boxClass}`;
-export const formTitleClass = 'text-lg font-semibold';
+/**
+ * D6's forms: add, edit, phone and password. Each one fills the right-hand Drawer, so it draws no box of its own (the
+ * Drawer already is one); its heading is the Drawer's name.
+ */
+export const formClass = 'flex flex-col gap-3';
 
 /**
  * One answer of a radio group (role, shift), as D10's shift pattern: 36 px high (pages/admin.md). A held shift is

@@ -1,156 +1,148 @@
-import { useState } from 'react';
-import { useGetAreasQuery, useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
-import { freshOnOpen } from '../../shared/api/baseApi';
-import { Field, TextInput } from '../../shared/components/Field';
+import { Plus } from 'lucide-react';
+import { Button } from '../../shared/components/Button';
+import { Field, Select, TextInput } from '../../shared/components/Field';
+import { Drawer } from '../../shared/components/Modal';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
-import { toggleClass } from '../../shared/components/styles';
+import { PageLoading } from '../../shared/components/PageState';
+import { Tabs } from '../../shared/components/Tabs';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { useAppSelector } from '../../store/hooks';
-import { accountFilters, filterAccounts, filterCounts, filterLabel, type AccountFilter } from './accountRules';
-import { useGetAccountsQuery, useSetAccountActiveMutation, type Account } from './accountsApi';
-import { AccountTable, type AccountAction } from './AccountTable';
+import { accountRoles, accountRoleLabel } from './accountRules';
+import { AccountTable } from './AccountTable';
 import { CreateAccountForm } from './CreateAccountForm';
 import { DeactivateConfirm } from './DeactivateConfirm';
 import { EditAccountForm } from './EditAccountForm';
 import { PasswordForm, PhoneForm } from './SecretForms';
+import { useAccountsPage } from './useAccountsPage';
 
-type Panel = { kind: 'create' } | { kind: 'edit' | 'phone' | 'password' | 'deactivate'; id: number };
-
-type Notice = { kind: 'ok' | 'error'; text: string } | null;
-
-/**
- * facility-0020, 0056, wireframe D6: every account, filtered and searched on the page. The side panel adds an account,
- * or holds the action of the row pressed; when that action is done it goes back to "เพิ่มบัญชี".
- */
+/** Counted role views of the same account list; forms retain the full data and existing business rules. */
 export function AccountsPage() {
-  const accounts = useGetAccountsQuery(undefined, freshOnOpen);
-  const areas = useGetAreasQuery(undefined, freshOnOpen);
-  const buildings = useGetBuildingsQuery(undefined, freshOnOpen);
-  const me = useAppSelector((state) => state.auth.currentUser?.id);
-  const [filter, setFilter] = useState<AccountFilter>('all');
-  const [search, setSearch] = useState('');
-  const [panel, setPanel] = useState<Panel>({ kind: 'create' });
-  const [notice, setNotice] = useState<Notice>(null);
-  const [setAccountActive, activating] = useSetAccountActiveMutation();
-  const list = accounts.data ?? [];
-  const counts = filterCounts(list);
-  const error = accounts.error ?? areas.error ?? buildings.error;
-  const target = panel.kind === 'create' ? undefined : list.find((account) => account.id === panel.id);
-  const backToCreate = () => setPanel({ kind: 'create' });
-  const done = (text: string) => {
-    setNotice({ kind: 'ok', text });
-    backToCreate();
-  };
-
-  // facility-0020: activation is one press; a Cleaner comes back with no Area (plan 5 decision 3)
-  const activate = async (account: Account) => {
-    try {
-      await setAccountActive({ id: account.id, active: true }).unwrap();
-      setNotice({
-        kind: 'ok',
-        text:
-          account.role === 'Cleaner'
-            ? `เปิดใช้งาน ${account.displayName} แล้ว ยังไม่มีพื้นที่ เลือกพื้นที่ได้ที่ "แก้ไข"`
-            : `เปิดใช้งาน ${account.displayName} แล้ว`,
-      });
-    } catch (activationError) {
-      setNotice({ kind: 'error', text: getErrorMessage(activationError) });
-    }
-  };
-
-  const act = (action: AccountAction, account: Account) => {
-    setNotice(null);
-    if (action === 'activate') {
-      void activate(account);
-      return;
-    }
-    setPanel({ kind: action, id: account.id });
-  };
+  const {
+    accounts, areas, buildings, me, role, setRole, active, changeActive, search, changeSearch,
+    panel, notice, list, shown, counts, error, target, closePanel, done, act, openCreate, busy,
+  } = useAccountsPage();
 
   return (
-    <main className="flex flex-col gap-4 text-sm text-text">
-      <h1 className="text-xl font-bold">บัญชีผู้ใช้</h1>
+    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-bold">บัญชีผู้ใช้</h1>
+          {/* As tall as its words before the answer, so nothing under it moves */}
+          <span className="min-h-5 text-text-2">สร้างทีละคน แม่บ้านผูกกับพื้นที่ หัวหน้าผูกกับตึกและกะ</span>
+        </div>
+        <Button variant="primary" size="desk" onClick={openCreate}>
+          <Plus aria-hidden="true" className="size-4" />
+          สร้างบัญชี
+        </Button>
+      </header>
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
-      {/* the list, then the 360 px side panel of the wireframe; no token describes a two-column track list */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="flex min-w-0 flex-col gap-2.5" aria-label="รายชื่อบัญชี">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="กรองบัญชี">
-            {accountFilters.map((option) => (
-              <button
-                key={option}
-                type="button"
-                data-tap=""
-                className={toggleClass}
-                aria-pressed={filter === option}
-                onClick={() => setFilter(option)}
-              >
-                {`${filterLabel[option]} (${counts[option]})`}
-              </button>
-            ))}
-          </div>
-          <div className="max-w-90">
-            <Field label="ค้นหา">
-              <TextInput
-                size="desk"
-                type="search"
-                placeholder="ชื่อ รหัสพนักงาน หรือชื่อผู้ใช้"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
+      {notice && (
+        <Note tone={notice.kind === 'ok' ? 'info' : 'error'} status={notice.kind === 'ok'}>
+          {notice.text}
+        </Note>
+      )}
+      <section
+        className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface"
+        aria-label="รายชื่อบัญชี"
+      >
+        <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-4">
+          <Tabs
+            label="บทบาทบัญชี"
+            idPrefix="accounts"
+            ruled={false}
+            value={role}
+            onChange={setRole}
+            tabs={accountRoles.map((id) => ({
+              id,
+              label: (
+                <>
+                  {accountRoleLabel[id]}{' '}
+                  <span className={id === role
+                    ? 'inline-flex min-h-5.5 min-w-5.5 items-center justify-center rounded-sm bg-accent-subtle px-1.5 text-xs text-accent'
+                    : 'inline-flex min-h-5.5 min-w-5.5 items-center justify-center rounded-sm bg-idle-bg px-1.5 text-xs text-idle'}>
+                    {counts[id]}
+                  </span>
+                </>
+              ),
+            }))}
+          />
+          <div className="flex w-full flex-wrap gap-3 py-2 sm:w-auto">
+            <Field label="สถานะบัญชี">
+              <Select size="desk" value={active} onChange={changeActive}>
+                <option value="all">ทั้งหมด</option>
+                <option value="active">ใช้งานอยู่</option>
+                <option value="inactive">ปิดใช้งาน</option>
+              </Select>
             </Field>
+            <div className="min-w-0 flex-1 sm:w-60">
+              <Field label="ค้นหา">
+                <TextInput
+                  size="desk"
+                  type="search"
+                  placeholder="ชื่อ รหัสพนักงาน หรือชื่อผู้ใช้"
+                  value={search}
+                  onChange={changeSearch}
+                />
+              </Field>
+            </div>
           </div>
-          {notice && (
-            <Note tone={notice.kind === 'ok' ? 'info' : 'error'} status={notice.kind === 'ok'}>
-              {notice.text}
-            </Note>
+        </div>
+        <div role="tabpanel" id={`accounts-panel-${role}`} aria-labelledby={`accounts-tab-${role}`}>
+          {accounts.isLoading && (
+            <div className="px-4 py-3">
+              <PageLoading>กำลังโหลดบัญชี...</PageLoading>
+            </div>
           )}
-          {accounts.isLoading && <p className="text-text-2">กำลังโหลดบัญชี...</p>}
+          {accounts.data && <AccountTable accounts={shown} role={role} me={me} busy={busy} onAction={act} />}
           {accounts.data && (
-            <AccountTable
-              accounts={filterAccounts(list, filter, search)}
-              me={me}
-              busy={activating.isLoading}
-              onAction={act}
-            />
+            <div className="border-t border-border px-4 py-3 text-text-2">
+              {`แสดง ${shown.length > 0 ? `1–${shown.length}` : '0'} จาก ${counts[role]} บัญชี`}
+            </div>
           )}
-          <MoreInfo summary="เกี่ยวกับการปิดใช้งาน">
-            <span>
-              ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติการสแกนยังอยู่ · ปิดใช้งาน แก้เบอร์โทร หรือรีเซ็ตรหัสผ่านแล้ว
-              ทุกเครื่องของคนนั้นหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ · ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
-            </span>
-          </MoreInfo>
-        </section>
-        <aside className="flex min-w-0 flex-col gap-2.5" aria-label="แผงบัญชี">
-          {(!target || panel.kind === 'deactivate') && <CreateAccountForm accounts={list} areas={areas.data ?? []} buildings={buildings.data ?? []} />}
-          {target && panel.kind === 'edit' && (
-            <EditAccountForm
-              key={target.id}
-              account={target}
-              accounts={list}
-              areas={areas.data ?? []}
-              buildings={buildings.data ?? []}
-              onDone={done}
-              onCancel={backToCreate}
-            />
-          )}
-          {target && panel.kind === 'phone' && (
-            <PhoneForm key={target.id} account={target} onDone={done} onCancel={backToCreate} />
-          )}
-          {target && panel.kind === 'password' && (
-            <PasswordForm
-              key={target.id}
-              account={target}
-              isSelf={target.id === me}
-              onDone={done}
-              onCancel={backToCreate}
-            />
-          )}
-          {target && panel.kind === 'deactivate' && (
-            <DeactivateConfirm key={target.id} account={target} onDone={done} onCancel={backToCreate} />
-          )}
-        </aside>
-      </div>
+        </div>
+      </section>
+      <MoreInfo summary="เกี่ยวกับการปิดใช้งาน">
+        <span>
+          ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติการสแกนยังอยู่ · ปิดใช้งาน แก้เบอร์โทร หรือรีเซ็ตรหัสผ่านแล้ว
+          ทุกเครื่องของคนนั้นหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ · ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
+        </span>
+      </MoreInfo>
+      {panel?.kind === 'create' && (
+        <Drawer labelledBy="accounts-create-title" onClose={closePanel}>
+          <CreateAccountForm
+            accounts={list}
+            areas={areas.data ?? []}
+            buildings={buildings.data ?? []}
+            onCancel={closePanel}
+          />
+        </Drawer>
+      )}
+      {target && panel?.kind === 'edit' && (
+        <Drawer labelledBy={`accounts-edit-${target.id}`} onClose={closePanel}>
+          <EditAccountForm
+            key={target.id}
+            account={target}
+            accounts={list}
+            areas={areas.data ?? []}
+            buildings={buildings.data ?? []}
+            onDone={done}
+            onCancel={closePanel}
+          />
+        </Drawer>
+      )}
+      {target && panel?.kind === 'phone' && (
+        <Drawer labelledBy={`accounts-phone-${target.id}`} onClose={closePanel}>
+          <PhoneForm key={target.id} account={target} onDone={done} onCancel={closePanel} />
+        </Drawer>
+      )}
+      {target && panel?.kind === 'password' && (
+        <Drawer labelledBy={`accounts-password-${target.id}`} onClose={closePanel}>
+          <PasswordForm key={target.id} account={target} isSelf={target.id === me} onDone={done} onCancel={closePanel} />
+        </Drawer>
+      )}
+      {target && panel?.kind === 'deactivate' && (
+        <DeactivateConfirm key={target.id} account={target} onDone={done} onCancel={closePanel} />
+      )}
     </main>
   );
 }

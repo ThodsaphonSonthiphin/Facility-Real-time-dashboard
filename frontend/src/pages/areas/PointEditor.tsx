@@ -4,6 +4,7 @@ import type { AdminPoint, AreaSummary } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, FieldGroup, TextInput } from '../../shared/components/Field';
+import { DialogHeader } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
 import { focusRing, inputClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -94,17 +95,16 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
   };
 
   return (
-    <section className="flex flex-col gap-3" aria-labelledby={titleId}>
-      <div className="flex items-start justify-between gap-2">
-        <h3 id={titleId} tabIndex={-1} className="text-lg font-semibold">
-          {`${point ? 'แก้ไขจุด' : 'เพิ่มจุด'} · ${area.code} ${area.name}`}
-        </h3>
-        <Button size="desk" onClick={onClose}>
-          ปิด
-        </Button>
-      </div>
-      <form className="flex flex-col gap-3" onSubmit={(event) => void save(event)}>
-        <Field label="ชื่อจุด">
+    <section className="flex flex-col gap-5" aria-labelledby={titleId}>
+      <DialogHeader
+        id={titleId}
+        title={point ? `แก้ไขจุด · ${point.sign.code}` : 'เพิ่มจุด'}
+        detail={point ? `${point.name} · ${area.code} ${area.name}` : `${area.code} ${area.name}`}
+        onClose={onClose}
+        closeDisabled={sending}
+      />
+      <form className="flex flex-col gap-4" onSubmit={(event) => void save(event)}>
+        <Field label="ชื่อจุด" help="เปลี่ยนชื่อแล้วต้องพิมพ์ป้ายใหม่ เพราะชื่อพิมพ์อยู่บนป้าย">
           <TextInput
             size="desk"
             value={name}
@@ -132,14 +132,18 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
           </p>
         </div>
         {problem && <Note tone="error">{problem}</Note>}
-        <div>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+          <Button size="desk" disabled={sending} onClick={onClose}>
+            ยกเลิก
+          </Button>
           <Button type="submit" variant="primary" size="desk" disabled={sending}>
             {sending ? 'กำลังบันทึก...' : 'บันทึกจุด'}
           </Button>
         </div>
       </form>
       {point && (
-        <div className="flex flex-col items-start gap-2">
+        <div className="flex flex-col items-start gap-2 rounded-md border border-border p-3">
+          <h4 className="font-semibold">การใช้งานจุด</h4>
           {point.isActive ? (
             <>
               <p className="text-text-2">ปิดใช้งานแล้วจุดและป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>

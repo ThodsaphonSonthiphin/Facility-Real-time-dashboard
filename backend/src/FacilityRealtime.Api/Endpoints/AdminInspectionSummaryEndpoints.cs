@@ -80,6 +80,7 @@ public static class AdminInspectionSummaryEndpoints
             rounds);
 
         var byId = supervisors.ToDictionary(u => u.Id);
+        var pointById = places.ToDictionary(p => p.Id);
         var rows = tallies
             .Select(t =>
             {
@@ -97,7 +98,15 @@ public static class AdminInspectionSummaryEndpoints
                     t.NotInspected,
                     t.Inspections,
                     t.Reworks,
-                    t.GpsFlagged);
+                    t.GpsFlagged)
+                {
+                    UninspectedPoints = t.UninspectedPointIds.Select(id => pointById[id])
+                        .OrderBy(p => p.AreaCode, StringComparer.Ordinal)
+                        .ThenBy(p => p.SignCode, StringComparer.Ordinal)
+                        .ThenBy(p => p.Id)
+                        .Select(p => new UninspectedPointDto(p.Id, p.AreaCode, p.PointName, p.SignCode))
+                        .ToList(),
+                };
             })
             .OrderBy(r => r.BuildingCode, StringComparer.Ordinal)
             .ThenBy(r => r.Shift)

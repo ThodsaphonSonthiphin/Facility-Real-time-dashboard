@@ -4,6 +4,7 @@ import { buildingOptionText, useBuildingNames } from '../../shared/api/buildingN
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, FieldGroup, Select, TextInput } from '../../shared/components/Field';
+import { DialogHeader } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import {
@@ -16,20 +17,22 @@ import {
   type CreateDraft,
 } from './accountRules';
 import { useCreateAccountMutation, type Account } from './accountsApi';
-import { formClass, formTitleClass, radioClass, radioLabelClass } from './accountStyles';
+import { formClass, radioClass, radioLabelClass } from './accountStyles';
 import { ShiftChoice } from './ShiftChoice';
 
 interface CreateAccountFormProps {
   accounts: Account[];
   areas: AreaSummary[];
   buildings: Building[];
+  /** Given: "ยกเลิก" closes the Drawer it sits in. */
+  onCancel: () => void;
 }
 
 /**
- * Wireframe D6's "เพิ่มบัญชี" (facility-0020, 0054, 0056): the fields of the chosen role only. A phone or password lives
+ * Wireframe D6's "สร้างบัญชี" (facility-0020, 0054, 0056): the fields of the chosen role only. A phone or password lives
  * in this form's state until it is sent, then it is cleared.
  */
-export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountFormProps) {
+export function CreateAccountForm({ accounts, areas, buildings, onCancel }: CreateAccountFormProps) {
   const names = useBuildingNames();
   const [draft, setDraft] = useState<CreateDraft>(() => emptyDraft());
   const [problem, setProblem] = useState<string | null>(null);
@@ -80,9 +83,7 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
 
   return (
     <form className={formClass} aria-labelledby="accounts-create-title" onSubmit={(event) => void submit(event)}>
-      <h2 id="accounts-create-title" className={formTitleClass}>
-        เพิ่มบัญชี
-      </h2>
+      <DialogHeader id="accounts-create-title" title="สร้างบัญชี" onClose={onCancel} closeDisabled={isLoading} />
       <FieldGroup legend="บทบาท" disabled={isLoading}>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {(['Cleaner', 'Supervisor', 'Admin'] as const).map((role) => (
@@ -220,9 +221,14 @@ export function CreateAccountForm({ accounts, areas, buildings }: CreateAccountF
           {notice}
         </Note>
       )}
-      <Button type="submit" variant="primary" size="desk" disabled={isLoading}>
-        {isLoading ? 'กำลังสร้าง...' : 'สร้างบัญชี'}
-      </Button>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+        <Button size="desk" disabled={isLoading} onClick={onCancel}>
+          ยกเลิก
+        </Button>
+        <Button type="submit" variant="primary" size="desk" disabled={isLoading}>
+          {isLoading ? 'กำลังสร้าง...' : 'สร้างบัญชี'}
+        </Button>
+      </div>
     </form>
   );
 }

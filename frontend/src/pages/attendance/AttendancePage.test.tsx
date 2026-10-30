@@ -186,15 +186,15 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     }
   });
 
-  it('"ส่งออก Excel" opens the export of the shift date and building on screen', async () => {
+  it('keeps Export only in the Admin menu (facility-0100)', async () => {
     serve();
     await renderApp('/admin/attendance?building=2');
     await loaded();
 
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute(
-      'href',
-      '/admin/export?from=2026-10-15&to=2026-10-15&building=2',
-    );
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: 'ส่งออก Excel' })).not.toBeInTheDocument();
+    const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
+    expect(within(menu).getAllByRole('link', { name: 'ส่งออก Excel' })).toHaveLength(1);
+    expect(within(menu).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('href', '/admin/export');
   });
 
   it('the one-line note is in view; the longer notes wait behind ℹ (the design file)', async () => {

@@ -1,94 +1,63 @@
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Fragment } from 'react';
 import { Table } from '../../shared/components/Boxes';
+import { Button } from '../../shared/components/Button';
 import { PageEmpty } from '../../shared/components/PageState';
 import { tableCell } from '../../shared/components/styles';
-import { useBuildingNames } from '../../shared/api/buildingNames';
-import type { SummaryRow } from './summaryApi';
-import { inspectedShare, placeText, pointsText } from './summaryRules';
+import { shiftShortLabel } from '../../shared/utils/labels';
+import { SummaryRowDetails } from './SummaryRowDetails';
+import { useSummaryTable } from './useSummaryTable';
+import type { SummaryTableProps } from './type';
 
-/** Wireframe D7's table, in the server's order, plus "จำนวนครั้งที่ตรวจ" (facility-0048 rule 5). Names are React text only. */
-export function SummaryTable({ rows }: { rows: SummaryRow[] }) {
-  const names = useBuildingNames();
-  if (rows.length === 0) {
+export function SummaryTable(props: SummaryTableProps) {
+  const table = useSummaryTable(props);
+  if (table.rows.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-surface">
-        <PageEmpty title="ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก">เลือกตึกอื่น หรือเลือกทุกตึกเพื่อดูทุกคน</PageEmpty>
+        <PageEmpty title={props.filteredShift ? 'ไม่มีหัวหน้าที่เปิดใช้งานในกะที่เลือก' : 'ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก'}>
+          เลือกตึกอื่นหรือทั้งสองกะเพื่อดูทุกคน
+        </PageEmpty>
       </div>
     );
   }
   return (
-    <Table label="การตรวจของหัวหน้าแต่ละคน">
+    <Table label="การตรวจของหัวหน้าแต่ละคน" minWidth="min-w-230">
       <thead>
         <tr>
           <th scope="col">หัวหน้า</th>
           <th scope="col">ตึก · กะ</th>
-          <th scope="col">จุดที่ตรวจแล้ว</th>
-          <th scope="col" className={tableCell.num}>
-            จำนวนครั้งที่ตรวจ
-          </th>
-          <th scope="col" className={tableCell.num}>
-            งานที่แม่บ้านส่ง
-          </th>
-          <th scope="col" className={tableCell.num}>
-            ตรวจแล้ว
-          </th>
-          <th scope="col">สัดส่วนที่ตรวจ</th>
-          <th scope="col" className={tableCell.num}>
-            ไม่ได้ตรวจ
-          </th>
-          <th scope="col" className={tableCell.num}>
-            ให้แก้ไข
-          </th>
-          <th scope="col" className={tableCell.num}>
-            ตรวจตอนอยู่ไกลป้าย
-          </th>
+          <th scope="col" className={tableCell.num}>ตรวจ (ครั้ง)</th>
+          <th scope="col" className={tableCell.num}>ส่งแล้วไม่ได้ตรวจ</th>
+          <th scope="col" className={tableCell.num}>ให้แก้</th>
+          <th scope="col" className={tableCell.num}>ตรวจไกลป้าย</th>
+          <th scope="col" className={tableCell.num}>จุดที่ไม่ได้ตรวจเลย</th>
+          <th scope="col" className="relative"><span className="sr-only">รายละเอียด</span></th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => (
-          <tr key={row.supervisorId}>
-            <th scope="row">
-              {row.displayName}
-              <span className="block text-xs font-normal text-text-2">{row.employeeId}</span>
-            </th>
-            <td>{placeText(row, names)}</td>
-            <td
-              className={
-                row.pointsInspected < row.pointsTotal
-                  ? 'font-semibold whitespace-nowrap text-overdue tabular-nums'
-                  : 'tabular-nums'
-              }
-            >
-              {pointsText(row)}
-            </td>
-            <td className={tableCell.num}>{row.inspections}</td>
-            <td className={tableCell.num}>{row.submitted}</td>
-            <td className={tableCell.num}>{row.submittedInspected}</td>
-            <td>
-              <Share row={row} />
-            </td>
-            <td className={tableCell.num}>{row.notInspected}</td>
-            <td className={tableCell.num}>{row.reworks}</td>
-            <td className={tableCell.num}>{row.gpsFlagged}</td>
-          </tr>
+        {table.rows.map(({ row, place, missed, id, expanded, share }) => (
+          <Fragment key={row.supervisorId}>
+            <tr>
+              <th scope="row" className="whitespace-nowrap font-semibold">{row.displayName}</th>
+              <td title={place} className="whitespace-nowrap">{row.buildingCode} · {shiftShortLabel[row.shift]}</td>
+              <td className={tableCell.num}>{row.inspections}</td>
+              <td className={`${tableCell.num} ${row.notInspected > 0 ? 'font-bold text-overdue' : 'text-text-2'}`}>{row.notInspected}</td>
+              <td className={tableCell.num}>{row.reworks}</td>
+              <td className={`${tableCell.num} ${row.gpsFlagged > 0 ? 'font-bold text-overdue' : 'text-text-2'}`}>{row.gpsFlagged}</td>
+              <td className={`${tableCell.num} ${missed > 0 ? 'font-bold text-rework' : 'text-text-2'}`}>{missed}</td>
+              <td className={tableCell.actions}>
+                <Button variant="link" size="desk" aria-expanded={expanded} aria-controls={id}
+                  aria-label={`${expanded ? 'ซ่อน' : missed > 0 ? 'ดูจุด' : 'รายละเอียด'} ${row.displayName}`}
+                  onClick={() => table.toggle(row.supervisorId)}>
+                  {expanded ? 'ซ่อน' : missed > 0 ? 'ดูจุด' : 'รายละเอียด'}
+                  {expanded ? <ChevronUp aria-hidden="true" className="size-4" /> : <ChevronDown aria-hidden="true" className="size-4" />}
+                </Button>
+              </td>
+            </tr>
+            <SummaryRowDetails row={row} id={id} expanded={expanded} place={place} share={share} />
+          </Fragment>
         ))}
       </tbody>
     </Table>
-  );
-}
-
-/**
- * A <progress> bar draws the share without an inline width. Grey, not primary: blue means "can be pressed", and the
- * page judges nothing (plan 12 decision 4). `w-30` is the old 120 px bar.
- */
-function Share({ row }: { row: SummaryRow }) {
-  const share = inspectedShare(row);
-  if (share == null) {
-    return <>–</>;
-  }
-  return (
-    <span className="inline-flex items-center gap-2 text-xs tabular-nums">
-      <progress className="h-2 w-30 accent-text-2" max={100} value={share} aria-label={`ตรวจ ${share}% ของงานที่ส่ง`} />
-      {`${share}%`}
-    </span>
   );
 }

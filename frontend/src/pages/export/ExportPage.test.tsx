@@ -28,7 +28,12 @@ function serve(routes: FakeRoutes = {}) {
 }
 
 const exportPosts = (server: ReturnType<typeof serve>) => server.calls.filter((call) => call.path === '/api/admin/export');
-const download = () => screen.getByRole('button', { name: 'ดาวน์โหลด .xlsx' });
+const download = () => screen.getByRole('button', { name: 'ดาวน์โหลด Excel' });
+const acknowledge = async (user: Awaited<ReturnType<typeof renderApp>>['user']) => {
+  await user.click(screen.getByRole('checkbox', { name: /เข้าใจแล้ว/ }));
+  await waitFor(() => expect(download()).toBeEnabled());
+};
+const building = (code: string) => screen.getByRole('checkbox', { name: new RegExp(`^${code} `) });
 const fromField = () => screen.getByRole('textbox', { name: 'ตั้งแต่' });
 const toField = () => screen.getByRole('textbox', { name: 'ถึง' });
 
@@ -45,9 +50,11 @@ describe('ExportPage (D8, facility-0053)', () => {
     expect(screen.getByRole('checkbox', { name: /^การลงเวลา/ })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: /^การส่งงาน/ })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: /^การตรวจงาน/ })).not.toBeChecked();
+    await user.click(screen.getByText('รายละเอียดไฟล์'));
     expect(screen.getByText(`facility_${weekAgo}_${today}.xlsx`)).toBeInTheDocument();
     expect(screen.getByText('2 แผ่นงาน · การลงเวลา + การส่งงาน')).toBeInTheDocument();
 
+    await acknowledge(user);
     await user.click(download());
 
     expect(await screen.findByText('ดาวน์โหลดแล้ว: facility_2026-10-09_2026-10-15.xlsx')).toBeInTheDocument();
@@ -72,15 +79,18 @@ describe('ExportPage (D8, facility-0053)', () => {
     await user.type(fromField(), '01/10/2026');
     await user.clear(toField());
     await user.type(toField(), '07/10/2026');
-    await screen.findByRole('option', { name: 'B · ตึกข้างเคียง' });
-    await user.selectOptions(screen.getByRole('combobox', { name: 'ตึก' }), 'B · ตึกข้างเคียง');
+    await screen.findByRole('checkbox', { name: /^B / });
+    await user.click(screen.getByRole('checkbox', { name: 'ทุกตึก' }));
+    await user.click(building('A'));
+    await user.click(building('B'));
+    await acknowledge(user);
     await user.click(download());
 
     await screen.findByText(/^ดาวน์โหลดแล้ว/);
     expect(exportPosts(server)[0].body).toEqual({
       from: '2026-10-01',
       to: '2026-10-07',
-      buildingId: 2,
+      buildingIds: [1, 2],
       sets: ['Attendance', 'Submissions', 'Inspections'],
     });
   });
@@ -89,6 +99,7 @@ describe('ExportPage (D8, facility-0053)', () => {
     const { saved } = fakeDownload();
     const server = serve();
     const { user } = await renderApp('/admin/export');
+    await acknowledge(user);
 
     await user.click(screen.getByRole('checkbox', { name: /^การลงเวลา/ }));
     await user.click(screen.getByRole('checkbox', { name: /^การส่งงาน/ }));
@@ -116,7 +127,8 @@ describe('ExportPage (D8, facility-0053)', () => {
   it("shows the server's refusal, and saves nothing", async () => {
     const { saved } = fakeDownload();
     serve({ 'POST /api/admin/export': () => ({ status: 400, body: { message: 'ไม่พบตึกนี้' } }) });
-    const { user } = await renderApp('/admin/export?building=9');
+    const { user } = await renderApp('/admin/export?building=2');
+    await acknowledge(user);
 
     await user.click(download());
 
@@ -134,6 +146,7 @@ describe('ExportPage (D8, facility-0053)', () => {
         }),
     });
     const { user } = await renderApp('/admin/export');
+    await acknowledge(user);
 
     await user.click(download());
     const busy = await screen.findByRole('button', { name: 'กำลังสร้างไฟล์...' });
@@ -157,6 +170,7 @@ describe('ExportPage (D8, facility-0053)', () => {
       },
     });
     const { user } = await renderApp('/admin/export');
+    await acknowledge(user);
 
     await user.click(download());
 
@@ -173,7 +187,10 @@ describe('ExportPage (D8, facility-0053)', () => {
 
     expect(fromField()).toHaveValue('15/10/2026');
     expect(toField()).toHaveValue('15/10/2026');
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B · ตึกข้างเคียง'));
+    await screen.findByRole('checkbox', { name: /^B / });
+    expect(building('B')).toBeChecked();
+    expect(building('A')).not.toBeChecked();
+    await acknowledge(user);
     await user.click(download());
 
     await screen.findByText(/^ดาวน์โหลดแล้ว/);
@@ -188,39 +205,34 @@ describe('ExportPage (D8, facility-0053)', () => {
   it('the form follows the address when the menu link is clicked on the open page', async () => {
     serve();
     const { user } = await renderApp('/admin/export?from=2026-10-15&to=2026-10-15&building=2');
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('B · ตึกข้างเคียง'));
+    await screen.findByRole('checkbox', { name: /^B / });
+    expect(building('B')).toBeChecked();
+    expect(building('A')).not.toBeChecked();
 
     await user.click(within(screen.getByRole('navigation', { name: 'เมนูแอดมิน' })).getByRole('link', { name: 'ส่งออก Excel' }));
 
     expect(fromField()).toHaveValue(formatShiftDate(addDays(thaiToday(), -6)));
     expect(toField()).toHaveValue(formatShiftDate(thaiToday()));
-    expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveDisplayValue('ทุกตึก');
+    expect(screen.getByRole('checkbox', { name: 'ทุกตึก' })).toBeChecked();
   });
 
-  it('is in the Admin menu as ส่งออก Excel, and links back to the Dashboard', async () => {
+  it('is in the Admin menu as ส่งออก Excel', async () => {
     serve();
     await renderApp('/admin/export');
     const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
     expect(within(menu).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('aria-current', 'page');
-    expect(within(screen.getByRole('main')).getByRole('link', { name: '‹ กลับไปหน้าสถานะจุด' })).toHaveAttribute(
-      'href',
-      '/dashboard',
-    );
+
   });
 
   it('the building picker lists every building, an off one marked (ปิดใช้งาน) (facility-0090)', async () => {
     serve();
     await renderApp('/admin/export');
 
-    const picker = await screen.findByRole('combobox', { name: 'ตึก' });
-    await waitFor(() =>
-      expect(within(picker).getAllByRole('option').map((option) => option.textContent)).toEqual([
-        'ทุกตึก',
-        'A · ตึกทดลอง',
-        'B · ตึกข้างเคียง',
-        'C · ตึกเก่า (ปิดใช้งาน)',
-      ]),
-    );
+    await screen.findByRole('checkbox', { name: /^C / });
+    expect(building('A')).toBeChecked();
+    expect(building('B')).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /^C · ตึกเก่า \(ปิดใช้งาน\)/ })).toBeChecked();
+    expect(screen.getByText('เลือกแล้ว 3 จาก 3 ตึก')).toBeInTheDocument();
   });
 
   it('asks for the buildings on every open, so a rename or a building turned off shows (facility-0091)', async () => {
@@ -231,12 +243,8 @@ describe('ExportPage (D8, facility-0053)', () => {
       'GET /api/admin/audit-log/actors': () => ({ status: 200, body: actors }),
     });
     const { user } = await renderApp('/admin/export');
-    const options = () =>
-      within(screen.getByRole('combobox', { name: 'ตึก' }))
-        .getAllByRole('option')
-        .map((option) => option.textContent);
     const buildingGets = () => server.calls.filter((call) => call.path === '/api/admin/buildings/all').length;
-    await waitFor(() => expect(options()).toContain('B · ตึกข้างเคียง'));
+    await screen.findByRole('checkbox', { name: /^B · ตึกข้างเคียง/ });
     const before = buildingGets();
 
     // The history page never reads the buildings list, so only the picker itself can ask again.
@@ -246,7 +254,62 @@ describe('ExportPage (D8, facility-0053)', () => {
     expect(buildingGets()).toBe(before);
     await user.click(screen.getByRole('link', { name: 'ส่งออก Excel' }));
 
-    await waitFor(() => expect(options()).toContain('B · อาคารใหม่ (ปิดใช้งาน)'));
+    await screen.findByRole('checkbox', { name: /^B · อาคารใหม่ \(ปิดใช้งาน\)/ });
     expect(buildingGets()).toBe(before + 1);
   });
+  it('requires acknowledgement and an explicit nonempty building selection before download', async () => {
+    fakeDownload();
+    const server = serve();
+    const { user } = await renderApp('/admin/export');
+    await screen.findByRole('checkbox', { name: /^A / });
+    expect(download()).toBeDisabled();
+    await user.click(download());
+    expect(exportPosts(server)).toHaveLength(0);
+    await acknowledge(user);
+    await user.click(screen.getByRole('checkbox', { name: 'ทุกตึก' }));
+    expect(download()).toBeDisabled();
+    expect(screen.getByText('เลือกแล้ว 0 จาก 3 ตึก')).toBeInTheDocument();
+    await user.click(download());
+    expect(exportPosts(server)).toHaveLength(0);
+    await user.click(building('C'));
+    expect(download()).toBeEnabled();
+    await user.click(download());
+    await screen.findByText(/^ดาวน์โหลดแล้ว/);
+    expect(exportPosts(server)[0].body).toMatchObject({ buildingIds: [3] });
+  });
+
+  it('blocks while buildings load or fail, and retry must succeed before exporting', async () => {
+    fakeDownload();
+    let fail = true;
+    let answer: (response: FakeResponse) => void = () => undefined;
+    const server = serve({
+      'GET /api/admin/buildings/all': () => fail ? new Promise<FakeResponse>((resolve) => { answer = resolve; })
+        : { status: 200, body: managedBuildings },
+    });
+    const { user } = await renderApp('/admin/export');
+    await screen.findByText('กำลังโหลดตึก...');
+    await user.click(screen.getByRole('checkbox', { name: /เข้าใจแล้ว/ }));
+    expect(download()).toBeDisabled();
+    await act(async () => answer({ status: 500, body: { message: 'unavailable' } }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('โหลดรายชื่อตึกไม่สำเร็จ');
+    expect(download()).toBeDisabled();
+    expect(exportPosts(server)).toHaveLength(0);
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+    await waitFor(() => expect(download()).toBeEnabled());
+    expect(screen.getByText('เลือกแล้ว 3 จาก 3 ตึก')).toBeInTheDocument();
+  });
+
+  it('never turns a missing deep-linked building into an all-building export', async () => {
+    const server = serve();
+    const { user } = await renderApp('/admin/export?building=999');
+    await screen.findByRole('checkbox', { name: /^A / });
+    await user.click(screen.getByRole('checkbox', { name: /เข้าใจแล้ว/ }));
+    expect(download()).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('ไม่พบตึกที่เลือก');
+    expect(exportPosts(server)).toHaveLength(0);
+    await user.click(screen.getByRole('checkbox', { name: 'ทุกตึก' }));
+    expect(download()).toBeEnabled();
+  });
+
 });

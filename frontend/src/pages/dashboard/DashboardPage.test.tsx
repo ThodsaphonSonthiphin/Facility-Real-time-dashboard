@@ -81,12 +81,12 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     expect(screen.getByText('รอบแรกของกะเริ่ม 11:00')).toBeInTheDocument();
     expect(screen.getByText('ส่งงาน 09:20 · แม่บ้านทดสอบ · ส่งช้า')).toBeInTheDocument();
     expect(screen.getByText('จุดนี้ไม่มีรอบในกะนี้')).toBeInTheDocument();
-    // facility-0059: only the sign's QR opens a point, so the one link on the board is the export (D8)
+    // facility-0059: only the sign's QR opens a point; facility-0100 leaves Export in the menu.
     expect(
       within(screen.getByRole('main'))
-        .getAllByRole('link')
+        .queryAllByRole('link')
         .map((link) => link.getAttribute('href')),
-    ).toEqual(['/admin/export']);
+    ).toEqual([]);
   });
 
   it('a pushed submission or inspection changes its card at once, without asking the server (#26)', async () => {
@@ -221,15 +221,15 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     expect(await screen.findByText('ยังไม่มีจุดที่เปิดใช้งาน เพิ่มได้ที่หน้าจัดการพื้นที่และป้าย')).toBeInTheDocument();
   });
 
-  it('links to the Excel export (D8)', async () => {
+  it('keeps Export only in the Admin menu (facility-0100)', async () => {
     const server = serve();
     const { store } = await renderApp('/dashboard');
     await settled(server, store);
 
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute(
-      'href',
-      '/admin/export',
-    );
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: 'ส่งออก Excel' })).not.toBeInTheDocument();
+    const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
+    expect(within(menu).getAllByRole('link', { name: 'ส่งออก Excel' })).toHaveLength(1);
+    expect(within(menu).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('href', '/admin/export');
   });
 
   it('the notes on reading a card wait behind ℹ (owner, 2026-10-27)', async () => {

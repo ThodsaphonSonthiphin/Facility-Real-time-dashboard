@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { addDays } from '../../shared/utils/dateRange';
 import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
 import { adminSession, managedBuildings } from '../../test/adminFixtures';
-import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
-import { summary } from '../../test/reportFixtures';
+import { authAnswer, fakeServer, type FakeRoutes } from '../../test/fakeServer';
+import { summary, summaryRow } from '../../test/reportFixtures';
 import { renderApp } from '../../test/renderApp';
 
 const query = (search: string) => Object.fromEntries(new URLSearchParams(search));
@@ -46,59 +46,45 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
 
     expect(await screen.findByText('แอดมินเท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)')).toBeInTheDocument();
     expect(query(summaryGets(server)[0].search)).toEqual({});
+    expect(screen.getByRole('heading', { name: 'สรุปการตรวจ' })).toBeInTheDocument();
+    expect(screen.getByText('ระบบไม่ให้คะแนนหรือจัดอันดับหัวหน้า')).toBeVisible();
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'หัวหน้า', 'ตึก · กะ', 'ตรวจ (ครั้ง)', 'ส่งแล้วไม่ได้ตรวจ', 'ให้แก้', 'ตรวจไกลป้าย', 'จุดที่ไม่ได้ตรวจเลย', 'รายละเอียด',
+    ]);
     expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual([
-      'หัวหน้าทดสอบ660001',
-      'หัวหน้ากะดึก660002',
-      'หัวหน้าตึกบี660003',
+      'หัวหน้าทดสอบ', 'หัวหน้ากะดึก', 'หัวหน้าตึกบี',
     ]);
-    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['A · ตึกทดลอง · กะเช้า', '12 จาก 12 จุด', '101', '168', '96', '57%', '72', '11', '3']);
-    expect(cellsOf('หัวหน้ากะดึก')).toEqual([
-      'A · ตึกทดลอง · กะดึก',
-      '9 จาก 12 จุด · ไม่ได้ตรวจ 3 จุด',
-      '41',
-      '150',
-      '40',
-      '27%',
-      '110',
-      '2',
-      '1',
-    ]);
-    expect(cellsOf('หัวหน้าตึกบี')).toEqual(['B · ตึกข้างเคียง · กะเช้า', '0 จาก 10 จุด · ไม่ได้ตรวจ 10 จุด', '0', '0', '0', '–', '0', '0', '0']);
-    expect(screen.getByRole('progressbar', { name: 'ตรวจ 57% ของงานที่ส่ง' })).toHaveAttribute('value', '57');
+    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['A · กะเช้า', '101', '72', '11', '3', '0', 'รายละเอียด']);
+    expect(cellsOf('หัวหน้ากะดึก')).toEqual(['A · กะดึก', '41', '110', '2', '1', '3', 'ดูจุด']);
+    expect(cellsOf('หัวหน้าตึกบี')).toEqual(['B · กะเช้า', '0', '0', '0', '0', '10', 'ดูจุด']);
     // facility-0059: no link to a sign page
     expect(within(screen.getByRole('table')).queryAllByRole('link')).toHaveLength(0);
   });
 
-  it('the fields start on the 7 dates ending today, and the shortcuts fill both', async () => {
-    serve();
-    const { user } = await renderApp('/admin/inspection-summary');
+  it('the compact preset select applies dates and keeps numeric ranges', async () => {
+    const server = serve();
+    const { user, router } = await renderApp('/admin/inspection-summary');
+    await screen.findByText('หัวหน้ากะดึก');
     const today = thaiToday();
-
-    expect(fromField()).toHaveValue(formatShiftDate(addDays(today, -6)));
-    expect(toField()).toHaveValue(formatShiftDate(today));
-    expect(screen.getByRole('button', { name: '7 วัน' })).toHaveAttribute('aria-pressed', 'true');
-
-    await user.click(screen.getByRole('button', { name: 'เดือนนี้' }));
+    const picker = screen.getByRole('combobox', { name: 'ช่วงวัน' });
+    expect(picker).toHaveValue('week');
+    expect(within(picker).getByRole('option', { name: `7 วันล่าสุด (${formatShiftDate(addDays(today, -6))}–${formatShiftDate(today)})` })).toBeInTheDocument();
+    await user.selectOptions(picker, 'today');
+    await waitFor(() => expect(router.state.location.search).toBe(`?from=${today}&to=${today}`));
+    await waitFor(() => expect(query(summaryGets(server).at(-1)!.search)).toEqual({ from: today, to: today }));
+    await user.selectOptions(picker, 'month');
+    await waitFor(() => expect(router.state.location.search).toBe(`?from=${today.slice(0, 8)}01&to=${today}`));
+    await user.selectOptions(picker, 'custom');
+    expect(fromField()).toBeVisible();
+    expect(toField()).toBeVisible();
     expect(fromField()).toHaveValue(formatShiftDate(`${today.slice(0, 8)}01`));
-    expect(toField()).toHaveValue(formatShiftDate(today));
-
-    await user.click(screen.getByRole('button', { name: 'วันนี้' }));
-    expect(fromField()).toHaveValue(formatShiftDate(today));
-    expect(screen.getByRole('button', { name: 'วันนี้' })).toHaveAttribute('aria-pressed', 'true');
-
-    await user.clear(fromField());
-    await user.type(fromField(), '02/01/2020');
-    await user.clear(toField());
-    await user.type(toField(), '03/01/2020');
-    for (const name of ['วันนี้', '7 วัน', 'เดือนนี้']) {
-      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');
-    }
   });
 
   it('shows a typed range; the address keeps it with the building', async () => {
     const server = serve();
     const { user, router } = await renderApp('/admin/inspection-summary');
     await screen.findByText('แอดมินเท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
+    await user.click(screen.getByText('ตัวกรองเพิ่มเติม · ตึกและกำหนดช่วงวัน'));
 
     await user.clear(fromField());
     await user.type(fromField(), '01/10/2026');
@@ -119,6 +105,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     const server = serve();
     const { user } = await renderApp('/admin/inspection-summary');
     await screen.findByText('แอดมินเท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
+    await user.click(screen.getByText('ตัวกรองเพิ่มเติม · ตึกและกำหนดช่วงวัน'));
     const show = screen.getByRole('button', { name: 'แสดง' });
 
     await user.clear(fromField());
@@ -198,20 +185,21 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     expect(within(menu).getByRole('link', { name: 'สรุปการตรวจ' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('"ส่งออก Excel" opens the export of the range and building on screen', async () => {
+  it('keeps Export only in the Admin menu (facility-0100)', async () => {
     serve();
     await renderApp('/admin/inspection-summary?building=1');
     await screen.findByText('แอดมินเท่านั้น · 7 วันล่าสุด (09/10/2026–15/10/2026)');
 
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute(
-      'href',
-      '/admin/export?from=2026-10-09&to=2026-10-15&building=1',
-    );
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: 'ส่งออก Excel' })).not.toBeInTheDocument();
+    const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
+    expect(within(menu).getAllByRole('link', { name: 'ส่งออก Excel' })).toHaveLength(1);
+    expect(within(menu).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('href', '/admin/export');
   });
 
   it('the building picker lists active buildings only, an off one is left out (facility-0090)', async () => {
     serve();
-    await renderApp('/admin/inspection-summary');
+    const { user } = await renderApp('/admin/inspection-summary');
+    await user.click(screen.getByText('ตัวกรองเพิ่มเติม · ตึกและกำหนดช่วงวัน'));
 
     const picker = await screen.findByRole('combobox', { name: 'ตึก' });
     await waitFor(() =>
@@ -219,4 +207,85 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     );
     expect(within(picker).queryByRole('option', { name: /ปิดใช้งาน/ })).not.toBeInTheDocument();
   });
+
+  it('expands real safe point chips with Enter and Space, and preserves old aggregates in a disclosure', async () => {
+    serve();
+    const { user } = await renderApp('/admin/inspection-summary');
+    const opener = await screen.findByRole('button', { name: 'ดูจุด หัวหน้ากะดึก' });
+    expect(opener).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: 'รายละเอียดของ หัวหน้ากะดึก' })).not.toBeInTheDocument();
+    opener.focus();
+    await user.keyboard('{Enter}');
+    expect(opener).toHaveAttribute('aria-expanded', 'true');
+    const details = screen.getByRole('region', { name: 'รายละเอียดของ หัวหน้ากะดึก' });
+    expect(details).toHaveAttribute('id', opener.getAttribute('aria-controls'));
+    expect(within(details).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(details).getByText('ห้องน้ำทดสอบ')).toBeVisible();
+    expect(within(details).getByTitle('AR01-01')).toBeVisible();
+    expect(within(details).queryByRole('link')).not.toBeInTheDocument();
+    await user.click(within(details).getByText('ข้อมูลรวมเพิ่มเติม'));
+    expect(within(details).getByText('9 จาก 12 จุด · ไม่ได้ตรวจ 3 จุด')).toBeVisible();
+    expect(within(details).getByRole('progressbar', { name: 'ตรวจ 27% ของงานที่ส่ง' })).toHaveAttribute('value', '27');
+    expect(within(details).getByText('A · ตึกทดลอง · กะดึก')).toBeVisible();
+    opener.focus();
+    await user.keyboard(' ');
+    expect(opener).toHaveAttribute('aria-expanded', 'false');
+    expect(opener).toHaveFocus();
+    expect(screen.queryByRole('region', { name: 'รายละเอียดของ หัวหน้ากะดึก' })).not.toBeInTheDocument();
+  });
+
+  it('filters the existing returned shift values without changing any tally or making a new request', async () => {
+    const server = serve();
+    const { user } = await renderApp('/admin/inspection-summary');
+    await screen.findByText('หัวหน้ากะดึก');
+    await user.click(screen.getByRole('button', { name: 'ดูจุด หัวหน้ากะดึก' }));
+    const before = summaryGets(server).length;
+    await user.selectOptions(screen.getByRole('combobox', { name: 'กะ' }), 'Day');
+    expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual(['หัวหน้าทดสอบ', 'หัวหน้าตึกบี']);
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'กะ' }), 'Night');
+    expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual(['หัวหน้ากะดึก']);
+    expect(cellsOf('หัวหน้ากะดึก')[1]).toBe('41');
+    expect(screen.getByRole('button', { name: 'ดูจุด หัวหน้ากะดึก' })).toHaveAttribute('aria-expanded', 'false');
+    expect(summaryGets(server)).toHaveLength(before);
+  });
+
+  it('keeps details and zero metrics available even with no beat points or submitted work', async () => {
+    serve({ 'GET /api/admin/inspection-summary': () => ({ status: 200, body: {
+      ...summary, rows: [summaryRow({ pointsTotal: 0, pointsInspected: 0, submitted: 0, submittedInspected: 0, inspections: 0, notInspected: 0, reworks: 0, gpsFlagged: 0 })],
+    } }) });
+    const { user } = await renderApp('/admin/inspection-summary');
+    await user.click(await screen.findByRole('button', { name: 'รายละเอียด หัวหน้าทดสอบ' }));
+    const details = screen.getByRole('region', { name: 'รายละเอียดของ หัวหน้าทดสอบ' });
+    expect(within(details).getByText('ไม่มีจุดที่ไม่ได้ตรวจในช่วงนี้')).toBeVisible();
+    await user.click(within(details).getByText('ข้อมูลรวมเพิ่มเติม'));
+    expect(within(details).getByText('0 จาก 0 จุด')).toBeVisible();
+    expect(within(details).getByText('–')).toBeVisible();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'กะ' }), 'Night');
+    expect(screen.getByText('ไม่มีหัวหน้าที่เปิดใช้งานในกะที่เลือก')).toBeVisible();
+  });
+
+  it('shows loading and retries a failed summary request', async () => {
+    let finish: ((answer: { status: number; body: unknown }) => void) | undefined;
+    let calls = 0;
+    serve({ 'GET /api/admin/inspection-summary': () => {
+      calls++;
+      return calls === 1 ? new Promise((resolve) => { finish = resolve; }) : { status: 200, body: summary };
+    } });
+    const { user } = await renderApp('/admin/inspection-summary');
+    expect(screen.getByText('กำลังโหลด…')).toBeVisible();
+    finish!({ status: 500, body: { message: 'โหลดสรุปไม่สำเร็จ' } });
+    expect(await screen.findByRole('alert')).toHaveTextContent('โหลดสรุปไม่สำเร็จ');
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+    expect(await screen.findByText('หัวหน้ากะดึก')).toBeVisible();
+  });
+
+  it.each(['cleaner', 'supervisor'] as const)('does not fetch or expose point details to a %s', async (role) => {
+    const server = serve({ 'POST /api/auth/refresh': () => authAnswer(role) });
+    await renderApp('/admin/inspection-summary');
+    expect(screen.queryByRole('heading', { name: 'สรุปการตรวจ' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ดูจุด/ })).not.toBeInTheDocument();
+    expect(summaryGets(server)).toHaveLength(0);
+  });
+
 });

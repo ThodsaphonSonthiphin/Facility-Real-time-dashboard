@@ -1,6 +1,5 @@
-import { ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { livePoll } from '../../shared/api/baseApi';
 import { LiveBadge } from '../../shared/components/LiveBadge';
@@ -8,7 +7,6 @@ import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../shared/components/PageState';
 import { Button } from '../../shared/components/Button';
-import { buttonClass } from '../../shared/components/styles';
 import { pointStatusLabel } from '../../shared/utils/labels';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { useBuildingNames, buildingText } from '../../shared/api/buildingNames';
@@ -59,10 +57,6 @@ export function DashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <LiveBadge hubKey={DASHBOARD_HUB} />
-          <Link className={buttonClass('secondary', 'desk')} data-tap="" to="/admin/export">
-            <Download aria-hidden="true" className="size-4" />
-            ส่งออก Excel
-          </Link>
         </div>
       </header>
       {data && <Filters points={data} />}

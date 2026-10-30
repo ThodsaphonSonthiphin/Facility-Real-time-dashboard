@@ -28,14 +28,14 @@ export function AreaActiveSection({ detail }: { detail: AreaDetail }) {
   return (
     <>
       <section className={`flex flex-col gap-2 ${boxClass}`} aria-labelledby="areaform-signs">
-        <h2 id="areaform-signs" className="text-lg font-semibold">
+        <h2 id="areaform-signs" className="text-base font-bold">
           ป้ายของพื้นที่นี้
         </h2>
         <p>{`ป้ายลงเวลา ${detail.checkInSign.code} ระบบสร้างให้เองตอนเพิ่มพื้นที่`}</p>
-        <p>{`จุดทำความสะอาด ${activePoints} จุด · เพิ่มหรือแก้ที่หน้า จัดการพื้นที่และป้าย`}</p>
+        <p>{`จุดทำความสะอาด ${activePoints} จุด · เพิ่มหรือแก้ที่หน้า พื้นที่และป้าย`}</p>
       </section>
       <section className={`flex flex-col gap-2 ${boxClass}`} aria-labelledby="areaform-active">
-        <h2 id="areaform-active" className="text-lg font-semibold">
+        <h2 id="areaform-active" className="text-base font-bold">
           {area.isActive ? 'ปิดใช้งานพื้นที่' : 'เปิดใช้งานพื้นที่'}
         </h2>
         {!area.isActive && <Note tone="warn">พื้นที่นี้ปิดใช้งานอยู่ ป้ายทุกป้ายสแกนไม่ได้</Note>}
