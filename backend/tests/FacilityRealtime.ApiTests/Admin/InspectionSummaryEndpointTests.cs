@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FacilityRealtime.ApiTests.Infrastructure;
 using FacilityRealtime.ApiTests.Inspections;
 using FacilityRealtime.Domain.Enums;
@@ -9,7 +10,12 @@ namespace FacilityRealtime.ApiTests.Admin;
 
 public record InspectionSummaryRowModel(
     int SupervisorId, string EmployeeId, string DisplayName, string BuildingCode, string Shift,
-    int PointsInspected, int PointsTotal, int Submitted, int SubmittedInspected, int NotInspected, int Inspections, int Reworks, int GpsFlagged);
+    int PointsInspected, int PointsTotal, int Submitted, int SubmittedInspected, int NotInspected, int Inspections, int Reworks, int GpsFlagged)
+{
+    public List<UninspectedPointModel> UninspectedPoints { get; init; } = [];
+}
+
+public record UninspectedPointModel(int PointId, string AreaCode, string PointName, string SignCode);
 
 public record InspectionSummaryModel(DateOnly From, DateOnly To, List<InspectionSummaryRowModel> Rows);
 
@@ -48,10 +54,13 @@ public class InspectionSummaryEndpointTests
         Assert.Equal(
             new[] { 2, 3, 3, 2, 1, 2, 1, 1 },
             new[] { day.PointsInspected, day.PointsTotal, day.Submitted, day.SubmittedInspected, day.NotInspected, day.Inspections, day.Reworks, day.GpsFlagged });
+        Assert.Equal(["AR01-02"], day.UninspectedPoints.Select(p => p.SignCode));
         var night = summary.Rows[1];
         Assert.Equal(
             new[] { 0, 2, 0, 0, 0, 0, 0, 0 },
             new[] { night.PointsInspected, night.PointsTotal, night.Submitted, night.SubmittedInspected, night.NotInspected, night.Inspections, night.Reworks, night.GpsFlagged });
+        Assert.Equal(["AR01-01", "AR01-02"], night.UninspectedPoints.Select(p => p.SignCode));
+        Assert.All(summary.Rows, row => Assert.Equal(row.PointsTotal - row.PointsInspected, row.UninspectedPoints.Count));
     }
 
     [Fact]
@@ -126,6 +135,8 @@ public class InspectionSummaryEndpointTests
 
         Assert.Equal(0, one.Rows.Single(r => r.EmployeeId == "2000001").Inspections);
         Assert.Equal(1, two.Rows.Single(r => r.EmployeeId == "2000001").Inspections);
+        Assert.Equal(3, one.Rows.Single(r => r.EmployeeId == "2000001").UninspectedPoints.Count);
+        Assert.Equal(2, two.Rows.Single(r => r.EmployeeId == "2000001").UninspectedPoints.Count);
     }
 
     [Fact]
@@ -140,7 +151,11 @@ public class InspectionSummaryEndpointTests
 
         var summary = (await admin.GetFromJsonAsync<InspectionSummaryModel>($"{Path}?from=2026-10-08&to=2026-10-08&buildingId={buildingA}"))!;
 
-        Assert.Equal(1, summary.Rows.Single(r => r.EmployeeId == "2000001").Inspections);
+        var row = summary.Rows.Single(r => r.EmployeeId == "2000001");
+        Assert.Equal(1, row.Inspections);
+        Assert.Equal(0, row.PointsInspected);
+        Assert.Equal(3, row.UninspectedPoints.Count);
+        Assert.All(row.UninspectedPoints, point => Assert.StartsWith("AR", point.AreaCode));
     }
 
     [Fact]
@@ -161,6 +176,64 @@ public class InspectionSummaryEndpointTests
 
         var row = summary.Rows.Single(r => r.EmployeeId == "2000001");
         Assert.Equal((0, 0, 0), (row.Submitted, row.SubmittedInspected, row.NotInspected));
+    }
+
+    [Fact]
+    public async Task Point_lists_are_safe_sorted_and_exclude_only_own_inspections_in_the_own_shift()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        await TestData.AddSupervisorAsync(factory, "S2002", "0820000002", "A", Shift.Night);
+        await TestData.AddPointAsync(factory, "AR01", "AR01-09", "token-summary-extra-nine");
+        await TestData.AddPointAsync(factory, "AR01", "AR01-00", "token-summary-extra-zero");
+        var another = await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 10));
+        await TestData.AddInspectionAsync(factory, another, InspectionResult.Passed, ThaiClock.At(8, 8, 20), supervisorEmployeeId: "S2002");
+        var ownWrongShift = await TestData.AddScanAsync(factory, "token-restroom-f1", ThaiClock.At(8, 20, 10));
+        await TestData.AddInspectionAsync(factory, ownWrongShift, InspectionResult.Passed, ThaiClock.At(8, 20, 20));
+
+        var response = await admin.GetAsync($"{Path}?from=2026-10-08&to=2026-10-08");
+        var summary = (await response.Content.ReadFromJsonAsync<InspectionSummaryModel>())!;
+        var day = summary.Rows.Single(r => r.EmployeeId == "2000001");
+        Assert.Equal((0, 5, 1), (day.PointsInspected, day.PointsTotal, day.Inspections));
+        Assert.Equal(["AR01-00", "AR01-01", "AR01-02", "AR01-09", "AR02-01"], day.UninspectedPoints.Select(p => p.SignCode));
+        Assert.All(summary.Rows, row => Assert.Equal(row.PointsTotal - row.PointsInspected, row.UninspectedPoints.Count));
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        foreach (var row in json.RootElement.GetProperty("rows").EnumerateArray())
+        {
+            foreach (var point in row.GetProperty("uninspectedPoints").EnumerateArray())
+            {
+                Assert.Equal(["areaCode", "pointId", "pointName", "signCode"], point.EnumerateObject().Select(p => p.Name).Order());
+                Assert.False(string.IsNullOrWhiteSpace(point.GetProperty("pointName").GetString()));
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("point", 2)]
+    [InlineData("area", 1)]
+    [InlineData("all", 0)]
+    public async Task Inactive_points_and_areas_leave_the_list_and_zero_point_beats_are_empty(string deactivate, int expected)
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        await factory.WithDbAsync(async db =>
+        {
+            if (deactivate == "point")
+            {
+                (await db.Signs.Include(s => s.ServicePoint).SingleAsync(s => s.QrToken == "token-restroom-m1")).ServicePoint!.IsActive = false;
+            }
+            else
+            {
+                var areas = await db.Areas.Where(a => deactivate == "all" || a.Code == "AR01").ToListAsync();
+                foreach (var area in areas) area.IsActive = false;
+            }
+            await db.SaveChangesAsync();
+        });
+        var summary = (await admin.GetFromJsonAsync<InspectionSummaryModel>(Path))!;
+        var row = Assert.Single(summary.Rows);
+        Assert.Equal((0, expected), (row.PointsInspected, row.PointsTotal));
+        Assert.Equal(expected, row.UninspectedPoints.Count);
+        Assert.Equal(row.PointsTotal - row.PointsInspected, row.UninspectedPoints.Count);
     }
 
     [Theory]

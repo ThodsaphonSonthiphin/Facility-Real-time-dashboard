@@ -15,55 +15,116 @@ function serve(routes: FakeRoutes = {}) {
   });
 }
 
-/** A row by its name cell; the first four cells are login name, role, place, active. */
+/** A row by its name cell; its data cells are login name, place, active, actions. */
 const rowOf = (name: string) => screen.getByRole('rowheader', { name }).closest('tr') as HTMLElement;
 const cellsOf = (name: string) =>
   within(rowOf(name))
     .getAllByRole('cell')
-    .slice(0, 4)
+    .slice(0, 3)
     .map((cell) => cell.textContent);
 const names = () => screen.getAllByRole('rowheader').map((header) => header.textContent);
 const created = (server: ReturnType<typeof serve>) =>
   server.calls.find((call) => call.method === 'POST' && call.path === '/api/admin/accounts')?.body;
 
-describe('AccountsPage (D6, facility-0020, 0056)', () => {
-  it('lists every account with role filters, counts and where each one works', async () => {
-    serve();
-    await renderApp('/admin/accounts');
+/** The header's "สร้างบัญชี" opens the form in the right-hand Drawer (owner, 2026-10-30). */
+async function openCreate(user: Awaited<ReturnType<typeof renderApp>>['user']) {
+  await user.click(await screen.findByRole('button', { name: 'สร้างบัญชี' }));
+  return screen.getByRole('form', { name: 'สร้างบัญชี' });
+}
 
-    await screen.findByRole('table', { name: 'บัญชีผู้ใช้' });
-    const filters = screen.getByRole('group', { name: 'กรองบัญชี' });
-    expect(within(filters).getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'ทั้งหมด (7)',
-      'แม่บ้าน (4)',
-      'หัวหน้า (1)',
-      'แอดมิน (2)',
-      'ปิดใช้งาน (1)',
+describe('AccountsPage (D6, facility-0020, 0056)', () => {
+  it('starts at counted Cleaner tabs, with truthful places and no phone column', async () => {
+    serve();
+    const { user } = await renderApp('/admin/accounts');
+    const table = await screen.findByRole('table', { name: 'บัญชีผู้ใช้' });
+    const tabs = screen.getByRole('tablist', { name: 'บทบาทบัญชี' });
+    expect(within(tabs).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['แม่บ้าน 4', 'หัวหน้า 1', 'แอดมิน 2']);
+    expect(within(tabs).getByRole('tab', { name: 'แม่บ้าน 4' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel', { name: 'แม่บ้าน 4' })).toContainElement(table);
+    expect(names()).toEqual(['แม่บ้านทดสอบ', 'แม่บ้านกะดึก', 'แม่บ้านว่าง', 'แม่บ้านที่ลาออก']);
+    expect(cellsOf('แม่บ้านทดสอบ')).toEqual(['650001', 'AR01 · กะเช้า', 'ใช้งานอยู่']);
+    expect(cellsOf('แม่บ้านว่าง')).toEqual(['650003', 'ยังไม่มีพื้นที่ · กะเช้า', 'ใช้งานอยู่']);
+    expect(cellsOf('แม่บ้านที่ลาออก')).toEqual(['650006', 'ยังไม่มีพื้นที่ · กะเช้า', 'ปิดใช้งาน']);
+    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'ชื่อ', 'รหัสพนักงาน', 'พื้นที่ · กะ', 'สถานะ', 'การกระทำ',
     ]);
-    expect(within(filters).getByRole('button', { name: 'ทั้งหมด (7)' })).toHaveAttribute('aria-pressed', 'true');
-    expect(cellsOf('แม่บ้านทดสอบ')).toEqual(['650001', 'แม่บ้าน', 'AR01 · กะเช้า', 'ใช้งาน']);
-    expect(cellsOf('แม่บ้านว่าง')).toEqual(['650003', 'แม่บ้าน', 'ยังไม่มีพื้นที่ · กะเช้า', 'ใช้งาน']);
-    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['660001', 'หัวหน้า', 'ตึก A · ตึกทดลอง · กะเช้า', 'ใช้งาน']);
-    expect(cellsOf('ผู้ดูแลคนที่สอง')).toEqual(['admin2', 'แอดมิน', '—', 'ใช้งาน']);
-    expect(cellsOf('แม่บ้านที่ลาออก')).toEqual(['650006', 'แม่บ้าน', 'ยังไม่มีพื้นที่ · กะเช้า', 'ปิดใช้งาน']);
+    expect(screen.getByText('แสดง 1–4 จาก 4 บัญชี')).toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: /เบอร์โทร/ })).not.toBeInTheDocument();
+    expect(within(rowOf('แม่บ้านทดสอบ')).getByRole('button', { name: 'แก้เบอร์โทร แม่บ้านทดสอบ' })).toBeInTheDocument();
+    expect(within(rowOf('แม่บ้านทดสอบ')).queryByRole('button', { name: /รีเซ็ตรหัสผ่าน/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'หัวหน้า 1' }));
+    expect(await screen.findByText('ตึก A · ตึกทดลอง · กะเช้า')).toBeInTheDocument();
+    expect(names()).toEqual(['หัวหน้าทดสอบ']);
+    expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['660001', 'ตึก A · ตึกทดลอง · กะเช้า', 'ใช้งานอยู่']);
+    expect(screen.getByRole('columnheader', { name: 'รหัสพนักงาน' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'ตึก · กะ' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'แก้เบอร์โทร หัวหน้าทดสอบ' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /เบอร์โทร/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'แอดมิน 2' }));
+    expect(names()).toEqual(['ผู้ดูแลทดสอบ', 'ผู้ดูแลคนที่สอง']);
+    expect(cellsOf('ผู้ดูแลคนที่สอง')).toEqual(['admin2', '—', 'ใช้งานอยู่']);
+    expect(screen.getByRole('button', { name: 'รีเซ็ตรหัสผ่าน ผู้ดูแลคนที่สอง' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'แก้เบอร์โทร ผู้ดูแลคนที่สอง' })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'ชื่อผู้ใช้' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'รหัสพนักงาน' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /เบอร์โทร/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'บทบาท' })).not.toBeInTheDocument();
   });
 
-  it('filters by role or by deactivated, and searches names and login names', async () => {
+  it('keeps role, active state and search independent, with full role counts and true shown counts', async () => {
     serve();
     const { user } = await renderApp('/admin/accounts');
     await screen.findByRole('table', { name: 'บัญชีผู้ใช้' });
-
-    await user.click(screen.getByRole('button', { name: 'แม่บ้าน (4)' }));
-    expect(names()).toEqual(['แม่บ้านทดสอบ', 'แม่บ้านกะดึก', 'แม่บ้านว่าง', 'แม่บ้านที่ลาออก']);
-    await user.click(screen.getByRole('button', { name: 'ปิดใช้งาน (1)' }));
+    await user.selectOptions(screen.getByLabelText('สถานะบัญชี'), 'inactive');
     expect(names()).toEqual(['แม่บ้านที่ลาออก']);
+    expect(screen.getByText('แสดง 1–1 จาก 4 บัญชี')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('ค้นหา'), '650006');
+    expect(names()).toEqual(['แม่บ้านที่ลาออก']);
+    await user.click(screen.getByRole('tab', { name: 'แอดมิน 2' }));
+    expect(screen.getByLabelText('สถานะบัญชี')).toHaveValue('inactive');
+    expect(screen.getByLabelText('ค้นหา')).toHaveValue('650006');
+    expect(screen.getByText('ไม่พบบัญชีที่ตรงกับที่ค้นหา')).toBeInTheDocument();
+    expect(screen.getByText('แสดง 0 จาก 2 บัญชี')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'ทั้งหมด (7)' }));
+    await user.selectOptions(screen.getByLabelText('สถานะบัญชี'), 'active');
+    await user.clear(screen.getByLabelText('ค้นหา'));
     await user.type(screen.getByLabelText('ค้นหา'), 'ADMIN2');
     expect(names()).toEqual(['ผู้ดูแลคนที่สอง']);
-    await user.clear(screen.getByLabelText('ค้นหา'));
-    await user.type(screen.getByLabelText('ค้นหา'), 'ไม่มีคนนี้');
+    expect(screen.getByRole('tab', { name: 'แม่บ้าน 4' })).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'แม่บ้าน 4' }));
     expect(screen.getByText('ไม่พบบัญชีที่ตรงกับที่ค้นหา')).toBeInTheDocument();
+    await user.clear(screen.getByLabelText('ค้นหา'));
+    expect(names()).toEqual(['แม่บ้านทดสอบ', 'แม่บ้านกะดึก', 'แม่บ้านว่าง']);
+    await user.type(screen.getByLabelText('ค้นหา'), 'แม่บ้านว่าง');
+    expect(names()).toEqual(['แม่บ้านว่าง']);
+    await user.selectOptions(screen.getByLabelText('สถานะบัญชี'), 'all');
+    expect(names()).toEqual(['แม่บ้านว่าง']);
+  });
+
+  it('switches tabs with Arrow keys, Home and End, linking the active panel and keeping focus on the chosen tab', async () => {
+    serve();
+    const { user } = await renderApp('/admin/accounts');
+    const cleaner = await screen.findByRole('tab', { name: 'แม่บ้าน 4' });
+    await user.click(cleaner);
+    await user.keyboard('{ArrowRight}');
+    const supervisor = screen.getByRole('tab', { name: 'หัวหน้า 1' });
+    expect(supervisor).toHaveFocus();
+    expect(supervisor).toHaveAttribute('aria-selected', 'true');
+    expect(supervisor).toHaveAttribute('aria-controls', screen.getByRole('tabpanel', { name: 'หัวหน้า 1' }).id);
+    expect(names()).toEqual(['หัวหน้าทดสอบ']);
+    await user.keyboard('{End}');
+    expect(screen.getByRole('tab', { name: 'แอดมิน 2' })).toHaveFocus();
+    expect(names()).toEqual(['ผู้ดูแลทดสอบ', 'ผู้ดูแลคนที่สอง']);
+    await user.keyboard('{ArrowRight}');
+    expect(cleaner).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('tab', { name: 'แอดมิน 2' })).toHaveFocus();
+    await user.keyboard('{Home}');
+    expect(cleaner).toHaveFocus();
+    expect(cleaner).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getAllByRole('tab').filter((tab) => tab.tabIndex === 0)).toEqual([cleaner]);
   });
 
   it('adds a Cleaner: only the Cleaner’s fields go, and a held shift or a night in a day-only Area cannot be picked', async () => {
@@ -81,7 +142,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     });
     const { user } = await renderApp('/admin/accounts');
 
-    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    const form = await openCreate(user);
     expect(within(form).getByRole('radio', { name: 'แม่บ้าน' })).toBeChecked();
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านใหม่');
     await user.type(within(form).getByLabelText('รหัสพนักงาน'), '650010');
@@ -137,7 +198,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     });
     const { user } = await renderApp('/admin/accounts');
 
-    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    const form = await openCreate(user);
     await user.click(within(form).getByRole('radio', { name: 'หัวหน้า' }));
     expect(within(form).queryByLabelText('พื้นที่ประจำ')).not.toBeInTheDocument();
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'หัวหน้าใหม่');
@@ -172,7 +233,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     });
     const { user } = await renderApp('/admin/accounts');
 
-    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    const form = await openCreate(user);
     await user.click(within(form).getByRole('radio', { name: 'แอดมิน' }));
     expect(within(form).queryByLabelText('เบอร์โทรศัพท์')).not.toBeInTheDocument();
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'ผู้ดูแลคนที่สาม');
@@ -195,7 +256,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
       'POST /api/admin/accounts': () => ({ status: 409, body: { message: 'รหัสพนักงานนี้มีแล้ว' } }),
     });
     const { user } = await renderApp('/admin/accounts');
-    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    const form = await openCreate(user);
     const send = () => user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
 
     await send();
@@ -227,7 +288,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
         }),
     });
     const { user } = await renderApp('/admin/accounts');
-    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    const form = await openCreate(user);
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านใหม่');
     await user.type(within(form).getByLabelText('รหัสพนักงาน'), '650010');
     await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0810000009');
@@ -246,7 +307,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
   it('drops a chosen shift that the newly chosen Area does not allow', async () => {
     const server = serve();
     const { user } = await renderApp('/admin/accounts');
-    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    const form = await openCreate(user);
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านใหม่');
     await user.type(within(form).getByLabelText('รหัสพนักงาน'), '650010');
     await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0810000009');
@@ -264,7 +325,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
   it('drops a chosen shift that the newly chosen building does not allow', async () => {
     const server = serve();
     const { user } = await renderApp('/admin/accounts');
-    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    const form = await openCreate(user);
     await user.click(within(form).getByRole('radio', { name: 'หัวหน้า' }));
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'หัวหน้าใหม่');
     await user.type(within(form).getByLabelText('รหัสพนักงาน'), '660002');
@@ -291,7 +352,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
       },
     });
     const { user } = await renderApp('/admin/accounts');
-    const form = await screen.findByRole('form', { name: 'เพิ่มบัญชี' });
+    const form = await openCreate(user);
     expect(screen.queryByRole('rowheader', { name: 'แม่บ้านใหม่' })).not.toBeInTheDocument();
 
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านใหม่');

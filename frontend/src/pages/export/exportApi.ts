@@ -7,6 +7,7 @@ export interface ExportRequest {
   from: string;
   to: string;
   buildingId?: number;
+  buildingIds?: number[];
   sets: ExportSet[];
 }
 

@@ -37,33 +37,39 @@ describe('AreasPage (D4, facility-0045)', () => {
     const { user } = await renderApp('/admin/areas');
 
     expect(await screen.findByRole('heading', { level: 2, name: 'AR01 Area ทดลอง' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'จัดการพื้นที่ จุด และพิกัดป้าย' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'พื้นที่และป้าย' })).toBeInTheDocument();
+    expect(screen.getByText('2 พื้นที่ · 2 จุด · 1 ตึก')).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'เพิ่มพื้นที่' })).toHaveAttribute(
+      'href',
+      '/admin/areas/new',
+    );
     const list = screen.getByRole('region', { name: 'พื้นที่ทั้งหมด (2)' });
-    expect(within(list).getByText('ตึก A · ตึกทดลอง · 2 กะ · 2 จุด · ป้ายยังไม่ยืนยัน 1')).toBeInTheDocument();
-    expect(within(list).getByText('ตึก A · ตึกทดลอง · เฉพาะกะเช้า · 0 จุด · ป้ายยังไม่ยืนยัน 1')).toBeInTheDocument();
+    expect(within(list).getByText('ตึก A · 2 จุด')).toBeInTheDocument();
+    expect(within(list).getByText('ตึก A · 0 จุด')).toBeInTheDocument();
     expect(within(list).getByRole('link', { name: /^AR01 Area ทดลอง/ })).toHaveAttribute('aria-current', 'true');
-    expect(within(list).getByRole('link', { name: '+ เพิ่มพื้นที่' })).toHaveAttribute('href', '/admin/areas/new');
 
-    expect(screen.getByText('พื้นที่ที่เลือก · ตึก A · ตึกทดลอง')).toBeInTheDocument();
-    expect(
-      screen.getByText('ทำ 2 กะ (เช้า + ดึก) · แม่บ้านประจำ: เช้า แม่บ้านทดสอบ · ดึก แม่บ้านกะดึก · ป้าย 1 + 2'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('ตึก A · ตึกทดลอง · 2 กะ · 2 จุด')).toBeInTheDocument();
+    expect(screen.getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
+    expect(screen.getAllByText('แม่บ้านกะดึก')).toHaveLength(2);
+    expect(screen.getByText('AR01-IN · รัศมี 50 ม.')).toBeInTheDocument();
+    expect(screen.getByText('พิกัดป้ายลงเวลา')).toBeInTheDocument();
     // within main: the Admin menu has its own พิมพ์ป้าย (#121), to the page with no Area chosen
     expect(within(screen.getByRole('main')).getByRole('link', { name: 'พิมพ์ป้าย' })).toHaveAttribute('href', '/admin/print?area=1');
-    // Tab 1 is the point list, and the tab itself carries the count; the check-in sign has its own tab
-    expect(screen.getByRole('tab', { name: 'จุดทำความสะอาด (2)' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'ป้ายลงเวลา' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'จุดในพื้นที่ · 2' })).toBeInTheDocument();
 
     const men = row(/AR01-01/);
-    expect(within(men).getByText('เช้า 07:00–09:00, 16:00–18:00 · ดึก 20:00–22:00, 03:00–05:00')).toBeInTheDocument();
+    expect(within(men).getByText('07:00–09:00 · 16:00–18:00')).toBeInTheDocument();
+    expect(within(men).getByText('20:00–22:00 · 03:00–05:00')).toBeInTheDocument();
     expect(within(men).getByRole('link', { name: 'พิมพ์' })).toHaveAttribute('href', '/admin/print?area=1&sign=101');
     const women = row(/AR01-02/);
-    expect(within(women).getByText('เช้า 08:00–10:00')).toBeInTheDocument();
-    expect(within(women).getByText('ยังไม่มีพิกัด · รัศมี 50 ม.')).toBeInTheDocument();
+    expect(within(women).getByText('08:00–10:00')).toBeInTheDocument();
+    expect(within(women).getByText('ยังไม่มีพิกัด')).toBeInTheDocument();
+    expect(within(women).getByText('50 ม.')).toBeInTheDocument();
 
-    // The check-in sign is not a point row: it sits in Tab 2 with the place it was captured at
+    // Check-in facts stay visible; its management controls live in the Area Drawer.
     expect(screen.queryByRole('row', { name: /AR01-IN/ })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'ป้ายลงเวลา' }));
+    await user.click(screen.getByRole('button', { name: 'แก้ไขพื้นที่' }));
     const checkIn = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
     expect(within(checkIn).getByText(/AR01-IN/)).toBeInTheDocument();
     expect(within(checkIn).getByRole('link', { name: 'เก็บพิกัดบนมือถือ ›' })).toHaveAttribute(
@@ -77,18 +83,46 @@ describe('AreasPage (D4, facility-0045)', () => {
     );
   });
 
-  it('is a tablist: the arrow keys move between the two views', async () => {
-    serve();
-    const { user } = await renderApp('/admin/areas/1');
+  it('searches code, name and building, clears no matches, and preserves a deep-linked selection', async () => {
+    const { calls } = serve();
+    const { user } = await renderApp('/admin/areas/2');
+    await screen.findByRole('heading', { level: 2, name: 'AR02 Office ทดลอง' });
+    const list = screen.getByRole('region', { name: 'พื้นที่ทั้งหมด (2)' });
+    const search = within(list).getByRole('searchbox', { name: 'ค้นหาพื้นที่' });
+    for (const text of ['AR01', 'Area', 'ตึกทดลอง', 'A']) {
+      await user.clear(search);
+      await user.type(search, text);
+      expect(within(list).getByRole('link', { name: /^AR01 Area ทดลอง/ })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: 'AR02 Office ทดลอง' })).toBeInTheDocument();
+    }
+    await user.clear(search);
+    await user.type(search, 'no match');
+    expect(within(list).getByText('ไม่พบพื้นที่ที่ตรงกับตัวกรอง')).toBeInTheDocument();
+    expect(within(list).getByRole('status')).toHaveTextContent('แสดง 0 จาก 2 พื้นที่');
+    expect(within(list).queryByRole('link')).not.toBeInTheDocument();
+    await user.click(within(list).getByRole('button', { name: 'ล้างตัวกรอง' }));
+    expect(search).toHaveValue('');
+    expect(within(list).getByRole('status')).toHaveTextContent('แสดง 2 จาก 2 พื้นที่');
+    expect(calls.some((call) => call.method !== 'GET' && call.path.startsWith('/api/admin'))).toBe(false);
+  });
 
-    const points = await screen.findByRole('tab', { name: 'จุดทำความสะอาด (2)' });
-    points.focus();
-    await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'ป้ายลงเวลา' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'ป้ายลงเวลา' })).toHaveFocus();
-    await user.keyboard('{ArrowLeft}');
-    expect(points).toHaveAttribute('aria-selected', 'true');
-    expect(points).toHaveFocus();
+  it('filters buildings including an inactive Area’s building without replacing selected detail', async () => {
+    const inactive = areaSummary({ id: 3, code: 'AR03', name: 'Closed area', buildingId: 2, buildingCode: 'B', isActive: false });
+    serve({ 'GET /api/admin/areas': () => ({ status: 200, body: [areaSummary(), officeSummary, inactive] }) });
+    const { user } = await renderApp('/admin/areas/1');
+    await screen.findByRole('heading', { level: 2, name: 'AR01 Area ทดลอง' });
+    const list = screen.getByRole('region', { name: 'พื้นที่ทั้งหมด (3)' });
+    const filter = within(list).getByRole('combobox', { name: 'ตึก' });
+    await user.selectOptions(filter, '2');
+    expect(within(list).getByRole('link', { name: /AR03 Closed area/ })).toBeInTheDocument();
+    expect(within(list).queryByRole('link', { name: /AR01 Area ทดลอง/ })).not.toBeInTheDocument();
+    expect(within(list).getByRole('status')).toHaveTextContent('แสดง 1 จาก 3 พื้นที่');
+    expect(screen.getByRole('heading', { level: 2, name: 'AR01 Area ทดลอง' })).toBeInTheDocument();
+    await user.type(within(list).getByRole('searchbox'), 'AR01');
+    expect(within(list).getByText('ไม่พบพื้นที่ที่ตรงกับตัวกรอง')).toBeInTheDocument();
+    await user.click(within(list).getByRole('button', { name: 'ล้างตัวกรอง' }));
+    expect(filter).toHaveValue('');
+    expect(within(list).getByRole('status')).toHaveTextContent('แสดง 3 จาก 3 พื้นที่');
   });
 
   it('opens the Area form in the right-hand Drawer, without leaving the page (owner, 2026-10-23)', async () => {
@@ -123,14 +157,14 @@ describe('AreasPage (D4, facility-0045)', () => {
       },
     });
     const { user } = await renderApp('/admin/areas/1');
-    expect(await screen.findByText('ยังไม่มีพิกัด · รัศมี 50 ม.')).toBeInTheDocument();
+    expect(await screen.findByText('ยังไม่มีพิกัด')).toBeInTheDocument();
 
     await user.click(screen.getByRole('link', { name: /^AR02 Office ทดลอง/ }));
     expect(await screen.findByRole('heading', { level: 2, name: 'AR02 Office ทดลอง' })).toBeInTheDocument();
     newer = true;
     await user.click(screen.getByRole('link', { name: /^AR01 Area ทดลอง/ }));
 
-    expect(await within(row(/AR01-02/)).findByText('วัดที่ป้ายจริง ±9 ม. · รัศมี 50 ม.')).toBeInTheDocument();
+    expect(await within(row(/AR01-02/)).findByText('วัดที่ป้ายจริง ±9 ม.')).toBeInTheDocument();
     expect(server.calls.filter((call) => call.method === 'GET' && call.path === '/api/admin/areas/1')).toHaveLength(2);
   });
 
@@ -139,7 +173,8 @@ describe('AreasPage (D4, facility-0045)', () => {
     await renderApp('/admin/areas/2');
 
     expect(await screen.findByRole('heading', { level: 2, name: 'AR02 Office ทดลอง' })).toBeInTheDocument();
-    expect(screen.getByText('ทำเฉพาะกะเช้า · แม่บ้านประจำ: เช้า ยังไม่มี · ป้าย 1 + 0')).toBeInTheDocument();
+    expect(screen.getByText('ตึก A · ตึกทดลอง · เฉพาะกะเช้า · 0 จุด')).toBeInTheDocument();
+    expect(screen.getByText('ยังไม่มี')).toBeInTheDocument();
     expect(screen.getByText('พื้นที่นี้ยังไม่มีจุดทำความสะอาด')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^AR02 Office ทดลอง/ })).toHaveAttribute('aria-current', 'true');
     expect(screen.getByRole('link', { name: /^AR01 Area ทดลอง/ })).not.toHaveAttribute('aria-current');
@@ -158,11 +193,13 @@ describe('AreasPage (D4, facility-0045)', () => {
     ).toBeInTheDocument();
     expect(within(screen.getByRole('main')).queryByRole('link', { name: 'พิมพ์ป้าย' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'พิมพ์' })).not.toBeInTheDocument();
-    // the capture link lives in Tab 2, which offers nothing either
-    await user.click(screen.getByRole('tab', { name: 'ป้ายลงเวลา' }));
+    // The Drawer keeps the active-state print/capture restrictions.
+    await user.click(screen.getByRole('button', { name: 'แก้ไขพื้นที่' }));
     expect(screen.queryByRole('link', { name: 'เก็บพิกัดบนมือถือ ›' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'พิมพ์ป้ายลงเวลา' })).not.toBeInTheDocument();
-    expect(await screen.findByText('ตึก A · ตึกทดลอง · 2 กะ · 2 จุด · ป้ายยังไม่ยืนยัน 1 · ปิดใช้งาน')).toBeInTheDocument();
+    expect(screen.getByText('ตึก A · 2 จุด')).toBeInTheDocument();
+    const list = screen.getByRole('region', { name: 'พื้นที่ทั้งหมด (1)' });
+    expect(within(list).getByText('ปิดใช้งาน')).toBeInTheDocument();
   });
 
   it('a deactivated point stays in the table, marked, with no print link', async () => {
@@ -172,18 +209,17 @@ describe('AreasPage (D4, facility-0045)', () => {
     await renderApp('/admin/areas/1');
 
     const women = await screen.findByRole('row', { name: /AR01-02/ });
-    expect(within(women).getByText('จุดทำความสะอาด · ปิดใช้งาน')).toBeInTheDocument();
+    expect(within(women).getByText('ปิดใช้งาน')).toBeInTheDocument();
     expect(within(women).queryByRole('link', { name: 'พิมพ์' })).not.toBeInTheDocument();
-    expect(
-      screen.getByText('ทำ 2 กะ (เช้า + ดึก) · แม่บ้านประจำ: เช้า แม่บ้านทดสอบ · ดึก แม่บ้านกะดึก · ป้าย 1 + 1'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('ตึก A · ตึกทดลอง · 2 กะ · 1 จุด')).toBeInTheDocument();
   });
 
   it('with no Area yet it says how to start', async () => {
     serve({ 'GET /api/admin/areas': () => ({ status: 200, body: [] }) });
     await renderApp('/admin/areas');
 
-    expect(await screen.findByText('ยังไม่มีพื้นที่ กด "+ เพิ่มพื้นที่" เพื่อเริ่ม')).toBeInTheDocument();
+    expect(await screen.findByText('ยังไม่มีพื้นที่')).toBeInTheDocument();
+    expect(screen.getByText('เริ่มจากปุ่ม "เพิ่มพื้นที่" ด้านบน')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'พื้นที่ทั้งหมด (0)' })).toBeInTheDocument();
   });
 
@@ -245,10 +281,8 @@ describe('AreasPage (D4, facility-0045)', () => {
       'แม่บ้านสแกนได้เฉพาะป้ายของพื้นที่ตัวเอง · ป้ายลงเวลา 1 ป้ายต่อพื้นที่ ระบบสร้างให้เองเมื่อเพิ่มพื้นที่ · ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน',
       'เกี่ยวกับหน้านี้',
     );
-    await user.click(screen.getByRole('tab', { name: 'ป้ายลงเวลา' }));
-    expectInView(/^เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย/);
-
     await user.click(screen.getByRole('button', { name: 'แก้ไขพื้นที่' }));
+    expectInView(/^เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย/);
     const editor = await screen.findByRole('dialog', { name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' });
     await within(editor).findByLabelText('ชื่อพื้นที่');
     expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');

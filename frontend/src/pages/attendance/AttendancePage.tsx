@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Check, Coffee, Download, MapPin, UserX } from 'lucide-react';
+import { ArrowRightLeft, Check, Coffee, MapPin, UserX } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
@@ -13,12 +13,11 @@ import { Button } from '../../shared/components/Button';
 import { EditedMark } from '../../shared/components/Badge';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { MoreInfo } from '../../shared/components/MoreInfo';
-import { buttonClass, linkClass } from '../../shared/components/styles';
+import { linkClass } from '../../shared/components/styles';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { Toast, type Notice } from '../../shared/components/Toast';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { exportLink } from '../../shared/utils/dateRange';
 import { AttendanceTable } from './AttendanceTable';
 import { BoardControls } from './BoardControls';
 import { CorrectionForm } from './CorrectionForm';
@@ -100,16 +99,6 @@ export function AttendancePage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <LiveBadge hubKey={attendanceHubKey(args)} />
-          {board && (
-            <Link
-              className={buttonClass('secondary', 'desk')}
-              data-tap=""
-              to={exportLink({ from: board.shiftDate, to: board.shiftDate }, args.buildingId)}
-            >
-              <Download aria-hidden="true" className="size-4" />
-              ส่งออก Excel
-            </Link>
-          )}
           {/* The design file's main action: the cover Drawer without picking a row first; the Area is chosen inside it */}
           <Button
             variant="primary"

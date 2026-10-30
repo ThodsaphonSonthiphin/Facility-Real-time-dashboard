@@ -2,6 +2,8 @@ import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
   adminSession,
+  buildings,
+  cleaners,
   areaDetail,
   areaSummary,
   checkInSign,
@@ -15,6 +17,8 @@ import { renderApp } from '../../test/renderApp';
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
     ...adminSession,
+    'GET /api/admin/buildings': () => ({ status: 200, body: buildings }),
+    'GET /api/admin/cleaners': () => ({ status: 200, body: cleaners }),
     'GET /api/admin/areas': () => ({ status: 200, body: [areaSummary(), officeSummary] }),
     'GET /api/admin/areas/1': () => ({ status: 200, body: areaDetail() }),
     ...routes,
@@ -30,7 +34,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
       }),
     });
     const { user } = await renderApp('/admin/areas/1');
-    await user.click(await screen.findByRole('tab', { name: 'ป้ายลงเวลา' }));
+    await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
 
     const editor = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
     const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
@@ -61,6 +65,24 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     });
   });
 
+  it('the Area Drawer preserves the check-in map fallback and surfaces save errors', async () => {
+    const unlocated = checkInSign({ latitude: undefined, longitude: undefined, locationSource: undefined, locationAccuracyM: undefined });
+    const server = serve({
+      'GET /api/admin/areas/1': () => ({ status: 200, body: areaDetail({ checkInSign: unlocated }) }),
+      'PUT /api/admin/signs/100/location': () => ({ status: 409, body: { message: 'มีผู้แก้ไขพิกัดแล้ว เปิดพื้นที่ใหม่' } }),
+    });
+    const { user } = await renderApp('/admin/areas/1');
+    await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
+    const editor = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
+    const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
+    await user.type(within(place).getByLabelText('ยังไม่ได้ไปที่ป้าย? ปักพิกัดจากแผนที่ไปก่อน'), '13.7563, 100.5018');
+    await user.click(within(place).getByRole('button', { name: 'บันทึกพิกัดที่ปักจากแผนที่' }));
+    expect(await within(place).findByRole('alert')).toHaveTextContent('มีผู้แก้ไขพิกัดแล้ว เปิดพื้นที่ใหม่');
+    expect(server.calls.find((call) => call.method === 'PUT')).toMatchObject({
+      path: '/api/admin/signs/100/location', body: { latitude: 13.7563, longitude: 100.5018, source: 'Map' },
+    });
+  });
+
   it('a sign with no location takes coordinates typed from a map, as not confirmed on site', async () => {
     const server = serve({
       'PUT /api/admin/signs/102/location': () => ({
@@ -71,7 +93,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-02' }));
 
-    const editor = screen.getByRole('region', { name: 'แก้ไขจุด · AR01 Area ทดลอง' });
+    const editor = screen.getByRole('region', { name: 'แก้ไขจุด · AR01-02' });
     const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
     expect(within(place).getByText('ยังไม่มีพิกัด')).toBeInTheDocument();
     const field = within(place).getByLabelText('ยังไม่ได้ไปที่ป้าย? ปักพิกัดจากแผนที่ไปก่อน');
@@ -102,7 +124,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-01' }));
 
-    const qr = within(screen.getByRole('region', { name: 'แก้ไขจุด · AR01 Area ทดลอง' })).getByRole('region', {
+    const qr = within(screen.getByRole('region', { name: 'แก้ไขจุด · AR01-01' })).getByRole('region', {
       name: 'QR ของป้าย',
     });
     expect(within(qr).getByText('สร้าง QR ล่าสุด 16/10/2026 09:00')).toBeInTheDocument();
@@ -144,16 +166,15 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
       'GET /api/admin/areas/1': () => ({ status: 200, body: areaDetail({ area: inactive }) }),
     });
     const { user } = await renderApp('/admin/areas/1');
-    await user.click(await screen.findByRole('tab', { name: 'ป้ายลงเวลา' }));
+    await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
 
     const checkInQr = screen.getByRole('region', { name: 'QR ของป้าย' });
     expect(within(checkInQr).queryByRole('button', { name: 'สร้าง QR ใหม่' })).not.toBeInTheDocument();
     expect(within(checkInQr).getByText('ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้')).toBeInTheDocument();
 
-    // the point list is Tab 1, the check-in sign is Tab 2
-    await user.click(screen.getByRole('tab', { name: /^จุดทำความสะอาด/ }));
+    await user.click(within(screen.getByRole('dialog', { name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' })).getByRole('button', { name: 'ปิด' }));
     await user.click(screen.getByRole('button', { name: 'แก้ไข AR01-01' }));
-    const pointQr = within(screen.getByRole('region', { name: 'แก้ไขจุด · AR01 Area ทดลอง' })).getByRole('region', {
+    const pointQr = within(screen.getByRole('region', { name: 'แก้ไขจุด · AR01-01' })).getByRole('region', {
       name: 'QR ของป้าย',
     });
     expect(within(pointQr).queryByRole('button', { name: 'สร้าง QR ใหม่' })).not.toBeInTheDocument();
@@ -165,7 +186,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
       'POST /api/admin/signs/100/regenerate-token': () => ({ status: 200, body: checkInSign() }),
     });
     const { user } = await renderApp('/admin/areas/1');
-    await user.click(await screen.findByRole('tab', { name: 'ป้ายลงเวลา' }));
+    await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
 
     const qr = screen.getByRole('region', { name: 'QR ของป้าย' });
     await user.click(within(qr).getByRole('button', { name: 'สร้าง QR ใหม่' }));

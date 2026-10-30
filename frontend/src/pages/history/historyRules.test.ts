@@ -1,8 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { firstPage, olderPage } from '../../test/reportFixtures';
-import { actionText, changeLines, readHistoryArgs, toHistoryParams } from './historyRules';
+import { actionText, changeLines, changeValues, readHistoryArgs, toHistoryParams } from './historyRules';
 
 describe('historyRules (D9)', () => {
+  it('keeps arrows and HTML-like text inside their original value, with compatible text output', () => {
+    const entry = { action: 'POINT_UPDATE', before: { Name: 'A → B' }, after: { Name: '<b>C → D</b>' } };
+    expect(changeValues(entry)).toEqual([{ label: 'ชื่อ', before: 'A → B', after: '<b>C → D</b>' }]);
+    expect(changeLines(entry)).toEqual(['ชื่อ: A → B → <b>C → D</b>']);
+  });
+
+  it('handles null, primitive and unchanged snapshots without inventing a change', () => {
+    expect(changeValues({ action: 'NEW', before: null, after: null })).toEqual([]);
+    expect(changeValues({ action: 'NEW', before: 4, after: 5 })).toEqual([{ before: '4', after: '5' }]);
+    expect(changeValues({ action: 'NEW', before: 'same', after: 'same' })).toEqual([]);
+    expect(changeValues({ action: 'NEW', before: { Name: 'same' }, after: { Name: 'same' } })).toEqual([]);
+    expect(changeValues({ action: 'EXPORT_EXCEL', after: { BuildingIds: [2, 8] } })).toEqual([
+      { label: 'ตึกที่เลือก (รหัสในระบบ)', before: '–', after: '2, 8' },
+    ]);
+  });
+
+  it.each(['ACCOUNT_PHONE', 'ACCOUNT_PASSWORD', 'ADMIN_RECOVER_RESET'])('suppresses arbitrary secret snapshots for %s', (action) => {
+    const values = changeValues({ action, before: { Secret: 'hidden-before' }, after: { Secret: 'hidden-after' } });
+    expect(JSON.stringify(values)).not.toContain('hidden-');
+    expect(changeLines({ action })).toHaveLength(1);
+  });
   it('actionText names each action in Thai, and shows an unknown one as stored', () => {
     expect(actionText('ATTENDANCE_EDIT')).toBe('แก้เวลาลงงาน');
     expect(actionText('ACCOUNT_PHONE')).toBe('แก้เบอร์โทร');

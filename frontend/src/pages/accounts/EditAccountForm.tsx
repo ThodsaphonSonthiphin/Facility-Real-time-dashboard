@@ -4,6 +4,7 @@ import { buildingOptionText, useBuildingNames } from '../../shared/api/buildingN
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
+import { DialogHeader } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import {
@@ -16,7 +17,7 @@ import {
   type EditDraft,
 } from './accountRules';
 import { useUpdateAccountMutation, type Account } from './accountsApi';
-import { formClass, formTitleClass } from './accountStyles';
+import { formClass } from './accountStyles';
 import { ShiftChoice } from './ShiftChoice';
 
 interface EditAccountFormProps {
@@ -80,7 +81,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
 
   return (
     <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
-      <h2 id={titleId} className={formTitleClass}>{`แก้ไขบัญชี · ${account.displayName}`}</h2>
+      <DialogHeader id={titleId} title={`แก้ไขบัญชี · ${account.displayName}`} onClose={onCancel} closeDisabled={isLoading} />
       <p className="text-text-2">{`${accountRoleLabel[account.role]} · ${account.loginName} (บทบาทและรหัสแก้ไม่ได้)`}</p>
       <Field label="ชื่อที่แสดง">
         <TextInput
@@ -135,12 +136,12 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
         />
       )}
       {problem && <Note tone="error">{problem}</Note>}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+        <Button size="desk" disabled={isLoading} onClick={onCancel}>
+          ยกเลิก
+        </Button>
         <Button type="submit" variant="primary" size="desk" disabled={isLoading}>
           {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
-        </Button>
-        <Button size="desk" onClick={onCancel}>
-          ยกเลิก
         </Button>
       </div>
     </form>

@@ -323,8 +323,63 @@ public class ExportEndpointTests
         Assert.Equal("=1+1", cell.GetString());
     }
 
+    [Fact]
+    public async Task Multiple_buildings_filter_every_sheet_and_generated_outcome_and_log_deduplicated_selection()
+    {
+        var (factory, admin) = await StartAsync();
+        using var _ = factory;
+        var a = await AdminSetupApi.BuildingIdAsync(factory);
+        var b = await TestData.AddBuildingAsync(factory, "B");
+        var c = await TestData.AddBuildingAsync(factory, "C");
+        foreach (var code in new[] { "B", "C" })
+        {
+            var area = $"{code}R01";
+            await TestData.AddAreaAsync(factory, area, code);
+            await TestData.AddPointAsync(factory, area, $"{area}-01", $"token-{code}");
+            await TestData.AddPointAsync(factory, area, $"{area}-02", $"token-missed-{code}");
+            await TestData.AddCleanerAsync(factory, $"E-{code}", Shift.Day, area);
+            await TestData.AddAttendanceAsync(factory, $"E-{code}", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 7, 0));
+            var scanned = await TestData.AddScanAsync(factory, $"token-{code}", ThaiClock.At(8, 8, 10));
+            await TestData.AddInspectionAsync(factory, scanned, InspectionResult.Passed, ThaiClock.At(8, 8, 20));
+            // An uninspected finished round must be filtered by the same membership.
+            await TestData.AddScanAsync(factory, $"token-{code}", ThaiClock.At(8, 20, 10));
+        }
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 7, 0));
+        var scan = await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 10));
+        await TestData.AddInspectionAsync(factory, scan, InspectionResult.Passed, ThaiClock.At(8, 8, 20));
+        await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 20, 10));
+
+        using var workbook = await WorkbookAsync(await admin.PostAsJsonAsync(Path, new
+        {
+            from = "2026-10-08", to = "2026-10-08", buildingIds = new[] { a, b, b },
+            sets = new[] { "Attendance", "Submissions", "Inspections" },
+        }));
+
+        Assert.Equal(3, workbook.Worksheets.Count);
+        foreach (var sheet in workbook.Worksheets)
+        {
+            var rows = Rows(sheet);
+            Assert.Equal(new[] { "A · ตึก A", "B · ตึก B" }, rows.Select(row => row[2]).Distinct().Order());
+            Assert.DoesNotContain(rows, row => row[2].StartsWith("C ·"));
+        }
+        Assert.Contains(Rows(workbook.Worksheet("การส่งงาน")), row => row[2].StartsWith("B ·") && row[8] == "ไม่ได้ทำ");
+        Assert.Contains(Rows(workbook.Worksheet("การตรวจงาน")), row => row[2].StartsWith("B ·") && row[8] == "ไม่ได้ตรวจ");
+        var audit = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        using var after = JsonDocument.Parse(audit.AfterJson!);
+        Assert.Equal(new[] { a, b }, after.RootElement.GetProperty("BuildingIds").EnumerateArray().Select(id => id.GetInt32()));
+        Assert.False(after.RootElement.TryGetProperty("BuildingId", out var ignored));
+        Assert.Equal(workbook.Worksheets.Select(sheet => Rows(sheet).Count), after.RootElement.GetProperty("Rows").EnumerateArray().Select(count => count.GetInt32()));
+        Assert.DoesNotContain(c, after.RootElement.GetProperty("BuildingIds").EnumerateArray().Select(id => id.GetInt32()));
+    }
+
     public static TheoryData<string> BadRequests => new()
     {
+        """{ "from": "2026-10-08", "to": "2026-10-08", "sets": ["Attendance"], "buildingIds": [] }""",
+        """{ "from": "2026-10-08", "to": "2026-10-08", "sets": ["Attendance"], "buildingIds": [0] }""",
+        """{ "from": "2026-10-08", "to": "2026-10-08", "sets": ["Attendance"], "buildingIds": [-1] }""",
+        """{ "from": "2026-10-08", "to": "2026-10-08", "sets": ["Attendance"], "buildingIds": [99999] }""",
+        """{ "from": "2026-10-08", "to": "2026-10-08", "sets": ["Attendance"], "buildingId": 1, "buildingIds": [1] }""",
+
         """{ "from": "2026-10-01", "to": "2026-11-01", "sets": ["Attendance"] }""",
         """{ "from": "2026-10-09", "to": "2026-10-08", "sets": ["Attendance"] }""",
         """{ "from": "2026-10-08", "sets": ["Attendance"] }""",

@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { account, accounts, adminSession, areaSummary, buildings, managedBuildings, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
+import { accountRoleLabel } from './accountRules';
+import type { AccountRole } from './accountsApi';
 
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
@@ -16,9 +18,10 @@ function serve(routes: FakeRoutes = {}) {
 }
 
 /** Opens the page and presses a row's action button, e.g. "แก้ไข แม่บ้านว่าง". */
-async function openAndPress(action: string) {
+async function openAndPress(action: string, role: AccountRole) {
   const app = await renderApp('/admin/accounts');
   await screen.findByRole('table', { name: 'บัญชีผู้ใช้' });
+  await app.user.click(screen.getByRole('tab', { name: new RegExp(`^${accountRoleLabel[role]} `) }));
   await app.user.click(screen.getByRole('button', { name: action }));
   return app;
 }
@@ -27,6 +30,28 @@ const sent = (server: ReturnType<typeof serve>, method: string, path: string) =>
   server.calls.find((call) => call.method === method && call.path === path)?.body;
 
 describe('account actions (D6, facility-0020, 0054)', () => {
+  it.each([
+    { role: 'Cleaner', action: 'สร้างบัญชี', title: 'สร้างบัญชี' },
+    { role: 'Cleaner', action: 'แก้ไข แม่บ้านทดสอบ', title: 'แก้ไขบัญชี · แม่บ้านทดสอบ' },
+    { role: 'Cleaner', action: 'แก้เบอร์โทร แม่บ้านทดสอบ', title: 'แก้เบอร์โทร · แม่บ้านทดสอบ' },
+    { role: 'Admin', action: 'รีเซ็ตรหัสผ่าน ผู้ดูแลคนที่สอง', title: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลคนที่สอง' },
+  ] as const)('focuses the heading of $title and returns focus to the opener on close', async ({ action, title, role }) => {
+    const server = serve();
+    const { user } = await renderApp('/admin/accounts');
+    await screen.findByRole('table', { name: 'บัญชีผู้ใช้' });
+    await user.click(screen.getByRole('tab', { name: new RegExp(`^${accountRoleLabel[role]} `) }));
+    const opener = screen.getByRole('button', { name: action });
+    await user.click(opener);
+
+    const drawer = screen.getByRole('dialog', { name: title });
+    expect(within(drawer).getByRole('heading', { name: title })).toHaveFocus();
+    await user.click(within(drawer).getByRole('button', { name: 'ปิด' }));
+
+    expect(drawer).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+    expect(server.calls.filter((call) => call.path.startsWith('/api/admin/') && call.method !== 'GET')).toEqual([]);
+  });
+
   it('edits a Cleaner with no Area: name, Area and shift', async () => {
     const server = serve({
       'PUT /api/admin/accounts/23': () => ({
@@ -34,7 +59,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
         body: account({ id: 23, loginName: '650003', displayName: 'แม่บ้านว่าง ใหม่', areaId: 2, areaCode: 'AR02' }),
       }),
     });
-    const { user } = await openAndPress('แก้ไข แม่บ้านว่าง');
+    const { user } = await openAndPress('แก้ไข แม่บ้านว่าง', 'Cleaner');
 
     const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านว่าง' });
     expect(within(form).getByText('แม่บ้าน · 650003 (บทบาทและรหัสแก้ไม่ได้)')).toBeInTheDocument();
@@ -50,13 +75,14 @@ describe('account actions (D6, facility-0020, 0054)', () => {
       shift: 'Day',
       areaId: 2,
     });
-    // The panel goes back to "เพิ่มบัญชี"
-    expect(screen.getByRole('form', { name: 'เพิ่มบัญชี' })).toBeInTheDocument();
+    // The Drawer closes; the table is back
+    expect(screen.queryByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านว่าง' })).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'บัญชีผู้ใช้' })).toBeInTheDocument();
   });
 
   it('editing a Cleaner keeps their Area: their own slot is not "held"', async () => {
     const server = serve({ 'PUT /api/admin/accounts/21': () => ({ status: 200, body: account() }) });
-    const { user } = await openAndPress('แก้ไข แม่บ้านทดสอบ');
+    const { user } = await openAndPress('แก้ไข แม่บ้านทดสอบ', 'Cleaner');
 
     const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านทดสอบ' });
     expect(within(form).getByLabelText('พื้นที่ประจำ')).toHaveValue('1');
@@ -77,7 +103,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
       'PUT /api/admin/accounts/31': () => ({ status: 200, body: accounts[2] }),
       'PUT /api/admin/accounts/8': () => ({ status: 200, body: accounts[1] }),
     });
-    const { user } = await openAndPress('แก้ไข หัวหน้าทดสอบ');
+    const { user } = await openAndPress('แก้ไข หัวหน้าทดสอบ', 'Supervisor');
 
     const supervisor = screen.getByRole('form', { name: 'แก้ไขบัญชี · หัวหน้าทดสอบ' });
     expect(within(supervisor).getByLabelText('ตึกที่ประจำ')).toHaveValue('1');
@@ -85,6 +111,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     expect(await screen.findByText('บันทึกบัญชี หัวหน้าทดสอบ แล้ว')).toBeInTheDocument();
     expect(sent(server, 'PUT', '/api/admin/accounts/31')).toEqual({ displayName: 'หัวหน้าทดสอบ', buildingId: 1, shift: 'Day' });
 
+    await user.click(screen.getByRole('tab', { name: 'แอดมิน 2' }));
     await user.click(screen.getByRole('button', { name: 'แก้ไข ผู้ดูแลคนที่สอง' }));
     const admin = screen.getByRole('form', { name: 'แก้ไขบัญชี · ผู้ดูแลคนที่สอง' });
     expect(within(admin).queryByRole('group', { name: 'กะ' })).not.toBeInTheDocument();
@@ -95,7 +122,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
 
   it('a deactivated Cleaner gets no Area until activated (plan 5 decision 4)', async () => {
     serve();
-    await openAndPress('แก้ไข แม่บ้านที่ลาออก');
+    await openAndPress('แก้ไข แม่บ้านที่ลาออก', 'Cleaner');
 
     const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านที่ลาออก' });
     expect(within(form).getByLabelText('พื้นที่ประจำ')).toBeDisabled();
@@ -104,7 +131,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
 
   it('changes a phone: checked first, sent once, and never kept on the page (facility-0054)', async () => {
     const server = serve({ 'PUT /api/admin/accounts/21/phone': () => ({ status: 204 }) });
-    const { user } = await openAndPress('แก้เบอร์โทร แม่บ้านทดสอบ');
+    const { user } = await openAndPress('แก้เบอร์โทร แม่บ้านทดสอบ', 'Cleaner');
     expect(screen.queryByRole('button', { name: 'แก้เบอร์โทร ผู้ดูแลคนที่สอง' })).not.toBeInTheDocument();
 
     const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · แม่บ้านทดสอบ' });
@@ -133,7 +160,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
 
   it('the phone form of a Supervisor names the building with its current name (facility-0091)', async () => {
     serve();
-    await openAndPress('แก้เบอร์โทร หัวหน้าทดสอบ');
+    await openAndPress('แก้เบอร์โทร หัวหน้าทดสอบ', 'Supervisor');
 
     const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · หัวหน้าทดสอบ' });
     expect(await within(form).findByText('ตึก A · ตึกทดลอง · กะเช้า')).toBeInTheDocument();
@@ -144,7 +171,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
       'PUT /api/admin/accounts/8/password': () => ({ status: 204 }),
       'PUT /api/admin/accounts/7/password': () => ({ status: 204 }),
     });
-    const { user } = await openAndPress('รีเซ็ตรหัสผ่าน ผู้ดูแลคนที่สอง');
+    const { user } = await openAndPress('รีเซ็ตรหัสผ่าน ผู้ดูแลคนที่สอง', 'Admin');
     expect(screen.queryByRole('button', { name: 'รีเซ็ตรหัสผ่าน แม่บ้านทดสอบ' })).not.toBeInTheDocument();
 
     const form = screen.getByRole('form', { name: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลคนที่สอง' });
@@ -175,20 +202,23 @@ describe('account actions (D6, facility-0020, 0054)', () => {
         body: account({ isActive: false, areaId: undefined, areaCode: undefined }),
       }),
     });
-    const { user } = await openAndPress('ปิดใช้งาน แม่บ้านทดสอบ');
-    expect(screen.queryByRole('button', { name: 'ปิดใช้งาน ผู้ดูแลทดสอบ' })).not.toBeInTheDocument();
+    const { user } = await openAndPress('ปิดใช้งาน แม่บ้านทดสอบ', 'Cleaner');
 
     const ask = screen.getByRole('alertdialog', { name: 'ปิดใช้งานบัญชี แม่บ้านทดสอบ?' });
     expect(ask).toHaveTextContent('แม่บ้านทดสอบ เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดภายใน 5 นาที ประวัติยังอยู่ เปิดใช้งานกลับได้');
     expect(ask).toHaveTextContent('AR01 กะเช้า จะว่าง เปิดใช้งานกลับแล้วต้องเลือกพื้นที่ใหม่');
     await user.click(within(ask).getByRole('button', { name: 'ยกเลิก' }));
     expect(server.calls.some((call) => call.path.endsWith('/deactivate'))).toBe(false);
-    expect(screen.getByRole('form', { name: 'เพิ่มบัญชี' })).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog', { name: 'ปิดใช้งานบัญชี แม่บ้านทดสอบ?' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'ปิดใช้งาน แม่บ้านทดสอบ' }));
-    await user.click(screen.getByRole('button', { name: 'ยืนยัน ปิดใช้งาน' }));
+    await user.click(screen.getByRole('button', { name: 'ปิดใช้งาน' }));
     expect(await screen.findByText('ปิดใช้งาน แม่บ้านทดสอบ แล้ว')).toBeInTheDocument();
     expect(server.calls.filter((call) => call.path === '/api/admin/accounts/21/deactivate')).toHaveLength(1);
+    await user.click(screen.getByRole('tab', { name: 'แอดมิน 2' }));
+    expect(screen.getByRole('rowheader', { name: 'ผู้ดูแลทดสอบ' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ปิดใช้งาน ผู้ดูแลคนที่สอง' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ปิดใช้งาน ผู้ดูแลทดสอบ' })).not.toBeInTheDocument();
   });
 
   it('activating is one press, and says a Cleaner comes back with no Area', async () => {
@@ -198,7 +228,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
         body: account({ id: 26, loginName: '650006', displayName: 'แม่บ้านที่ลาออก', areaId: undefined, areaCode: undefined }),
       }),
     });
-    await openAndPress('เปิดใช้งาน แม่บ้านที่ลาออก');
+    await openAndPress('เปิดใช้งาน แม่บ้านที่ลาออก', 'Cleaner');
 
     expect(
       await screen.findByText('เปิดใช้งาน แม่บ้านที่ลาออก แล้ว ยังไม่มีพื้นที่ เลือกพื้นที่ได้ที่ "แก้ไข"'),
@@ -213,7 +243,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
         body: { message: 'กะเช้าของ AR01 มีแม่บ้านประจำแล้ว (แม่บ้านทดสอบ)' },
       }),
     });
-    await openAndPress('เปิดใช้งาน แม่บ้านที่ลาออก');
+    await openAndPress('เปิดใช้งาน แม่บ้านที่ลาออก', 'Cleaner');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('กะเช้าของ AR01 มีแม่บ้านประจำแล้ว (แม่บ้านทดสอบ)');
   });
@@ -222,7 +252,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     const server = serve({
       'PUT /api/admin/accounts/23': () => new Promise<never>(() => {}),
     });
-    const { user } = await openAndPress('แก้ไข แม่บ้านว่าง');
+    const { user } = await openAndPress('แก้ไข แม่บ้านว่าง', 'Cleaner');
 
     const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านว่าง' });
     await user.click(within(form).getByRole('button', { name: 'บันทึก' }));

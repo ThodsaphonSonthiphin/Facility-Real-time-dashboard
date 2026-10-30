@@ -6,14 +6,15 @@ import { renderApp } from '../../test/renderApp';
 import { expectBehindMoreInfo, expectInView } from '../../test/moreInfo';
 import { qrPath } from './qr';
 
+const secondBuildingArea = { ...officeSummary, buildingId: 2, buildingCode: 'B' };
 const closedArea = areaSummary({ id: 3, code: 'AR03', name: 'Area ปิด', isActive: false });
 
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
     ...adminSession,
-    'GET /api/admin/areas': () => ({ status: 200, body: [areaSummary(), officeSummary, closedArea] }),
+    'GET /api/admin/areas': () => ({ status: 200, body: [areaSummary(), secondBuildingArea, closedArea] }),
     'GET /api/admin/areas/1': () => ({ status: 200, body: areaDetail() }),
-    'GET /api/admin/areas/2': () => ({ status: 200, body: officeDetail() }),
+    'GET /api/admin/areas/2': () => ({ status: 200, body: officeDetail({ area: secondBuildingArea }) }),
     ...routes,
   });
 }
@@ -25,11 +26,55 @@ const qrDrawing = (card: HTMLElement, label: string) =>
   within(card).getByRole('img', { name: label }).querySelector('path')?.getAttribute('d');
 
 describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
+
+  it('selects only active Areas and signs in the chosen building and keeps the group in the address', async () => {
+    const detail = areaDetail();
+    detail.points[1].isActive = false;
+    const server = serve({ 'GET /api/admin/areas/1': () => ({ status: 200, body: detail }) });
+    const { user, router } = await renderApp('/admin/print');
+    const group = await screen.findByRole('option', { name: 'ทุกพื้นที่ในตึก A (1)' });
+    await user.selectOptions(screen.getByLabelText('พื้นที่'), group);
+    expect(router.state.location.search).toBe('?area=building%3A1');
+    await screen.findByRole('article', { name: 'ป้าย AR01-IN' });
+    expect(cardNames()).toEqual(['ป้าย AR01-IN', 'ป้าย AR01-01']);
+    expect(server.calls.some((call) => ['/api/admin/areas/2', '/api/admin/areas/3'].includes(call.path))).toBe(false);
+  });
+
+  it('opens a building group URL directly and offers both sizes as pressed buttons', async () => {
+    serve();
+    const { user } = await renderApp('/admin/print?area=building:2');
+    expect(await screen.findByRole('article', { name: 'ป้าย AR02-IN' })).toBeInTheDocument();
+    expect(cardNames()).toEqual(['ป้าย AR02-IN']);
+    const sizes = screen.getByRole('group', { name: 'ขนาดป้าย' });
+    const small = within(sizes).getByRole('button', { name: 'เล็ก (6 ต่อแผ่น)' });
+    const large = within(sizes).getByRole('button', { name: 'A5 (2 ต่อแผ่น)' });
+    expect(small).toHaveAttribute('aria-pressed', 'true');
+    expect(large).toHaveAttribute('aria-pressed', 'false');
+    await user.click(large);
+    expect(large).toHaveAttribute('aria-pressed', 'true');
+    await user.click(small);
+    expect(small).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('does not print cached tokens when refreshing fails', async () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    let failed = false;
+    serve({ 'GET /api/admin/areas/1': () => failed
+      ? ({ status: 500, body: { message: 'โหลดป้ายล่าสุดไม่ได้' } })
+      : ({ status: 200, body: areaDetail() }) });
+    const { user } = await renderApp('/admin/print?area=1');
+    await screen.findByRole('article', { name: 'ป้าย AR01-IN' });
+    failed = true;
+    await user.click(screen.getByRole('button', { name: 'พิมพ์' }));
+    expect(await screen.findByText('โหลดป้ายล่าสุดไม่ได้')).toBeInTheDocument();
+    expect(print).not.toHaveBeenCalled();
+  });
+
   it('prints one Area: the check-in sign and the active points, each with its QR and URL', async () => {
     serve();
     await renderApp('/admin/print?area=1');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย QR · AR01 Area ทดลอง' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย' })).toBeInTheDocument();
     expect(
       await screen.findByText(
         'ป้ายลงเวลา 1 + จุดทำความสะอาด 2 = 3 ป้าย · กระดาษ A4 แผ่นละ 6 ป้าย · 1 แผ่น · ตัดตามเส้นประ',
@@ -87,7 +132,7 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     const { user } = await renderApp('/admin/print?area=1');
     await screen.findByRole('article', { name: 'ป้าย AR01-IN' });
 
-    await user.click(screen.getByRole('radio', { name: 'A5 (2 ต่อแผ่น)' }));
+    await user.click(screen.getByRole('button', { name: 'A5 (2 ต่อแผ่น)' }));
 
     expect(
       screen.getByText('ป้ายลงเวลา 1 + จุดทำความสะอาด 2 = 3 ป้าย · กระดาษ A4 แผ่นละ 2 ป้าย · 2 แผ่น · ตัดตามเส้นประ'),
@@ -114,7 +159,7 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     const server = serve({ 'GET /api/admin/areas/1': () => ({ status: 200, body: detail }) });
     await renderApp('/admin/print?area=all');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย QR · ทุกพื้นที่' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย' })).toBeInTheDocument();
     await waitFor(() => expect(cardNames()).toEqual(['ป้าย AR01-IN', 'ป้าย AR01-01', 'ป้าย AR02-IN']));
     expect(
       screen.getByText('ป้ายลงเวลา 2 + จุดทำความสะอาด 1 = 3 ป้าย · กระดาษ A4 แผ่นละ 6 ป้าย · 1 แผ่น · ตัดตามเส้นประ'),
@@ -130,8 +175,8 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
 
     expect(await screen.findByText('เลือกพื้นที่ที่จะพิมพ์')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'พิมพ์' })).toBeDisabled();
-    await screen.findByRole('option', { name: 'AR02 Office ทดลอง' });
-    await user.selectOptions(screen.getByLabelText('พื้นที่'), 'AR02 Office ทดลอง');
+    await screen.findByRole('option', { name: 'AR02 Office ทดลอง · ตึก B' });
+    await user.selectOptions(screen.getByLabelText('พื้นที่'), 'AR02 Office ทดลอง · ตึก B');
 
     expect(router.state.location.search).toBe('?area=2');
     expect(await screen.findByRole('article', { name: 'ป้าย AR02-IN' })).toBeInTheDocument();
@@ -140,7 +185,9 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
   });
 
   it('"พิมพ์" asks the server first, so a QR renewed meanwhile is the one printed', async () => {
-    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {
+      expect(screen.getByText(`${window.location.origin}/check-in/11111111-2222-4333-8444-555555555555`)).toBeInTheDocument();
+    });
     let renewed = false;
     serve({
       'GET /api/admin/areas/1': () => ({
@@ -178,7 +225,7 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     serve();
     await renderApp('/admin/print?area=1');
 
-    await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย QR · AR01 Area ทดลอง' });
+    await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย' });
     expectBehindMoreInfo('ระบบสร้าง QR ในเครื่องนี้เอง ไม่ส่งรหัสออกไปเว็บภายนอก', 'เกี่ยวกับ QR');
     expectInView('ติดเสร็จให้สแกนทดสอบ 1 ครั้ง หน้าจอต้องขึ้นชื่อจุดตรงกับป้าย');
   });

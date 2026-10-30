@@ -48,9 +48,12 @@ public class InspectionSummaryTests
             ],
             [Round(10, Day8, RoundOutcome.Passed), Round(11, Day8, RoundOutcome.NotInspected), Round(20, Day8, RoundOutcome.NotReworked), Round(10, Night8, RoundOutcome.Passed)]);
 
-        Assert.Equal(new SupervisorTally(1, 1, 2, 2, 1, 1, 2, 1, 1), tallies[0]);
-        Assert.Equal(new SupervisorTally(2, 1, 1, 1, 1, 0, 1, 0, 0), tallies[1]);
-        Assert.Equal(new SupervisorTally(3, 0, 1, 1, 1, 0, 0, 0, 0), tallies[2]);
+        AssertMetrics(new SupervisorTally(1, 1, 2, 2, 1, 1, 2, 1, 1), tallies[0]);
+        AssertMetrics(new SupervisorTally(2, 1, 1, 1, 1, 0, 1, 0, 0), tallies[1]);
+        AssertMetrics(new SupervisorTally(3, 0, 1, 1, 1, 0, 0, 0, 0), tallies[2]);
+        Assert.Equal([11], tallies[0].UninspectedPointIds);
+        Assert.Empty(tallies[1].UninspectedPointIds);
+        Assert.Equal([20], tallies[2].UninspectedPointIds);
     }
 
     [Fact]
@@ -169,4 +172,37 @@ public class InspectionSummaryTests
         Assert.Equal(1, tallies[0].Submitted);
         Assert.Equal(1, tallies[0].SubmittedInspected);
     }
+    private static void AssertMetrics(SupervisorTally expected, SupervisorTally actual) =>
+        Assert.Equal(
+            (expected.SupervisorId, expected.PointsInspected, expected.PointsTotal, expected.Submitted, expected.SubmittedInspected,
+                expected.NotInspected, expected.Inspections, expected.Reworks, expected.GpsFlagged),
+            (actual.SupervisorId, actual.PointsInspected, actual.PointsTotal, actual.Submitted, actual.SubmittedInspected,
+                actual.NotInspected, actual.Inspections, actual.Reworks, actual.GpsFlagged));
+
+    [Fact]
+    public void Uninspected_list_is_exactly_the_active_own_shift_beat_minus_the_supervisors_own_inspections()
+    {
+        var tallies = InspectionSummary.Tally(
+            [.. Supervisors, new(4, 3, Shift.Day)],
+            [.. Points, new(13, 1, false, true)], // inactive Area has the same Counted=false rule
+            [],
+            [
+                Inspected(1, 10, 2, Day8, InspectionResult.Passed), // another Supervisor does not clear supervisor 1's beat
+                Inspected(2, 11, 1, Night8, InspectionResult.Passed), // own inspection in a different shift does not clear it
+                Inspected(3, 20, 1, Day8, InspectionResult.Passed), // cover does not clear own beat
+                Inspected(4, 12, 1, Day8, InspectionResult.Passed), // inactive point stays out
+                Inspected(5, 13, 1, Day8, InspectionResult.Passed), // inactive Area stays out
+            ],
+            []);
+
+        Assert.Equal([10, 11], tallies[0].UninspectedPointIds.Order());
+        Assert.Equal([10], tallies[1].UninspectedPointIds); // Day-only 11 excluded for Night
+        Assert.Equal([20], tallies[2].UninspectedPointIds);
+        Assert.Empty(tallies[3].UninspectedPointIds); // no active points in this building
+        Assert.All(tallies, tally => Assert.Equal(tally.PointsTotal - tally.PointsInspected, tally.UninspectedPointIds.Count));
+        AssertMetrics(new SupervisorTally(1, 0, 2, 0, 0, 0, 4, 0, 0), tallies[0]);
+        AssertMetrics(new SupervisorTally(2, 0, 1, 0, 0, 0, 1, 0, 0), tallies[1]);
+        AssertMetrics(new SupervisorTally(4, 0, 0, 0, 0, 0, 0, 0, 0), tallies[3]);
+    }
+
 }

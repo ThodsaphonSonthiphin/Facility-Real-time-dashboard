@@ -103,10 +103,10 @@ export function toHistoryParams({ from, to, actorId, category, q }: HistoryArgs)
 }
 
 /** facility-0057: these actions store nothing about the secret; the line says what changed without it. */
-const secretChange: Record<string, string> = {
-  ACCOUNT_PHONE: 'เบอร์เดิม → เบอร์ใหม่ (ไม่แสดงเบอร์)',
-  ACCOUNT_PASSWORD: 'รหัสผ่านเดิม → รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)',
-  ADMIN_RECOVER_RESET: 'รหัสผ่านเดิม → รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)',
+const secretChange: Record<string, ChangeValue> = {
+  ACCOUNT_PHONE: { before: 'เบอร์เดิม', after: 'เบอร์ใหม่ (ไม่แสดงเบอร์)' },
+  ACCOUNT_PASSWORD: { before: 'รหัสผ่านเดิม', after: 'รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)' },
+  ADMIN_RECOVER_RESET: { before: 'รหัสผ่านเดิม', after: 'รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)' },
 };
 
 /** Snapshot fields in Thai (the AuditTrail.Add calls). Ids stay numbers: snapshots keep ids, not names, on purpose. */
@@ -130,6 +130,7 @@ const fieldLabel: Record<string, string> = {
   DisplayName: 'ชื่อที่แสดง',
   AreaId: 'พื้นที่ (รหัสในระบบ)',
   BuildingId: 'ตึก (รหัสในระบบ)',
+  BuildingIds: 'ตึกที่เลือก (รหัสในระบบ)',
   Shift: 'กะ',
   Code: 'รหัส',
   ShiftPattern: 'กะของพื้นที่',
@@ -211,9 +212,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Wireframe D9's "ก่อน → หลัง" (plan 12 decision 8): one "label: before → after" line per field that shows
  * differently on the two sides, in the order the snapshots list them. An unknown field shows its key.
  */
-export function changeLines({ action, before, after }: Pick<AuditEntry, 'action' | 'before' | 'after'>): string[] {
+export interface ChangeValue {
+  label?: string;
+  before: string;
+  after: string;
+}
+
+/** Separate values stay intact even when an Admin types an arrow into a name. */
+export function changeValues({ action, before, after }: Pick<AuditEntry, 'action' | 'before' | 'after'>): ChangeValue[] {
   if (Object.hasOwn(secretChange, action)) {
-    return [secretChange[action]];
+    return [{ ...secretChange[action] }];
   }
   if (before == null && after == null) {
     return [];
@@ -221,11 +229,22 @@ export function changeLines({ action, before, after }: Pick<AuditEntry, 'action'
   const was = before ?? {};
   const now = after ?? {};
   if (!isRecord(was) || !isRecord(now)) {
-    return [`${valueText('', before)} → ${valueText('', after)}`];
+    const from = valueText('', before);
+    const to = valueText('', after);
+    return from === to ? [] : [{ before: from, after: to }];
   }
   const fields = [...new Set([...Object.keys(was), ...Object.keys(now)])];
   return fields
     .map((field) => ({ field, from: valueText(field, was[field]), to: valueText(field, now[field]) }))
     .filter((change) => change.from !== change.to)
-    .map((change) => `${Object.hasOwn(fieldLabel, change.field) ? fieldLabel[change.field] : change.field}: ${change.from} → ${change.to}`);
+    .map((change) => ({
+      label: Object.hasOwn(fieldLabel, change.field) ? fieldLabel[change.field] : change.field,
+      before: change.from,
+      after: change.to,
+    }));
+}
+
+/** Backward-compatible text formatter over the same safe structured values. */
+export function changeLines(entry: Pick<AuditEntry, 'action' | 'before' | 'after'>): string[] {
+  return changeValues(entry).map((change) => `${change.label ? `${change.label}: ` : ''}${change.before} → ${change.after}`);
 }

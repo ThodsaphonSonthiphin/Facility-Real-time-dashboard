@@ -2,7 +2,7 @@ import type { AdminSign, AreaDetail, AreaSummary } from '../../shared/api/adminS
 import { buildingText, type BuildingNames } from '../../shared/api/buildingNames';
 import { signPlaceLabel } from '../../shared/utils/labels';
 
-/** Wireframe D4's line under each Area in the list. */
+/** Wireframe D4's line under each Area in the list (the "ปิดใช้งาน" tag sits beside the name, not in this line). */
 export function areaMeta(area: AreaSummary, names?: BuildingNames): string {
   const parts = [
     `ตึก ${buildingText(area.buildingCode, names)}`,
@@ -12,21 +12,26 @@ export function areaMeta(area: AreaSummary, names?: BuildingNames): string {
   if (area.signsNotConfirmedOnSite > 0) {
     parts.push(`ป้ายยังไม่ยืนยัน ${area.signsNotConfirmedOnSite}`);
   }
-  if (!area.isActive) {
-    parts.push('ปิดใช้งาน');
-  }
   return parts.join(' · ');
 }
 
-/** Wireframe D4's line under the chosen Area's name: shifts, Cleaners, and signs (1 check-in + active points). */
-export function areaLine(detail: AreaDetail): string {
+/** Wireframe D4's page header: how much there is to set up, in one line. */
+export function areaTotals(areas: readonly AreaSummary[]): string {
+  const points = areas.reduce((total, area) => total + area.activePointCount, 0);
+  const buildings = new Set(areas.map((area) => area.buildingCode)).size;
+  return `${areas.length} พื้นที่ · ${points} จุด · ${buildings} ตึก`;
+}
+
+/** Wireframe D4's line under the chosen Area's name: its building, shifts and active points. */
+export function areaHeadline(detail: AreaDetail, names?: BuildingNames): string {
   const { area } = detail;
-  const day = `เช้า ${area.dayCleaner?.displayName ?? 'ยังไม่มี'}`;
-  const cleaners =
-    area.shiftPattern === 'DayOnly' ? day : `${day} · ดึก ${area.nightCleaner?.displayName ?? 'ยังไม่มี'}`;
-  const pattern = area.shiftPattern === 'DayOnly' ? 'ทำเฉพาะกะเช้า' : 'ทำ 2 กะ (เช้า + ดึก)';
   const activePoints = detail.points.filter((point) => point.isActive).length;
-  return `${pattern} · แม่บ้านประจำ: ${cleaners} · ป้าย 1 + ${activePoints}`;
+  const parts = [
+    `ตึก ${buildingText(area.buildingCode, names)}`,
+    area.shiftPattern === 'DayOnly' ? 'เฉพาะกะเช้า' : '2 กะ',
+    `${activePoints} จุด`,
+  ];
+  return parts.join(' · ');
 }
 
 /** A sign's place, in one line: how it was captured (or that it has none yet) and its radius. */
