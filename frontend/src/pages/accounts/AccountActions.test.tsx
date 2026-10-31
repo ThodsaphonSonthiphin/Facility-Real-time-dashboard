@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { account, accounts, adminSession, areaSummary, buildings, managedBuildings, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
@@ -30,6 +30,38 @@ const sent = (server: ReturnType<typeof serve>, method: string, path: string) =>
   server.calls.find((call) => call.method === method && call.path === path)?.body;
 
 describe('account actions (D6, facility-0020, 0054)', () => {
+  it.each([
+    { kind: 'phone', role: 'Cleaner', action: 'แก้เบอร์โทร แม่บ้านทดสอบ', title: 'แก้เบอร์โทร · แม่บ้านทดสอบ', path: 'PUT /api/admin/accounts/21/phone', field: 'เบอร์โทรที่คนนี้ใช้ตอนนี้', value: '0810000009', save: 'บันทึกเบอร์ใหม่' },
+    { kind: 'password', role: 'Admin', action: 'รีเซ็ตรหัสผ่าน ผู้ดูแลคนที่สอง', title: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลคนที่สอง', path: 'PUT /api/admin/accounts/8/password', field: 'รหัสผ่านชั่วคราวใหม่', value: ['a long', 'temporary phrase'].join(' '), save: 'บันทึกรหัสผ่านใหม่' },
+  ] as const)('keeps $kind open on Escape/cancel during sending, then allows retry and close after error', async ({ role, action, title, path, field, value, save }) => {
+    let answer: () => void = () => {};
+    serve({ [path]: () => new Promise((resolve) => { answer = () => resolve({ status: 409, body: { message: 'ลองใหม่อีกครั้ง' } }); }) });
+    const { user } = await openAndPress(action, role);
+    const dialog = screen.getByRole('dialog', { name: title });
+    await user.type(within(dialog).getByLabelText(field), value);
+    await user.click(within(dialog).getByRole('button', { name: save }));
+    expect(within(dialog).getByRole('button', { name: 'กำลังบันทึก...' })).toBeDisabled();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    fireEvent(dialog, new Event('cancel', { bubbles: false, cancelable: true }));
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(field)).toHaveValue(value);
+    answer();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('ลองใหม่อีกครั้ง');
+    expect(within(dialog).getByRole('button', { name: save })).toBeEnabled();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(dialog).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: action })).toHaveFocus();
+  });
+
+  it('links an invalid replacement phone to its field without sending it', async () => {
+    const server = serve();
+    const { user } = await openAndPress('แก้เบอร์โทร แม่บ้านทดสอบ', 'Cleaner');
+    const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · แม่บ้านทดสอบ' });
+    await user.click(within(form).getByRole('button', { name: 'บันทึกเบอร์ใหม่' }));
+    expect(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้')).toHaveAttribute('aria-invalid', 'true');
+    expect(server.calls.filter((call) => call.method !== 'GET' && call.path.startsWith('/api/admin/'))).toEqual([]);
+  });
+
   it.each([
     { role: 'Cleaner', action: 'สร้างบัญชี', title: 'สร้างบัญชี' },
     { role: 'Cleaner', action: 'แก้ไข แม่บ้านทดสอบ', title: 'แก้ไขบัญชี · แม่บ้านทดสอบ' },
@@ -260,6 +292,9 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     const saving = within(form).getByRole('button', { name: 'กำลังบันทึก...' });
     expect(saving).toBeDisabled();
     await user.click(saving);
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'แก้ไขบัญชี · แม่บ้านว่าง' }), { key: 'Escape' });
+    expect(form).toBeInTheDocument();
+    expect(within(form).getByLabelText('ชื่อที่แสดง')).toHaveValue('แม่บ้านว่าง');
     expect(server.calls.filter((call) => call.method === 'PUT' && call.path === '/api/admin/accounts/23')).toHaveLength(1);
   });
 });

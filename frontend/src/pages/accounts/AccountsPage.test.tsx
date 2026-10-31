@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { account, accounts, adminSession, areaSummary, buildings, managedBuildings, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
@@ -300,6 +300,9 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     await user.click(sending);
     expect(server.calls.filter((call) => call.method === 'POST' && call.path === '/api/admin/accounts')).toHaveLength(1);
 
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'สร้างบัญชี' }), { key: 'Escape' });
+    expect(form).toBeInTheDocument();
+    expect(within(form).getByLabelText('รหัสพนักงาน')).toHaveValue('650010');
     answer();
     expect(await within(form).findByRole('status')).toHaveTextContent('สร้างบัญชี แม่บ้านใหม่ แล้ว');
   });

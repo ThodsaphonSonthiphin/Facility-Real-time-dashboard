@@ -1,5 +1,4 @@
 import type { Shift } from '../../shared/api/types';
-import { FieldGroup } from '../../shared/components/Field';
 import { shiftLabel } from '../../shared/utils/labels';
 import { radioClass, radioLabelClass } from './accountStyles';
 
@@ -16,7 +15,8 @@ interface ShiftChoiceProps {
 /** D6's "กะ": a held slot or a night in a day-only Area cannot be picked, and the page says why. */
 export function ShiftChoice({ name, value, blockOf, disabled, onChange }: ShiftChoiceProps) {
   return (
-    <FieldGroup legend="กะ" disabled={disabled}>
+    <fieldset className="min-w-0 border-0 p-0" disabled={disabled}>
+      <legend className="mb-1 font-semibold">กะ</legend>
       {(['Day', 'Night'] as const).map((shift) => {
         const block = blockOf(shift);
         return (
@@ -36,6 +36,6 @@ export function ShiftChoice({ name, value, blockOf, disabled, onChange }: ShiftC
           </label>
         );
       })}
-    </FieldGroup>
+    </fieldset>
   );
 }

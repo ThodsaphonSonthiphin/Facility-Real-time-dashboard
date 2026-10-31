@@ -1,6 +1,8 @@
+import { useStore } from 'react-redux';
+import type { RootState } from '../../store';
 import { useState, type ChangeEvent } from 'react';
 import { useGetAreasQuery, useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
-import { freshOnOpen } from '../../shared/api/baseApi';
+import { baseApi, freshOnOpen } from '../../shared/api/baseApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { useAppSelector } from '../../store/hooks';
 import { filterAccounts, filterCounts, type AccountActiveFilter } from './accountRules';
@@ -27,10 +29,17 @@ export function useAccountsPage() {
   const openCreate = () => setPanel({ kind: 'create' });
   const error = accounts.error ?? areas.error ?? buildings.error;
   const target = panel === null || panel.kind === 'create' ? undefined : list.find((account) => account.id === panel.id);
-  const closePanel = () => setPanel(null);
+  // The Drawer owns Escape/cancel, so its guard observes the child mutation as well as its disabled buttons.
+  const store = useStore<RootState>();
+  const formSending = () => Object.values(store.getState()[baseApi.reducerPath].mutations).some(
+    (mutation) => mutation?.status === 'pending' && ['createAccount', 'updateAccount', 'changePhone', 'resetPassword'].includes(mutation.endpointName ?? ''),
+  );
+  const closePanel = () => {
+    if (!formSending()) setPanel(null);
+  };
   const done = (text: string) => {
     setNotice({ kind: 'ok', text });
-    closePanel();
+    setPanel(null);
   };
 
   // facility-0020: activation is one press; a Cleaner comes back with no Area (plan 5 decision 3)

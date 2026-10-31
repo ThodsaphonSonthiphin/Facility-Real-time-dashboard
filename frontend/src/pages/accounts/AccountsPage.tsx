@@ -108,7 +108,7 @@ export function AccountsPage() {
         </span>
       </MoreInfo>
       {panel?.kind === 'create' && (
-        <Drawer labelledBy="accounts-create-title" onClose={closePanel}>
+        <Drawer width="lg" labelledBy="accounts-create-title" onClose={closePanel}>
           <CreateAccountForm
             accounts={list}
             areas={areas.data ?? []}
@@ -118,7 +118,7 @@ export function AccountsPage() {
         </Drawer>
       )}
       {target && panel?.kind === 'edit' && (
-        <Drawer labelledBy={`accounts-edit-${target.id}`} onClose={closePanel}>
+        <Drawer width="lg" labelledBy={`accounts-edit-${target.id}`} onClose={closePanel}>
           <EditAccountForm
             key={target.id}
             account={target}
@@ -131,12 +131,12 @@ export function AccountsPage() {
         </Drawer>
       )}
       {target && panel?.kind === 'phone' && (
-        <Drawer labelledBy={`accounts-phone-${target.id}`} onClose={closePanel}>
+        <Drawer width="lg" labelledBy={`accounts-phone-${target.id}`} onClose={closePanel}>
           <PhoneForm key={target.id} account={target} onDone={done} onCancel={closePanel} />
         </Drawer>
       )}
       {target && panel?.kind === 'password' && (
-        <Drawer labelledBy={`accounts-password-${target.id}`} onClose={closePanel}>
+        <Drawer width="lg" labelledBy={`accounts-password-${target.id}`} onClose={closePanel}>
           <PasswordForm key={target.id} account={target} isSelf={target.id === me} onDone={done} onCancel={closePanel} />
         </Drawer>
       )}
