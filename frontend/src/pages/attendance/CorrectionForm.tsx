@@ -141,7 +141,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
   };
 
   return (
-    <Modal labelledBy={headingId} width="lg" onClose={() => !busy && onCancel()}>
+    <Modal labelledBy={headingId} width="lg" scrollBody onClose={() => !busy && onCancel()}>
       <DialogHeader
         id={headingId}
         title="แก้เวลา"
@@ -149,7 +149,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
         closeDisabled={busy}
         onClose={onCancel}
       />
-      <div className="flex flex-col gap-5">
+      <div className="-mx-6 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-5">
         {failure && (
           <Note tone="error" title="บันทึกไม่สำเร็จ">
             <span>{failure.message}</span>
@@ -170,7 +170,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
         </div>
         <fieldset className="flex flex-col gap-2" disabled={busy}>
           <legend className="mb-2 text-base font-bold">เลือกช่องที่จะแก้</legend>
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full border-collapse text-sm [&_td]:border-b [&_td]:border-border [&_td]:px-3 [&_td]:py-2.5 [&_th]:border-b [&_th]:border-border [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-text-2 [&_tr:last-child>td]:border-b-0">
               <thead>
                 <tr>
@@ -214,6 +214,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
                             className="w-32 tabular-nums data-changed:border-2 data-changed:border-accent"
                             data-changed={isChanged && !problem ? '' : undefined}
                             aria-invalid={problem ? true : undefined}
+                            aria-describedby={problem ? `${headingId}-${type}-error` : undefined}
                             value={values[type]}
                             placeholder="--:--"
                             inputMode="numeric"
@@ -233,7 +234,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
                           )}
                         </span>
                         {problem && (
-                          <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-rework">
+                          <span id={`${headingId}-${type}-error`} className="mt-1 flex items-center gap-1 text-xs font-semibold text-rework">
                             <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
                             {problem}
                           </span>
@@ -251,7 +252,13 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
           <legend className="mb-2 text-base font-bold">
             เหตุผล <span className="text-rework">*</span>
           </legend>
-          <div role="radiogroup" aria-label="เหตุผล" className="flex flex-wrap gap-2">
+          <div
+            role="radiogroup"
+            aria-label="เหตุผล"
+            aria-invalid={tried && !reason ? true : undefined}
+            aria-describedby={tried && !reason ? `${headingId}-reason-error` : undefined}
+            className="flex flex-wrap gap-2"
+          >
             {correctionReasons.map((choice) => (
               <label
                 key={choice}
@@ -276,7 +283,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
             ))}
           </div>
           {tried && reasonError && !reason && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-rework">
+            <span id={`${headingId}-reason-error`} className="flex items-center gap-1 text-xs font-semibold text-rework">
               <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
               {reasonError}
             </span>
@@ -291,12 +298,20 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
             <TextArea
               size="desk"
               rows={2}
+              aria-invalid={tried && reason && reasonError ? true : undefined}
+              aria-describedby={tried && reason && reasonError ? `${headingId}-detail-error` : undefined}
               maxLength={MAX_REASON - 20}
               placeholder="เช่น แจ้งหัวหน้าทางโทรศัพท์ตอน 09:35"
               value={detail}
               onChange={(event) => setDetail(event.target.value)}
             />
           </label>
+          {tried && reason && reasonError && (
+            <span id={`${headingId}-detail-error`} className="flex items-center gap-1 text-xs font-semibold text-rework">
+              <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
+              {reasonError}
+            </span>
+          )}
         </fieldset>
         <div className="flex flex-col gap-1 rounded-md border border-pending-border bg-accent-subtle px-4 py-3">
           <strong>สรุปก่อนบันทึก</strong>

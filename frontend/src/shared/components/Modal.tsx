@@ -79,16 +79,26 @@ function DialogFrame({ labelledBy, describedBy, role, onClose, className, childr
  * The page's own box in the middle of the page: D2's correction form, D3's cover form, a confirm. 480 px wide at most
  * (DESIGN_SPEC §5), 600 px with `width="lg"` (the owner's later design file draws D2's correction form so); the calc
  * keeps a 16 px gutter on a narrow window, which no token describes. 8 px corners, 24/20 padding (the design file's
- * dialog body). It scrolls inside itself when the screen is too short.
+ * dialog body). It scrolls inside itself when the screen is too short. `scrollBody` opts into a bounded flex frame
+ * for callers with their own scrolling body, leaving the header and footer visible. Its height calc keeps the same
+ * 16 px gutter at the top and bottom; no container token describes this viewport bound.
  */
-export function Modal({ labelledBy, describedBy, role, width = 'md', onClose, children }: DialogProps & { width?: Width }) {
+export function Modal({
+  labelledBy,
+  describedBy,
+  role,
+  width = 'md',
+  scrollBody = false,
+  onClose,
+  children,
+}: DialogProps & { width?: Width; scrollBody?: boolean }) {
   return (
     <DialogFrame
       labelledBy={labelledBy}
       describedBy={describedBy}
       role={role}
       onClose={onClose}
-      className={`m-auto ${modalWidths[width]} max-w-[calc(100%-2rem)] rounded-lg px-6 py-5`}
+      className={`m-auto ${modalWidths[width]} max-w-[calc(100%-2rem)] rounded-lg px-6 py-5 ${scrollBody ? 'max-h-[calc(100dvh-2rem)] overflow-hidden open:flex open:flex-col' : ''}`}
     >
       {children}
     </DialogFrame>
@@ -132,7 +142,7 @@ export function DialogHeader({
   closeDisabled?: boolean;
 }) {
   return (
-    <div className="-mx-6 -mt-5 mb-5 flex items-start justify-between gap-3 border-b border-border px-6 py-4">
+    <div className="-mx-6 -mt-5 mb-5 flex shrink-0 items-start justify-between gap-3 border-b border-border px-6 py-4">
       <div className="flex min-w-0 flex-col">
         <h2 id={id} tabIndex={-1} className="text-lg font-bold">
           {title}
@@ -150,6 +160,6 @@ export function DialogHeader({
 /** The design file's dialog foot: its buttons on the right, ยกเลิก before the main one; put it last. In a Drawer it sits at the bottom of the screen. */
 export function DialogFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="-mx-6 mt-auto -mb-5 flex flex-wrap justify-end gap-2 border-t border-border bg-surface px-6 py-3">{children}</div>
+    <div className="-mx-6 mt-auto -mb-5 flex shrink-0 flex-wrap justify-end gap-2 border-t border-border bg-surface px-6 py-3">{children}</div>
   );
 }
