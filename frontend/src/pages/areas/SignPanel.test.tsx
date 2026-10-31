@@ -35,6 +35,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     });
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
 
     const editor = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
     const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
@@ -56,7 +57,8 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     expect(server.calls.some((call) => call.method === 'PUT')).toBe(false);
 
     await user.clear(field);
-    await user.type(field, '80');
+    await user.type(field, '80{Enter}');
+    expect(server.calls.some((call) => call.method === 'PUT')).toBe(false);
     await user.click(within(radius).getByRole('button', { name: 'บันทึกรัศมี' }));
     expect(await within(radius).findByRole('status')).toHaveTextContent('บันทึกรัศมี 80 ม. แล้ว ใช้กับการสแกนครั้งต่อไป');
     expect(server.calls.find((call) => call.method === 'PUT')).toMatchObject({
@@ -73,6 +75,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     });
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
     const editor = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
     const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
     await user.type(within(place).getByLabelText('ยังไม่ได้ไปที่ป้าย? ปักพิกัดจากแผนที่ไปก่อน'), '13.7563, 100.5018');
@@ -92,6 +95,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     });
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-02' }));
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
 
     const editor = screen.getByRole('region', { name: 'แก้ไขจุด · AR01-02' });
     const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
@@ -123,6 +127,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     });
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-01' }));
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
 
     const qr = within(screen.getByRole('region', { name: 'แก้ไขจุด · AR01-01' })).getByRole('region', {
       name: 'QR ของป้าย',
@@ -153,6 +158,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     serve({ 'GET /api/admin/areas/1': () => ({ status: 200, body: detail }) });
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-01' }));
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
 
     const qr = screen.getByRole('region', { name: 'QR ของป้าย' });
     expect(within(qr).queryByRole('button', { name: 'สร้าง QR ใหม่' })).not.toBeInTheDocument();
@@ -167,13 +173,15 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     });
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
 
     const checkInQr = screen.getByRole('region', { name: 'QR ของป้าย' });
     expect(within(checkInQr).queryByRole('button', { name: 'สร้าง QR ใหม่' })).not.toBeInTheDocument();
     expect(within(checkInQr).getByText('ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้')).toBeInTheDocument();
 
-    await user.click(within(screen.getByRole('dialog', { name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' })).getByRole('button', { name: 'ปิด' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'แก้ไขพื้นที่' })).getByRole('button', { name: 'ปิด' }));
     await user.click(screen.getByRole('button', { name: 'แก้ไข AR01-01' }));
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
     const pointQr = within(screen.getByRole('region', { name: 'แก้ไขจุด · AR01-01' })).getByRole('region', {
       name: 'QR ของป้าย',
     });
@@ -187,6 +195,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     });
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
 
     const qr = screen.getByRole('region', { name: 'QR ของป้าย' });
     await user.click(within(qr).getByRole('button', { name: 'สร้าง QR ใหม่' }));

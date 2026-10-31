@@ -24,9 +24,9 @@ export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerP
   const titleId = 'area-editor-title';
 
   return (
-    <Drawer labelledBy={titleId} onClose={onClose}>
-      <div className="flex flex-col gap-5">
-        <DialogHeader id={titleId} title={`แก้ไขพื้นที่ · ${detail.area.code} ${detail.area.name}`} onClose={onClose} />
+    <Drawer width="lg" labelledBy={titleId} onClose={onClose}>
+      <div className="flex h-full min-h-0 flex-col">
+        <DialogHeader id={titleId} title="แก้ไขพื้นที่" detail={`${detail.area.code} ${detail.area.name} · ตึก ${detail.area.buildingCode}`} onClose={onClose} />
         {error && <Note tone="error">{getErrorMessage(error)}</Note>}
         {buildings.data && cleaners.data ? (
           <AreaForm
@@ -37,13 +37,14 @@ export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerP
             framed={false}
             onSaved={(saved) => onSaved(`บันทึกพื้นที่ ${saved.area.code} ${saved.area.name} แล้ว`)}
             onCancel={onClose}
-          />
+          >
+            <CheckInSignManagement detail={detail} />
+            <MoreInfo summary="การใช้งานพื้นที่และประวัติ"><AreaActiveSection detail={detail} /></MoreInfo>
+            <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
+          </AreaForm>
         ) : (
           !error && <p className="text-text-2">กำลังโหลด...</p>
         )}
-        <CheckInSignManagement detail={detail} />
-        <AreaActiveSection detail={detail} />
-        <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
       </div>
     </Drawer>
   );

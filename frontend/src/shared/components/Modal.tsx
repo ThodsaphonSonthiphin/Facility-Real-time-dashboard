@@ -19,7 +19,8 @@ interface DialogProps {
  * four times needs the room; 520 px for D2's cover Drawer (ฟอร์มแก้เวลา, ฟอร์มมอบหมายทำแทน). No token describes them.
  */
 const modalWidths = { md: 'w-120', lg: 'w-150' } as const;
-const drawerWidths = { md: 'w-120', lg: 'w-130' } as const;
+// The approved point/round editor is 560px, wider than the 520px Area editor; no container token describes it.
+const drawerWidths = { md: 'w-120', lg: 'w-130', xl: 'w-140' } as const;
 type Width = keyof typeof modalWidths;
 
 /**
@@ -97,7 +98,7 @@ export function Modal({ labelledBy, describedBy, role, width = 'md', onClose, ch
  * stays visible on the left while a point or the Area itself is edited on the right. `w-120` is 480 px, half a 1280 px
  * screen's content beside the 300 px Area list, and the design file's Drawer; `width="lg"` is D2's 520 px cover form.
  */
-export function Drawer({ labelledBy, width = 'md', onClose, children }: DialogProps & { width?: Width }) {
+export function Drawer({ labelledBy, width = 'md', onClose, children }: DialogProps & { width?: keyof typeof drawerWidths }) {
   return (
     <DialogFrame
       labelledBy={labelledBy}

@@ -95,13 +95,13 @@ describe('AreaFormPage (D10, facility-0045)', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' })).toBeInTheDocument();
     expect(screen.getByText('AR01')).toBeInTheDocument();
-    expect(screen.getByText('แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย')).toBeInTheDocument();
+    expect(screen.getByText(/แก้ไม่ได้ เพราะพิมพ์อยู่บนป้ายแล้ว/)).toBeInTheDocument();
     expect(screen.getByLabelText('ชื่อพื้นที่')).toHaveValue('Area ทดลอง');
     expect(screen.getByLabelText('ตึก')).toHaveValue('1');
     expect(screen.getByLabelText('แม่บ้านประจำกะเช้า')).toHaveValue('21');
     expect(screen.getByLabelText('แม่บ้านประจำกะดึก')).toHaveValue('22');
 
-    await user.click(screen.getByRole('radio', { name: 'เฉพาะกะเช้า' }));
+    await user.click(screen.getByRole('checkbox', { name: 'กะดึก' }));
     expect(screen.queryByLabelText('แม่บ้านประจำกะดึก')).not.toBeInTheDocument();
     expect(
       screen.getByText('บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่'),

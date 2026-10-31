@@ -38,11 +38,34 @@ async function typeWindow(user: UserEvent, shift: HTMLElement, from: string, to:
 }
 
 describe('PointEditor (D4, facility-0045, 0047)', () => {
+  it('edits an existing numbered round and preserves its draft after a server refusal', async () => {
+    const server = serve({
+      'PUT /api/admin/points/11': () => ({ status: 400, body: { message: 'รอบซ้อนกัน' } }),
+    });
+    const { user } = await renderApp('/admin/areas/1');
+    await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-01' }));
+    const row = screen.getByRole('group', { name: 'กะเช้า รอบ 1' });
+    expect(within(row).getByText('2 ชม.')).toBeInTheDocument();
+    await user.clear(within(row).getByLabelText('เริ่มรอบ 1'));
+    await user.type(within(row).getByLabelText('เริ่มรอบ 1'), '0830');
+    await user.click(screen.getByRole('button', { name: 'บันทึกจุด' }));
+    expect(await screen.findByText('รอบซ้อนกัน')).toBeInTheDocument();
+    expect(within(row).getByLabelText('เริ่มรอบ 1')).toHaveValue('08:30');
+    expect(within(row).getByText('30 นาที')).toBeInTheDocument();
+    expect((server.calls.find((call) => call.method === 'PUT')?.body as { roundWindows: unknown[] }).roundWindows).toContainEqual({ shift: 'Day', start: '08:30', end: '09:00' });
+    await user.clear(within(row).getByLabelText('เริ่มรอบ 1'));
+    await user.type(within(row).getByLabelText('เริ่มรอบ 1'), '24');
+    await user.click(screen.getByRole('button', { name: 'บันทึกจุด' }));
+    expect(server.calls.filter((call) => call.method === 'PUT')).toHaveLength(1);
+    expect(within(row).getByLabelText('เริ่มรอบ 1')).toHaveValue('24');
+  });
+
   it('opens QR management from its table row and retains the safe confirmation without sending on cancel', async () => {
     const server = serve();
     const { user } = await renderApp('/admin/areas/1');
     const opener = await screen.findByRole('button', { name: 'จัดการ QR AR01-01' });
     await user.click(opener);
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
     const editor = screen.getByRole('dialog', { name: 'แก้ไขจุด · AR01-01' });
     await user.click(within(editor).getByRole('button', { name: 'สร้าง QR ใหม่' }));
     const ask = within(editor).getByRole('alertdialog', { name: 'สร้าง QR ใหม่ของป้าย AR01-01 ห้องน้ำชาย?' });
