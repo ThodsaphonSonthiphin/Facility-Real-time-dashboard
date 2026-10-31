@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
   adminPoint,
@@ -14,7 +14,7 @@ import {
 } from '../../test/adminFixtures';
 import { authAnswer, fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
-import { expectBehindMoreInfo, expectInView } from '../../test/moreInfo';
+import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
@@ -70,7 +70,8 @@ describe('AreasPage (D4, facility-0045)', () => {
     // Check-in facts stay visible; its management controls live in the Area Drawer.
     expect(screen.queryByRole('row', { name: /AR01-IN/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'แก้ไขพื้นที่' }));
-    const checkIn = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
+    const checkIn = await screen.findByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
+    await user.click(within(checkIn).getByText('พิมพ์และรายละเอียดป้ายลงเวลา'));
     expect(within(checkIn).getByText(/AR01-IN/)).toBeInTheDocument();
     expect(within(checkIn).getByRole('link', { name: 'เก็บพิกัดบนมือถือ ›' })).toHaveAttribute(
       'href',
@@ -81,6 +82,38 @@ describe('AreasPage (D4, facility-0045)', () => {
       'href',
       '/admin/print?area=1&sign=100',
     );
+  });
+
+  it('shows the actual affected sign count after renaming without changing sign radius in the Area request', async () => {
+    const server = serve({
+      'PUT /api/admin/areas/1': () => ({ status: 200, body: areaDetail() }),
+    });
+    const { user, router } = await renderApp('/admin/areas/1');
+    await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
+    const name = await screen.findByLabelText('ชื่อพื้นที่');
+    await user.clear(name);
+    await user.type(name, 'ชื่อใหม่');
+    expect(screen.getByText(/ชื่อพื้นที่พิมพ์บนป้ายทั้ง 3 ป้าย/)).toBeInTheDocument();
+    expect(screen.getByLabelText('รัศมี (เมตร)')).toHaveValue('50');
+    await user.click(screen.getByRole('button', { name: 'บันทึก แล้วไปพิมพ์ป้าย' }));
+    await waitFor(() => expect(router.state.location.pathname + router.state.location.search).toBe('/admin/print?area=1'));
+    expect(server.calls.find((call) => call.method === 'PUT')?.body).toEqual({
+      name: 'ชื่อใหม่', buildingId: 1, shiftPattern: 'DayAndNight', dayCleanerId: 21, nightCleanerId: 22,
+    });
+    expect(server.calls.some((call) => call.path.endsWith('/radius'))).toBe(false);
+  });
+
+  it('keeps the renamed Area draft and route if saving before printing is refused', async () => {
+    serve({ 'PUT /api/admin/areas/1': () => ({ status: 409, body: { message: 'บันทึกไม่ได้' } }) });
+    const { user, router } = await renderApp('/admin/areas/1');
+    await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
+    const name = await screen.findByLabelText('ชื่อพื้นที่');
+    await user.clear(name);
+    await user.type(name, 'ชื่อใหม่');
+    await user.click(screen.getByRole('button', { name: 'บันทึก แล้วไปพิมพ์ป้าย' }));
+    expect(await screen.findByText('บันทึกไม่ได้')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/admin/areas/1');
+    expect(name).toHaveValue('ชื่อใหม่');
   });
 
   it('searches code, name and building, clears no matches, and preserves a deep-linked selection', async () => {
@@ -131,12 +164,12 @@ describe('AreasPage (D4, facility-0045)', () => {
 
     await user.click(await screen.findByRole('button', { name: 'แก้ไขพื้นที่' }));
 
-    const editor = await screen.findByRole('dialog', { name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' });
+    const editor = await screen.findByRole('dialog', { name: 'แก้ไขพื้นที่' });
     expect(await within(editor).findByLabelText('ชื่อพื้นที่')).toHaveValue('Area ทดลอง');
     // the table is still there behind the Drawer
     expect(screen.getByRole('row', { name: /AR01-01/ })).toBeInTheDocument();
     await user.click(within(editor).getByRole('button', { name: 'ยกเลิก' }));
-    expect(screen.queryByRole('dialog', { name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'แก้ไขพื้นที่' })).not.toBeInTheDocument();
   });
 
   it('asks the server again each time an Area is opened (another device may have changed it)', async () => {
@@ -282,8 +315,9 @@ describe('AreasPage (D4, facility-0045)', () => {
       'เกี่ยวกับหน้านี้',
     );
     await user.click(screen.getByRole('button', { name: 'แก้ไขพื้นที่' }));
-    expectInView(/^เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย/);
-    const editor = await screen.findByRole('dialog', { name: 'แก้ไขพื้นที่ · AR01 Area ทดลอง' });
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
+    expect(screen.getByText(/^เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย/)).toBeVisible();
+    const editor = await screen.findByRole('dialog', { name: 'แก้ไขพื้นที่' });
     await within(editor).findByLabelText('ชื่อพื้นที่');
     expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');
   });

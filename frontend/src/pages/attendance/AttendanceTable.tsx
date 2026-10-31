@@ -62,7 +62,8 @@ export function AttendanceTable({ rows, onCorrect, onCover, footer }: Attendance
             </th>
           ))}
           {(onCorrect || onCover) && (
-            <th scope="col" className={tableCell.actions}>
+            <th scope="col" className={`relative ${tableCell.actions}`}>
+              {/* Contain the absolute sr-only label inside the scrolling table, so it cannot widen the document. */}
               <span className="sr-only">การกระทำ</span>
             </th>
           )}

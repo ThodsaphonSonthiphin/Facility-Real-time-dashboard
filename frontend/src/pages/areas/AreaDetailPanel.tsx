@@ -64,7 +64,7 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
       <PointTable detail={detail} onEdit={open} />
       {notice && <Toast notice={notice} onClose={clearNotice} />}
       {drawerOpen && (
-        <Drawer key={drawerId} labelledBy={drawerId} onClose={closeEditor}>
+        <Drawer width="xl" key={drawerId} labelledBy={drawerId} onClose={closeEditor}>
           <PointEditor area={area} point={drawerPoint} onSaved={saved} onClose={closeEditor} />
         </Drawer>
       )}

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { account, accounts, adminSession, areaSummary, buildings, managedBuildings, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
@@ -50,7 +50,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     ]);
     expect(screen.getByText('แสดง 1–4 จาก 4 บัญชี')).toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: /เบอร์โทร/ })).not.toBeInTheDocument();
-    expect(within(rowOf('แม่บ้านทดสอบ')).getByRole('button', { name: 'แก้เบอร์โทร แม่บ้านทดสอบ' })).toBeInTheDocument();
+    expect(within(rowOf('แม่บ้านทดสอบ')).getByRole('button', { name: 'แก้ไข แม่บ้านทดสอบ' })).toBeInTheDocument();
     expect(within(rowOf('แม่บ้านทดสอบ')).queryByRole('button', { name: /รีเซ็ตรหัสผ่าน/ })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'หัวหน้า 1' }));
@@ -59,13 +59,13 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     expect(cellsOf('หัวหน้าทดสอบ')).toEqual(['660001', 'ตึก A · ตึกทดลอง · กะเช้า', 'ใช้งานอยู่']);
     expect(screen.getByRole('columnheader', { name: 'รหัสพนักงาน' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'ตึก · กะ' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'แก้เบอร์โทร หัวหน้าทดสอบ' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'แก้ไข หัวหน้าทดสอบ' })).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: /เบอร์โทร/ })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'แอดมิน 2' }));
     expect(names()).toEqual(['ผู้ดูแลทดสอบ', 'ผู้ดูแลคนที่สอง']);
     expect(cellsOf('ผู้ดูแลคนที่สอง')).toEqual(['admin2', '—', 'ใช้งานอยู่']);
-    expect(screen.getByRole('button', { name: 'รีเซ็ตรหัสผ่าน ผู้ดูแลคนที่สอง' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'แก้ไข ผู้ดูแลคนที่สอง' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'แก้เบอร์โทร ผู้ดูแลคนที่สอง' })).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'ชื่อผู้ใช้' })).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'รหัสพนักงาน' })).not.toBeInTheDocument();
@@ -300,6 +300,9 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     await user.click(sending);
     expect(server.calls.filter((call) => call.method === 'POST' && call.path === '/api/admin/accounts')).toHaveLength(1);
 
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'สร้างบัญชี' }), { key: 'Escape' });
+    expect(form).toBeInTheDocument();
+    expect(within(form).getByLabelText('รหัสพนักงาน')).toHaveValue('650010');
     answer();
     expect(await within(form).findByRole('status')).toHaveTextContent('สร้างบัญชี แม่บ้านใหม่ แล้ว');
   });

@@ -1,29 +1,18 @@
-import { useState } from 'react';
+import { ConfirmationDialog } from '../../shared/components/ConfirmationDialog';
+import { useAreaActiveSection } from './useAreaActiveSection';
 import type { AreaDetail } from '../../shared/api/adminSetupApi';
 import { Button } from '../../shared/components/Button';
 import { Note } from '../../shared/components/Note';
 import { boxClass } from '../../shared/components/styles';
-import { Toast, type Notice } from '../../shared/components/Toast';
-import { getErrorMessage } from '../../shared/utils/getErrorMessage';
+import { Toast } from '../../shared/components/Toast';
 import { cleanersLeft } from './areaText';
-import { useSetAreaActiveMutation } from './areaFormApi';
 
 /** Wireframe D10's lower half: the Area's signs, and deactivation (no delete; history stays). */
 export function AreaActiveSection({ detail }: { detail: AreaDetail }) {
   const { area } = detail;
-  const [setAreaActive, { isLoading }] = useSetAreaActiveMutation();
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { isLoading, notice, setNotice, confirmation, requestToggle } = useAreaActiveSection(detail);
   const activePoints = detail.points.filter((point) => point.isActive).length;
   const left = area.isActive ? cleanersLeft(area) : null;
-
-  const toggle = async () => {
-    try {
-      await setAreaActive({ areaId: area.id, active: !area.isActive }).unwrap();
-      setNotice({ kind: 'ok', text: `${area.isActive ? 'ปิด' : 'เปิด'}ใช้งาน ${area.code} แล้ว` });
-    } catch (error) {
-      setNotice({ kind: 'error', text: getErrorMessage(error) });
-    }
-  };
 
   return (
     <>
@@ -47,11 +36,21 @@ export function AreaActiveSection({ detail }: { detail: AreaDetail }) {
         )}
         <div>
           {/* deactivation is undone by the same button, so it is not `danger` (MASTER.md): the words carry it */}
-          <Button size="desk" disabled={isLoading || left !== null} onClick={() => void toggle()}>
+          <Button size="desk" disabled={isLoading || left !== null} onClick={requestToggle}>
             {area.isActive ? 'ปิดใช้งานพื้นที่นี้' : 'เปิดใช้งานพื้นที่นี้'}
           </Button>
         </div>
       </section>
+      {confirmation.question && <ConfirmationDialog
+          kind="area"
+          title={`ปิดใช้งานพื้นที่ ${area.code} ${area.name}?`}
+          body="แม่บ้านและหัวหน้าจะสแกนป้ายทั้งหมดของพื้นที่นี้ไม่ได้"
+          impacts={[`${activePoints} จุด + ป้ายลงเวลา 1 ป้าย หยุดใช้`, 'หายจากหน้าสถานะจุด · ประวัติยังอยู่ เปิดกลับได้']}
+          code={area.code}
+          confirmLabel="ปิดใช้งานพื้นที่"
+          onCancel={confirmation.cancel}
+          onConfirm={confirmation.confirm}
+        />}
       {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
     </>
   );

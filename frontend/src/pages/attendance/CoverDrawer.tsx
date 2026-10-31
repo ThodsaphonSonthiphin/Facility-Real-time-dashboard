@@ -1,3 +1,5 @@
+import { CoverCancellationDialog } from '../../shared/components/CoverCancellationDialog';
+import { useCoverCancellation } from '../../shared/components/useCoverCancellation';
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { ArrowRightLeft } from 'lucide-react';
 import { useState } from 'react';
@@ -13,7 +15,7 @@ import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { Segmented } from '../../shared/components/Segmented';
 import { useBuildingNames } from '../../shared/api/buildingNames';
-import { useAssignCoverMutation, useCancelCoverMutation, useGetCoverCandidatesQuery } from '../../shared/api/alertsApi';
+import { useAssignCoverMutation, useGetCoverCandidatesQuery } from '../../shared/api/alertsApi';
 import { coverNotice } from '../../shared/utils/coverText';
 import { coverSlots, sameSlot, shiftEndText, type CoverSlot } from '../../shared/utils/coverSlots';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -62,7 +64,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
   const [areaSearch, setAreaSearch] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [assign, { isLoading }] = useAssignCoverMutation();
-  const [cancelCover, cancelling] = useCancelCoverMutation();
+  const cancellation = useCoverCancellation();
   const ahead = !sameSlot(slot, current);
   const board = useGetAttendanceBoardQuery(slot, livePoll);
   const rows = board.currentData?.rows ?? [];
@@ -96,15 +98,6 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
     }
   };
 
-  const cancelOne = async (id: number) => {
-    setProblem(null);
-    try {
-      await cancelCover(id).unwrap();
-    } catch (error) {
-      setProblem(getErrorMessage(error));
-    }
-  };
-
   return (
     <Drawer labelledBy={headingId} width="lg" onClose={() => !isLoading && onCancel()}>
       <DialogHeader
@@ -114,7 +107,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
         closeDisabled={isLoading}
         onClose={onCancel}
       />
-      <div className="flex flex-col gap-6">
+      <div className="relative -mx-6 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-5">
         <section className="flex flex-col gap-3" aria-labelledby="cover-step-1">
           <h3 id="cover-step-1" className="text-base font-bold">
             1. วันและกะ
@@ -271,8 +264,8 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
                     variant="link"
                     size="desk"
                     aria-label={`ยกเลิกการทำแทนของ ${cover.displayName} ที่ ${row.areaCode}`}
-                    disabled={isLoading || cancelling.isLoading}
-                    onClick={() => void cancelOne(cover.id)}
+                    disabled={isLoading || cancellation.isLoading}
+                    onClick={() => cancellation.ask({ id: cover.id, areaCode: row.areaCode, name: cover.displayName })}
                   >
                     ยกเลิก
                   </Button>
@@ -295,6 +288,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
           มอบหมาย
         </Button>
       </DialogFooter>
+      {cancellation.selected && <CoverCancellationDialog {...cancellation.selected} onCancel={cancellation.cancel} onConfirm={cancellation.confirm} />}
     </Drawer>
   );
 }

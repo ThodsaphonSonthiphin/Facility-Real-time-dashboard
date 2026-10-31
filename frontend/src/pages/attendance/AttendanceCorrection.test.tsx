@@ -235,10 +235,12 @@ describe('attendance corrections (D2, facility-0051)', () => {
     await user.click(save());
     expect(within(form).getByRole('alert')).toHaveTextContent('ยังบันทึกไม่ได้ มี 2 จุดที่ต้องแก้');
     expect(within(form).getByRole('alert')).toHaveTextContent('ยังไม่ได้แก้เวลาช่องไหน · เลือกเหตุผลอย่างน้อย 1 ข้อ');
+    expect(within(form).getByRole('radiogroup', { name: 'เหตุผล' })).toHaveAccessibleDescription('เลือกเหตุผลอย่างน้อย 1 ข้อ');
 
     await user.type(time(form, 'ออกพัก'), '7.05');
     expect(within(form).getByText('เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05')).toBeInTheDocument();
     expect(time(form, 'ออกพัก')).toHaveAttribute('aria-invalid', 'true');
+    expect(time(form, 'ออกพัก')).toHaveAccessibleDescription('เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05');
 
     await user.clear(time(form, 'ออกพัก'));
     await user.type(time(form, 'ออกพัก'), '06:30');
@@ -250,8 +252,10 @@ describe('attendance corrections (D2, facility-0051)', () => {
     expect(within(form).getByRole('alert')).toHaveTextContent('เลือก "อื่น ๆ" ต้องเขียนรายละเอียด');
     await user.click(save());
     expect(puts(server)).toHaveLength(0);
+    expect(detail(form)).toHaveAccessibleDescription('เลือก "อื่น ๆ" ต้องเขียนรายละเอียด');
 
     await user.type(detail(form), 'ลืมสแกน');
+    expect(detail(form)).not.toHaveAttribute('aria-describedby');
     await user.click(save());
 
     expect(await within(form).findByText('เวลาที่ใส่ยังมาไม่ถึง')).toBeInTheDocument();
@@ -350,6 +354,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     expect(within(form).getByText(/พื้นที่นี้จะมีคนทำแทน 2 คน/)).toBeInTheDocument();
     expect(within(form).getByRole('heading', { name: 'ทำแทนที่มอบหมายไว้แล้วกะนี้ · 1' })).toBeInTheDocument();
     await user.click(within(form).getByRole('button', { name: 'ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR02' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ยกเลิกการทำแทน' }));
 
     await waitFor(() =>
       expect(server.calls.some((call) => call.method === 'DELETE' && call.path === '/api/admin/cover-assignments/71')).toBe(true),

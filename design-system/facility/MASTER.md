@@ -158,3 +158,7 @@ Web fonts (Kalam, Patrick Hand, Fira), landing-page layouts (Hero + CTA), GSAP o
 - [ ] No horizontal scroll at 375 px; Admin pages checked at 1280 px
 - [ ] `prefers-reduced-motion` respected if anything moves
 - [ ] Checked by eye on a real iPhone and a real Android phone (device fonts differ), and on a computer; for D5, a real print
+
+### Admin forms visual feedback (2026-10-31)
+
+Point round rows use inline numeric HH:mm fields, a link Delete action and `Button variant="add"` (dashed border, accent text) for Add round. Account scrolling bodies put the horizontal gutter inside the scroll container so the 5 px focus outline is visible. Account Edit contains profile and phone/password forms with independent saves; credentials are no longer separate table actions.

@@ -20,13 +20,13 @@ interface AreaEditorDrawerProps {
  * Area's table stays visible on the left. The building and Cleaner lists are asked for only while it is open.
  */
 export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerProps) {
-  const { buildings, cleaners, error } = useAreaEditorDrawer();
+  const { buildings, cleaners, error, dismissal } = useAreaEditorDrawer(onClose);
   const titleId = 'area-editor-title';
 
   return (
-    <Drawer labelledBy={titleId} onClose={onClose}>
-      <div className="flex flex-col gap-5">
-        <DialogHeader id={titleId} title={`แก้ไขพื้นที่ · ${detail.area.code} ${detail.area.name}`} onClose={onClose} />
+    <Drawer width="lg" labelledBy={titleId} onClose={dismissal.close}>
+      <div className="flex h-full min-h-0 flex-col">
+        <DialogHeader id={titleId} title="แก้ไขพื้นที่" detail={`${detail.area.code} ${detail.area.name} · ตึก ${detail.area.buildingCode}`} closeDisabled={dismissal.pending} onClose={dismissal.close} />
         {error && <Note tone="error">{getErrorMessage(error)}</Note>}
         {buildings.data && cleaners.data ? (
           <AreaForm
@@ -36,14 +36,15 @@ export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerP
             cleaners={cleaners.data}
             framed={false}
             onSaved={(saved) => onSaved(`บันทึกพื้นที่ ${saved.area.code} ${saved.area.name} แล้ว`)}
-            onCancel={onClose}
-          />
+            onCancel={dismissal.close}
+          >
+            <CheckInSignManagement detail={detail} />
+            <MoreInfo summary="การใช้งานพื้นที่และประวัติ"><AreaActiveSection detail={detail} /></MoreInfo>
+            <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
+          </AreaForm>
         ) : (
           !error && <p className="text-text-2">กำลังโหลด...</p>
         )}
-        <CheckInSignManagement detail={detail} />
-        <AreaActiveSection detail={detail} />
-        <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
       </div>
     </Drawer>
   );

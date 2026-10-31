@@ -174,6 +174,11 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     expect(within(covers).getByRole('listitem')).toHaveTextContent(/^แม่บ้านที่อื่น ทำแทน AR02 .*แทน แม่บ้านป่วย · แอดมินมอบหมาย 07:10ยกเลิกก่อนหมดกะ$/);
 
     await user.click(within(covers).getByRole('button', { name: 'ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR02' }));
+    expect(server.calls.filter((call) => call.method === 'DELETE')).toHaveLength(0);
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ยกเลิก' }));
+    expect(server.calls.filter((call) => call.method === 'DELETE')).toHaveLength(0);
+    await user.click(within(covers).getByRole('button', { name: 'ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR02' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ยกเลิกการทำแทน' }));
 
     expect(await screen.findByText('ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR02 แล้ว')).toBeInTheDocument();
     expect(server.calls.filter((call) => call.method === 'DELETE').map((call) => call.path)).toEqual([
@@ -336,6 +341,7 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
     const cancel = within(covers).getByRole('button', { name: 'ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR12' });
     expect(cancel.textContent).toBe('ยกเลิก'); // not "ยกเลิกก่อนหมดกะ": the shift has not started
     await user.click(cancel);
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ยกเลิกการทำแทน' }));
 
     expect(await screen.findByText('ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR12 แล้ว')).toBeInTheDocument();
     expect(server.calls.some((call) => call.method === 'DELETE' && call.path === '/api/admin/cover-assignments/81')).toBe(true);

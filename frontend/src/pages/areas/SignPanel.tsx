@@ -1,15 +1,15 @@
-import { useState } from 'react';
+import { ConfirmationDialog } from '../../shared/components/ConfirmationDialog';
+import { useSignQr } from './useSignQr';
+import { preventSignSubmit, useSignLocation, useSignRadius } from './useSignSettings';
+import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Link } from 'react-router';
-import { useSetSignLocationMutation, type AdminSign } from '../../shared/api/adminSetupApi';
+import { type AdminSign } from '../../shared/api/adminSetupApi';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
-import { linkClass, noteClass } from '../../shared/components/styles';
-import { getErrorMessage } from '../../shared/utils/getErrorMessage';
+import { linkClass } from '../../shared/components/styles';
 import { formatCoordinates, signPlaceLabel } from '../../shared/utils/labels';
 import { formatDate, formatTime } from '../../shared/utils/thaiTime';
-import { useRegenerateQrMutation, useSetSignRadiusMutation } from './areasApi';
-import { MAX_RADIUS_M, MIN_RADIUS_M, parseLatLng, parseRadius } from './signRules';
 
 interface SignPanelProps {
   areaId: number;
@@ -29,9 +29,8 @@ function NoteLine({ note }: { note: NoteKind }) {
   return note.kind === 'ok' ? <Note tone="info" status>{note.text}</Note> : <Note tone="error">{note.text}</Note>;
 }
 
-// The three parts sit side by side when the screen is wide enough, 240 px each at the least; no token names that
-// track list. Each is its own box, so a save that belongs to one part is never read as part of another.
-const panelsClass = 'grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3 border-t border-border pt-4';
+// Radius stays visible; infrequent location and QR actions live in labelled details. Each save remains independent.
+const panelsClass = 'flex min-w-0 flex-col gap-4';
 const partClass = 'flex flex-col gap-2 rounded-md border border-border p-3';
 const rowClass = 'flex flex-wrap items-end gap-2';
 
@@ -41,35 +40,21 @@ const rowClass = 'flex flex-wrap items-end gap-2';
  */
 export function SignPanel({ areaId, sign, label, canIssueQr }: SignPanelProps) {
   return (
-    <div className={panelsClass}>
-      <SignLocation areaId={areaId} sign={sign} />
+    <div className={panelsClass} onKeyDown={preventSignSubmit}>
       <SignRadius sign={sign} />
-      <SignQr areaId={areaId} sign={sign} label={label} canIssueQr={canIssueQr} />
+      <MoreInfo summary="พิกัดและ QR ของป้าย">
+        <div className="flex flex-col gap-3">
+          <SignLocation areaId={areaId} sign={sign} />
+          <SignQr areaId={areaId} sign={sign} label={label} canIssueQr={canIssueQr} />
+        </div>
+      </MoreInfo>
     </div>
   );
 }
 
 /** facility-0045 items 2 and 3: captured at the sign on a phone (M17), or typed from a map before going there. */
 function SignLocation({ areaId, sign }: { areaId: number; sign: AdminSign }) {
-  const [text, setText] = useState('');
-  const [note, setNote] = useState<NoteKind>(null);
-  const [setLocation, { isLoading }] = useSetSignLocationMutation();
-  const titleId = `sign-${sign.id}-place`;
-
-  const saveMapPick = async () => {
-    const place = parseLatLng(text);
-    if (!place) {
-      setNote({ kind: 'error', text: 'ใส่พิกัดแบบ 13.756300, 100.501800' });
-      return;
-    }
-    try {
-      await setLocation({ signId: sign.id, ...place, source: 'Map' }).unwrap();
-      setText('');
-      setNote({ kind: 'ok', text: 'บันทึกพิกัดที่ปักจากแผนที่แล้ว ป้ายนี้ยังไม่ได้วัดที่ป้ายจริง' });
-    } catch (error) {
-      setNote({ kind: 'error', text: getErrorMessage(error) });
-    }
-  };
+  const { text, setText, note, isLoading, titleId, saveMapPick } = useSignLocation(sign);
 
   return (
     <section className={partClass} aria-labelledby={titleId}>
@@ -116,28 +101,11 @@ function SignLocation({ areaId, sign }: { areaId: number; sign: AdminSign }) {
 
 /** facility-0038: 50 m by default, set per sign. */
 function SignRadius({ sign }: { sign: AdminSign }) {
-  const [text, setText] = useState(String(sign.radiusM));
-  const [note, setNote] = useState<NoteKind>(null);
-  const [setRadius, { isLoading }] = useSetSignRadiusMutation();
-  const titleId = `sign-${sign.id}-radius`;
-
-  const save = async () => {
-    const radiusM = parseRadius(text);
-    if (radiusM === null) {
-      setNote({ kind: 'error', text: `รัศมีต้องอยู่ระหว่าง ${MIN_RADIUS_M}–${MAX_RADIUS_M} เมตร` });
-      return;
-    }
-    try {
-      await setRadius({ signId: sign.id, radiusM }).unwrap();
-      setNote({ kind: 'ok', text: `บันทึกรัศมี ${radiusM} ม. แล้ว ใช้กับการสแกนครั้งต่อไป` });
-    } catch (error) {
-      setNote({ kind: 'error', text: getErrorMessage(error) });
-    }
-  };
+  const { text, setText, note, isLoading, titleId, save } = useSignRadius(sign);
 
   return (
-    <section className={partClass} aria-labelledby={titleId}>
-      <h4 id={titleId} className="font-semibold">
+    <section className="flex flex-col gap-2" aria-labelledby={titleId}>
+      <h4 id={titleId} className="sr-only">
         รัศมีของป้าย
       </h4>
       <div className={rowClass}>
@@ -145,7 +113,7 @@ function SignRadius({ sign }: { sign: AdminSign }) {
           {/* a number of 2–3 digits; no token names that width */}
           <TextInput
             size="desk"
-            className="w-24"
+            className="w-28 text-right"
             inputMode="numeric"
             value={text}
             disabled={isLoading}
@@ -156,30 +124,16 @@ function SignRadius({ sign }: { sign: AdminSign }) {
           บันทึกรัศมี
         </Button>
       </div>
-      <p className="text-text-2">สแกนห่างจากป้ายเกินรัศมีจะขึ้นว่าไกลป้าย ค่าเริ่ม 50 ม.</p>
+      <p className="text-text-2">10–500 เมตร · สแกนห่างจากป้ายเกินรัศมีจะขึ้นว่าไกลป้าย ค่าเริ่ม 50 ม. · บันทึกรัศมีแยกจากข้อมูลพื้นที่หรือจุด</p>
       <NoteLine note={note} />
     </section>
   );
 }
 
-/** facility-0021 item 5, 0006: one question in the page, then the offer to print the new sign. */
+/** facility-0021 item 5: confirm before invalidating the sign, then optionally open the existing print route. */
 function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
-  const [asking, setAsking] = useState(false);
-  const [done, setDone] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
-  const [regenerate, { isLoading }] = useRegenerateQrMutation();
+  const { done, confirmation, ask } = useSignQr(areaId, sign.id);
   const titleId = `sign-${sign.id}-qr`;
-
-  const confirm = async () => {
-    try {
-      await regenerate(sign.id).unwrap();
-      setAsking(false);
-      setDone(true);
-      setProblem(null);
-    } catch (error) {
-      setProblem(getErrorMessage(error));
-    }
-  };
 
   return (
     <section className={partClass} aria-labelledby={titleId}>
@@ -188,39 +142,17 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
       </h4>
       <p>{`สร้าง QR ล่าสุด ${formatDate(sign.qrIssuedAt)} ${formatTime(sign.qrIssuedAt)}`}</p>
       {!canIssueQr && <p className="text-text-2">ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้</p>}
-      {canIssueQr && !asking && (
-        <div>
-          <Button
-            size="desk"
-            onClick={() => {
-              setAsking(true);
-              setDone(false);
-            }}
-          >
-            สร้าง QR ใหม่
-          </Button>
-        </div>
-      )}
-      {asking && (
-        <div
-          className={`flex flex-col gap-2 ${noteClass('warn')}`}
-          role="alertdialog"
-          aria-labelledby={`${titleId}-ask`}
-          aria-describedby={`${titleId}-detail`}
-        >
-          <p id={`${titleId}-ask`} className="font-bold">{`สร้าง QR ใหม่ของป้าย ${sign.code} ${label}?`}</p>
-          <p id={`${titleId}-detail`}>ป้ายที่ติดอยู่ตอนนี้จะสแกนไม่ได้ทันที ต้องพิมพ์ป้ายใหม่ไปติดแทน ประวัติการสแกนไม่เปลี่ยน</p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="danger" size="desk" disabled={isLoading} onClick={() => void confirm()}>
-              {isLoading ? 'กำลังสร้าง QR...' : 'ยืนยัน สร้าง QR ใหม่'}
-            </Button>
-            {/* The safe choice has the focus */}
-            <Button size="desk" autoFocus disabled={isLoading} onClick={() => setAsking(false)}>
-              ยกเลิก
-            </Button>
-          </div>
-        </div>
-      )}
+      {canIssueQr && <div><Button size="desk" onClick={ask}>สร้าง QR ใหม่</Button></div>}
+      {confirmation.question && <ConfirmationDialog
+          kind="qr"
+          title={`สร้าง QR ใหม่ของป้าย ${sign.code} ${label}?`}
+          body="ป้ายที่ติดอยู่ตอนนี้จะสแกนไม่ได้ทันที ต้องพิมพ์ป้ายใหม่ไปติดแทน"
+          impacts={['ประวัติการสแกนไม่เปลี่ยน']}
+          confirmLabel="ยืนยัน สร้าง QR ใหม่"
+          printFollowup
+          onCancel={confirmation.cancel}
+          onConfirm={confirmation.confirm}
+        />}
       {done && (
         <Note tone="info" status>
           สร้าง QR ใหม่แล้ว ป้ายเดิมสแกนไม่ได้แล้ว{' '}
@@ -229,7 +161,6 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
           </Link>
         </Note>
       )}
-      {problem && <Note tone="error">{problem}</Note>}
     </section>
   );
 }

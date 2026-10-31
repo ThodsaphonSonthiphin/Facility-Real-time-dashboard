@@ -1,75 +1,83 @@
-import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useLocation } from 'react-router';
+import { Eye, EyeOff, LoaderCircle } from 'lucide-react';
+import { Link, Navigate } from 'react-router';
 import { buildCommit } from '../../shared/version/buildInfo';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
 import { inlineLinkClass } from '../../shared/components/styles';
-import { useLogin } from './useLogin';
+import { useAdminLoginPage } from './useAdminLoginPage';
 
-/** Wireframe D0: the Admin logs in with username + password (facility-0054). */
+/** D0: Enterprise Light layout, with the existing authentication and navigation contract. */
 export function AdminLoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const { submit, isLoading, errorText, returnsToPage, redirectTo } = useLogin('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-  const location = useLocation();
+  const page = useAdminLoginPage();
 
-  if (redirectTo) {
-    return <Navigate to={redirectTo} replace />;
+  if (page.redirectTo) {
+    return <Navigate to={page.redirectTo} replace />;
   }
 
-  const onSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    void submit({ username: username.trim(), password });
-  };
-
   return (
-    // An Admin page (facility-0087): body text-sm, 36 px controls, one card in the middle of the screen
-    <main className="flex min-h-screen items-center justify-center p-6 text-sm text-text">
-      <form
-        className="flex w-full max-w-100 flex-col gap-3 rounded-lg border border-border bg-surface p-7"
-        onSubmit={onSubmit}
-      >
-        <header className="flex flex-col gap-0.5">
-          <span className="text-xs tracking-wide text-text-2">ระบบลงเวลาและตรวจงานแม่บ้าน</span>
-          <h1 className="text-xl font-bold">แอดมินเข้าสู่ระบบ</h1>
+    <main className="flex min-h-svh items-center justify-center bg-bg px-4 py-12 text-sm text-text">
+      <div className="flex w-full max-w-100 flex-col gap-6">
+        <header className="flex flex-col gap-1">
+          <span className="font-semibold text-text-2">ระบบตรวจงานแม่บ้าน</span>
+          <h1 className="text-2xl font-bold">แอดมินเข้าสู่ระบบ</h1>
         </header>
-        {returnsToPage && <Note tone="info">เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที</Note>}
-        <Field label="ชื่อผู้ใช้">
-          <TextInput
-            size="desk"
-            type="text"
-            autoComplete="username"
-            required
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-          />
-        </Field>
-        <Field label="รหัสผ่าน">
-          <TextInput
-            size="desk"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </Field>
-        {errorText && <Note tone="error">{errorText}</Note>}
-        <Button type="submit" variant="primary" size="desk" className="mt-1 w-full" disabled={isLoading}>
-          {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
-        </Button>
-        <footer className="flex flex-col gap-1 text-center text-xs text-text-2">
-          <span>
-            แม่บ้านและหัวหน้าเข้าด้วยรหัสพนักงาน + เบอร์โทรบนมือถือ ·{' '}
-            <Link className={inlineLinkClass} to="/login" state={location.state}>
-              หน้าเข้าสู่ระบบของพนักงาน
-            </Link>
-          </span>
-          <span>ลืมรหัสผ่าน: ให้แอดมินอีกคนรีเซ็ต</span>
+        <form
+          className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-6"
+          onSubmit={page.onSubmit}
+          aria-busy={page.isLoading}
+        >
+          {page.returnsToPage && <Note tone="info">เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที</Note>}
+          {page.errorText && <div id={page.errorId}><Note tone="error">{page.errorText}</Note></div>}
+          <Field label="ชื่อผู้ใช้">
+            <TextInput
+              size="desk"
+              className="h-10"
+              type="text"
+              autoComplete="username"
+              required
+              disabled={page.isLoading}
+              value={page.username}
+              onChange={(event) => page.setUsername(event.target.value)}
+            />
+          </Field>
+          <div className="flex flex-col gap-1">
+            <label htmlFor={page.passwordId} className="font-semibold">รหัสผ่าน</label>
+            <div className="flex gap-2">
+              <TextInput
+                id={page.passwordId}
+                size="desk"
+                className="h-10 min-w-0 flex-1"
+                type={page.passwordVisible ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                disabled={page.isLoading}
+                aria-invalid={page.credentialInvalid || undefined}
+                aria-describedby={page.credentialInvalid ? page.errorId : undefined}
+                value={page.password}
+                onChange={(event) => page.setPassword(event.target.value)}
+              />
+              <Button size="desk" className="h-10 shrink-0" onClick={page.togglePassword} disabled={page.isLoading}>
+                {page.passwordVisible
+                  ? <EyeOff aria-hidden="true" className="size-4" />
+                  : <Eye aria-hidden="true" className="size-4" />}
+                {page.passwordVisible ? 'ซ่อน' : 'แสดง'}
+              </Button>
+            </div>
+          </div>
+          <Button type="submit" variant="primary" size="desk" className="h-10 w-full" disabled={page.isLoading}>
+            {page.isLoading && <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />}
+            {page.isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+          </Button>
+        </form>
+        <footer className="flex flex-col gap-2 text-center text-xs text-text-2">
+          <span>ลืมรหัสผ่าน ให้แอดมินคนอื่นรีเซ็ตให้ที่หน้า บัญชีผู้ใช้</span>
+          <Link className={inlineLinkClass} to="/login" state={page.linkState}>
+            หน้าเข้าสู่ระบบของพนักงาน
+          </Link>
           <span>เวอร์ชัน {buildCommit}</span>
         </footer>
-      </form>
+      </div>
     </main>
   );
 }

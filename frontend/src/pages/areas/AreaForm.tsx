@@ -1,18 +1,19 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { LockKeyhole } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router';
 import type { AreaDetail, Building, CleanerOption } from '../../shared/api/adminSetupApi';
 import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
-import { Field, FieldGroup, Select, TextInput } from '../../shared/components/Field';
+import { Field, Select, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
 import { buttonClass, focusRing } from '../../shared/components/styles';
-import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { shiftPatternLabel, shiftShortLabel } from '../../shared/utils/labels';
-import { useCreateAreaMutation, useUpdateAreaMutation } from './areaFormApi';
-import { cleanerChoices, draftOf, draftProblem, formBody, type AreaDraft } from './areaFormRules';
+import { shiftShortLabel } from '../../shared/utils/labels';
+import { cleanerChoices } from './areaFormRules';
+import { useAreaForm } from './useAreaForm';
 
-interface AreaFormProps {
+export interface AreaFormProps {
+  children?: ReactNode;
   /** Missing: a new Area. */
   detail?: AreaDetail;
   buildings: Building[];
@@ -25,53 +26,21 @@ interface AreaFormProps {
   framed?: boolean;
 }
 
-const SHIFT_PATTERNS = ['DayAndNight', 'DayOnly'] as const;
 
 // D10's own card. The Drawer presents the same fields without a box inside a box.
 const cardClass = 'flex flex-col gap-4 rounded-lg border border-border bg-surface px-4 py-4 sm:px-6 sm:py-5';
-const bareClass = 'flex flex-col gap-4';
+const bareClass = 'flex min-h-0 flex-1 flex-col';
 
 /** Wireframe D10's form. A save opens the Area on the D4 page. The page keys it by Area id. */
-export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel, framed = true }: AreaFormProps) {
-  const navigate = useNavigate();
-  const isNew = !detail;
-  const areaId = detail?.area.id;
-  const [draft, setDraft] = useState<AreaDraft>(() => draftOf(detail));
-  const [problem, setProblem] = useState<string | null>(null);
-  const [createArea, created] = useCreateAreaMutation();
-  const [updateArea, updated] = useUpdateAreaMutation();
-  const sending = created.isLoading || updated.isLoading;
-  const set = (patch: Partial<AreaDraft>) => setDraft((current) => ({ ...current, ...patch }));
-  const areaIsOff = detail !== undefined && !detail.area.isActive;
-  const losesNightRounds = detail?.area.shiftPattern === 'DayAndNight' && draft.shiftPattern === 'DayOnly';
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    const found = draftProblem(draft, isNew);
-    setProblem(found);
-    if (found) {
-      return;
-    }
-    try {
-      const saved =
-        areaId === undefined
-          ? await createArea({ code: draft.code.trim(), ...formBody(draft) }).unwrap()
-          : await updateArea({ areaId, body: formBody(draft) }).unwrap();
-      if (onSaved) {
-        onSaved(saved);
-      } else {
-        navigate(`/admin/areas/${saved.area.id}`);
-      }
-    } catch (error) {
-      setProblem(getErrorMessage(error));
-    }
-  };
+export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel, framed = true, children }: AreaFormProps) {
+  const { renamed, isNew, areaId, draft, set, problem, sending, areaIsOff, losesNightRounds, submit } = useAreaForm({ detail, buildings, cleaners, onSaved });
 
   return (
     <form className={framed ? cardClass : bareClass} onSubmit={(event) => void submit(event)}>
+      <div className={framed ? "flex flex-col gap-6" : "-mx-6 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-5"}>
       <h2 className="text-base font-bold">ข้อมูลพื้นที่</h2>
       {problem && <Note tone="error">{problem}</Note>}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <section className="flex flex-col gap-4" aria-label="ข้อมูลพื้นที่">
         {isNew ? (
           <Field
             label="รหัสพื้นที่"
@@ -88,11 +57,10 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel, frame
         ) : (
           <div className="flex flex-col gap-1">
             <span className="font-semibold">รหัสพื้นที่</span>
-            <span className="font-mono">{detail.area.code}</span>
-            <span className="text-xs text-text-2">แก้ไม่ได้ พิมพ์อยู่บนทุกป้าย</span>
+            <span className="flex flex-wrap items-center gap-1.5 text-xs text-text-2"><LockKeyhole className="size-4" aria-hidden="true" /><b className="font-mono text-sm text-text">{detail!.area.code}</b> แก้ไม่ได้ เพราะพิมพ์อยู่บนป้ายแล้ว</span>
           </div>
         )}
-        <Field label="ชื่อพื้นที่">
+        <Field label="ชื่อพื้นที่" help={detail ? `เดิม: ${detail.area.name}` : undefined}>
           <TextInput
             size="desk"
             value={draft.name}
@@ -101,6 +69,9 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel, frame
             onChange={(event) => set({ name: event.target.value })}
           />
         </Field>
+        {detail && draft.name.trim() !== detail.area.name && (
+          <Note tone="warn">ชื่อพื้นที่พิมพ์บนป้ายทั้ง {detail.points.length + 1} ป้าย หลังบันทึกจะไปหน้าพิมพ์ป้ายเพื่อพิมพ์ใหม่ ป้ายเดิมยังสแกนได้จนกว่าจะสร้าง QR ใหม่</Note>
+        )}
         <Field label="ตึก">
           <Select
             size="desk"
@@ -116,55 +87,30 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel, frame
             ))}
           </Select>
         </Field>
-        <FieldGroup legend="รูปแบบกะ" disabled={sending}>
-          <div className="flex flex-wrap gap-2">
-            {SHIFT_PATTERNS.map((pattern) => (
-              <label
-                key={pattern}
-                className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-border-control px-3 has-checked:border-accent has-checked:bg-accent-subtle has-checked:font-semibold has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
-              >
-                <input
-                  type="radio"
-                  className={`size-4 accent-accent ${focusRing}`}
-                  name="areaform-pattern"
-                  checked={draft.shiftPattern === pattern}
-                  onChange={() => set({ shiftPattern: pattern })}
-                />
-                {shiftPatternLabel[pattern]}
-              </label>
-            ))}
-          </div>
-        </FieldGroup>
-      </div>
-      <CleanerSelect
-        shift="Day"
-        value={draft.dayCleanerId}
-        choices={cleanerChoices(cleaners, 'Day', areaId, areaIsOff)}
-        disabled={sending}
-        onChange={(dayCleanerId) => set({ dayCleanerId })}
-      />
-      {draft.shiftPattern === 'DayAndNight' && (
-        <CleanerSelect
-          shift="Night"
-          value={draft.nightCleanerId}
-          choices={cleanerChoices(cleaners, 'Night', areaId, areaIsOff)}
-          disabled={sending}
-          onChange={(nightCleanerId) => set({ nightCleanerId })}
-        />
-      )}
-      <p className="text-text-2">
-        พื้นที่ละ 1 คนต่อกะ · รายชื่อแสดงเฉพาะแม่บ้านที่ยังไม่มีพื้นที่ในกะนั้น · เปลี่ยนเป็น "เฉพาะกะเช้า"
-        แล้วช่องกะดึกและเวลารอบกะดึกหายไป
-      </p>
+      </section>
+      <section className="flex flex-col gap-4 border-t border-border pt-5" aria-label="กะและแม่บ้านประจำ">
+        <h3 className="text-base font-bold">กะและแม่บ้านประจำ</h3>
+        <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-3">
+          <label className="flex min-h-9 items-center gap-2 font-semibold"><input type="checkbox" className={`size-4 accent-accent ${focusRing}`} checked disabled />กะเช้า</label>
+          <div className="sm:col-span-2"><CleanerSelect shift="Day" value={draft.dayCleanerId} choices={cleanerChoices(cleaners, 'Day', areaId, areaIsOff)} disabled={sending} onChange={(dayCleanerId) => set({ dayCleanerId })} /></div>
+          <label className="flex min-h-9 items-center gap-2 font-semibold"><input type="checkbox" className={`size-4 accent-accent ${focusRing}`} checked={draft.shiftPattern === 'DayAndNight'} disabled={sending} onChange={(event) => set({ shiftPattern: event.target.checked ? 'DayAndNight' : 'DayOnly' })} />กะดึก</label>
+          <div className="sm:col-span-2">{draft.shiftPattern === 'DayAndNight' ? <CleanerSelect shift="Night" value={draft.nightCleanerId} choices={cleanerChoices(cleaners, 'Night', areaId, areaIsOff)} disabled={sending} onChange={(nightCleanerId) => set({ nightCleanerId })} /> : <p className="text-text-2">เฉพาะกะเช้า</p>}</div>
+        </div>
+      <p className="text-xs text-text-2">กะเช้าเปิดเสมอ · ปิดกะดึกเป็นเฉพาะกะเช้า · พื้นที่ละ 1 คนต่อกะ เลือกได้เฉพาะแม่บ้านว่าง</p>
       {areaIsOff && <Note tone="warn">พื้นที่นี้ปิดใช้งานอยู่ เปิดใช้งานก่อน แล้วค่อยใส่แม่บ้าน</Note>}
       {losesNightRounds && (
         <Note tone="warn">บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่</Note>
       )}
-      <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+      </section>
+      {children}
+      </div>
+      <div className={framed ? "flex flex-wrap justify-end gap-2 border-t border-border pt-4" : "-mx-6 -mb-5 flex shrink-0 flex-wrap justify-end gap-2 border-t border-border bg-surface px-6 py-3"}>
         {onCancel ? (
           <Button size="desk" disabled={sending} onClick={onCancel}>
             ยกเลิก
           </Button>
+        ) : sending ? (
+          <Button size="desk" disabled>ยกเลิก</Button>
         ) : (
           <Link
             className={buttonClass('secondary', 'desk')}
@@ -175,7 +121,7 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel, frame
           </Link>
         )}
         <Button type="submit" variant="primary" size="desk" disabled={sending}>
-          {sending ? 'กำลังบันทึก...' : 'บันทึก'}
+          {sending ? 'กำลังบันทึก...' : renamed ? 'บันทึก แล้วไปพิมพ์ป้าย' : 'บันทึก'}
         </Button>
       </div>
     </form>

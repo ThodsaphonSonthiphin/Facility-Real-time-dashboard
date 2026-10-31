@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { authAnswer, fakeServer } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
@@ -89,6 +89,47 @@ describe('LoginPage (M0)', () => {
 });
 
 describe('AdminLoginPage (D0)', () => {
+  it('disables the form while login is pending and shows the real throttle error', async () => {
+    let finish!: (response: { status: number }) => void;
+    fakeServer({ ...noSession, 'POST /api/auth/login': () => new Promise((resolve) => { finish = resolve; }) });
+    const { user } = await renderApp('/login/admin');
+    await user.type(screen.getByLabelText('ชื่อผู้ใช้'), 'admin');
+    await user.type(screen.getByLabelText('รหัสผ่าน'), 'example-password-for-test');
+    await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
+
+    expect(await screen.findByRole('button', { name: 'กำลังเข้าสู่ระบบ...' })).toBeDisabled();
+    expect(screen.getByLabelText('ชื่อผู้ใช้')).toBeDisabled();
+    expect(screen.getByLabelText('รหัสผ่าน')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'แสดง' })).toBeDisabled();
+
+    await act(async () => { finish({ status: 429 }); });
+    expect(await screen.findByRole('alert')).toHaveTextContent('กรอกผิดหลายครั้ง รอสักครู่แล้วลองใหม่');
+    expect(screen.getByRole('button', { name: 'เข้าสู่ระบบ' })).toBeEnabled();
+    expect(screen.getByLabelText('รหัสผ่าน')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('reveals and hides the password without submitting or changing its value', async () => {
+    const server = fakeServer({ ...noSession, 'POST /api/auth/login': () => authAnswer('admin') });
+    const { user } = await renderApp('/login/admin');
+    await user.type(screen.getByLabelText('ชื่อผู้ใช้'), ' admin ');
+    const password = screen.getByLabelText('รหัสผ่าน');
+    await user.type(password, 'example-password-for-test');
+    expect(password).toHaveAttribute('type', 'password');
+
+    await user.click(screen.getByRole('button', { name: 'แสดง' }));
+    expect(password).toHaveAttribute('type', 'text');
+    expect(password).toHaveValue('example-password-for-test');
+    expect(server.calls.filter((call) => call.path === '/api/auth/login')).toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: 'ซ่อน' }));
+    expect(password).toHaveAttribute('type', 'password');
+    await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
+    await screen.findByRole('heading', { name: 'สถานะจุดทำความสะอาด' });
+    expect(server.calls.find((call) => call.path === '/api/auth/login')?.body).toEqual({
+      username: 'admin', password: 'example-password-for-test',
+    });
+  });
+
   it('the Admin logs in with username and password and lands on the Dashboard', async () => {
     const server = fakeServer({ ...noSession, 'POST /api/auth/login': () => authAnswer('admin') });
     const { user, router } = await renderApp('/login/admin');
@@ -114,6 +155,8 @@ describe('AdminLoginPage (D0)', () => {
     await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+    expect(screen.getByLabelText('รหัสผ่าน')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('รหัสผ่าน')).toHaveAccessibleDescription('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
   });
 
   it('the link between the two login pages keeps the page to return to', async () => {

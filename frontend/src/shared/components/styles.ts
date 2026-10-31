@@ -29,7 +29,7 @@ export const statusText: Record<PointStatus, string> = {
   OffHours: 'text-idle',
 };
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'link';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'link' | 'add';
 /** phone: 48 px; main: the phone page's one main action, 56 px and full width; desk: the Admin pages, 36 px. */
 export type ButtonSize = 'phone' | 'main' | 'desk';
 /** code: the phone's 56 px field for an employee ID or a phone number, with big digits (the design file's Login). */
@@ -51,6 +51,7 @@ const greyWhenDisabled = 'disabled:border-border disabled:bg-border disabled:tex
 const buttonVariants: Record<ButtonVariant, string> = {
   primary: `border-accent bg-accent text-on-accent no-underline not-disabled:hover:border-accent-hover not-disabled:hover:bg-accent-hover ${greyWhenDisabled}`,
   secondary: `border-border-control bg-surface text-text no-underline not-disabled:hover:border-accent ${greyWhenDisabled}`,
+  add: `border-dashed border-border-control bg-surface text-accent no-underline not-disabled:hover:border-accent ${greyWhenDisabled}`,
   danger: `border-rework bg-surface text-rework no-underline not-disabled:hover:bg-rework-bg ${greyWhenDisabled}`,
   link: 'border-transparent bg-transparent text-accent no-underline not-disabled:hover:text-accent-hover disabled:text-text-2',
 };
