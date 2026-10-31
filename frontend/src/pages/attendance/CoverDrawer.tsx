@@ -107,7 +107,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
         closeDisabled={isLoading}
         onClose={onCancel}
       />
-      <div className="-mx-6 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-5">
+      <div className="relative -mx-6 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-5">
         <section className="flex flex-col gap-3" aria-labelledby="cover-step-1">
           <h3 id="cover-step-1" className="text-base font-bold">
             1. วันและกะ
