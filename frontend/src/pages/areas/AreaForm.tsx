@@ -109,6 +109,8 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel, frame
           <Button size="desk" disabled={sending} onClick={onCancel}>
             ยกเลิก
           </Button>
+        ) : sending ? (
+          <Button size="desk" disabled>ยกเลิก</Button>
         ) : (
           <Link
             className={buttonClass('secondary', 'desk')}

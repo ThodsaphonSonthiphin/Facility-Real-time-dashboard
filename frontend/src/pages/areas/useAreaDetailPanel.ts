@@ -1,3 +1,4 @@
+import { useMutationDismissal } from '../../shared/components/useMutationDismissal';
 import { useState } from 'react';
 import type { AreaDetail } from '../../shared/api/adminSetupApi';
 import { useBuildingNames } from '../../shared/api/buildingNames';
@@ -15,13 +16,15 @@ export function useAreaDetailPanel(detail: AreaDetail) {
   const drawerPoint = editing?.kind === 'new-point' ? undefined : editedPoint;
   const drawerId = pointEditorTitleId(drawerPoint?.id);
   const drawerOpen = editing !== null && (editing.kind === 'new-point' || editedPoint !== undefined);
-  const closeEditor = () => setEditing(null);
+  const pointDismissal = useMutationDismissal(['createPoint', 'updatePoint', 'setPointActive', 'setSignRadius', 'setSignLocation', 'regenerateQr'], () => setEditing(null));
+  const closeEditor = pointDismissal.close;
   const closeArea = () => setAreaOpen(false);
   const clearNotice = () => setNotice(null);
   const open = (target: EditTarget) => { setEditing(target); clearNotice(); };
   const openArea = () => { setAreaOpen(true); clearNotice(); };
   const saved = (text: string) => {
-    closeEditor(); closeArea(); setNotice({ kind: 'ok', text });
+    // Successful saves close intentionally, independently of the user's pending-dismissal guard.
+    setEditing(null); closeArea(); setNotice({ kind: 'ok', text });
   };
   return {
     names, area: detail.area, checkInSign: detail.checkInSign, areaOpen, notice, drawerPoint, drawerId,

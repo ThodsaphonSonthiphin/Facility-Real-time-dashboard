@@ -1,10 +1,12 @@
+import { useMutationDismissal } from '../../shared/components/useMutationDismissal';
 import { useState, type FormEvent } from 'react';
 import type { ManagedBuilding } from '../../shared/api/adminSetupApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { draftProblem, stillInside } from './buildingRules';
 import { useCreateBuildingMutation, useRenameBuildingMutation, useSetBuildingActiveMutation } from './buildingsApi';
 import { useConfirmationAction } from '../../shared/components/useConfirmationDialog';
-export function useBuildingDrawer(building: ManagedBuilding | undefined, onDone: (message: string) => void) {
+export function useBuildingDrawer(building: ManagedBuilding | undefined, onDone: (message: string) => void, onClose: () => void) {
+  const dismissal = useMutationDismissal(['createBuilding', 'renameBuilding', 'setBuildingActive'], onClose);
   const [code, setCode] = useState('');
   const [name, setName] = useState(building?.name ?? '');
   const [problem, setProblem] = useState<string | null>(null);
@@ -49,5 +51,5 @@ export function useBuildingDrawer(building: ManagedBuilding | undefined, onDone:
   };
 
   const requestToggle = () => { if (!building) return; if (building.isActive) confirmation.ask(() => toggle(building)); else void toggle(building); };
-  return { code, setCode, name, setName, problem, switchProblem, sending, left, titleId, submit, confirmation, requestToggle };
+  return { dismissal, code, setCode, name, setName, problem, switchProblem, sending, left, titleId, submit, confirmation, requestToggle };
 }

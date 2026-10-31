@@ -20,16 +20,16 @@ interface BuildingDrawerProps {
  * building that exists, turning it off or on. Off is offered only when nothing active is left in it; the server checks too.
  */
 export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProps) {
-  const { code, setCode, name, setName, problem, switchProblem, sending, left, titleId, submit, confirmation, requestToggle } = useBuildingDrawer(building, onDone);
+  const { dismissal, code, setCode, name, setName, problem, switchProblem, sending, left, titleId, submit, confirmation, requestToggle } = useBuildingDrawer(building, onDone, onClose);
 
   return (
-    <Drawer labelledBy={titleId} onClose={onClose}>
+    <Drawer labelledBy={titleId} onClose={dismissal.close}>
       <div className="flex flex-col gap-5">
         <DialogHeader
           id={titleId}
           title={building ? `แก้ไขตึก · ${building.code} ${building.name}` : 'เพิ่มตึก'}
           detail="ตึกเก็บพื้นที่และบัญชีหัวหน้า · ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน"
-          onClose={onClose}
+          onClose={dismissal.close}
           closeDisabled={sending}
         />
         <form className="flex flex-col gap-4" onSubmit={(event) => void submit(event)}>
@@ -61,7 +61,7 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
             />
           </Field>
           <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-            <Button size="desk" disabled={sending} onClick={onClose}>
+            <Button size="desk" disabled={sending} onClick={dismissal.close}>
               ยกเลิก
             </Button>
             <Button type="submit" variant="primary" size="desk" disabled={sending}>

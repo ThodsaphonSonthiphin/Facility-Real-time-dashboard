@@ -54,6 +54,8 @@ export function ConfirmationDialog({
                   value={state.typed}
                   disabled={state.pending}
                   onChange={(event) => state.setTyped(event.target.value)}
+                  // This dialog may be inside another form: Enter must not submit its ancestor.
+                  onKeyDown={(event) => { if (event.key === 'Enter') event.preventDefault(); }}
                 />
               </Field>
             )}
