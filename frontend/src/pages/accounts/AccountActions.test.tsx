@@ -244,7 +244,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     expect(screen.queryByRole('alertdialog', { name: 'ปิดใช้งานบัญชี แม่บ้านทดสอบ?' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'ปิดใช้งาน แม่บ้านทดสอบ' }));
-    await user.click(screen.getByRole('button', { name: 'ปิดใช้งาน' }));
+    await user.click(screen.getByRole('button', { name: 'ปิดใช้งานบัญชี' }));
     expect(await screen.findByText('ปิดใช้งาน แม่บ้านทดสอบ แล้ว')).toBeInTheDocument();
     expect(server.calls.filter((call) => call.path === '/api/admin/accounts/21/deactivate')).toHaveLength(1);
     await user.click(screen.getByRole('tab', { name: 'แอดมิน 2' }));

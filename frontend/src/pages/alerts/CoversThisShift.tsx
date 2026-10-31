@@ -1,12 +1,12 @@
+import { CoverCancellationDialog } from '../../shared/components/CoverCancellationDialog';
+import { useCoverCancellation } from '../../shared/components/useCoverCancellation';
 import { ArrowRightLeft } from 'lucide-react';
 import type { AttendanceBoard } from '../../shared/api/attendanceBoardApi';
 import { Button } from '../../shared/components/Button';
 import type { Notice } from '../../shared/components/Toast';
-import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftEndText } from '../../shared/utils/coverSlots';
 import { formatDayTime, formatTime } from '../../shared/utils/thaiTime';
 import { slotText } from './alertRules';
-import { useCancelCoverMutation } from '../../shared/api/alertsApi';
 import { countClass, countTones, panelClass, panelTitleClass } from './alertStyles';
 
 interface CoversThisShiftProps {
@@ -19,20 +19,12 @@ interface CoversThisShiftProps {
 /**
  * The design file's D3 "คนทำแทนกะนี้", beside the Areas with nobody: every Area cover of the shift on screen, from its
  * board: the shift on the clock, or one picked up to 7 days ahead (facility-0075, 0084). Each ends with the shift by
- * itself, or is cancelled in one press. Supervisors' building covers have no list endpoint (plan 11 decision 10).
+ * itself, or is cancelled after confirmation. Supervisors' building covers have no list endpoint (plan 11 decision 10).
  */
 export function CoversThisShift({ board, ahead, onNotice }: CoversThisShiftProps) {
-  const [cancel, { isLoading }] = useCancelCoverMutation();
+  const cancellation = useCoverCancellation((text) => onNotice({ kind: 'ok', text }));
+  const { isLoading } = cancellation;
   const covers = board.rows.flatMap((row) => row.covers.map((cover) => ({ row, cover })));
-
-  const cancelCover = async (id: number, text: string) => {
-    try {
-      await cancel(id).unwrap();
-      onNotice({ kind: 'ok', text });
-    } catch (error) {
-      onNotice({ kind: 'error', text: getErrorMessage(error) });
-    }
-  };
 
   return (
     <section className={`${panelClass} flex-[1_1_320px]`} aria-labelledby="alerts-covers">
@@ -62,15 +54,14 @@ export function CoversThisShift({ board, ahead, onNotice }: CoversThisShiftProps
               className="self-start"
               aria-label={`ยกเลิกการทำแทนของ ${cover.displayName} ที่ ${row.areaCode}`}
               disabled={isLoading}
-              onClick={() =>
-                void cancelCover(cover.id, `ยกเลิกการทำแทนของ ${cover.displayName} ที่ ${row.areaCode} แล้ว`)
-              }
+              onClick={() => cancellation.ask({ id: cover.id, areaCode: row.areaCode, name: cover.displayName })}
             >
               {ahead ? 'ยกเลิก' : 'ยกเลิกก่อนหมดกะ'}
             </Button>
           </li>
         ))}
       </ul>
+      {cancellation.selected && <CoverCancellationDialog {...cancellation.selected} onCancel={cancellation.cancel} onConfirm={cancellation.confirm} />}
     </section>
   );
 }

@@ -1,13 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useBuildingDrawer } from './useBuildingDrawer';
+import { ConfirmationDialog } from '../../shared/components/ConfirmationDialog';
 import type { ManagedBuilding } from '../../shared/api/adminSetupApi';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { DialogHeader, Drawer } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
-import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { draftProblem, stillInside } from './buildingRules';
-import { useCreateBuildingMutation, useRenameBuildingMutation, useSetBuildingActiveMutation } from './buildingsApi';
 
 interface BuildingDrawerProps {
   /** Missing: a new building. */
@@ -22,46 +20,7 @@ interface BuildingDrawerProps {
  * building that exists, turning it off or on. Off is offered only when nothing active is left in it; the server checks too.
  */
 export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProps) {
-  const [code, setCode] = useState('');
-  const [name, setName] = useState(building?.name ?? '');
-  const [problem, setProblem] = useState<string | null>(null);
-  const [switchProblem, setSwitchProblem] = useState<string | null>(null);
-  const [createBuilding, created] = useCreateBuildingMutation();
-  const [renameBuilding, renamed] = useRenameBuildingMutation();
-  const [setBuildingActive, switching] = useSetBuildingActiveMutation();
-  const sending = created.isLoading || renamed.isLoading || switching.isLoading;
-  const left = building?.isActive ? stillInside(building) : null;
-  const titleId = 'building-editor-title';
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    const found = draftProblem(code, name, !building);
-    setProblem(found);
-    if (found) {
-      return;
-    }
-    try {
-      if (building) {
-        const saved = await renameBuilding({ buildingId: building.id, name: name.trim() }).unwrap();
-        onDone(`บันทึกตึก ${saved.code} ${saved.name} แล้ว`);
-      } else {
-        const saved = await createBuilding({ code: code.trim(), name: name.trim() }).unwrap();
-        onDone(`เพิ่มตึก ${saved.code} ${saved.name} แล้ว`);
-      }
-    } catch (error) {
-      setProblem(getErrorMessage(error));
-    }
-  };
-
-  const toggle = async (current: ManagedBuilding) => {
-    setSwitchProblem(null);
-    try {
-      const saved = await setBuildingActive({ buildingId: current.id, active: !current.isActive }).unwrap();
-      onDone(`${saved.isActive ? 'เปิด' : 'ปิด'}ใช้งานตึก ${saved.code} แล้ว`);
-    } catch (error) {
-      setSwitchProblem(getErrorMessage(error));
-    }
-  };
+  const { code, setCode, name, setName, problem, switchProblem, sending, left, titleId, submit, confirmation, requestToggle } = useBuildingDrawer(building, onDone);
 
   return (
     <Drawer labelledBy={titleId} onClose={onClose}>
@@ -130,12 +89,22 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
             {switchProblem && <Note tone="error">{switchProblem}</Note>}
             <div>
               {/* turning off is undone by the same button, so it is not `danger` (MASTER.md): the words carry it */}
-              <Button size="desk" disabled={sending || left !== null} onClick={() => void toggle(building)}>
+              <Button size="desk" disabled={sending || left !== null} onClick={requestToggle}>
                 {building.isActive ? 'ปิดใช้งานตึกนี้' : 'เปิดใช้งานตึกนี้'}
               </Button>
             </div>
           </section>
         )}
+        {building && confirmation.question && <ConfirmationDialog
+          kind="building"
+          title={`ปิดใช้งานตึก ${building.code} ${building.name}?`}
+          body="ตึกหายจากฟอร์มและหน้าข้อมูลสด ยังเลือกได้ในสรุปการตรวจและส่งออก Excel"
+          impacts={['ประวัติยังอยู่ เปิดกลับได้', 'เปิดพื้นที่หรือบัญชีหัวหน้าในตึกนี้ไม่ได้จนกว่าจะเปิดใช้งานตึก']}
+          code={building.code}
+          confirmLabel="ปิดใช้งานตึก"
+          onCancel={confirmation.cancel}
+          onConfirm={confirmation.confirm}
+        />}
         <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
       </div>
     </Drawer>

@@ -1,3 +1,4 @@
+import { ConfirmationDialog } from '../../shared/components/ConfirmationDialog';
 import type { AdminPoint, AreaSummary } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
@@ -31,7 +32,7 @@ export interface PointEditorProps {
  * The whole list is sent on every save; the server keeps unchanged windows and checks overlap and shift bounds.
  */
 export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps) {
-  const { name, setName, windows, setWindows, pending, setPending, problem, sending, shifts, titleId, save, toggle } = usePointEditor({ area, point, onSaved, onClose });
+  const { confirmation, requestDeactivate, name, setName, windows, setWindows, pending, setPending, problem, sending, shifts, titleId, save, toggle } = usePointEditor({ area, point, onSaved, onClose });
 
   return (
     <section className="flex h-full min-h-0 flex-col" aria-labelledby={titleId}>
@@ -89,7 +90,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
           {point.isActive ? (
             <>
               <p className="text-text-2">ปิดใช้งานแล้วจุดและป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้ ประวัติยังอยู่ เปิดกลับได้</p>
-              <Button size="desk" disabled={sending} onClick={() => void toggle(false)}>
+              <Button size="desk" disabled={sending} onClick={requestDeactivate}>
                 ปิดใช้งานจุดนี้
               </Button>
             </>
@@ -113,6 +114,15 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
           </Button>
         </div>
       </form>
+      {point && confirmation.question && <ConfirmationDialog
+          kind="point"
+          title={`ปิดใช้งานจุด ${point.sign.code} ${point.name}?`}
+          body="จุดและป้ายหายจากหน้าสถานะจุดและสแกนไม่ได้"
+          impacts={['ประวัติยังอยู่ เปิดกลับได้']}
+          confirmLabel="ปิดใช้งานจุด"
+          onCancel={confirmation.cancel}
+          onConfirm={confirmation.confirm}
+        />}
 
 
     </section>

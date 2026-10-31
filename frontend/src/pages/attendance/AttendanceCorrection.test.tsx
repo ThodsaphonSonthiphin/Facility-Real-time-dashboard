@@ -350,6 +350,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     expect(within(form).getByText(/พื้นที่นี้จะมีคนทำแทน 2 คน/)).toBeInTheDocument();
     expect(within(form).getByRole('heading', { name: 'ทำแทนที่มอบหมายไว้แล้วกะนี้ · 1' })).toBeInTheDocument();
     await user.click(within(form).getByRole('button', { name: 'ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR02' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ยกเลิกการทำแทน' }));
 
     await waitFor(() =>
       expect(server.calls.some((call) => call.method === 'DELETE' && call.path === '/api/admin/cover-assignments/71')).toBe(true),

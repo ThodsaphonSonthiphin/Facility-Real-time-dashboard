@@ -158,6 +158,22 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     expect(await screen.findByText('ป้ายลงเวลา AR01-IN ระบบสร้างให้เองตอนเพิ่มพื้นที่')).toBeInTheDocument();
     expect(screen.getByText('จุดทำความสะอาด 2 จุด · เพิ่มหรือแก้ที่หน้า พื้นที่และป้าย')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'ปิดใช้งานพื้นที่นี้' }));
+    expect(server.calls.some((call) => call.path === '/api/admin/areas/1/deactivate')).toBe(false);
+    const firstQuestion = screen.getByRole('alertdialog');
+    await user.keyboard('{Escape}');
+    expect(firstQuestion).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ปิดใช้งานพื้นที่นี้' })).toHaveFocus();
+    expect(server.calls.some((call) => call.path === '/api/admin/areas/1/deactivate')).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'ปิดใช้งานพื้นที่นี้' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ยกเลิก' }));
+    expect(server.calls.some((call) => call.path === '/api/admin/areas/1/deactivate')).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'ปิดใช้งานพื้นที่นี้' }));
+    const confirmation = screen.getByRole('alertdialog');
+    expect(within(confirmation).getByRole('button', { name: 'ปิดใช้งานพื้นที่' })).toBeDisabled();
+    await user.type(within(confirmation).getByRole('textbox', { name: 'รหัสยืนยัน' }), 'AR0');
+    expect(within(confirmation).getByRole('button', { name: 'ปิดใช้งานพื้นที่' })).toBeDisabled();
+    await user.type(within(confirmation).getByRole('textbox', { name: 'รหัสยืนยัน' }), '1');
+    await user.click(within(confirmation).getByRole('button', { name: 'ปิดใช้งานพื้นที่' }));
 
     expect(await screen.findByText('ปิดใช้งาน AR01 แล้ว')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'เปิดใช้งานพื้นที่นี้' })).toBeInTheDocument();

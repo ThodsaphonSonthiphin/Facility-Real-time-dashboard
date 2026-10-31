@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { ConfirmationDialog } from '../../shared/components/ConfirmationDialog';
+import { useSignQr } from './useSignQr';
 import { preventSignSubmit, useSignLocation, useSignRadius } from './useSignSettings';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Link } from 'react-router';
@@ -6,11 +7,9 @@ import { type AdminSign } from '../../shared/api/adminSetupApi';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
-import { linkClass, noteClass } from '../../shared/components/styles';
-import { getErrorMessage } from '../../shared/utils/getErrorMessage';
+import { linkClass } from '../../shared/components/styles';
 import { formatCoordinates, signPlaceLabel } from '../../shared/utils/labels';
 import { formatDate, formatTime } from '../../shared/utils/thaiTime';
-import { useRegenerateQrMutation } from './areasApi';
 
 interface SignPanelProps {
   areaId: number;
@@ -131,24 +130,10 @@ function SignRadius({ sign }: { sign: AdminSign }) {
   );
 }
 
-/** facility-0021 item 5, 0006: one question in the page, then the offer to print the new sign. */
+/** facility-0021 item 5: confirm before invalidating the sign, then optionally open the existing print route. */
 function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
-  const [asking, setAsking] = useState(false);
-  const [done, setDone] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
-  const [regenerate, { isLoading }] = useRegenerateQrMutation();
+  const { done, confirmation, ask } = useSignQr(areaId, sign.id);
   const titleId = `sign-${sign.id}-qr`;
-
-  const confirm = async () => {
-    try {
-      await regenerate(sign.id).unwrap();
-      setAsking(false);
-      setDone(true);
-      setProblem(null);
-    } catch (error) {
-      setProblem(getErrorMessage(error));
-    }
-  };
 
   return (
     <section className={partClass} aria-labelledby={titleId}>
@@ -157,39 +142,17 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
       </h4>
       <p>{`สร้าง QR ล่าสุด ${formatDate(sign.qrIssuedAt)} ${formatTime(sign.qrIssuedAt)}`}</p>
       {!canIssueQr && <p className="text-text-2">ป้ายนี้ปิดใช้งานอยู่ เปิดใช้งานก่อนจึงสร้าง QR ใหม่ได้</p>}
-      {canIssueQr && !asking && (
-        <div>
-          <Button
-            size="desk"
-            onClick={() => {
-              setAsking(true);
-              setDone(false);
-            }}
-          >
-            สร้าง QR ใหม่
-          </Button>
-        </div>
-      )}
-      {asking && (
-        <div
-          className={`flex flex-col gap-2 ${noteClass('warn')}`}
-          role="alertdialog"
-          aria-labelledby={`${titleId}-ask`}
-          aria-describedby={`${titleId}-detail`}
-        >
-          <p id={`${titleId}-ask`} className="font-bold">{`สร้าง QR ใหม่ของป้าย ${sign.code} ${label}?`}</p>
-          <p id={`${titleId}-detail`}>ป้ายที่ติดอยู่ตอนนี้จะสแกนไม่ได้ทันที ต้องพิมพ์ป้ายใหม่ไปติดแทน ประวัติการสแกนไม่เปลี่ยน</p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="danger" size="desk" disabled={isLoading} onClick={() => void confirm()}>
-              {isLoading ? 'กำลังสร้าง QR...' : 'ยืนยัน สร้าง QR ใหม่'}
-            </Button>
-            {/* The safe choice has the focus */}
-            <Button size="desk" autoFocus disabled={isLoading} onClick={() => setAsking(false)}>
-              ยกเลิก
-            </Button>
-          </div>
-        </div>
-      )}
+      {canIssueQr && <div><Button size="desk" onClick={ask}>สร้าง QR ใหม่</Button></div>}
+      {confirmation.question && <ConfirmationDialog
+          kind="qr"
+          title={`สร้าง QR ใหม่ของป้าย ${sign.code} ${label}?`}
+          body="ป้ายที่ติดอยู่ตอนนี้จะสแกนไม่ได้ทันที ต้องพิมพ์ป้ายใหม่ไปติดแทน"
+          impacts={['ประวัติการสแกนไม่เปลี่ยน']}
+          confirmLabel="ยืนยัน สร้าง QR ใหม่"
+          printFollowup
+          onCancel={confirmation.cancel}
+          onConfirm={confirmation.confirm}
+        />}
       {done && (
         <Note tone="info" status>
           สร้าง QR ใหม่แล้ว ป้ายเดิมสแกนไม่ได้แล้ว{' '}
@@ -198,7 +161,6 @@ function SignQr({ areaId, sign, label, canIssueQr }: SignPanelProps) {
           </Link>
         </Note>
       )}
-      {problem && <Note tone="error">{problem}</Note>}
     </section>
   );
 }

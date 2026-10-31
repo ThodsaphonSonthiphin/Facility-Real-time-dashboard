@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
   adminSession,
@@ -137,12 +137,14 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     await user.click(within(qr).getByRole('button', { name: 'สร้าง QR ใหม่' }));
     const ask = within(qr).getByRole('alertdialog', { name: 'สร้าง QR ใหม่ของป้าย AR01-01 ห้องน้ำชาย?' });
     expect(ask).toHaveAccessibleDescription(
-      'ป้ายที่ติดอยู่ตอนนี้จะสแกนไม่ได้ทันที ต้องพิมพ์ป้ายใหม่ไปติดแทน ประวัติการสแกนไม่เปลี่ยน',
+      'ป้ายที่ติดอยู่ตอนนี้จะสแกนไม่ได้ทันที ต้องพิมพ์ป้ายใหม่ไปติดแทน',
     );
     await user.click(within(ask).getByRole('button', { name: 'ยกเลิก' }));
     expect(server.calls.some((call) => call.path.endsWith('/regenerate-token'))).toBe(false);
 
     await user.click(within(qr).getByRole('button', { name: 'สร้าง QR ใหม่' }));
+    expect(within(screen.getByRole('alertdialog')).getByRole('checkbox', { name: 'ไปหน้าพิมพ์ป้ายต่อเลย' })).toBeChecked();
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('checkbox', { name: 'ไปหน้าพิมพ์ป้ายต่อเลย' }));
     await user.click(within(qr).getByRole('button', { name: 'ยืนยัน สร้าง QR ใหม่' }));
     expect(await within(qr).findByText('สร้าง QR ใหม่แล้ว ป้ายเดิมสแกนไม่ได้แล้ว')).toBeInTheDocument();
     expect(within(qr).getByRole('link', { name: 'พิมพ์ป้ายใหม่ ›' })).toHaveAttribute(
@@ -199,6 +201,8 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
 
     const qr = screen.getByRole('region', { name: 'QR ของป้าย' });
     await user.click(within(qr).getByRole('button', { name: 'สร้าง QR ใหม่' }));
+    expect(within(screen.getByRole('alertdialog')).getByRole('checkbox', { name: 'ไปหน้าพิมพ์ป้ายต่อเลย' })).toBeChecked();
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('checkbox', { name: 'ไปหน้าพิมพ์ป้ายต่อเลย' }));
     await user.click(within(qr).getByRole('button', { name: 'ยืนยัน สร้าง QR ใหม่' }));
     expect(await within(qr).findByText('สร้าง QR ใหม่แล้ว ป้ายเดิมสแกนไม่ได้แล้ว')).toBeInTheDocument();
     expect(within(qr).getByRole('link', { name: 'พิมพ์ป้ายใหม่ ›' })).toHaveAttribute(
@@ -207,4 +211,39 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     );
     expect(server.calls.filter((call) => call.path === '/api/admin/signs/100/regenerate-token')).toHaveLength(1);
   });
+  it('keeps a pending QR question locked, retains its error for retry, then follows the checked print route only on success', async () => {
+    let release: (value: { status: number; body: unknown }) => void = () => {};
+    let attempts = 0;
+    const server = serve({
+      'POST /api/admin/signs/101/regenerate-token': () => {
+        attempts++;
+        return attempts === 1 ? new Promise((resolve) => { release = resolve; }) : { status: 200, body: sign() };
+      },
+    });
+    const { user, router } = await renderApp('/admin/areas/1');
+    await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-01' }));
+    await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
+    const parent = screen.getByRole('dialog', { name: 'แก้ไขจุด · AR01-01' });
+    const opener = within(parent).getByRole('button', { name: 'สร้าง QR ใหม่' });
+    await user.click(opener);
+    const ask = screen.getByRole('alertdialog');
+    expect(ask.tagName).toBe('DIALOG');
+    expect(within(ask).getByRole('checkbox')).toBeChecked();
+    expect(attempts).toBe(0);
+    await user.click(within(ask).getByRole('button', { name: 'ยืนยัน สร้าง QR ใหม่' }));
+    await waitFor(() => expect(attempts).toBe(1));
+    expect(within(ask).getByRole('button', { name: 'ยกเลิก' })).toBeDisabled();
+    await user.keyboard('{Escape}');
+    expect(ask).toBeInTheDocument();
+    expect(parent).toBeInTheDocument();
+    release({ status: 409, body: { message: 'ลองสร้าง QR อีกครั้ง' } });
+    expect(await within(ask).findByRole('alert')).toHaveTextContent('ลองสร้าง QR อีกครั้ง');
+    expect(within(ask).getByRole('checkbox')).toBeChecked();
+    expect(parent).toBeInTheDocument();
+    await user.click(within(ask).getByRole('button', { name: 'ยืนยัน สร้าง QR ใหม่' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/admin/print'));
+    expect(router.state.location.search).toBe('?area=1&sign=101');
+    expect(server.calls.filter((call) => call.path.endsWith('/regenerate-token'))).toHaveLength(2);
+  });
+
 });

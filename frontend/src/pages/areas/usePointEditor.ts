@@ -1,3 +1,4 @@
+import { useConfirmationAction } from '../../shared/components/useConfirmationDialog';
 import { useState, type FormEvent } from 'react';
 import type { Shift } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -7,6 +8,7 @@ import type { PointEditorProps } from './PointEditor';
 interface Typed { start: string; end: string }
 const noTyped: Typed = { start: '', end: '' };
 export function usePointEditor({ area, point, onSaved }: PointEditorProps) {
+  const confirmation = useConfirmationAction();
   const [name, setName] = useState(point?.name ?? '');
   const [windows, setWindows] = useState<WindowDraft[]>(() =>
     (point?.roundWindows ?? []).map(({ shift, start, end }) => ({ shift, start, end })),
@@ -58,9 +60,10 @@ export function usePointEditor({ area, point, onSaved }: PointEditorProps) {
       const saved = await setPointActive({ pointId: point.id, active }).unwrap();
       onSaved(`${active ? 'เปิด' : 'ปิด'}ใช้งานจุด ${saved.name} แล้ว`);
     } catch (error) {
+      if (!active) throw error;
       setProblem(getErrorMessage(error));
     }
   };
 
-return { name, setName, windows, setWindows, pending, setPending, problem, sending, shifts, titleId, save, toggle };
+return { confirmation, requestDeactivate: () => confirmation.ask(() => toggle(false)), name, setName, windows, setWindows, pending, setPending, problem, sending, shifts, titleId, save, toggle };
 }

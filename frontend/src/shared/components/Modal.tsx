@@ -57,11 +57,13 @@ function DialogFrame({ labelledBy, describedBy, role, onClose, className, childr
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault();
+          event.stopPropagation();
           onClose();
         }
       }}
       onCancel={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         onClose();
       }}
       // text-text: a dialog does not inherit the colour (the browser sets its own). The design file's dim page behind and

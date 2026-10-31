@@ -184,6 +184,9 @@ describe('BuildingsPage (facility-0090)', () => {
     const { user } = await renderApp('/admin/buildings');
 
     await user.click(within(await openEditor(user, b)).getByRole('button', { name: 'ปิดใช้งานตึกนี้' }));
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    await user.type(within(screen.getByRole('alertdialog')).getByRole('textbox', { name: 'รหัสยืนยัน' }), 'B');
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ปิดใช้งานตึก' }));
     expect(await screen.findByText('ปิดใช้งานตึก B แล้ว')).toBeInTheDocument();
 
     const offDrawer = await openEditor(user, c);
@@ -202,6 +205,9 @@ describe('BuildingsPage (facility-0090)', () => {
 
     const drawer = await openEditor(user, b);
     await user.click(within(drawer).getByRole('button', { name: 'ปิดใช้งานตึกนี้' }));
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    await user.type(within(screen.getByRole('alertdialog')).getByRole('textbox', { name: 'รหัสยืนยัน' }), 'B');
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ปิดใช้งานตึก' }));
 
     expect(await within(drawer).findByText(message)).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: `แก้ไขตึก · ${b.code} ${b.name}` })).toBeInTheDocument();

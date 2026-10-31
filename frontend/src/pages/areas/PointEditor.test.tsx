@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import {
@@ -69,8 +69,14 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     const editor = screen.getByRole('dialog', { name: 'แก้ไขจุด · AR01-01' });
     await user.click(within(editor).getByRole('button', { name: 'สร้าง QR ใหม่' }));
     const ask = within(editor).getByRole('alertdialog', { name: 'สร้าง QR ใหม่ของป้าย AR01-01 ห้องน้ำชาย?' });
-    expect(within(ask).getByRole('button', { name: 'ยกเลิก' })).toHaveFocus();
-    await user.click(within(ask).getByRole('button', { name: 'ยกเลิก' }));
+    expect(within(ask).getByRole('heading')).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(editor).toBeInTheDocument();
+    expect(within(editor).getByRole('button', { name: 'สร้าง QR ใหม่' })).toHaveFocus();
+    await user.click(within(editor).getByRole('button', { name: 'สร้าง QR ใหม่' }));
+    fireEvent(screen.getByRole('alertdialog'), new Event('cancel', { bubbles: true, cancelable: true }));
+    expect(editor).toBeInTheDocument();
+    expect(within(editor).getByRole('button', { name: 'สร้าง QR ใหม่' })).toHaveFocus();
     expect(server.calls.some((call) => call.path.endsWith('/regenerate-token'))).toBe(false);
     await user.click(within(editor).getByRole('button', { name: 'ปิด' }));
     expect(opener).toHaveFocus();
@@ -245,6 +251,7 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
 
     const editor = screen.getByRole('dialog', { name: 'แก้ไขจุด · AR01-02' });
     await user.click(within(editor).getByRole('button', { name: 'ปิดใช้งานจุดนี้' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ปิดใช้งานจุด' }));
     expect(await screen.findByText('ปิดใช้งานจุด ห้องน้ำหญิง แล้ว')).toBeInTheDocument();
 
     // The save closed the editor; the row stays in the table, marked, and opening it again offers the way back
