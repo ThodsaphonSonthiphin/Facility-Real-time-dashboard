@@ -149,7 +149,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
         closeDisabled={busy}
         onClose={onCancel}
       />
-      <div className="-mx-6 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-5">
+      <div className="relative -mx-6 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-5">
         {failure && (
           <Note tone="error" title="บันทึกไม่สำเร็จ">
             <span>{failure.message}</span>
