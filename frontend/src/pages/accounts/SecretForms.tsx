@@ -21,15 +21,15 @@ import { usePasswordForm, usePhoneForm } from './useSecretForms';
  * device of the person must log in again. The old number cannot be shown, because it is stored as a hash, and it is
  * not needed. So the form says so and shows who is being edited (facility-0081).
  */
-export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
+export function PhoneForm({ account, onDone, onCancel, embedded = false, disabled = false }: SecretFormProps & { embedded?: boolean; disabled?: boolean }) {
   const { names, phone, setPhone, problem, isLoading, titleId, submit } = usePhoneForm({ account, onDone, onCancel });
 
   return (
-    <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
-      <DialogHeader id={titleId} title={`แก้เบอร์โทร · ${account.displayName}`} onClose={onCancel} closeDisabled={isLoading} />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-5 flex flex-col gap-5">
+    <form className={embedded ? "flex flex-col gap-4 border-t border-border pt-5" : formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
+      {embedded ? <h3 id={titleId} className="font-semibold">{`แก้เบอร์โทร · ${account.displayName}`}</h3> : <DialogHeader id={titleId} title={`แก้เบอร์โทร · ${account.displayName}`} onClose={onCancel} closeDisabled={isLoading} />}
+      <div className={embedded ? "flex flex-col gap-4" : "-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pb-5 flex flex-col gap-5"}>
         {/* facility-0081: who the form is for; the owner found 19 px bold too large (2026-10-26), so the normal size */}
-        <Facts
+        {!embedded && <Facts
           items={[
             {
               label: 'ชื่อ',
@@ -48,7 +48,7 @@ export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
               value: placeText(account, names),
             },
           ]}
-        />
+        />}
         <Field
           label="เบอร์โทรที่คนนี้ใช้ตอนนี้"
           error={problem === PHONE_PROBLEM ? problem : undefined}
@@ -61,30 +61,30 @@ export function PhoneForm({ account, onDone, onCancel }: SecretFormProps) {
             autoComplete="off"
             maxLength={16}
             value={phone}
-            disabled={isLoading}
+            disabled={isLoading || disabled}
             onChange={(event) => setPhone(event.target.value)}
           />
         </Field>
         {problem && <Note tone="error">{problem}</Note>}
       </div>
-      <FormButtons sending={isLoading} label="บันทึกเบอร์ใหม่" onCancel={onCancel} />
+      {embedded ? <Button type="submit" size="desk" disabled={isLoading || disabled}>{isLoading ? 'กำลังบันทึกเบอร์...' : 'บันทึกเบอร์ใหม่'}</Button> : <FormButtons sending={isLoading} label="บันทึกเบอร์ใหม่" onCancel={onCancel} />}
     </form>
   );
 }
 
 /** facility-0020: a new temporary password for an Admin, told by voice or on paper; sent once, then cleared. */
-export function PasswordForm({ account, isSelf, onDone, onCancel }: SecretFormProps & { isSelf: boolean }) {
+export function PasswordForm({ account, isSelf, onDone, onCancel, embedded = false, disabled = false }: SecretFormProps & { isSelf: boolean; embedded?: boolean; disabled?: boolean }) {
   const { password, setPassword, problem, isLoading, titleId, submit } = usePasswordForm({ account, isSelf, onDone, onCancel });
 
   return (
-    <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
-      <DialogHeader
+    <form className={embedded ? "flex flex-col gap-4 border-t border-border pt-5" : formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
+      {embedded ? <h3 id={titleId} className="font-semibold">{`รีเซ็ตรหัสผ่าน · ${account.displayName}`}</h3> : <DialogHeader
         id={titleId}
         title={`รีเซ็ตรหัสผ่าน · ${account.displayName}`}
         onClose={onCancel}
         closeDisabled={isLoading}
-      />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-5 flex flex-col gap-5">
+      />}
+      <div className={embedded ? "flex flex-col gap-4" : "-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pb-5 flex flex-col gap-5"}>
         <Field
           label="รหัสผ่านชั่วคราวใหม่"
           error={problem === PASSWORD_PROBLEM ? problem : undefined}
@@ -96,13 +96,13 @@ export function PasswordForm({ account, isSelf, onDone, onCancel }: SecretFormPr
             autoComplete="new-password"
             maxLength={MAX_PASSWORD}
             value={password}
-            disabled={isLoading}
+            disabled={isLoading || disabled}
             onChange={(event) => setPassword(event.target.value)}
           />
         </Field>
         {problem && <Note tone="error">{problem}</Note>}
       </div>
-      <FormButtons sending={isLoading} label="บันทึกรหัสผ่านใหม่" onCancel={onCancel} />
+      {embedded ? <Button type="submit" size="desk" disabled={isLoading || disabled}>{isLoading ? 'กำลังบันทึกรหัสผ่าน...' : 'บันทึกรหัสผ่านใหม่'}</Button> : <FormButtons sending={isLoading} label="บันทึกรหัสผ่านใหม่" onCancel={onCancel} />}
     </form>
   );
 }

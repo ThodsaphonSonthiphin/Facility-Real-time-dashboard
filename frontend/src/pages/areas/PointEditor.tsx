@@ -1,3 +1,4 @@
+import { Plus, Trash2 } from 'lucide-react';
 import { ConfirmationDialog } from '../../shared/components/ConfirmationDialog';
 import type { AdminPoint, AreaSummary } from '../../shared/api/adminSetupApi';
 import type { Shift } from '../../shared/api/types';
@@ -11,11 +12,6 @@ import { SignPanel } from './SignPanel';
 import { usePointEditor } from './usePointEditor';
 import { timeKeyDown, useShiftWindows } from './useShiftWindows';
 
-/** What is typed in one shift's two time fields but not yet added (facility-0083): up to four digits, e.g. "0700". */
-interface Typed {
-  start: string;
-  end: string;
-}
 
 
 export interface PointEditorProps {
@@ -32,7 +28,7 @@ export interface PointEditorProps {
  * The whole list is sent on every save; the server keeps unchanged windows and checks overlap and shift bounds.
  */
 export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps) {
-  const { confirmation, requestDeactivate, name, setName, windows, setWindows, pending, setPending, problem, sending, shifts, titleId, save, toggle } = usePointEditor({ area, point, onSaved, onClose });
+  const { confirmation, requestDeactivate, name, setName, windows, setWindows, problem, sending, shifts, titleId, save, toggle } = usePointEditor({ area, point, onSaved, onClose });
 
   return (
     <section className="flex h-full min-h-0 flex-col" aria-labelledby={titleId}>
@@ -62,8 +58,6 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
               shift={shift}
               windows={windows}
               disabled={sending}
-              typed={pending[shift]}
-              onTyped={(typed) => setPending((all) => ({ ...all, [shift]: typed }))}
               onAdd={(draft) => setWindows((all) => [...all, draft])}
               onEdit={(index, patch) => setWindows((all) => all.map((w, i) => i === index ? { ...w, ...patch } : w))}
               onRemove={(index) => setWindows((all) => all.filter((_, i) => i !== index))}
@@ -133,16 +127,14 @@ interface ShiftWindowsProps {
   shift: Shift;
   windows: WindowDraft[];
   disabled: boolean;
-  typed: Typed;
-  onTyped: (typed: Typed) => void;
   onAdd: (draft: WindowDraft) => void;
   onRemove: (index: number) => void;
   onEdit: (index: number, patch: Partial<WindowDraft>) => void;
 }
 
-/** One shift's windows (D4: "07:00–09:00 ×", then เริ่ม [07:00] – ถึง [09:00] + เพิ่มช่วงเวลา). Enter adds. */
-function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemove, onEdit }: ShiftWindowsProps) {
-  const { problem, label, mine, add, timeline, ticks } = useShiftWindows({ shift, windows, typed, onTyped, onAdd });
+/** Editable round rows; adding creates an empty draft that must be completed before saving. */
+function ShiftWindows({ shift, windows, disabled, onAdd, onRemove, onEdit }: ShiftWindowsProps) {
+  const { label, mine, timeline, ticks } = useShiftWindows({ shift, windows });
 
   return (
     <FieldGroup legend={<>{label} <span aria-hidden="true" className="text-sm font-normal text-text-2">{shift === 'Day' ? '07:00–19:00' : '19:00–07:00'}</span></>} disabled={disabled}>
@@ -155,38 +147,18 @@ function ShiftWindows({ shift, windows, disabled, typed, onTyped, onAdd, onRemov
       <div className="flex flex-col gap-3" aria-label={`ช่วงรอบ${label}`}>
         {mine.length === 0 && <p className="text-text-2">ยังไม่มีช่วงรอบ · จุดจะแสดงนอกเวลาในกะนี้</p>}
         {mine.map(({ window: w, index, duration }, n) => (
-          <div key={index} role="group" aria-label={`${label} รอบ ${n + 1}`} className="flex flex-wrap items-end gap-2">
-            <span className="inline-flex min-h-9 items-center text-xs text-text-2">รอบ {n + 1}<span className="sr-only">{`${w.start}–${w.end}`}</span></span>
-            <TimeField label={`เริ่มรอบ ${n + 1}`} displayLabel="เริ่ม" hint="07:00" value={w.start.replace(/:/g, '')} disabled={disabled} onChange={(start) => onEdit(index, { start: typedTime(start) })} onEnter={() => {}} />
+          <div key={index} role="group" aria-label={`${label} รอบ ${n + 1}`} className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex min-h-9 w-13 shrink-0 items-center text-xs text-text-2">รอบ {n + 1}<span className="sr-only">{`${w.start}–${w.end}`}</span></span>
+            <TimeField label={`เริ่มรอบ ${n + 1}`} displayLabel="" hint="07:00" value={w.start.replace(/:/g, '')} disabled={disabled} onChange={(start) => onEdit(index, { start: typedTime(start) })} onEnter={() => {}} />
             <TimeField label={`สิ้นสุดรอบ ${n + 1}`} displayLabel="ถึง" hint="09:00" value={w.end.replace(/:/g, '')} disabled={disabled} onChange={(end) => onEdit(index, { end: typedTime(end) })} onEnter={() => {}} />
-            <span className="inline-flex min-h-9 items-center text-xs text-text-2">{duration}</span>
-            <Button size="desk" disabled={disabled} aria-label={`ลบช่วง ${w.start}–${w.end}`} onClick={() => onRemove(index)}>ลบ</Button>
+            <span className="inline-flex min-h-9 items-center whitespace-nowrap text-xs text-text-2">{duration}</span>
+            <Button variant="link" size="desk" className="ml-auto" disabled={disabled} aria-label={`ลบรอบ ${n + 1} ${label}`} onClick={() => onRemove(index)}><Trash2 aria-hidden="true" className="size-4" />ลบ</Button>
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <TimeField
-          label="เริ่ม"
-          hint="07:00"
-          value={typed.start}
-          disabled={disabled}
-          onChange={(start) => onTyped({ ...typed, start })}
-          onEnter={add}
-        />
-        <span aria-hidden="true">–</span>
-        <TimeField
-          label="ถึง"
-          hint="09:00"
-          value={typed.end}
-          disabled={disabled}
-          onChange={(end) => onTyped({ ...typed, end })}
-          onEnter={add}
-        />
-        <Button size="desk" disabled={disabled} onClick={add}>
-          + เพิ่มช่วงเวลา
-        </Button>
-      </div>
-      {problem && <Note tone="error">{problem}</Note>}
+      <Button variant="add" size="desk" className="self-start" disabled={disabled} onClick={() => onAdd({ shift, start: '', end: '' })}>
+        <Plus aria-hidden="true" className="size-4" />เพิ่มรอบ
+      </Button>
     </FieldGroup>
   );
 }
@@ -212,7 +184,7 @@ interface TimeFieldProps {
 function TimeField({ label, displayLabel, hint, value, disabled, onChange, onEnter }: TimeFieldProps) {
   return (
     <div className="inline-flex items-center gap-1.5">
-      <span>{displayLabel ?? label}</span>
+      {displayLabel !== '' && <span>{displayLabel ?? label}</span>}
       {/* four digits and the colon; no token names that width */}
       <input
         className={`${inputClass('desk')} w-20 text-center`}

@@ -24,7 +24,7 @@ export function CreateAccountForm({ accounts, areas, buildings, onCancel }: Crea
   return (
     <form className={formClass} aria-labelledby="accounts-create-title" onSubmit={(event) => void submit(event)}>
       <DialogHeader id="accounts-create-title" title="สร้างบัญชี" onClose={onCancel} closeDisabled={isLoading} detail="สร้างทีละคน" />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-5 flex flex-col gap-5">
+      <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pb-5 flex flex-col gap-5">
         <fieldset disabled={isLoading} className="m-0 min-w-0 border-0 p-0">
           <legend className="mb-2 font-semibold">บทบาท</legend>
           <div className="grid grid-cols-3 gap-2">

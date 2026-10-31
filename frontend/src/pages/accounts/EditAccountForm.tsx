@@ -1,3 +1,7 @@
+import { useState } from 'react';
+import { useAppSelector } from '../../store/hooks';
+import { baseApi } from '../../shared/api/baseApi';
+import { PasswordForm, PhoneForm } from './SecretForms';
 import { buildingOptionText } from '../../shared/api/buildingNames';
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
@@ -16,12 +20,18 @@ import { useEditAccountForm } from './useEditAccountForm';
 
 /** D6's "แก้ไข": name and place; the role and the login name are fixed (plan 5 decision 2). Keyed by account id. */
 export function EditAccountForm({ account, accounts, areas, buildings, onDone, onCancel }: EditAccountFormProps) {
-  const { names, draft, set, problem, isLoading, areaChoices, blockOf, titleId, chooseArea, chooseBuilding, submit } = useEditAccountForm({ account, accounts, areas, buildings, onDone, onCancel });
+  const { names, draft, set, problem, isLoading: profileLoading, areaChoices, blockOf, titleId, chooseArea, chooseBuilding, submit } = useEditAccountForm({ account, accounts, areas, buildings, onDone, onCancel });
+
+  const [notice, setNotice] = useState<string | null>(null);
+  const me = useAppSelector((state) => state.auth.currentUser?.id);
+  const isLoading = useAppSelector((state) => Object.values(state[baseApi.reducerPath].mutations).some((m) => m?.status === 'pending' && ['updateAccount', 'changePhone', 'resetPassword'].includes(m.endpointName ?? '')));
+  const profileId = `${titleId}-profile`;
 
   return (
-    <form className={formClass} aria-labelledby={titleId} onSubmit={(event) => void submit(event)}>
+    <section className={formClass} aria-labelledby={titleId}>
       <DialogHeader id={titleId} title={`แก้ไขบัญชี · ${account.displayName}`} onClose={onCancel} closeDisabled={isLoading} />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-5 flex flex-col gap-5">
+      <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pb-5 flex flex-col gap-5">
+        <form aria-labelledby={titleId} id={profileId} className="flex flex-col gap-5" onSubmit={(event) => void submit(event)}>
         <p className="text-text-2">{`${accountRoleLabel[account.role]} · ${account.loginName} (บทบาทและรหัสแก้ไม่ได้)`}</p>
         <Field label="ชื่อที่แสดง">
           <TextInput
@@ -32,7 +42,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
             onChange={(event) => set({ displayName: event.target.value })}
           />
         </Field>
-        {account.role !== 'Admin' && <p className="rounded-md bg-bg p-3 text-text-3">เบอร์โทรเปิดดูไม่ได้ ใช้ปุ่มแก้เบอร์โทรเพื่อเปลี่ยนเบอร์</p>}
+
         {/* Reference assignment is 1fr + 160px at 420px and above; no container token fits these widths. */}
         <fieldset hidden={account.role === 'Admin'} className="min-w-0 rounded-lg border border-border p-4">
           <legend className="px-1.5 font-semibold">{account.role === 'Cleaner' ? 'ผูกกับพื้นที่' : 'ผูกกับตึกและกะ'}</legend>
@@ -83,15 +93,20 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
           </div>
         </fieldset>
         {problem && <Note tone="error">{problem}</Note>}
+        </form>
+        {notice && <Note tone="success" status>{notice}</Note>}
+        {account.role === 'Admin'
+          ? <PasswordForm embedded account={account} isSelf={account.id === me} onDone={setNotice} onCancel={onCancel} disabled={profileLoading} />
+          : <PhoneForm embedded account={account} onDone={setNotice} onCancel={onCancel} disabled={profileLoading} />}
       </div>
       <DialogFooter>
         <Button size="desk" disabled={isLoading} onClick={onCancel}>
           ยกเลิก
         </Button>
-        <Button type="submit" variant="primary" size="desk" disabled={isLoading}>
+        <Button form={profileId} type="submit" variant="primary" size="desk" disabled={isLoading}>
           {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
         </Button>
       </DialogFooter>
-    </form>
+    </section>
   );
 }

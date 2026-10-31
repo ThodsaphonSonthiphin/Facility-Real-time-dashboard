@@ -25,11 +25,15 @@ function serve(routes: FakeRoutes = {}) {
 
 /** Types one Round Window into a shift's two time fields (facility-0083); an empty string leaves that field empty. */
 async function typeWindow(user: UserEvent, shift: HTMLElement, from: string, to: string) {
+  await user.click(within(shift).getByRole('button', { name: 'เพิ่มรอบ' }));
+  const rows = within(shift).getAllByRole('group', { name: /รอบ/ });
+  const row = rows[rows.length - 1];
+  const n = rows.length;
   for (const [name, text] of [
-    ['เริ่ม', from],
-    ['ถึง', to],
+    [`เริ่มรอบ ${n}`, from],
+    [`สิ้นสุดรอบ ${n}`, to],
   ] as const) {
-    const box = within(shift).getByLabelText(name);
+    const box = within(row).getByLabelText(name);
     await user.clear(box);
     if (text !== '') {
       await user.type(box, text);
@@ -82,18 +86,18 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     expect(opener).toHaveFocus();
   });
 
-  it('refuses to save while times are typed but not added, and sends nothing', async () => {
+  it('refuses to save an incomplete added round and sends nothing', async () => {
     const server = serve();
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-01' }));
     const editor = screen.getByRole('region', { name: 'แก้ไขจุด · AR01-01' });
     const day = within(editor).getByRole('group', { name: 'กะเช้า' });
 
-    await typeWindow(user, day, '0800', '1000');
+    await typeWindow(user, day, '0800', '');
     await user.click(within(editor).getByRole('button', { name: 'บันทึกจุด' }));
 
     expect(await within(editor).findByRole('alert')).toHaveTextContent(
-      'มีเวลาที่พิมพ์ไว้แต่ยังไม่ได้เพิ่ม กด "+ เพิ่มช่วงเวลา" หรือลบเวลานั้นก่อนบันทึก',
+      'ใส่เวลารอบให้ครบเป็น HH:mm (ชั่วโมง 0–23 นาที 00–59)',
     );
     expect(server.calls.some((call) => call.path.startsWith('/api/admin') && call.method !== 'GET')).toBe(false);
   });
@@ -120,9 +124,8 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     expect(within(day).getByText('07:00–09:00')).toBeInTheDocument();
     expect(within(night).getByText('03:00–05:00')).toBeInTheDocument();
 
-    await user.click(within(day).getByRole('button', { name: 'ลบช่วง 16:00–18:00' }));
+    await user.click(within(day).getByRole('button', { name: 'ลบรอบ 2 กะเช้า' }));
     await typeWindow(user, night, '2300', '0100');
-    await user.click(within(night).getByRole('button', { name: '+ เพิ่มช่วงเวลา' }));
     expect(within(night).getByText('23:00–01:00')).toBeInTheDocument();
     await user.clear(within(editor).getByLabelText('ชื่อจุด'));
     await user.type(within(editor).getByLabelText('ชื่อจุด'), 'ห้องน้ำชาย ชั้น 1');
@@ -169,7 +172,7 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     await user.type(within(editor).getByLabelText('ชื่อจุด'), 'โถงทางเดิน');
     const day = within(editor).getByRole('group', { name: 'กะเช้า' });
     await typeWindow(user, day, '0800', '1000');
-    await user.keyboard('{Enter}'); // Enter in a field adds the window
+    await user.keyboard('{Enter}'); // Enter edits a round without submitting the point
     await user.click(within(editor).getByRole('button', { name: 'บันทึกจุด' }));
 
     expect(await screen.findByText('บันทึกจุด โถงทางเดิน แล้ว')).toBeInTheDocument();
@@ -182,33 +185,19 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     expect(await screen.findByRole('row', { name: /AR02-01/ })).toBeInTheDocument();
   });
 
-  it('one time field each: the colon is added, Backspace takes a digit, Enter adds, a bad time is refused (facility-0083)', async () => {
-    serve();
+  it('keeps numeric editing and Backspace, and Enter does not submit an incomplete round', async () => {
+    const server = serve();
     const { user } = await renderApp('/admin/areas/1');
     await user.click(await screen.findByRole('button', { name: 'แก้ไข AR01-01' }));
     const day = screen.getByRole('group', { name: 'กะเช้า' });
-
-    await user.type(within(day).getByLabelText('เริ่ม'), '1030');
-    expect(within(day).getByLabelText('เริ่ม')).toHaveValue('10:30');
-    await user.type(within(day).getByLabelText('ถึง'), '1200');
-    await user.keyboard('{Enter}'); // Enter in a field adds the window
-    expect(within(day).getByText('10:30–12:00')).toBeInTheDocument();
-    // added, so both fields empty again
-    expect(within(day).getByLabelText('เริ่ม')).toHaveValue('');
-    expect(within(day).getByLabelText('ถึง')).toHaveValue('');
-
-    // Backspace takes the last digit typed, never the colon the field added
-    await user.type(within(day).getByLabelText('เริ่ม'), '0900');
-    await user.type(within(day).getByLabelText('เริ่ม'), '{Backspace}');
-    expect(within(day).getByLabelText('เริ่ม')).toHaveValue('09:0');
-
-    await typeWindow(user, day, '2400', '2500');
-    await user.click(within(day).getByRole('button', { name: '+ เพิ่มช่วงเวลา' }));
-    expect(within(day).getByRole('alert')).toHaveTextContent('ใส่เวลาเป็น 07:00 (ชั่วโมง 0–23 นาที 00–59)');
-
-    await typeWindow(user, day, '0700', '0900'); // 07:00–09:00 is already there
-    await user.click(within(day).getByRole('button', { name: '+ เพิ่มช่วงเวลา' }));
-    expect(within(day).getByRole('alert')).toHaveTextContent('มีช่วงนี้แล้ว');
+    await typeWindow(user, day, '1030', '');
+    const start = within(day).getByLabelText('เริ่มรอบ 3');
+    expect(start).toHaveValue('10:30');
+    await user.type(start, '{Backspace}{Enter}');
+    expect(start).toHaveValue('10:3');
+    expect(server.calls.some((call) => call.method === 'PUT')).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'บันทึกจุด' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('ใส่เวลารอบให้ครบ');
   });
 
   it('shows the server’s refusal and keeps the draft', async () => {
@@ -221,7 +210,6 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     const editor = screen.getByRole('region', { name: 'แก้ไขจุด · AR01-01' });
     const day = within(editor).getByRole('group', { name: 'กะเช้า' });
     await typeWindow(user, day, '1800', '2000');
-    await user.click(within(day).getByRole('button', { name: '+ เพิ่มช่วงเวลา' }));
     await user.click(within(editor).getByRole('button', { name: 'บันทึกจุด' }));
 
     expect(await within(editor).findByRole('alert')).toHaveTextContent('ช่วง 18:00–20:00 ต้องอยู่ในกะเช้า');

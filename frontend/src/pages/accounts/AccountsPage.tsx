@@ -12,7 +12,6 @@ import { AccountTable } from './AccountTable';
 import { CreateAccountForm } from './CreateAccountForm';
 import { DeactivateConfirm } from './DeactivateConfirm';
 import { EditAccountForm } from './EditAccountForm';
-import { PasswordForm, PhoneForm } from './SecretForms';
 import { useAccountsPage } from './useAccountsPage';
 
 /** Counted role views of the same account list; forms retain the full data and existing business rules. */
@@ -128,16 +127,6 @@ export function AccountsPage() {
             onDone={done}
             onCancel={closePanel}
           />
-        </Drawer>
-      )}
-      {target && panel?.kind === 'phone' && (
-        <Drawer width="lg" labelledBy={`accounts-phone-${target.id}`} onClose={closePanel}>
-          <PhoneForm key={target.id} account={target} onDone={done} onCancel={closePanel} />
-        </Drawer>
-      )}
-      {target && panel?.kind === 'password' && (
-        <Drawer width="lg" labelledBy={`accounts-password-${target.id}`} onClose={closePanel}>
-          <PasswordForm key={target.id} account={target} isSelf={target.id === me} onDone={done} onCancel={closePanel} />
         </Drawer>
       )}
       {target && panel?.kind === 'deactivate' && (

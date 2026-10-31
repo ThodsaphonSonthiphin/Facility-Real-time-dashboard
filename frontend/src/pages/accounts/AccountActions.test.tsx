@@ -31,16 +31,16 @@ const sent = (server: ReturnType<typeof serve>, method: string, path: string) =>
 
 describe('account actions (D6, facility-0020, 0054)', () => {
   it.each([
-    { kind: 'phone', role: 'Cleaner', action: 'แก้เบอร์โทร แม่บ้านทดสอบ', title: 'แก้เบอร์โทร · แม่บ้านทดสอบ', path: 'PUT /api/admin/accounts/21/phone', field: 'เบอร์โทรที่คนนี้ใช้ตอนนี้', value: '0810000009', save: 'บันทึกเบอร์ใหม่' },
-    { kind: 'password', role: 'Admin', action: 'รีเซ็ตรหัสผ่าน ผู้ดูแลคนที่สอง', title: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลคนที่สอง', path: 'PUT /api/admin/accounts/8/password', field: 'รหัสผ่านชั่วคราวใหม่', value: ['a long', 'temporary phrase'].join(' '), save: 'บันทึกรหัสผ่านใหม่' },
-  ] as const)('keeps $kind open on Escape/cancel during sending, then allows retry and close after error', async ({ role, action, title, path, field, value, save }) => {
+    { kind: 'phone', role: 'Cleaner', action: 'แก้ไข แม่บ้านทดสอบ', title: 'แก้เบอร์โทร · แม่บ้านทดสอบ', path: 'PUT /api/admin/accounts/21/phone', field: 'เบอร์โทรที่คนนี้ใช้ตอนนี้', value: '0810000009', save: 'บันทึกเบอร์ใหม่' },
+    { kind: 'password', role: 'Admin', action: 'แก้ไข ผู้ดูแลคนที่สอง', title: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลคนที่สอง', path: 'PUT /api/admin/accounts/8/password', field: 'รหัสผ่านชั่วคราวใหม่', value: ['a long', 'temporary phrase'].join(' '), save: 'บันทึกรหัสผ่านใหม่' },
+  ] as const)('keeps $kind open on Escape/cancel during sending, then allows retry and close after error', async ({ role, action, path, field, value, save }) => {
     let answer: () => void = () => {};
     serve({ [path]: () => new Promise((resolve) => { answer = () => resolve({ status: 409, body: { message: 'ลองใหม่อีกครั้ง' } }); }) });
     const { user } = await openAndPress(action, role);
-    const dialog = screen.getByRole('dialog', { name: title });
+    const dialog = screen.getByRole('dialog');
     await user.type(within(dialog).getByLabelText(field), value);
     await user.click(within(dialog).getByRole('button', { name: save }));
-    expect(within(dialog).getByRole('button', { name: 'กำลังบันทึก...' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: /^กำลังบันทึก(เบอร์|รหัสผ่าน)/ })).toBeDisabled();
     fireEvent.keyDown(dialog, { key: 'Escape' });
     fireEvent(dialog, new Event('cancel', { bubbles: false, cancelable: true }));
     expect(dialog).toBeInTheDocument();
@@ -55,7 +55,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
 
   it('links an invalid replacement phone to its field without sending it', async () => {
     const server = serve();
-    const { user } = await openAndPress('แก้เบอร์โทร แม่บ้านทดสอบ', 'Cleaner');
+    const { user } = await openAndPress('แก้ไข แม่บ้านทดสอบ', 'Cleaner');
     const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · แม่บ้านทดสอบ' });
     await user.click(within(form).getByRole('button', { name: 'บันทึกเบอร์ใหม่' }));
     expect(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้')).toHaveAttribute('aria-invalid', 'true');
@@ -65,8 +65,8 @@ describe('account actions (D6, facility-0020, 0054)', () => {
   it.each([
     { role: 'Cleaner', action: 'สร้างบัญชี', title: 'สร้างบัญชี' },
     { role: 'Cleaner', action: 'แก้ไข แม่บ้านทดสอบ', title: 'แก้ไขบัญชี · แม่บ้านทดสอบ' },
-    { role: 'Cleaner', action: 'แก้เบอร์โทร แม่บ้านทดสอบ', title: 'แก้เบอร์โทร · แม่บ้านทดสอบ' },
-    { role: 'Admin', action: 'รีเซ็ตรหัสผ่าน ผู้ดูแลคนที่สอง', title: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลคนที่สอง' },
+    { role: 'Cleaner', action: 'แก้ไข แม่บ้านทดสอบ', title: 'แก้ไขบัญชี · แม่บ้านทดสอบ' },
+    { role: 'Admin', action: 'แก้ไข ผู้ดูแลคนที่สอง', title: 'แก้ไขบัญชี · ผู้ดูแลคนที่สอง' },
   ] as const)('focuses the heading of $title and returns focus to the opener on close', async ({ action, title, role }) => {
     const server = serve();
     const { user } = await renderApp('/admin/accounts');
@@ -93,7 +93,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     });
     const { user } = await openAndPress('แก้ไข แม่บ้านว่าง', 'Cleaner');
 
-    const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านว่าง' });
+    const form = screen.getByRole('region', { name: 'แก้ไขบัญชี · แม่บ้านว่าง' });
     expect(within(form).getByText('แม่บ้าน · 650003 (บทบาทและรหัสแก้ไม่ได้)')).toBeInTheDocument();
     await user.clear(within(form).getByLabelText('ชื่อที่แสดง'));
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านว่าง ใหม่');
@@ -116,7 +116,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     const server = serve({ 'PUT /api/admin/accounts/21': () => ({ status: 200, body: account() }) });
     const { user } = await openAndPress('แก้ไข แม่บ้านทดสอบ', 'Cleaner');
 
-    const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านทดสอบ' });
+    const form = screen.getByRole('region', { name: 'แก้ไขบัญชี · แม่บ้านทดสอบ' });
     expect(within(form).getByLabelText('พื้นที่ประจำ')).toHaveValue('1');
     // facility-0091: the Area options carry the building's current name once the names arrive
     expect(
@@ -137,7 +137,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     });
     const { user } = await openAndPress('แก้ไข หัวหน้าทดสอบ', 'Supervisor');
 
-    const supervisor = screen.getByRole('form', { name: 'แก้ไขบัญชี · หัวหน้าทดสอบ' });
+    const supervisor = screen.getByRole('region', { name: 'แก้ไขบัญชี · หัวหน้าทดสอบ' });
     expect(within(supervisor).getByLabelText('ตึกที่ประจำ')).toHaveValue('1');
     await user.click(within(supervisor).getByRole('button', { name: 'บันทึก' }));
     expect(await screen.findByText('บันทึกบัญชี หัวหน้าทดสอบ แล้ว')).toBeInTheDocument();
@@ -145,7 +145,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
 
     await user.click(screen.getByRole('tab', { name: 'แอดมิน 2' }));
     await user.click(screen.getByRole('button', { name: 'แก้ไข ผู้ดูแลคนที่สอง' }));
-    const admin = screen.getByRole('form', { name: 'แก้ไขบัญชี · ผู้ดูแลคนที่สอง' });
+    const admin = screen.getByRole('region', { name: 'แก้ไขบัญชี · ผู้ดูแลคนที่สอง' });
     expect(within(admin).queryByRole('group', { name: 'กะ' })).not.toBeInTheDocument();
     await user.click(within(admin).getByRole('button', { name: 'บันทึก' }));
     expect(await screen.findByText('บันทึกบัญชี ผู้ดูแลคนที่สอง แล้ว')).toBeInTheDocument();
@@ -156,22 +156,20 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     serve();
     await openAndPress('แก้ไข แม่บ้านที่ลาออก', 'Cleaner');
 
-    const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านที่ลาออก' });
+    const form = screen.getByRole('region', { name: 'แก้ไขบัญชี · แม่บ้านที่ลาออก' });
     expect(within(form).getByLabelText('พื้นที่ประจำ')).toBeDisabled();
     expect(within(form).getByText('เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่')).toBeInTheDocument();
   });
 
   it('changes a phone: checked first, sent once, and never kept on the page (facility-0054)', async () => {
     const server = serve({ 'PUT /api/admin/accounts/21/phone': () => ({ status: 204 }) });
-    const { user } = await openAndPress('แก้เบอร์โทร แม่บ้านทดสอบ', 'Cleaner');
+    const { user } = await openAndPress('แก้ไข แม่บ้านทดสอบ', 'Cleaner');
     expect(screen.queryByRole('button', { name: 'แก้เบอร์โทร ผู้ดูแลคนที่สอง' })).not.toBeInTheDocument();
 
+    const profileName = screen.getByLabelText('ชื่อที่แสดง');
+    await user.clear(profileName);
+    await user.type(profileName, 'Unsaved profile');
     const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · แม่บ้านทดสอบ' });
-    // facility-0081: who is being edited, and that the old number is not needed (it is stored as a hash)
-    expect(within(form).getByText('650001')).toBeInTheDocument();
-    expect(within(form).getByText('AR01 · กะเช้า')).toBeInTheDocument();
-    expect(within(form).getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
-    expect(within(form).getByText('แม่บ้าน')).toBeInTheDocument();
     expect(within(form).getByText(/^ไม่ต้องรู้เบอร์เดิม ใส่เบอร์ที่คนนี้ใช้ตอนนี้แล้วกดบันทึก/)).toBeInTheDocument();
     await user.type(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้'), '123');
     await user.click(within(form).getByRole('button', { name: 'บันทึกเบอร์ใหม่' }));
@@ -186,16 +184,19 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     ).toBeInTheDocument();
     const puts = server.calls.filter((call) => call.method === 'PUT' && call.path === '/api/admin/accounts/21/phone');
     expect(puts).toHaveLength(1);
+    expect(profileName).toHaveValue('Unsaved profile');
+    expect(server.calls.filter((call) => call.method === 'PUT' && call.path === '/api/admin/accounts/21')).toHaveLength(0);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(puts[0].body).toEqual({ phone: '0810000099' });
     expect(screen.queryByDisplayValue('0810000099')).not.toBeInTheDocument();
   });
 
   it('the phone form of a Supervisor names the building with its current name (facility-0091)', async () => {
     serve();
-    await openAndPress('แก้เบอร์โทร หัวหน้าทดสอบ', 'Supervisor');
+    await openAndPress('แก้ไข หัวหน้าทดสอบ', 'Supervisor');
 
-    const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · หัวหน้าทดสอบ' });
-    expect(await within(form).findByText('ตึก A · ตึกทดลอง · กะเช้า')).toBeInTheDocument();
+    const form = screen.getByRole('region', { name: 'แก้ไขบัญชี · หัวหน้าทดสอบ' });
+    expect(await within(form).findByRole('option', { name: 'A · ตึกทดลอง' })).toBeInTheDocument();
   });
 
   it('resets an Admin’s password, and says when it was the Admin’s own', async () => {
@@ -203,7 +204,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
       'PUT /api/admin/accounts/8/password': () => ({ status: 204 }),
       'PUT /api/admin/accounts/7/password': () => ({ status: 204 }),
     });
-    const { user } = await openAndPress('รีเซ็ตรหัสผ่าน ผู้ดูแลคนที่สอง', 'Admin');
+    const { user } = await openAndPress('แก้ไข ผู้ดูแลคนที่สอง', 'Admin');
     expect(screen.queryByRole('button', { name: 'รีเซ็ตรหัสผ่าน แม่บ้านทดสอบ' })).not.toBeInTheDocument();
 
     const form = screen.getByRole('form', { name: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลคนที่สอง' });
@@ -216,7 +217,8 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     ).toBeInTheDocument();
     expect(sent(server, 'PUT', '/api/admin/accounts/8/password')).toEqual({ password: 'temporary-pass-456' });
 
-    await user.click(screen.getByRole('button', { name: 'รีเซ็ตรหัสผ่าน ผู้ดูแลทดสอบ' }));
+    await user.click(screen.getByRole('button', { name: 'ปิด' }));
+    await user.click(screen.getByRole('button', { name: 'แก้ไข ผู้ดูแลทดสอบ' }));
     const own = screen.getByRole('form', { name: 'รีเซ็ตรหัสผ่าน · ผู้ดูแลทดสอบ' });
     await user.type(within(own).getByLabelText('รหัสผ่านชั่วคราวใหม่'), 'temporary-pass-789');
     await user.click(within(own).getByRole('button', { name: 'บันทึกรหัสผ่านใหม่' }));
@@ -286,7 +288,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     });
     const { user } = await openAndPress('แก้ไข แม่บ้านว่าง', 'Cleaner');
 
-    const form = screen.getByRole('form', { name: 'แก้ไขบัญชี · แม่บ้านว่าง' });
+    const form = screen.getByRole('region', { name: 'แก้ไขบัญชี · แม่บ้านว่าง' });
     await user.click(within(form).getByRole('button', { name: 'บันทึก' }));
 
     const saving = within(form).getByRole('button', { name: 'กำลังบันทึก...' });

@@ -1,4 +1,4 @@
-import { Check, KeyRound, Minus, Pencil, Phone, Power } from 'lucide-react';
+import { Check, Minus, Pencil, Power } from 'lucide-react';
 import { useBuildingNames } from '../../shared/api/buildingNames';
 import { Table } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
@@ -56,27 +56,6 @@ export function AccountTable({ accounts, role, me, busy, onAction }: AccountTabl
                   <Pencil aria-hidden="true" className="size-4" />
                   แก้
                 </Button>
-                {account.role === 'Admin' ? (
-                  <Button
-                    variant="link"
-                    size="desk"
-                    aria-label={`รีเซ็ตรหัสผ่าน ${account.displayName}`}
-                    onClick={() => onAction('password', account)}
-                  >
-                    <KeyRound aria-hidden="true" className="size-4" />
-                    รีเซ็ต
-                  </Button>
-                ) : (
-                  <Button
-                    variant="link"
-                    size="desk"
-                    aria-label={`แก้เบอร์โทร ${account.displayName}`}
-                    onClick={() => onAction('phone', account)}
-                  >
-                    <Phone aria-hidden="true" className="size-4" />
-                    เบอร์โทร
-                  </Button>
-                )}
                 {account.isActive ? (
                   account.id !== me && (
                     <Button
