@@ -6,6 +6,8 @@
 
 ## Decision
 
+Amended by facility-0101 (2026-10-31): the owner explicitly requested aligning the nested forms and confirmation windows as well as the routes covered here.
+
 Align `/admin/inspection-summary`, `/admin/export`, `/admin/areas`, `/admin/buildings`, `/admin/print`, `/admin/accounts` and `/admin/history` with the approved design's structure, controls, typography, spacing and states, rather than changing only their headings.
 
 1. Areas follows the design: one detail view instead of the points/check-in tabs, and a searchable list with a building filter. Keep all sign-management actions available through the area and point Drawers, and preserve existing deep links.

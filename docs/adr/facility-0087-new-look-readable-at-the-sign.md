@@ -1,5 +1,7 @@
 # หน้าตาใหม่: อ่านง่ายและกดง่ายที่หน้างาน สีหลักน้ำเงิน
 
+> **Amendment 2026-10-31:** facility-0101 follows the owner's approved confirmation-window design: stopping use or invalidating a sign has a solid red confirmation button inside the contextual popup. This supersedes the 2026-10-22 outline-only rule in that context; outline danger remains available elsewhere.
+
 ```mermaid
 flowchart TD
     Q{"ย้ายไป Tailwind แล้ว<br/>หน้าตาใหม่แก้ปัญหาอะไรก่อน"} -->|chosen| A["อ่านง่าย กดง่ายหน้างาน<br/>ตัวใหญ่ขึ้น contrast สูง ปุ่มใหญ่<br/>สีมีความหมายเดียว สถานะเห็นทันที"]
