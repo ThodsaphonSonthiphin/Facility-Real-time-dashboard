@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test';
 declare global {
   interface Window {
     e2eLayoutShift: number;
+    e2eLayoutEntries: { value: number; at: number; sources: { node: string; previous: unknown; current: unknown }[] }[];
     e2eTextShown: boolean;
   }
 }
@@ -12,10 +13,15 @@ declare global {
 export async function recordLayoutShifts(page: Page): Promise<void> {
   await page.addInitScript(() => {
     window.e2eLayoutShift = 0;
+    window.e2eLayoutEntries = [];
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) {
+      for (const entry of list.getEntries() as unknown as { value: number; hadRecentInput: boolean; startTime: number;
+        sources?: { node: Element; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[] }[]) {
         if (!entry.hadRecentInput) {
           window.e2eLayoutShift += entry.value;
+          window.e2eLayoutEntries.push({ value: entry.value, at: entry.startTime,
+            sources: (entry.sources ?? []).map((source) => ({ node: `${source.node?.tagName}: ${source.node?.textContent?.slice(0, 160)}`,
+              previous: source.previousRect.toJSON(), current: source.currentRect.toJSON() })) });
         }
       }
     }).observe({ type: 'layout-shift', buffered: true });

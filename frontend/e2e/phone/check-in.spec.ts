@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/test.ts';
 import { loginAsEmployee } from '../support/login.ts';
 import { sidewaysOverflow } from '../support/pageWatch.ts';
 import { checkInToken, cleanerOnShift } from '../support/seed.ts';

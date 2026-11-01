@@ -72,12 +72,17 @@ export function AdminNav() {
                 >
                   <link.Icon aria-hidden="true" className="size-5 shrink-0" />
                   <span className="flex-1">{link.label}</span>
-                  {link.counted && open > 0 && (
-                    <span
-                      aria-hidden="true"
-                      className="inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-sm bg-rework px-1.5 text-xs font-bold text-on-accent tabular-nums"
-                    >
-                      {open}
+                  {/* Keep the same badge slot while loading, empty and populated, so the menu never rewraps. */}
+                  {link.counted && (
+                    <span aria-hidden="true" className="inline-flex w-12 shrink-0 justify-end">
+                      {open > 0 && (
+                        <span
+                          title={String(open)}
+                          className="inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-sm bg-rework px-1.5 text-xs font-bold text-on-accent tabular-nums"
+                        >
+                          {open > 999 ? '999+' : open}
+                        </span>
+                      )}
                     </span>
                   )}
                 </NavLink>

@@ -1,9 +1,40 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/test.ts';
 import { loginAsAdmin } from '../support/login.ts';
 import { expectAreaShown } from '../support/dashboard.ts';
-import { holdBack, layoutShiftTotal, recordLayoutShifts, textEverShown, watchForText } from '../support/pageWatch.ts';
+import { holdBack, layoutShiftTotal, recordLayoutShifts, sidewaysOverflow, textEverShown, watchForText } from '../support/pageWatch.ts';
 
 const badge = 'กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)';
+
+test('Admin navigation keeps its geometry while alert counts load at phone, narrow and desktop widths', async ({ page }, testInfo) => {
+  await loginAsAdmin(page);
+  for (const width of [375, 700, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    await page.route('**/api/admin/alerts', async (route) => { await gate; await route.fallback(); });
+    try {
+      await page.goto('/dashboard');
+      await expectAreaShown(page);
+      const nav = page.getByRole('navigation', { name: 'เมนูแอดมิน' });
+      const alertLink = nav.getByRole('link', { name: 'รายการที่ขึ้นเตือน', exact: true });
+      await expect(alertLink).toBeVisible();
+      const before = { nav: await nav.boundingBox(), link: await alertLink.boundingBox() };
+      const response = page.waitForResponse('**/api/admin/alerts');
+      release();
+      const alerts = await (await response).json() as { reviewed: boolean }[];
+      const count = alerts.filter((alert) => !alert.reviewed).length;
+      const loaded = nav.getByRole('link', { name: count ? `รายการที่ขึ้นเตือน (${count})` : 'รายการที่ขึ้นเตือน', exact: true });
+      await expect(loaded).toBeVisible();
+      if (count) await expect(loaded.getByTitle(String(count))).toHaveText(count > 999 ? '999+' : String(count));
+      expect({ nav: await nav.boundingBox(), link: await loaded.boundingBox() }).toEqual(before);
+      expect(await sidewaysOverflow(page)).toBe(0);
+      await testInfo.attach(`navigation-${width}px`, { body: await page.screenshot(), contentType: 'image/png' });
+    } finally {
+      release();
+      await page.unroute('**/api/admin/alerts');
+    }
+  }
+});
 
 test('an Admin lands on D1 and sees AR01', async ({ page }) => {
   await loginAsAdmin(page);
@@ -17,7 +48,7 @@ test.describe('on a narrow window (half a laptop screen)', () => {
 
   // Measured 0.04 in Lighthouse mobile before bdfd581, about 0.017 at 700px here (measured on this Mac; depends on the
   // system font, so re-run the proof on any new machine)
-  test('D1 does not move when the building names arrive', async ({ page }) => {
+  test('D1 does not move when the building names arrive', async ({ page }, testInfo) => {
     await loginAsAdmin(page);
 
     await recordLayoutShifts(page);
@@ -27,7 +58,9 @@ test.describe('on a narrow window (half a laptop screen)', () => {
     // The shift happens when the names land, so wait for a building beyond "ทุกตึก" before measuring
     await expect(page.getByLabel('ตึก').getByRole('option')).not.toHaveCount(1);
 
-    expect(await layoutShiftTotal(page)).toBeLessThan(0.01);
+    const total = await layoutShiftTotal(page);
+    await testInfo.attach('layout-shifts', { body: JSON.stringify({ total, entries: await page.evaluate(() => window.e2eLayoutEntries) }, null, 2), contentType: 'application/json' });
+    expect(total).toBeLessThan(0.01);
   });
 });
 
