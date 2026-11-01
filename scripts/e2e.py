@@ -61,9 +61,10 @@ def clean_run(run_dir):
     # Both the private manifest and database marker must agree before any DROP.
     if sql(f"SELECT token FROM `{database}`.__e2e_owner") != state['token']:
         raise ValueError('Database ownership marker does not match; refusing cleanup')
-    sql(f"DROP DATABASE `{database}`;")
+    # Preserve the marker until user deletion succeeds, so either DROP can be retried.
     if state.get('userCreated'):
         sql(f"DROP USER IF EXISTS '{user}'@'localhost';")
+    sql(f"DROP DATABASE `{database}`;")
     state['cleaned'] = True
     manifest_path.write_text(json.dumps(state, indent=2) + '\n')
     print(f'Cleaned owned synthetic database {database}; evidence retained at {run_dir}', flush=True)

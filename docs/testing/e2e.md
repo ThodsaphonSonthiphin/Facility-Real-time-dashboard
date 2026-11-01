@@ -33,6 +33,8 @@ Every run creates `facility_e2e_<UTC timestamp>_<random suffix>` with CREATE, wi
 
 An interrupted run normally cleans up on Ctrl+C/SIGTERM. SIGKILL/reboot cannot run cleanup. Once any surviving run process has stopped, explicitly clean the exact owned directory:
 
+Cleanup validates the marker, removes the successfully created user first, then removes the database. If either DROP fails before database deletion, the marker remains available for retry; boundary tests cover both failures.
+
 ```bash
 npm --prefix frontend run e2e:clean -- /absolute/path/to/repo/.run/e2e/20261031155209_5743fe0c
 ```

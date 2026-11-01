@@ -74,8 +74,8 @@ class CleanupSafetyTests(unittest.TestCase):
     def test_success_only_drops_matching_database_and_user_once(self, sql):
         sql.side_effect = ['a' * 48, '', '']
         e2e.clean_run(self.directory)
-        self.assertEqual(sql.call_args_list[1].args[0], "DROP DATABASE `facility_e2e_20261031120000_0123abcd`;")
-        self.assertEqual(sql.call_args_list[2].args[0], "DROP USER IF EXISTS 'e2e_0123abcd'@'localhost';")
+        self.assertEqual(sql.call_args_list[1].args[0], "DROP USER IF EXISTS 'e2e_0123abcd'@'localhost';")
+        self.assertEqual(sql.call_args_list[2].args[0], "DROP DATABASE `facility_e2e_20261031120000_0123abcd`;")
         self.assertTrue(json.loads(self.manifest.read_text())['cleaned'])
         e2e.clean_run(self.directory)
         self.assertEqual(sql.call_count, 3)
@@ -88,6 +88,37 @@ class CleanupSafetyTests(unittest.TestCase):
         e2e.clean_run(self.directory)
         self.assertEqual(sql.call_count, 2)
         self.assertNotIn('DROP USER', sql.call_args.args[0])
+
+    def retry_after_drop_failure(self, target):
+        database_exists, failed = True, False
+
+        def server(statement):
+            nonlocal database_exists, failed
+            if statement.startswith('SELECT'):
+                if not database_exists:
+                    raise RuntimeError('Ownership marker was destroyed')
+                return self.state['token']
+            if statement.startswith(target) and not failed:
+                failed = True
+                raise RuntimeError('Injected DROP failure')
+            if statement.startswith('DROP DATABASE'):
+                database_exists = False
+            return ''
+
+        with patch.object(e2e, 'sql', side_effect=server):
+            with self.assertRaisesRegex(RuntimeError, 'Injected DROP failure'):
+                e2e.clean_run(self.directory)
+            self.assertTrue(database_exists, 'Keep ownership proof available for retry')
+            self.assertFalse(json.loads(self.manifest.read_text())['cleaned'])
+            e2e.clean_run(self.directory)
+            self.assertFalse(database_exists)
+            self.assertTrue(json.loads(self.manifest.read_text())['cleaned'])
+
+    def test_retry_after_user_drop_failure(self):
+        self.retry_after_drop_failure('DROP USER')
+
+    def test_retry_after_database_drop_failure(self):
+        self.retry_after_drop_failure('DROP DATABASE')
 
 
 if __name__ == '__main__':
