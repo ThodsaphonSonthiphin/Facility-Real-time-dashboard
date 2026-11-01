@@ -16,11 +16,13 @@ export function ExportPage() {
         <h1 className="text-2xl font-bold">ส่งออก Excel</h1>
         <span className="text-text-2">เลือกชุดข้อมูล ช่วงวัน และตึก แล้วดาวน์โหลดเป็นไฟล์ .xlsx</span>
       </header>
+      {/* The approved summary column is 280px; no theme width token matches this page-specific layout. */}
       <div className="grid min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
           <section className={sectionClass} aria-labelledby="export-sets">
             <h2 id="export-sets" className={titleClass}>1. ชุดข้อมูล</h2>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {/* No spacing token matches 15px/11px: offset the extra checked border pixel to keep card geometry stable. */}
               {exportSets.map((set) => (
                 <label
                   key={set}
