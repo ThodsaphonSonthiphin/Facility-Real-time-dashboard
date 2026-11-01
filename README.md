@@ -128,3 +128,7 @@ npm --prefix frontend test
 
 ### คู่มือสำหรับ server จริง
 - [docs/handover.md](docs/handover.md): คู่มือติดตั้งระบบบน server Linux (facility-0093) สร้างแอดมินคนแรกจากค่าใน server และกู้คืนด้วยคำสั่ง `reset-admin` (ADR facility-0092)
+
+### Visible end-to-end testing
+
+Run `npm --prefix frontend run e2e -- --dataset large` for real UI workflows in headed Chromium against an isolated synthetic MySQL database. See [the E2E guide](docs/testing/e2e.md) for prerequisites, dataset sizes, safety and reports.

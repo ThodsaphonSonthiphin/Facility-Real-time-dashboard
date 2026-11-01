@@ -103,6 +103,7 @@ All with line height 1.25.
 
 - **Admin, from 1024 px:** a white 240 px sidebar with a right border: the system name and "แอดมิน" on top, the menu in two groups, **ติดตามงาน** (สถานะจุด, การเข้างาน, รายการที่ขึ้นเตือน with its red count, สรุปการตรวจ, ส่งออก Excel) and **ตั้งค่า** (พื้นที่และป้าย, ตึก, พิมพ์ป้าย, บัญชีผู้ใช้, ประวัติการแก้ไข), 40 px items, the open one in accent-subtle with accent text (`aria-current="page"`), and at the bottom who is logged in and ออกจากระบบ (a button: it acts). The page beside it: at most 1216 px, centred, 24 px around it.
 - **Admin, narrower:** the sidebar sits above the page and its groups wrap as rows. A wide table scrolls in its own box, never the page.
+- **Alert count geometry (owner approved2026-11-01):** the alert menu link always reserves a48px count slot, including loading/zero. Positive counts retain the red badge; values above999 display `999+` within the slot, with the exact total in the link's accessible name and the badge's hover title. Loading or polling must not rewrap the menu.
 - **Phone:** one column, at most 480 px, 16 px sides: a white bar (who is logged in, ออกจากระบบ) clear of the notch (`env(safe-area-inset-top)`), then the page, which scrolls with the window and fills the rest of the screen (`min-h-svh`, not dvh: owner, 2026-10-27). `BottomBar` is the white bar for the page's one main action, held at the bottom and clear of the home bar (`env(safe-area-inset-bottom)`); the pages move into it in #123.
 
 ## Icons (facility-0088)

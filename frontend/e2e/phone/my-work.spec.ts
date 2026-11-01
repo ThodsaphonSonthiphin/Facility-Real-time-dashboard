@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/test.ts';
 import { loginAsEmployee } from '../support/login.ts';
 import { holdBack, layoutShiftTotal, recordLayoutShifts } from '../support/pageWatch.ts';
 import { cleanerOnShift } from '../support/seed.ts';

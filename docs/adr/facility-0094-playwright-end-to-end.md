@@ -1,5 +1,7 @@
 # เทส end-to-end ด้วย Playwright บนระบบจริงและฐานข้อมูลชั่วคราว
 
+**2026-10-31:** lifecycle, headed defaults and volume fixtures amended by [facility-0102](facility-0102-headed-e2e-datasets.md). Use [the current run guide](../testing/e2e.md); the fixed database/shared-wwwroot cleanup below is historical.
+
 ```mermaid
 flowchart TD
     Q{"เจ้าของต้องเช็กด้วยตาบนมือถือทุกครั้ง<br/>บั๊กหน้าตาและ live update หลุดจาก Vitest บน jsdom<br/>จะให้ AI เทสแทนได้อย่างไร"} -->|chosen| A["A: Playwright บน API จริง + MySQL ชั่วคราว<br/>สคริปต์เดียว build, รัน, ล้างเอง"]
