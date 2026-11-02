@@ -27,7 +27,7 @@ internal static class PointNotifications
         try
         {
             var dto = PointDtoMapper.ToDto(board);
-            await hub.Clients.Group(ScanHub.AdminGroup).SendAsync(eventName, dto);
+            await hub.Clients.Users(await ActiveAdmins.IdsAsync(db)).SendAsync(eventName, dto);
 
             var buildingId = board.Point.Area!.BuildingId;
             var slot = ShiftCalendar.SlotAt(nowUtc);
