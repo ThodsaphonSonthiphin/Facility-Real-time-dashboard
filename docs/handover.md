@@ -144,7 +144,9 @@ facility.example.com {
 }
 ```
 
-แล้ว `sudo systemctl reload caddy` เปิด `https://facility.example.com` ต้องเห็นหน้าเข้าระบบ ต่อไปทำข้อ 3
+แล้ว `sudo systemctl reload caddy` เปิด `https://facility.example.com` ต้องเห็นหน้าเข้าระบบ
+
+เช็ก security header ที่ระบบส่งเอง (facility-0106) ด้วย `curl -sI https://facility.example.com/login/admin` ต้องเห็น `content-security-policy`, `x-frame-options: DENY`, `x-content-type-options: nosniff`, `referrer-policy: no-referrer`, `permissions-policy` และ `strict-transport-security: max-age=31536000` ต้อง curl ผ่านโดเมนจริง ถ้า curl ไปที่ `localhost:5001` จะไม่เห็น `strict-transport-security` เป็นเรื่องปกติ ถ้าผ่านโดเมนแล้วยังไม่มี แปลว่าระบบไม่รู้ว่าคำขอมาทาง https หรือระบบไม่ได้รันเป็น `Production` ต่อไปทำข้อ 3
 
 ### 2.7 สำรองฐานข้อมูลทุกวัน
 

@@ -21,7 +21,7 @@ Owner asked for an authorized security test of the app on this Mac only. Done on
     - Admin pushes go to the active Admins read from the database at send time; the `admins` group is dropped. No `CloseOnAuthenticationExpiration`.
     - `/api/me`, `/api/service-points` and `by-token` load the account through `CurrentUser.LoadAsync`. `/api/service-points` was found during the grill, not in the report.
   - This ADR describes the weakness, so it goes public in the same PR as the fix.
-- **F3 + F7:** worktree `../Facility-Real-time-dashboard-security-headers`, branch `fix/security-headers` from `fix/login-lock-per-ip`.
+- **F3 + F7:** worktree `../Facility-Real-time-dashboard-security-headers`, branch `fix/security-headers`, now at master `aa6d7e5`.
   - Files: new ADR **facility-0106** (security headers set by the app) and an amendment pointer in 0104 (also trust `X-Forwarded-Proto` from the loopback proxy).
   - Decisions:
     - Headers come from app middleware, not Caddy: a strict enforced CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, a Permissions-Policy that allows only geolocation, and no `Server` header.
@@ -37,7 +37,7 @@ Owner asked for an authorized security test of the app on this Mac only. Done on
   - On the owner's request, the accounts page now says deactivation drops every device at once (`DeactivateConfirm.tsx`, `AccountsPage.tsx`). The hint keeps "ภายใน 5 นาที" for a phone change or password reset, which still wait for the access token to expire.
   - The wireframe `docs/design/wireframe/Accounts.dc.html` still has the old wording; left as design history.
   - Results: backend 344 unit + 671 API tests pass (5 MySQL tests skipped, as before); frontend 537 tests and lint pass. Only check on GitHub: GitGuardian, passed.
-- **F2 built 2026-11-02** on `fix/login-lock-per-ip`, after merging master into it (no conflict). Committed, not pushed yet.
+- **F2 merged 2026-11-02** to master as PR #139 (`aa6d7e5`) on the owner's "push pr merge"; the branch is deleted. GitGuardian (the only check) passed.
   - Built test-first at four seams the owner agreed: `LoginThrottle` unit tests, `LoginPlace` unit tests (IPv4 counted by the full address, IPv6 by its /64, IPv4 written in IPv6 form counted as IPv4), `/api/auth/login` API tests, and security-log API tests.
   - The API tests set the peer address through a test-only startup filter (`TestPeerAddress`), and cover X-Forwarded-For from loopback against X-Forwarded-For from elsewhere.
   - `Program.cs`: `UseForwardedHeaders` (X-Forwarded-For only, one hop, the default loopback trust). The new setting is `LoginThrottle:MaxFailuresPerPlace` (20).
@@ -47,7 +47,23 @@ Owner asked for an authorized security test of the app on this Mac only. Done on
   - Overlong login names are still not counted or kept.
   - Code names now use "place" throughout (`LoginPlace`, `NameLocked`, `PlaceLocked`).
   - Results: backend 352 unit + 676 API tests pass (5 MySQL tests skipped, as before). No frontend change.
-- Next: owner's OK to push `fix/login-lock-per-ip` and open its PR. Then build F3 in the `fix/security-headers` worktree; merge master into it first, once F2 is merged.
+  - **Owner still owes, at deploy:** one `Login failed ... from <your IP>` line in the journal, to confirm Caddy sends X-Forwarded-For. If every line shows `127.0.0.1`, the forwarded address is not reaching the app.
+- **F3 + F7 built 2026-11-02** on `fix/security-headers` (worktree `../Facility-Real-time-dashboard-security-headers`). Committed, not pushed yet.
+  - `SecurityHeaders.cs` sends the CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy` and `Permissions-Policy` on every answer, plus `Cache-Control: no-store` under `/api`. In Development, Swagger gets no CSP.
+  - `Program.cs` trusts X-Forwarded-Proto from loopback, sends HSTS (1 year, outside Development, https only, never for localhost) and turns off Kestrel's `Server` header.
+  - The deploy guide (`docs/handover.md` §2.6) gets a `curl -sI` header check.
+  - Built test-first at four seams the owner agreed: headers API test, HSTS API test, Swagger path API test, and E2E small with the CSP build.
+  - E2E (headless, `.run/e2e/20261102140209_a5f2f288`): 25 passed, 1 skipped, 1 failed.
+    - The failure (attendance correction expects 07:00 while the night shift shows at 21:02 Bangkok) fails the same way on master without CSP (`.run/e2e/20261102140336_978bd033` in the main folder). It is a test that depends on the time of day, not a CSP problem. Not fixed; it is outside this task.
+    - None of the 27 traces has a CSP refusal, and the traces do record console messages (33 found).
+    - `curl -I` against the E2E's real Kestrel showed every header and no `Server` header.
+  - A two-axis review found one real issue, now fixed. The Swagger CSP exemption applied to every `/swagger` path in every mode, so in Production `/swagger/x` served the app without a CSP. It now applies only in Development, and a test checks that a `/swagger` path outside Development keeps the CSP.
+  - Known and accepted (written in the ADR):
+    - An unhandled-exception 500 carries none of these headers; it has no body.
+    - HSTS never shows when curling localhost.
+  - Not checked by hand: Swagger in Development (the exemption keeps it working by design).
+  - Results: backend 352 unit + 685 API tests pass (5 MySQL tests skipped, as before). No frontend source change.
+- Next: owner's OK to push `fix/security-headers` and open its PR. After the merge, remove the worktree. That finishes F1–F3; the report's F5 (dev-only npm advisories) and F6 (Info) are not scheduled.
 
 ## Business overview for the PM (2026-11-02 Bangkok, merged as PR #137, `2a9efad`, branch deleted)
 
