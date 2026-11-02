@@ -43,7 +43,8 @@ try
     }
 
     // facility-0103: the Server Log goes through Serilog behind ILogger<T>. Sinks and levels come from the "Serilog" settings;
-    // ReadFrom.Services adds any ILogEventSink registered in the container (the API tests' capture). The host owns this
+    // ReadFrom.Services adds any ILogEventSink registered in the container: only the API tests' capture. The app registers
+    // none; a real sink goes in the settings, and one that sends the log off the server needs a new ADR. The host owns this
     // logger, so the static one stays the bootstrap logger and test hosts never share one.
     builder.Services.AddSerilog(
         (services, configuration) => configuration.ReadFrom.Configuration(builder.Configuration).ReadFrom.Services(services),
@@ -178,10 +179,10 @@ try
 
     app.Run();
 }
-// WebApplicationFactory stops Program on purpose once the host is built (API tests); that is not a failure
+// `dotnet ef` stops Program on purpose once the host is built (design-time migrations); that is not a failure
 catch (Exception exception) when (exception is not HostAbortedException)
 {
-    Log.ForContext<Program>().Fatal(exception, "The server stopped on an error it could not recover from");
+    Log.ForContext<Program>().Fatal(exception, "Stopped on an error it could not recover from");
     throw;
 }
 finally

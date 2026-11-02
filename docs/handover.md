@@ -124,7 +124,7 @@ log ต้องไม่มีข้อผิดพลาด ถ้าขึ้
 
 ดูเฉพาะเหตุการณ์ด้านความปลอดภัย: `sudo journalctl --namespace=facility -u facility | grep FacilityRealtime.Security`
 
-ทุกบรรทัดขึ้นต้นด้วยระดับและหมวด เช่น `[WRN] FacilityRealtime.Security: Login failed: ...` ถ้าระบบเริ่มไม่ได้จะมีบรรทัด `[FTL] Program: The server stopped ...` ตามด้วยสาเหตุ ระบบเขียน log ผ่าน Serilog (facility-0103) ระดับ log ตั้งที่ `Serilog:MinimumLevel` ใน `appsettings.json` หรือตัวแปร `Serilog__MinimumLevel__Default` ในไฟล์ค่า ส่วน `Logging__LogLevel__*` ไม่มีผลแล้ว ห้ามเพิ่มที่ส่ง log ออกนอก server (เช่น Discord) โดยไม่มี ADR ใหม่
+ทุกบรรทัดขึ้นต้นด้วยระดับและหมวด เช่น `[WRN] FacilityRealtime.Security: Login failed: ...` ถ้าระบบเริ่มไม่ได้จะมีบรรทัด `[FTL] Program: Stopped on an error ...` ตามด้วยสาเหตุ ระบบเขียน log ผ่าน Serilog (facility-0103) ระดับ log ตั้งที่ `Serilog:MinimumLevel` ใน `appsettings.json` หรือตัวแปร `Serilog__MinimumLevel__Default` ในไฟล์ค่า ส่วน `Logging__LogLevel__*` ไม่มีผลแล้ว ห้ามเพิ่มที่ส่ง log ออกนอก server (เช่น Discord) โดยไม่มี ADR ใหม่
 
 - `Login failed: employee 1000001, wrong secret` ใส่เบอร์ผิด (`account turned off` คือบัญชีถูกปิดใช้งาน)
 - `Login failed: unknown account (employee login)` รหัสพนักงานที่พิมพ์ไม่มีในระบบ ระบบไม่เขียนสิ่งที่พิมพ์ เพราะอาจเป็นเบอร์โทรที่พิมพ์สลับช่อง

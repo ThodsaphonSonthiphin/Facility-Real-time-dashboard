@@ -35,7 +35,7 @@ public sealed class LogCapture : ILogEventSink
             logEvent.Properties.TryGetValue("SourceContext", out var context) && context is ScalarValue { Value: string category } ? category : "",
             logEvent.Level,
             Render(MessageOnly, logEvent) + (logEvent.Exception is null ? "" : $" {logEvent.Exception}"),
-            _consoleLine is null ? "" : Render(_consoleLine, logEvent)));
+            Render(_consoleLine ?? throw new InvalidOperationException("Call RenderingWith before the sink is used."), logEvent)));
 
     private static string Render(MessageTemplateTextFormatter formatter, LogEvent logEvent)
     {
