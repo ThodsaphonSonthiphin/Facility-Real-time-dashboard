@@ -4,6 +4,39 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
+## Project status as the owner sees it (2026-11-02 Bangkok)
+
+The owner counts the build as **done**. What is left: real use (deploy, then the pilot) and the Excel import, which is shelved for now. The owner said not to bother with the PDPA rules. That leaves facility-0055 ("data retention and PDPA before production") and `docs/business-overview.md` line 233 saying PDPA work comes before production. The ADR has not been amended; ask the owner before changing it.
+
+## Business overview for the PM (2026-11-02 Bangkok, not committed)
+
+Owner asked for one md file that explains to their PM how the system works and which business rules were built. Written in Thai (the reader is the PM) as `docs/business-overview.md`, from `CONTEXT.md`, the ADRs, the supervisor answers and the code (`AttendanceRules.cs`, `AlertKind`). No code changed. Not committed; the owner checks it first.
+
+## Question: import an Excel file into MySQL (2026-11-02 Bangkok, answered, nothing changed)
+
+Owner asked how to import an Excel file into MySQL. The file holds Buildings, Areas and Service Points and is **not on this Mac yet**, so nothing was measured. Advice given: do not import it straight into `buildings`/`areas`/`service_points` with DBeaver. The Admin endpoints write more than the row (`AdminAreaEndpoints.cs`: Check-In Sign + QR Token + Audit Log; `AdminPointEndpoints.cs`: Sign code + QR Token + Round Windows + Audit Log), so a raw table import gives points with no sign, no QR and no rounds. Options offered: enter through the Admin pages, build a bulk import (needs a new ADR; facility-0056 only covers accounts), or load into a separate staging table in a test database just to look at the data. Installed DBeaver is Community 26.2.2; its docs put Excel import in paid editions, so the staging path saves the sheet as CSV UTF-8 first. Owner asked for a recommendation: Claude recommended the Admin pages for the pilot (facility-0043: one Area), and building the bulk import only if all buildings must be in before the internship ends 2026-11-30 (deploy stays first). Not measured: how many rows the file has. Owner then chose the bulk import (option 2). Next: owner puts the .xlsx on the Mac **outside the repo** (repo is public) and gives the path; Claude reads it read-only, counts buildings/areas/points, maps the columns to the entities, then a new ADR before any code.
+
+**Measured 2026-11-02 (read-only, stdlib zip/XML, files in `~/Downloads`, not copied into the repo):**
+- `Book1.xlsx`, sheet "Master table": 6 Areas, all Building `B1` floor `L1`. Area ID column looks like `B1-L1-M-1`. Shift columns Day/Night: 1 Area day only, 5 day+night. Points are given only as **counts per room type** (e.g. Walkway x1, Toilet x1; 54 type columns plus an SQM column for each), 19 points in total (1+2+5+7+1+3), with no point names and no round times.
+- `ตารางทำความสะอาด.xlsx`, sheet "B2": Building 2, floors L1–L3, 26 room-type rows with a job description, rounds per day, round times and manpower. It is a different building from `Book1.xlsx`, so the two files do not overlap.
+- `รายชื่อแม่บ้าน.xlsx`: a staff list with name, gender, age and date of birth. It belongs to accounts (facility-0056), not to this import. Only the header row was read; no personal data goes into the repo.
+- **Clashes with current rules:**
+  - The Area code rule is `^[A-Z0-9]{2,20}$` (`SignCodes.AreaCodePattern`), so `B1-L1-M-1` is refused because of the hyphens.
+  - Round times are written like `07.00-10.00,11.00-12.00` and `24.00`. The API takes `HH:mm`, one start and one end per window.
+  - The schedule names room types differently from `Book1.xlsx` (`Toliet /Restroom` against `Toilet`).
+- **Owner answers (2026-11-02), not yet in an ADR:**
+  - The Area code must accept hyphens (`B1-L1-M-1`). **This conflicts with the 2026-10-26 note under "Pending work" that `-` stays forbidden because it separates sign codes.** Raise that conflict with the owner, and settle it in the ADR, before this answer is built. Area `Code` is `varchar(20)` and Sign `Code` is `varchar(30)`, so `B1-L1-M-1-IN` and `B1-L1-M-1-01` fit.
+  - In `Book1.xlsx`, the `1` under a room type means that room is one Service Point. `xx-SQM` is that point's size in square metres, and `TTL SQM` is the Area's total. There is no field for size in the system today.
+  - The owner did not follow the round-time question. It was explained again with an example and is still open.
+- **Shelved 2026-11-02 by the owner:** "leave the import feature for now". Do not pick it up or ask the three questions below unless the owner brings it back. Before that, it had been paused so the owner could run the project for their supervisor. No code, no ADR and no database change yet. To pick up, ask the three open questions:
+  1. Where do Building B1's round times come from? The schedule file is for Building 2. Either the owner has a B1 schedule, or B1 reuses Building 2's times by room type.
+  2. How should a round with a break be stored, e.g. `07.00-10.00,11.00-12.00`? (A) one window `07:00–12:00` (Claude recommends this), or (B) two windows.
+  3. Should the system store the size in square metres for each point?
+  
+  Run commands given to the owner for the supervisor demo (2026-11-02). Checked read-only first: MySQL is running on 3306; nothing is listening on 5001 or 5173; the user-secrets connection points at `facility_dashboard` (values not printed); the `DatabaseSettings.cs` diff is only a missing final newline. Claude did not start anything.
+
+  After those answers: write ADR facility-0104 (bulk import from our own template, all-or-nothing like facility-0056, Area code with hyphens), let the owner check it, and only then write code.
+
 ## Serilog (2026-11-02 Bangkok; merged to master as PR #135, `9347639`, branch deleted)
 
 Owner ran `grill-with-docs` on moving logging to Serilog; the owner's senior settled Q3–Q6, the owner the rest. All decisions are in **facility-0103** (new, does not supersede 0095–0099): `ILogger<T>` stays with Serilog behind it; sinks and levels in `appsettings.json` (`Serilog:MinimumLevel` only, `Logging:LogLevel` removed, EF Command stays Warning); Console is the only sink, plain text, `{SourceContext}` on the same line so the handover grep drops `-A1`; bootstrap logger for startup failures; no request logging; no Discord; any sink that leaves the server needs a new ADR; no File sink until the OS is chosen; tests capture through a small hand-written Serilog sink using the real template. No glossary change (Server Log meaning unchanged).
