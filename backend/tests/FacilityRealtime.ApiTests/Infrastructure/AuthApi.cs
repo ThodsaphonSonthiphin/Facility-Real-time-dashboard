@@ -16,6 +16,14 @@ public static class AuthApi
     public static HttpClient CreateApiClient(this FacilityApiFactory factory) =>
         factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, AllowAutoRedirect = false });
 
+    /// <summary>A client whose requests come from <paramref name="peerAddress"/>, as the server sees the connection.</summary>
+    public static HttpClient CreateApiClientFrom(this FacilityApiFactory factory, string peerAddress)
+    {
+        var client = factory.CreateApiClient();
+        client.DefaultRequestHeaders.Add(TestPeerAddress.Header, peerAddress);
+        return client;
+    }
+
     /// <summary>facility-0054: Cleaner and Supervisor Accounts log in with employee ID + phone. Defaults to seeded cleaner 1000001.</summary>
     public static Task<HttpResponseMessage> LoginAsync(HttpClient client, string employeeId = "1000001", string phone = "0810000001") =>
         client.PostAsJsonAsync("/api/auth/login", new { employeeId, phone });

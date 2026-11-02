@@ -21,10 +21,10 @@ public class ServerLogTests
     {
         using var factory = new FacilityApiFactory();
 
-        await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", "0899999999");
+        await AuthApi.LoginAsync(factory.CreateApiClientFrom("203.0.113.7"), "1000001", "0899999999");
 
         Assert.Contains(
-            "[WRN] FacilityRealtime.Security: Login failed: employee 1000001, wrong secret" + Environment.NewLine,
+            "[WRN] FacilityRealtime.Security: Login failed: employee 1000001, wrong secret, from 203.0.113.7" + Environment.NewLine,
             factory.Logs.Lines.Select(line => line.ConsoleText));
     }
 }
