@@ -8,7 +8,13 @@ This repo is public: never put a password, phone number, real name or any secret
 
 The owner counts the build as **done**. What is left: real use (deploy, then the pilot) and the Excel import, which is shelved for now. The owner said not to bother with the PDPA rules. That leaves facility-0055 ("data retention and PDPA before production") and `docs/business-overview.md` line 233 saying PDPA work comes before production. The ADR has not been amended; ask the owner before changing it.
 
-## Business overview for the PM (2026-11-02 Bangkok, not committed)
+## Security assessment (2026-11-02 Bangkok, report given to the owner, nothing changed in code)
+
+Owner asked for an authorized security test of the app on this Mac only. Done on `master` `2a9efad`, with the API on loopback (Development and Production mode), each on its own throwaway database (`facility_sec_test`, `facility_sec_prod_test`, both dropped). `facility_dashboard` was not touched; the key and password were random and deleted. Checks covered login, JWT forgery, roles, cross-Area and cross-building access, mass assignment, XSS in the browser (Playwright), Excel formulas, traversal, headers, framing, the live hub and dependencies. The detailed report and scripts stay **outside the repo** (the repo is public and not every finding is fixed); the owner has them. Result: 2 Medium, 3 Low, 2 Info, no Critical or High. Nothing was fixed: the owner decides which fixes to make, and some need an ADR change (facility-0012, facility-0054). Next: the owner's choice of fixes.
+
+**F2 (login lock abuse) grilled 2026-11-02, decided, not built yet.** New ADR **facility-0104** (amends 0054 and 0097, pointers added to both) and the glossary term **Login Lock** in `CONTEXT.md`, committed on branch `fix/login-lock-per-ip` on the owner's "commit" (not pushed: the ADR describes the weakness, so it goes public in the same PR as the fix). In short: lock the pair login name + IP (5 failures / 15 min), a per-IP cap of 20 failures / 15 min across all names, failures only, success clears only its own pair, same rule for Admin, no account-wide cap, trust `X-Forwarded-For` only from a loopback proxy (one hop), IPv6 counted by /64, same 429 text, IP written in the security log lines. Build after the owner's OK, with `/mattpocock-skills:implement` (TDD), then update `docs/handover.md` lines on the lock (around lines 131 and 246). F1 and F3 not grilled yet.
+
+## Business overview for the PM (2026-11-02 Bangkok, merged as PR #137, `2a9efad`, branch deleted)
 
 Owner asked for one md file that explains to their PM how the system works and which business rules were built. Written in Thai (the reader is the PM) as `docs/business-overview.md`, from `CONTEXT.md`, the ADRs, the supervisor answers and the code (`AttendanceRules.cs`, `AlertKind`). No code changed. Not committed; the owner checks it first.
 
@@ -35,7 +41,7 @@ Owner asked how to import an Excel file into MySQL. The file holds Buildings, Ar
   
   Run commands given to the owner for the supervisor demo (2026-11-02). Checked read-only first: MySQL is running on 3306; nothing is listening on 5001 or 5173; the user-secrets connection points at `facility_dashboard` (values not printed); the `DatabaseSettings.cs` diff is only a missing final newline. Claude did not start anything.
 
-  After those answers: write ADR facility-0104 (bulk import from our own template, all-or-nothing like facility-0056, Area code with hyphens), let the owner check it, and only then write code.
+  After those answers: write an ADR with the next free number (facility-0104 was taken by the login lock on 2026-11-02) for the bulk import (from our own template, all-or-nothing like facility-0056, Area code with hyphens), let the owner check it, and only then write code.
 
 ## Serilog (2026-11-02 Bangkok; merged to master as PR #135, `9347639`, branch deleted)
 

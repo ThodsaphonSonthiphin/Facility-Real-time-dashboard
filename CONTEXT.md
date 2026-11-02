@@ -41,6 +41,10 @@ _บนหน้าเว็บ_: แอดมิน (facility-0085)
 บัญชี (Cleaner หรือ Admin) ที่ Admin ปิดใช้งาน login ไม่ได้และ Session ที่ค้างอยู่หลุดภายในไม่กี่นาที แต่ประวัติ Scan Record และชื่อยังคงอยู่ เพราะระบบไม่ลบบัญชี Admin เปิดใช้งานกลับได้
 _Avoid_: Deleted User, Banned, Archived
 
+**Login Lock**:
+การพักการ login ชั่วคราว 15 นาที หลังกรอกผิดหลายครั้ง พักเฉพาะ "ชื่อที่ใช้ login จากที่เดียวกัน (IP)" ไม่ได้พักทั้งบัญชี บัญชีเดียวกันจากเน็ตอื่นยัง login ได้ คนอื่นจึงใช้การกรอกผิดล็อกพนักงานไม่ได้ ที่ที่กรอกผิดหลายบัญชีรวมกันมากเกินไปจะถูกพัก login ทั้งที่ ไม่ใช่ Deactivated Account เพราะหายเองเมื่อครบเวลา (facility-0054, 0104)
+_Avoid_: Account Lock, Ban, Blocked Account
+
 **Point Status**:
 สถานะของ Service Point ที่แสดงบนการ์ดใน Dashboard คำนวณสดจาก Round Window ปัจจุบันของจุด, Shift Pattern ของ Area, Scan Record และ Inspection Record ของรอบนั้น ตามลำดับความสำคัญ: ต้องแก้ไข, Overdue (เลยรอบ), รอตรวจ, ตรวจผ่าน, ยังไม่ทำ, ยังไม่ถึงรอบ (กะเริ่มแล้วแต่รอบแรกยังไม่เริ่ม), Off Hours (นอกเวลา) รอบใหม่เริ่มแล้วการ์ดเริ่มใหม่เสมอ ผลของรอบเก่า (ไม่ได้ตรวจ, ไม่ได้แก้, ไม่ได้ทำ) เก็บในประวัติ Issue ไม่ใช่ Point Status แต่เป็นป้ายแยก (facility-0046, 0047)
 _Avoid_: Card Color, Point State, Alert Level
