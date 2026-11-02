@@ -11,7 +11,7 @@ public static class MeEndpoints
     {
         app.MapGet("/api/me", async (ClaimsPrincipal principal, AppDbContext db) =>
         {
-            var user = int.TryParse(principal.FindFirstValue(AuthClaims.UserId), out var id) ? await db.Users.FindAsync(id) : null;
+            var user = await CurrentUser.LoadAsync(principal, db); // facility-0105: a deactivated account gets 401 at once
             return user is null ? Results.Unauthorized() : Results.Ok(AuthEndpoints.ToUserDto(user));
         }).RequireAuthorization();
 

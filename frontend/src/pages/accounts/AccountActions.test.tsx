@@ -239,7 +239,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     const { user } = await openAndPress('ปิดใช้งาน แม่บ้านทดสอบ', 'Cleaner');
 
     const ask = screen.getByRole('alertdialog', { name: 'ปิดใช้งานบัญชี แม่บ้านทดสอบ?' });
-    expect(ask).toHaveTextContent('แม่บ้านทดสอบ เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดภายใน 5 นาที ประวัติยังอยู่ เปิดใช้งานกลับได้');
+    expect(ask).toHaveTextContent('แม่บ้านทดสอบ เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดทันที ประวัติยังอยู่ เปิดใช้งานกลับได้');
     expect(ask).toHaveTextContent('AR01 กะเช้า จะว่าง เปิดใช้งานกลับแล้วต้องเลือกพื้นที่ใหม่');
     await user.click(within(ask).getByRole('button', { name: 'ยกเลิก' }));
     expect(server.calls.some((call) => call.path.endsWith('/deactivate'))).toBe(false);

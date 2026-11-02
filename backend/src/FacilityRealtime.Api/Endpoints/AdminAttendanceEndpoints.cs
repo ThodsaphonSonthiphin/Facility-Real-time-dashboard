@@ -50,7 +50,8 @@ public static class AdminAttendanceEndpoints
         AppDbContext db,
         TimeProvider clock,
         AttendanceSettings settings,
-        IHubContext<ScanHub> hub)
+        IHubContext<ScanHub> hub,
+        ILogger<ScanHub> logger)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -185,7 +186,7 @@ public static class AdminAttendanceEndpoints
             row = existing;
         }
 
-        await AttendanceBoard.NotifyAsync(hub, row.AreaId, slot);
+        await AttendanceBoard.NotifyAsync(hub, db, logger, row.AreaId, slot);
         return Results.Ok(AttendanceBoard.ToDto(row));
     }
 

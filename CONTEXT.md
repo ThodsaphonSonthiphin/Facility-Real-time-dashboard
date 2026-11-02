@@ -38,7 +38,7 @@ _Avoid_: Superuser, Root, Manager
 _บนหน้าเว็บ_: แอดมิน (facility-0085)
 
 **Deactivated Account**:
-บัญชี (Cleaner หรือ Admin) ที่ Admin ปิดใช้งาน login ไม่ได้และ Session ที่ค้างอยู่หลุดภายในไม่กี่นาที แต่ประวัติ Scan Record และชื่อยังคงอยู่ เพราะระบบไม่ลบบัญชี Admin เปิดใช้งานกลับได้
+บัญชี (Cleaner หรือ Admin) ที่ Admin ปิดใช้งาน login ไม่ได้ หยุดได้รับข้อมูลทันที และหน้าที่เปิดค้างไว้หลุดออกเมื่อเรียกระบบครั้งถัดไป (facility-0105) แต่ประวัติ Scan Record และชื่อยังคงอยู่ เพราะระบบไม่ลบบัญชี Admin เปิดใช้งานกลับได้
 _Avoid_: Deleted User, Banned, Archived
 
 **Login Lock**:

@@ -32,7 +32,8 @@ public static class AttendanceEndpoints
         AppDbContext db,
         TimeProvider clock,
         AttendanceSettings settings,
-        IHubContext<ScanHub> hub)
+        IHubContext<ScanHub> hub,
+        ILogger<ScanHub> logger)
     {
         var user = await CurrentUser.LoadAsync(principal, db);
         if (user is null)
@@ -127,7 +128,7 @@ public static class AttendanceEndpoints
             return Results.Ok(State(slot, recordedNow, AttendanceOutcome.AlreadyRecorded));
         }
 
-        await AttendanceBoard.NotifyAsync(hub, area.Id, slot);
+        await AttendanceBoard.NotifyAsync(hub, db, logger, area.Id, slot);
         return Results.Ok(State(slot, [.. existing, entry], AttendanceOutcome.Recorded));
     }
 
