@@ -1,7 +1,7 @@
 using System.Net;
 using FacilityRealtime.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using Serilog.Events;
 
 namespace FacilityRealtime.ApiTests.Auth;
 
@@ -14,7 +14,7 @@ public class SecurityLogTests
     private static List<string> SecurityLines(FacilityApiFactory factory) =>
         factory.Logs.Lines
             .Where(line => line.Category == "FacilityRealtime.Security")
-            .Select(line => { Assert.Equal(LogLevel.Warning, line.Level); return line.Message; })
+            .Select(line => { Assert.Equal(LogEventLevel.Warning, line.Level); return line.Message; })
             .ToList();
 
     private static void NowhereInTheLog(FacilityApiFactory factory, string text) =>

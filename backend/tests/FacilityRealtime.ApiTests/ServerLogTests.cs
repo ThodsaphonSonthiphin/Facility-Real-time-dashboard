@@ -14,4 +14,17 @@ public class ServerLogTests
 
         Assert.DoesNotContain(factory.Logs.Lines, line => line.Category == "Microsoft.EntityFrameworkCore.Database.Command");
     }
+
+    /// <summary>facility-0103: the category sits on the message's own line, so `grep FacilityRealtime.Security` finds it.</summary>
+    [Fact]
+    public async Task A_security_line_prints_its_category_on_the_same_line_as_the_message()
+    {
+        using var factory = new FacilityApiFactory();
+
+        await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", "0899999999");
+
+        Assert.Contains(
+            "[WRN] FacilityRealtime.Security: Login failed: employee 1000001, wrong secret" + Environment.NewLine,
+            factory.Logs.Lines.Select(line => line.ConsoleText));
+    }
 }

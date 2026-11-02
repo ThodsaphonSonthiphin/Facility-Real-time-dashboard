@@ -5,9 +5,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Serilog.Core;
 
 namespace FacilityRealtime.ApiTests.Infrastructure;
 
@@ -48,7 +49,8 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
             _connection.Open();
             services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
             services.AddSingleton<TimeProvider>(Clock);
-            services.AddSingleton<ILoggerProvider>(Logs);
+            // Serilog picks up every ILogEventSink in the container (ReadFrom.Services, facility-0103)
+            services.AddSingleton<ILogEventSink>(provider => Logs.RenderingWith(provider.GetRequiredService<IConfiguration>()));
             // 600,000 iterations per login would make the API suite slow; the format is identical
             services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher(iterations: 1_000));
             ConfigureTestServices?.Invoke(services);
