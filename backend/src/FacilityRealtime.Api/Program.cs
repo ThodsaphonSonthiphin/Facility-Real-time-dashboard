@@ -94,15 +94,33 @@ try
     // 5. Compression of the frontend's files only (see the pipeline below). Also over https: these files hold no secret.
     builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 
+    // facility-0106: no "Server: Kestrel" header; it only tells a visitor what the server runs
+    builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+
+    // facility-0106: HSTS for a year, this host only (the domain is not known yet, so no subdomains and no preload)
+    builder.Services.AddHsts(options => options.MaxAge = TimeSpan.FromDays(365));
+
     var app = builder.Build();
 
     // facility-0104 decision 6: behind Caddy every request comes from loopback, so the client's address is taken from
     // X-Forwarded-For, one hop, and only when the request comes from loopback (the default trusted proxies: 127.0.0.0/8
-    // and ::1). Kestrel listens on localhost only (facility-0093), so nobody outside can fake the header.
-    app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor, ForwardLimit = 1 });
+    // and ::1). Kestrel listens on localhost only (facility-0093), so nobody outside can fake the header. facility-0106
+    // adds X-Forwarded-Proto on the same terms, so the app knows an answer goes out over https.
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        ForwardLimit = 1,
+    });
+    app.UseSecurityHeaders(swaggerWithoutCsp: app.Environment.IsDevelopment());
+    if (!app.Environment.IsDevelopment())
+    {
+        // Only on https answers, and never for localhost: a developer's browser would otherwise refuse http://localhost
+        app.UseHsts();
+    }
 
     // facility-0067: the built frontend (frontend/dist, copied into wwwroot by `npm run build:api`) is served from this origin.
     // Hashed files under assets/ never change; everything else, index.html included, is revalidated on every load.
+    // API answers are never stored (facility-0106, SecurityHeaders).
     var appFiles = new StaticFileOptions
     {
         ContentTypeProvider = PrecompressedFiles.ContentTypes(),
