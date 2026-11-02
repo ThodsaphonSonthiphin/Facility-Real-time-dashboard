@@ -131,7 +131,7 @@ public static class ResetAdminCommand
         }
 
         // LoginThrottle lives in the running API's memory; this process cannot clear it (facility-0092 decision 5)
-        console.WriteLine("ถ้าบัญชีเพิ่งถูกล็อกเพราะใส่รหัสผิด 5 ครั้ง ให้รอ 15 นาที หรือรีสตาร์ตระบบ");
+        console.WriteLine("ถ้าเพิ่งใส่รหัสผิด 5 ครั้งจนถูกล็อก การล็อกผูกกับ IP ที่ใช้ ลองจากเน็ตอื่นได้เลย หรือรอ 15 นาที หรือรีสตาร์ตระบบ");
         console.WriteLine("เข้าระบบแล้วเปลี่ยนรหัสผ่านของตัวเองที่หน้าบัญชีผู้ใช้ทันที");
         return 0;
     }

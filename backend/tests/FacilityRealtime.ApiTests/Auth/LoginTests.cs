@@ -196,6 +196,82 @@ public class LoginTests
         Assert.Equal(HttpStatusCode.OK, afterTheLock.StatusCode);
     }
 
+    /// <summary>facility-0104 decision 1: wrong phones lock that employee ID from that place only, so nobody can lock someone else out.</summary>
+    [Fact]
+    public async Task Wrong_phones_lock_the_employee_id_only_from_the_place_they_came_from()
+    {
+        using var factory = new FacilityApiFactory();
+        var attacker = factory.CreateApiClientFrom("203.0.113.7");
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.LoginAsync(attacker, "1000001", "0899999999")).StatusCode);
+        }
+
+        var lockedThere = await AuthApi.LoginAsync(attacker);
+        var fromTheOwnersPhone = await AuthApi.LoginAsync(factory.CreateApiClientFrom("198.51.100.20"));
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, lockedThere.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, fromTheOwnersPhone.StatusCode);
+    }
+
+    /// <summary>facility-0104 decision 2: one place guessing across many employee IDs is stopped after 20 failures.</summary>
+    [Fact]
+    public async Task Twenty_failures_across_employee_ids_lock_that_place()
+    {
+        using var factory = new FacilityApiFactory();
+        var guesser = factory.CreateApiClientFrom("203.0.113.7");
+        for (var i = 0; i < 20; i++)
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, (await AuthApi.LoginAsync(guesser, $"9{i:D6}", "0899999999")).StatusCode);
+        }
+
+        var lockedThere = await AuthApi.LoginAsync(guesser);
+        var elsewhere = await AuthApi.LoginAsync(factory.CreateApiClientFrom("198.51.100.20"));
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, lockedThere.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, elsewhere.StatusCode);
+    }
+
+    /// <summary>facility-0104 decision 6: behind Caddy every request comes from loopback, so the place is the forwarded one.</summary>
+    [Fact]
+    public async Task Behind_the_local_proxy_the_place_is_the_forwarded_address()
+    {
+        using var factory = new FacilityApiFactory();
+        var attacker = ThroughProxy(factory, "127.0.0.1", "203.0.113.7");
+        for (var i = 0; i < 5; i++)
+        {
+            await AuthApi.LoginAsync(attacker, "1000001", "0899999999");
+        }
+
+        var lockedThere = await AuthApi.LoginAsync(attacker);
+        var fromTheOwnersPhone = await AuthApi.LoginAsync(ThroughProxy(factory, "127.0.0.1", "198.51.100.20"));
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, lockedThere.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, fromTheOwnersPhone.StatusCode);
+    }
+
+    /// <summary>facility-0104 decision 6: only a proxy on the same machine is believed; anyone else could fake the header.</summary>
+    [Fact]
+    public async Task A_forwarded_address_from_anywhere_but_the_local_proxy_is_ignored()
+    {
+        using var factory = new FacilityApiFactory();
+        for (var i = 0; i < 5; i++)
+        {
+            await AuthApi.LoginAsync(ThroughProxy(factory, "192.0.2.50", $"198.51.100.{i}"), "1000001", "0899999999");
+        }
+
+        var response = await AuthApi.LoginAsync(ThroughProxy(factory, "192.0.2.50", "198.51.100.99"));
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+    }
+
+    private static HttpClient ThroughProxy(FacilityApiFactory factory, string proxy, string forwardedFor)
+    {
+        var client = factory.CreateApiClientFrom(proxy);
+        client.DefaultRequestHeaders.Add("X-Forwarded-For", forwardedFor);
+        return client;
+    }
+
     [Fact]
     public async Task A_successful_login_clears_the_failures()
     {

@@ -47,10 +47,12 @@ public static class AuthEndpoints
         var byEmployeeId = !string.IsNullOrWhiteSpace(request.EmployeeId);
         var loginName = (byEmployeeId ? request.EmployeeId : request.Username)?.Trim() ?? string.Empty;
         var secret = byEmployeeId ? PhoneNumber.Normalize(request.Phone) : request.Password ?? string.Empty;
+        var place = LoginPlace.Of(http.Connection.RemoteIpAddress);
         if (loginName.Length > MaxLoginNameLength)
         {
-            // Longer than any login column, so no account can match; nothing is counted or kept in memory
-            securityLog.LoginFailedUnknownAccount(byEmployeeId);
+            // Longer than any login column, so no account can match and no secret is checked; nothing is counted or
+            // kept in memory, not even toward the place's cap
+            securityLog.LoginFailedUnknownAccount(byEmployeeId, place);
             return Results.Unauthorized();
         }
 
@@ -59,31 +61,45 @@ public static class AuthEndpoints
             : await db.Users.FirstOrDefaultAsync(u => u.Username == loginName && u.Role == UserRole.Admin);
 
         // Count per account when the name matches one, so spellings the database collation folds together
-        // (case, accents) share one counter; per typed name otherwise, so unknown names lock the same way
+        // (case, accents) share one counter; per typed name otherwise, so unknown names lock the same way.
+        // facility-0104: the Login Lock is per login name and place, so nobody can lock someone else out.
         var throttleKey = user is not null
             ? $"user:{user.Id}"
             : (byEmployeeId ? "employee:" : "admin:") + loginName;
-        if (!throttle.TryBeginAttempt(throttleKey))
+        var gate = throttle.TryBeginAttempt(throttleKey, place);
+        if (gate != LoginGate.Allowed)
         {
-            securityLog.LoginRefusedWhileLocked(user, byEmployeeId);
+            // facility-0104 decision 8: the same 429 whichever lock it is. The journal writes one line when a place
+            // reaches its cap; each later refusal there is written like a locked name, naming whoever tried
+            if (gate == LoginGate.PlaceLockedNow)
+            {
+                securityLog.LoginPlaceLocked(place);
+            }
+            else
+            {
+                securityLog.LoginRefusedWhileLocked(user, byEmployeeId, place);
+            }
+
             return Results.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
         var secretMatches = hasher.Verify(secret, user?.SecretHash ?? DummyPasswordHash);
         if (user is null)
         {
-            securityLog.LoginFailedUnknownAccount(byEmployeeId);
+            throttle.Failed(place);
+            securityLog.LoginFailedUnknownAccount(byEmployeeId, place);
             return Results.Unauthorized();
         }
 
         if (!user.IsActive || !secretMatches)
         {
             // facility-0097: the journal tells the two apart; the phone still gets the same 401 for both
-            securityLog.LoginFailed(user, secretMatches);
+            throttle.Failed(place);
+            securityLog.LoginFailed(user, secretMatches, place);
             return Results.Unauthorized();
         }
 
-        throttle.Reset(throttleKey);
+        throttle.Succeeded(throttleKey, place);
 
         var now = clock.GetUtcNow().UtcDateTime;
         var refresh = AddRefreshToken(db, user.Id, sessionId: Guid.NewGuid(), now);

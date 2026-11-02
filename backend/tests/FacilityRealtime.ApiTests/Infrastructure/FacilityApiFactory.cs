@@ -53,6 +53,7 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
             services.AddSingleton<ILogEventSink>(provider => Logs.RenderingWith(provider.GetRequiredService<IConfiguration>()));
             // 600,000 iterations per login would make the API suite slow; the format is identical
             services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher(iterations: 1_000));
+            services.AddSingleton<IStartupFilter, TestPeerAddress>();
             ConfigureTestServices?.Invoke(services);
         });
     }

@@ -8,7 +8,48 @@ This repo is public: never put a password, phone number, real name or any secret
 
 The owner counts the build as **done**. What is left: real use (deploy, then the pilot) and the Excel import, which is shelved for now. The owner said not to bother with the PDPA rules. That leaves facility-0055 ("data retention and PDPA before production") and `docs/business-overview.md` line 233 saying PDPA work comes before production. The ADR has not been amended; ask the owner before changing it.
 
-## Business overview for the PM (2026-11-02 Bangkok, not committed)
+## Security assessment (2026-11-02 Bangkok, report given to the owner, nothing changed in code)
+
+Owner asked for an authorized security test of the app on this Mac only. Done on `master` `2a9efad`, with the API on loopback (Development and Production mode), each on its own throwaway database (`facility_sec_test`, `facility_sec_prod_test`, both dropped). `facility_dashboard` was not touched; the key and password were random and deleted. Checks covered login, JWT forgery, roles, cross-Area and cross-building access, mass assignment, XSS in the browser (Playwright), Excel formulas, traversal, headers, framing, the live hub and dependencies. The detailed report and scripts stay **outside the repo** (the repo is public and not every finding is fixed); the owner has them. Result: 2 Medium, 3 Low, 2 Info, no Critical or High. Nothing was fixed: the owner decides which fixes to make, and some need an ADR change (facility-0012, facility-0054). Next: the owner's choice of fixes.
+
+**F2 (login lock abuse) grilled 2026-11-02 and built the same day (see "F2 built" below).** New ADR **facility-0104** (amends 0054 and 0097, pointers added to both) and the glossary term **Login Lock** in `CONTEXT.md`, committed on branch `fix/login-lock-per-ip` on the owner's "commit" (not pushed: the ADR describes the weakness, so it goes public in the same PR as the fix). In short: lock the pair login name + IP (5 failures / 15 min), a per-IP cap of 20 failures / 15 min across all names, failures only, success clears only its own pair, same rule for Admin, no account-wide cap, trust `X-Forwarded-For` only from a loopback proxy (one hop), IPv6 counted by /64, same 429 text, IP written in the security log lines. Build after the owner's OK, with `/mattpocock-skills:implement` (TDD), then update `docs/handover.md` lines on the lock (around lines 131 and 246).
+
+**F1 and F3 grilled 2026-11-02, decided, not built yet.** The owner confirmed the summary. F4 is folded into F1 and F7 into F3. Build order: F1 → F2 → F3, three branches and three PRs. F3 waits until F2 is merged, because it reuses F2's loopback-proxy trust. Uncommitted files sit in two git worktrees next to this folder (`git worktree list`). Nothing is committed or pushed yet.
+- **F1 + F4:** was on branch `fix/hub-admins-from-db`, now merged (PR #138, see below).
+  - Files: new ADR **facility-0105** (deactivation takes effect at once on the hub and the API), an amendment pointer in 0012, and the `CONTEXT.md` definition of **Deactivated Account** changed to take effect at once.
+  - Decisions:
+    - Admin pushes go to the active Admins read from the database at send time; the `admins` group is dropped. No `CloseOnAuthenticationExpiration`.
+    - `/api/me`, `/api/service-points` and `by-token` load the account through `CurrentUser.LoadAsync`. `/api/service-points` was found during the grill, not in the report.
+  - This ADR describes the weakness, so it goes public in the same PR as the fix.
+- **F3 + F7:** worktree `../Facility-Real-time-dashboard-security-headers`, branch `fix/security-headers` from `fix/login-lock-per-ip`.
+  - Files: new ADR **facility-0106** (security headers set by the app) and an amendment pointer in 0104 (also trust `X-Forwarded-Proto` from the loopback proxy).
+  - Decisions:
+    - Headers come from app middleware, not Caddy: a strict enforced CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, a Permissions-Policy that allows only geolocation, and no `Server` header.
+    - HSTS is sent only in Production and only over https, for 1 year, without includeSubDomains or preload.
+    - Development's Swagger page gets no CSP.
+    - Every `/api` answer gets `Cache-Control: no-store`.
+  - The owner let Claude choose the header set and values.
+- Next ADR number for the shelved import: **facility-0107**.
+- The previous session's report folder was wiped. A copy recovered from that session's log is in this session's scratchpad (temporary as well). The owner should copy it outside the repo if they want to keep it.
+- **F1 + F4 merged 2026-11-02** to master as PR #138 (`52aa4ee`) on the owner's "push pr merge". The branch and its worktree are deleted.
+  - Built test-first at three seams the owner agreed: a deactivated Admin gets no ScanRecorded, a deactivated Admin gets no AttendanceRecorded, and the three routes answer 401.
+  - A two-axis review (standards + spec) found one real issue, now fixed. `AttendanceBoard.NotifyAsync` now reads the database after the event is saved, so a failure there would have turned a saved Shift Check-In into a 500. It now logs instead, like PointNotifications, and a new test in `LiveUpdateFailureTests` covers it.
+  - On the owner's request, the accounts page now says deactivation drops every device at once (`DeactivateConfirm.tsx`, `AccountsPage.tsx`). The hint keeps "ภายใน 5 นาที" for a phone change or password reset, which still wait for the access token to expire.
+  - The wireframe `docs/design/wireframe/Accounts.dc.html` still has the old wording; left as design history.
+  - Results: backend 344 unit + 671 API tests pass (5 MySQL tests skipped, as before); frontend 537 tests and lint pass. Only check on GitHub: GitGuardian, passed.
+- **F2 built 2026-11-02** on `fix/login-lock-per-ip`, after merging master into it (no conflict). Committed, not pushed yet.
+  - Built test-first at four seams the owner agreed: `LoginThrottle` unit tests, `LoginPlace` unit tests (IPv4 counted by the full address, IPv6 by its /64, IPv4 written in IPv6 form counted as IPv4), `/api/auth/login` API tests, and security-log API tests.
+  - The API tests set the peer address through a test-only startup filter (`TestPeerAddress`), and cover X-Forwarded-For from loopback against X-Forwarded-For from elsewhere.
+  - `Program.cs`: `UseForwardedHeaders` (X-Forwarded-For only, one hop, the default loopback trust). The new setting is `LoginThrottle:MaxFailuresPerPlace` (20).
+  - Log lines end with `, from <place>`. A new line, `Login place locked after too many failures: <place>`, is written once when a place reaches its cap. `docs/handover.md` is updated (log lines and the lock note), and so is the `reset-admin` console message.
+  - A two-axis review found one real issue, now fixed. Counting at the gate made logins still having their secret checked count toward the place cap, so people behind one IP logging in together at shift start could lock it. The place now counts only failures (`LoginThrottle.Failed`); the pair is still counted at the gate.
+  - Trade-off kept: concurrent guesses can pass the place cap by the few still being checked; each name's limit of 5 still holds.
+  - Overlong login names are still not counted or kept.
+  - Code names now use "place" throughout (`LoginPlace`, `NameLocked`, `PlaceLocked`).
+  - Results: backend 352 unit + 676 API tests pass (5 MySQL tests skipped, as before). No frontend change.
+- Next: owner's OK to push `fix/login-lock-per-ip` and open its PR. Then build F3 in the `fix/security-headers` worktree; merge master into it first, once F2 is merged.
+
+## Business overview for the PM (2026-11-02 Bangkok, merged as PR #137, `2a9efad`, branch deleted)
 
 Owner asked for one md file that explains to their PM how the system works and which business rules were built. Written in Thai (the reader is the PM) as `docs/business-overview.md`, from `CONTEXT.md`, the ADRs, the supervisor answers and the code (`AttendanceRules.cs`, `AlertKind`). No code changed. Not committed; the owner checks it first.
 
@@ -35,7 +76,7 @@ Owner asked how to import an Excel file into MySQL. The file holds Buildings, Ar
   
   Run commands given to the owner for the supervisor demo (2026-11-02). Checked read-only first: MySQL is running on 3306; nothing is listening on 5001 or 5173; the user-secrets connection points at `facility_dashboard` (values not printed); the `DatabaseSettings.cs` diff is only a missing final newline. Claude did not start anything.
 
-  After those answers: write ADR facility-0104 (bulk import from our own template, all-or-nothing like facility-0056, Area code with hyphens), let the owner check it, and only then write code.
+  After those answers: write an ADR with the next free number (facility-0104 was taken by the login lock on 2026-11-02) for the bulk import (from our own template, all-or-nothing like facility-0056, Area code with hyphens), let the owner check it, and only then write code.
 
 ## Serilog (2026-11-02 Bangkok; merged to master as PR #135, `9347639`, branch deleted)
 

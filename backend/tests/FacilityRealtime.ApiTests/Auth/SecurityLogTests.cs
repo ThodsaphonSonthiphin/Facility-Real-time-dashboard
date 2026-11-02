@@ -11,6 +11,9 @@ namespace FacilityRealtime.ApiTests.Auth;
 /// </summary>
 public class SecurityLogTests
 {
+    /// <summary>facility-0104 decision 9: login lines name the place, so a server admin can block it at the firewall.</summary>
+    private const string Place = "203.0.113.7";
+
     private static List<string> SecurityLines(FacilityApiFactory factory) =>
         factory.Logs.Lines
             .Where(line => line.Category == "FacilityRealtime.Security")
@@ -25,9 +28,9 @@ public class SecurityLogTests
     {
         using var factory = new FacilityApiFactory();
 
-        await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", "0899999999");
+        await AuthApi.LoginAsync(factory.CreateApiClientFrom(Place), "1000001", "0899999999");
 
-        Assert.Equal(new[] { "Login failed: employee 1000001, wrong secret" }, SecurityLines(factory));
+        Assert.Equal(new[] { "Login failed: employee 1000001, wrong secret, from 203.0.113.7" }, SecurityLines(factory));
         NowhereInTheLog(factory, "0899999999");
     }
 
@@ -41,9 +44,9 @@ public class SecurityLogTests
             await db.SaveChangesAsync();
         });
 
-        await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", "0810000001");
+        await AuthApi.LoginAsync(factory.CreateApiClientFrom(Place), "1000001", "0810000001");
 
-        Assert.Equal(new[] { "Login failed: employee 1000001, account turned off" }, SecurityLines(factory));
+        Assert.Equal(new[] { "Login failed: employee 1000001, account turned off, from 203.0.113.7" }, SecurityLines(factory));
         NowhereInTheLog(factory, "0810000001");
     }
 
@@ -58,9 +61,9 @@ public class SecurityLogTests
         });
 
         // "account turned off" is written only once the secret matched, so it never tells a guesser more
-        await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", "0899999999");
+        await AuthApi.LoginAsync(factory.CreateApiClientFrom(Place), "1000001", "0899999999");
 
-        Assert.Equal(new[] { "Login failed: employee 1000001, wrong secret" }, SecurityLines(factory));
+        Assert.Equal(new[] { "Login failed: employee 1000001, wrong secret, from 203.0.113.7" }, SecurityLines(factory));
         NowhereInTheLog(factory, "0899999999");
     }
 
@@ -70,9 +73,9 @@ public class SecurityLogTests
         using var factory = new FacilityApiFactory();
 
         // both fields take digits only (facility-0054), so the fields get swapped
-        await AuthApi.LoginAsync(factory.CreateApiClient(), "0810000001", "1000001");
+        await AuthApi.LoginAsync(factory.CreateApiClientFrom(Place), "0810000001", "1000001");
 
-        Assert.Equal(new[] { "Login failed: unknown account (employee login)" }, SecurityLines(factory));
+        Assert.Equal(new[] { "Login failed: unknown account (employee login), from 203.0.113.7" }, SecurityLines(factory));
         NowhereInTheLog(factory, "0810000001");
     }
 
@@ -81,9 +84,9 @@ public class SecurityLogTests
     {
         using var factory = new FacilityApiFactory();
 
-        await AuthApi.LoginAsync(factory.CreateApiClient(), new string('1', 101), "0810000001");
+        await AuthApi.LoginAsync(factory.CreateApiClientFrom(Place), new string('1', 101), "0810000001");
 
-        Assert.Equal(new[] { "Login failed: unknown account (employee login)" }, SecurityLines(factory));
+        Assert.Equal(new[] { "Login failed: unknown account (employee login), from 203.0.113.7" }, SecurityLines(factory));
     }
 
     [Fact]
@@ -92,9 +95,9 @@ public class SecurityLogTests
         using var factory = new FacilityApiFactory();
         var typed = $"wrong-{Guid.NewGuid():N}"; // built at run time: no password literal in the repo
 
-        await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin", typed);
+        await AuthApi.AdminLoginAsync(factory.CreateApiClientFrom(Place), "admin", typed);
 
-        Assert.Equal(new[] { "Login failed: admin admin, wrong secret" }, SecurityLines(factory));
+        Assert.Equal(new[] { "Login failed: admin admin, wrong secret, from 203.0.113.7" }, SecurityLines(factory));
         NowhereInTheLog(factory, typed);
     }
 
@@ -102,7 +105,7 @@ public class SecurityLogTests
     public async Task Each_attempt_refused_while_locked_is_written()
     {
         using var factory = new FacilityApiFactory();
-        var client = factory.CreateApiClient();
+        var client = factory.CreateApiClientFrom(Place);
         for (var i = 0; i < 5; i++)
         {
             await AuthApi.LoginAsync(client, "1000001", "0899999999");
@@ -113,21 +116,21 @@ public class SecurityLogTests
 
         Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
         var lines = SecurityLines(factory);
-        Assert.Equal(Enumerable.Repeat("Login failed: employee 1000001, wrong secret", 5), lines.Take(5));
-        Assert.Equal(new[] { "Login refused while locked: employee 1000001", "Login refused while locked: employee 1000001" }, lines.Skip(5));
+        Assert.Equal(Enumerable.Repeat("Login failed: employee 1000001, wrong secret, from 203.0.113.7", 5), lines.Take(5));
+        Assert.Equal(new[] { "Login refused while locked: employee 1000001, from 203.0.113.7", "Login refused while locked: employee 1000001, from 203.0.113.7" }, lines.Skip(5));
     }
 
     [Fact]
     public async Task A_locked_unknown_account_is_written_without_what_was_typed()
     {
         using var factory = new FacilityApiFactory();
-        var client = factory.CreateApiClient();
+        var client = factory.CreateApiClientFrom(Place);
         for (var i = 0; i < 6; i++)
         {
             await AuthApi.LoginAsync(client, "9999999", "0812345678");
         }
 
-        Assert.Equal("Login refused while locked: unknown account (employee login)", SecurityLines(factory).Last());
+        Assert.Equal("Login refused while locked: unknown account (employee login), from 203.0.113.7", SecurityLines(factory).Last());
         NowhereInTheLog(factory, "9999999");
         NowhereInTheLog(factory, "0812345678");
     }
@@ -153,9 +156,9 @@ public class SecurityLogTests
         using var factory = new FacilityApiFactory();
         var typed = $"nobody-{Guid.NewGuid():N}"; // built at run time: no login literal in the repo
 
-        await AuthApi.AdminLoginAsync(factory.CreateApiClient(), typed, $"wrong-{Guid.NewGuid():N}");
+        await AuthApi.AdminLoginAsync(factory.CreateApiClientFrom(Place), typed, $"wrong-{Guid.NewGuid():N}");
 
-        Assert.Equal(new[] { "Login failed: unknown account (admin login)" }, SecurityLines(factory));
+        Assert.Equal(new[] { "Login failed: unknown account (admin login), from 203.0.113.7" }, SecurityLines(factory));
         NowhereInTheLog(factory, typed);
     }
 
@@ -163,7 +166,7 @@ public class SecurityLogTests
     public async Task A_locked_admin_is_written_with_the_username_and_never_the_password()
     {
         using var factory = new FacilityApiFactory();
-        var client = factory.CreateApiClient();
+        var client = factory.CreateApiClientFrom(Place);
         var typed = $"wrong-{Guid.NewGuid():N}"; // built at run time: no password literal in the repo
         for (var i = 0; i < 5; i++)
         {
@@ -173,7 +176,7 @@ public class SecurityLogTests
         var refused = await AuthApi.AdminLoginAsync(client, "admin", typed);
 
         Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
-        Assert.Equal("Login refused while locked: admin admin", SecurityLines(factory).Last());
+        Assert.Equal("Login refused while locked: admin admin, from 203.0.113.7", SecurityLines(factory).Last());
         NowhereInTheLog(factory, typed);
     }
 
@@ -181,14 +184,14 @@ public class SecurityLogTests
     public async Task A_locked_unknown_admin_username_is_written_without_what_was_typed()
     {
         using var factory = new FacilityApiFactory();
-        var client = factory.CreateApiClient();
+        var client = factory.CreateApiClientFrom(Place);
         var typed = $"nobody-{Guid.NewGuid():N}"; // built at run time: no login literal in the repo
         for (var i = 0; i < 6; i++)
         {
             await AuthApi.AdminLoginAsync(client, typed, $"wrong-{Guid.NewGuid():N}");
         }
 
-        Assert.Equal("Login refused while locked: unknown account (admin login)", SecurityLines(factory).Last());
+        Assert.Equal("Login refused while locked: unknown account (admin login), from 203.0.113.7", SecurityLines(factory).Last());
         NowhereInTheLog(factory, typed);
     }
 
@@ -212,8 +215,29 @@ public class SecurityLogTests
     {
         using var factory = new FacilityApiFactory();
 
-        await AuthApi.LoginAsync(factory.CreateApiClient());
+        await AuthApi.LoginAsync(factory.CreateApiClientFrom(Place));
 
         Assert.Empty(SecurityLines(factory));
+    }
+
+    /// <summary>facility-0104 decision 9: one line when a place reaches its cap; each later refusal is written as locked.</summary>
+    [Fact]
+    public async Task A_place_reaching_its_cap_is_written_once()
+    {
+        using var factory = new FacilityApiFactory();
+        var client = factory.CreateApiClientFrom(Place);
+        for (var i = 0; i < 20; i++)
+        {
+            await AuthApi.LoginAsync(client, $"9{i:D6}", "0899999999");
+        }
+
+        await AuthApi.LoginAsync(client, "1000001", "0810000001");
+        await AuthApi.LoginAsync(client, "1000001", "0810000001");
+
+        Assert.Equal(new[]
+        {
+            "Login place locked after too many failures: 203.0.113.7",
+            "Login refused while locked: employee 1000001, from 203.0.113.7",
+        }, SecurityLines(factory).Skip(20));
     }
 }

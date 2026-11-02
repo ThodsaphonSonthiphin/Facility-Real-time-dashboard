@@ -10,6 +10,7 @@ using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Auth;
 using FacilityRealtime.Infrastructure.Auth;
 using FacilityRealtime.Infrastructure.Persistence;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -94,6 +95,11 @@ try
     builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 
     var app = builder.Build();
+
+    // facility-0104 decision 6: behind Caddy every request comes from loopback, so the client's address is taken from
+    // X-Forwarded-For, one hop, and only when the request comes from loopback (the default trusted proxies: 127.0.0.0/8
+    // and ::1). Kestrel listens on localhost only (facility-0093), so nobody outside can fake the header.
+    app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor, ForwardLimit = 1 });
 
     // facility-0067: the built frontend (frontend/dist, copied into wwwroot by `npm run build:api`) is served from this origin.
     // Hashed files under assets/ never change; everything else, index.html included, is revalidated on every load.
