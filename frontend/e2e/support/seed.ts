@@ -48,3 +48,27 @@ export function cleanerOnShift(now: Date = new Date()): Employee {
 export function beforeFirstNightRound(now: Date = new Date()): boolean {
   return thaiHour(now) === 19;
 }
+
+/** The last two minutes before 07:00 or 19:00: a multi-step workflow could cross its shift change. */
+export function nearShiftChange(now: Date = new Date()): boolean {
+  return [6, 18].includes(thaiHour(now)) && now.getUTCMinutes() >= 58;
+}
+
+const pad = (value: number, width: number) => String(value).padStart(width, '0');
+
+/**
+ * facility-0102: generated Area n (E2EA000n, from 1), its signs and the Cleaner of the shift on the clock. Every
+ * generated sign stands where AR01's check-in sign does, and every generated account has the Day Cleaner's synthetic
+ * phone. Area n works both shifts unless n is a multiple of 4. Each case owns its Area: 1 rework, 2 covers,
+ * 3 attendance offline, 5 GPS far, 6 submission offline, 7 location off.
+ */
+export function factoryArea(n: number, now: Date = new Date()) {
+  const hour = thaiHour(now);
+  const number = (n - 1) * 2 + (hour < 7 || hour >= 19 ? 1 : 0);
+  return {
+    code: `E2EA${pad(n, 4)}`,
+    checkIn: `/check-in/e2e-checkin-${n}`,
+    point: (p: number) => `/scan/e2e-point-${n}-${p}`,
+    cleaner: { employeeId: `7${pad(number, 6)}`, phone: dayCleaner.phone },
+  };
+}

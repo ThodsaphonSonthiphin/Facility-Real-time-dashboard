@@ -1,10 +1,12 @@
 import { expect, test } from '../support/test.ts';
+import { measuresLayoutShift } from '../support/browser.ts';
 import { loginAsEmployee } from '../support/login.ts';
 import { holdBack, layoutShiftTotal, recordLayoutShifts } from '../support/pageWatch.ts';
 import { cleanerOnShift } from '../support/seed.ts';
 
 // Measured 0.10 before bdfd581: the footer showed while loading and the list pushed it down
 test('My Work does not move while its work loads', async ({ page }) => {
+  test.skip(!measuresLayoutShift, 'Layout shifts are measured with an API only Chromium has');
   await loginAsEmployee(page, cleanerOnShift());
   await expect(page).toHaveURL(/\/my-work$/);
 

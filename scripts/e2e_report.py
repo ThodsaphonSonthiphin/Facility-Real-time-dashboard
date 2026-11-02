@@ -25,10 +25,12 @@ def generate(directory):
     report = json.loads(results_path.read_text())
     stats = report['stats']
     metrics = defaultdict(list)
+    run_path = directory / 'run.json'
+    browser = json.loads(run_path.read_text()).get('browser', 'chromium') if run_path.exists() else 'chromium'
     lines = ['# E2E execution evidence', '',
              f"Passed: {stats['expected']}. Failed: {stats['unexpected']}. Skipped: {stats['skipped']}. Flaky: {stats['flaky']}.",
              f"Browser suite elapsed: {stats['duration'] / 1000:.2f} seconds.", '',
-             'Real loopback API and MySQL; Chromium is headed by default at 350 ms slow motion. '
+             f'Real loopback API and MySQL; browser engine: {browser}, headed by default at 350 ms slow motion. '
              'These durations include browser/trace overhead and are not concurrent load-test results.', '',
              '[HTML report](html/index.html) · [Machine-readable results](results.json) · [API log](api.log)', '']
     dataset_path = directory / 'dataset.json'

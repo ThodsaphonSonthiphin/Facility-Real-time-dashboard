@@ -16,7 +16,7 @@ test('a submission from the phone shows on D1 without a reload', async ({ page, 
   await expect(tile).not.toContainText(cleaner.name);
 
   const phoneContext = await browser.newContext({ ...phone, baseURL: testInfo.project.use.baseURL });
-  observeAdditionalContext(phoneContext);
+  await observeAdditionalContext(phoneContext);
   try {
     const cleanerPage = await phoneContext.newPage();
     await loginAsEmployee(cleanerPage, cleaner);

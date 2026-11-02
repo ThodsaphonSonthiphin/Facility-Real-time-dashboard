@@ -1,5 +1,6 @@
 import { defineConfig } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { engine } from './e2e/support/browser.ts';
 import { desktop, phone } from './e2e/support/devices.ts';
 
 // facility-0094: scripts/e2e.sh starts the API on a throwaway database and passes its address here
@@ -34,7 +35,7 @@ export default defineConfig({
   ],
   use: {
     baseURL,
-    browserName: 'chromium',
+    browserName: engine,
     headless: process.env.E2E_HEADLESS === '1',
     launchOptions: { slowMo: Number(process.env.E2E_SLOW_MO ?? 350) },
     actionTimeout: 15_000,

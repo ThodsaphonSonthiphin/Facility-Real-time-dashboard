@@ -1,4 +1,5 @@
 import { test as base, expect, type BrowserContext } from '@playwright/test';
+import { engine } from './browser.ts';
 
 interface Evidence {
   errors: string[];
@@ -6,12 +7,31 @@ interface Evidence {
 }
 const activeEvidence = new Map<string, Evidence>();
 
-function observe(context: BrowserContext, evidence: Evidence) {
+const cspMark = 'E2E CSP violation:';
+
+async function observe(context: BrowserContext, evidence: Evidence) {
+  // facility-0106: the app sends a strict CSP. Every engine fires securitypolicyviolation on what it blocks; the page
+  // passes it on as a console line (an init script is not itself under the page's CSP).
+  await context.addInitScript(({ mark, engine }) => {
+    document.addEventListener('securitypolicyviolation', (event) => {
+      // Playwright's WebKit puts in a <style> of its own that has no source; a blank page under the app's CSP shows it
+      // too (2026-11-02). Only that is skipped: an inline script with no source still counts (checked with a probe).
+      if (engine === 'webkit' && event.effectiveDirective === 'style-src-elem' && !event.sourceFile) return;
+      // WebKit also reports style-src-attr for its own drawing of any <select>, even one in plain HTML with no script
+      // (probe 2026-11-02): the element has no style attribute, or is already off the page (React's createElement of a
+      // select). Chromium reports neither, so the Chromium run still checks every style attribute.
+      const target = event.target;
+      if (event.effectiveDirective === 'style-src-attr' && engine === 'webkit' &&
+        (!(target instanceof Element) || (target instanceof HTMLSelectElement && !target.hasAttribute('style')))) return;
+      const element = event.target instanceof Element ? event.target.outerHTML.slice(0, 160) : '';
+      console.error(`${mark} ${event.effectiveDirective} blocked ${event.blockedURI || 'inline'} ` +
+        `from ${event.sourceFile || '?'}:${event.lineNumber}:${event.columnNumber} ${element}`);
+    });
+  }, { mark: cspMark, engine });
   context.on('page', (page) => {
     page.on('pageerror', (error) => evidence.errors.push(error.message));
-    // facility-0106: the app sends a strict CSP; Chromium reports anything it blocks as a console error
     page.on('console', (message) => {
-      if (message.type() === 'error' && message.text().includes('Content Security Policy')) evidence.errors.push(message.text());
+      if (message.text().startsWith(cspMark)) evidence.errors.push(message.text());
     });
   });
   context.on('requestfinished', (request) => {
@@ -25,10 +45,10 @@ function observe(context: BrowserContext, evidence: Evidence) {
 }
 
 /** Include the other role's window in the same runtime-error and response-duration evidence. */
-export function observeAdditionalContext(context: BrowserContext) {
+export async function observeAdditionalContext(context: BrowserContext) {
   const evidence = activeEvidence.get(base.info().testId);
   if (!evidence) throw new Error('Runtime evidence fixture is not active');
-  observe(context, evidence);
+  await observe(context, evidence);
 }
 
 /** Collect runtime failures and real loopback response timings without replacing API answers. */
@@ -36,7 +56,7 @@ export const test = base.extend<{ browserEvidence: void }>({
   browserEvidence: [async ({ context }, runTest, testInfo) => {
     const evidence: Evidence = { errors: [], responses: [] };
     activeEvidence.set(testInfo.testId, evidence);
-    observe(context, evidence);
+    await observe(context, evidence);
     try {
       await runTest();
     } finally {

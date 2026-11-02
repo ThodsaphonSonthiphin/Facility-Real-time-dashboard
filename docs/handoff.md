@@ -8,6 +8,17 @@ This repo is public: never put a password, phone number, real name or any secret
 
 The owner counts the build as **done**. What is left: real use (deploy, then the pilot) and the Excel import, which is shelved for now. The owner said not to bother with the PDPA rules. That leaves facility-0055 ("data retention and PDPA before production") and `docs/business-overview.md` line 233 saying PDPA work comes before production. The ADR has not been amended; ask the owner before changing it.
 
+## E2E: WebKit and Firefox, offline, GPS, print (2026-11-02 Bangkok, branch `test/e2e-more-browsers-and-conditions`, not committed)
+
+The owner asked why the untested items were untested, then chose (popup) to add WebKit + Firefox, offline, GPS outside the radius and the print page. Test-only changes; no application source changed. Based on `fix/attendance-pick-while-loading` (PR #141, open).
+- `E2E_BROWSER=chromium|webkit|firefox`, one engine per run. Five new cases: GPS far (flag seen by the Admin, about 1,112 m), location refused then allowed, a submission without signal, the Admin page losing the network, the print page. Details and the engine differences found are in `docs/testing/e2e.md`.
+- **Results (large, headed, 350 ms):** Chromium **35 passed, 0 failed** (`.run/e2e/20261102153114_e6db4f4e`). WebKit **31 passed, 1 failed, 3 skipped** (`.run/e2e/20261102153538_e2f90b63`). Firefox not run: it cannot start inside the agent's sandbox, and running outside it was refused.
+- Measured (Chromium): the reconnecting badge shows 29.4 s after the network goes (SignalR's 30 s server timeout, `serverTimeoutInMilliseconds` not set); back online, the row and badge catch up in 3.3 s. QR codes read back to their own addresses with Chromium's BarcodeDetector (WebKit has none: not checked there).
+- **Likely app issue, not confirmed on an iPhone:** WebKit keeps a refused location for the page, so "เปิดแล้ว ลองอีกครั้ง" after turning location on keeps failing until a reload. If real iPhone Safari does the same, a Cleaner stays stuck on that page. The WebKit case fails on purpose. Fix idea for the owner: on a refusal, the retry button reloads the page. Owner to decide; check on a real iPhone first.
+- Suggestion, not a bug: an Admin page that loses the network looks live for about 30 s before the badge. Setting a shorter server timeout or listening to the browser's offline event would show it sooner (ADR 0064 sets no time).
+- Mistake made and fixed during the work: a too-wide CSP filter (any violation with no source file) briefly hid an injected inline script on both engines; caught by re-running the inline-script probe, narrowed, both engines fail that probe again. Runs made with the wide filter are not counted.
+- Next: owner's decisions on the iPhone location retry, on committing, and a Firefox run from a normal Terminal (`E2E_BROWSER=firefox npm --prefix frontend run e2e -- --dataset large`).
+
 ## Headed E2E rerun on current master, and the attendance date/shift race (2026-11-02 Bangkok)
 
 The owner pasted a full "set up Playwright E2E" brief. It was already built (facility-0102, `docs/testing/e2e.md`), so the suite was rerun on master `7a25174` (after #135, #139, #140) and its gaps filled. The owner approved (popup) the one app fix below, and commit + push + PR (not merge). Branch `fix/attendance-pick-while-loading`.

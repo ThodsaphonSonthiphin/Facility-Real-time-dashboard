@@ -62,6 +62,7 @@ Options:
 
 - `E2E_PORT=5102`: use another free loopback port (default5101). Frontend and API share this origin; no Vite server is required. A run may start right after another: the port check ignores the previous run's TIME_WAIT, as Kestrel does, and still refuses a port another process listens on.
 - `E2E_SLOW_MO=500`: change the visible pace. Default350.
+- `E2E_BROWSER=webkit` or `firefox`: the engine of the run (default `chromium`). One engine per run, each on its own fresh database: the mutating cases cannot run twice on one database. WebKit is Safari's engine, with an iPhone user agent on the phone project; it is not iPhone Safari itself. Firefox has no mobile emulation, so its phone project is a narrow touch window. The two layout-shift cases run on Chromium only (the API they measure with is Chromium's).
 - `E2E_HEADLESS=1 E2E_SLOW_MO=0`: explicitly opt into a faster unattended run. Normal runs remain headed.
 - Playwright arguments pass through: `--project=phone`, `--grep`, `--headed`, etc. Do not set `--workers` above1: some cases share seeded state.
 
@@ -77,6 +78,17 @@ npm --prefix frontend exec -- tsc -b frontend/tsconfig.json
 
 Coverage includes authentication/session restoration, role restrictions, Building/Area/point/account CRUD and validation, dialogs/Drawers/typed confirmation, large lists/search/filter/default ordering, history cursor paging, attendance paging/correction/audit, covers, inspection summaries, XLSX download, multi-role rework/live update workflows, the login lock (facility-0104: five wrong logins lock that employee ID, another name still logs in) and the security headers (facility-0106). Every case fails on a CSP violation in any of its pages, as on an uncaught page error or HTTP5xx. Account and Area lists filter in the client; they have no pagination or user-selectable sort control. Attendance pages25 rows in the client; history uses100-row API cursors. Small-profile attendance pagination is explicitly skipped.
 
-Limits: this is a single-worker functional volume test, not a concurrent load test. Timings include trace/browser overhead and some UI timings include slow motion. Safari, real GPS accuracy, physical QR scanning/printing, offline recovery, throttling/token-reuse security, every account credential-change variant and every cover/alert/round boundary remain outside the executed case set. The original live-push case skips19:00–20:00 Bangkok before its first Night round; the generated rework case skips the last two minutes before a shift change to avoid crossing its round boundary mid-workflow. Failed application assertions remain failed; production changes require the owner's approval.
+Conditions (2026-11-02): GPS far from the sign (recorded and flagged, the Admin sees the distance) and location refused then allowed, on generated Areas 5 and 7; a submission sent without signal (the page keeps the choice, ส่งใหม่ sends it once) on Area 6; the Admin attendance page losing the network (badge, then catch-up) on Area 3; the print page (signs against the Area's API answer, QR read back with the browser's BarcodeDetector where the engine has one, A4 sheet size and nothing cut off in print media, the print call counted instead of opening the system dialog). Each case owns its generated Area (`factoryArea` in `support/seed.ts`).
+
+Engine differences found (2026-11-02 probes, kept in the tests):
+
+- WebKit reports CSP violations that are not the app's: a source-less `<style>` Playwright adds (a blank page under the same CSP shows it), and `style-src-attr` for its own drawing of any `<select>` (a plain HTML select shows it). Only those two are skipped, on WebKit only; an injected inline script still fails on both engines.
+- WebKit keeps a refused location for the life of the page; Chromium reads it again at once. The location-refused case fails on WebKit on purpose (see handoff).
+- A visible Chromium asks with its own prompt when location is merely cleared, so the case refuses it at browser level (DevTools `Browser.setPermission`).
+- Offline emulation cuts HTTP and pushes in both engines. Chromium's hub notices after its 30 s server timeout; WebKit's never did within 58 s, so that case is `fixme` on WebKit.
+- A mouse click does not focus a button on WebKit, so the cover case opens its confirmation with the keyboard there.
+- Firefox could not start inside the agent's sandbox ("Could not find profile folder"); run it from a normal Terminal.
+
+Limits: this is a single-worker functional volume test, not a concurrent load test. Timings include trace/browser overhead and some UI timings include slow motion. iPhone Safari itself, real GPS accuracy, a phone camera reading a paper sign, a real printer, throttling/token-reuse security, every account credential-change variant and every cover/alert/round boundary remain outside the executed case set. The original live-push case skips19:00–20:00 Bangkok before its first Night round; the generated rework case skips the last two minutes before a shift change to avoid crossing its round boundary mid-workflow. Failed application assertions remain failed; production changes require the owner's approval.
 
 Playwright configuration reference: [headed launch, slow motion and recording options](https://playwright.dev/docs/test-use-options).

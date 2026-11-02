@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../support/test.ts';
 import { loginAsAdmin } from '../support/login.ts';
 import { holdBack } from '../support/pageWatch.ts';
+import { engine } from '../support/browser.ts';
 
 test.beforeEach(async ({ page }) => {
   test.skip(process.env.E2E_DATASET === 'baseline', 'Requires generated assignments and attendance');
@@ -98,7 +99,14 @@ test('cover assignment and nested cancellation preserve the parent drawer @datas
   await page.getByRole('button', { name: 'มอบหมายทำแทน', exact: true }).click();
   const cancel = drawer.getByRole('button', { name: /ยกเลิกการทำแทนของ .* ที่ E2EA0002/ });
   await expect(cancel).toBeVisible();
-  await cancel.click();
+  // A mouse click does not focus a button on Apple platforms (WebKit), so there the keyboard opens it: focus going back
+  // to the button is for keyboard users
+  if (engine === 'webkit') {
+    await cancel.focus();
+    await page.keyboard.press('Enter');
+  } else {
+    await cancel.click();
+  }
   const confirmation = page.getByRole('alertdialog');
   await page.keyboard.press('Escape');
   await expect(confirmation).toBeHidden();

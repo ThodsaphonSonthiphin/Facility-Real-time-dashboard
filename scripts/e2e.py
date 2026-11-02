@@ -18,6 +18,7 @@ from e2e_report import generate
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / '.run' / 'e2e'
+BROWSERS = ('chromium', 'firefox', 'webkit')  # E2E_BROWSER; one engine per run, each on its own database
 SAFE_DB = re.compile(r'facility_e2e_[0-9]{14}_[0-9a-f]{8}\Z')
 
 
@@ -83,6 +84,9 @@ def run(args, playwright_args):
         if not shutil.which(program):
             raise RuntimeError(f'Missing prerequisite: {program}')
     sql('SELECT 1')
+    browser = os.environ.get('E2E_BROWSER', 'chromium')
+    if browser not in BROWSERS:
+        raise RuntimeError(f'E2E_BROWSER must be one of {", ".join(BROWSERS)}')
     port = int(os.environ.get('E2E_PORT', '5101'))
     ensure_port_free(port)
     stamp = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%d%H%M%S')
@@ -148,7 +152,7 @@ def run(args, playwright_args):
             repeated = json.loads((run_dir / 'dataset-repeat.json').read_text())
             if first['counts'] != repeated['counts'] or not repeated['reused']:
                 raise RuntimeError('Repeated seed changed dataset counts')
-        execute(['npx', 'playwright', 'install', 'chromium'], cwd=ROOT / 'frontend', env=env)
+        execute(['npx', 'playwright', 'install', browser], cwd=ROOT / 'frontend', env=env)
         result = subprocess.run(['npx', 'playwright', 'test', *playwright_args],
                                 cwd=ROOT / 'frontend', env=env)
         exit_code = result.returncode
@@ -164,7 +168,7 @@ def run(args, playwright_args):
         (run_dir / 'run.json').write_text(json.dumps({
             'database': database, 'dataset': args.dataset, 'baseURL': env['E2E_BASE_URL'],
             'elapsedSeconds': round(time.monotonic() - started, 2), 'exitCode': exit_code,
-            'headed': os.environ.get('E2E_HEADLESS') != '1', 'playwrightArgs': playwright_args,
+            'browser': browser, 'headed': os.environ.get('E2E_HEADLESS') != '1', 'playwrightArgs': playwright_args,
         }, indent=2) + '\n')
         if owned and (run_dir / 'ownership.json').exists():
             clean_run(run_dir)

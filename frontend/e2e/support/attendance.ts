@@ -2,11 +2,11 @@ import { expect, type Page } from '@playwright/test';
 import { checkInToken } from './seed.ts';
 
 /**
- * Opens AR01's check-in page and presses "เข้างาน" when it is offered. An earlier test in the same run may already
- * have shifted in; then the page offers "ออกพัก" or "เลิกงาน" instead and nothing is pressed.
+ * Opens a check-in page (AR01's unless another is given) and presses "เข้างาน" when it is offered. An earlier test in
+ * the same run may already have shifted in; then the page offers "ออกพัก" or "เลิกงาน" instead and nothing is pressed.
  */
-export async function shiftInIfOffered(page: Page): Promise<void> {
-  await page.goto(`/check-in/${checkInToken}`);
+export async function shiftInIfOffered(page: Page, sign = `/check-in/${checkInToken}`): Promise<void> {
+  await page.goto(sign);
   // The page draws its buttons only from a fresh answer, and the hub asks for one again on its first connect
   // (facility-0064): the buttons appear, vanish while that second answer is on its way, then come back. Waiting for
   // the network to settle keeps the decision below out of that gap (it made live-flow fail 3 runs of 4 on 2026-10-30).
