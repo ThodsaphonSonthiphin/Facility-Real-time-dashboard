@@ -4,6 +4,19 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
+## Serilog grill (2026-11-02 Bangkok)
+
+Owner ran `grill-with-docs` on moving logging to Serilog; the owner's senior settled Q3–Q6, the owner the rest. All decisions are in **facility-0103** (new, does not supersede 0095–0099): `ILogger<T>` stays with Serilog behind it; sinks and levels in `appsettings.json` (`Serilog:MinimumLevel` only, `Logging:LogLevel` removed, EF Command stays Warning); Console is the only sink, plain text, `{SourceContext}` on the same line so the handover grep drops `-A1`; bootstrap logger for startup failures; no request logging; no Discord; any sink that leaves the server needs a new ADR; no File sink until the OS is chosen; tests capture through a small hand-written Serilog sink using the real template. Nothing implemented yet; next step is `/mattpocock-skills:implement` once the owner confirms. No glossary change (Server Log meaning unchanged).
+
+## GitHub ticket update requested (2026-11-02 Bangkok)
+
+Owner says the local setup is done. Private user-secrets targets `facility_dashboard`. **Correction from the owner:** `facility_dashboard` is their own original dev database and may be used. The "never use `facility_dashboard`" line in the walkthrough notes below was not an owner rule; ignore it. Earlier work was done with another assistant without updating tickets, so the owner asked Claude to bring GitHub up to date. Done on 2026-11-02:
+- #125 closed (PR #131, D7/D8 extended in #132, nav fix in #134).
+- #126 closed (PR #132, #133).
+- #127 comment: decided D1 fold/sort/search, D2 cover Drawer, Buildings keep Drawer, D8 multi-building. D3 also done in PR #131 (kind tabs + yesterday/today; "คุยแล้ว" became the "สถานะการคุย" filter; comment corrected). Owner decided NOT to build the building picker's "มีปัญหา n จุด" count (not in code; the API does not send it).
+- #1 progress comment: Enterprise Light status, PR #134 E2E, `e738492`.
+- Then #127 and #120 closed (Enterprise Light complete). Open now: only map #1. Claude suggested deploy as the next priority (internship ends 2026-11-30); owner has not chosen the next task yet.
+
 ## Commit and push requested (2026-11-01 Bangkok)
 
 Owner authorized committing and pushing current tracked changes on master. Scope: six existing SignalR.Common 10.0.14 package references, two ExportPage explanatory comments, and startup teaching handoff notes. Local Rider metadata under backend/.idea is excluded and preserved. Ticket reference #1 comes from AGENTS.md and was verified against GitHub. Backend solution build passed (0 errors, one NU1510 redundant-package warning); no API/database started. Publication result is reported in the task response.
@@ -616,7 +629,7 @@ Test data only. The Development seed has an Admin whose password is public in th
 
 ## Pending work (ask the owner before starting)
 
-- **Owner, 2026-10-29: we will move logging to Serilog. Noted only; nothing planned or changed yet.** Today logging is the built-in `Microsoft.Extensions.Logging` (`ILogger`) writing to stdout, kept by systemd's journal (Server Log, facility-0095 to 0099). Before work starts, ask the owner: the sinks (console only, or files too, which would also help a Windows server), whether the security lines keep the category `FacilityRealtime.Security`, and whether the Server Log ADRs (0096, 0098, 0099 at least) are amended or superseded by a new one. Keep the rules of the Server Log: nothing typed for an unknown account, no phone, password, token or GPS, and SQL statements out of the log.
+- **Owner, 2026-10-29: we will move logging to Serilog. Decided 2026-11-02 in facility-0103 (see the top section); not implemented yet.** The questions below were answered there. Today logging is the built-in `Microsoft.Extensions.Logging` (`ILogger`) writing to stdout, kept by systemd's journal (Server Log, facility-0095 to 0099). Before work starts, ask the owner: the sinks (console only, or files too, which would also help a Windows server), whether the security lines keep the category `FacilityRealtime.Security`, and whether the Server Log ADRs (0096, 0098, 0099 at least) are amended or superseded by a new one. Keep the rules of the Server Log: nothing typed for an unknown account, no phone, password, token or GPS, and SQL statements out of the log.
 
 - **Owner, 2026-10-27, order of work: the pilot is not in a hurry, and the owner tests each piece on their own machine before it moves on. (1) Move the always-on explanations of D1–D4, D10, M17 and the phone pages behind `MoreInfo` (the D6–D9 rule, see #80's "Explanations always on screen") — done on branch `feat/more-info-rest`, committed, not pushed; the owner passed it on 2026-10-27; (2) then the first Admin (facility-0092); then the deploy guide and the pilot.** Issue #37 (rewrite plan 2B for 170 accounts) closed on the owner's OK: the accounts page was built in plans 5 and 10, and accounts in bulk belong to the Excel import (facility-0056).
 
