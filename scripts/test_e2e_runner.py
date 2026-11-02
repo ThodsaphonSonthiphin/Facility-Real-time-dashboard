@@ -1,6 +1,7 @@
 """Safety checks for the destructive boundary; no MySQL server is contacted."""
 import json
 from pathlib import Path
+import socket
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -123,3 +124,23 @@ class CleanupSafetyTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class PortProbeTests(unittest.TestCase):
+    def test_listening_port_is_refused(self):
+        with socket.socket() as other:
+            other.bind(('127.0.0.1', 0))
+            other.listen()
+            with self.assertRaises(OSError):
+                e2e.ensure_port_free(other.getsockname()[1])
+
+    def test_previous_runs_time_wait_is_allowed(self):
+        with socket.socket() as server:
+            server.bind(('127.0.0.1', 0))
+            server.listen()
+            port = server.getsockname()[1]
+            client = socket.create_connection(('127.0.0.1', port))
+            accepted, _ = server.accept()
+            accepted.close()  # the server side closes first, so the server port is left in TIME_WAIT
+            client.close()
+        e2e.ensure_port_free(port)

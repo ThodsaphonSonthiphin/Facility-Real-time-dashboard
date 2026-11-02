@@ -38,3 +38,15 @@ test('invalid QR is refused with a readable error', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /ป้าย|ไม่พบ/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'ส่งงาน' })).toHaveCount(0);
 });
+
+// facility-0106: the app page arrives with its browser security headers; the fixture fails any case the CSP blocks
+test('the app is served with its security headers', async ({ page }) => {
+  const response = await page.goto('/login');
+  const headers = response!.headers();
+  expect(headers['content-security-policy']).toContain("default-src 'self'");
+  expect(headers['x-frame-options']).toBe('DENY');
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['referrer-policy']).toBe('no-referrer');
+  expect(headers['server']).toBeUndefined();
+  await expect(page.getByRole('button', { name: 'เข้าสู่ระบบ' })).toBeVisible();
+});

@@ -70,14 +70,21 @@ def clean_run(run_dir):
     print(f'Cleaned owned synthetic database {database}; evidence retained at {run_dir}', flush=True)
 
 
+def ensure_port_free(port):
+    """Refuse a port another process listens on. SO_REUSEADDR lets the previous run's TIME_WAIT pass, as Kestrel does."""
+    with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        probe.bind(('127.0.0.1', port))
+        probe.listen()
+
+
 def run(args, playwright_args):
     for program in ['mysql', 'dotnet', 'node', 'npm', 'npx']:
         if not shutil.which(program):
             raise RuntimeError(f'Missing prerequisite: {program}')
     sql('SELECT 1')
     port = int(os.environ.get('E2E_PORT', '5101'))
-    with socket.socket() as probe:
-        probe.bind(('127.0.0.1', port))
+    ensure_port_free(port)
     stamp = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%d%H%M%S')
     suffix = secrets.token_hex(4)
     database = f'facility_e2e_{stamp}_{suffix}'

@@ -22,7 +22,8 @@ interface BoardControlsProps {
 /**
  * The design file's D2 filter row: the shift, the date (the browser's calendar, owner 2026-10-29), the building, each
  * with its label beside it, then the search (kept on the owner's word, at the end of the row). A date picked shows that
- * date at once; the shift on the clock is its date and shift.
+ * date at once; the shift on the clock is its date and shift. A pick goes with the other half as last asked (the
+ * address), not as on screen: the board on screen is the old one until the new one arrives.
  */
 export function BoardControls({ board, args, search, onSearch, onSlot, onBuilding }: BoardControlsProps) {
   const { data: buildings } = useGetBuildingsQuery();
@@ -35,7 +36,7 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onBuildin
         options={shiftOptions}
         value={board?.shift}
         disabled={!board}
-        onChange={(shift) => board && onSlot(board.shiftDate, shift)}
+        onChange={(shift) => board && onSlot(args.shiftDate ?? board.shiftDate, shift)}
       />
       <label className="inline-flex items-center gap-2">
         วันที่
@@ -47,7 +48,7 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onBuildin
           onChange={(event) => {
             // A date box gives "" while a part of the date is cleared; only a whole date is shown
             if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) {
-              onSlot(event.target.value, board?.shift ?? 'Day');
+              onSlot(event.target.value, args.shift ?? board?.shift ?? 'Day');
             }
           }}
         />

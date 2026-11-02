@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
+import type { Page } from '@playwright/test';
 import { test, expect } from '../support/test.ts';
 import { loginAsAdmin } from '../support/login.ts';
+import { holdBack } from '../support/pageWatch.ts';
 
 test.beforeEach(async ({ page }) => {
   test.skip(process.env.E2E_DATASET === 'baseline', 'Requires generated assignments and attendance');
@@ -8,9 +10,20 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'การเข้างาน', exact: true }).click();
 });
 
+const dayButton = (page: Page) => page.getByRole('group', { name: 'กะ', exact: true }).getByRole('button', { name: /^กะเช้า/ });
+
+/**
+ * Presses กะเช้า and waits until the page shows it, as a person would. Before the BoardControls fix (2026-11-02) a date
+ * picked before the Day board arrived asked for the old shift; this test failed at night because of it.
+ */
+async function showDayShift(page: Page): Promise<void> {
+  await dayButton(page).click();
+  await expect(dayButton(page)).toHaveAttribute('aria-pressed', 'true');
+}
+
 test('attendance client pagination has distinct rows, returns to page one and resets after search @dataset', async ({ page }) => {
   test.skip(process.env.E2E_DATASET === 'small', 'Small profile has fewer than25 Areas; medium and large exercise pagination');
-  await page.getByRole('group', { name: 'กะ', exact: true }).getByRole('button', { name: /^กะเช้า/ }).click();
+  await showDayShift(page);
   const table = page.getByRole('table', { name: 'การเข้างานรายพื้นที่' });
   await expect(table.getByRole('rowheader')).toHaveCount(25);
   const first = await table.getByRole('rowheader').allTextContents();
@@ -32,8 +45,10 @@ test('attendance correction requires a reason and persists its time and audit tr
   const yesterday = new Date(`${dataset.anchorDate}T00:00:00Z`);
   yesterday.setUTCDate(yesterday.getUTCDate() - 1);
   const date = yesterday.toISOString().slice(0, 10);
-  await page.getByRole('group', { name: 'กะ', exact: true }).getByRole('button', { name: /^กะเช้า/ }).click();
+  await showDayShift(page);
   await page.getByLabel('วันที่', { exact: true }).fill(date);
+  await expect(page.getByLabel('วันที่', { exact: true })).toHaveValue(date);
+  await expect(dayButton(page)).toHaveAttribute('aria-pressed', 'true');
   await page.getByLabel('ค้นหาพื้นที่หรือแม่บ้าน', { exact: true }).fill('E2EA0001');
   const row = page.getByRole('row').filter({ has: page.getByRole('rowheader', { name: /^E2EA0001 / }) });
   await expect(row).toContainText('07:00');
@@ -56,6 +71,20 @@ test('attendance correction requires a reason and persists its time and audit tr
   await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
   await expect(page.getByRole('table')).toContainText('E2E-CORRECTION');
   await expect(page.getByRole('table')).toContainText('07:05');
+});
+
+test('a date picked while another shift is still loading keeps that shift', async ({ page }) => {
+  await holdBack(page, '**/api/admin/attendance*', 1_500); // a slow network: the old board stays on screen meanwhile
+  const pressed = await dayButton(page).getAttribute('aria-pressed');
+  const [pick, other] = pressed === 'true' ? (['Night', /^กะดึก/] as const) : (['Day', /^กะเช้า/] as const);
+  const otherButton = page.getByRole('group', { name: 'กะ', exact: true }).getByRole('button', { name: other });
+  await otherButton.click();
+  await expect(page).toHaveURL(new RegExp(`shift=${pick}`));
+  await expect(otherButton).toHaveAttribute('aria-pressed', 'false'); // still loading
+  await page.getByLabel('วันที่', { exact: true }).fill('2026-10-01');
+  await expect(page).toHaveURL(new RegExp(`date=2026-10-01&shift=${pick}$`));
+  await expect(otherButton).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('วันที่', { exact: true })).toHaveValue('2026-10-01');
 });
 
 test('cover assignment and nested cancellation preserve the parent drawer @dataset', async ({ page }) => {
