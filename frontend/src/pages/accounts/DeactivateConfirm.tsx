@@ -14,7 +14,7 @@ export function DeactivateConfirm({ account, onDone, onCancel }: DeactivateConfi
   return (
     <ConfirmationDialog
       title={`ปิดใช้งานบัญชี ${account.displayName}?`}
-      body={`${account.displayName} เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดภายใน 5 นาที ประวัติยังอยู่ เปิดใช้งานกลับได้`}
+      body={`${account.displayName} เข้าสู่ระบบไม่ได้ และทุกเครื่องหลุดทันที ประวัติยังอยู่ เปิดใช้งานกลับได้`}
       impacts={account.role === 'Cleaner' && account.areaCode && account.shift
         ? [`${account.areaCode} ${shiftShortLabel[account.shift]} จะว่าง เปิดใช้งานกลับแล้วต้องเลือกพื้นที่ใหม่`]
         : []}

@@ -64,9 +64,22 @@ internal static class AttendanceBoard
     public static BoardEventDto ToDto(ShiftAttendance a) =>
         new(a.Id, a.EventType, Utc(a.OccurredAt), a.Source, a.WithinRadius, a.DistanceM);
 
-    /// <summary>facility-0027 rule 5: the attendance page reloads that board; it also polls every 30 s (facility-0061).</summary>
-    public static Task NotifyAsync(IHubContext<ScanHub> hub, int areaId, ShiftSlot slot) =>
-        hub.Clients.Group(ScanHub.AdminGroup).SendAsync("AttendanceRecorded", new AttendanceChangedDto(areaId, slot.ShiftDate, slot.Shift));
+    /// <summary>
+    /// facility-0027 rule 5: the attendance page reloads that board; it also polls every 30 s (facility-0061). The event is
+    /// already saved, so a failed push is logged and never thrown, as in PointNotifications.
+    /// </summary>
+    public static async Task NotifyAsync(IHubContext<ScanHub> hub, AppDbContext db, ILogger logger, int areaId, ShiftSlot slot)
+    {
+        try
+        {
+            await hub.Clients.Users(await ActiveAdmins.IdsAsync(db))
+                .SendAsync("AttendanceRecorded", new AttendanceChangedDto(areaId, slot.ShiftDate, slot.Shift));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Live update AttendanceRecorded for area {AreaId} failed; the record is saved", areaId);
+        }
+    }
 
     private static BoardRowDto Row(Area area, User? cleaner, List<CoverAssignment> covers, List<ShiftAttendance> events)
     {

@@ -113,7 +113,7 @@ export async function followScanHub({
       onAttendance(change);
     });
   }
-  // A handler for each event this follower does not take: the admins group sends all three, and the client logs a
+  // A handler for each event this follower does not take: an Admin gets all three, and the client logs a
   // warning for every message with no handler
   if (!onPoint) {
     for (const event of POINT_EVENTS) {

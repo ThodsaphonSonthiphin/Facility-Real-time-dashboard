@@ -60,4 +60,21 @@ public class LiveUpdateFailureTests
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         await factory.WithDbAsync(async db => Assert.Equal(1, await db.ScanRecords.CountAsync()));
     }
+
+    [Fact]
+    public async Task A_failed_push_still_answers_200_and_keeps_the_shift_check_in()
+    {
+        var clients = new FakeClients { Failing = true };
+        using var factory = new FacilityApiFactory
+        {
+            ConfigureTestServices = services => services.AddSingleton<IHubContext<ScanHub>>(new FakeHubContext(clients)),
+        };
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
+
+        var response = await AttendanceApi.RecordAsync(cleaner, "ShiftIn");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await factory.WithDbAsync(async db => Assert.Equal(1, await db.ShiftAttendances.CountAsync()));
+    }
 }
