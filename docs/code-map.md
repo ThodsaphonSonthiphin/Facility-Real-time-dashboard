@@ -1,6 +1,6 @@
 # Code Map — which file does what
 
-Checked against `master` at `aa1963d` on 2026-11-03. Current project status is in [handoff](handoff.md); the tables below describe code, not a confirmed production deployment.
+Includes the 2026-11-03 retention implementation. Current checkout/publication status is in [handoff](handoff.md); the tables below describe code, not a confirmed production deployment.
 
 > **Read this when you open the repo and do not know where anything is.**
 > `docs/architecture.md` explains how the parts *connect* (deployment, network, MySQL schema).
@@ -22,7 +22,7 @@ graph TD
         Persist["Infrastructure/ — EF Core, PBKDF2, Excel"]
         Hub["Hubs/ScanHub — /hubs/scan"]
     end
-    DB[("MySQL — 14 tables")]
+    DB[("MySQL — 15 tables")]
     Shared -->|"HTTP JSON /api/*"| Endpoints
     Shared -.->|"WebSocket"| Hub
     Hub -.->|"push: ScanRecorded"| Shared
@@ -65,7 +65,7 @@ A factory cleaning-inspection system: cleaners scan a printed QR sign at each se
 | Frontend | React 19.2.8, TypeScript, Vite 8, react-router 7, Redux Toolkit + RTK Query, Tailwind 4, Vitest |
 | Real-time | `@microsoft/signalr` — one hub at `/hubs/scan`, server → client only |
 | Backend | ASP.NET Core 10 Minimal API (no controllers), four projects: Api references Application + Infrastructure; Infrastructure references Application + Domain; Application references Domain |
-| Persistence | EF Core 10 + `MySql.EntityFrameworkCore`, snake_case tables, 5 migrations |
+| Persistence | EF Core 10 + `MySql.EntityFrameworkCore`, snake_case tables, 6 migrations |
 | Auth | JWT access token 5 minutes (HS256) + rotating refresh token in an `HttpOnly` cookie scoped to `/api/auth` |
 | Passwords | PBKDF2-HMAC-SHA256, 600 000 iterations |
 | Tests | xUnit API/unit tests, Vitest frontend tests, Playwright real-API browser workflows; latest recorded results in handoff |
@@ -247,6 +247,7 @@ Solution `backend/FacilityRealtime.slnx` — four projects, no controllers.
 | `SecurityHeaders.cs` | CSP and other browser security headers; `/api` answers use `no-store`. HSTS and forwarded-header trust are configured in `Program.cs` (0106). |
 | `Auth/SecurityLog.cs` | Redacted security events, including normalized login IP, through `ILogger` → Serilog Console (0103, 0104). |
 | `Commands/ResetAdminCommand.cs` | Console account recovery; `FirstAdmin` / `ServerAdminAccounts` create the first Admin from settings (0092). |
+| `Retention/RetentionWorker.cs` | Startup catch-up and nightly Bangkok schedule, fresh DI scope per attempt, cancellation and error retry. Testing does not auto-start it. |
 | `PrecompressedFiles.cs` | Sends a frontend file's build-time `.br`/`.gz` copy when the browser accepts it (facility-0067 amendment). |
 | `wwwroot/` | The built frontend, copied in by `npm run build:api`; `frontend/precompress.ts` writes a `.br` and a `.gz` beside each text file. |
 
@@ -269,16 +270,17 @@ Business rules without database or HTTP dependencies, mostly static; LoginThrott
 
 | Path | Purpose |
 |---|---|
-| `Persistence/AppDbContext.cs` | All EF mapping: 14 `DbSet`s, snake_case columns, unique indexes, computed columns, check constraints. |
+| `Persistence/AppDbContext.cs` | All EF mapping: 15 `DbSet`s, snake_case columns, unique indexes, computed columns, check constraints. |
+| `Persistence/Retention/` | Scoped RetentionRunner: GPS SQL batches, source/dependent cleanup and atomic PointMonthlySummary archives. |
 | `Persistence/*Query.cs` | Reusable read models: `PointBoardQuery`, `RoundFactsQuery`, `AlertQuery`, `AuditLogQuery`, `ExportQuery`, `InspectionHistoryQuery`. |
 | `Auth/Pbkdf2PasswordHasher.cs` | PBKDF2-HMAC-SHA256, 600 000 iterations, `pbkdf2-sha256$…` format. Also used for the phone number-as-secret. |
 | `Export/ExcelWorkbook.cs` | ClosedXML `.xlsx` writer. |
-| `Migrations/` | 5 migrations + model snapshot, applied at startup with `MigrateAsync()`. |
+| `Migrations/` | 6 migrations + model snapshot, applied at startup with `MigrateAsync()`. |
 | `Persistence/DbInitializer.cs` | Dev-only seed (`admin` / `admin1234`). Never runs outside Development. |
 
 ### `FacilityRealtime.Domain`
 
-`Entities/` models the 14 application tables and the `IGpsStamped` interface; `Enums/` holds shared domain values. Entities include small domain helpers such as Area.HasShift.
+`Entities/` models the 15 application tables and the `IGpsStamped` interface; `Enums/` holds shared domain values. Entities include small domain helpers such as Area.HasShift.
 
 **Design shape to internalise:** endpoints inject `AppDbContext` directly. There is no repository layer and no service layer for business logic. If you go looking for `IOrderService`, it does not exist here — the rule is a static class in `Application`, the endpoint calls it.
 
@@ -658,6 +660,7 @@ graph LR
 
 ```mermaid
 erDiagram
+    SERVICE_POINT ||--o{ POINT_MONTHLY_SUMMARY : anonymous_archive
     BUILDING ||--o{ AREA : contains
     AREA ||--o{ SERVICE_POINT : contains
     SERVICE_POINT |o--o| SIGN : has
@@ -678,7 +681,7 @@ erDiagram
     BUILDING |o--o{ COVER_ASSIGNMENT : receives
 ```
 
-14 tables, defined in `Infrastructure/Persistence/AppDbContext.cs`, snake_case. Accounts, buildings, Areas and points are deactivated through Admin actions. Record/GPS retention deletion is decided but not implemented (0055); it is distinct from deactivation.
+15 tables, defined in `Infrastructure/Persistence/AppDbContext.cs`, snake_case. Accounts, buildings, Areas and points are deactivated through Admin actions. Automatic retention (0055) clears raw GPS, deletes expired records and stores anonymous point/month summaries transactionally; it is distinct from master-data deactivation. See [the retention guide](data-retention.md).
 
 **Invariants the schema itself enforces** (you cannot code around them):
 
@@ -712,6 +715,8 @@ Backend paths below are relative to `backend/tests/`; frontend paths are relativ
 | Submission/inspection screens, live Dashboard and date/shift race | `pages/scan/ScanPage.test.tsx`, `pages/inspect/InspectPage.test.tsx`, `pages/dashboard/DashboardPage.test.tsx`, `pages/attendance/AttendancePage.test.tsx` |
 | Route roles and lazy boundaries | `router.test.tsx` |
 
+Retention tests are in `FacilityRealtime.ApiTests/Retention/` (real relational deletion/rollback, race cases, schedule/lifecycle and MySQL migration/provider) and `FacilityRealtime.UnitTests/RetentionRulesTests.cs` (settings/calendar/anonymous counts). See [the retention guide](data-retention.md).
+
 The frontend harness is `src/test/`: fake fetch, SignalR, GPS and `renderApp`. Real-API workflows and runner safety checks are described in [testing/e2e.md](testing/e2e.md). Current recorded counts belong in [handoff](handoff.md), not in this file map.
 
 ---
@@ -722,7 +727,7 @@ The frontend harness is `src/test/`: fake fetch, SignalR, GPS and `renderApp`. R
 - QR decoding is delegated to the phone's native camera (0007). The app renders QR codes for printing; it has no in-app camera scanner.
 - LoginThrottle is in memory; restarting clears it. This is a single-server design.
 - No offline submission queue, payroll calculations, automatic Supervisor score or external notification service is implemented; see the business overview for scope.
-- Deployment/field checks, retention automation and the shelved import are tracked in [handoff](handoff.md). Browser-engine E2E does not confirm real iPhone behavior, GPS accuracy or physical printing.
+- Deployment/field checks, retention host verification and the shelved import are tracked in [handoff](handoff.md). Browser-engine E2E does not confirm real iPhone behavior, GPS accuracy or physical printing.
 
 ---
 

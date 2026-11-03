@@ -1,6 +1,6 @@
 # Architecture — how the Facility Real-time Dashboard is connected
 
-Checked against `master` at `aa1963d` on 2026-11-03. This describes the application code and the documented deployment topology; a production installation and field pilot are not yet confirmed. See [handoff](handoff.md) for status, [code map](code-map.md) for files and [ADRs](adr/README.md) for decisions.
+Describes the application code including the 2026-11-03 retention implementation and the documented deployment topology; current checkout/publication status is in [handoff](handoff.md), and a production installation and field pilot are not yet confirmed. See [handoff](handoff.md) for status, [code map](code-map.md) for files and [ADRs](adr/README.md) for decisions.
 
 ## 1. Deployment and network
 
@@ -136,7 +136,7 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 - Every push looks up active recipients in the database at send time. There is no `admins` connection group. Deactivation blocks the next protected API read and stops subsequent pushes, although an already open socket may remain connected (0105). Phone/password changes revoke refresh tokens; existing access tokens can last up to 5 minutes.
 - Login Lock combines a login-name/IP pair (5 attempts per 15 minutes, cleared by success) and an IP-wide failure cap of 20. IPv6 is normalized to /64. The counters are in memory on one server (0104).
 - `ILogger` writes through Serilog, Console only. Linux's journal is the retained Server Log; no request logging or external sink is configured (0103).
-- GPS/record retention and anonymous monthly summaries are decided in 0055 but no cleanup job is implemented. PDPA notice/HR-before-production work was removed by the owner on 2026-11-03. Excel import is shelved. See [handoff](handoff.md) for the remaining work.
+- The retention runner (0055) clears raw GPS at 90 days, deletes annual attendance/blocked scans and transactionally archives old point/months into anonymous summaries. RetentionWorker starts after ApplicationStarted, catches up and runs nightly at 02:00 Bangkok; failures retry after 15 minutes. Whole-month archive semantics and configuration are in [data-retention.md](data-retention.md). PDPA notice/HR-before-production work was removed by the owner on 2026-11-03. Excel import is shelved. See [handoff](handoff.md) for the remaining work.
 
 ---
 
@@ -420,6 +420,20 @@ classDiagram
         +DateTime ReviewedAt
     }
 
+    class PointMonthlySummary {
+        <<point_monthly_summaries>>
+        +int ServicePointId «composite key»
+        +DateOnly Month «composite key»
+        +int RoundsTotal
+        +int SubmittedOnTime
+        +int SubmittedLate
+        +int NotDone
+        +int InspectedPass
+        +int InspectedFail
+        +int NotInspected
+        +int IssuesReported
+    }
+    ServicePoint "1" <-- "0..*" PointMonthlySummary : anonymous monthly archive
     Building "1" <-- "0..*" Area
     Area "1" <-- "0..*" ServicePoint
     Area "1" <-- "1..*" Sign

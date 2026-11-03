@@ -5,6 +5,9 @@ using FacilityRealtime.Api.Auth;
 using FacilityRealtime.Api.Commands;
 using FacilityRealtime.Api.Endpoints;
 using FacilityRealtime.Api.Hubs;
+using FacilityRealtime.Api.Retention;
+using FacilityRealtime.Application.Retention;
+using FacilityRealtime.Infrastructure.Persistence.Retention;
 using FacilityRealtime.Application.Accounts;
 using FacilityRealtime.Application.Attendance;
 using FacilityRealtime.Application.Auth;
@@ -62,6 +65,13 @@ try
     {
         throw new InvalidOperationException("Attendance: window minutes must be 0-360 and RepeatIgnoreMinutes 0 or more.");
     }
+
+    var retention = builder.Configuration.GetSection(RetentionSettings.SectionName).Get<RetentionSettings>() ?? new RetentionSettings();
+    retention.Validate();
+    builder.Services.AddSingleton(retention);
+    builder.Services.AddScoped<IRetentionRunner, RetentionRunner>();
+    if (!builder.Environment.IsEnvironment("Testing"))
+        builder.Services.AddHostedService<RetentionWorker>();
 
     builder.Services.AddSingleton(attendance);
     builder.Services.AddFacilityAuth(builder.Configuration);
