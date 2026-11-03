@@ -39,3 +39,32 @@ export function readLocation(): Promise<LocationReading> {
     );
   });
 }
+
+/**
+ * After a refusal, whether this page must reload to ask again. WebKit (iPhone Safari) keeps a refusal for the life of
+ * the page even after the person turns location on; only a reload asks again (E2E probe 2026-11-02). Chromium asks
+ * again at once, so it never reloads. A reload only when location is on but the page still gets a refusal: if it is
+ * really still off, the help stays and nothing on the page is lost.
+ */
+export async function refusalNeedsReload(): Promise<boolean> {
+  if (!('geolocation' in navigator)) {
+    return false;
+  }
+  const refused = await new Promise<boolean>((resolve) => {
+    setTimeout(() => resolve(false), 1_000); // a refusal answers at once; a fix on its way is not one
+    navigator.geolocation.getCurrentPosition(
+      () => resolve(false),
+      (error) => resolve(error.code === PERMISSION_DENIED),
+      { maximumAge: Infinity, timeout: 1_000 },
+    );
+  });
+  if (!refused) {
+    return false;
+  }
+  try {
+    const status = await navigator.permissions.query({ name: 'geolocation' });
+    return status.state !== 'denied';
+  } catch {
+    return true; // no Permissions API: a reload is the only way to ask again
+  }
+}

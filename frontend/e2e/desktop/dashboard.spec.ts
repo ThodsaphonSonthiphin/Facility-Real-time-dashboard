@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test.ts';
+import { measuresLayoutShift } from '../support/browser.ts';
 import { loginAsAdmin } from '../support/login.ts';
 import { expectAreaShown } from '../support/dashboard.ts';
 import { holdBack, layoutShiftTotal, recordLayoutShifts, sidewaysOverflow, textEverShown, watchForText } from '../support/pageWatch.ts';
@@ -49,6 +50,7 @@ test.describe('on a narrow window (half a laptop screen)', () => {
   // Measured 0.04 in Lighthouse mobile before bdfd581, about 0.017 at 700px here (measured on this Mac; depends on the
   // system font, so re-run the proof on any new machine)
   test('D1 does not move when the building names arrive', async ({ page }, testInfo) => {
+    test.skip(!measuresLayoutShift, 'Layout shifts are measured with an API only Chromium has');
     await loginAsAdmin(page);
 
     await recordLayoutShifts(page);

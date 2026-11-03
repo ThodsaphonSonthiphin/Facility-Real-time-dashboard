@@ -1,5 +1,7 @@
 import { MapPinOff, RefreshCw } from 'lucide-react';
-import type { LocationProblem } from '../geo/readLocation';
+import { useState } from 'react';
+import { refusalNeedsReload, type LocationProblem } from '../geo/readLocation';
+import { browserPage } from '../utils/reloadPage';
 import { Panel } from './Boxes';
 import { Button } from './Button';
 import { Note } from './Note';
@@ -15,11 +17,26 @@ interface LocationHelpProps {
 
 /**
  * Wireframe M2 (facility-0036): without a location nothing is recorded, so the page says how to turn it on and
- * repeats the same press. On plain http no browser gives a location, so there is nothing to retry.
+ * repeats the same press (reloading first where the browser keeps the refusal for the page, see refusalNeedsReload). On plain http no browser gives a location, so there is nothing to retry.
  */
 export function LocationHelp({ problem, action, busy, onRetry }: LocationHelpProps) {
   const insecure = problem === 'insecure';
   const denied = problem === 'denied';
+  const [checking, setChecking] = useState(false);
+  // After a refusal, the same press again unless the page itself keeps the refusal (iPhone Safari): then a reload
+  const retry = async () => {
+    if (!denied) {
+      onRetry();
+      return;
+    }
+    setChecking(true);
+    if (await refusalNeedsReload()) {
+      browserPage.reload();
+      return;
+    }
+    setChecking(false);
+    onRetry();
+  };
   return (
     <ResultScreen
       tone="err"
@@ -28,7 +45,7 @@ export function LocationHelp({ problem, action, busy, onRetry }: LocationHelpPro
       // On plain http no browser gives a location, so there is nothing to retry
       bottom={
         insecure ? undefined : (
-          <Button variant="primary" size="main" disabled={busy} onClick={onRetry}>
+          <Button variant="primary" size="main" disabled={busy || checking} onClick={() => void retry()}>
             <RefreshCw aria-hidden="true" className="size-6" />
             {denied ? 'เปิดแล้ว ลองอีกครั้ง' : 'ลองอีกครั้ง'}
           </Button>

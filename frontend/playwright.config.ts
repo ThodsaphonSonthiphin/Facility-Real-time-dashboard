@@ -1,5 +1,6 @@
 import { defineConfig } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
+import { engine } from './e2e/support/browser.ts';
 import { desktop, phone } from './e2e/support/devices.ts';
 
 // facility-0094: scripts/e2e.sh starts the API on a throwaway database and passes its address here
@@ -15,6 +16,15 @@ if (address.protocol !== 'http:' || address.hostname !== '127.0.0.1' || !runDire
 const ownership = JSON.parse(readFileSync(`${runDirectory}/ownership.json`, 'utf8')) as { cleaned: boolean; token: string };
 if (ownership.cleaned || ownership.token !== process.env.E2E_SEED_TOKEN) {
   throw new Error('Missing or expired E2E database ownership');
+}
+
+// Playwright's Firefox does not start on macOS 27 ("Could not find profile folder"): macOS shields
+// ~/Library/Application Support/Firefox from it. An empty stand-in home, owned by this run, lets it start.
+let firefoxEnv = {};
+if (engine === 'firefox' && process.platform === 'darwin') {
+  const firefoxHome = `${runDirectory}/firefox-home`;
+  mkdirSync(firefoxHome, { recursive: true });
+  firefoxEnv = { env: { ...process.env, CFFIXED_USER_HOME: firefoxHome } };
 }
 
 export default defineConfig({
@@ -34,9 +44,9 @@ export default defineConfig({
   ],
   use: {
     baseURL,
-    browserName: 'chromium',
+    browserName: engine,
     headless: process.env.E2E_HEADLESS === '1',
-    launchOptions: { slowMo: Number(process.env.E2E_SLOW_MO ?? 350) },
+    launchOptions: { slowMo: Number(process.env.E2E_SLOW_MO ?? 350), ...firefoxEnv },
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     screenshot: 'on',

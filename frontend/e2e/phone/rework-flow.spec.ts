@@ -31,7 +31,7 @@ test('Cleaner submission → Supervisor rework → Cleaner resubmission → pass
   await expect(page.getByRole('heading', { name: /^ส่งงานแล้ว/ })).toBeVisible();
 
   const supervisorContext = await browser.newContext({ ...phone, baseURL: testInfo.project.use.baseURL });
-  observeAdditionalContext(supervisorContext);
+  await observeAdditionalContext(supervisorContext);
   try {
     const supervisorPage = await supervisorContext.newPage();
     await loginAsEmployee(supervisorPage, { employeeId: supervisorId, phone: factoryPhone });

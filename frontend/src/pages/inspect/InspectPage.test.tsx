@@ -321,7 +321,7 @@ describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
     await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
 
     expect(await screen.findByRole('heading', { name: 'ห้องน้ำชาย' })).toBeInTheDocument();
-    expect(gps.calls).toBe(2);
+    expect(gps.calls).toBe(3); // the refusal, the quick check that it is gone, the reading
     expect(server.calls.filter((c) => c.path === '/api/inspections/scan')).toHaveLength(1);
   });
 

@@ -75,3 +75,11 @@ export function fakeGpsTrack(answers: FakeTrackAnswer[], everyMs = 1_000) {
   Object.defineProperty(navigator, 'geolocation', { value: geolocation, configurable: true });
   return state;
 }
+
+/** Gives the page a navigator.permissions whose geolocation state is `state` (jsdom has none); setup.ts removes it. */
+export function permissionsSay(state: PermissionState) {
+  Object.defineProperty(navigator, 'permissions', {
+    value: { query: () => Promise.resolve({ state }) },
+    configurable: true,
+  });
+}
