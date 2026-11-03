@@ -72,8 +72,8 @@ try
         builder.Services.AddDbContext<AppDbContext>(options => options.UseMySQL(connectionString));
     }
 
-    // 2. SignalR with string enum serialization
-    builder.Services.AddSignalR()
+    // 2. SignalR with string enum serialization; facility-0107: a ping every 5 s, for the Admin pages' 10 s wait
+    builder.Services.AddSignalR(options => options.KeepAliveInterval = TimeSpan.FromSeconds(5))
         .AddJsonProtocol(options =>
         {
             options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());

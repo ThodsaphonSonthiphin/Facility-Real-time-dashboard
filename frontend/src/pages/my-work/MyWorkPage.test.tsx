@@ -276,6 +276,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
 
     expect(await screen.findByText('หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน')).toBeInTheDocument();
     expect(hub.latest().tokens).toEqual(['token-cleaner']);
+    expect(hub.latest().serverTimeoutInMilliseconds).toBe(30_000); // a phone keeps the client's own wait (facility-0107)
   });
 
   it('asks again when the hub says a point changed, so an inspection shows without a press', async () => {

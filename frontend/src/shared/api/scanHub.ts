@@ -5,6 +5,16 @@ import type { AttendanceChanged, PointCard } from './types';
 /** facility-0064: the automatic reconnect's waits; after it gives up, a fresh start every 3 s. */
 export const HUB_RETRY_DELAYS_MS = [0, 2_000, 5_000, 10_000, 30_000];
 export const HUB_RESTART_MS = 3_000;
+/**
+ * facility-0107: an Admin page counts the link lost after 10 s without a word from the server (the client's own is
+ * 30 s); the server pings every 5 s. Phones keep 30 s: a factory's signal drops for a moment and the badge would flicker.
+ */
+export const ADMIN_HUB_SERVER_TIMEOUT_MS = 10_000;
+/**
+ * facility-0107: back online, the page asks the server after this long. Chromium says online before a request gets
+ * through (E2E 2026-11-03: the ask at once failed with net::ERR_INTERNET_DISCONNECTED, and the next was the 30 s poll).
+ */
+export const HUB_ONLINE_ASK_MS = 1_000;
 
 /** ScanHub's point events (facility-0057, 0058): each carries the point's whole card as the clock's shift sees it. */
 const POINT_EVENTS = ['ScanRecorded', 'InspectionRecorded'] as const;
@@ -24,6 +34,8 @@ export interface ScanHubFollow {
   onAttendance?: (change: AttendanceChanged) => void;
   /** Pushes may have been missed while the connection was down: ask the server again (facility-0064 item 2). */
   onMissed: () => void;
+  /** How long to wait to hear from the server before the link counts as lost; left out, the client's own 30 s. */
+  serverTimeoutMs?: number;
 }
 
 /**
@@ -39,6 +51,7 @@ export async function followScanHub({
   onPoint,
   onAttendance,
   onMissed,
+  serverTimeoutMs,
 }: ScanHubFollow): Promise<void> {
   // The SignalR client is a third of the main JS and no page needs it before its first answer, so it comes in its own
   // file, fetched while that answer is on its way (2026-10-28, measured: a phone's first screen no longer waits for it)
@@ -54,8 +67,9 @@ export async function followScanHub({
     entryGone = true;
   });
   let HubConnectionBuilder: typeof import('@microsoft/signalr').HubConnectionBuilder;
+  let HubConnectionState: typeof import('@microsoft/signalr').HubConnectionState;
   try {
-    ({ HubConnectionBuilder } = await signalR);
+    ({ HubConnectionBuilder, HubConnectionState } = await signalR);
   } catch {
     // The file did not arrive (a new build replaced it, or the link dropped): the page keeps its polling
     dispatch(hubStatusChanged({ key, status: 'reconnecting' }));
@@ -71,8 +85,12 @@ export async function followScanHub({
     .withAutomaticReconnect(HUB_RETRY_DELAYS_MS)
     .configureLogging('warn')
     .build();
+  if (serverTimeoutMs !== undefined) {
+    connection.serverTimeoutInMilliseconds = serverTimeoutMs;
+  }
   let removed = false;
   let restartTimer: ReturnType<typeof setTimeout> | undefined;
+  let onlineAskTimer: ReturnType<typeof setTimeout> | undefined;
   const setStatus = (status: HubStatus) => dispatch(hubStatusChanged({ key, status }));
 
   const restartLater = () => {
@@ -93,6 +111,10 @@ export async function followScanHub({
     }
     if (removed) {
       void connection.stop(); // the entry went while this start was in flight: do not leave the connection open
+      return;
+    }
+    if (!navigator.onLine) {
+      setStatus('reconnecting'); // the network went while the start was finishing; back online asks again (facility-0107)
       return;
     }
     setStatus('live');
@@ -129,12 +151,28 @@ export async function followScanHub({
     onMissed();
   });
   connection.onclose(restartLater);
+  // facility-0107: the browser knows at once when its own network goes, long before the connection's wait runs out.
+  // Back online, the page asks the server soon (HUB_ONLINE_ASK_MS): a connection that dropped meanwhile may wait up to
+  // 30 s for its next try (HUB_RETRY_DELAYS_MS), and until it is back the badge stays. One that never noticed is live.
+  const wentOffline = () => setStatus('reconnecting');
+  const cameOnline = () => {
+    if (connection.state === HubConnectionState.Connected) {
+      setStatus('live');
+    }
+    clearTimeout(onlineAskTimer);
+    onlineAskTimer = setTimeout(onMissed, HUB_ONLINE_ASK_MS);
+  };
+  window.addEventListener('offline', wentOffline);
+  window.addEventListener('online', cameOnline);
 
   setStatus('connecting');
   void start();
   await cacheEntryRemoved;
   removed = true;
+  window.removeEventListener('offline', wentOffline);
+  window.removeEventListener('online', cameOnline);
   clearTimeout(restartTimer);
+  clearTimeout(onlineAskTimer);
   dispatch(hubFollowEnded(key));
   await connection.stop();
 }

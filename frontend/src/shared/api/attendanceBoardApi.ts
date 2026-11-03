@@ -2,7 +2,7 @@ import type { RootState } from '../../store';
 import { getValidAccessToken } from '../auth/session';
 import type { AssignedCleaner } from './adminSetupApi';
 import { baseApi } from './baseApi';
-import { followScanHub } from './scanHub';
+import { ADMIN_HUB_SERVER_TIMEOUT_MS, followScanHub } from './scanHub';
 import type { AttendanceEvent, Shift } from './types';
 
 /**
@@ -90,6 +90,7 @@ const attendanceBoardApi = baseApi.injectEndpoints({
       async onCacheEntryAdded(args, { cacheDataLoaded, cacheEntryRemoved, dispatch, getState }) {
         await followScanHub({
           key: attendanceHubKey(args),
+          serverTimeoutMs: ADMIN_HUB_SERVER_TIMEOUT_MS,
           cacheDataLoaded,
           cacheEntryRemoved,
           dispatch,

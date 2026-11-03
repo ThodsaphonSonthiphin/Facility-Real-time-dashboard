@@ -186,6 +186,7 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement()); // the hub is live
     await waitFor(() => expect(boardCalls(server)).toHaveLength(2)); // the hub's first start asks again
     await apiIdle(store);
+    expect(hub.latest().serverTimeoutInMilliseconds).toBe(10_000); // an Admin page hears of a dead link sooner (facility-0107)
 
     act(() => hub.latest().push('AttendanceRecorded', { areaId: 1, shiftDate: '2026-10-14', shift: 'Night' }));
     act(() => hub.latest().push('AttendanceRecorded', { areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }));

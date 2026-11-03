@@ -3,7 +3,7 @@ import { makeStore } from '../../store';
 import { selectHubStatus } from '../../store/slices/hubSlice';
 import { point } from '../../test/cleanerFixtures';
 import { hub } from '../../test/fakeSignalR';
-import { followScanHub } from './scanHub';
+import { followScanHub, HUB_ONLINE_ASK_MS } from './scanHub';
 import type { AttendanceChanged, PointCard } from './types';
 
 interface FollowOptions {
@@ -13,10 +13,17 @@ interface FollowOptions {
   points?: boolean;
   /** Whether the page takes AttendanceRecorded. */
   attendance?: boolean;
+  /** How long the connection waits to hear from the server; left out, the client's own 30 s. */
+  serverTimeoutMs?: number;
+  /** The token a start asks for; a test holds it to keep a start in flight. */
+  token?: () => Promise<string>;
 }
 
 /** One cache entry's life, driven by hand: `loaded` is its first answer, `remove` its end. */
-function follow({ key = 'test', points: withPoints = true, attendance: withAttendance = false }: FollowOptions = {}, store = makeStore()) {
+function follow(
+  { key = 'test', points: withPoints = true, attendance: withAttendance = false, serverTimeoutMs, token }: FollowOptions = {},
+  store = makeStore(),
+) {
   let loaded: (value?: unknown) => void = () => {};
   let failLoad: (reason: unknown) => void = () => {};
   let remove: () => void = () => {};
@@ -35,12 +42,13 @@ function follow({ key = 'test', points: withPoints = true, attendance: withAtten
     cacheDataLoaded,
     cacheEntryRemoved,
     dispatch: store.dispatch,
-    accessToken: async () => 'token-supervisor',
+    accessToken: token ?? (async () => 'token-supervisor'),
     onPoint: withPoints ? (card) => points.push(card) : undefined,
     onAttendance: withAttendance ? (change) => changes.push(change) : undefined,
     onMissed: () => {
       counts.missed += 1;
     },
+    serverTimeoutMs,
   });
   return {
     loaded,
@@ -262,5 +270,107 @@ describe('followScanHub (#26 hub-cache-bridge, facility-0064)', () => {
 
     expect(hub.connections).toHaveLength(0);
     expect(f.connections()).toEqual({});
+  });
+
+  it('a follower given a server timeout waits that long to hear from the server; one given none keeps 30 s (facility-0107)', async () => {
+    const admin = follow({ key: 'admin', serverTimeoutMs: 10_000 });
+    admin.loaded();
+    await vi.waitFor(() => expect(admin.status()).toBe('live'));
+    expect(hub.latest().serverTimeoutInMilliseconds).toBe(10_000);
+
+    const phone = follow({ key: 'phone' });
+    phone.loaded();
+    await vi.waitFor(() => expect(phone.status()).toBe('live'));
+    expect(hub.latest().serverTimeoutInMilliseconds).toBe(30_000);
+  });
+
+  it('the browser going offline says reconnecting at once; back online on a connection still open, live again and asks what it missed (facility-0107)', async () => {
+    const f = follow();
+    f.loaded();
+    await vi.waitFor(() => expect(f.status()).toBe('live'));
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      window.dispatchEvent(new Event('offline'));
+      expect(f.status()).toBe('reconnecting');
+      window.dispatchEvent(new Event('online'));
+
+      expect(f.status()).toBe('live');
+      // Chromium says online before a request gets through (E2E 2026-11-03: net::ERR_INTERNET_DISCONNECTED)
+      expect(f.counts.missed).toBe(1);
+      await vi.advanceTimersByTimeAsync(HUB_ONLINE_ASK_MS);
+      expect(f.counts.missed).toBe(2); // 1 from the first start, 1 for the time offline
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('back online while the connection is still reconnecting, it asks the server at once and says reconnecting until the connection is back (facility-0107)', async () => {
+    const f = follow();
+    f.loaded();
+    await vi.waitFor(() => expect(f.status()).toBe('live'));
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      window.dispatchEvent(new Event('offline'));
+      hub.latest().reconnecting();
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(HUB_ONLINE_ASK_MS);
+      expect(f.status()).toBe('reconnecting');
+      expect(f.counts.missed).toBe(2); // the page catches up now, not at the reconnect's next try (up to 30 s away)
+
+      hub.latest().reconnected();
+      expect(f.status()).toBe('live');
+      expect(f.counts.missed).toBe(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a start that completes after the browser went offline does not say live (facility-0107)', async () => {
+    let giveToken: (token: string) => void = () => {};
+    const f = follow({ token: () => new Promise((resolve) => (giveToken = resolve)) });
+    f.loaded();
+    await vi.waitFor(() => expect(hub.latest().state).toBe('Connecting'));
+    // The network goes while the start is finishing (seen on Firefox, 2026-11-03): the start still completes
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    window.dispatchEvent(new Event('offline'));
+    giveToken('token-supervisor');
+
+    await vi.waitFor(() => expect(hub.latest().state).toBe('Connected'));
+    expect(f.status()).toBe('reconnecting');
+  });
+
+  it('an entry that goes before its back-online ask never asks (facility-0107)', async () => {
+    const f = follow();
+    f.loaded();
+    await vi.waitFor(() => expect(f.status()).toBe('live'));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      window.dispatchEvent(new Event('online'));
+      f.remove();
+      await f.done;
+      await vi.advanceTimersByTimeAsync(HUB_ONLINE_ASK_MS);
+
+      expect(f.counts.missed).toBe(1);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('after the entry goes, the browser going offline changes nothing (facility-0107)', async () => {
+    const store = makeStore();
+    const f = follow({ key: 'gone' }, store);
+    f.loaded();
+    await vi.waitFor(() => expect(f.status()).toBe('live'));
+    f.remove();
+    await f.done;
+
+    window.dispatchEvent(new Event('offline'));
+    window.dispatchEvent(new Event('online'));
+
+    expect(f.connections()).toEqual({});
+    expect(f.counts.missed).toBe(1);
   });
 });

@@ -95,6 +95,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement()); // the hub is live
     await settled(server, store);
     expect(hub.latest().tokens).toEqual(['token-admin']);
+    expect(hub.latest().serverTimeoutInMilliseconds).toBe(10_000); // an Admin page hears of a dead link sooner (facility-0107)
 
     act(() => hub.latest().push('InspectionRecorded', { ...boardPoints[0], status: 'Passed' }));
 

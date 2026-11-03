@@ -17,6 +17,8 @@ export class FakeHubConnection {
   readonly tokens: string[] = [];
   starts = 0;
   stops = 0;
+  /** How long the connection waits to hear from the server before it counts as lost; the real client's default. */
+  serverTimeoutInMilliseconds = 30_000;
   state: 'Disconnected' | 'Connecting' | 'Connected' | 'Reconnecting' = 'Disconnected';
   private readonly options: FakeConnectionOptions;
   private readonly listeners = new Map<string, Listener[]>();
@@ -100,6 +102,15 @@ export class FakeHubConnection {
     this.closedListeners.forEach((callback) => callback(new Error('fake hub: closed')));
   }
 }
+
+/** The real client's connection states (a string enum). */
+export const HubConnectionState = {
+  Disconnected: 'Disconnected',
+  Connecting: 'Connecting',
+  Connected: 'Connected',
+  Disconnecting: 'Disconnecting',
+  Reconnecting: 'Reconnecting',
+} as const;
 
 export class HubConnectionBuilder {
   private url = '';
