@@ -83,6 +83,8 @@ async function setChromiumLocation(context: BrowserContext, page: Page, setting:
 
 // facility-0036: no location permission is the one case that blocks; turned on, the same press goes through
 test('with location turned off a check-in waits until it is turned on @dataset', async ({ page, context }) => {
+  test.skip(engine === 'firefox', 'Playwright cannot refuse location on Firefox and then allow it: with no permission ' +
+    'Firefox waits on its own prompt, and geo.prompt.testing refuses even a granted permission (probe 2026-11-03)');
   const area = factoryArea(7);
   await loginAsEmployee(page, area.cleaner);
   await expect(page).toHaveURL(/\/my-work$/);

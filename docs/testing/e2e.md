@@ -83,11 +83,13 @@ Conditions (2026-11-02): GPS far from the sign (recorded and flagged, the Admin 
 Engine differences found (2026-11-02 probes, kept in the tests):
 
 - WebKit reports CSP violations that are not the app's: a source-less `<style>` Playwright adds (a blank page under the same CSP shows it), and `style-src-attr` for its own drawing of any `<select>` (a plain HTML select shows it). Only those two are skipped, on WebKit only; an injected inline script still fails on both engines.
-- WebKit keeps a refused location for the life of the page; Chromium reads it again at once. The location-refused case fails on WebKit on purpose (see handoff).
+- WebKit keeps a refused location for the life of the page; Chromium reads it again at once. Since the retry fix, "เปิดแล้ว ลองอีกครั้ง" reloads the page there, and the WebKit case expects the reload and a second เข้างาน press.
 - A visible Chromium asks with its own prompt when location is merely cleared, so the case refuses it at browser level (DevTools `Browser.setPermission`).
 - Offline emulation cuts HTTP and pushes in both engines. Chromium's hub notices after its 30 s server timeout; WebKit's never did within 58 s, so that case is `fixme` on WebKit.
 - A mouse click does not focus a button on WebKit, so the cover case opens its confirmation with the keyboard there.
-- Firefox could not start inside the agent's sandbox ("Could not find profile folder"); run it from a normal Terminal.
+- Playwright's Firefox (157) does not start on macOS 27 ("Could not find profile folder"), in the agent's sandbox and in a normal Terminal alike: macOS shields `~/Library/Application Support/Firefox` from it. On macOS the config gives it an empty stand-in home, `CFFIXED_USER_HOME=<run>/firefox-home`, and it starts.
+- Firefox (2026-11-03 probes): with no permission set it waits on its own prompt, so a refusal cannot be made by clearing it; the `geo.prompt.testing` preference refuses, but then refuses even a granted permission, so a later allow never comes. The location-refused case is skipped on Firefox. Firefox's offline emulation did not bring the reconnecting badge within 45 s; that case is `fixme` on Firefox, cause not investigated.
+- The "date picked while another shift is still loading" case read the pressed shift before the first board arrived, which Firefox's slower first load showed (it picked the shift already on screen). It now waits for the first board before slowing the network.
 
 Limits: this is a single-worker functional volume test, not a concurrent load test. Timings include trace/browser overhead and some UI timings include slow motion. iPhone Safari itself, real GPS accuracy, a phone camera reading a paper sign, a real printer, throttling/token-reuse security, every account credential-change variant and every cover/alert/round boundary remain outside the executed case set. The original live-push case skips19:00–20:00 Bangkok before its first Night round; the generated rework case skips the last two minutes before a shift change to avoid crossing its round boundary mid-workflow. Failed application assertions remain failed; production changes require the owner's approval.
 

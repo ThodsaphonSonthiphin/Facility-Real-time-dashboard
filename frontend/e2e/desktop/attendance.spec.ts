@@ -75,6 +75,8 @@ test('attendance correction requires a reason and persists its time and audit tr
 });
 
 test('a date picked while another shift is still loading keeps that shift', async ({ page }) => {
+  // The first board is on screen (a shift shows pressed) before the network slows: the shift to pick is read from it
+  await expect(page.getByRole('group', { name: 'กะ', exact: true }).getByRole('button', { pressed: true })).toBeVisible();
   await holdBack(page, '**/api/admin/attendance*', 1_500); // a slow network: the old board stays on screen meanwhile
   const pressed = await dayButton(page).getAttribute('aria-pressed');
   const [pick, other] = pressed === 'true' ? (['Night', /^กะดึก/] as const) : (['Day', /^กะเช้า/] as const);
