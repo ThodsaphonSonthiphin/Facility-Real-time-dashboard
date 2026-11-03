@@ -116,6 +116,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     expect(await screen.findByText(LIVE)).toBeInTheDocument();
     await settled(server);
     expect(hub.latest().tokens).toEqual(['token-supervisor']);
+    expect(hub.latest().serverTimeoutInMilliseconds).toBe(30_000); // a phone keeps the client's own wait (facility-0107)
 
     act(() =>
       hub.latest().push('ScanRecorded', { ...fourPoints[0], status: 'PendingInspection', lastScan: lastScanAt('2026-10-15T03:20:00Z') }),

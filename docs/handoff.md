@@ -14,6 +14,15 @@ Follow-up: the owner requested a self-contained prompt to rehearse in another Ch
 
 The owner counts the build as **done**. What is left: real use (deploy, then the pilot) and the Excel import, which is shelved for now. The owner said not to bother with the PDPA rules. That leaves facility-0055 ("data retention and PDPA before production") and `docs/business-overview.md` line 233 saying PDPA work comes before production. The ADR has not been amended; ask the owner before changing it.
 
+## Faster "กำลังเชื่อมต่อ…" badge (facility-0107, 2026-11-03 Bangkok, branch `feat/faster-offline-badge`, merged on the owner's "OK" to commit, push, PR and merge)
+
+The owner wanted the offline badge sooner than ~30 s and chose (popup) both ways, with a 10 s wait for Admin pages only.
+- **App:** `followScanHub` listens for the browser's `offline` event (badge at once) and its `online` event. When the network is back, it asks the server again after 1 s (`HUB_ONLINE_ASK_MS`), because Chromium says online before a request gets through. A start that finishes after the network went does not say live. Dashboard and Attendance wait 10 s for the server (`ADMIN_HUB_SERVER_TIMEOUT_MS`); phones keep SignalR's 30 s. The server pings every 5 s (`KeepAliveInterval` in `Program.cs`). ADR facility-0107; facility-0064 has a note pointing to it.
+- **Tests:** unit and API tests for each rule, red before the code (backend: `HubKeepAliveTests`). The E2E offline case now needs the badge within 5 s and runs on WebKit and Firefox too (no more `fixme`). A new E2E case relays the hub's WebSocket: for 25 s no link may drop, then the server goes silent and the badge must show. With a 15 s ping it failed (connections 2 → 4), so it catches a ping that is too slow.
+- **Mistakes found and fixed during the work:** the first version of the new case polled for the badge, and it passed with the 15 s ping, because the link drops and is back within a moment; it now counts connections. The back-online ask went out at once at first, and it failed on Chromium (`net::ERR_INTERNET_DISCONNECTED`, row not updated within 20 s); now it waits 1 s.
+- **Results:** frontend 546/546, lint, TypeScript; backend unit 352, API 686 passed, 5 skipped. E2E large, headed, 350 ms: Chromium **36 passed** (`.run/e2e/20261103032049_2644e513`), WebKit **34 passed, 2 skipped** (`.run/e2e/20261103032521_a71d78d8`), Firefox **33 passed, 3 skipped** (`.run/e2e/20261103032944_0bd4136c`). Measured: badge 0.0 s after going offline; the row caught up 0.3–1.4 s after the network came back; with the server silent, the badge showed after 5.4–6.8 s.
+- Not checked: a real phone or a real Wi-Fi drop (E2E emulates the network).
+
 ## Ignore Rider's `.idea/` (2026-11-03 Bangkok, branch `chore/ignore-idea`, merged on the owner's "จัดการเลย")
 
 `backend/.idea/` (JetBrains Rider's settings for this machine: open files, window layout) showed as untracked. The owner chose to ignore it rather than delete it (Rider makes it again); `.gitignore` now has `.idea/`. Nothing else changed.

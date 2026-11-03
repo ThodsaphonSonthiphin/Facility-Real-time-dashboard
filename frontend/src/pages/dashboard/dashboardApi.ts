@@ -1,5 +1,5 @@
 import { baseApi } from '../../shared/api/baseApi';
-import { followScanHub } from '../../shared/api/scanHub';
+import { ADMIN_HUB_SERVER_TIMEOUT_MS, followScanHub } from '../../shared/api/scanHub';
 import type { PointCard } from '../../shared/api/types';
 import { getValidAccessToken } from '../../shared/auth/session';
 import type { RootState } from '../../store';
@@ -18,6 +18,7 @@ const dashboardApi = baseApi.injectEndpoints({
       async onCacheEntryAdded(_arg, { cacheDataLoaded, cacheEntryRemoved, updateCachedData, getCacheEntry, dispatch, getState }) {
         await followScanHub({
           key: DASHBOARD_HUB,
+          serverTimeoutMs: ADMIN_HUB_SERVER_TIMEOUT_MS,
           cacheDataLoaded,
           cacheEntryRemoved,
           dispatch,
