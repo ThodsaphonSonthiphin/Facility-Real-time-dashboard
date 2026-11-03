@@ -6,6 +6,9 @@ node_modules/
 bin/
 obj/
 
+# JetBrains Rider's own settings for this machine (open files, window layout)
+.idea/
+
 # facility-0067: the built frontend, made by `npm --prefix frontend run build:api`
 backend/src/FacilityRealtime.Api/wwwroot/
 
