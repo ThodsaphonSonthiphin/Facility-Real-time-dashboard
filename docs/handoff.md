@@ -12,7 +12,7 @@ Follow-up: the owner requested a self-contained prompt to rehearse in another Ch
 
 ## Project status as the owner sees it (2026-11-02 Bangkok)
 
-The owner counts the build as **done**. What is left: real use (deploy, then the pilot) and the Excel import, which is shelved for now. The owner said not to bother with the PDPA rules. That leaves facility-0055 ("data retention and PDPA before production") and `docs/business-overview.md` line 233 saying PDPA work comes before production. The ADR has not been amended; ask the owner before changing it.
+The owner counts the build as **done**. What is left: real use (deploy, then the pilot) and the Excel import, which is shelved for now. No PDPA notice or HR talk before production: the owner chose (popup, 2026-11-03) to drop only that part. facility-0055 has an amendment saying so, and the row is gone from `docs/business-overview.md`. The data retention rules and the automatic delete/summary job (not built, needed before real data is 90 days old) stay.
 
 ## Faster "กำลังเชื่อมต่อ…" badge (facility-0107, 2026-11-03 Bangkok, branch `feat/faster-offline-badge`, merged on the owner's "OK" to commit, push, PR and merge)
 
