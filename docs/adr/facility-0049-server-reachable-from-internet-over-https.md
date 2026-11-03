@@ -1,5 +1,7 @@
 # Server Reachable from the Internet over HTTPS — Replaces Same-WiFi HTTP
 
+> **อ่านร่วมกับการแก้ไขภายหลัง:** URL บนป้ายใช้ origin ของหน้าพิมพ์ (0067 และ amendment ของ 0021) จึงไม่มี `PublicBaseUrl` setting ในโค้ดปัจจุบัน; ข้อค่าเน็ตมือถือปิดแล้วใน 0055: บริษัทไม่ช่วยค่าเน็ต เซิร์ฟเวอร์/โดเมนและ field pilot ยังรอ ส่วนเงื่อนไข HTTPS จากอินเทอร์เน็ตยังใช้เหมือนเดิม ดู [handoff](../handoff.md)
+
 ```mermaid
 flowchart TD
     Q{"มือถือแม่บ้านเข้าระบบทางไหน"} -->|chosen| A["อินเทอร์เน็ตผ่าน HTTPS ที่ domain คงที่<br/>ระหว่างรอฝ่าย IT ใช้ Cloudflare Tunnel ทดสอบ"]

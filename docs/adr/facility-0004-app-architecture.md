@@ -1,5 +1,7 @@
 # App Architecture — Clean Architecture 4 โปรเจกต์ + Mediator (MIT) + React ตาม react-structure
 
+> **สถานะ implementation ตรวจ 2026-11-03:** คง 4 โปรเจกต์และ MySQL provider แต่โค้ด Pilot ปัจจุบันไม่ได้ใช้ Mediator/ISender: endpoint เรียกกฎใน Application และ AppDbContext โดยตรง ไม่มี MUI หรือ Base UI dependency; frontend ใช้ pages/shared/store, RTK Query, Tailwind และ shared components ของโครงการ (0025, 0086–0088) ระบบจริงใช้ HTTPS/origin เดียว (0049, 0067) เนื้อหาเดิมด้านล่างเป็นที่มาของสถาปัตยกรรมช่วงแรก ดู [architecture](../architecture.md) และ [code map](../code-map.md) สำหรับโค้ดปัจจุบัน
+
 ```mermaid
 flowchart TD
     Q{โครงสร้างแอประบบซ้อมมือ} -->|chosen| B["Clean Architecture 4 โปรเจกต์ (Domain / Application / Infrastructure / Api) + Mediator (MIT, source generator)"]

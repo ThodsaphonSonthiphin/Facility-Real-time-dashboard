@@ -1,7 +1,9 @@
 # บันทึกบทเรียนจากการทดสอบใช้งานจริง (Lessons Learned)
+
+> เอกสารบทเรียนจากการทดสอบช่วงแรก เก็บตัวเลขและข้อสังเกตตามสภาพวันนั้น ไม่ใช่ผล field pilot หรือสถานะโค้ดปัจจุบัน ขั้นตอนส่งงาน/สถานะ/GPS และเครือข่ายเปลี่ยนตาม ADR ภายหลัง ดู [ภาพรวมปัจจุบัน](business-overview.md), [handoff](handoff.md) และ [ADR](adr/README.md)
 ## Facility Real-time Dashboard POC
 
-เอกสารบันทึกบทเรียนและข้อค้นพบจากการทดลองนำระบบไปใช้งานและสแกนจริงด้วยโทรศัพท์มือถือผ่านเครือข่าย WiFi วงเดียวกับโฮสต์ (Mac) ตามที่ระบุไว้ใน [ADR 0009: Delivery Plan — 3-Phase Walking Skeleton](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0009-delivery-plan-walking-skeleton.md) เพื่อใช้เป็นฐานข้อมูลและแนวปฏิบัติก่อนเข้าสู่การฝึกงานจริงในวันที่ 1 ต.ค. 2026
+เอกสารบันทึกบทเรียนและข้อค้นพบจากการทดลองนำระบบไปใช้งานและสแกนจริงด้วยโทรศัพท์มือถือผ่านเครือข่าย WiFi วงเดียวกับโฮสต์ (Mac) ตามที่ระบุไว้ใน [ADR 0009: Delivery Plan — 3-Phase Walking Skeleton](adr/facility-0009-delivery-plan-walking-skeleton.md) เพื่อใช้เป็นฐานข้อมูลและแนวปฏิบัติก่อนเข้าสู่การฝึกงานจริงในวันที่ 1 ต.ค. 2026
 
 ---
 

@@ -1,106 +1,52 @@
 # Architecture — how the Facility Real-time Dashboard is connected
 
-This page shows how the parts of the POC connect: browser, web server, API server and database server.
-It describes the code as it is on `master` today. Decisions behind it are in [docs/adr/](adr/).
+Checked against `master` at `aa1963d` on 2026-11-03. This describes the application code and the documented deployment topology; a production installation and field pilot are not yet confirmed. See [handoff](handoff.md) for status, [code map](code-map.md) for files and [ADRs](adr/README.md) for decisions.
 
-| Node | What runs there | Port |
-|---|---|---|
-| Phone (cleaner) | Browser opens `/scan/{qrToken}` from the QR code | — |
-| Dashboard screen (PC / tablet) | Browser opens `/dashboard` | — |
-| Web server (dev) | Vite dev server: serves the React app, proxies `/api` and `/hubs` | `5173` |
-| API server | ASP.NET Core 10 (Kestrel): Minimal API + SignalR hub | `5001` |
-| Database server | MySQL 8 (Homebrew, native) — database `facility_dashboard` | `3306` |
+## 1. Deployment and network
 
-All of it runs on one Mac. The phone reaches the Mac over the same WiFi with plain HTTP ([facility-0003](adr/facility-0003-phone-reaches-mac-over-same-wifi-http.md)).
+Production requires a fixed public HTTPS domain because workers use mobile data and phone GPS requires a secure context (facility-0049). The API serves the built React app and `/api` and `/hubs` from one origin (facility-0067). Vite is used for development only.
 
----
-
-## 1. Deployment diagram — where each part runs
+The server OS is still undecided. The following is the **Linux deployment documented in [handover.md](handover.md)**, not a claim that the server is already running:
 
 ```mermaid
 flowchart LR
-    subgraph LAN["Same WiFi network (HTTP only)"]
-        Phone["«device» Phone<br/>Browser: Scan page"]
-        Screen["«device» PC / Tablet<br/>Browser: Dashboard"]
-
-        subgraph Mac["«device» Mac M1 (dev machine)"]
-            subgraph Vite["«execution environment» Vite dev server :5173"]
-                SPA["«artifact» React SPA<br/>(index.html + JS bundle)"]
-                Proxy["«component» Dev proxy<br/>/api → :5001<br/>/hubs → :5001 (ws)"]
-            end
-            subgraph Kestrel["«execution environment» Kestrel :5001"]
-                Api["«artifact» FacilityRealtime.Api"]
-            end
-            subgraph MySQL["«execution environment» MySQL 8 :3306"]
-                DB[("«database»<br/>facility_dashboard")]
-            end
-        end
+    Phone["Cleaner / Supervisor phone<br/>browser and native QR camera"]
+    Admin["Admin computer<br/>browser"]
+    subgraph Host["Documented Linux host (pending IT server/domain)"]
+        Proxy["Caddy :443<br/>HTTPS and WebSocket reverse proxy<br/>:80 certificate/redirect traffic"]
+        Api["Kestrel localhost:5001<br/>React wwwroot + /api + /hubs/scan"]
+        DB[("MySQL<br/>application database")]
+        Journal["systemd journal<br/>namespace facility, 90-day retention"]
+        Api -->|"EF Core / restricted database account"| DB
+        Api -->|"Serilog Console via ILogger"| Journal
+        Proxy -->|"HTTP + WebSocket<br/>forwarded client IP and scheme"| Api
     end
-
-    Phone -->|"HTTP GET page"| SPA
-    Screen -->|"HTTP GET page"| SPA
-    Phone -->|"HTTP/JSON /api/*"| Proxy
-    Screen -->|"HTTP/JSON /api/*<br/>WebSocket /hubs/scan"| Proxy
-    Proxy -->|"HTTP + WebSocket"| Api
-    Api -->|"MySQL protocol (EF Core)"| DB
+    Phone -->|"Internet / HTTPS"| Proxy
+    Admin -->|"Internet / HTTPS"| Proxy
 ```
 
-Why the proxy matters: the browser only ever talks to one origin (`:5173`).
-So the refresh-token cookie works without CORS settings, and the URL inside the QR code is the Vite URL ([facility-0004](adr/facility-0004-app-architecture.md) item 5).
+| Boundary | Documented rule |
+|---|---|
+| Internet → host | Public HTTP/HTTPS ports 80/443 terminate at Caddy; browsers use HTTPS |
+| Caddy → API | Kestrel listens on loopback only; trust `X-Forwarded-For` and `X-Forwarded-Proto` from loopback for one hop (0104, 0106) |
+| API → MySQL | Database is not a browser endpoint; use the application's own database account |
+| Browser security | App middleware sets CSP, frame denial, nosniff, no-referrer and Permissions-Policy; HSTS on HTTPS outside Development, excluding localhost; `/api` gets `no-store` (0106) |
+| Browser → signs | Printed QR URLs use the origin of the print page, so permanent signs need the fixed HTTPS domain |
 
-In production the Vite server is not used: `npm run build:api` puts the built app in the API's `wwwroot`, and the API serves it from the same origin, with `index.html` for every page path outside `/api` and `/hubs` ([facility-0067](adr/facility-0067-api-serves-frontend-from-one-origin.md)). The Supervisor's My Building page opens the SignalR hub (plan 9, `shared/api/scanHub.ts`); the Admin's Dashboard and attendance board open it too (plan 11). Admin pages are separate files, loaded the first time an Admin opens them (lazy routes, [facility-0062](adr/facility-0062-phone-bundle-budget-200kb-gzip.md)), so phones never download them.
+The app migrates its selected database on startup. Development alone adds synthetic fixtures and exposes Swagger; Production has no seed or Swagger and creates the first Admin from private settings (0092, 0093). It refuses a missing connection string or JWT signing key. Never publish Development fixtures with real data.
 
----
-
-## 1b. Network diagram — servers, ports and firewalls
-
-The deployment diagram shows *what runs where*. This network diagram shows *which traffic each boundary lets through*.
-UML has no firewall element, so this is a plain infrastructure (network topology) diagram, not strict UML.
+### Local development and phone trials
 
 ```mermaid
 flowchart LR
-    Internet(("Internet"))
-
-    subgraph Home["Home / office network"]
-        Router{{"WiFi router<br/>NAT + firewall<br/>no port forwarding"}}
-
-        subgraph LAN["WiFi LAN 192.168.x.x"]
-            Phone["Phone<br/>(cleaner)"]
-            Screen["PC / Tablet<br/>(dashboard)"]
-
-            subgraph Mac["Mac — web, app and database server in one machine"]
-                FW{{"macOS Application Firewall<br/>allow incoming: node (Vite), dotnet"}}
-
-                subgraph Exposed["Listens on 0.0.0.0 (reachable from LAN)"]
-                    Web["Web server<br/>Vite :5173"]
-                    App["App server<br/>Kestrel :5001"]
-                end
-
-                subgraph Local["Listens on 127.0.0.1 only"]
-                    DBS[("Database server<br/>MySQL :3306")]
-                end
-            end
-        end
-    end
-
-    Internet -. "blocked: no inbound route" .-x Router
-    Router --- Phone & Screen & FW
-    Phone -->|"HTTP :5173"| FW
-    Screen -->|"HTTP + WebSocket :5173"| FW
-    FW -->|"allowed"| Web
-    Web -->|"proxy via localhost:5001"| App
-    App -->|"localhost:3306"| DBS
-    FW -. "not needed by browsers<br/>(but :5001 is open)" .-> App
-    FW -. "blocked: not listening on LAN" .-x DBS
+    Browser["Developer browser<br/>localhost:5173"] --> Vite["Vite :5173<br/>React and dev proxy"]
+    Vite -->|"/api HTTP + /hubs WebSocket"| Api["Kestrel localhost:5001"]
+    Api --> DB[("Local MySQL<br/>selected development database")]
 ```
 
-| Boundary | Rule | Why |
-|---|---|---|
-| Router (Internet → LAN) | Nothing comes in. No port forwarding, no tunnel | The phone is always on the same WiFi ([facility-0003](adr/facility-0003-phone-reaches-mac-over-same-wifi-http.md)) |
-| macOS firewall (LAN → Mac) | Allow incoming connections for Vite (`node`) and the API (`dotnet`) | facility-0003 item 2. **On this Mac the firewall is currently off**, so every listening port is reachable from the WiFi |
-| Vite `:5173` | The only port browsers use | Single origin, so cookies work without CORS |
-| Kestrel `:5001` | Bound to `0.0.0.0` (`--urls "http://0.0.0.0:5001"` in the README). Reachable from the LAN, but only the Vite proxy needs it | Binding it to `localhost` would be enough while Vite proxies every request |
-| MySQL `:3306` | Only the API connects, over `localhost` | Homebrew's MySQL config uses `bind-address = 127.0.0.1` by default, so other devices cannot reach it |
+Use the explicit port 5001 to override the launch profile's 5225 default and match `vite.config.ts`. Alternatively, `npm --prefix frontend run build:api` writes the frontend to the API's ignored `wwwroot`; browse localhost:5001 directly without Vite. Both use one browser origin, so no cross-origin cookie setup is needed.
+
+For phone trials, a Cloudflare Quick Tunnel provides temporary HTTPS to localhost:5001 (handover §2.9). Its URL changes on each start. Same-WiFi HTTP (facility-0003) is historical and remains useful only for development that does not require phone GPS; facility-0049 supersedes it for real use. No current firewall or running-service state is implied by this diagram.
 
 ---
 
@@ -110,7 +56,7 @@ flowchart LR
 flowchart TB
     subgraph FE["Frontend — frontend/src (React 19 + TypeScript, tree of facility-0025)"]
         AppF["main.tsx · App.tsx · router.tsx<br/>store, page-load refresh, createBrowserRouter"]
-        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · inspect (M6, M7, M16) · my-building (M15) · dashboard (D1) · attendance (D2) · alerts (D3) · areas (D4) · area-form (D10) · capture (M17) · print-signs (D5) · accounts (D6) · inspection-summary (D7) · export (D8) · history (D9)<br/>each: Page.tsx + pageApi.ts (injectEndpoints) + page.css<br/>Admin pages are lazy routes (own files)"]
+        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · inspect (M6, M7, M16) · my-building (M15) · dashboard (D1) · attendance (D2) · alerts (D3) · areas (D4, D10) · capture (M17) · print-signs (D5) · accounts (D6) · inspection-summary (D7) · export (D8) · history (D9)<br/>feature UI + hooks/rules/API where needed<br/>Tailwind 4; index.css is the only CSS file<br/>Admin pages are lazy routes (own files)"]
         Store["store/<br/>authSlice: user + access token in memory<br/>hubSlice: each hub connection live or not<br/>dashboardSlice: Dashboard filters"]
         BaseApi["shared/api/baseApi.ts<br/>RTK Query, Bearer header,<br/>401 → one shared refresh → retry"]
         Session["shared/auth<br/>session.ts (refresh, single-flight)<br/>endSession.ts (logout)"]
@@ -122,8 +68,8 @@ flowchart TB
         subgraph ApiP["FacilityRealtime.Api"]
             Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance (+ /signs/{token}) | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>/api/inspections/scan | /api/inspections | /api/my-building<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)<br/>AdminInspectionSummaryEndpoints: /api/admin/inspection-summary"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
-            Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, InspectionRecorded → Admins + the building's Supervisors; AttendanceRecorded → Admins"]
-            Jwt["Auth/AuthSetup.cs<br/>JWT bearer validation"]
+            Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, InspectionRecorded → active Admins + building Supervisors + Area Cleaners and covers; AttendanceRecorded → active Admins"]
+            Jwt["Auth/AuthSetup.cs<br/>JWT bearer + CurrentUser database check for API<br/>LoginPlace and LoginThrottle; SecurityLog"]
         end
         subgraph AppP["FacilityRealtime.Application"]
             Status["Shifts/ShiftCalendar<br/>Rounds/RoundPlacer, PointStatusCalculator<br/>Attendance/AttendanceCalendar, AttendanceRules<br/>Geo/Geofence, GpsStamping"]
@@ -159,8 +105,8 @@ flowchart TB
     Ep --> Reads
     Ep -->|"export sheets"| Xlsx
     Reads --> Ctx
-    Ep -->|"Clients.Group(admins)"| Hub
-    Ep -->|"Clients.Users(building Supervisors)"| Hub
+    Ep -->|"Clients.Users(active Admin ids from DB)"| Hub
+    Ep -->|"Clients.Users(scoped active Supervisors / Cleaners / covers)"| Hub
     AuthEp --> Rules
     AuthEp --> Ctx
     Jwt -.->|validates| Ep & Hub
@@ -183,6 +129,17 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 ---
 
+## Live updates, sessions and operational limits
+
+- Four cache followers use `followScanHub`: My Work, My Building, Dashboard and attendance. My Work refetches on a point event; the two point boards patch cards. Admin boards also poll every 30 s and refetch on focus. Push failures after saving are logged; they do not turn the saved record into an HTTP failure.
+- All followers listen for browser offline/online. Offline shows reconnecting immediately; online refetches after 1 s. Admin followers time out after 10 s of server silence; phones keep 30 s. The server pings every 5 s (0107).
+- Every push looks up active recipients in the database at send time. There is no `admins` connection group. Deactivation blocks the next protected API read and stops subsequent pushes, although an already open socket may remain connected (0105). Phone/password changes revoke refresh tokens; existing access tokens can last up to 5 minutes.
+- Login Lock combines a login-name/IP pair (5 attempts per 15 minutes, cleared by success) and an IP-wide failure cap of 20. IPv6 is normalized to /64. The counters are in memory on one server (0104).
+- `ILogger` writes through Serilog, Console only. Linux's journal is the retained Server Log; no request logging or external sink is configured (0103).
+- GPS/record retention and anonymous monthly summaries are decided in 0055 but no cleanup job is implemented. PDPA notice/HR-before-production work was removed by the owner on 2026-11-03. Excel import is shelved. See [handoff](handoff.md) for the remaining work.
+
+---
+
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
 > Note (plan 11): the phone side is plan 8's `pages/scan`; the Admin side is `pages/dashboard`, whose `getServicePoints` cache entry follows the hub with `followScanHub`. Plan 9's Supervisor live updates and plan 11's attendance board are in the section 2 diagram.
@@ -194,13 +151,13 @@ sequenceDiagram
     autonumber
     actor Cleaner
     participant Phone as Phone browser<br/>(pages/scan ScanPage)
-    participant Vite as Vite :5173<br/>(proxy)
+    participant Vite as Same-origin host<br/>(Caddy in deployment / Vite in dev)
     participant Api as API :5001<br/>(Endpoints/*)
     participant DB as MySQL
     participant Hub as ScanHub<br/>/hubs/scan
     participant Dash as Admin browser<br/>(pages/dashboard, getServicePoints cache)
 
-    Note over Dash,Hub: Earlier: an Admin opened the Dashboard; its WebSocket to /hubs/scan<br/>(?access_token=<JWT>) joined the "admins" group (facility-0058)
+    Note over Dash,Hub: Earlier: an Admin opened the Dashboard; its WebSocket to /hubs/scan<br/>(?access_token=<JWT>) was authenticated; recipients are read at send time (facility-0105)
 
     Cleaner->>Phone: Scan QR with phone camera → opens /scan/{qrToken}
     Phone->>Vite: GET /api/service-points/by-token/{qrToken}<br/>Authorization: Bearer <JWT>
@@ -230,9 +187,10 @@ sequenceDiagram
     Api->>DB: INSERT scan_records (shift, round, placement, GPS, cover assignment)
     DB-->>Api: OK
     Api->>Api: PointStatusCalculator.Calculate(...)
-    Api->>Hub: Clients.Group("admins").SendAsync("ScanRecorded", dto)
+    Api->>DB: Read active Admin ids and scoped active recipients
+    Api->>Hub: Clients.Users(adminIds).SendAsync("ScanRecorded", dto)
     Note right of Hub: Sent for the Dashboard's running shift (ShiftCalendar), not the Cleaner's attendance slot
-    Note right of Hub: PointNotifications also sends the same event to the building's Supervisors by account id (Clients.Users)
+    Note right of Hub: PointNotifications also sends to the building's Supervisors and Area's Cleaners, including current covers (Clients.Users)
     Hub-->>Dash: "ScanRecorded" (WebSocket push)
     Dash->>Dash: followScanHub hands the card to the cache entry, updateCachedData replaces that point's card, no page reload (a point not on the page: GET /api/service-points again)
     Note over Dash: Every open, every 30 s and on window focus the Dashboard asks GET /api/service-points again (facility-0061), and after every hub start or reconnect (facility-0064)
@@ -257,11 +215,11 @@ sequenceDiagram
 
     User->>FE: Enter employee ID + phone (Cleaner/Supervisor)<br/>or username + password (Admin)
     FE->>Auth: POST /api/auth/login
-    alt Fewer than 5 failed attempts for this account in 15 minutes
+    alt Login name + IP pair below 5 attempts and IP below 20 failures per 15 minutes
         Auth->>DB: Find user, verify credentials
         Auth->>DB: INSERT refresh_tokens (SHA-256 hash only)
         Auth-->>FE: 200 { accessToken, expiresAt, user }<br/>Set-Cookie: facility_refresh (HttpOnly, Path=/api/auth)
-    else 5 attempts within 15 minutes (facility-0054)
+    else Pair or IP is locked (facility-0104)
         Auth-->>FE: 429 (refused for 15 minutes)
     end
 
@@ -443,7 +401,7 @@ classDiagram
     class AuditEntry {
         <<audit_log>>
         +long Id
-        +int ActorId
+        +int? ActorId
         +DateTime OccurredAt
         +string Action
         +string EntityType
@@ -465,7 +423,7 @@ classDiagram
     Building "1" <-- "0..*" Area
     Area "1" <-- "0..*" ServicePoint
     Area "1" <-- "1..*" Sign
-    ServicePoint "1" <-- "0..1" Sign
+    ServicePoint "0..1" <-- "0..1" Sign
     ServicePoint "1" <-- "0..*" PointRoundWindow
     Area "0..1" <-- "0..*" User : Cleaner
     Building "0..1" <-- "0..*" User : Supervisor
@@ -483,7 +441,7 @@ classDiagram
     User "1" <-- "0..*" BlockedScan
     Sign "1" <-- "0..*" BlockedScan
     User "1" <-- "0..*" CoverAssignment : covering Cleaner
-    Area "1" <-- "0..*" CoverAssignment : covered Area
+    Area "0..1" <-- "0..*" CoverAssignment : covered Area
     Building "0..1" <-- "0..*" CoverAssignment : Supervisor cover
     User "1" <-- "0..*" CoverAssignment : assigned by, cancelled by
     CoverAssignment "0..1" <-- "0..*" ScanRecord : cover used
@@ -492,7 +450,7 @@ classDiagram
     User "1" <-- "0..*" AlertReview : reviewed by
 ```
 
-The full target schema, including the tables later plans add, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`). A Cover Assignment lets one Cleaner work another Area for one shift; it lapses when that Cleaner's attendance window for the shift closes ([facility-0069](adr/facility-0069-attendance-scan-window-60-minutes-around-the-shift.md)). A Supervisor's Cover Assignment names a building instead of an Area, for one shift by the clock (facility-0048); a CHECK keeps exactly one of the two. An Inspection Record keeps the GPS of the inspection; outside the sign's radius it is the `INSPECTION_GPS` alert. Blocked Scans and Audit Log rows are history the Admin reads on the alert and history pages and that no one edits (facility-0041, facility-0051). An Alert Review records that the Admin closed one alert ("คุยแล้ว ปิดเตือน") on a Blocked Scan or a scan outside its sign's radius, one per alert; a missing Shift-Out is never reviewed, it closes when the Admin fills the time (facility-0051).
+The full target schema, covering the implemented tables, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`). A Cover Assignment lets one Cleaner work another Area in their own regular shift; it lapses when that Cleaner's attendance window for the shift closes ([facility-0069](adr/facility-0069-attendance-scan-window-60-minutes-around-the-shift.md)). A Supervisor's Cover Assignment names a building instead of an Area, for one shift by the clock (facility-0048); a CHECK keeps exactly one of the two. An Inspection Record keeps the GPS of the inspection; outside the sign's radius it is the `INSPECTION_GPS` alert. Blocked Scans and Audit Log rows are history the Admin reads on the alert and history pages and that no one edits (facility-0041, facility-0051). An Alert Review records that the Admin closed one alert ("คุยแล้ว ปิดเตือน") on a Blocked Scan or a scan outside its sign's radius, one per alert; a missing Shift-Out is never reviewed, it closes when the Admin fills the time (facility-0051).
 
 ---
 
@@ -500,9 +458,10 @@ The full target schema, including the tables later plans add, is `docs/design/da
 
 | From | To | Protocol | Auth | Configured in |
 |---|---|---|---|---|
-| Browser | Vite `:5173` | HTTP | — | `frontend/vite.config.ts` |
-| Vite proxy | API `:5001` `/api/*` | HTTP/JSON | `Authorization: Bearer <JWT>` | `frontend/vite.config.ts` |
-| Vite proxy | API `:5001` `/hubs/scan` | WebSocket (SignalR) | `?access_token=<JWT>` (hub paths only) | `Auth/AuthSetup.cs`, `frontend/src/shared/api/scanHub.ts` (`followScanHub`) |
-| Browser | API `/api/auth/*` | HTTP/JSON | HttpOnly cookie `facility_refresh` | `Endpoints/AuthEndpoints.cs` |
+| Browser (deployment) | Caddy → API | HTTPS / WebSocket | JWT or auth cookie | `docs/handover.md`, `Program.cs` |
+| Browser (development) | Vite `:5173` | HTTP on localhost | — | `frontend/vite.config.ts` |
+| Vite proxy (development) | API `:5001` `/api/*` | HTTP/JSON | `Authorization: Bearer <JWT>` | `frontend/vite.config.ts` |
+| Vite proxy (development) | API `:5001` `/hubs/scan` | WebSocket (SignalR) | `?access_token=<JWT>` (hub paths only) | `Auth/AuthSetup.cs`, `frontend/src/shared/api/scanHub.ts` (`followScanHub`) |
+| Browser | Same-origin `/api/auth/*` | HTTPS/JSON (HTTP on localhost in dev) | HttpOnly cookie `facility_refresh` | `Endpoints/AuthEndpoints.cs` |
 | API | MySQL `:3306` | MySQL protocol via EF Core | `ConnectionStrings:DefaultConnection` | `appsettings.Development.json` (developer machine only); a server sets `ConnectionStrings__DefaultConnection` in its env file (facility-0093, `docs/handover.md`) |
-| API | itself on startup | — | — | `Program.cs` runs `MigrateAsync()` and seeds data |
+| API | itself on startup | — | — | `Program.cs`: migrate, synthetic seed only in Development, then FirstAdmin settings if no Admin exists |

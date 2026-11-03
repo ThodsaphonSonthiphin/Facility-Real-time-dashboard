@@ -38,7 +38,7 @@ _Avoid_: Superuser, Root, Manager
 _บนหน้าเว็บ_: แอดมิน (facility-0085)
 
 **Deactivated Account**:
-บัญชี (Cleaner หรือ Admin) ที่ Admin ปิดใช้งาน login ไม่ได้ หยุดได้รับข้อมูลทันที และหน้าที่เปิดค้างไว้หลุดออกเมื่อเรียกระบบครั้งถัดไป (facility-0105) แต่ประวัติ Scan Record และชื่อยังคงอยู่ เพราะระบบไม่ลบบัญชี Admin เปิดใช้งานกลับได้
+บัญชี (Cleaner, Supervisor หรือ Admin) ที่ Admin ปิดใช้งาน login ไม่ได้ หยุดได้รับข้อมูลทันที และหน้าที่เปิดค้างไว้หลุดออกเมื่อเรียกระบบครั้งถัดไป (facility-0105) แต่ประวัติ Scan Record และชื่อยังคงอยู่ เพราะระบบไม่ลบบัญชี Admin เปิดใช้งานกลับได้
 _Avoid_: Deleted User, Banned, Archived
 
 **Login Lock**:
@@ -92,7 +92,7 @@ _Avoid_: Gate QR, Station Sign, Attendance QR
 _Avoid_: Worker Status, Shift State, Member Attendance
 
 **Attendance Board**:
-หน้าจอแสดงรายงานและรายชื่อการเข้างานของ Cleaner Account ทั้งหมด (ประมาณ 170 คน) แบบเรียลไทม์ เป็นแท็บย่อยบน Dashboard ให้ Admin Account ตรวจสอบอัตรากำลังและคนขาดในแต่ละกะ
+หน้าการเข้างาน (`/admin/attendance`) สำหรับ Admin Account แสดงแต่ละ Area ว่ามีคนแล้ว ยังไม่มีคน อยู่ระหว่างพัก เลิกงานแล้ว หรือมีคนทำแทน ในวันที่และกะที่เลือก อัปเดตแบบเรียลไทม์ Admin เพิ่มหรือแก้เวลาพร้อมเหตุผลได้ ใช้ดูความครอบคลุมของพื้นที่ ไม่คิดสาย กลับก่อน หรือค่าจ้าง (facility-0027, 0050, 0051)
 _Avoid_: Check-In Page, Attendance View, Staff Table
 
 **GPS Geofencing**:

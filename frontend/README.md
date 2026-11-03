@@ -1,6 +1,6 @@
 # Frontend
 
-React 19 + TypeScript on Vite 8. The ADRs `docs/adr/facility-0022` to `0026` and `0061` to `0068` are the rules; this file is the short version.
+React 19 + TypeScript on Vite 8. Current as of 2026-11-03. ADRs facility-0022–0026, 0061–0068, 0086–0088 and 0100–0107 apply with their amendments; this file is the short version.
 
 ## Commands
 
@@ -11,6 +11,7 @@ React 19 + TypeScript on Vite 8. The ADRs `docs/adr/facility-0022` to `0026` and
 | `npm run lint` | eslint 9, folder boundaries, no raw HTML |
 | `npm run build` | typecheck, then build into `dist/` |
 | `npm run build:api` | build into the API's `wwwroot`, so the API serves the app (facility-0067) |
+| `npm run e2e -- --dataset large` | headed browser workflows against a real isolated API/MySQL; see [E2E guide](../docs/testing/e2e.md) |
 
 The pre-commit hook (husky) runs lint, `tsc -b` and the tests.
 
@@ -23,9 +24,9 @@ src/shared/api/                          baseApi (RTK Query, livePoll), server t
                                          attendanceBoardApi (D2 and D3), alertListApi (alerts and the menu count)
 src/shared/auth/                         session refresh, logout, role homes
 src/shared/geo/                          readLocation: one fresh GPS reading per press
-src/shared/components/                   guard, layout, Admin menu, status and crash screens, RangeFields, BuildingSelect (class prefix app-)
+src/shared/components/                   guard, layout, Admin menu, status and crash screens, RangeFields, BuildingSelect, Drawers and confirmations
 src/shared/utils/                        Thai time, labels, error wording, dateRange (the report pages' date ranges)
-src/pages/<page>/                        one folder per page: Page.tsx, <page>Api.ts, <page>.css, index.ts
+src/pages/<feature>/                     page UI, hooks, rules and feature API where needed; related routes may share a folder
 src/test/                                fakeServer (fake fetch), fakeGps, fakeSignalR, fixtures, renderApp
 ```
 
@@ -34,14 +35,18 @@ src/test/                                fakeServer (fake fetch), fakeGps, fakeS
 - Admin setup and accounts data provide the cache tag `AdminSetup`, and every save that changes Areas, signs, Cleaners or accounts invalidates it (a phone change or password reset changes nothing shown, so it does not): Areas, signs, Cleaners and accounts depend on each other.
 - A new Admin page goes under the Admin `ProtectedRoute` in `router.tsx` as a lazy route (`lazy: async () => ({ Component: (await import('./pages/<page>')).<Page> })`), so phones never download it (facility-0062), and into the lazy-route list in `router.test.tsx`. It goes into `shared/components/AdminNav.tsx` if it belongs in the menu. Phone pages stay in the main file.
 - The Admin's live board uses the tags `ServicePoints`, `AttendanceBoard` (one per shift, `boardTag`) and `Alerts`; corrections and covers invalidate the last two.
-- Styles go in the page's `.css` with the page's class prefix; tokens are in `src/index.css`. No `style={...}`.
+- Style with Tailwind 4 utilities and shared components. `src/index.css` is the only CSS file and owns `@theme` tokens and print `@page`. Follow [frontend standards](../docs/agents/frontend-standards.md) and [MASTER](../design-system/facility/MASTER.md); facility-0086 supersedes per-page CSS. No `style={...}`.
 - Text people type is rendered as React text only; never build `href` or `src` from it.
 
 ## Session
 
 The access token lives only in the Redux store. The refresh token is an HttpOnly cookie the page never sees. On page load one refresh restores the session; on a 401 every request shares one refresh and retries once. A refresh answered with 401 or 403 ends the session; any other failure (no network, a server fault, a non-JSON body) keeps it, and page-load bootstrapping always finishes. "ออกจากระบบ" logs out on the server and empties the cache.
 
-SignalR gets its token from `getValidAccessToken`, which refreshes first when 30 s or less is left, on every connect and reconnect. A page that wants live updates opens the hub with `followScanHub` inside its query's `onCacheEntryAdded`. There is one connection per cache entry, and each has its own key in `hubSlice`. See `pages/my-building/myBuildingApi.ts`, `pages/dashboard/dashboardApi.ts` and `shared/api/attendanceBoardApi.ts`. The Admin's live pages also use `livePoll` (every open, every 30 s, on focus; facility-0061) and show `LiveBadge` with the connection's key.
+SignalR gets its token from `getValidAccessToken`, which refreshes first when 30 s or less is left, on every connect and reconnect. A page that wants live updates opens the hub with `followScanHub` inside its query's `onCacheEntryAdded`. There is one connection per cache entry, and each has its own key in `hubSlice`. The four followers are `shared/api/myWorkApi.ts`, `pages/my-building/myBuildingApi.ts`, `pages/dashboard/dashboardApi.ts` and `shared/api/attendanceBoardApi.ts`. My Work refetches on point events; Dashboard and My Building patch their point cards. The Admin's live pages also use `livePoll` (every open, every 30 s, on focus; facility-0061) and show `LiveBadge` with the connection's key.
+
+`followScanHub` listens for browser `offline`/`online` events on all followers. Offline sets reconnecting immediately; online asks for fresh data after 1 s. Dashboard and attendance use `ADMIN_HUB_SERVER_TIMEOUT_MS` (10 s); phone followers keep SignalR's 30 s. The server pings every 5 s (facility-0107). Account deactivation is checked by the API and by recipient lookup at push time (facility-0105).
+
+Location retry first checks whether the browser still refuses. If permission is enabled but the page keeps a refusal, `LocationHelp` reloads (WebKit); otherwise it repeats the action. See `refusalNeedsReload` and `shared/utils/reloadPage.ts`.
 
 ## Tests
 
