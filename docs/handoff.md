@@ -14,6 +14,10 @@ Follow-up: the owner requested a self-contained prompt to rehearse in another Ch
 
 The owner counts the build as **done**. What is left: real use (deploy, then the pilot) and the Excel import, which is shelved for now. The owner said not to bother with the PDPA rules. That leaves facility-0055 ("data retention and PDPA before production") and `docs/business-overview.md` line 233 saying PDPA work comes before production. The ADR has not been amended; ask the owner before changing it.
 
+## Ignore Rider's `.idea/` (2026-11-03 Bangkok, branch `chore/ignore-idea`, merged on the owner's "จัดการเลย")
+
+`backend/.idea/` (JetBrains Rider's settings for this machine: open files, window layout) showed as untracked. The owner chose to ignore it rather than delete it (Rider makes it again); `.gitignore` now has `.idea/`. Nothing else changed.
+
 ## E2E: WebKit and Firefox, offline, GPS, print (2026-11-02 Bangkok, branch `test/e2e-more-browsers-and-conditions`, merged as PR #142 on the owner's "handoff commit push pr merge" 2026-11-03, after #141)
 
 The owner asked why the untested items were untested, then chose (popup) to add WebKit + Firefox, offline, GPS outside the radius and the print page. First commit `c3af855` was test-only; the iPhone location retry fix below adds app source. Based on `fix/attendance-pick-while-loading` (PR #141, open).
