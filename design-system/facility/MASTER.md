@@ -2,8 +2,8 @@
 
 Read this before building or moving any page. A page file in `pages/` (`phone.md`, `admin.md`) overrides it where they differ.
 
-- Decisions: facility-0086 (Tailwind), facility-0087 (the new look), facility-0088 (icons), facility-0072 (device font).
-- **The `@theme` block of `frontend/src/index.css` is the source of the token values.** The values below are the ones agreed in the grill (2026-10-22), shown so the rules can be read. If `index.css` and this file disagree, `index.css` is right: fix this file in the same change.
+- Decisions: facility-0086 (Tailwind), facility-0087 (Enterprise Light amendment), facility-0088 (icons), facility-0072 (device font), facility-0100–0101 (approved Admin routes/forms/confirmations). Documentation checked 2026-11-03; implementation and owner visual acceptance are complete. See `docs/handoff.md` for remaining device/deployment checks.
+- **The `@theme` block of `frontend/src/index.css` is the source of the token values.** The values below are the Enterprise Light values approved on 2026-10-29, shown so the rules can be read. If `index.css` and this file disagree, `index.css` is right: fix this file in the same change.
 - Code rules (Tailwind usage, class names, tests) are in `docs/agents/frontend-standards.md`.
 - `index.css` is the only CSS file, and Tailwind's preflight is on (#82): the browser's own heading sizes, list bullets, link colours and button faces are gone, so every element's look comes from its utilities.
 
@@ -35,7 +35,7 @@ Each colour has one meaning: **blue (accent) only for what can be pressed**; red
 
 ### Status colours (facility-0047)
 
-A status is **always shown with its words** (never colour alone). Each has a text colour, a light background and a border; the chip's new face (light background, border, icon) comes in #122; until then `StatusChip` is white text on the status colour.
+A status is **always shown with its words** (never colour alone). Each has a text colour, a light background, a border and an icon. `StatusChip` uses the light face by default; `solid` is the filled variant for the phone's urgent-work card.
 
 | Point Status | Words | Tokens | Text / background / border |
 |---|---|---|---|
@@ -46,13 +46,13 @@ A status is **always shown with its words** (never colour alone). Each has a tex
 | NotYetDone, BeforeFirstRound, OffHours | ยังไม่ทำ, ยังไม่ถึงรอบ, นอกเวลา | `--color-idle`, `-bg`, `-border` | `#5B6474` / `#F2F4F7` / `#E0E5EB` |
 | Break (attendance, D2) | พัก | `--color-break`, `-bg`, `-border` | `#6941C6` / `#F4F1FB` / `#D9CFF2` |
 
-D2's Area states reuse these chips, with their words: ยังไม่มีคน rework red, ทำงานอยู่ passed green, พักเบรก break, เลิกงานแล้ว idle grey, มีคนทำแทน pending teal. D3's alert kinds are not states, so their chips take a note's colours: refused at a sign error, far from a sign warn, a missing time plain (#78).
+D2's Area states reuse these chips, with their words: ยังไม่มีคน overdue orange, ทำงานอยู่ passed green, พักเบรก break, เลิกงานแล้ว idle grey, มีคนทำแทน pending teal. D3's alert kinds are not states, so their chips take a note's colours: refused at a sign error, far from a sign warn, a missing time plain (#78).
 
 The three idle statuses share one grey on purpose: nothing needs doing.
 
 ### Notes (messages in a box)
 
-A note takes the status colours (the design file's DesignSystem page): `Note` tone `error` = rework, `warn` = overdue, `info` = pending, and success = passed (the tone comes in #122). Utilities such as `bg-rework-bg`, `border-overdue-border`, `text-pending`.
+A note takes the status colours (the design file's DesignSystem page): `Note` tone `error` = rework, `warn` = overdue, `info` = pending, and `success` = passed. Utilities such as `bg-rework-bg`, `border-overdue-border`, `text-pending`.
 
 ### The printed sign (D5)
 
@@ -93,7 +93,7 @@ All with line height 1.25.
 ## Size and spacing
 
 - Spacing on the 4 px scale (`--spacing: 4px`).
-- Corners: `rounded-sm` 4 px (small badges), `rounded-md` 6 px (buttons, inputs, chips), `rounded-lg` 8 px (cards, tables, dialogs); chips may be fully round (`rounded-full`). #121 moved every old `rounded` (8 px) to `rounded-lg` unchanged; controls move to `rounded-md` in #122.
+- Corners: `rounded-sm` 4 px (small badges), `rounded-md` 6 px (buttons, inputs, chips), `rounded-lg` 8 px (cards, tables, dialogs); chips may be fully round (`rounded-full`). #121 moved every old `rounded` (8 px) to `rounded-lg` unchanged; controls use `rounded-md`.
 - Shadow `shadow-overlay` on a dialog or drawer only.
 - Widths: phone column `--container-mobile` 480 px (`max-w-mobile`), Admin page `--container-content` 1216 px (`max-w-content`), Admin sidebar `--container-sidebar` 240 px (`w-sidebar`).
 - Phone targets at least **48 px** high; primary actions (ส่งงาน, ลงเวลา) **56 px**, full width.
@@ -104,7 +104,7 @@ All with line height 1.25.
 - **Admin, from 1024 px:** a white 240 px sidebar with a right border: the system name and "แอดมิน" on top, the menu in two groups, **ติดตามงาน** (สถานะจุด, การเข้างาน, รายการที่ขึ้นเตือน with its red count, สรุปการตรวจ, ส่งออก Excel) and **ตั้งค่า** (พื้นที่และป้าย, ตึก, พิมพ์ป้าย, บัญชีผู้ใช้, ประวัติการแก้ไข), 40 px items, the open one in accent-subtle with accent text (`aria-current="page"`), and at the bottom who is logged in and ออกจากระบบ (a button: it acts). The page beside it: at most 1216 px, centred, 24 px around it.
 - **Admin, narrower:** the sidebar sits above the page and its groups wrap as rows. A wide table scrolls in its own box, never the page.
 - **Alert count geometry (owner approved2026-11-01):** the alert menu link always reserves a48px count slot, including loading/zero. Positive counts retain the red badge; values above999 display `999+` within the slot, with the exact total in the link's accessible name and the badge's hover title. Loading or polling must not rewrap the menu.
-- **Phone:** one column, at most 480 px, 16 px sides: a white bar (who is logged in, ออกจากระบบ) clear of the notch (`env(safe-area-inset-top)`), then the page, which scrolls with the window and fills the rest of the screen (`min-h-svh`, not dvh: owner, 2026-10-27). `BottomBar` is the white bar for the page's one main action, held at the bottom and clear of the home bar (`env(safe-area-inset-bottom)`); the pages move into it in #123.
+- **Phone:** one column, at most 480 px, 16 px sides: a white bar (who is logged in, ออกจากระบบ) clear of the notch (`env(safe-area-inset-top)`), then the page, which scrolls with the window and fills the rest of the screen (`min-h-svh`, not dvh: owner, 2026-10-27). `BottomBar` is the white bar for the page's one main action, held at the bottom and clear of the home bar (`env(safe-area-inset-bottom)`); phone pages use it for their primary actions.
 
 ## Icons (facility-0088)
 
@@ -116,18 +116,18 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 
 | Component | For |
 |---|---|
-| `Button` (`variant` primary / secondary / danger / link, `size` phone / main / desk) | Every button. A `link` button has no side padding, so its words line up with the text above it (owner, #78). `main` is the phone page's one 56 px full-width action; `danger` confirms what cannot be undone (red text and border on white, owner 2026-10-22) |
+| `Button` (`variant` primary / secondary / danger / link / add, `size` phone / main / desk) | Every button. A `link` button has no side padding, so its words line up with the text above it (owner, #78). `main` is the phone page's one 56 px full-width action; `danger` is red text and border on white; contextual stopping-use/QR confirmations use the solid red action in `ConfirmationDialog` (0101), and `add` is dashed accent for adding a round |
 | `buttonClass(variant, size)` + `data-tap` | A react-router `Link` that looks like a button |
-| `Note` (`tone` info / warn / error, `title`, `icon`, `alert`, `status`) | A message in a box, in the status colours (see Notes); an error is `role="alert"` unless `alert={false}` (a red box that is part of the page from the start, such as the Supervisor's defect); `status` makes it `role="status"`, for the answer to a press (the recorded time on the check-in page). `noteClass(tone)` for a box that must be a `<section>` with its own heading |
-| `StatusChip` (`size` md / lg) | A Point Status, always with its words |
+| `Note` (`tone` info / success / warn / error, `title`, `icon`, `alert`, `status`) | A message in a box, in the status colours (see Notes); an error is `role="alert"` unless `alert={false}` (a red box that is part of the page from the start, such as the Supervisor's defect); `status` makes it `role="status"`, for the answer to a press (the recorded time on the check-in page). `noteClass(tone)` for a box that must be a `<section>` with its own heading |
+| `StatusChip` (`size` md / lg, `solid`, `fixed`) | A Point Status, always with its words |
 | `Toast` (`notice`, `onClose`; with its `Notice` type) | The answer to an Admin's action (D2, D3), floating at the top centre so nothing under it moves (owner, #78). `ok` (done): info (pending) colours, a check icon, `role="status"`, gone by itself after 5 s (held while the pointer or keyboard is on it). `warn` (something the Admin did not ask for, such as their form closing): warn colours, `role="status"`. `error`: error colours, `role="alert"`. warn and error stay until ✕ (named ปิดข้อความ), which closes any of them at once |
 | `toggleClass` (`styles.ts`) + `data-tap` | An Admin on/off button with `aria-pressed` (D1 filters, D2 shift, D3 tabs): 36 px, a blue frame when on |
 | `tabClass` + `tabListClass` (`styles.ts`) + `data-tap` | An Admin view switcher, a real tablist (`role="tab"`, `aria-selected`, arrows and Home/End, one keyboard stop): a 2 px line under the words, never a box, so a switch is not mistaken for a button that does something beside it (D4, owner 2026-10-23) |
 | `Field` (`label`, `help`), `FieldGroup` (`legend`), `TextInput`, `Select`, `TextArea` (`size` phone / desk) | A labelled control; the help line sits outside the label and is linked with `aria-describedby`; `inputClass(size)` for a bare one. `FieldGroup` is the bordered `fieldset` whose legend names a group of answers (D10's shift pattern, D4's round windows) |
 | `ChoiceTile` (radio), `ToggleChip` (checkbox) | Large answers and issue tags on the phone |
 | `Table` | A table in its own scroll box; style-free `<th>` / `<td>` inside |
-| `Modal` (`labelledBy`, `onClose`) | A form over the page (the browser's modal `<dialog>`), so the page behind does not move: D2's correction form, D3's cover form, D6's confirm to deactivate an account (`role="alertdialog"` with `describedBy`, owner 2026-10-26: a confirm of what cannot be undone is a popup, not a box in the page). Its heading (`tabIndex={-1}`) takes the keyboard on open; Escape asks `onClose`; closing gives the keyboard back to what opened it (owner, #78) |
-| `Drawer` (`labelledBy`, `onClose`) | The same modal `<dialog>` as a full-height panel on the right edge (480 px, `w-120`, commented), scrolling on its own, the page still visible on the left: D4's point editor and its Area form (owner, 2026-10-23). Escape, the keyboard and the opener's keyboard back work as `Modal`'s |
+| `Modal` (`labelledBy`, `onClose`) | A form over the page (the browser's modal `<dialog>`), so the page behind does not move: D2's correction form and shared confirmation dialogs (`role="alertdialog"` with `describedBy`, owner 2026-10-26: a confirm of what cannot be undone is a popup, not a box in the page). Its heading (`tabIndex={-1}`) takes the keyboard on open; Escape asks `onClose`; closing gives the keyboard back to what opened it (owner, #78) |
+| `Drawer` (`labelledBy`, `onClose`) | The same modal `<dialog>` as a full-height panel on the right edge (480 px, `w-120`, commented), scrolling on its own, the page still visible on the left: Area/point editors, Building/account editors and cover assignment (0100–0101). Escape, the keyboard and the opener's keyboard back work as `Modal`'s |
 | `MoreInfo` (`summary`, `size` desk / phone) | Notes on how a page counts or keeps things, shut until asked (owner, 2026-10-26; every page, phone ones too, 2026-10-27). A warning about what the user is about to do and a field's help stay in the page. `phone`: 48 px summary, `size-5` icon, `text-sm` |
 | `Panel`, `Facts`, `Splash` | A boxed group, label–value pairs, the waiting line |
 | `AppLayout`, `AdminNav`, `BottomBar`, `LiveBadge`, `StatusScreen`, `CrashScreen` | The shell (see Layout), the sidebar menu, the phone's bottom bar, the live badge, full-page messages |

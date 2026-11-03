@@ -1,4 +1,6 @@
-# Data Retention — GPS 90 Days, Records 1 Year; PDPA Notice Settled Before Production
+# Data Retention — GPS 90 Days, Records 1 Year; PDPA Notice Requirement Withdrawn
+
+> **กติกาที่ใช้ ณ 2026-11-03:** เจ้าของยกเลิกงานประกาศ/ใบยินยอม PDPA และการคุย HR ก่อน production (amendment ท้ายไฟล์) ข้อความและแผนภาพเดิมเกี่ยวกับเงื่อนไขนี้เป็นประวัติ ระยะเก็บ GPS 90 วัน/รายการ 1 ปีและ Server Log 90 วันยังคงเดิม งานลบ/สรุปข้อมูลอัตโนมัติยังไม่สร้าง ต้องมีก่อนข้อมูลจริงอายุครบ 90 วัน การดูแลสำเนา Excel ยังไม่ได้ตัดสิน
 
 ```mermaid
 flowchart TD

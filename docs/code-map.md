@@ -1,5 +1,7 @@
 # Code Map — which file does what
 
+Checked against `master` at `aa1963d` on 2026-11-03. Current project status is in [handoff](handoff.md); the tables below describe code, not a confirmed production deployment.
+
 > **Read this when you open the repo and do not know where anything is.**
 > `docs/architecture.md` explains how the parts *connect* (deployment, network, MySQL schema).
 > This page explains what each *file* is for, and walks the two flows everyone asks about first: **login** and **scan → GPS → dashboard**.
@@ -48,13 +50,13 @@ The picture above is the whole system: a phone opens a URL from a printed QR sig
 - [Part 9 — API reference](#part-9--api-reference)
 - [Part 10 — Data model](#part-10--data-model)
 - [Part 11 — Tests that pin behaviour](#part-11--tests-that-pin-behaviour)
-- [Part 12 — Things that are unclear](#part-12--things-that-are-unclear)
+- [Part 12 — Limits and remaining work](#part-12--limits-and-remaining-work)
 
 ---
 
 ## Part 1 — What this app does
 
-A factory cleaning-inspection system: cleaners scan a printed QR sign at each service point to record that they cleaned it, supervisors scan the same sign to judge the work, and admins watch everything live on a dashboard. GPS is captured on every scan so the record proves the person was physically at the sign. Three roles, three different home pages, one URL per sign.
+A factory cleaning-inspection system: cleaners scan a printed QR sign at each service point to record that they cleaned it, supervisors scan the same sign to judge the work, and admins watch everything live on a dashboard. GPS is captured on every scan to flag distance or accuracy outside the sign radius; real indoor accuracy still needs field validation. Three roles, three different home pages, one URL per sign.
 
 **Tech stack**
 
@@ -62,11 +64,11 @@ A factory cleaning-inspection system: cleaners scan a printed QR sign at each se
 |---|---|
 | Frontend | React 19.2.8, TypeScript, Vite 8, react-router 7, Redux Toolkit + RTK Query, Tailwind 4, Vitest |
 | Real-time | `@microsoft/signalr` — one hub at `/hubs/scan`, server → client only |
-| Backend | ASP.NET Core 10 Minimal API (no controllers), Clean Architecture split Api → Application → Infrastructure → Domain |
-| Persistence | EF Core 10 + `MySql.EntityFrameworkCore`, snake_case tables, 4 migrations |
+| Backend | ASP.NET Core 10 Minimal API (no controllers), four projects: Api references Application + Infrastructure; Infrastructure references Application + Domain; Application references Domain |
+| Persistence | EF Core 10 + `MySql.EntityFrameworkCore`, snake_case tables, 5 migrations |
 | Auth | JWT access token 5 minutes (HS256) + rotating refresh token in an `HttpOnly` cookie scoped to `/api/auth` |
 | Passwords | PBKDF2-HMAC-SHA256, 600 000 iterations |
-| Tests | xUnit — 62 API test files, 25 unit test files; Vitest for the frontend |
+| Tests | xUnit API/unit tests, Vitest frontend tests, Playwright real-API browser workflows; latest recorded results in handoff |
 
 ---
 
@@ -76,7 +78,7 @@ If you have just opened the repo, read in this order. Each step is one file.
 
 | # | Question in your head | File to open | What you will see |
 |---|---|---|---|
-| 1 | "What routes exist?" | `frontend/src/router.tsx` | The whole route table as data. 90 lines, no magic. |
+| 1 | "What routes exist?" | `frontend/src/router.tsx` | The whole route table as data. Route guards, role homes and lazy Admin routes. |
 | 2 | "What runs at boot?" | `frontend/src/main.tsx` | Store → session refresh → tap feedback → render. Then `App.tsx` (three providers, that is all). |
 | 3 | "How does the page get data?" | `frontend/src/shared/api/baseApi.ts` | The single `createApi`. Every request in the app goes through this one file: Bearer header, 401 → refresh → retry, timeouts, cache tags. |
 | 4 | "How does login work?" | [Part 7](#part-7--login-flow) | Full trace with file names. |
@@ -88,13 +90,13 @@ If you have just opened the repo, read in this order. Each step is one file.
 
 1. **One folder per feature.** `frontend/src/pages/scan/` owns the cleaner's scan page and nothing else. A page may not import another page — `eslint.config.js` enforces it.
 2. **One API file per feature.** Each page folder has an `*Api.ts` that calls `baseApi.injectEndpoints`. Grep for a route string there and you will find the caller.
-3. **Rules live apart from I/O.** Everything that decides *yes/no* sits in `backend/src/FacilityRealtime.Application/` as a static class. Endpoints only read input, call a rule, and write.
+3. **Rules live apart from I/O.** Shared business rules sit in `backend/src/FacilityRealtime.Application/` mostly as static classes. LoginThrottle is a stateful in-memory gate; endpoints handle request validation, authorization and persistence.
 
 ---
 
 ## Part 3 — Frontend file map
 
-Root: `frontend/src/` — 114 `.tsx` files (25 of them tests), of which 64 are page components under `pages/`.
+Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 
 ### Root files
 
@@ -110,7 +112,7 @@ Root: `frontend/src/` — 114 `.tsx` files (25 of them tests), of which 64 are p
 | Folder | Files worth knowing | Purpose |
 |---|---|---|
 | `shared/api/` | `baseApi.ts` | **The single `createApi`.** `baseUrl = ${origin}/api`, Bearer header from `state.auth.accessToken`, `baseQueryWithReauth` (401 → one shared refresh → retry once, skipped for `/auth/*`), `SEND_TIMEOUT_MS = 20_000`, tag types, and the two standard hook options `freshOnOpen` and `livePoll` (30 s + refetch on focus). |
-| | `types.ts` | Every server DTO shared by pages. 47 imports. Note: the server omits null fields, so test with truthiness. |
+| | `types.ts` | Server DTOs shared by pages. Note: the server omits null fields, so test with truthiness. |
 | | `buildingNames.ts` | `buildingOptionText` / `buildingText` / `useBuildingNames`: the Admin pages' `code · current name` for a building (facility-0091). Phones keep the bare code. |
 | | `adminSetupApi.ts`, `attendanceBoardApi.ts`, `alertListApi.ts`, `myWorkApi.ts` | Endpoints shared by more than one page. |
 | | `scanHub.ts` | `followScanHub()` — one SignalR connection per RTK Query cache entry, retry ladder, `onMissed` refetch on every reconnect. Loads `@microsoft/signalr` by dynamic import, so it is not in the main JS. |
@@ -118,9 +120,9 @@ Root: `frontend/src/` — 114 `.tsx` files (25 of them tests), of which 64 are p
 | `shared/auth/` | `session.ts` | Single-flight `refreshSession`, `startSession`, `getValidAccessToken`, `abandonSession`. Raw `fetch` to `/api/auth/refresh` with a 15 s timeout. |
 | | `endSession.ts` | Logout: forget locally → await in-flight refresh → `POST /api/auth/logout`. |
 | | `roles.ts` | `homeOf(role)`: cleaner → `/my-work`, supervisor → `/my-building`, admin → `/dashboard`. |
-| `shared/geo/` | `readLocation.ts` | 41 lines. The only place the browser geolocation API is called. See [Part 8](#part-8--scan-gps-and-real-time-flow). |
-| `shared/components/` | 20 `.tsx` | The reusable library. Most-used first: `Note.tsx` (30 page imports), `styles.ts` (29), `Button.tsx` (25), `Field.tsx` (14), `StatusChip.tsx` (8), `Boxes.tsx` (8), `Toast.tsx` (6), `Modal.tsx` (4). Router-only: `ProtectedRoute`, `AppLayout`, `AdminNav`, `ByRole`, `HomeRedirect`, `SessionGate`, `CrashScreen`. |
-| `shared/utils/` | `thaiTime.ts` (34 imports), `getErrorMessage.ts` (31), `labels.ts` (26), `dateRange.ts` (11), `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock — every time you see a strange time, look here first. |
+| `shared/geo/` | `readLocation.ts` | Fresh scan reads and permission-retry detection; setup capture separately uses watchPosition. See [Part 8](#part-8--scan-gps-and-real-time-flow). |
+| `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `Drawer`, `Modal`, `ConfirmationDialog`, `LocationHelp` | Shared Tailwind UI, feedback and route/layout components. |
+| `shared/utils/` | `thaiTime.ts`, `getErrorMessage.ts` (31), `labels.ts` (26), `dateRange.ts` (11), `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock — every time you see a strange time, look here first. |
 | `shared/version/` | `buildInfo.ts` | The build commit shown on the login pages. |
 
 ### pages — 17 feature folders
@@ -136,14 +138,14 @@ Root: `frontend/src/` — 114 `.tsx` files (25 of them tests), of which 64 are p
 | `dashboard/` | Admin live point board (D1) | `DashboardPage.tsx`, `PointTile.tsx`, `boardRules.ts`, `dashboardApi.ts` (hub follow) |
 | `attendance/` | Admin attendance board + corrections (D2) | `AttendancePage.tsx`, `CorrectionForm.tsx`, `attendanceRules.ts` |
 | `alerts/` | Empty areas, covers, alert list (D3) | `AlertsPage.tsx`, `CoversThisShift.tsx`, `alertRules.ts` |
-| `areas/` | Area / point / sign setup (D4, D10) — largest folder, 23 files | `AreasPage.tsx`, `PointEditor.tsx` (301 lines), `SignPanel.tsx` (235), `signRules.ts` (radius 10–500 m) |
+| `areas/` | Area / point / sign setup (D4, D10) | `AreasPage.tsx`, `PointEditor.tsx`, `SignPanel.tsx`, `signRules.ts` (radius 10–500 m) |
 | `buildings/` | Building setup: add, rename, on/off (facility-0090) | `BuildingsPage.tsx`, `BuildingDrawer.tsx`, `buildingRules.ts` (same counts as the server's `BuildingRules`) |
 | `accounts/` | Account CRUD, no delete (D6) | `AccountsPage.tsx`, `CreateAccountForm.tsx`, `SecretForms.tsx` |
 | `print-signs/` | QR sign printing (D5) | `PrintSignsPage.tsx`, `qr.ts` + `printRules.ts` — `signUrl()` builds `/scan/<token>` |
 | `capture/` | Admin records a sign's GPS standing at the site (M17) | `CapturePage.tsx`, `captureLocation.ts` (30 s, median of ≥3 readings) |
 | `inspection-summary/` | Per-supervisor tallies (D7) | `InspectionSummaryPage.tsx`, `summaryRules.ts` |
 | `export/` | Excel export (D8) | `ExportPage.tsx`, `exportRules.ts` (1–31 days), `saveFile.ts` |
-| `history/` | Audit log with infinite scroll (D9) | `HistoryPage.tsx`, `historyRules.ts` (max 92 days) |
+| `history/` | Audit log with previous/next navigation over API cursors (D9) | `HistoryPage.tsx`, `historyRules.ts` (max 92 days) |
 
 ### store
 
@@ -155,7 +157,9 @@ Three slices plus RTK Query — see [Part 5](#part-5--state-management).
 
 ### e2e (facility-0094)
 
-Playwright, run only by `npm run e2e` (`scripts/e2e.sh` starts the real API on `facility_e2e_test` first). `e2e/phone/` runs at 390 x 844 with GPS at the AR01 check-in sign, `e2e/desktop/` at 1280 px (the D1 layout-shift test at 700 px). `e2e/support/seed.ts` is the only copy of the seed values (change it with `DbInitializer.cs`); `pageWatch.ts` measures layout shift, watches for text that must never show and holds requests back. How to run and recover: `docs/handover.md` section 6.
+Playwright runs through `npm run e2e` → `scripts/e2e.sh` → `scripts/e2e.py`. Each run publishes to its own ignored directory, creates a unique `facility_e2e_<timestamp>_<suffix>` database and restricted user, seeds synthetic data through `backend/tools/FacilityRealtime.E2ESeed`, and cleans up only resources it can prove it owns. It does not reset a fixed `facility_e2e_test` database or the shared `wwwroot` (facility-0102 amends 0094).
+
+`frontend/e2e/phone/` and `desktop/` cover role workflows, setup/reporting and network/GPS conditions. `frontend/e2e/support/seed.ts` centralizes fixture credentials with `DbInitializer.cs`; `pageWatch.ts` watches browser errors, CSP and layout. Chromium is headed with 350 ms slow motion by default; choose WebKit/Firefox with `E2E_BROWSER`. [E2E guide](testing/e2e.md) covers profiles, retained reports, engine skips and explicit ownership-checked cleanup.
 
 ---
 
@@ -189,7 +193,7 @@ From `frontend/src/router.tsx`. Guards come from `shared/components/ProtectedRou
 
 Admin routes are lazy-loaded so phones never download them ([facility-0062](adr/facility-0062-phone-bundle-budget-200kb-gzip.md)).
 
-**The guard's own comment is the important part:** `ProtectedRoute.tsx` lines 7–9 say it *"hides pages, it does not protect data: the server's policies do that."* Never assume a hidden button means a forbidden action — check the endpoint.
+**The guard's own comment is the important part:** `ProtectedRoute.tsx` says it *"hides pages, it does not protect data: the server's policies do that."* Never assume a hidden button means a forbidden action — check the endpoint.
 
 ---
 
@@ -214,16 +218,16 @@ graph TD
 |---|---|---|
 | `auth` | `store/slices/authSlice.ts` | `currentUser`, `accessToken`, `expiresAt`, `isBootstrapping`, `signedOutByUser`. **Memory only — nothing is ever written to localStorage** (facility-0013). Refreshing the tab forgets the token on purpose; the cookie brings it back. |
 | `hub` | `store/slices/hubSlice.ts` | `connections: Record<key, 'connecting'｜'live'｜'reconnecting'>` — one key per SignalR follow. |
-| `dashboard` | `store/slices/dashboardSlice.ts` | The D1 filter row: building, status, issue-only. |
+| `dashboard` | `store/slices/dashboardSlice.ts` | D1 building, status, issue-only, search and problem-first sorting; session end resets them. |
 | `api` | `baseApi.reducerPath` | The RTK Query cache — all server state. |
 
 **Rules of thumb**
 
-- **Server data → RTK Query.** There is no axios and no plain `fetch` for data. The only two raw `fetch` calls in `src` are `shared/auth/session.ts:43` and `shared/auth/endSession.ts:18`.
+- **Server data → RTK Query.** There is no axios and no plain `fetch` for data. The only two raw `fetch` calls in `src` are `shared/auth/session.ts` and `shared/auth/endSession.ts`.
 - **Form drafts → local `useState`.** Heaviest users: `pages/areas/SignPanel.tsx` (8), `pages/export/ExportPage.tsx` (6), `pages/areas/PointEditor.tsx` (6).
 - **No React Context anywhere** — grep for `createContext` returns 0 hits.
 - **Refetch policy** is one of three constants: `freshOnOpen` (phone and setup pages ask again every open) or `livePoll` (admin live pages, 30 s + on focus), both from `baseApi.ts`, or `namesFreshness` from `shared/api/buildingNames.ts` (30 s, building names only).
-- **SignalR push** is wired in exactly three cache entries via `onCacheEntryAdded → followScanHub`: `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts`.
+- **SignalR push** is wired in four cache entries via `onCacheEntryAdded → followScanHub`: `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts` and `shared/api/myWorkApi.ts`.
 
 ---
 
@@ -236,21 +240,24 @@ Solution `backend/FacilityRealtime.slnx` — four projects, no controllers.
 | Path | Purpose |
 |---|---|
 | `Program.cs` | Composition root, numbered 1–9 in comments: services → middleware → migrate → hub → endpoint groups → SPA fallback. |
-| `Endpoints/` (30 files) | All HTTP routes. `*Endpoints.cs` registers routes; the rest are helpers (`ThaiLabels`, `GpsInput`, `ApiResults`, `BlockedScans`, `PointNotifications`, `ExportSheets`, `AdminQuery`, `AccountChecks`, read-model builders). |
+| `Endpoints/` | All HTTP routes. `*Endpoints.cs` registers routes; the rest are helpers (`ThaiLabels`, `GpsInput`, `ApiResults`, `BlockedScans`, `PointNotifications`, `ExportSheets`, `AdminQuery`, `AccountChecks`, read-model builders). |
 | `Auth/` | `AuthSetup.cs` (JWT bearer, `AdminOnly` policy, SignalR query-string token), `JwtAccessTokenIssuer.cs`, `JwtKeys.cs`, `AuthClaims.cs`, `CurrentUser.cs`. |
-| `Hubs/ScanHub.cs` | Server → client only, **zero hub methods**. Admin connections join the `"admins"` group on connect. |
-| `DTOs/` (14 files) | One request/response record set per feature. |
+| `Hubs/ScanHub.cs` | Server → client only, **zero hub methods**. Every push addresses active user ids read from the database at send time; no Admin group is joined (0105). |
+| `DTOs/` | One request/response record set per feature. |
+| `SecurityHeaders.cs` | CSP and other browser security headers; `/api` answers use `no-store`. HSTS and forwarded-header trust are configured in `Program.cs` (0106). |
+| `Auth/SecurityLog.cs` | Redacted security events, including normalized login IP, through `ILogger` → Serilog Console (0103, 0104). |
+| `Commands/ResetAdminCommand.cs` | Console account recovery; `FirstAdmin` / `ServerAdminAccounts` create the first Admin from settings (0092). |
 | `PrecompressedFiles.cs` | Sends a frontend file's build-time `.br`/`.gz` copy when the browser accepts it (facility-0067 amendment). |
 | `wwwroot/` | The built frontend, copied in by `npm run build:api`; `frontend/precompress.ts` writes a `.br` and a `.gz` beside each text file. |
 
 ### `FacilityRealtime.Application` — read this first, it is the rules
 
-Pure static classes, no database, no HTTP, fully unit-tested:
+Business rules without database or HTTP dependencies, mostly static; LoginThrottle holds in-memory counters:
 
 | Area | Files |
 |---|---|
 | `Areas/` | `AreaRules` (an Area is turned off only once no active Cleaner holds it; facility-0091) |
-| `Auth/` | `LoginThrottle`, `PhoneNumber`, `RefreshTokenRules`, `JwtSettings`, `IPasswordHasher` |
+| `Auth/` | `LoginThrottle`, `LoginPlace`, `PhoneNumber`, `RefreshTokenRules`, `JwtSettings`, `IPasswordHasher` |
 | `Geo/` | **`Geofence.cs`** (haversine distance + within-radius verdict), `GpsStamping.cs` |
 | `Rounds/` | **`RoundPlacer.cs`** (OnTime / Late / Rework / OffRound), `PointStatusCalculator`, `RoundWindow`, `RoundRules` |
 | `Attendance/` | `AttendanceRules`, `AttendanceCalendar`, `AreaAttendance`, `AttendanceSettings` |
@@ -266,12 +273,12 @@ Pure static classes, no database, no HTTP, fully unit-tested:
 | `Persistence/*Query.cs` | Reusable read models: `PointBoardQuery`, `RoundFactsQuery`, `AlertQuery`, `AuditLogQuery`, `ExportQuery`, `InspectionHistoryQuery`. |
 | `Auth/Pbkdf2PasswordHasher.cs` | PBKDF2-HMAC-SHA256, 600 000 iterations, `pbkdf2-sha256$…` format. Also used for the phone number-as-secret. |
 | `Export/ExcelWorkbook.cs` | ClosedXML `.xlsx` writer. |
-| `Migrations/` | 4 migrations + model snapshot, applied at startup with `MigrateAsync()`. |
+| `Migrations/` | 5 migrations + model snapshot, applied at startup with `MigrateAsync()`. |
 | `Persistence/DbInitializer.cs` | Dev-only seed (`admin` / `admin1234`). Never runs outside Development. |
 
 ### `FacilityRealtime.Domain`
 
-15 files in `Entities/` (14 tables + `IGpsStamped` marker) and 12 in `Enums/`. No behaviour.
+`Entities/` models the 14 application tables and the `IGpsStamped` interface; `Enums/` holds shared domain values. Entities include small domain helpers such as Area.HasShift.
 
 **Design shape to internalise:** endpoints inject `AppDbContext` directly. There is no repository layer and no service layer for business logic. If you go looking for `IOrderService`, it does not exist here — the rule is a static class in `Application`, the endpoint calls it.
 
@@ -285,23 +292,23 @@ There are two login screens because the three roles authenticate differently: cl
 
 | Step | File | What happens |
 |---|---|---|
-| 1 | `pages/auth/LoginPage.tsx` | Two fields. Client-side validation is **only** HTML5 `required` plus `.trim()` on the employee id — no format check. Submit at lines 21–24 calls `submit({ employeeId, phone })`. |
+| 1 | `pages/auth/LoginPage.tsx` | Two fields. Client-side validation is **only** HTML5 `required` plus `.trim()` on the employee id — no format check. Submit calls `submit({ employeeId, phone })`. |
 | 2 | `pages/auth/useLogin.ts` | The hook both login pages share: `submit` → `login(body).unwrap()` → `dispatch(setCredentials(response))`. Maps errors: 401 → the page's own Thai message, 429 → throttle message, otherwise `getErrorMessage()`. |
-| 3 | `pages/auth/authApi.ts:7` | `POST /auth/login` — the RTK Query mutation. |
-| 4 | `shared/api/baseApi.ts:14-25` | `prepareHeaders` attaches `Authorization: Bearer <accessToken>` if one exists. |
-| 5 | `backend/.../Endpoints/AuthEndpoints.cs:35-94` | `LoginAsync` — see the numbered steps below. |
-| 6 | `store/slices/authSlice.ts:27-33` | `setCredentials` copies `user`, `accessToken`, `expiresAt` into **memory**. |
+| 3 | `pages/auth/authApi.ts` | `POST /auth/login` — the RTK Query mutation. |
+| 4 | `shared/api/baseApi.ts` | `prepareHeaders` attaches `Authorization: Bearer <accessToken>` if one exists. |
+| 5 | `backend/.../Endpoints/AuthEndpoints.cs` | `LoginAsync` — see the numbered steps below. |
+| 6 | `store/slices/authSlice.ts` | `setCredentials` copies `user`, `accessToken`, `expiresAt` into **memory**. |
 | 7 | `shared/components/ProtectedRoute.tsx` + `shared/auth/roles.ts` | Next navigation: `state.from` if there was one, else `homeOf(role)`. |
 
-### What LoginAsync actually does, lines 47 to 93
+### What LoginAsync actually does
 
-1. Pick the credential mode — `byEmployeeId` if `request.EmployeeId` is non-empty (line 47).
-2. Over-long login name → bare `401` and an unknown-account Server Log line, nothing counted by the throttle (50–55).
-3. **Role-separated lookup** (57–59): employee mode matches `EmployeeId` **and** `Role != Admin`; admin mode matches `Username` **and** `Role == Admin`. This is the only thing stopping someone logging into the wrong form.
-4. **Throttle** (63–70): key is `user:{id}` if the account matched, otherwise the typed name. 5 failures in 15 minutes → `429`.
-5. **Dummy hash** (72): `hasher.Verify(secret, user?.SecretHash ?? DummyPasswordHash)` — an unknown account still pays one full PBKDF2 run, so timing cannot reveal whether an account exists.
-6. Two branches, both → `401` with **no body and no cookie**: `user is null` (73–77) and `!user.IsActive || !secretMatches` (79–84). Each writes its own Server Log line first. Wrong password, unknown id and deactivated account are indistinguishable **by design**.
-7. Success → reset throttle, insert a `RefreshToken` row storing **only the SHA-256 hash** (89–90), write the cookie (92), return `{ accessToken, expiresAt, user }` (93).
+1. Pick employee ID + phone or Admin username + password, trim the login name and normalize the connection IP with `LoginPlace` (IPv4 address, IPv6 /64).
+2. Overlong login names → bare `401` and an unknown-account Server Log line; no throttle entry is kept.
+3. Role-separated lookup: employee ID matches a non-Admin; username matches an Admin. Known-account spellings share `user:{id}`, unknown names use a mode-prefixed key.
+4. `LoginThrottle.TryBeginAttempt(key, place)` checks the name/IP pair (5 attempts per 15 minutes) and IP-wide failures (20 per 15 minutes). A locked gate returns `429` without checking the secret (0104). Pair attempts are reserved before verification to bound concurrency; success clears that pair. Only failures increment the IP-wide counter.
+5. Verify the real hash or a dummy PBKDF2 hash for an unknown name.
+6. Unknown, inactive or wrong-secret → `401`, no cookie, a redacted security log and an IP failure increment. The public response does not distinguish these cases.
+7. Success clears its own pair only, saves a SHA-256 refresh-token hash, writes the HttpOnly cookie and returns `{ accessToken, expiresAt, user }`. All `/api` responses carry `Cache-Control: no-store` (0106).
 
 ### The two tokens
 
@@ -315,24 +322,24 @@ There are two login screens because the three roles authenticate differently: cl
 
 ### Session lifecycle
 
-**Attachment** — `shared/api/baseApi.ts:14-25`. Every RTK Query request carries the Bearer header.
+**Attachment** — `shared/api/baseApi.ts`. Every RTK Query request carries the Bearer header.
 
 **Refresh fires in exactly three places** (there is no timer):
 
 | Trigger | Code |
 |---|---|
-| Page load | `main.tsx:16` `void startSession(store.dispatch)` — deliberately outside React so StrictMode cannot fire two. The splash `SessionGate.tsx` waits for it so a live session never flashes the login page. |
-| Any 401 on a non-auth request | `baseApi.ts:39-41` — refresh, then **retry once**. `isAuthCall` excludes `/auth/*` so a wrong password never triggers a refresh. |
-| SignalR connect / reconnect | `session.ts:94-101 getValidAccessToken` — refreshes if less than 30 s remain (`REFRESH_MARGIN_MS`), otherwise returns the stored token. |
+| Page load | `main.tsx` `void startSession(store.dispatch)` — deliberately outside React so StrictMode cannot fire two. The splash `SessionGate.tsx` waits for it so a live session never flashes the login page. |
+| Any 401 on a non-auth request | `baseApi.ts` — refresh, then **retry once**. `isAuthCall` excludes `/auth/*` so a wrong password never triggers a refresh. |
+| SignalR connect / reconnect | `session.ts getValidAccessToken` — refreshes if less than 30 s remain (`REFRESH_MARGIN_MS`), otherwise returns the stored token. |
 
-**Single flight** — `session.ts:12`. All callers share one refresh promise, because *"the server treats a second use of the same refresh token as theft and ends the session."*
+**Single flight** — `session.ts`. All callers share one refresh promise, because *"the server treats a second use of the same refresh token as theft and ends the session."*
 
 **Outcomes** — `session.ts` returns `'refreshed' | 'rejected' | 'offline'`:
 
 - `rejected` (401/403) → `dispatch(sessionExpired())` → listener middleware resets the whole API cache → `ProtectedRoute` sees `currentUser === null` → redirect to `/login` **with** `state.from`, so the person lands back where they were.
 - `offline` (network down, 5xx, non-JSON 200, 15 s timeout) → **session kept**. A phone losing signal must not log the person out.
 
-**Server side of refresh** — `AuthEndpoints.cs:96-145` with `RefreshTokenRules.Decide`: rotate normally; reuse after the 30 s grace revokes the **whole session** (two holders means theft); re-reading the user each refresh is what makes an admin deactivation take effect within 5 minutes (ADR facility-0012).
+**Server side of refresh** — `AuthEndpoints.cs` with `RefreshTokenRules.Decide`: rotate normally; reuse after the 30 s grace revokes the **whole session** (two holders means theft); refresh also rejects inactive accounts. Deactivation takes effect on the next protected API request and subsequent push through database account/recipient checks (0105); phone/password changes revoke refresh tokens and can take up to the access token's 5-minute lifetime to reach every device.
 
 **Logout** — `shared/auth/endSession.ts`: forget locally → `abandonSession()` (bumps `sessionEpoch` so an in-flight refresh cannot log you back in) → `POST /api/auth/logout`.
 
@@ -363,19 +370,19 @@ sequenceDiagram
 | Failure | Handled where | User sees |
 |---|---|---|
 | Empty field | HTML5 `required` | native browser bubble, request never sent |
-| Wrong employee id **or** wrong phone | `AuthEndpoints.cs:73-84` → 401 | `รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง` |
+| Wrong employee id **or** wrong phone | `AuthEndpoints.cs` → 401 | `รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง` |
 | Wrong admin credentials | same 401 path | `ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง` |
 | Deactivated account | same 401 path, indistinguishable on purpose | same message as wrong credentials |
-| 5 failures in 15 min | `LoginThrottle` → 429 | `กรอกผิดหลายครั้ง รอสักครู่แล้วลองใหม่` |
+| 5 attempts for a name/IP pair or 20 IP failures in 15 min | `LoginThrottle` → 429 | `กรอกผิดหลายครั้ง รอสักครู่แล้วลองใหม่` |
 | Network / timeout during login | `getErrorMessage.ts` | `เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่` |
-| Access token expired mid-session | `baseApi.ts:39-41` refresh + retry | nothing — silent retry |
-| Refresh refused | `session.ts:63-66` → `sessionExpired()` | bounced to `/login` with `state.from` kept |
+| Access token expired mid-session | `baseApi.ts` refresh + retry | nothing — silent retry |
+| Refresh refused | `session.ts` → `sessionExpired()` | bounced to `/login` with `state.from` kept |
 | Refresh offline / 5xx / timeout | `session.ts` → `'offline'` | nothing, session kept |
-| Reused refresh token after 30 s grace | `AuthEndpoints.cs:123-128` revokes session | bounced to login |
-| Deactivated while a refresh is in flight | `AuthEndpoints.cs:132-136` revokes **all** that user's sessions | bounced to login; every other device dies too |
-| Role changed | re-read on refresh; guard `ProtectedRoute.tsx:21-30` | `ไม่มีสิทธิ์เปิดหน้านี้` with a link home |
+| Reused refresh token after 30 s grace | `AuthEndpoints.cs` revokes session | bounced to login |
+| Deactivated while a refresh is in flight | `AuthEndpoints.cs` revokes **all** that user's sessions | bounced to login; every other device dies too |
+| Role changed | re-read on refresh; guard `ProtectedRoute.tsx` | `ไม่มีสิทธิ์เปิดหน้านี้` with a link home |
 
-**Server Log lines** (facility-0095..0097): `Api/Auth/SecurityLog.cs`, called from `AuthEndpoints.LoginAsync` (failed, unknown account, refused while locked) and `RefreshAsync` (reused token). Category `FacilityRealtime.Security`, level Warning; the phone sees the same 401/429 as before. SQL statements stay out because `appsettings.json` sets `Microsoft.EntityFrameworkCore.Database.Command` to `Warning`.
+**Server Log lines** (facility-0095–0099, 0103, 0104): `Api/Auth/SecurityLog.cs`, called from `AuthEndpoints.LoginAsync` (failed, unknown account, refused while locked) and `RefreshAsync` (reused token), plus the IP cap event. Login lines include normalized IP. Category `FacilityRealtime.Security`, level Warning; the phone sees the same 401/429 as before. SQL statements stay out because `appsettings.json` sets `Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore.Database.Command` to `Warning`; Console is the only sink.
 
 ---
 
@@ -386,7 +393,7 @@ sequenceDiagram
 **There is no camera code in this repo.** The app never decodes a QR itself. What happens is: the sign carries a printed URL, the phone's own camera or OS scanner opens it, the browser lands on `/scan/<qrToken>` and React takes over.
 
 ```ts
-// frontend/src/pages/print-signs/printRules.ts:23-24
+// frontend/src/pages/print-signs/printRules.ts
 export function signUrl(kind, token) {
   return `${window.location.origin}/${kind === 'check-in' ? 'check-in' : 'scan'}/${token}`;
 }
@@ -406,7 +413,7 @@ The token lives on the `signs` row (`Sign.QrToken`) and appears in no list respo
 
 Related: `/check-in/:token` (`pages/check-in/`) is the shift in/out sign — same GPS and blocked-scan components, different endpoint.
 
-### GPS — readLocation, the whole file
+### GPS — fresh reading and permission recovery
 
 ```ts
 { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 }
@@ -423,7 +430,7 @@ It **never rejects**. Every branch resolves to `{ kind: 'fix', fix }` or `{ kind
 | error callback with `PERMISSION_DENIED` | `denied` |
 | anything else, including the 15 s timeout | `unavailable` |
 
-**No automatic retry and no cache.** Retry is user-driven: the failure screen's button re-runs the whole `send()`. Four callers: `ScanPage.tsx:44`, `InspectPage.tsx:55`, `inspectApi.ts:67` (inside the query), `CheckInPage.tsx:54`.
+**No automatic submission retry or cached scan fix.** Retry is user-driven through `LocationHelp`. After a refusal, `refusalNeedsReload()` probes whether the page still refuses despite permission being enabled; if so it reloads (WebKit), otherwise it repeats the action. Check-in, scan and inspection use this help. Setup capture uses `pages/capture/captureLocation.ts` with watchPosition for 30 seconds.
 
 ### The geofence: flag, never block
 
@@ -437,10 +444,10 @@ return new GeofenceResult(distance, distance <= radiusM && phone.AccuracyM <= ra
 Three things follow from that one line, and they surprise people:
 
 1. **Both distance and accuracy must fit the radius.** A precise fix taken 400 m away is still flagged.
-2. **Outside the radius does not stop the save.** Tests assert this explicitly: `ScanRecordEndpointTests.Far_scan_is_saved_and_flagged` and `InspectionScanEndpointTests.Far_from_the_sign_is_flagged_not_blocked` both expect **201 with `withinRadius: false`**. The admin sees it later as an alert (`AlertQuery.cs:44-49`).
+2. **Outside the radius does not stop the save.** Tests assert this explicitly: `ScanRecordEndpointTests.Far_scan_is_saved_and_flagged` and `InspectionScanEndpointTests.Far_from_the_sign_is_flagged_not_blocked` both expect **201 with `withinRadius: false`**. The admin sees it later as an alert (`AlertQuery.cs`).
 3. **A sign that was never captured gives no verdict at all** — `Evaluate` returns `null` distance.
 
-Default radius is 50 m (`Sign.cs:32`), editable per sign in 10–500 m (`pages/areas/signRules.ts`).
+Default radius is 50 m (`Sign.cs`), editable per sign in 10–500 m (`pages/areas/signRules.ts`).
 
 **`BlockedScanScreen.tsx` is not the geofence.** It renders *scope* blocks — wrong area, wrong building, outside your shift — returned as 403 by `Endpoints/BlockedScans.cs`, which also writes a `blocked_scans` row.
 
@@ -478,63 +485,66 @@ sequenceDiagram
     Dash->>Dash: updateCachedData(replacePoint) → tiles re-render
 ```
 
-**Order of validation inside `CreateAsync`** (`ScanRecordEndpoints.cs:28-144`) — knowing this order tells you *which* error a user is looking at:
+**Order of validation inside `CreateAsync`** (`ScanRecordEndpoints.cs`) — knowing this order tells you *which* error a user is looking at:
 
 | # | Check | Failure |
 |---|---|---|
 | 1 | Authenticated and `Role == Cleaner` | 401 / 403 *"การส่งงานใช้สำหรับแม่บ้านเท่านั้น"* |
 | 2 | Tags ≤ 200 chars, note ≤ 1000, status is a valid enum | 400 |
-| 3 | **GPS present and in range** | 400 *"ต้องเปิดตำแหน่งและอนุญาตให้เว็บอ่านตำแหน่งก่อนสแกน"* |
+| 3 | **GPS present and coordinate values valid** | 400 *"ต้องเปิดตำแหน่งและอนุญาตให้เว็บอ่านตำแหน่งก่อนสแกน"* |
 | 4 | Sign exists, point and area active | 404 *"ไม่พบป้ายนี้ หรือจุดนี้ปิดใช้งานแล้ว"* |
 | 5 | Same area **or** a live cover for this shift | 403 + a `blocked_scans` row |
 | 6 | On duty (in shift, not already signed out) | 409 *"ตอนนี้ไม่อยู่ในกะของคุณ"* etc. |
 | 7 | Round placement — **not** a duplicate check | never fails |
 | 8 | Write `ScanRecord`, stamp GPS, broadcast `ScanRecorded` | — |
 
-**There is no "already scanned" rejection.** `RoundPlacer.cs:17-39` simply places a second submission as `OffRound` or `Late` and the result screen says so (*"ส่งเพิ่มแล้ว (ไม่นับรอบ)"*).
+**There is no "already scanned" rejection.** `RoundPlacer.cs` places submissions from the current time and round facts: `OnTime`, `Late`, `Rework` or `OffRound` and the result screen says so (*"ส่งเพิ่มแล้ว (ไม่นับรอบ)"*).
 
 ### How the dashboard updates without a refresh
 
 ```mermaid
 graph LR
-    A["Endpoint saves the record"] --> B["PointNotifications.SendAsync<br/>scanHub.ts line 28 and 44"]
-    B --> C["group: admins"]
+    A["Endpoint saves the record"] --> B["PointNotifications.SendAsync<br/>backend Endpoints/PointNotifications.cs"]
+    B --> C["users: active Admin ids read at send time"]
     B --> D["users: supervisors of that building<br/>plus covers this shift"]
     C --> E["shared/api/scanHub.ts<br/>onCacheEntryAdded"]
     D --> E
+    B --> J["users: active Area Cleaners and covers"]
+    J --> K["myWorkApi.ts refetches MyWork"]
     E --> F["updateCachedData<br/>replacePoint or patchPoint"]
     F --> G["PointTile re-renders<br/>LiveBadge stays empty"]
     H["SignalR push fails"] --> I["logged and swallowed<br/>30 s livePoll + onMissed refetch recovers"]
 ```
 
-- **Hub:** `Hubs/ScanHub.cs` at `/hubs/scan`. Zero methods — strictly server → client. Admins join `"admins"` on connect. Since 2026-10-26 the **Cleaners of the point's Area (both shifts) and anyone covering it** get the point events too; their My Work page asks the server again when one arrives, on open and on "อัปเดต".
+- **Hub:** `Hubs/ScanHub.cs` at `/hubs/scan`. Zero methods — strictly server → client. Recipients are read from the database at send time, including Admins (0105); sockets do not join an Admin group. Since 2026-10-26 the **Cleaners of the point's Area (both shifts) and anyone covering it** get the point events too; their My Work page asks the server again when one arrives, on open and on "อัปเดต".
 - **Three events:** `ScanRecorded`, `InspectionRecorded` (both → admins + the building's supervisors + the Area's Cleaners and covers), `AttendanceRecorded` (→ admins only).
 - **Auth on the socket:** the access token goes in the query string, accepted **only** for `/hubs` paths (facility-0011) — browsers cannot set headers on a WebSocket.
-- **Three subscribers:** `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts` — one connection per cache entry.
+- **Four subscribers:** `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts` — one connection per cache entry.
 - **The safety net:** `livePoll` = 30 s poll + refetch on focus. Pushes are best effort; a failure is logged and swallowed because the record is already committed.
-- **Badge:** `shared/components/LiveBadge.tsx` reads `hubSlice` — orange `กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)` only while `reconnecting` (down, or a first start failed); nothing while live or during the first connect (owner, 2026-10-28).
+- **Connection timing (0107):** browser offline sets reconnecting immediately, online refetches after 1 s; Dashboard/attendance wait 10 s for server silence, phones 30 s; server ping 5 s.
+- **Badge:** `shared/components/LiveBadge.tsx` reads `hubSlice` — orange `กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)` only while `reconnecting` (browser offline, server timeout, reconnecting or a first start failed); nothing while live or during the first connect (owner, 2026-10-28).
 
 ### Scan failure table
 
 | Failure | Handled where | User sees |
 |---|---|---|
-| GPS permission denied | `readLocation.ts:37` → `LocationHelp.tsx:32-50` | full-screen *"เปิดตำแหน่งก่อนส่งงาน"* with Android/iPhone steps + retry |
-| GPS unavailable / 15 s timeout | `LocationHelp.tsx:51-56` | *"มือถือยังหาตำแหน่งไม่เจอ ลองเดินไปใกล้หน้าต่าง"* + retry |
-| Page on plain http | `readLocation.ts:20-22` → `LocationHelp.tsx:20-29` | *"หน้านี้ต้องเปิดผ่าน https"* — **no retry button** |
+| GPS permission denied | `readLocation.ts` → `LocationHelp.tsx` | full-screen *"เปิดตำแหน่งก่อนส่งงาน"* with Android/iPhone steps + retry |
+| GPS unavailable / 15 s timeout | `LocationHelp.tsx` | *"มือถือยังหาตำแหน่งไม่เจอ ลองเดินไปใกล้หน้าต่าง"* + retry |
+| Page on plain http | `readLocation.ts` → `LocationHelp.tsx` | *"หน้านี้ต้องเปิดผ่าน https"* — **no retry button** |
 | No signal / 5xx / 20 s timeout | `scanAnswers.ts isNotSent` → `SendFailed.tsx` | *"ยังไม่ได้บันทึก"*, choices kept in memory, ส่งใหม่ re-reads GPS fresh |
 | Outside the geofence | server → `withinRadius: false` | **still saved**; amber *"ไกลป้าย: ห่างป้าย N ม."*, later an admin alert |
 | Wrong area / building / shift, no cover | server 403 → `BlockedScanScreen.tsx` | big message + *"ไม่ได้บันทึกงาน"*, nothing stored except the blocked row |
-| Off duty | server 409, pre-checked client-side by `scanRules.ts:45-54` | `OffDuty.tsx` shown before the form |
+| Off duty | server 409, pre-checked client-side by `scanRules.ts` | `OffDuty.tsx` shown before the form |
 | Sign unknown / point deactivated | server 404 | `StatusScreen` *"ไม่พบป้ายนี้ หรือจุดนี้ปิดใช้งานแล้ว"* |
-| Work changed while the supervisor looked away | `InspectionEndpoints.cs:174-177` → 409 | *"งานของจุดนี้เปลี่ยนไประหว่างที่คุณตรวจ"* — the verdict is discarded, page re-scans |
-| Nothing to inspect | `InspectionRules.cs:36-44` | `NothingToInspect.tsx`, refusal shown as the heading, **no button** |
+| Work changed while the supervisor looked away | `InspectionEndpoints.cs` → 409 | *"งานของจุดนี้เปลี่ยนไประหว่างที่คุณตรวจ"* — the verdict is discarded, page re-scans |
+| Nothing to inspect | `InspectionRules.cs` | `NothingToInspect.tsx`, refusal shown as the heading, **no button** |
 | Push lost | `scanHub.ts` reconnect + `onMissed` refetch | badge turns orange, data recovers |
 
 ---
 
 ## Part 9 — API reference
 
-53 HTTP routes. `frontend/src/shared/api/baseApi.ts:16` adds the `/api` prefix, so the frontend `url` values below are relative to it.
+53 HTTP routes. `frontend/src/shared/api/baseApi.ts` adds the `/api` prefix, so the frontend `url` values below are relative to it.
 
 **How to read the Why column:** it answers *"what business goal does this call serve, what breaks without it?"* — not "what does it fetch". If you are deciding whether an endpoint is essential while changing something, the Why is the row that matters.
 
@@ -542,114 +552,105 @@ graph LR
 
 | Method | Route | Handler | Why |
 |---|---|---|---|
-| POST | `/api/auth/login` | `AuthEndpoints.cs:29` → `LoginAsync:35` | Three roles authenticate differently — staff use employee id + phone, admins use username + password. Without it, GPS-stamped scans would be anonymous. The throttle and dummy hash exist so an attacker cannot tell "no such account" from "wrong phone". |
-| POST | `/api/auth/refresh` | `AuthEndpoints.cs:30` → `RefreshAsync:96` | Access tokens last 5 minutes (privacy on a shared phone), so the browser needs a way to stay logged in. Re-reading the user each refresh is what makes an admin deactivation land within 5 minutes. |
-| POST | `/api/auth/logout` | `AuthEndpoints.cs:31` → `LogoutAsync:147` | Kills the session server-side; otherwise a left-behind cookie keeps minting tokens for 30 days. |
-| GET | `/api/me` | `MeEndpoints.cs:12` | Fresh self state. **No frontend caller found** — see [Part 12](#part-12--things-that-are-unclear). |
-| GET | `/api/health` | `Program.cs:141` | Liveness for curl and tunnel probes. No frontend caller. |
+| POST | `/api/auth/login` | `AuthEndpoints.cs` → `LoginAsync` | Three roles authenticate differently — staff use employee id + phone, admins use username + password. Without it, GPS-stamped scans would be anonymous. The throttle and dummy hash exist so an attacker cannot tell "no such account" from "wrong phone". |
+| POST | `/api/auth/refresh` | `AuthEndpoints.cs` → `RefreshAsync` | Access tokens last 5 minutes (privacy on a shared phone), so the browser needs a way to stay logged in. Refresh refuses inactive accounts and revoked sessions. Protected API and push-recipient checks apply deactivation immediately (0105). |
+| POST | `/api/auth/logout` | `AuthEndpoints.cs` → `LogoutAsync` | Kills the session server-side; otherwise a left-behind cookie keeps minting tokens for 30 days. |
+| GET | `/api/me` | `MeEndpoints.cs` | Fresh self state. **No frontend caller found** — see [Part 12](#part-12--limits-and-remaining-work). |
+| GET | `/api/health` | `Program.cs` | Liveness for curl and tunnel probes. No frontend caller. |
 
 ### Cleaner
 
 | Method | Route | Handler | Called by | Why |
 |---|---|---|---|---|
-| GET | `/api/my-work` | `MyWorkEndpoints.cs:16` | `shared/api/myWorkApi.ts` | The cleaner's own beat plus covered areas. Without it the phone page has nothing to render. |
-| GET | `/api/attendance/signs/{token}` | `AttendanceEndpoints.cs:25` | `pages/check-in/checkInApi.ts:32` | Fails fast on page open when a sign was deactivated, instead of the cleaner discovering it at the end of a shift. |
-| POST | `/api/attendance` | `AttendanceEndpoints.cs:23` → `RecordAsync:29` | `pages/check-in/checkInApi.ts:15` | The payroll and legal record of who was on site. GPS + sign binding is the only evidence the person was physically there. |
-| GET | `/api/attendance/me` | `AttendanceEndpoints.cs:24` | **none found** | Current shift and next allowed event. |
-| GET | `/api/service-points/by-token/{token}` | `ServicePointEndpoints.cs:20` | `pages/scan/scanApi.ts:29` | Resolves a scanned sign to exactly one point, so a photo of a QR cannot leak the facility map. |
-| POST | `/api/scan-records` | `ScanRecordEndpoints.cs:24` → `CreateAsync:28` | `pages/scan/scanApi.ts:32` | **The core work product**: "this point was cleaned, at this time, by this person." Round placement, point status, inspections, exports and alerts are all derived from these rows. |
+| GET | `/api/my-work` | `MyWorkEndpoints.cs` | `shared/api/myWorkApi.ts` | The cleaner's own beat plus covered areas. Without it the phone page has nothing to render. |
+| GET | `/api/attendance/signs/{token}` | `AttendanceEndpoints.cs` | `pages/check-in/checkInApi.ts` | Fails fast on page open when a sign was deactivated, instead of the cleaner discovering it at the end of a shift. |
+| POST | `/api/attendance` | `AttendanceEndpoints.cs` → `RecordAsync` | `pages/check-in/checkInApi.ts` | Records presence in an assigned Area and gates work submission. This is not payroll/timekeeping and does not calculate late/early attendance (0050); GPS gives a flag for Admin review. |
+| GET | `/api/attendance/me` | `AttendanceEndpoints.cs` | **none found** | Current shift and next allowed event. |
+| GET | `/api/service-points/by-token/{token}` | `ServicePointEndpoints.cs` | `pages/scan/scanApi.ts` | Resolves a scanned sign to exactly one point, so a photo of a QR cannot leak the facility map. |
+| POST | `/api/scan-records` | `ScanRecordEndpoints.cs` → `CreateAsync` | `pages/scan/scanApi.ts` | **The core work product**: "this point was cleaned, at this time, by this person." Round placement, point status, inspections, exports and alerts are all derived from these rows. |
 
 ### Supervisor
 
 | Method | Route | Handler | Called by | Why |
 |---|---|---|---|---|
-| POST | `/api/inspections/scan` | `InspectionEndpoints.cs:27` → `ScanAsync:84` | `pages/inspect/inspectApi.ts:72` | Stores nothing — it shows the supervisor the current submission (or a refusal reason). The two-step design exists so a supervisor can only judge what they were actually shown. |
-| POST | `/api/inspections` | `InspectionEndpoints.cs:28` → `CreateAsync:132` | `pages/inspect/inspectApi.ts:84` | Closes the loop: unverified cleaning is not accepted. `Rework` sends the cleaner back with the defect text. |
-| GET | `/api/my-building` | `MyBuildingEndpoints.cs:20` | `pages/my-building/myBuildingApi.ts:31` | The supervisor's walking queue, rework-first. |
+| POST | `/api/inspections/scan` | `InspectionEndpoints.cs` → `ScanAsync` | `pages/inspect/inspectApi.ts` | Stores nothing — it shows the supervisor the current submission (or a refusal reason). The two-step design exists so a supervisor can only judge what they were actually shown. |
+| POST | `/api/inspections` | `InspectionEndpoints.cs` → `CreateAsync` | `pages/inspect/inspectApi.ts` | Records a voluntary inspection or rework request; an uninspected round remains visible as not inspected. `Rework` sends the cleaner back with the defect text. |
+| GET | `/api/my-building` | `MyBuildingEndpoints.cs` | `pages/my-building/myBuildingApi.ts` | The supervisor's walking queue, pending-inspection first, then rework. |
 
 ### Admin setup
 
 | Method | Route | Handler | Called by | Why |
 |---|---|---|---|---|
-| GET | `/api/admin/buildings` | `AdminAreaEndpoints.cs:20` | `shared/api/adminSetupApi.ts:119` | Picker options used across many pages. |
+| GET | `/api/admin/buildings` | `AdminAreaEndpoints.cs` | `shared/api/adminSetupApi.ts` | Picker options used across many pages. |
 | GET | `/api/admin/buildings/all` | `AdminBuildingEndpoints.cs` | `adminSetupApi.ts` (`getAllBuildings`) | Every building, off ones too, with active Area and Supervisor counts: the buildings page and the D8 picker (D7 lists the active ones only). |
 | POST | `/api/admin/buildings` | `AdminBuildingEndpoints.cs` → `CreateAsync` | `pages/buildings/buildingsApi.ts` | Code set once, never reused (facility-0090). |
 | PUT | `/api/admin/buildings/{id}` | `AdminBuildingEndpoints.cs` → `RenameAsync` | `buildingsApi.ts` | Name only. |
 | POST | `/api/admin/buildings/{id}/deactivate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | Refused while an active Area or Supervisor is left in it. |
 | POST | `/api/admin/buildings/{id}/activate` | `AdminBuildingEndpoints.cs` → `SetActiveAsync` | `buildingsApi.ts` | No condition; its Areas stay as they are. |
-| GET | `/api/admin/cleaners` | `AdminAreaEndpoints.cs:21` | `adminSetupApi.ts:128` | Same. |
-| GET | `/api/admin/areas` | `AdminAreaEndpoints.cs:22` | `adminSetupApi.ts:111` | Area summaries with counts. |
-| GET | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:24` | `adminSetupApi.ts:115` | Area detail: points, windows, signs. |
-| POST | `/api/admin/areas` | `AdminAreaEndpoints.cs:33` → `CreateAsync:68` | `pages/areas/areaFormApi.ts:17` | Creates the area **and** its check-in sign in one transaction. |
-| PUT | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs:34` → `UpdateAsync:117` | `areaFormApi.ts:21` | Renaming or moving an area drops night windows for a DayOnly pattern. |
-| POST | `/api/admin/areas/{id}/deactivate` | `AdminAreaEndpoints.cs:35` → `SetActiveAsync:174` | `areaFormApi.ts:25` | Deactivate, never delete — history must keep the name. Refused while an active Cleaner holds the Area (facility-0091). |
-| POST | `/api/admin/areas/{id}/activate` | `AdminAreaEndpoints.cs:37` | `areaFormApi.ts:26` | Re-open. |
-| POST | `/api/admin/areas/{areaId}/points` | `AdminPointEndpoints.cs:19` → `CreateAsync:28` | `pages/areas/areasApi.ts:15` | A point is meaningless without its sign and round windows. |
-| PUT | `/api/admin/points/{id}` | `AdminPointEndpoints.cs:20` → `UpdateAsync:80` | `areasApi.ts:19` | Unchanged windows keep their ids so a live round keeps its records. |
-| POST | `/api/admin/points/{id}/deactivate` | `AdminPointEndpoints.cs:21` → `SetActiveAsync:136` | `areasApi.ts:23` | Leaves the dashboard, cannot be scanned, history kept. |
-| POST | `/api/admin/points/{id}/activate` | `AdminPointEndpoints.cs:23` | `areasApi.ts:24` | Re-open. |
-| PUT | `/api/admin/signs/{id}/location` | `AdminSignEndpoints.cs:23` → `SetLocationAsync:29` | `adminSetupApi.ts:133` | Sets the coordinates the geofence compares against. Site capture beats map pick. |
-| PUT | `/api/admin/signs/{id}/radius` | `AdminSignEndpoints.cs:24` → `SetRadiusAsync:95` | `areasApi.ts:31` | A wrong radius makes every scan "off-site". |
-| POST | `/api/admin/signs/{id}/regenerate-token` | `AdminSignEndpoints.cs:25` → `RegenerateTokenAsync:129` | `areasApi.ts:36` | Kills the printed QR at once — the only way to de-authorise a lost sign. |
+| GET | `/api/admin/cleaners` | `AdminAreaEndpoints.cs` | `adminSetupApi.ts` | Same. |
+| GET | `/api/admin/areas` | `AdminAreaEndpoints.cs` | `adminSetupApi.ts` | Area summaries with counts. |
+| GET | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs` | `adminSetupApi.ts` | Area detail: points, windows, signs. |
+| POST | `/api/admin/areas` | `AdminAreaEndpoints.cs` → `CreateAsync` | `pages/areas/areaFormApi.ts` | Creates the area **and** its check-in sign in one transaction. |
+| PUT | `/api/admin/areas/{id}` | `AdminAreaEndpoints.cs` → `UpdateAsync` | `areaFormApi.ts` | Renaming or moving an area drops night windows for a DayOnly pattern. |
+| POST | `/api/admin/areas/{id}/deactivate` | `AdminAreaEndpoints.cs` → `SetActiveAsync` | `areaFormApi.ts` | Deactivate, never delete — history must keep the name. Refused while an active Cleaner holds the Area (facility-0091). |
+| POST | `/api/admin/areas/{id}/activate` | `AdminAreaEndpoints.cs` | `areaFormApi.ts` | Re-open. |
+| POST | `/api/admin/areas/{areaId}/points` | `AdminPointEndpoints.cs` → `CreateAsync` | `pages/areas/areasApi.ts` | A point is meaningless without its sign and round windows. |
+| PUT | `/api/admin/points/{id}` | `AdminPointEndpoints.cs` → `UpdateAsync` | `areasApi.ts` | Unchanged windows keep their ids so a live round keeps its records. |
+| POST | `/api/admin/points/{id}/deactivate` | `AdminPointEndpoints.cs` → `SetActiveAsync` | `areasApi.ts` | Leaves the dashboard, cannot be scanned, history kept. |
+| POST | `/api/admin/points/{id}/activate` | `AdminPointEndpoints.cs` | `areasApi.ts` | Re-open. |
+| PUT | `/api/admin/signs/{id}/location` | `AdminSignEndpoints.cs` → `SetLocationAsync` | `adminSetupApi.ts` | Sets the coordinates the geofence compares against. Site capture beats map pick. |
+| PUT | `/api/admin/signs/{id}/radius` | `AdminSignEndpoints.cs` → `SetRadiusAsync` | `areasApi.ts` | A wrong radius makes every scan "off-site". |
+| POST | `/api/admin/signs/{id}/regenerate-token` | `AdminSignEndpoints.cs` → `RegenerateTokenAsync` | `areasApi.ts` | Kills the printed QR at once — the only way to de-authorise a lost sign. |
 
 ### Admin accounts
 
 | Method | Route | Handler | Why |
 |---|---|---|---|
-| GET | `/api/admin/accounts` | `AdminAccountEndpoints.cs:23` | All accounts including deactivated (~180 rows, filtered client-side). |
-| POST | `/api/admin/accounts` | `AdminAccountEndpoints.cs:25` → `CreateAsync:42` | Provisioning. Staff secrets are the phone number, hashed as `SecretHash`. |
-| PUT | `/api/admin/accounts/{id}` | `AdminAccountEndpoints.cs:26` → `UpdateAsync:146` | Slot-uniqueness: one cleaner per area-shift, one supervisor per building-shift. |
-| POST | `/api/admin/accounts/{id}/deactivate` | `AdminAccountEndpoints.cs:27` → `SetActiveAsync:203` | **The only off-boarding mechanism** — revokes every refresh token and frees the area slot. No delete exists so history keeps names. |
-| POST | `/api/admin/accounts/{id}/activate` | `AdminAccountEndpoints.cs:29` | Re-open only if the slot is free. |
-| PUT | `/api/admin/accounts/{id}/phone` | `AdminAccountEndpoints.cs:31` → `ChangePhoneAsync:257` | Changing the secret forces every device to log in again. |
-| PUT | `/api/admin/accounts/{id}/password` | `AdminAccountEndpoints.cs:32` → `ResetPasswordAsync:288` | Temporary admin password, told out of band, sessions revoked. |
+| GET | `/api/admin/accounts` | `AdminAccountEndpoints.cs` | All accounts including deactivated (~180 rows, filtered client-side). |
+| POST | `/api/admin/accounts` | `AdminAccountEndpoints.cs` → `CreateAsync` | Provisioning. Staff secrets are the phone number, hashed as `SecretHash`. |
+| PUT | `/api/admin/accounts/{id}` | `AdminAccountEndpoints.cs` → `UpdateAsync` | Slot-uniqueness: one cleaner per area-shift, one supervisor per building-shift. |
+| POST | `/api/admin/accounts/{id}/deactivate` | `AdminAccountEndpoints.cs` → `SetActiveAsync` | **The only off-boarding mechanism** — revokes every refresh token and frees the area slot. No delete exists so history keeps names. |
+| POST | `/api/admin/accounts/{id}/activate` | `AdminAccountEndpoints.cs` | Re-open only if the slot is free. |
+| PUT | `/api/admin/accounts/{id}/phone` | `AdminAccountEndpoints.cs` → `ChangePhoneAsync` | Changing the secret forces every device to log in again. |
+| PUT | `/api/admin/accounts/{id}/password` | `AdminAccountEndpoints.cs` → `ResetPasswordAsync` | Temporary admin password, told out of band, sessions revoked. |
 
 ### Admin operations
 
 | Method | Route | Handler | Why |
 |---|---|---|---|
-| GET | `/api/admin/attendance` | `AdminAttendanceEndpoints.cs:24` → `GetBoardAsync:29` | Board D2: who is in each area this shift. |
-| PUT | `/api/admin/attendance` | `AdminAttendanceEndpoints.cs:25` → `CorrectAsync:47` | Corrections require a reason and are audited — a payroll record you can silently edit is worthless. |
-| GET | `/api/admin/alerts` | `AdminAlertEndpoints.cs:21` → `ListAsync:27` | The exception queue: blocked scans, GPS flags, missing shift-out. |
-| POST | `/api/admin/alerts/review` | `AdminAlertEndpoints.cs:22` → `ReviewAsync:46` | "คุยแล้ว ปิดเตือน" — one review per alert, audited, so "we talked about it" is a record not folklore. |
-| POST | `/api/admin/cover-assignments` | `CoverAssignmentEndpoints.cs:23` → `AssignAsync:29` | The **only** legitimate way to work outside your area or shift; without it every cross-area scan becomes a blocked scan. |
-| DELETE | `/api/admin/cover-assignments/{id}` | `CoverAssignmentEndpoints.cs:24` → `CancelAsync:255` | Cancel closes duplicate twins too. |
-| GET | `/api/admin/cover-assignments/candidates` | `CoverAssignmentEndpoints.cs:25` → `ListCandidatesAsync:301` | Ranked: those who already scanned this area first. |
+| GET | `/api/service-points` | `ServicePointEndpoints.cs` | Dashboard point cards for active Admins, without QR tokens; role and active-account checks are enforced server-side (0058, 0060, 0105). |
+| GET | `/api/admin/attendance` | `AdminAttendanceEndpoints.cs` → `GetBoardAsync` | Board D2: who is in each area this shift. |
+| PUT | `/api/admin/attendance` | `AdminAttendanceEndpoints.cs` → `CorrectAsync` | Corrections require a reason and are audited — the Admin must be able to see what changed and why; this is Area coverage, not payroll (0050). |
+| GET | `/api/admin/alerts` | `AdminAlertEndpoints.cs` → `ListAsync` | The exception queue: blocked scans, GPS flags, missing shift-out. |
+| POST | `/api/admin/alerts/review` | `AdminAlertEndpoints.cs` → `ReviewAsync` | "คุยแล้ว ปิดเตือน" — one review per alert, audited, so "we talked about it" is a record not folklore. |
+| POST | `/api/admin/cover-assignments` | `CoverAssignmentEndpoints.cs` → `AssignAsync` | The explicit authorization to work another Area (Cleaner, own regular shift) or another building/shift (Supervisor); without it every cross-area scan becomes a blocked scan. |
+| DELETE | `/api/admin/cover-assignments/{id}` | `CoverAssignmentEndpoints.cs` → `CancelAsync` | Cancel closes duplicate twins too. |
+| GET | `/api/admin/cover-assignments/candidates` | `CoverAssignmentEndpoints.cs` → `ListCandidatesAsync` | Ranked: those who already scanned this area first. |
 
 ### Admin reports
 
 | Method | Route | Handler | Why |
 |---|---|---|---|
-| GET | `/api/admin/audit-log` | `AdminAuditLogEndpoints.cs:22` → `ListAsync:30` | Every admin mutation is attributable. Read-only, because rewriting it would defeat the point. Max 92 days, 500 rows. `q` searches summary, actor name and reason over every row in the range (LIKE, `!` escape), not only the rows loaded. |
-| GET | `/api/admin/audit-log/actors` | `AdminAuditLogEndpoints.cs:23` | Actor filter options. |
-| POST | `/api/admin/export` | `AdminExportEndpoints.cs:24` → `ExportAsync:28` | **POST not GET** precisely because downloading personnel data is itself an audited action. The file omits coordinates, phones, QR tokens and passwords. |
-| GET | `/api/admin/inspection-summary` | `AdminInspectionSummaryEndpoints.cs:26` → `GetAsync:30` | How much of the beat was actually checked — supervisor coverage evidence. |
+| GET | `/api/admin/audit-log` | `AdminAuditLogEndpoints.cs` → `ListAsync` | Every admin mutation is attributable. Read-only, because rewriting it would defeat the point. Max 92 days, 500 rows. `q` searches summary, actor name and reason over every row in the range (LIKE, `!` escape), not only the rows loaded. |
+| GET | `/api/admin/audit-log/actors` | `AdminAuditLogEndpoints.cs` | Actor filter options. |
+| POST | `/api/admin/export` | `AdminExportEndpoints.cs` → `ExportAsync` | **POST not GET** precisely because downloading personnel data is itself an audited action. The file omits coordinates, phones, QR tokens and passwords. It accepts `buildingId` or multiple `buildingIds` (never both), including inactive buildings (0100). |
+| GET | `/api/admin/inspection-summary` | `AdminInspectionSummaryEndpoints.cs` → `GetAsync` | How much of the beat was actually checked — supervisor coverage evidence, including expandable uninspected points (0100). |
 
 ### Non-HTTP routes
 
 | Route | Where | Why |
 |---|---|---|
-| `/hubs/scan` | `Program.cs:138` | The SignalR hub. |
-| any non-`/api`, non-`/hubs`, extension-less path | `Program.cs:164` `MapFallbackToFile` | Serves `index.html` so a printed QR link opens the SPA instead of a 404. |
+| `/hubs/scan` | `Program.cs` | The SignalR hub. |
+| any non-`/api`, non-`/hubs`, extension-less path | `Program.cs` `MapFallbackToFile` | Serves `index.html` so a printed QR link opens the SPA instead of a 404. |
 
 ### The events, all of them
 
-```mermaid
-graph TD
-    subgraph Push["SignalR /hubs/scan"]
-        E1["ScanRecorded — PointCard"]
-        E2["InspectionRecorded — PointCard"]
-        E3["AttendanceRecorded — areaId, shiftDate, shift"]
-    end
-    Sent["Sent from<br/>ScanRecordEndpoints.cs:137<br/>InspectionEndpoints.cs:195<br/>AttendanceBoard.cs:68"]
-    Sent --> Push
-    E1 --> Dash["dashboardApi.ts<br/>replacePoint"]
-    E2 --> MyB["myBuildingApi.ts<br/>patchPoint"]
-    E1 --> Att["attendanceBoardApi.ts"]
-    E2 --> Att
-    E3 --> Att
-    E1 -.->|"to the building's supervisors"| MyB
-```
+| Event | Active recipients at send time | Frontend handling |
+|---|---|---|
+| `ScanRecorded`, `InspectionRecorded` (whole PointCard) | Admins, the building's Supervisors, the Area's Cleaners, current scoped covers | Dashboard/My Building patch the point; My Work refetches; attendance follower ignores point messages |
+| `AttendanceRecorded` (Area/date/shift) | Admins | Attendance refetches the affected board; other followers ignore it |
+
+`PointNotifications.SendAsync` and `AttendanceBoard.NotifyAsync` send after the record is saved and catch/log push failures. `ActiveAdmins.IdsAsync` reads Admin recipients; no group membership cache decides access.
 
 ---
 
@@ -659,32 +660,33 @@ graph TD
 erDiagram
     BUILDING ||--o{ AREA : contains
     AREA ||--o{ SERVICE_POINT : contains
-    SERVICE_POINT ||--o{ SIGN : has
+    SERVICE_POINT |o--o| SIGN : has
+    AREA ||--o{ SIGN : has
     SERVICE_POINT ||--o{ POINT_ROUND_WINDOW : has
     AREA ||--o{ SHIFT_ATTENDANCE : records
     USER ||--o{ SHIFT_ATTENDANCE : makes
     USER ||--o{ SCAN_RECORD : submits
     SERVICE_POINT ||--o{ SCAN_RECORD : receives
     USER ||--o{ INSPECTION_RECORD : judges
-    SCAN_RECORD ||--o| INSPECTION_RECORD : judged_by
+    SCAN_RECORD ||--o{ INSPECTION_RECORD : judged_by
     USER ||--o{ REFRESH_TOKEN : owns
     USER ||--o{ COVER_ASSIGNMENT : receives
-    AREA ||--o{ COVER_ASSIGNMENT : receives
-    USER ||--o{ AUDIT_ENTRY : performs
-    AREA ||--o{ BLOCKED_SCAN : causes
-    SERVICE_POINT ||--o{ BLOCKED_SCAN : causes
-    ALERT_REVIEW ||--o| BLOCKED_SCAN : closes
+    AREA |o--o{ COVER_ASSIGNMENT : receives
+    USER |o--o{ AUDIT_ENTRY : performs
+    SIGN ||--o{ BLOCKED_SCAN : records
+    USER ||--o{ BLOCKED_SCAN : makes
+    BUILDING |o--o{ COVER_ASSIGNMENT : receives
 ```
 
-14 tables, defined in `Infrastructure/Persistence/AppDbContext.cs`, snake_case. Nothing is ever deleted — only deactivated.
+14 tables, defined in `Infrastructure/Persistence/AppDbContext.cs`, snake_case. Accounts, buildings, Areas and points are deactivated through Admin actions. Record/GPS retention deletion is decided but not implemented (0055); it is distinct from deactivation.
 
 **Invariants the schema itself enforces** (you cannot code around them):
 
 | Invariant | Where |
 |---|---|
-| One attendance event per user / shift / type — first press wins | unique index, `AppDbContext.cs:174` |
-| One cleaner per area-shift, one supervisor per building-shift | stored computed unique columns, `AppDbContext.cs:104-114` |
-| A cover is an area **or** a building, never both | check constraint, `AppDbContext.cs:195-197` |
+| One attendance event per user / shift / type — first press wins | unique index, `AppDbContext.cs` |
+| One cleaner per area-shift, one supervisor per building-shift | stored computed unique columns, `AppDbContext.cs` |
+| A cover is an area **or** a building, never both | check constraint, `AppDbContext.cs` |
 | Every stored `DATETIME` is UTC; shifts and round windows are Thai wall clock | `Application/Common/ThaiTime.cs` |
 
 **Enums worth memorising** (`Domain/Enums/`): `UserRole` (cleaner | supervisor | admin), `Shift`, `AttendanceEvent`, `CleaningStatus`, `InspectionResult` (Passed | Rework), `Placement` (OnTime | Late | Rework | OffRound), `BlockReason`, `AlertType`.
@@ -693,44 +695,34 @@ erDiagram
 
 ## Part 11 — Tests that pin behaviour
 
-If you are about to change something, read its test first — in this repo the tests are the tightest specification available.
+Backend paths below are relative to `backend/tests/`; frontend paths are relative to `frontend/src/`.
 
-| Behaviour | Test |
+| Behaviour | Tests |
 |---|---|
-| Login, throttle, role-separated forms, cookie flags | `backend/tests/.../Auth/LoginTests.cs` (14 tests) |
-| Refresh rotation, 30 s reuse grace, deactivation, role change | `backend/tests/.../Auth/RefreshTests.cs` (11 tests) |
-| Token expiry, query-string token accepted only for hubs | `backend/tests/.../Auth/ProtectedEndpointTests.cs` |
-| Scan placements, second scan, blocked area, **far scan saved and flagged** | `backend/tests/.../Points/ScanRecordEndpointTests.cs` |
-| Supervisor scan gates, **far scan flagged not blocked**, covers | `backend/tests/.../Inspections/InspectionScanEndpointTests.cs` |
-| Haversine maths and the within-radius rule | `backend/tests/.../UnitTests/GeofenceTests.cs` |
-| Live push reaches the building's supervisors only | `backend/tests/.../Inspections/SupervisorLiveTests.cs` |
-| A failed push still returns 201 and keeps the record | `backend/tests/.../Inspections/LiveUpdateFailureTests.cs` |
-| Session refresh, single flight, logout ordering | `frontend/src/shared/auth/session.test.ts` (4 describe blocks) |
-| Bearer header, refresh-then-retry-once, login never triggers refresh | `frontend/src/shared/api/baseApi.test.ts` |
-| Exact GPS options, denied vs unavailable vs insecure | `frontend/src/shared/geo/readLocation.test.ts` |
-| Two-tap submit, location help, resend with fresh GPS, blocked scan | `frontend/src/pages/scan/ScanPage.test.tsx` (422 lines) |
-| Open = fresh GPS + scan, 409 re-scan flow | `frontend/src/pages/inspect/InspectPage.test.tsx` (520 lines) |
-| A pushed card changes a tile without asking the server | `frontend/src/pages/dashboard/DashboardPage.test.tsx` |
-| Route guards per role | `frontend/src/router.test.tsx` |
+| Login forms, pair/IP throttle and forwarded address trust | `FacilityRealtime.ApiTests/Auth/LoginTests.cs`, `FacilityRealtime.UnitTests/LoginThrottleTests.cs`, `FacilityRealtime.UnitTests/LoginPlaceTests.cs` |
+| Refresh rotation, reuse grace and revocation | `FacilityRealtime.ApiTests/Auth/RefreshTests.cs` |
+| Deactivation blocks reads and live updates | `FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs`, `FacilityRealtime.ApiTests/Admin/DeactivatedAdminLiveTests.cs` |
+| CSP, HSTS, no-store, Swagger exemption and ping interval | `FacilityRealtime.ApiTests/SecurityHeaderTests.cs`, `FacilityRealtime.ApiTests/HubKeepAliveTests.cs` |
+| Scan placement, scope blocks and far-GPS flags | `FacilityRealtime.ApiTests/Points/ScanRecordEndpointTests.cs`, `FacilityRealtime.ApiTests/Inspections/InspectionScanEndpointTests.cs`, `FacilityRealtime.UnitTests/GeofenceTests.cs` |
+| Scoped live updates and saved-record behavior when push fails | `FacilityRealtime.ApiTests/Inspections/SupervisorLiveTests.cs`, `CleanerLiveTests.cs`, `LiveUpdateFailureTests.cs` (same directory) |
+| Redacted security log and real Serilog rendering | `FacilityRealtime.ApiTests/Auth/SecurityLogTests.cs`, `FacilityRealtime.ApiTests/ServerLogTests.cs` |
+| Session and one refresh/retry | `shared/auth/session.test.ts`, `shared/api/baseApi.test.ts` |
+| Browser offline/online, reconnect and timeout | `shared/api/scanHub.test.ts`, `shared/api/scanHub.noSignalR.test.ts` |
+| Fresh GPS and permission recovery | `shared/geo/readLocation.test.ts`, `pages/check-in/CheckInPage.test.tsx` |
+| Submission/inspection screens, live Dashboard and date/shift race | `pages/scan/ScanPage.test.tsx`, `pages/inspect/InspectPage.test.tsx`, `pages/dashboard/DashboardPage.test.tsx`, `pages/attendance/AttendancePage.test.tsx` |
+| Route roles and lazy boundaries | `router.test.tsx` |
 
-Test harness: `frontend/src/test/` — `fakeServer.ts` (fake `fetch`), `fakeSignalR.ts`, `fakeGps.ts` (scripted location answers), `renderApp.tsx`.
+The frontend harness is `src/test/`: fake fetch, SignalR, GPS and `renderApp`. Real-API workflows and runner safety checks are described in [testing/e2e.md](testing/e2e.md). Current recorded counts belong in [handoff](handoff.md), not in this file map.
 
 ---
 
-## Part 12 — Things that are unclear
+## Part 12 — Limits and remaining work
 
-Documented here so you do not waste an afternoon on them.
-
-1. **No frontend caller for `GET /api/me`, `GET /api/attendance/me`, `GET /api/health`.** Exhaustive grep of `frontend/src` finds only backend, test and doc hits. They may be leftovers or tool-facing (curl / tunnel probe).
-2. **Which app decodes the QR is not in this repo.** There is no camera or decoder dependency. The printed URL in `printRules.ts:23-24` implies the phone's OS camera, but no file says so.
-3. ~~My Work has no live push.~~ Fixed 2026-10-26: `myWorkApi.ts` follows the hub, and `PointNotifications` sends to the Area's Cleaners (facility-0052 and 0058 amended).
-4. **`session.ts:63` treats a 403 from refresh as session over, but the backend only ever returns 401 there.** The 403 branch looks defensive.
-5. **`throttle` state is in memory** — a restart forgets every count (`LoginThrottle.cs:16`). Single-server assumption.
-6. **No idle-timeout warning.** `expiresAt` is read only by `getValidAccessToken`; nothing schedules on it.
-7. **No rate limiting on `POST /api/scan-records`** beyond round placement.
-8. **Two discrepancies in `docs/architecture.md`:** it lists an `area-form (D10)` folder that in code is `pages/areas/AreaFormPage.tsx`, and it says every page is `Page.tsx + pageApi.ts + page.css` — in reality only 5 pages have a `.css` and 3 feature folders have no api file of their own (`my-work`, `capture`, `auth` use `shared/api` or a differently-named file).
-9. **React version is 19.2.8**, not 18.
-10. **`pages/.DS_Store` is a stray file** checked into the repo.
+- `GET /api/me`, `/api/attendance/me` and `/api/health` have no frontend data callers; health is used by operating/test probes. Endpoint existence does not imply a user-facing page.
+- QR decoding is delegated to the phone's native camera (0007). The app renders QR codes for printing; it has no in-app camera scanner.
+- LoginThrottle is in memory; restarting clears it. This is a single-server design.
+- No offline submission queue, payroll calculations, automatic Supervisor score or external notification service is implemented; see the business overview for scope.
+- Deployment/field checks, retention automation and the shelved import are tracked in [handoff](handoff.md). Browser-engine E2E does not confirm real iPhone behavior, GPS accuracy or physical printing.
 
 ---
 

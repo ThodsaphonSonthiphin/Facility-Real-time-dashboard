@@ -1,5 +1,7 @@
 # Client State Split — RTK Query Cache vs Redux Slices vs Component State
 
+> **สถานะปัจจุบัน 2026-11-03:** Enterprise Light ที่เจ้าของอนุมัติและงาน #127 ที่ปิดแล้ว เพิ่ม `search` และ `problemFirst` ใน `dashboardSlice` จึงแทนข้อความใน amendment 2026-10-19 ที่ว่า D1 ไม่มีค้นหา ตัวกรอง/การเรียงคงอยู่ข้ามหน้าและล้างเมื่อ session จบ; ยังไม่มี `lastUpdatedPointId` โค้ดอ้างอิง `frontend/src/store/slices/dashboardSlice.ts` การแบ่ง Server / Shared UI / Local draft ยังเหมือนเดิม
+
 ```mermaid
 flowchart TD
     Q{"ข้อมูลและ State ในฝั่ง Frontend ควรแบ่งเก็บที่ไหน ระหว่าง RTK Query Cache, Redux Slice และ Component State"} -->|chosen| A["A: แบ่ง 3 ระดับตาม Lifecycle:<br/>1. Server Data เก็บใน RTK Query Cache (อัปเดตผ่าน API และ SignalR)<br/>2. Shared / Page State เก็บใน Redux Slices (authSlice, dashboardSlice เก็บ filters/search)<br/>3. Ephemeral / Form Draft เก็บใน Component State (useState ในหน้าสแกนและ Login)"]

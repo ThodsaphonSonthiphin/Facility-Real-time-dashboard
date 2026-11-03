@@ -1,0 +1,32 @@
+# ADR reading guide — current decisions
+
+ทบทวน 3 พ.ย. 2026 เทียบ `master` `aa1963d` และ [handoff](../handoff.md) เลขล่าสุดคือ **facility-0107** เอกสารนี้เป็นทางเข้าอ่าน ADR ไม่ใช่การตัดสินใจใหม่ และไม่ใช่หลักฐานว่าขึ้น production หรือทำ pilot แล้ว
+
+อ่าน amendment ที่ใหม่กว่าด้วยเสมอ ADR เก่าเก็บทางเลือกและเหตุผลในวันนั้นไว้ ข้อความเดิมที่ถูกแทนที่ไม่ใช่ backlog ปัจจุบัน หากขัดกับ wireframe/แผนเก่า ให้ยึด ADR และ amendment ที่ยังมีผล
+
+| เรื่อง | อ่าน ADR | สถานะ/กติกาปัจจุบันโดยย่อ |
+|---|---|---|
+| โครงสร้างและ data model | [0004](facility-0004-app-architecture.md), [0025](facility-0025-frontend-target-tree.md), [0040](facility-0040-area-is-the-unit-of-assignment.md), [0045](facility-0045-admin-manages-areas-and-captures-sign-location.md) | 4 backend projects; endpoint + rules + EF; frontend pages/shared/store ดู implementation note ของ 0004 |
+| สถานะจุดและการตรวจ | [0046](facility-0046-issue-is-a-tag-not-a-card-status.md), [0047](facility-0047-cleaning-rounds-are-time-windows.md), [0048](facility-0048-supervisor-assigned-to-building.md) | Issue เป็นป้ายแยก; รอบเป็นช่วงเวลา; ส่ง → ตรวจ → แก้ → ตรวจซ้ำ |
+| การลงเวลาและทำแทน | [0031](facility-0031-four-stage-shift-attendance-lifecycle.md), [0041](facility-0041-scan-only-own-area-with-cover-assignment.md), [0050](facility-0050-check-in-confirms-area-presence-not-time-attendance.md), [0051](facility-0051-admin-corrections-and-audit-log.md), [0069](facility-0069-attendance-scan-window-60-minutes-around-the-shift.md), [0075](facility-0075-covers-assigned-up-to-7-days-ahead.md) | 4 จังหวะ ยืนยันคนดูแล Area; ไม่คิดค่าจ้าง; มีเหตุผลเมื่อ Admin แก้เวลา |
+| การเข้าระบบและ session | [0012](facility-0012-short-access-token-with-refresh.md), [0013](facility-0013-refresh-token-httponly-cookie.md), [0014](facility-0014-refresh-tokens-stored-server-side.md), [0015](facility-0015-refresh-token-reuse-detection.md), [0016](facility-0016-refresh-token-sliding-30-days.md), [0054](facility-0054-login-with-employee-id-and-phone.md), [0089](facility-0089-admin-password-15-characters-and-blocklist.md), [0104](facility-0104-login-lock-per-login-name-and-ip.md) | JWT 5 นาที + refresh cookie 30 วัน; Login Lock ตามชื่อ + IP และเพดานต่อ IP |
+| ปิดบัญชีและข่าวสด | [0052](facility-0052-cleaner-my-work-page-and-resend.md), [0057](facility-0057-supervisor-building-page-and-audit-log-page.md), [0058](facility-0058-dashboard-is-admin-only.md), [0105](facility-0105-deactivation-takes-effect-at-once-on-hub-and-api.md) | Dashboard Admin-only; มือถือได้เฉพาะขอบเขตตน; อ่าน active recipients ตอนส่ง ไม่มี admins group |
+| การเชื่อมต่อหลุด | [0061](facility-0061-dashboard-keeps-30s-poll-beside-push.md), [0064](facility-0064-dashboard-hub-offline-keeps-todays-behaviour.md), [0107](facility-0107-admin-pages-notice-a-lost-link-sooner.md) | Admin poll 30 s; browser offline ทันที; server timeout Admin 10 s / phone 30 s; ping 5 s |
+| GPS และป้าย | [0007](facility-0007-scan-flow-native-camera.md), [0035](facility-0035-per-building-check-in-gps-flag-not-block.md), [0036](facility-0036-check-in-requires-location-permission.md), [0037](facility-0037-gps-for-every-scan-replaces-nfc.md), [0038](facility-0038-default-radius-50m-per-sign.md), [0059](facility-0059-qr-token-only-from-the-sign.md), [0060](facility-0060-admin-gets-qr-token-from-points-page-only.md) | อ่าน GPS ทุกการสแกน; ไกลป้ายติดธง ไม่บล็อก; เปิดหน้าจากป้าย; QR ไม่อยู่บน Dashboard |
+| Pilot / deploy / กู้ Admin | [0043](facility-0043-pilot-scope-one-area.md), [0049](facility-0049-server-reachable-from-internet-over-https.md), [0067](facility-0067-api-serves-frontend-from-one-origin.md), [0092](facility-0092-first-admin-from-server-settings.md), [0093](facility-0093-safe-start-and-deploy-guide.md), [0106](facility-0106-security-headers-set-by-the-app.md) | 1 Area; fixed public HTTPS; API เสิร์ฟ frontend; server/domain/OS ยังรอ |
+| ข้อมูลและ Excel | [0053](facility-0053-excel-export-instead-of-report-pages.md), [0055](facility-0055-data-retention-and-pdpa-before-production.md), [0056](facility-0056-accounts-created-one-by-one-excel-import-before-rollout.md), [0100](facility-0100-admin-pages-follow-approved-design.md) | export ทำแล้วและเลือกหลายตึกได้; import พักไว้; retention ตกลงแล้วแต่ job ยังไม่สร้าง; PDPA notice ถอนแล้ว |
+| หน้าตาและฟอร์ม | [0063](facility-0063-frontend-css-global-tokens-per-page-files.md), [0086](facility-0086-frontend-styling-with-tailwind.md), [0087](facility-0087-new-look-readable-at-the-sign.md), [0088](facility-0088-icons-from-lucide-react-beside-text.md), [0100](facility-0100-admin-pages-follow-approved-design.md), [0101](facility-0101-admin-forms-and-confirmations-follow-approved-design.md) | 0086 แทน CSS ต่อหน้า; Tailwind 4 / Enterprise Light; nested forms/confirmations ตามแบบที่อนุมัติ |
+| Server Log | [0095](facility-0095-logging-scope-security-events-and-errors.md), [0096](facility-0096-server-log-read-from-journal-only.md), [0097](facility-0097-server-log-names-account-by-employee-id-never-typed-text.md), [0098](facility-0098-server-log-kept-90-days.md), [0099](facility-0099-server-log-in-its-own-journal-namespace.md), [0103](facility-0103-server-log-written-through-serilog.md), [0104](facility-0104-login-lock-per-login-name-and-ip.md) | ILogger ผ่าน Serilog Console → journal namespace facility; 90 วัน; เพิ่ม normalized IP ใน login logs |
+| E2E | [0094](facility-0094-playwright-end-to-end.md), [0102](facility-0102-headed-e2e-datasets.md), [0107](facility-0107-admin-pages-notice-a-lost-link-sooner.md) | unique owned DB/user ต่อรอบ; private publish; Chromium/WebKit/Firefox ตามคู่มือ E2E |
+
+## จุดที่อ่านเอกสารเก่าแล้วอาจเข้าใจผิด
+
+- 0003 Wi-Fi/HTTP ถูก 0049 แทนสำหรับระบบจริง; ใช้ localhost/Vite ได้ตอนพัฒนา
+- 0005 และ 0042 ต้องอ่านต่อถึง 0046–0047: ไม่ใช้ countdown interval และ Issue ไม่ใช่สถานะหลักของการ์ดแล้ว
+- 0033 pilot ตึก A / 12 จุดถูก 0043 แทนด้วย 1 Area / อย่างน้อย 1 จุด
+- 0063 CSS ต่อหน้าถูก 0086 แทน; UI ล่าสุดคือ Enterprise Light amendment ของ 0087 และ 0100–0101
+- 0054 การล็อกทั้งบัญชีถูก 0104 แก้เป็นชื่อ + IP; 0012 การรอ deactivation ครบ 5 นาทีถูก 0105 แก้ ส่วนเปลี่ยนเบอร์/รีเซ็ตรหัสผ่านยังรอ access token ได้ถึง 5 นาที
+- 0055 ถอนเฉพาะงานประกาศ/ใบยินยอมและคุย HR ก่อน production; retention และคำถามเรื่องไฟล์ Excel ยังคงอยู่
+- 0094 fixed E2E database/shared wwwroot ถูก 0102 แก้เป็นทรัพยากรที่สร้างและพิสูจน์เจ้าของแยกต่อรอบ
+
+รายละเอียดสถานะงานและผลตรวจล่าสุดอยู่ใน [handoff](../handoff.md) กติกาธุรกิจภาษาไทยอยู่ใน [business overview](../business-overview.md) โค้ดปัจจุบันอยู่ใน [code map](../code-map.md)

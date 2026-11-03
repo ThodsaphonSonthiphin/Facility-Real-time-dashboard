@@ -21,10 +21,10 @@ An Admin at a desk with a mouse and keyboard, on a computer screen, watching man
 - Targets at least 36 px high.
 - Hover states allowed (mouse), but never the only way to reach an action.
 - Keyboard: every action reachable with Tab, visible focus ring.
-- Live data (Dashboard) shows when it last updated and whether the connection is live (`LiveBadge`).
+- Live data (Dashboard and attendance) shows `LiveBadge` only while reconnecting; live and initial connecting show no badge. Browser offline is immediate, Admin server silence times out after 10 s, and data is refetched on reconnect (0064, 0107).
 
 ## Layout chosen from the mockups (owner, 2026-10-22)
 
 Mockups: branch `prototype/tailwind-look`, `docs/design/tailwind-look-prototype.html`.
 
-- **Dashboard D1: variant A.** Cards grouped by Area (heading "AR01 ห้องน้ำชั้น 1", "ตึก A · 5 จุด"), tiles in an auto-fill grid; the filter row has the building select, one button per status with its count, and "มีปัญหาที่แจ้ง n".
+- **Dashboard D1:** Enterprise Light keeps cards grouped by Area, building/status/Issue filters and adds search and problem-first ordering/folding as approved for #127. Values/counts come from API data. The building picker does not show an invented problem-count field.

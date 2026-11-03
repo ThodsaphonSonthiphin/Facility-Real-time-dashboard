@@ -6,6 +6,8 @@
 
 **รหัสผ่านทุกจุดในเอกสารนี้พิมพ์แบบไม่แสดงบนจอ ตรวจว่าแป้นพิมพ์เป็นภาษาอังกฤษก่อนพิมพ์** ถ้าแป้นเป็นภาษาไทย รหัสที่ได้จะเป็นตัวไทยโดยมองไม่เห็น
 
+**สถานะ 3 พ.ย. 2026:** คู่มือนี้รองรับ Linux ตามแนวทางที่เตรียมไว้ ยังไม่ได้ยืนยัน server/domain หรือ OS ของระบบจริง ดู [handoff](handoff.md) สำหรับงานที่เหลือและ [ADR](adr/README.md) สำหรับ amendment ล่าสุด
+
 ## 1. ก่อนเริ่ม
 
 - ระบบคือโปรแกรม `FacilityRealtime.Api` (ไฟล์ `FacilityRealtime.Api.dll` ในโฟลเดอร์ที่ deploy)
@@ -146,7 +148,7 @@ facility.example.com {
 
 แล้ว `sudo systemctl reload caddy` เปิด `https://facility.example.com` ต้องเห็นหน้าเข้าระบบ
 
-เช็ก security header ที่ระบบส่งเอง (facility-0106) ด้วย `curl -sI https://facility.example.com/login/admin` ต้องเห็น `content-security-policy`, `x-frame-options: DENY`, `x-content-type-options: nosniff`, `referrer-policy: no-referrer`, `permissions-policy` และ `strict-transport-security: max-age=31536000` ต้อง curl ผ่านโดเมนจริง ถ้า curl ไปที่ `localhost:5001` จะไม่เห็น `strict-transport-security` เป็นเรื่องปกติ ถ้าผ่านโดเมนแล้วยังไม่มี แปลว่าระบบไม่รู้ว่าคำขอมาทาง https หรือระบบไม่ได้รันเป็น `Production` ต่อไปทำข้อ 3
+เช็ก security header ที่ระบบส่งเอง (facility-0106) ด้วย `curl -sI https://facility.example.com/login/admin` ต้องเห็น `content-security-policy`, `x-frame-options: DENY`, `x-content-type-options: nosniff`, `referrer-policy: no-referrer`, `permissions-policy` และ `strict-transport-security: max-age=31536000` ต้อง curl ผ่านโดเมนจริง ถ้า curl ไปที่ `localhost:5001` จะไม่เห็น `strict-transport-security` เป็นเรื่องปกติ ถ้าผ่านโดเมนแล้วยังไม่มี แปลว่าระบบไม่รู้ว่าคำขอมาทาง https หรือระบบไม่ได้รันเป็น `Production` ลอง login ผิดหนึ่งครั้งด้วยบัญชีทดสอบ แล้วดู journal ว่าท้ายบรรทัด `from ...` เป็น IP ของเครื่องผู้ใช้ ไม่ใช่ loopback ของ Caddy (facility-0104) เพื่อตรวจว่า forwarding ทำงานจริง จากนั้นทำข้อ 3
 
 ### 2.7 สำรองฐานข้อมูลทุกวัน
 
@@ -272,4 +274,13 @@ npm run e2e -- --dataset large
 
 ### สิ่งที่เทสนี้จับไม่ได้
 
-หน้าตาเฉพาะ Safari บน iPhone, การเลื่อนหน้าที่ขึ้นกับแถบเครื่องมือของเบราว์เซอร์มือถือ, GPS จริง และการพิมพ์ป้าย D5 ยังต้องเช็กบนเครื่องจริง
+WebKit/Firefox รันได้ด้วย `E2E_BROWSER=webkit` หรือ `E2E_BROWSER=firefox` แต่ยังต้องเช็ก Safari บน iPhone จริง (รวมปฏิเสธแล้วเปิด Location กลับ), การเลื่อนหน้าที่ขึ้นกับแถบเครื่องมือมือถือ, GPS/สัญญาณเครือข่ายจริง, กล้องอ่านป้าย และเครื่องพิมพ์จริง ชุด E2E ตรวจหน้า D5/ขนาดกระดาษ/คำสั่งพิมพ์แล้ว แต่ไม่ได้สั่งเครื่องพิมพ์กระดาษจริง
+
+
+## 7. หลังขึ้นระบบจริง
+
+เริ่มนำร่อง 1 Area มีป้ายลงเวลา 1 ป้ายและจุดทำความสะอาดอย่างน้อย 1 จุด (facility-0043) กรอกตึก พื้นที่ รอบ และบัญชีผ่านหน้า Admin พิมพ์ป้ายจากโดเมน HTTPS คงที่ แล้วเก็บพิกัดทุกป้ายที่หน้างาน Excel import ยังพักไว้
+
+ระยะเก็บข้อมูลตาม facility-0055 ยังเป็นกติกาที่ต้องทำให้เกิดขึ้น: GPS ดิบ 90 วัน, การลงเวลา/ส่งงาน/ตรวจงาน 1 ปี แล้วลบหรือสรุปตามชนิดข้อมูล **ยังไม่มีงานลบ/สรุปอัตโนมัติในโค้ด ต้องสร้างก่อนข้อมูลจริงอายุครบ 90 วัน** การเก็บ journal 90 วันในข้อ 2.5 และ backup 14 วันในข้อ 2.7 ไม่ได้ลบ GPS/รายการจากฐานข้อมูลแทนงานนี้
+
+เจ้าของถอนงานประกาศ PDPA/ใบยินยอมและการคุย HR ก่อน production เมื่อ 3 พ.ย. 2026 (amendment ใน facility-0055) ผู้รับผิดชอบและกำหนดลบสำเนา Excel ที่ส่งออกยังไม่ได้ตกลง
