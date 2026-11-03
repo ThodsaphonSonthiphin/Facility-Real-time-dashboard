@@ -60,7 +60,7 @@ The report and traces contain synthetic credentials/session tokens from browser 
 
 Options:
 
-- `E2E_PORT=5102`: use another free loopback port (default5101). Frontend and API share this origin; no Vite server is required.
+- `E2E_PORT=5102`: use another free loopback port (default5101). Frontend and API share this origin; no Vite server is required. A run may start right after another: the port check ignores the previous run's TIME_WAIT, as Kestrel does, and still refuses a port another process listens on.
 - `E2E_SLOW_MO=500`: change the visible pace. Default350.
 - `E2E_HEADLESS=1 E2E_SLOW_MO=0`: explicitly opt into a faster unattended run. Normal runs remain headed.
 - Playwright arguments pass through: `--project=phone`, `--grep`, `--headed`, etc. Do not set `--workers` above1: some cases share seeded state.
@@ -75,7 +75,7 @@ npm --prefix frontend run lint
 npm --prefix frontend exec -- tsc -b frontend/tsconfig.json
 ```
 
-Coverage includes authentication/session restoration, role restrictions, Building/Area/point/account CRUD and validation, dialogs/Drawers/typed confirmation, large lists/search/filter/default ordering, history cursor paging, attendance paging/correction/audit, covers, inspection summaries, XLSX download and multi-role rework/live update workflows. Account and Area lists filter in the client; they have no pagination or user-selectable sort control. Attendance pages25 rows in the client; history uses100-row API cursors. Small-profile attendance pagination is explicitly skipped.
+Coverage includes authentication/session restoration, role restrictions, Building/Area/point/account CRUD and validation, dialogs/Drawers/typed confirmation, large lists/search/filter/default ordering, history cursor paging, attendance paging/correction/audit, covers, inspection summaries, XLSX download, multi-role rework/live update workflows, the login lock (facility-0104: five wrong logins lock that employee ID, another name still logs in) and the security headers (facility-0106). Every case fails on a CSP violation in any of its pages, as on an uncaught page error or HTTP5xx. Account and Area lists filter in the client; they have no pagination or user-selectable sort control. Attendance pages25 rows in the client; history uses100-row API cursors. Small-profile attendance pagination is explicitly skipped.
 
 Limits: this is a single-worker functional volume test, not a concurrent load test. Timings include trace/browser overhead and some UI timings include slow motion. Safari, real GPS accuracy, physical QR scanning/printing, offline recovery, throttling/token-reuse security, every account credential-change variant and every cover/alert/round boundary remain outside the executed case set. The original live-push case skips19:00–20:00 Bangkok before its first Night round; the generated rework case skips the last two minutes before a shift change to avoid crossing its round boundary mid-workflow. Failed application assertions remain failed; production changes require the owner's approval.
 

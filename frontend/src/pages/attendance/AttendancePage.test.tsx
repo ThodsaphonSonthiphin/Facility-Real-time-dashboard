@@ -105,7 +105,32 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     expect(router.state.location.search).toBe('?date=2026-10-14&shift=Day');
 
     await user.click(screen.getByRole('button', { name: 'กะดึก 19:00–07:00' }));
-    expect(router.state.location.search).toBe('?date=2026-10-15&shift=Night');
+    expect(router.state.location.search).toBe('?date=2026-10-14&shift=Night');
+  });
+
+  it('a date or shift picked while the last pick is still loading keeps that pick (E2E, 2026-11-02)', async () => {
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    serve({
+      'GET /api/admin/attendance': async (request) => {
+        if (request.search.includes('shift=Night')) {
+          await held;
+          return { status: 200, body: attendanceBoard([workingRow], { shift: 'Night' }) };
+        }
+        return { status: 200, body: attendanceBoard() };
+      },
+    });
+    const { user, router } = await renderApp('/admin/attendance');
+    await loaded();
+
+    await user.click(screen.getByRole('button', { name: 'กะดึก 19:00–07:00' }));
+    // The Day board is still on screen while the Night one loads
+    fireEvent.change(screen.getByLabelText('วันที่'), { target: { value: '2026-10-14' } });
+    expect(router.state.location.search).toBe('?date=2026-10-14&shift=Night');
+
+    await user.click(screen.getByRole('button', { name: 'กะเช้า 07:00–19:00' }));
+    expect(router.state.location.search).toBe('?date=2026-10-14&shift=Day');
+    act(() => release());
   });
 
   it('shows 25 Areas a page; ก่อนหน้า and ถัดไป move, and a search starts again at the first page', async () => {

@@ -18,3 +18,22 @@ test('a wrong phone number is refused', async ({ page }) => {
   await expect(page.getByText('รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง')).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
 });
+
+// facility-0104: 5 failures lock that login name from this place; the next try is refused before the phone is checked.
+// 6999999 belongs to no account (the seed uses 1/2, the factory 7/8/9), so the lock lands on nobody real.
+test('repeated wrong logins lock that employee ID only', async ({ page }) => {
+  const guess = { employeeId: '6999999', phone: '0899999999' };
+  const answers: number[] = [];
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const answer = page.waitForResponse((response) => response.url().endsWith('/api/auth/login'));
+    await loginAsEmployee(page, guess);
+    answers.push((await answer).status());
+  }
+  expect(answers).toEqual([401, 401, 401, 401, 401, 429]);
+  await expect(page.getByText('กรอกผิดหลายครั้ง รอสักครู่แล้วลองใหม่')).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+
+  // The same place may still log in under another name
+  await loginAsEmployee(page, supervisor);
+  await expect(page).toHaveURL(/\/my-building$/);
+});

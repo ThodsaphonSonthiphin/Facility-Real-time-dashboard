@@ -8,20 +8,31 @@ This repo is public: never put a password, phone number, real name or any secret
 
 The owner counts the build as **done**. What is left: real use (deploy, then the pilot) and the Excel import, which is shelved for now. The owner said not to bother with the PDPA rules. That leaves facility-0055 ("data retention and PDPA before production") and `docs/business-overview.md` line 233 saying PDPA work comes before production. The ADR has not been amended; ask the owner before changing it.
 
+## Headed E2E rerun on current master, and the attendance date/shift race (2026-11-02 Bangkok)
+
+The owner pasted a full "set up Playwright E2E" brief. It was already built (facility-0102, `docs/testing/e2e.md`), so the suite was rerun on master `7a25174` (after #135, #139, #140) and its gaps filled. The owner approved (popup) the one app fix below, and commit + push + PR (not merge). Branch `fix/attendance-pick-while-loading`.
+- **Failure found:** "attendance correction requires a reason" failed during the night shift. Trace proof: the date was filled 113 ms after pressing กะเช้า, before the Day board came, so the page asked for `shift=Night`.
+- **App fix (owner approved):** `BoardControls` took the shift (on a date pick) and the date (on a shift press) from the board on screen, which is still the old one while the new one loads; now from the address (`args`) first. Unit test with a held answer (red before, green after); the old test "a date picked in the calendar…" expected 10-15 only because the fake server always answers 10-15, now 10-14 as the real API answers. New E2E case holds the real attendance answer 1.5 s: failed on the old code, passes on the fix. Only a click-then-date within ~30 ms (a router navigation still in flight, not reachable by hand) still goes to the old shift.
+- **Test changes:** the correction test waits for กะเช้า to show pressed, as a person would. Every case now fails on a CSP violation (proven with an injected inline script). New cases: security headers; login lock (5 × 401 then 429 for `6999999`, an ID no account has, then another name still logs in).
+- **Runner fix:** a run started within about a minute of the last one stopped with `Address already in use`: the port check bound without `SO_REUSEADDR` and hit the server-side TIME_WAIT. `ensure_port_free` now sets it; two new safety tests (12/12).
+- **Result:** large, headed, 350 ms: **30 passed, 0 failed, 0 skipped**, 164.95 s browser, 200.04 s total, run `.run/e2e/20261102143158_cc6e16dd`. Same dataset as 11-01 (1,127 users, 602 Areas, 110,480 activity rows). Slowest: export 2,861 ms, inspection summary 1,431 ms (one sample each). Frontend 538/538, lint, TypeScript, 12/12 runner tests pass.
+- Database check: no `facility_e2e_*` database or `e2e_*` user left; only `facility_dashboard` exists. `facility_enterprise_test` was dropped 2026-10-29 (binlog) and not recreated, so the 11-01 note that it "remains" was wrong.
+- Next: the owner reviews and merges the PR.
+
 ## Security assessment (2026-11-02 Bangkok, report given to the owner, nothing changed in code)
 
 Owner asked for an authorized security test of the app on this Mac only. Done on `master` `2a9efad`, with the API on loopback (Development and Production mode), each on its own throwaway database (`facility_sec_test`, `facility_sec_prod_test`, both dropped). `facility_dashboard` was not touched; the key and password were random and deleted. Checks covered login, JWT forgery, roles, cross-Area and cross-building access, mass assignment, XSS in the browser (Playwright), Excel formulas, traversal, headers, framing, the live hub and dependencies. The detailed report and scripts stay **outside the repo** (the repo is public and not every finding is fixed); the owner has them. Result: 2 Medium, 3 Low, 2 Info, no Critical or High. Nothing was fixed: the owner decides which fixes to make, and some need an ADR change (facility-0012, facility-0054). Next: the owner's choice of fixes.
 
 **F2 (login lock abuse) grilled 2026-11-02 and built the same day (see "F2 built" below).** New ADR **facility-0104** (amends 0054 and 0097, pointers added to both) and the glossary term **Login Lock** in `CONTEXT.md`, committed on branch `fix/login-lock-per-ip` on the owner's "commit" (not pushed: the ADR describes the weakness, so it goes public in the same PR as the fix). In short: lock the pair login name + IP (5 failures / 15 min), a per-IP cap of 20 failures / 15 min across all names, failures only, success clears only its own pair, same rule for Admin, no account-wide cap, trust `X-Forwarded-For` only from a loopback proxy (one hop), IPv6 counted by /64, same 429 text, IP written in the security log lines. Build after the owner's OK, with `/mattpocock-skills:implement` (TDD), then update `docs/handover.md` lines on the lock (around lines 131 and 246).
 
-**F1 and F3 grilled 2026-11-02, decided, not built yet.** The owner confirmed the summary. F4 is folded into F1 and F7 into F3. Build order: F1 → F2 → F3, three branches and three PRs. F3 waits until F2 is merged, because it reuses F2's loopback-proxy trust. Uncommitted files sit in two git worktrees next to this folder (`git worktree list`). Nothing is committed or pushed yet.
+**F1 and F3 grilled 2026-11-02, decided, not built yet.** The owner confirmed the summary. F4 is folded into F1 and F7 into F3. Build order: F1 → F2 → F3, three branches and three PRs. F3 waits until F2 is merged, because it reuses F2's loopback-proxy trust. All three are merged; no worktree is left.
 - **F1 + F4:** was on branch `fix/hub-admins-from-db`, now merged (PR #138, see below).
   - Files: new ADR **facility-0105** (deactivation takes effect at once on the hub and the API), an amendment pointer in 0012, and the `CONTEXT.md` definition of **Deactivated Account** changed to take effect at once.
   - Decisions:
     - Admin pushes go to the active Admins read from the database at send time; the `admins` group is dropped. No `CloseOnAuthenticationExpiration`.
     - `/api/me`, `/api/service-points` and `by-token` load the account through `CurrentUser.LoadAsync`. `/api/service-points` was found during the grill, not in the report.
   - This ADR describes the weakness, so it goes public in the same PR as the fix.
-- **F3 + F7:** worktree `../Facility-Real-time-dashboard-security-headers`, branch `fix/security-headers`, now at master `aa6d7e5`.
+- **F3 + F7:** was on branch `fix/security-headers`, now merged (PR #140, see below).
   - Files: new ADR **facility-0106** (security headers set by the app) and an amendment pointer in 0104 (also trust `X-Forwarded-Proto` from the loopback proxy).
   - Decisions:
     - Headers come from app middleware, not Caddy: a strict enforced CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, a Permissions-Policy that allows only geolocation, and no `Server` header.
@@ -48,7 +59,7 @@ Owner asked for an authorized security test of the app on this Mac only. Done on
   - Code names now use "place" throughout (`LoginPlace`, `NameLocked`, `PlaceLocked`).
   - Results: backend 352 unit + 676 API tests pass (5 MySQL tests skipped, as before). No frontend change.
   - **Owner still owes, at deploy:** one `Login failed ... from <your IP>` line in the journal, to confirm Caddy sends X-Forwarded-For. If every line shows `127.0.0.1`, the forwarded address is not reaching the app.
-- **F3 + F7 built 2026-11-02** on `fix/security-headers` (worktree `../Facility-Real-time-dashboard-security-headers`). Committed, not pushed yet.
+- **F3 + F7 merged 2026-11-02** to master as PR #140 (`7a25174`) on the owner's "push pr merge"; GitGuardian passed. The branch and its worktree are deleted.
   - `SecurityHeaders.cs` sends the CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy` and `Permissions-Policy` on every answer, plus `Cache-Control: no-store` under `/api`. In Development, Swagger gets no CSP.
   - `Program.cs` trusts X-Forwarded-Proto from loopback, sends HSTS (1 year, outside Development, https only, never for localhost) and turns off Kestrel's `Server` header.
   - The deploy guide (`docs/handover.md` §2.6) gets a `curl -sI` header check.
@@ -63,7 +74,12 @@ Owner asked for an authorized security test of the app on this Mac only. Done on
     - HSTS never shows when curling localhost.
   - Not checked by hand: Swagger in Development (the exemption keeps it working by design).
   - Results: backend 352 unit + 685 API tests pass (5 MySQL tests skipped, as before). No frontend source change.
-- Next: owner's OK to push `fix/security-headers` and open its PR. After the merge, remove the worktree. That finishes F1–F3; the report's F5 (dev-only npm advisories) and F6 (Info) are not scheduled.
+- **F1–F4 and F7 are now fixed and merged** (PRs #138, #139, #140). Not scheduled: F5 (dev-only npm advisories) and F6 (Info, Development only).
+- **Owner still owes, at deploy:**
+  - A journal line `Login failed ... from <your IP>` (F2).
+  - The `curl -sI` header check in `docs/handover.md` §2.6 (F3).
+- A pre-existing E2E case depended on the time of day (attendance correction failed during the night shift): fixed, see "Headed E2E rerun on current master" above.
+- Next: the owner's choice. Deploy was suggested as the next priority (internship ends 2026-11-30).
 
 ## Business overview for the PM (2026-11-02 Bangkok, merged as PR #137, `2a9efad`, branch deleted)
 
