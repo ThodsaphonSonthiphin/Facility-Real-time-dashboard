@@ -100,6 +100,11 @@ test('with location turned off a check-in waits until it is turned on @dataset',
   await allowLocation(context, page);
   const answer = recorded(page);
   await page.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง', exact: true }).click();
+  if (engine === 'webkit') {
+    // WebKit keeps the refusal for the page, so the button reloads it; the person presses เข้างาน again
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: 'เข้างาน', exact: true }).click();
+  }
   expect((await answer).ok()).toBe(true);
   await expect(page.getByText(/^บันทึกเวลาเข้างานแล้ว \d\d:\d\d$/)).toBeVisible();
   expect(sent).toBe(1);

@@ -13,7 +13,8 @@ import {
   otherAreaBlocked,
   outsideShift,
 } from '../../test/cleanerFixtures';
-import { fakeGps, farFromSign, nearSign } from '../../test/fakeGps';
+import { browserPage } from '../../shared/utils/reloadPage';
+import { fakeGps, farFromSign, nearSign, permissionsSay } from '../../test/fakeGps';
 import { fakeServer, type FakeResponse, type FakeRoutes } from '../../test/fakeServer';
 import { expectBehindMoreInfo } from '../../test/moreInfo';
 import { renderApp } from '../../test/renderApp';
@@ -171,7 +172,36 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     await user.click(screen.getByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
 
     expect(await screen.findByText('บันทึกเวลาเข้างานแล้ว 06:52')).toBeInTheDocument();
-    expect(gps.calls).toBe(2);
+    expect(gps.calls).toBe(3); // the refusal, the quick check that it is gone, the reading
+  });
+
+  it('location turned on but the page keeps the refusal (iPhone Safari): "เปิดแล้ว ลองอีกครั้ง" reloads the page', async () => {
+    fakeGps('denied');
+    permissionsSay('granted');
+    const reload = vi.spyOn(browserPage, 'reload').mockImplementation(() => {});
+    const server = serve({});
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
+    await user.click(await screen.findByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
+
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(server.calls.some((c) => c.path === '/api/attendance')).toBe(false);
+  });
+
+  it('location still off: "เปิดแล้ว ลองอีกครั้ง" keeps the help and does not reload (nothing on the page is lost)', async () => {
+    const gps = fakeGps('denied');
+    permissionsSay('denied');
+    const reload = vi.spyOn(browserPage, 'reload').mockImplementation(() => {});
+    serve({});
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
+    await user.click(await screen.findByRole('button', { name: 'เปิดแล้ว ลองอีกครั้ง' }));
+
+    await waitFor(() => expect(gps.calls).toBe(3));
+    expect(await screen.findByRole('heading', { name: 'เปิดตำแหน่งก่อนลงเวลา' })).toBeInTheDocument();
+    expect(reload).not.toHaveBeenCalled();
   });
 
   it('on plain http the page says it needs https and offers no retry (facility-0049)', async () => {
