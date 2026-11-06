@@ -140,7 +140,6 @@ Recognise these as the moment to run the method, not skip it:
 
 ## Relationship to neighbouring skills
 
-- **`career-growth`** — a five-station quarterly career review: evidence-graded skill inventory, job-market survey, a four-test "moat" selection gated on the user's own pick, then a certification-driven study plan. It owns the person-side analysis and the decision structure; it delegates all outside-world fact verification — certifications, exam codes, market demand — to this skill. Precedence: reach for `career-growth` for the full periodic review; reach for this skill for a single verified recommendation, or to check whether one named product or credential is still current.
 - **`study-design-verify`** — same evidence-grounded stance, aimed at *the user's own system*. That one studies code, schemas, and live data. This one handles facts nobody in the room controls. They compose: study the system with that, verify the outside world with this.
 - **`scrutinize`** — reviews a plan or change already on the table. This runs earlier, while the advice is still being formed.
 - **`reflect`** — where the lessons from a mis-advised session get routed, including into this skill.

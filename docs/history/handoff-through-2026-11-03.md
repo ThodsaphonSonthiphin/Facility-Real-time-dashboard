@@ -10,16 +10,6 @@ Read this first on a new machine or in a new session. It is updated after **ever
 
 This repo is public: never put a password, phone number, real name or any secret in this file.
 
-## Terminal question (2026-11-03 Bangkok, advice only)
-
-The owner asked whether ChatGPT has a terminal tool like Claude Code. Official OpenAI documentation confirms Codex CLI runs in the terminal, reads and edits local project files, runs commands, and offers Sign in with ChatGPT. Provided the `codex` launch command in this project's directory. No installation, app changes or tests performed.
-
-## Codex chat cleanup question (2026-11-03 Bangkok, advice only)
-
-The owner asked how to delete chats together. Official Projects documentation confirms the project menu can archive chats together; archive is recoverable. Bulk permanent deletion in the installed desktop app was not verified: computer use cannot access Codex for safety reasons. No chats archived or deleted, no app source changed.
-
-Follow-up: the owner asked whether this assistant can delete chats or sessions. Available Codex tools can list, archive and restore sessions, but provide no permanent deletion. Nothing archived or deleted; asked whether they want all sessions in this project archived or only specific ones.
-
 ## WD presentation preparation (2026-11-03 Bangkok, advice only)
 
 The owner is preparing their first project presentation to WD, in English. Audience and allotted time are still unknown. Read the business overview, current status and pilot ADR (facility-0043). Suggested a short business-focused story: visibility of Area attendance, cleaning progress and inspection; one cleaning point's submit → inspect → rework → pass flow; built features versus field validation still needed; then the one-Area pilot. Prepare about 5 minutes of core material plus an optional 2–3 minute demo, with simple English speaker prompts and a recorded fallback. These are suggestions, not an approved slide deck or a confirmed meeting agenda. No slides created, no app changes or tests run. Existing working-tree changes preserved.
