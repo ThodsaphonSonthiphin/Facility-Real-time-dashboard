@@ -25,7 +25,7 @@ The whole skill rests on one discipline you must not skip:
 - "Write test cases / a test plan / QA cases for this feature/PR/change"
 - After implementation finishes (hand-off from grill-then-plan → build) or a bug is fixed (hand-off from `post-mortem` → regression case)
 - Before filing findings or release sign-off
-- NOT for verifying one finished task → `dual-verifier`; NOT for filing tickets → `findings-to-ado-backlog` / `ado-create-work-items` (this skill *hands off* to them)
+- NOT for verifying one finished task → `dual-verifier`; NOT for filing tickets → `findings-to-github-issues` / `github-create-issues` (this skill *hands off* to them)
 
 ## Steps
 
@@ -64,7 +64,7 @@ Also: priority scheme? · include Tester/Date columns? · map automated cases to
 **7. Render via a format adapter** (same canonical model → chosen target):
 - **xlsx** → `scripts/render_xlsx.py` (Status dropdown, conditional color, freeze, auto-filter, Cases + Legend + Test Data + Summary sheets)
 - **md** → grouped tables + summary · **csv** → flat rows
-- **tracker** → **delegate** to `findings-to-ado-backlog` / `ado-create-work-items` (they own dry-run + safety gate + writeback). Do not re-implement ticket creation here.
+- **tracker** → **delegate** to `findings-to-github-issues` / `github-create-issues` (they own dry-run + safety gate + writeback). Do not re-implement ticket creation here.
 
 **8. Self-review gates** (all must pass before delivery):
 - Evidence present on **every** row; no `TBD` left unflagged; no "probably/assume/typically" in Steps/Expected/Test Data
@@ -78,7 +78,7 @@ Also: priority scheme? · include Tester/Date columns? · map automated cases to
 - Every fix-commit in the area has a regression case
 - Encoding check **by codepoint**, not by console rendering (avoids false "mojibake")
 
-**9. Deliver + chain.** Report counts (total / auto / manual / P1 / hard-gates) + path. Then: failed/`TBD` cases → `findings-to-ado-backlog` (FILE); summary → `management-talk` (REPORT).
+**9. Deliver + chain.** Report counts (total / auto / manual / P1 / hard-gates) + path. Then: failed/`TBD` cases → `findings-to-github-issues` (FILE); summary → `management-talk` (REPORT).
 
 ## Rationalization table
 
@@ -116,4 +116,4 @@ Also: priority scheme? · include Tester/Date columns? · map automated cases to
 
 ## Chain position
 
-Sits on the **WORK → FILE** hinge. In: `grill-then-plan`→build, `post-mortem`→regression case, alongside `dual-verifier`/`scrutinize`. Out: `findings-to-ado-backlog`/`ado-create-work-items` (FILE), `management-talk` (REPORT).
+Sits on the **WORK → FILE** hinge. In: `grill-then-plan`→build, `post-mortem`→regression case, alongside `dual-verifier`/`scrutinize`. Out: `findings-to-github-issues`/`github-create-issues` (FILE), `management-talk` (REPORT).

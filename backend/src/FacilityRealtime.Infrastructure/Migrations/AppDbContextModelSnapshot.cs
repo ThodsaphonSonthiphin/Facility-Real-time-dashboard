@@ -396,6 +396,53 @@ namespace FacilityRealtime.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.PointMonthlySummary", b =>
+                {
+                    b.Property<int>("ServicePointId")
+                        .HasColumnType("int")
+                        .HasColumnName("service_point_id");
+
+                    b.Property<DateTime>("Month")
+                        .HasColumnType("date")
+                        .HasColumnName("month");
+
+                    b.Property<int>("InspectedFail")
+                        .HasColumnType("int")
+                        .HasColumnName("inspected_fail");
+
+                    b.Property<int>("InspectedPass")
+                        .HasColumnType("int")
+                        .HasColumnName("inspected_pass");
+
+                    b.Property<int>("IssuesReported")
+                        .HasColumnType("int")
+                        .HasColumnName("issues_reported");
+
+                    b.Property<int>("NotDone")
+                        .HasColumnType("int")
+                        .HasColumnName("not_done");
+
+                    b.Property<int>("NotInspected")
+                        .HasColumnType("int")
+                        .HasColumnName("not_inspected");
+
+                    b.Property<int>("RoundsTotal")
+                        .HasColumnType("int")
+                        .HasColumnName("rounds_total");
+
+                    b.Property<int>("SubmittedLate")
+                        .HasColumnType("int")
+                        .HasColumnName("submitted_late");
+
+                    b.Property<int>("SubmittedOnTime")
+                        .HasColumnType("int")
+                        .HasColumnName("submitted_on_time");
+
+                    b.HasKey("ServicePointId", "Month");
+
+                    b.ToTable("point_monthly_summaries", (string)null);
+                });
+
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.PointRoundWindow", b =>
                 {
                     b.Property<int>("Id")
@@ -1002,6 +1049,15 @@ namespace FacilityRealtime.Infrastructure.Migrations
                     b.Navigation("ScanRecord");
 
                     b.Navigation("Supervisor");
+                });
+
+            modelBuilder.Entity("FacilityRealtime.Domain.Entities.PointMonthlySummary", b =>
+                {
+                    b.HasOne("FacilityRealtime.Domain.Entities.ServicePoint", null)
+                        .WithMany()
+                        .HasForeignKey("ServicePointId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FacilityRealtime.Domain.Entities.PointRoundWindow", b =>

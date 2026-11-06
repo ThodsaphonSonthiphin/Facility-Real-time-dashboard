@@ -5,9 +5,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FacilityRealtime.Infrastructure.Persistence;
 
-/// <summary>The tables of docs/design/database.html that the pilot's first features use. Nothing is ever deleted: rows are deactivated.</summary>
+/// <summary>The tables of docs/design/database.html that the pilot's first features use. Master rows are deactivated; retention removes expired operational history.</summary>
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<PointMonthlySummary> PointMonthlySummaries => Set<PointMonthlySummary>();
     public DbSet<Building> Buildings => Set<Building>();
     public DbSet<Area> Areas => Set<Area>();
     public DbSet<ServicePoint> ServicePoints => Set<ServicePoint>();
@@ -227,6 +228,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             // database.html: an alert is closed once
             e.HasIndex(x => new { x.AlertType, x.RecordId }).IsUnique();
             e.HasOne<User>().WithMany().HasForeignKey(x => x.ReviewedById).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PointMonthlySummary>(e =>
+        {
+            e.ToTable("point_monthly_summaries");
+            e.HasKey(x => new { x.ServicePointId, x.Month });
+            e.HasOne<ServicePoint>().WithMany().HasForeignKey(x => x.ServicePointId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.UseSnakeCaseColumns();

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8">
+<title>ระบบ Login ทำงานอย่างไร: Entry point ถึงฐานข้อมูล</title>
+<style>
+  :root {
+    --bg:#0a0e14; --panel:#1a2330; --surface:#0f1722; --surface-2:#0f1419;
+    --border:#2a3441; --border-dim:#3d4a5f; --surface-active:#233040;
+    --text:#e0e6ed; --text-dim:#b8c4cf; --muted:#6b7785; --muted-2:#8a96a3;
+    --accent:#5fb4ff; --accent-bright:#7ed4ff;
+    --amber:#ffd479; --warn:#ffaa00; --warn-text:#ffaa44;
+    --magic:#b070ff; --magic-text:#d4a4ff; --magic-bg:#2a1a3a;
+    --success:#4ade80; --success-text:#a3e8b9;
+    --error:#ff5757; --error-text:#ff8888; --conflict:#ff3030;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px;
+    background: var(--bg); color: var(--text);
+    font-family: 'Segoe UI', 'Sukhumvit Set', 'Tahoma', sans-serif;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  h1 { color: var(--accent); font-size: 22px; margin: 0 0 4px; }
+  h2 { color: var(--text-dim); font-size: 13px; font-weight: 400; margin: 0 0 18px; }
+  code { background: var(--panel); padding: 1px 5px; border-radius: 3px;
+         font-family: 'Consolas', monospace; color: var(--amber); font-size: 0.9em; }
+
+  /* progress dots */
+  .step-progress { display: flex; gap: 4px; justify-content: center;
+                   margin: 12px 0 14px; flex-wrap: wrap; }
+  .step-dot { width: 22px; height: 22px; border-radius: 50%;
+              background: var(--panel); color: var(--muted);
+              display: flex; align-items: center; justify-content: center;
+              font-size: 10px; font-weight: 700; transition: all 0.3s; }
+  .step-dot.done    { background: #1a3a5f; color: var(--accent); }
+  .step-dot.current { background: var(--accent); color: var(--bg); transform: scale(1.2); }
+
+  /* narration — the canonical NESTED shape (badge+title+body inside #narration) */
+  .narration {
+    background: var(--panel); padding: 12px 18px; border-radius: 6px;
+    border-left: 3px solid var(--accent); margin-bottom: 16px;
+    font-size: 14.5px; line-height: 1.65; min-height: 60px;
+  }
+  .narration.warn    { border-color: var(--warn);    background: #2a2018; }
+  .narration.error   { border-color: var(--error);   background: #2a1818; }
+  .narration.success { border-color: var(--success); background: #182a1f; }
+  .narration.magic   { border-color: var(--magic);   background: #1f1830; }
+  .narration .step-badge { background: var(--accent); color: var(--bg);
+                           padding: 3px 10px; border-radius: 12px; font-size: 12px;
+                           font-weight: 700; display: inline-block; margin-right: 8px; }
+  .narration .step-title { color: var(--accent); font-weight: 700; font-size: 16px;
+                           display: block; margin: 8px 0 6px; }
+  .narration.warn    .step-title { color: var(--amber); }
+  .narration.error   .step-title { color: var(--error-text); }
+  .narration.success .step-title { color: var(--success-text); }
+  .narration.magic   .step-title { color: var(--magic-text); }
+
+  /* shared hidden panel (replaces the old .extra-panel/.toggleable/.key-question) */
+  .wt-panel { background: var(--panel); border-radius: 6px; padding: 14px 18px;
+              margin-bottom: 16px; font-size: 14px; line-height: 1.6; }
+  .wt-panel .wt-panel-title { font-weight: 700; margin-bottom: 6px; }
+  .wt-panel.question { background: #1f1830; border: 2px solid var(--magic); }
+  .wt-panel.question .wt-panel-title { color: var(--magic-text); }
+  .wt-panel.race     { background: #2a1818; border: 2px solid var(--error); }
+  .wt-panel.race .wt-panel-title { color: var(--error-text); }
+  .wt-panel.summary  { background: #182a1f; border: 2px solid var(--success); }
+  .wt-panel.summary .wt-panel-title { color: var(--success-text); }
+
+  /* controls */
+  .controls { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+  button { background: var(--accent); color: var(--bg); border: none;
+           padding: 10px 22px; border-radius: 6px; font-size: 14px; font-weight: 700;
+           cursor: pointer; transition: background 0.2s, transform 0.1s; }
+  button:hover:not(:disabled)  { background: var(--accent-bright); }
+  button:active:not(:disabled) { transform: scale(0.97); }
+  button.tertiary { background: var(--border); color: var(--text); }
+  button.tertiary:hover:not(:disabled) { background: var(--border-dim); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .hidden { display: none !important; }
+
+  .diagram-wrapper { background: var(--surface-2); border: 1px solid var(--panel);
+                     border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+  svg.diagram { width: 100%; height: auto; display: block; }
+  .comp rect { fill: var(--panel); stroke: var(--border); stroke-width: 2; transition: all 0.4s; }
+  .comp .comp-title { font-family: 'Segoe UI', sans-serif; font-size: 14px; font-weight: 700; fill: var(--text-dim); transition: fill 0.4s; }
+  .comp .comp-sub { font-family: 'Consolas', monospace; font-size: 11px; fill: var(--muted); transition: fill 0.4s; }
+  .comp .comp-val { font-family: 'Consolas', monospace; font-size: 12px; fill: var(--amber); transition: fill 0.4s; }
+  .comp.active rect { fill: #1a3a5f; stroke: var(--accent); stroke-width: 3; filter: drop-shadow(0 0 8px #5fb4ff88); }
+  .comp.active .comp-title { fill: var(--accent-bright); }
+  .comp.active .comp-sub { fill: var(--text-dim); }
+  .comp.firing rect { fill: #2a2818; stroke: var(--amber); stroke-width: 3; filter: drop-shadow(0 0 8px #ffd47988); animation: pulse-fire 1.2s ease-in-out infinite; }
+  .comp.firing .comp-title { fill: var(--amber); }
+  @keyframes pulse-fire { 0%, 100% { filter: drop-shadow(0 0 8px #ffd47988); } 50% { filter: drop-shadow(0 0 16px #ffd479dd); } }
+  .comp.locked rect { fill: var(--magic-bg); stroke: var(--magic); stroke-width: 3; filter: drop-shadow(0 0 10px #b070ff88); }
+  .comp.locked .comp-title { fill: var(--magic-text); }
+  .comp.locked .comp-val { fill: var(--magic-text); }
+  .comp.blocked rect { fill: #2a1f10; stroke: var(--warn); stroke-width: 2; animation: blink-block 1s ease-in-out infinite alternate; }
+  .comp.blocked .comp-title { fill: var(--warn-text); }
+  @keyframes blink-block { from { opacity: 0.55; } to { opacity: 0.9; } }
+  .comp.done rect { fill: #18301f; stroke: var(--success); stroke-width: 2; }
+  .comp.done .comp-title { fill: var(--success-text); }
+  .comp.done .comp-val { fill: var(--success-text); }
+  .comp.error rect { fill: #2a1818; stroke: var(--error); stroke-width: 3; filter: drop-shadow(0 0 10px #ff575788); }
+  .comp.error .comp-title { fill: var(--error-text); }
+  .comp.dimmed { opacity: 0.35; }
+  .arrow { fill: none; stroke: var(--border-dim); stroke-width: 2; transition: stroke 0.3s, stroke-width 0.3s; }
+  .arrow.active { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 8 4; animation: flow 1.8s linear infinite; }
+  .arrow.magic { stroke: var(--magic); stroke-width: 3.5; filter: drop-shadow(0 0 4px var(--magic)); }
+  .arrow.done { stroke: var(--success); stroke-width: 2.5; }
+  .arrow.error { stroke: var(--error); stroke-width: 3; }
+  .arrow.dimmed { opacity: 0.2; }
+  @keyframes flow { to { stroke-dashoffset: -24; } }
+  .flow-label { fill: var(--amber); font-family: 'Consolas', monospace; font-size: 12px; font-weight: 700; pointer-events: none; }
+  .flow-label-bg { fill: #2a2818; stroke: var(--amber); stroke-width: 1.5; }
+  .flow-label-group { opacity: 0; transition: opacity 0.3s; }
+  .flow-label-group.show { opacity: 1; }
+  .flow-label-group.magic .flow-label { fill: var(--magic-text); }
+  .flow-label-group.magic .flow-label-bg { fill: #1f1830; stroke: var(--magic); }
+  .flow-label-group.error .flow-label { fill: var(--error-text); }
+  .flow-label-group.error .flow-label-bg { fill: #2a1818; stroke: var(--error); }
+
+  .container { max-width: 1380px; }
+  body { font-family: system-ui, Tahoma, sans-serif; padding-bottom:100px; }
+  .intro { color: var(--text-dim); line-height: 1.7; font-size: 15px; }
+  .walk-grid { display:grid; grid-template-columns: 290px minmax(0,1fr); gap:18px; align-items:start; }
+  .walk-grid > div { min-width:0; }
+  .node-card { border:2px solid var(--border); border-radius:12px; padding:20px; background:var(--surface); }
+  .comp.active > .node-card { border-color:var(--accent); }
+  .comp.firing > .node-card { border-color:var(--amber); }
+  .comp.locked > .node-card { border-color:var(--magic); }
+  .comp.blocked > .node-card { border-color:var(--warn); }
+  .comp.done > .node-card { border-color:var(--success); }
+  .comp.error > .node-card { border-color:var(--error); }
+  .mock-label { font-size:13px; color:var(--amber); margin-bottom:16px; }
+  .mock-title { font-size:24px; font-weight:700; margin:8px 0; }
+  .mock-field { display:block; font-size:16px; font-weight:600; margin-top:24px; }
+  .mock-help { display:block; font-size:13px; color:var(--text-dim); margin:4px 0 8px; }
+  .mock-input { width:100%; padding:12px; border:1px solid var(--border-dim); background:var(--panel); color:var(--text); font:16px ui-monospace,monospace; border-radius:6px; }
+  .mock-action { margin:24px 0 12px; padding:14px; background:var(--accent); color:var(--bg); border-radius:6px; text-align:center; font-weight:700; }
+  .mock-status { min-height:58px; font-size:14px; line-height:1.6; }
+  .mock-foot { font-size:13px; color:var(--text-dim); line-height:1.7; border-top:1px solid var(--border); padding-top:12px; }
+  .diagram-wrapper { overflow-x:auto; padding:8px; }
+  .intro code { overflow-wrap:anywhere; }
+  svg.diagram { min-width:740px; }
+  .comp .comp-title { font:700 18px system-ui,sans-serif; }
+  .comp .comp-sub { font:14px system-ui,sans-serif; fill:var(--text-dim); }
+  .comp .comp-val { font:13px ui-monospace,monospace; }
+  .flow-label { font:700 14px ui-monospace,monospace; }
+  .stage-caption { fill:var(--text-dim); font:14px system-ui,sans-serif; }
+  .legend { display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--text-dim); margin:8px 0 16px; }
+  .trace { border:1px solid var(--border); background:var(--surface); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .trace h3 { margin:0 0 10px; font-size:15px; color:var(--text-dim); }
+  pre { margin:0; color:var(--amber); font:14px/1.65 ui-monospace,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .storage-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .storage-grid .trace { margin-bottom:0; }
+  .controls { position:fixed; bottom:0; left:0; right:0; background:var(--bg); padding:12px; margin:0; border-top:1px solid var(--border); flex-wrap:wrap; z-index:2; }
+  button { min-height:44px; }
+  button:focus-visible, a:focus-visible, .term:focus-visible, summary:focus-visible { outline:3px solid var(--accent-bright); outline-offset:4px; }
+  .step-dot { width:26px; height:26px; font-size:12px; color:var(--text-dim); }
+  .narration { font-size:16px; line-height:1.8; min-height:158px; }
+  .narration .step-title { font-size:20px; }
+  .drawer-source, .drawer-seealso-title { font-size:13px; }
+  .drawer-def { font-size:16px; }
+  .seealso-chip { min-height:40px; padding:8px 12px; }
+  details { margin:20px 0; border:1px solid var(--border); border-radius:8px; padding:16px; line-height:1.7; }
+  summary { cursor:pointer; font-weight:600; }
+  a { color:var(--accent-bright); }
+  table { width:100%; border-collapse:collapse; margin-top:14px; font-size:14px; }
+  th,td { text-align:left; vertical-align:top; padding:10px; border-bottom:1px solid var(--border); overflow-wrap:anywhere; }
+  .wt-panel { font-size:16px; }
+  .small { font-size:13px; color:var(--text-dim); line-height:1.7; }
+  @media(max-width:980px) { .walk-grid { grid-template-columns:1fr; } .mock-wrap { max-width:420px; width:100%; margin:auto; } }
+  @media(max-width:600px) { body { padding:12px; } .storage-grid { grid-template-columns:1fr; } .narration { min-height:0; } button { padding:10px 14px; } h1 { font-size:20px; } }
+  @media(prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+  /* Colors are engine :root tokens (var(--token)), so a palette change in the engine
+     propagates here too; the standalone demo's :root above supplies them when opened raw. */
+  .term { border-bottom: 1px dotted var(--accent); color: var(--accent); cursor: help; }
+  .term:hover { color: var(--accent-bright); }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 340px; max-width: 86vw;
+    background: var(--panel); border-left: 2px solid var(--accent);
+    box-shadow: -8px 0 24px #00000088;
+    padding: 18px 20px; overflow-y: auto; z-index: 50;
+  }
+  .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .drawer-term { color: var(--accent-bright); font-size: 17px; font-weight: 700; line-height: 1.3; }
+  .drawer-source { font-size: 10px; color: var(--muted); text-transform: uppercase;
+                   letter-spacing: 0.5px; margin: 2px 0 12px; }
+  .drawer-def { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 16px; }
+  .drawer-seealso-title { font-size: 11px; color: var(--muted-2); text-transform: uppercase;
+                          letter-spacing: 0.5px; margin-bottom: 8px; }
+  .seealso-chip {
+    display: inline-block; background: var(--panel); border: 1px solid var(--border);
+    color: var(--accent); border-radius: 14px; padding: 4px 12px;
+    margin: 0 6px 6px 0; font-size: 13px; cursor: pointer;
+  }
+  .seealso-chip:hover { background: var(--surface-active); border-color: var(--accent); }
+  .drawer-btns { display: flex; gap: 8px; margin-top: 18px; }
+
+</style></head>
+<body>
+<div class="container">
+  <h1>ระบบ Login ทำงานอย่างไร: Entry point ถึงฐานข้อมูล</h1>
+  <h2>กด <strong>ถัดไป →</strong> เพื่อดูทีละ step</h2>
+
+  <div class="step-progress" id="stepProgress"></div>
+
+  <div class="narration" id="narration">
+    <span class="step-badge" id="stepBadge">Step 0 / 0</span>
+    <span class="step-title" id="sceneTitle">เริ่มต้น</span>
+    <div id="narrationBody"></div>
+  </div>
+
+  <!-- ===== MODE CONTENT — assembly inserts the chosen mode pack's §HTML here ===== -->
+<p class="intro">Entry point → หน้า Login → API → Entity / EF Core → MySQL<br>
+อิงโค้ด branch <code>codex/automatic-data-retention</code> ณ commit <code>190cbf4</code> · 3 พฤศจิกายน 2026<br>
+ชื่อสมศรี รหัสพนักงาน เบอร์โทร ID เวลา และ token ที่แสดงเป็น <strong>ข้อมูลสมมติสำหรับอธิบาย</strong> ไม่ได้อ่านข้อมูลบุคลากรจากฐานข้อมูลจริง</p>
+<div class="walk-grid">
+  <div class="mock-wrap"><div id="compScreen" class="comp"><section class="node-card" aria-label="Mock หน้า Login ของพนักงาน">
+    <div class="mock-label">MOCK · /login · ตัวอย่างอ่านอย่างเดียว</div>
+    <div class="small">ระบบลงเวลาและตรวจงานแม่บ้าน</div>
+    <div class="mock-title">เข้าสู่ระบบ</div>
+    <div class="intro">ใช้รหัสพนักงานและเบอร์โทรของคุณ</div>
+    <label class="mock-field" for="mockEmployee">รหัสพนักงาน</label>
+    <span class="mock-help">เลข 7 หลัก</span>
+    <input class="mock-input" id="mockEmployee" value="1234567" readonly aria-label="รหัสพนักงานตัวอย่าง">
+    <label class="mock-field" for="mockPhone">เบอร์โทรศัพท์</label>
+    <span class="mock-help">เบอร์ที่แจ้งแอดมินไว้ตอนสร้างบัญชี</span>
+    <input class="mock-input" id="mockPhone" type="tel" value="081-000-0007" readonly aria-label="เบอร์โทรศัพท์ตัวอย่าง">
+    <div class="mock-action" id="mockButton">เข้าสู่ระบบ</div>
+    <div class="mock-status" id="mockStatus" role="status">ยังไม่ได้ส่งข้อมูล</div>
+    <div class="mock-foot">เปลี่ยนเบอร์โทร: แจ้งแอดมินให้แก้ · ไม่มีการสมัครเอง<br>แอดมินเข้าด้วยชื่อผู้ใช้และรหัสผ่าน · หน้าแอดมิน</div>
+  </section></div></div>
+  <div>
+    <div class="diagram-wrapper">
+      <svg class="diagram" viewBox="0 0 900 370" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="API รับ JSON จาก mock หน้า Login ส่ง query ผ่าน EF Core ไป MySQL และส่งผลกลับเบราว์เซอร์">
+        <text class="stage-caption" x="18" y="25">จากหน้าเว็บ</text>
+        <g class="comp" id="compApi"><rect x="105" y="45" width="240" height="120" rx="10"/>
+          <text class="comp-title" x="225" y="78" text-anchor="middle">ASP.NET Core API</text>
+          <text class="comp-sub" x="225" y="106" text-anchor="middle">AuthEndpoints.LoginAsync</text>
+          <text class="comp-val" x="225" y="140" text-anchor="middle" id="apiState">รอ request</text></g>
+        <g class="comp" id="compEf"><rect x="420" y="45" width="230" height="120" rx="10"/>
+          <text class="comp-title" x="535" y="78" text-anchor="middle">Entity / EF Core</text>
+          <text class="comp-sub" x="535" y="106" text-anchor="middle">AppDbContext</text>
+          <text class="comp-val" x="535" y="140" text-anchor="middle" id="efState">User / RefreshToken</text></g>
+        <g class="comp" id="compDb"><rect x="715" y="45" width="170" height="120" rx="10"/>
+          <text class="comp-title" x="800" y="78" text-anchor="middle">MySQL</text>
+          <text class="comp-sub" x="800" y="106" text-anchor="middle">users</text>
+          <text class="comp-val" x="800" y="140" text-anchor="middle">refresh_tokens</text></g>
+        <path class="arrow" id="arrWebApi" d="M 10 88 L 105 88" marker-end="url(#arrowhead)"/>
+        <path class="arrow" id="arrApiEf" d="M 345 88 L 420 88" marker-end="url(#arrowhead)"/>
+        <path class="arrow" id="arrEfDb" d="M 650 88 L 715 88" marker-end="url(#arrowhead)"/>
+        <path class="arrow" id="arrDbEf" d="M 750 165 L 750 215 L 580 215 L 580 165" marker-end="url(#arrowhead)"/>
+        <path class="arrow" id="arrEfApi" d="M 490 165 L 490 263 L 280 263 L 280 165" marker-end="url(#arrowhead)"/>
+        <path class="arrow" id="arrApiWeb" d="M 170 165 L 170 320 L 10 320" marker-end="url(#arrowhead)"/>
+        <text class="stage-caption" x="18" y="350">กลับเบราว์เซอร์: JSON + Set-Cookie</text>
+        <g class="flow-label-group" id="lblWebApi"><rect class="flow-label-bg" x="5" y="49" width="95" height="27" rx="5"/><text class="flow-label" x="52" y="68" text-anchor="middle" id="textWebApi">POST</text></g>
+        <g class="flow-label-group" id="lblApiEf"><rect class="flow-label-bg" x="335" y="8" width="100" height="27" rx="5"/><text class="flow-label" x="385" y="27" text-anchor="middle" id="textApiEf">query</text></g>
+        <g class="flow-label-group" id="lblEfDb"><rect class="flow-label-bg" x="645" y="8" width="90" height="27" rx="5"/><text class="flow-label" x="690" y="27" text-anchor="middle" id="textEfDb">SELECT</text></g>
+        <g class="flow-label-group" id="lblDbEf"><rect class="flow-label-bg" x="610" y="200" width="150" height="28" rx="5"/><text class="flow-label" x="685" y="219" text-anchor="middle" id="textDbEf">row → User</text></g>
+        <g class="flow-label-group" id="lblEfApi"><rect class="flow-label-bg" x="330" y="249" width="160" height="28" rx="5"/><text class="flow-label" x="410" y="268" text-anchor="middle" id="textEfApi">User.Id = 42</text></g>
+        <g class="flow-label-group" id="lblApiWeb"><rect class="flow-label-bg" x="10" y="285" width="145" height="28" rx="5"/><text class="flow-label" x="82" y="304" text-anchor="middle" id="textApiWeb">200 OK</text></g>
+      </svg>
+    </div>
+    <div class="legend"><span>น้ำเงิน = กำลังทำ</span><span>เขียว = ผ่านแล้ว</span><span>ม่วง = จุดสำคัญ</span><span>แดง = ปฏิเสธ</span></div>
+    <section class="trace"><h3>สิ่งที่กำลังเกิดขึ้น / โค้ดย่อจากระบบ</h3><pre id="traceCode"></pre></section>
+    <div class="storage-grid">
+      <section class="trace"><h3>Browser · ข้อมูลอยู่ที่ไหน</h3><pre id="browserData"></pre></section>
+      <section class="trace"><h3>MySQL · snapshot จำลอง</h3><pre id="databaseData"></pre></section>
+    </div>
+  </div>
+</div>
+<section class="wt-panel question hidden" id="panelQuestion"><div class="wt-panel-title">หยุดคิดก่อนเฉลย</div>สมศรีกรอกเบอร์ผิด หรือกด Login ซ้ำสำเร็จอีกครั้ง:<br>กรณีไหนแก้ <code>users.secret_hash</code>? กรณีไหนเพิ่ม <code>refresh_tokens</code>?<br>ลองตอบก่อนกด “ถัดไป →”</section>
+<section class="wt-panel race hidden" id="panelFailure"><div class="wt-panel-title">ผลของ Login ไม่สำเร็จ</div>401 = ชื่อ / secret ไม่ถูกต้อง หรือบัญชีปิดใช้งาน · 429 = Login Lock<br>ไม่มี session ใหม่ใน <code>refresh_tokens</code> · ตัวนับ Login Lock อยู่ในหน่วยความจำ server · เหตุการณ์ความปลอดภัยเขียน Server Log</section>
+<section class="wt-panel summary hidden" id="panelSummary"><div class="wt-panel-title">จำ 3 จุดนี้ให้ได้</div><ol><li>สร้างบัญชี: hash เบอร์โทรหรือรหัสผ่าน → <code>users.secret_hash</code></li><li>Login: อ่าน User เดิม → Verify → สุ่ม refresh token → บันทึกเฉพาะ hash ใน <code>refresh_tokens</code></li><li>ฝั่ง Browser: refresh token ใน HttpOnly cookie / access JWT ใน Redux memory</li></ol>ผลข้างเคียง: refresh เพิ่มแถวและหมุน token ทุกครั้ง จึงต้องดูแล retention; ระบบพึ่งฐานข้อมูลและ Login Lock แบบหน่วยความจำเหมาะกับ server เดียว เบอร์โทรที่คนอื่นรู้ยังใช้สวมบัญชีได้ตามความเสี่ยงที่ยอมรับใน facility-0054</section>
+<details><summary>Admin / Supervisor ต่างกันตรงไหน</summary>
+<table><thead><tr><th>บทบาท</th><th>หน้าและข้อมูลที่ส่ง</th><th>ค้นบัญชี / หลัง Login</th></tr></thead><tbody>
+<tr><td>Cleaner</td><td><code>/login</code><br>employeeId + phone</td><td>employee_id และ role ไม่ใช่ ADMIN<br>ไป <code>/my-work</code></td></tr>
+<tr><td>Supervisor</td><td><code>/login</code><br>employeeId + phone</td><td>employee_id และ role ไม่ใช่ ADMIN<br>ไป <code>/my-building</code></td></tr>
+<tr><td>Admin</td><td><code>/login/admin</code><br>username + password</td><td>username และ role = ADMIN<br>ไป <code>/dashboard</code></td></tr>
+</tbody></table><p>ทุกบทบาทใช้ <code>POST /api/auth/login</code> เดียวกัน API เลือกทาง employeeId เมื่อมีค่า; Admin ไม่ Normalize รหัสผ่าน ทั้งหมด Verify กับ <code>User.SecretHash</code> และออก token แบบเดียวกัน ถ้าเปิดหน้าที่ต้อง Login ไว้ก่อน ระบบพากลับ URL เดิมตาม <code>location.state.from</code> แล้วตรวจสิทธิ์หน้าต่อ</p>
+<p class="small">Mock ใช้ลำดับช่องและข้อความจาก LoginPage.tsx จริง และย่อ footer เพื่ออธิบาย ภาพใช้ธีมของ walkthrough สำหรับช่วยอ่านสถานะ</p></details>
+<details><summary>Entity → ตาราง → คอลัมน์จริง</summary><table><thead><tr><th>C# / DTO</th><th>MySQL / Browser</th><th>หน้าที่</th></tr></thead><tbody>
+<tr><td>LoginRequest</td><td>JSON ชั่วคราวใน request</td><td>EmployeeId, Phone หรือ Username, Password ไม่ใช่ Entity ที่นำไป INSERT ทั้งก้อน</td></tr>
+<tr><td>User</td><td>users</td><td>Id → id; EmployeeId → employee_id; Username → username; DisplayName → display_name; SecretHash → secret_hash; IsActive → is_active; Role → role</td></tr>
+<tr><td>RefreshToken</td><td>refresh_tokens</td><td>Id, UserId, SessionId, TokenHash, CreatedAt, ExpiresAt, RotatedAt, RevokedAt → snake_case; user_id อ้าง users.id</td></tr>
+<tr><td>AuthResponse</td><td>JSON → Redux memory</td><td>accessToken, expiresAt, user {id, username, fullName, role}; username ของ Cleaner คือ employeeId</td></tr>
+<tr><td>Raw refresh token</td><td>facility_refresh cookie</td><td>ส่งด้วย Set-Cookie แยกจาก JSON; JavaScript อ่านค่า cookie นี้ไม่ได้</td></tr>
+</tbody></table><p>ชื่อ Entity และ Property เป็นของจริง ค่า hash และชื่อ token ใน walkthrough ย่อไว้เพื่ออ่านง่าย ไม่ใช่ค่าที่นำไปใช้ Login ได้</p></details>
+<details><summary>เปิดโค้ดต้นทางตามเส้นทาง</summary><table><thead><tr><th>ช่วง</th><th>ไฟล์ใน repository</th></tr></thead><tbody>
+<tr><td>Entry / Router / gate</td><td><a href="../../frontend/src/main.tsx">frontend/src/main.tsx</a><br><a href="../../frontend/src/App.tsx">frontend/src/App.tsx</a><br><a href="../../frontend/src/router.tsx">frontend/src/router.tsx</a><br><a href="../../frontend/src/shared/components/SessionGate.tsx">frontend/src/shared/components/SessionGate.tsx</a><br><a href="../../frontend/src/shared/components/ProtectedRoute.tsx">frontend/src/shared/components/ProtectedRoute.tsx</a></td></tr>
+<tr><td>แบบฟอร์ม → request</td><td><a href="../../frontend/src/pages/auth/LoginPage.tsx">frontend/src/pages/auth/LoginPage.tsx</a><br><a href="../../frontend/src/pages/auth/AdminLoginPage.tsx">frontend/src/pages/auth/AdminLoginPage.tsx</a><br><a href="../../frontend/src/pages/auth/useLogin.ts">frontend/src/pages/auth/useLogin.ts</a><br><a href="../../frontend/src/pages/auth/authApi.ts">frontend/src/pages/auth/authApi.ts</a><br><a href="../../frontend/src/shared/api/baseApi.ts">frontend/src/shared/api/baseApi.ts</a></td></tr>
+<tr><td>API → กฎตรวจสอบ</td><td><a href="../../backend/src/FacilityRealtime.Api/Program.cs">backend/src/FacilityRealtime.Api/Program.cs</a><br><a href="../../backend/src/FacilityRealtime.Api/DTOs/AuthDtos.cs">backend/src/FacilityRealtime.Api/DTOs/AuthDtos.cs</a><br><a href="../../backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs">backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs</a><br><a href="../../backend/src/FacilityRealtime.Application/Auth/PhoneNumber.cs">backend/src/FacilityRealtime.Application/Auth/PhoneNumber.cs</a><br><a href="../../backend/src/FacilityRealtime.Application/Auth/LoginThrottle.cs">backend/src/FacilityRealtime.Application/Auth/LoginThrottle.cs</a></td></tr>
+<tr><td>Hash / token</td><td><a href="../../backend/src/FacilityRealtime.Infrastructure/Auth/Pbkdf2PasswordHasher.cs">backend/src/FacilityRealtime.Infrastructure/Auth/Pbkdf2PasswordHasher.cs</a><br><a href="../../backend/src/FacilityRealtime.Application/Auth/RefreshTokenRules.cs">backend/src/FacilityRealtime.Application/Auth/RefreshTokenRules.cs</a><br><a href="../../backend/src/FacilityRealtime.Api/Auth/JwtAccessTokenIssuer.cs">backend/src/FacilityRealtime.Api/Auth/JwtAccessTokenIssuer.cs</a><br><a href="../../backend/src/FacilityRealtime.Application/Auth/JwtSettings.cs">backend/src/FacilityRealtime.Application/Auth/JwtSettings.cs</a></td></tr>
+<tr><td>Entity → MySQL</td><td><a href="../../backend/src/FacilityRealtime.Domain/Entities/User.cs">backend/src/FacilityRealtime.Domain/Entities/User.cs</a><br><a href="../../backend/src/FacilityRealtime.Domain/Entities/RefreshToken.cs">backend/src/FacilityRealtime.Domain/Entities/RefreshToken.cs</a><br><a href="../../backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs">backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs</a></td></tr>
+<tr><td>สร้างบัญชี / ตรวจบัญชีปัจจุบัน</td><td><a href="../../backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs">backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs</a><br><a href="../../backend/src/FacilityRealtime.Api/Auth/CurrentUser.cs">backend/src/FacilityRealtime.Api/Auth/CurrentUser.cs</a></td></tr>
+<tr><td>Browser session</td><td><a href="../../frontend/src/store/slices/authSlice.ts">frontend/src/store/slices/authSlice.ts</a><br><a href="../../frontend/src/shared/auth/session.ts">frontend/src/shared/auth/session.ts</a><br><a href="../../frontend/src/shared/auth/endSession.ts">frontend/src/shared/auth/endSession.ts</a><br><a href="../../frontend/src/shared/auth/roles.ts">frontend/src/shared/auth/roles.ts</a></td></tr>
+</tbody></table><p>อ่านคู่กับ CONTEXT.md และ ADR facility-0011–0016, 0023, 0054, 0104–0105 · โค้ดตัวอย่างและ SQL ในกล่อง trace เป็นรูปแบบย่อเพื่อสอน ไม่ใช่ SQL literal ที่ provider รับประกันว่าจะสร้างเหมือนกันทุกตัวอักษร</p></details>
+
+
+  <div class="controls">
+    <button id="prevBtn" class="tertiary" disabled>← ย้อนกลับ</button>
+    <button id="nextBtn">ถัดไป →</button>
+    <button id="resetBtn" class="tertiary">↻ เริ่มใหม่</button>
+  </div>
+
+    <aside id="termDrawer" class="drawer hidden" aria-label="term definition">
+    <div class="drawer-head">
+      <span class="drawer-term" id="drawerTerm"></span>
+      <button class="tertiary" id="drawerClose" title="ปิด">✕</button>
+    </div>
+    <div class="drawer-source" id="drawerSource"></div>
+    <div class="drawer-def" id="drawerDef"></div>
+    <div class="drawer-seealso-title hidden" id="drawerSeeAlsoTitle">ดูเพิ่ม</div>
+    <div id="drawerSeeAlso"></div>
+    <div class="drawer-btns">
+      <button class="tertiary hidden" id="drawerBack">← ย้อน</button>
+    </div>
+  </aside>
+
+</div>
+
+<!-- The engine owns the fixed 5 markerheads; SVG modes select from them (ADR 0022). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="arrowhead"        markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#3d4a5f"/></marker>
+  <marker id="arrowhead-active" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#5fb4ff"/></marker>
+  <marker id="arrowhead-magic"  markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#b070ff"/></marker>
+  <marker id="arrowhead-done"   markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#4ade80"/></marker>
+  <marker id="arrowhead-error"  markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#ff5757"/></marker>
+</defs></svg>
+<script>
+let currentStep = 0;
+let TOTAL = 0;                 // the authored bootstrap sets TOTAL = scenes.length - 1
+let MODE = null;              // the authored bootstrap sets MODE = '<mode name>'
+const RENDER_HOOKS = [];      // cross-cutting per-render actions; capabilities self-register (e.g. drawer pushes closeDrawer)
+const modeRenderers = {};     // modes self-register: modeRenderers['<name>'] = { registry, clear, <setters> }
+
+function show(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
+function hide(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
+
+// canonical 3-arg narration (nested shape). setSceneTitle kept for scenes that set only the title.
+function setNarration(cls, title, bodyHTML) {
+  const n = document.getElementById('narration');
+  n.className = 'narration' + (cls ? ' ' + cls : '');
+  document.getElementById('sceneTitle').textContent = title;
+  document.getElementById('narrationBody').innerHTML = bodyHTML || '';
+}
+function setSceneTitle(text) { document.getElementById('sceneTitle').textContent = text; }
+
+function buildProgressDots() {
+  const p = document.getElementById('stepProgress');
+  p.innerHTML = '';
+  for (let i = 0; i <= TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'step-dot'; d.textContent = i; d.id = 'dot' + i;
+    p.appendChild(d);
+  }
+}
+
+function render(step) {
+  RENDER_HOOKS.forEach(h => h());                 // runs FIRST (drawer closes here), before any paint
+  const R = modeRenderers[MODE];
+  if (R && R.clear) R.clear(R.registry);          // engine calls the mode's reset generically
+  if (typeof scenes !== 'undefined' && scenes[step]) scenes[step]();
+  for (let i = 0; i <= TOTAL; i++) {
+    const d = document.getElementById('dot' + i);
+    if (!d) continue;
+    d.classList.remove('done', 'current');
+    if (i < step)  d.classList.add('done');
+    if (i === step) d.classList.add('current');
+  }
+  document.getElementById('stepBadge').textContent = 'Step ' + step + ' / ' + TOTAL;
+  document.getElementById('prevBtn').disabled = step === 0;
+  document.getElementById('nextBtn').disabled = step === TOTAL;
+}
+
+document.getElementById('prevBtn').onclick  = () => { if (currentStep > 0)     { currentStep--; render(currentStep); } };
+document.getElementById('nextBtn').onclick  = () => { if (currentStep < TOTAL) { currentStep++; render(currentStep); } };
+document.getElementById('resetBtn').onclick = () => { currentStep = 0; render(0); };
+
+/* GLOSSARY is provided by the generated walkthrough's authored bootstrap (inlined from
+   CONTEXT.md at authoring time): an object keyed by slug -> {term, short, seeAlso, source}
+   where source is 'CONTEXT.md' | 'authored'. The §JS below only READS it; the standalone
+   demo declares a demo GLOSSARY in its DEMO-ONLY block at the bottom of this file. */
+
+let drawerStack = [];   // GLOSSARY keys visited this open, for ← back
+
+function renderTerm(key) {
+  const entry = GLOSSARY[key];
+  if (!entry) return;
+  document.getElementById('drawerTerm').textContent = entry.term;
+  document.getElementById('drawerSource').textContent =
+    entry.source === 'CONTEXT.md' ? 'จาก CONTEXT.md' : 'อธิบายเพิ่มเติม';
+  document.getElementById('drawerDef').textContent = entry.short;
+  const wrap = document.getElementById('drawerSeeAlso');
+  wrap.innerHTML = '';
+  const related = (entry.seeAlso || []).filter(k => GLOSSARY[k]);
+  if (related.length) {
+    document.getElementById('drawerSeeAlsoTitle').classList.remove('hidden');
+    related.forEach(k => {
+      const chip = document.createElement('span');
+      chip.className = 'seealso-chip';
+      chip.textContent = GLOSSARY[k].term;
+      chip.dataset.hop = k;
+      wrap.appendChild(chip);
+    });
+  } else {
+    document.getElementById('drawerSeeAlsoTitle').classList.add('hidden');
+  }
+  document.getElementById('drawerBack').classList.toggle('hidden', drawerStack.length <= 1);
+}
+
+function openTerm(key) {
+  if (!GLOSSARY[key]) return;
+  drawerStack.push(key);
+  renderTerm(key);
+  document.getElementById('termDrawer').classList.remove('hidden');
+}
+
+function hopTerm(key) {
+  if (!GLOSSARY[key]) return;
+  drawerStack.push(key);
+  renderTerm(key);
+}
+
+function backTerm() {
+  if (drawerStack.length <= 1) return;
+  drawerStack.pop();
+  renderTerm(drawerStack[drawerStack.length - 1]);
+}
+
+function closeDrawer() {
+  drawerStack = [];
+  document.getElementById('termDrawer').classList.add('hidden');
+}
+
+document.addEventListener('click', (e) => {
+  const termEl = e.target.closest('[data-term]');
+  if (termEl) { openTerm(termEl.dataset.term); return; }
+  const hopEl = e.target.closest('[data-hop]');
+  if (hopEl) { hopTerm(hopEl.dataset.hop); return; }
+});
+document.getElementById('drawerClose').onclick = closeDrawer;
+document.getElementById('drawerBack').onclick  = backTerm;
+
+// Self-register with the walkthrough engine so stepping closes the drawer
+// (Phase 2 RENDER_HOOKS model). Guarded so this file still runs standalone.
+if (typeof RENDER_HOOKS !== 'undefined' && RENDER_HOOKS.indexOf(closeDrawer) === -1) RENDER_HOOKS.push(closeDrawer);
+
+modeRenderers['diagram'] = {
+  registry: {
+    COMPONENTS: ['compScreen', 'compApi', 'compEf', 'compDb'],
+    ARROWS: ['arrWebApi', 'arrApiEf', 'arrEfDb', 'arrDbEf', 'arrEfApi', 'arrApiWeb'],
+    LABELS: ['lblWebApi', 'lblApiEf', 'lblEfDb', 'lblDbEf', 'lblEfApi', 'lblApiWeb'],
+    LIVE: {"apiState": "รอ request", "efState": "User / RefreshToken", "mockButton": "เข้าสู่ระบบ", "mockStatus": "ยังไม่ได้ส่งข้อมูล", "traceCode": "ยังไม่มี request", "browserData": "Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)", "databaseData": "users: สมศรีมีบัญชีอยู่แล้ว\nrefresh_tokens: ไม่มีของ session นี้", "textWebApi": "POST", "textApiEf": "query", "textEfDb": "SELECT", "textDbEf": "row → User", "textEfApi": "User.Id = 42", "textApiWeb": "200 OK"},
+  },
+  clear(reg) {
+    reg.COMPONENTS.forEach(id => this.setComp(id, ''));
+    reg.ARROWS.forEach(id => this.setArrow(id, ''));
+    reg.LABELS.forEach(id => this.setLabel(id, false));
+    Object.keys(reg.LIVE).forEach(id => this.setText(id, reg.LIVE[id]));
+    document.querySelectorAll('.wt-panel').forEach(p => p.classList.add('hidden'));
+  },
+  setComp(id, state) { const el = document.getElementById(id); if (el) el.setAttribute('class', 'comp' + (state ? ' ' + state : '')); },
+  setArrow(id, state) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.setAttribute('class', 'arrow' + (state ? ' ' + state : ''));
+    const m = { '': 'url(#arrowhead)', dimmed: 'url(#arrowhead)', active: 'url(#arrowhead-active)', magic: 'url(#arrowhead-magic)', done: 'url(#arrowhead-done)', error: 'url(#arrowhead-error)' };
+    el.setAttribute('marker-end', m[state] || 'url(#arrowhead)');
+  },
+  setLabel(id, show, variant) { const el = document.getElementById(id); if (el) el.setAttribute('class', 'flow-label-group' + (variant ? ' ' + variant : '') + (show ? ' show' : '')); },
+  setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; },
+  assertRegistryComplete() {
+    const got = { comp: '.comp', arrow: '.arrow', flow: '.flow-label-group' };
+    const lists = { comp: this.registry.COMPONENTS, arrow: this.registry.ARROWS, flow: this.registry.LABELS };
+    const miss = [];
+    // DOM not in registry
+    Object.keys(got).forEach(k => [].forEach.call(document.querySelectorAll(got[k]), e => { if (e.id && !lists[k].includes(e.id)) miss.push(e.id); }));
+    // registry not in DOM (typo/orphan) — incl. the LIVE text fields
+    [].concat(this.registry.COMPONENTS, this.registry.ARROWS, this.registry.LABELS, Object.keys(this.registry.LIVE))
+      .forEach(id => { if (!document.getElementById(id)) miss.push(id); });
+    if (miss.length) throw new Error('diagram registry/DOM mismatch: ' + miss.join(', '));
+    return true;
+  },
+};
+
+MODE = 'diagram';
+const { setComp, setArrow, setLabel, setText } = modeRenderers[MODE];
+const GLOSSARY = {
+  'entity': {"term": "Entity", "short": "คลาส C# ที่ EF Core map เป็นข้อมูลในตาราง เช่น User และ RefreshToken; การสร้าง object ยังไม่ใช่การเขียนลง MySQL", "seeAlso": ["ef"], "source": "authored"},
+  'ef': {"term": "EF Core / AppDbContext", "short": "ตัวกลางที่แปลง LINQ และสถานะ Entity เป็นคำสั่งฐานข้อมูล; SaveChangesAsync บันทึก Entity ที่เปลี่ยนแปลง", "seeAlso": ["entity"], "source": "authored"},
+  'hash': {"term": "Hash", "short": "ค่าที่คำนวณจากข้อมูลเพื่อใช้ตรวจเทียบ; ระบบไม่ถอด hash กลับเป็นเบอร์โทรหรือรหัสผ่าน แต่คำนวณจากสิ่งที่กรอกแล้วเทียบผล", "seeAlso": ["pbkdf2", "refresh"], "source": "authored"},
+  'pbkdf2': {"term": "PBKDF2", "short": "วิธี hash secret แบบคำนวณซ้ำให้การเดาช้าลง; โค้ดนี้ใช้ HMAC-SHA256, salt สุ่ม 16 bytes, ค่าเริ่มต้น 600,000 รอบ และผล 32 bytes", "seeAlso": ["hash"], "source": "authored"},
+  'jwt': {"term": "Access JWT", "short": "token ที่ API เซ็นด้วย HMAC-SHA256 เพื่อยืนยันตัวผู้ใช้และบทบาท มีอายุเริ่มต้น 5 นาที; เก็บใน Redux memory และแนบ Bearer header", "seeAlso": ["refresh", "cookie"], "source": "authored"},
+  'refresh': {"term": "Refresh token", "short": "ค่าสุ่ม 32 bytes ที่ใช้ขอ access JWT ใหม่; Browser ถือค่าจริงใน HttpOnly cookie ส่วน MySQL เก็บ SHA-256 hash พร้อม user_id และ session_id", "seeAlso": ["jwt", "hash", "persistent"], "source": "authored"},
+  'cookie': {"term": "HttpOnly cookie", "short": "cookie ที่ browser จัดเก็บและแนบไปตามขอบเขตที่กำหนด แต่ JavaScript อ่านค่าไม่ได้; ของระบบชื่อ facility_refresh ส่งเฉพาะ /api/auth และตั้ง SameSite=Strict", "seeAlso": ["refresh"], "source": "authored"},
+  'persistent': {"term": "Persistent Session", "short": "สถานะการเข้าสู่ระบบที่ค้างไว้ในเบราว์เซอร์ของผู้ใช้ (เช่น มือถือผู้สแกน) ทำให้ใช้งานต่อเนื่องได้โดยไม่ต้องกรอกรหัสผ่านซ้ำ จนกว่าจะกด Logout, ไม่ได้ใช้งานนาน 30 วัน หรือบัญชีถูกปิด", "seeAlso": ["refresh", "cookie"], "source": "CONTEXT.md"},
+  'lock': {"term": "Login Lock", "short": "การพักการ login ชั่วคราว 15 นาที หลังกรอกผิดหลายครั้ง พักเฉพาะ \"ชื่อที่ใช้ login จากที่เดียวกัน (IP)\" ไม่ได้พักทั้งบัญชี บัญชีเดียวกันจากเน็ตอื่นยัง login ได้ คนอื่นจึงใช้การกรอกผิดล็อกพนักงานไม่ได้ ที่ที่กรอกผิดหลายบัญชีรวมกันมากเกินไปจะถูกพัก login ทั้งที่ ไม่ใช่ Deactivated Account เพราะหายเองเมื่อครบเวลา (facility-0054, 0104)", "seeAlso": [], "source": "CONTEXT.md"},
+};
+const scenes = [
+  () => {
+    setNarration('', 'ภาพรวม — จากจุดเข้าเว็บถึงแถวใน MySQL', 'เป้าหมายคือแยกให้ได้ว่า <b>Login อ่านบัญชีเดิม แต่เขียนข้อมูล session ใหม่</b> และแต่ละชั้นรับผิดชอบอะไร ตัวอย่างนี้ใช้แม่บ้านสมศรีที่ Admin สร้างบัญชีไว้แล้ว; ไม่ต้องรู้ JWT หรือ EF Core มาก่อน กดคำที่มีเส้นใต้เพื่อดูความหมาย');
+    setText('traceCode', 'Browser → API → EF Core → MySQL\nLogin = อ่าน users + ตรวจ secret + เพิ่ม refresh_tokens');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'ยังไม่ได้ส่งข้อมูล');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'ก่อน Login — ใครเก็บบัญชีสมศรีไว้', 'Admin สร้างบัญชีผ่าน <code>POST /api/admin/accounts</code> ก่อน จึงมี User ให้ Login ค้นหา ระบบ Normalize เบอร์แล้วทำ <span class="term" data-term="pbkdf2">PBKDF2</span> เก็บใน <code>users.secret_hash</code> เพื่อใช้ตรวจภายหลัง; ขั้นนี้เป็นการสร้างบัญชี ไม่ใช่การ Login');
+    setComp('compDb', 'done');
+    setText('traceCode', '// สร้างบัญชีมาก่อนแล้ว (ย่อ)\nuser.SecretHash = hasher.Hash(PhoneNumber.Normalize(phone));\ndb.Users.Add(user);\n// SaveAsync บันทึก user และ audit ใน transaction เดียวกัน');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'สมศรีมีบัญชีที่ Admin เตรียมไว้แล้ว');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'Entry point — main.tsx ตรวจ session ก่อน', 'Browser โหลด <code>index.html → main.tsx</code> แล้วสร้าง Redux store และเรียก <code>startSession</code> นอก React เพื่อไม่ให้ StrictMode เริ่ม refresh ซ้ำ <code>SessionGate</code> แสดงข้อความรอ เพราะยังตัดสินไม่ได้ว่ามี session เดิมอยู่หรือไม่');
+    setComp('compScreen', 'active');
+    setText('traceCode', 'const store = makeStore();\nvoid startSession(store.dispatch);\n// App: Provider → SessionGate → RouterProvider');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'กำลังตรวจสอบการเข้าสู่ระบบ...');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'ลอง refresh — ไม่มี cookie จึงไปหน้า Login', 'ตอนเปิดหน้าใหม่จะเรียก refresh ก่อนเสมอ ในตัวอย่างนี้ไม่มี <span class="term" data-term="cookie">HttpOnly cookie</span> จึงได้ 401 และจบ bootstrap เพื่อให้แสดง <code>/login</code> ได้; ถ้า cookie เดิมใช้ได้ ระบบจะคืน session โดยไม่ต้องกรอกใหม่');
+    setComp('compApi', 'active');
+    setArrow('arrWebApi', 'active'); setLabel('lblWebApi', true);
+    setText('textWebApi', 'POST');
+    setText('traceCode', 'POST /api/auth/refresh\n// ไม่มี facility_refresh → 401\n// bootstrapFinished() → router เปิด /login');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'ไม่มี session เดิม · แสดงหน้าเข้าสู่ระบบ');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'กรอกแบบฟอร์ม — ค่าอยู่ใน React state', 'LoginPage เก็บ <code>employeeId</code> และ <code>phone</code> ด้วย useState จึงยังไม่มีการเขียน MySQL ช่องเบอร์โทรเป็น <code>type="tel"</code> ตามหน้าจอจริง; การกรอกเบอร์ใช้ตรวจบัญชี ไม่ได้ส่ง OTP');
+    setComp('compScreen', 'active');
+    setText('traceCode', 'employeeId = "1234567"\nphone = "081-000-0007"\n// required ตรวจช่องว่างโดย browser ก่อน submit');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'กรอกแล้ว · ยังไม่กดเข้าสู่ระบบ');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'กดเข้าสู่ระบบ — useLogin เรียก mutation', 'onSubmit เรียก <code>preventDefault()</code> เพื่อไม่ reload หน้า แล้ว trim รหัสพนักงานก่อนส่งให้ <code>useLogin.submit</code> Hook ใช้ RTK Query mutation และรอผล จึงแสดงสถานะกำลังเข้าสู่ระบบแทนการพาไปหน้าถัดไปทันที');
+    setComp('compScreen', 'active');
+    setText('traceCode', 'submit({ employeeId: employeeId.trim(), phone });\n// useLogin → await login(body).unwrap()');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'กำลังเข้าสู่ระบบ...');
+    setText('mockButton', 'กำลังเข้าสู่ระบบ...');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'ส่ง JSON — POST /api/auth/login', 'authApi ระบุ <code>/auth/login</code> และ baseApi เติม <code>/api</code> บน origin เดียวกับหน้าเว็บ ข้อมูลนี้คือ request DTO ชั่วคราว ไม่ใช่คำสั่งให้ INSERT ทั้งแบบฟอร์ม; cookie ที่ตรง scope จะถูกส่งด้วยตาม same-origin');
+    setComp('compApi', 'active');
+    setArrow('arrWebApi', 'active'); setLabel('lblWebApi', true);
+    setText('textWebApi', 'POST login');
+    setText('traceCode', 'POST /api/auth/login\nContent-Type: application/json\n{ "employeeId": "1234567", "phone": "081-000-0007" }');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'ส่งคำขอแล้ว · รอ API');
+    setText('mockButton', 'กำลังเข้าสู่ระบบ...');
+    setText('apiState', 'รับ LoginRequest');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'API — แยกชนิดบัญชีและ Normalize เบอร์', 'Program.cs map AuthEndpoints ซึ่ง bind JSON เป็น <code>LoginRequest</code> เมื่อมี EmployeeId จะค้นเฉพาะบัญชีที่ไม่ใช่ Admin และใช้ PhoneNumber.Normalize เพื่อให้เบอร์มีขีดหรือ +66 ตรวจเทียบได้เหมือนกัน; ไม่ได้ hash ใหม่แล้วเก็บทับ User');
+    setComp('compApi', 'active');
+    setText('traceCode', 'byEmployeeId = !IsNullOrWhiteSpace(request.EmployeeId);\nloginName = "1234567";\nsecret = PhoneNumber.Normalize("081-000-0007");\n// secret = "0810000007"');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'API กำลังตรวจข้อมูล');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'Normalize → 0810000007');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'สร้าง query — ค้น User ผ่าน AppDbContext', 'Endpoint ขอ <span class="term" data-term="ef">AppDbContext</span> จาก DI และใช้ LINQ เลือกบัญชีด้วยรหัสพนักงานพร้อมเงื่อนไข role เพื่อไม่ให้วิธี Login ของพนักงานไปจับ Admin ได้ ขั้นนี้ยังไม่มี Add หรือ SaveChanges');
+    setComp('compEf', 'active');
+    setArrow('arrApiEf', 'active'); setLabel('lblApiEf', true);
+    setText('textApiEf', 'LINQ query');
+    setText('traceCode', 'await db.Users.FirstOrDefaultAsync(\n  u => u.EmployeeId == loginName && u.Role != UserRole.Admin\n);');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'API กำลังดำเนินการ · ยังไม่เปลี่ยนหน้า');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'query Users');
+  },
+  () => {
+    setNarration('', 'อ่าน MySQL — SELECT จาก users', 'EF Core แปลง query เป็น SQL ตาม mapping <code>User → users</code> และ <code>EmployeeId → employee_id</code> จึงอ่านแถวที่ Admin เตรียมไว้ได้ SELECT นี้ไม่เปลี่ยนค่าเบอร์หรือ hash ในฐานข้อมูล');
+    setComp('compDb', 'active');
+    setArrow('arrEfDb', 'active'); setLabel('lblEfDb', true);
+    setText('textEfDb', 'SELECT');
+    setText('traceCode', '-- SQL เชิงแนวคิด (provider สร้างรูปจริง)\nSELECT … FROM users\nWHERE employee_id = \'1234567\' AND role <> \'ADMIN\'\nLIMIT 1;');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'API กำลังดำเนินการ · ยังไม่เปลี่ยนหน้า');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'รอผลจาก MySQL');
+  },
+  () => {
+    setNarration('', 'สร้าง Entity — row กลับเป็น User object', 'EF Core materialize แถวเป็น <span class="term" data-term="entity">Entity</span> ชนิด User เพื่อให้ C# อ่าน <code>Id, SecretHash, IsActive, Role</code> ได้ การมี User object ในหน่วยความจำไม่ได้แปลว่าได้เขียนแถวใหม่');
+    setComp('compEf', 'active');
+    setArrow('arrDbEf', 'active'); setLabel('lblDbEf', true);
+    setText('textDbEf', 'row → User');
+    setText('traceCode', '// row → Entity\nUser { Id = 42, EmployeeId = "1234567",\n  DisplayName = "สมศรี", Role = Cleaner,\n  SecretHash = "pbkdf2-sha256$600000$…", IsActive = true }');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'API กำลังดำเนินการ · ยังไม่เปลี่ยนหน้า');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User { Id = 42 }');
+  },
+  () => {
+    setNarration('', 'Login Lock — อนุญาตให้ตรวจ secret หรือยัง', 'หลังอ่านบัญชี API ใช้ key <code>user:42 + IP</code> ตรวจ <span class="term" data-term="lock">Login Lock</span> ก่อนทำ PBKDF2 ค่าเริ่มต้นคือพยายามได้ 5 ครั้งในหน้าต่าง 15 นาที; ถ้าผิดครบ 5 ครั้ง ครั้งถัดไปเริ่มพัก 15 นาที ตัวนับอยู่ในหน่วยความจำ server ไม่ได้เป็นตาราง MySQL');
+    setComp('compApi', 'active');
+    setArrow('arrEfApi', 'active'); setLabel('lblEfApi', true);
+    setText('textEfApi', 'User.Id = 42');
+    setText('traceCode', 'gate = throttle.TryBeginAttempt("user:42", place);\n// Allowed → ตรวจ secret ต่อ\n// ไม่ผ่าน gate → 429 โดยไม่ Verify');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'API กำลังดำเนินการ · ยังไม่เปลี่ยนหน้า');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'gate = Allowed');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'Verify — เทียบเบอร์กับ hash ที่เก็บไว้', 'API ส่งเบอร์ที่ Normalize แล้วให้ <code>hasher.Verify</code> ซึ่งอ่าน salt และจำนวนรอบจาก hash เดิม แล้วคำนวณผลมาเทียบแบบ fixed time จึงไม่ต้องถอดรหัสเบอร์กลับ และไม่ใช้ Hash(secret) แบบสุ่ม salt ใหม่มาเทียบตรง ๆ; ยังต้องผ่าน <code>IsActive</code> ด้วย');
+    setComp('compApi', 'locked');
+    setText('traceCode', 'hasher.Verify("0810000007", user.SecretHash) → true\nuser.IsActive → true\nthrottle.Succeeded("user:42", place);\n// User.SecretHash ไม่มีการเปลี่ยนค่า');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'API กำลังดำเนินการ · ยังไม่เปลี่ยนหน้า');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'secretMatches = true');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'สร้าง refresh token — ค่าจริงกับ hash แยกกัน', 'เมื่อผ่านการตรวจ API สุ่ม <span class="term" data-term="refresh">refresh token</span> 32 bytes และสร้าง SessionId ใหม่เพื่อระบุการ Login ครั้งนี้ จากนั้นทำ SHA-256 เก็บเป็น TokenHash; token-A / refresh-A และ S-สมศรี เป็นป้ายแทนค่าที่ยาวจริง');
+    setComp('compApi', 'locked');
+    setText('traceCode', 'token = RefreshTokenRules.NewToken(); // 256 random bits\nsessionId = Guid.NewGuid();\ntokenHash = RefreshTokenRules.Hash(token); // SHA-256\nexpiresAt = nowUtc + TimeSpan.FromDays(30);');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'ยังไม่ได้รับ cookie หรือ access JWT');
+    setText('mockStatus', 'API กำลังดำเนินการ · ยังไม่เปลี่ยนหน้า');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'สร้าง refresh-A + hash');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'Add Entity — อยู่ใน ChangeTracker ก่อน', '<code>AddRefreshToken</code> สร้าง RefreshToken Entity และเรียก <code>db.RefreshTokens.Add</code> ทำให้ EF รู้ว่ามีแถวรอเพิ่ม ค่าจริง refresh-A ยังอยู่ฝั่ง server เพื่อส่งเป็น cookie ภายหลัง; Add อย่างเดียวยังไม่ยืนยันว่าข้อมูลลง MySQL แล้ว');
+    setComp('compEf', 'active');
+    setArrow('arrApiEf', 'active'); setLabel('lblApiEf', true);
+    setText('textApiEf', 'Add(token)');
+    setText('traceCode', 'db.RefreshTokens.Add(new RefreshToken {\n  UserId = 42, SessionId = sessionId, TokenHash = tokenHash,\n  CreatedAt = nowUtc, ExpiresAt = expiresAt\n});\n// EntityState = Added; MySQL ยังไม่มีแถวใหม่นี้');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'API กำลังดำเนินการ · ยังไม่เปลี่ยนหน้า');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'RefreshToken = Added');
+  },
+  () => {
+    setNarration('', 'SaveChangesAsync — จุดที่เขียนฐานข้อมูลจริง', 'Endpoint await <code>db.SaveChangesAsync()</code> ให้ EF ส่ง INSERT และรอฐานข้อมูลยืนยันก่อนส่ง cookie กลับ ถ้า save ล้มเหลว endpoint จะไม่ถึงขั้น WriteRefreshCookie และ 200 OK จึงไม่แจ้งว่าการ Login สำเร็จก่อนเขียน session');
+    setComp('compDb', 'active');
+    setArrow('arrEfDb', 'active'); setLabel('lblEfDb', true);
+    setText('textEfDb', 'INSERT');
+    setText('traceCode', 'await db.SaveChangesAsync();\n-- INSERT INTO refresh_tokens\n-- (user_id, session_id, token_hash, created_at, expires_at, …)\n-- VALUES (42, S-สมศรี, SHA256(refresh-A), …)');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens · token-A\nuser_id: 42 | session_id: S-สมศรี\ntoken_hash: SHA256(refresh-A) [ย่อ]\ncreated_at: 2026-11-03 08:00Z\nexpires_at: 2026-12-03 08:00Z\nrotated_at: NULL | revoked_at: NULL');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'API กำลังดำเนินการ · ยังไม่เปลี่ยนหน้า');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'await SaveChangesAsync');
+    setText('efState', 'บันทึก RefreshToken แล้ว');
+  },
+  () => {
+    setNarration('', 'ออก JWT — แนบ cookie แยกจาก JSON', 'หลัง save สำเร็จ API สร้าง <span class="term" data-term="jwt">access JWT</span> ที่มี id ชื่อ บทบาท และเวลาหมดอายุเริ่มต้น 5 นาที แล้วคืน AuthResponse ขณะเดียวกันส่งค่าจริง refresh-A ด้วย Set-Cookie; JWT ไม่ถูกบันทึกใน refresh_tokens');
+    setComp('compApi', 'active');
+    setArrow('arrApiWeb', 'active'); setLabel('lblApiWeb', true);
+    setText('textApiWeb', '200 + cookie');
+    setText('traceCode', 'Set-Cookie: facility_refresh=refresh-A; HttpOnly;\n  SameSite=Strict; Path=/api/auth; Expires=…\n// Secure ตาม Jwt.RefreshCookieSecure (HTTPS deployment ต้อง true)\n200 { accessToken: "JWT-A", expiresAt: "2026-11-03T08:05:00Z",\n  user: { id:42, username:"1234567", fullName:"สมศรี", role:"cleaner" } }');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens · token-A\nuser_id: 42 | session_id: S-สมศรี\ntoken_hash: SHA256(refresh-A) [ย่อ]\ncreated_at: 2026-11-03 08:00Z\nexpires_at: 2026-12-03 08:00Z\nrotated_at: NULL | revoked_at: NULL');
+    setText('browserData', 'Redux: user = null\naccessToken = null\ncookie: ไม่มี (ตัวอย่างเริ่มใหม่)');
+    setText('mockStatus', 'ได้รับผลสำเร็จจาก API');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', '200 AuthResponse');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('', 'Browser — เก็บ token คนละที่แล้วพาไปงาน', 'Browser เก็บ refresh token เป็น HttpOnly cookie ส่วน <code>useLogin</code> dispatch setCredentials ให้ Redux เก็บ user, accessToken และ expiresAt ใน memory จึง Navigate ไป <code>/my-work</code> หรือ URL เดิมที่ guard จำไว้; ไม่เก็บ token ใน localStorage/sessionStorage');
+    setComp('compScreen', 'done');
+    setText('traceCode', 'dispatch(setCredentials(await login(body).unwrap()));\n// Redux memory: currentUser, accessToken, expiresAt\n// homeOf("cleaner") → /my-work\n// API ครั้งถัดไปแนบ Authorization: Bearer JWT-A');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens · token-A\nuser_id: 42 | session_id: S-สมศรี\ntoken_hash: SHA256(refresh-A) [ย่อ]\ncreated_at: 2026-11-03 08:00Z\nexpires_at: 2026-12-03 08:00Z\nrotated_at: NULL | revoked_at: NULL');
+    setText('browserData', 'Redux: user = สมศรี (cleaner)\naccessToken = JWT-A (5 นาที)\ncookie: facility_refresh = refresh-A');
+    setText('mockStatus', 'Login สำเร็จ → งานของฉัน (/my-work)');
+    setText('mockButton', 'เข้าสู่ระบบสำเร็จ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('magic', 'คำถามสำคัญ — Login แก้บัญชีเดิมไหม', 'ตอนนี้สมศรี Login สำเร็จแล้ว ลองแยกการแก้ข้อมูลบัญชีกับการสร้าง session ก่อนดูอีกสองกรณี เพราะทั้งคู่เกี่ยวกับ User เดียวกัน แต่ส่งผลต่อตารางต่างกัน');
+    setComp('compApi', 'locked');
+    setText('traceCode', 'users.secret_hash เปลี่ยนหรือไม่?\nLogin ผิด → refresh_tokens ?\nLogin สำเร็จอีกครั้ง → session_id เดิมหรือใหม่?');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens · token-A\nuser_id: 42 | session_id: S-สมศรี\ntoken_hash: SHA256(refresh-A) [ย่อ]\ncreated_at: 2026-11-03 08:00Z\nexpires_at: 2026-12-03 08:00Z\nrotated_at: NULL | revoked_at: NULL');
+    setText('browserData', 'Redux: user = สมศรี (cleaner)\naccessToken = JWT-A (5 นาที)\ncookie: facility_refresh = refresh-A');
+    setText('mockStatus', 'หยุดคิดก่อนดูกรณีถัดไป');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+    show('panelQuestion');
+  },
+  () => {
+    setNarration('error', 'กรอกผิด — API คืน 401 และไม่สร้าง session', 'สมมติเริ่มการลองอีกครั้งแต่เบอร์ไม่ตรง API Verify แล้วคืน 401 ก่อนถึง AddRefreshToken จึงไม่มี token ใหม่และไม่แก้ <code>users.secret_hash</code> หน้า Login แสดง “รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง”; บัญชีไม่พบหรือปิดใช้งานให้ข้อความเดียวกัน และบัญชีไม่พบยัง Verify กับ dummy hash');
+    setComp('compApi', 'error');
+    setArrow('arrApiWeb', 'error'); setLabel('lblApiWeb', true, 'error');
+    setText('textApiWeb', '401');
+    setText('traceCode', 'secretMatches = false;\nthrottle.Failed(place);\nsecurityLog.LoginFailed(…);\nreturn Results.Unauthorized(); // 401\n// ไม่มี AddRefreshToken / SaveChanges ในทางนี้');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'กรณีทดสอบแยก: ยังไม่มี session\nไม่มี cookie / JWT ใหม่');
+    setText('mockStatus', 'รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', '401 Unauthorized');
+    setText('efState', 'User / RefreshToken');
+    show('panelFailure');
+  },
+  () => {
+    setNarration('warn', 'ผิดซ้ำ — ครั้งถัดไปคืน 429 ก่อน Verify', 'ในกรณีเรียงกัน: ชื่อเดียวจาก IP เดิมผิด 5 ครั้ง ครั้งที่ 6 จะเริ่มพัก 15 นาทีและตอบ 429 แม้ตอนนี้พิมพ์เบอร์ถูกก็ตาม IP เดียวที่ผิดรวมทุกชื่อถึง 20 ครั้งก็มีเพดานพักทั้งที่; ตัวนับรีเซ็ตเมื่อ server restart และใช้ร่วมกันหลัง NAT ได้');
+    setComp('compApi', 'blocked');
+    setArrow('arrApiWeb', 'active'); setLabel('lblApiWeb', true);
+    setText('textApiWeb', '429');
+    setText('traceCode', '// ค่า default, ไม่มีการ Login สำเร็จคั่น\nผิด 5 ครั้งใน window → ครั้งที่ 6 ถูกพัก 15 นาที\nIP ผิดรวม 20 ครั้ง → ครั้งถัดไปถูกพักทั้ง IP\n// TryBeginAttempt ไม่อนุญาต → return 429');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens: ยังไม่มีของ session นี้');
+    setText('browserData', 'กรณีทดสอบแยก: ยังไม่มี session\nไม่ได้ออก JWT หรือ refresh token');
+    setText('mockStatus', 'กรอกผิดหลายครั้ง รอสักครู่แล้วลองใหม่');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', '429 Too Many Requests');
+    setText('efState', 'User / RefreshToken');
+    show('panelFailure');
+  },
+  () => {
+    setNarration('success', 'Login สำเร็จซ้ำ — เพิ่มอีก session', 'กลับมาที่กรณีปกติ สมศรี Login สำเร็จจากอีกเครื่อง API จะสร้าง SessionId ใหม่และเพิ่มแถว refresh token อีกใบ เพราะระบบอนุญาตหลายเครื่อง บัญชี User ยังเป็นแถวเดิมและ secret_hash เดิม; cookie ของแต่ละ browser แยกจากกัน');
+    setComp('compDb', 'done');
+    setArrow('arrEfDb', 'active'); setLabel('lblEfDb', true);
+    setText('textEfDb', 'INSERT');
+    setText('traceCode', '// Login สำเร็จครั้งใหม่ ไม่ใช่ refresh\nSessionId = Guid.NewGuid(); // S-สมศรี-B\nAddRefreshToken(…); await db.SaveChangesAsync();\n// users 1 แถวเดิม; 2 login sessions');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens · token-A\nuser_id: 42 | session_id: S-สมศรี\ntoken_hash: SHA256(refresh-A) [ย่อ]\ncreated_at: 2026-11-03 08:00Z\nexpires_at: 2026-12-03 08:00Z\nrotated_at: NULL | revoked_at: NULL\n\n+ token-B: user_id=42\n  session_id=S-สมศรี-B (อีกเครื่อง)');
+    setText('browserData', 'Redux: user = สมศรี (cleaner)\naccessToken = JWT-A (5 นาที)\ncookie: facility_refresh = refresh-A');
+    setText('mockStatus', 'เครื่องเดิมยังใช้ session เดิมได้');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('success', 'เปิดหน้าใหม่ — refresh หมุน token ใน session เดิม', 'กลับมาที่เครื่องแรก เมื่อ reload memory หายแต่ cookie ยังอยู่ startSession จึง POST refresh ให้ API hash cookie ไปค้นแถวเดิมและอ่าน User ปัจจุบัน จากนั้นตั้ง RotatedAt ของ token-A และเพิ่ม token-C ใน <b>SessionId เดิม</b> เพื่อทำ <span class="term" data-term="persistent">Persistent Session</span> 30 วันนับใหม่จาก refresh');
+    setComp('compDb', 'active');
+    setArrow('arrEfDb', 'active'); setLabel('lblEfDb', true);
+    setText('textEfDb', 'UPDATE + INSERT');
+    setText('traceCode', 'POST /api/auth/refresh + cookie refresh-A\nSELECT refresh_tokens WHERE token_hash = SHA256(refresh-A)\nInclude(User) → ตรวจหมดอายุ / revoked / active\ntokenA.RotatedAt = now; AddRefreshToken(…, sameSessionId, now);\nawait db.SaveChangesAsync(); // UPDATE เดิม + INSERT ใหม่');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\ntoken-A: session_id=S-สมศรี\nrotated_at: 2026-11-03 08:10Z\n\ntoken-C: session_id=S-สมศรี (เดิม)\ncreated_at: 2026-11-03 08:10Z\nexpires_at: 2026-12-03 08:10Z\n\ntoken-B: session_id=S-สมศรี-B (อีกเครื่อง ไม่เปลี่ยน)');
+    setText('browserData', 'หลัง refresh สำเร็จ:\nRedux = สมศรี + JWT-C\ncookie = refresh-C\nLogin ไม่ต้องกรอกซ้ำ');
+    setText('mockStatus', 'ตรวจ session เดิมผ่าน → งานของฉัน');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('error', 'ถ้าไม่หมุน token — ใบเก่าจะถูกใช้ต่อเรื่อย ๆ', 'การแทนที่ cookie อย่างเดียวไม่พอให้ server ตรวจว่าใบเก่าเคยถูกใช้ จึงต้องเก็บ <code>RotatedAt</code> และกลุ่ม SessionId ระบบจริงยอมให้ใบเก่าซ้ำได้ภายใน 30 วินาทีเพื่อรองรับหลายแท็บ แต่ถ้าเกินนั้นจะ revoke ทั้ง session; ในแท็บเดียว frontend แชร์ refresh ที่กำลังทำอยู่');
+    setComp('compApi', 'error');
+    setText('traceCode', 'แนวคิดที่ไม่พอ: เปลี่ยน cookie แต่ไม่เก็บสถานะใบเก่า\n→ server แยก replay ออกจากการใช้ครั้งแรกไม่ได้\n\nระบบจริง: rotated_at + session_id\nใบเก่าภายใน 30 วินาที → grace\nใบเก่าเกิน 30 วินาที → RevokeSessionAsync → 401');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nหากพบ reuse เกิน grace:\ntoken-A และ token-C ใน S-สมศรี\n→ revoked_at ถูกตั้งทั้ง session\nS-สมศรี-B ของอีก Login ไม่อยู่ในกลุ่มนี้');
+    setText('browserData', 'session ที่พบ reuse ต้อง Login ใหม่');
+    setText('mockStatus', 'กรณี token เก่าใช้ซ้ำเกินเวลา → ให้ Login ใหม่');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('success', 'Logout — ยกเลิก session และล้าง cookie', 'หน้าเว็บล้าง Redux ทันทีแล้วรอ refresh ที่ค้างอยู่ก่อน POST logout เพื่อให้ส่ง cookie ล่าสุด API หา SessionId จาก cookie และตั้ง RevokedAt ทุกใบใน session นั้นพร้อมลบ cookie; ถ้า offline คำขอไปไม่ถึง server จะล้างได้เฉพาะแท็บนี้ จึงยังยืนยันการ revoke ฝั่ง server ไม่ได้');
+    setComp('compDb', 'active');
+    setArrow('arrEfDb', 'active'); setLabel('lblEfDb', true);
+    setText('textEfDb', 'revoke');
+    setText('traceCode', 'POST /api/auth/logout\nSHA256(cookie) → หา session_id\nawait db.RevokeSessionAsync(sessionId, now);\nResponse.Cookies.Delete("facility_refresh", options);\n204 No Content');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nเมื่อ server ได้รับ Logout สำเร็จ:\nทุก token ใน S-สมศรี → revoked_at มีค่า\nบัญชี users ยังอยู่\nsession ของอีก Login ไม่ถูกยกเลิก');
+    setText('browserData', 'Redux user/accessToken = null\nเมื่อ Logout ถึง server: cookie ถูกลบ');
+    setText('mockStatus', 'ออกจากระบบแล้ว');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+  },
+  () => {
+    setNarration('success', 'สรุป — Login อ่าน User และเขียน session', 'จุดเขียนจริงของ Login คือ <code>SaveChangesAsync</code> หลังเพิ่ม RefreshToken; ส่วน hash ของเบอร์โทรเกิดตอน Admin สร้างหรือแก้บัญชี ระบบแยก access JWT อายุสั้นกับ refresh token อายุยาวเพื่อใช้ต่อได้สะดวก โดยแลกกับแถว token และการดูแล rotation/revocation; API ยังต้องตรวจบัญชีและสิทธิ์ของคำขอที่ตามมาเอง');
+    setComp('compDb', 'done');
+    setText('traceCode', 'สร้างบัญชี → users.secret_hash (PBKDF2)\nLogin → SELECT users → Verify → INSERT refresh_tokens\nBrowser → HttpOnly refresh cookie + access JWT ใน memory\nRefresh → UPDATE rotated_at + INSERT ใบใหม่\nLogout → UPDATE revoked_at + ลบ cookie');
+    setText('databaseData', 'users (เดิม ไม่แก้ตอน Login)\nid: 42 | employee_id: 1234567\ndisplay_name: สมศรี | role: CLEANER\nsecret_hash: pbkdf2-sha256$600000$…\nis_active: true\n\nrefresh_tokens · token-A\nuser_id: 42 | session_id: S-สมศรี\ntoken_hash: SHA256(refresh-A) [ย่อ]\ncreated_at: 2026-11-03 08:00Z\nexpires_at: 2026-12-03 08:00Z\nrotated_at: NULL | revoked_at: NULL');
+    setText('browserData', 'Redux: user = สมศรี (cleaner)\naccessToken = JWT-A (5 นาที)\ncookie: facility_refresh = refresh-A');
+    setText('mockStatus', 'จบ walkthrough · เลื่อนเปิดตาราง Entity และโค้ดด้านล่างได้');
+    setText('mockButton', 'เข้าสู่ระบบ');
+    setText('apiState', 'รอ request');
+    setText('efState', 'User / RefreshToken');
+    show('panelSummary');
+  },
+];
+TOTAL = scenes.length - 1;
+modeRenderers[MODE].assertRegistryComplete();
+buildProgressDots();
+render(0);
+
+const viewport = document.createElement('meta');
+viewport.name = 'viewport'; viewport.content = 'width=device-width, initial-scale=1';
+document.head.appendChild(viewport);
+document.querySelector('h2').textContent = 'กด ถัดไป → เพื่อดูทีละขั้น · คำเส้นใต้กดอ่านความหมายได้';
+document.getElementById('narration').setAttribute('aria-live', 'polite');
+document.getElementById('drawerClose').textContent = 'ปิด';
+document.getElementById('termDrawer').setAttribute('aria-label', 'คำอธิบายศัพท์');
+function wireTerms() {
+  document.querySelectorAll('[data-term], [data-hop]').forEach(el => {
+    el.setAttribute('role', 'button'); el.tabIndex = 0;
+    el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } };
+  });
+}
+const termObserver = new MutationObserver(wireTerms);
+termObserver.observe(document.getElementById('narrationBody'), { childList: true, subtree: true });
+termObserver.observe(document.getElementById('drawerSeeAlso'), { childList: true, subtree: true });
+wireTerms();
+
+</script>
+</body></html>
