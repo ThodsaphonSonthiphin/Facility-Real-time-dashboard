@@ -56,3 +56,5 @@ Completed on `codex/rename-project-files`, with no commit/push/merge. The root d
 ## Publication follow-up
 
 On 2026-11-06 the owner authorized committing, pushing and merging this rename. The follow-up review's P2 upgrade/rollback documentation issue is fixed in handover section 2.8 and independently re-reviewed; synthetic old/new-DLL upgrade/rollback checks pass. Earlier completion notes above describe the pre-publication state. See the latest handoff entry for actual publication status. The pre-existing local Word manual is excluded from this source change.
+
+Publication completed: source commit `8d15838` was pushed and merged into `master` through [PR #148](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/pull/148) at `a9c2e03` on 2026-11-06. GitGuardian and final whole-branch review passed on the exact source head; the mandatory pre-commit checks passed. The checkout is now `master`; see the latest handoff for the post-merge documentation refresh and preserved local manual.
