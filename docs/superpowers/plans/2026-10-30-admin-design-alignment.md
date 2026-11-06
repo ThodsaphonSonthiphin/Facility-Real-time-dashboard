@@ -23,7 +23,7 @@
 
 ### Task 1: Export selection, layout and one navigation entry
 
-**Files:** Modify `backend/src/FacilityRealtime.Api/{DTOs/ExportDtos.cs,Endpoints/AdminExportEndpoints.cs}`, `backend/src/FacilityRealtime.Infrastructure/Persistence/{ExportQuery.cs,InspectionHistoryQuery.cs}`, export API/query tests, `frontend/src/pages/export/{ExportPage.tsx,exportApi.ts,ExportPage.test.tsx}`, dashboard/attendance/inspection-summary pages and their tests. Create `frontend/src/pages/export/useExportPage.ts` and focused building-selector UI as needed within that page directory. Amend facility-0053 with the superseding decision link. Do not edit inspection-summary tally logic.
+**Files:** Modify `backend/src/JanitorialManagementDashboard.Api/{DTOs/ExportDtos.cs,Endpoints/AdminExportEndpoints.cs}`, `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/{ExportQuery.cs,InspectionHistoryQuery.cs}`, export API/query tests, `frontend/src/pages/export/{ExportPage.tsx,exportApi.ts,ExportPage.test.tsx}`, dashboard/attendance/inspection-summary pages and their tests. Create `frontend/src/pages/export/useExportPage.ts` and focused building-selector UI as needed within that page directory. Amend facility-0053 with the superseding decision link. Do not edit inspection-summary tally logic.
 
 **Interfaces:** Existing `buildingId` and date deep links work; new JSON `buildingIds: number[]` filters every export dataset and missing-round query. Page selection state is `number[] | null` (`null` = all, `[]` = none). Existing `sets: ExportSet[]` remains.
 
@@ -54,11 +54,11 @@ export interface ExportRequest {
 ```
 
 - [ ] Remove only the three in-page shortcuts, not the Admin menu or export route. Update the affected tests to assert no Export link inside `main`, but one menu link with `/admin/export`. Preserve QR-route restrictions and other assertions.
-- [ ] Run `npm test -- src/pages/export src/pages/dashboard/DashboardPage.test.tsx src/pages/attendance/AttendancePage.test.tsx src/pages/inspection-summary/InspectionSummaryPage.test.tsx` in frontend and `dotnet test backend/tests/FacilityRealtime.ApiTests --filter 'FullyQualifiedName~Export'` at repo root. Self-review scoped diff; report results without a commit.
+- [ ] Run `npm test -- src/pages/export src/pages/dashboard/DashboardPage.test.tsx src/pages/attendance/AttendancePage.test.tsx src/pages/inspection-summary/InspectionSummaryPage.test.tsx` in frontend and `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter 'FullyQualifiedName~Export'` at repo root. Self-review scoped diff; report results without a commit.
 
 ### Task 2: Inspection coverage details and compact summary UI
 
-**Files:** Modify `backend/src/FacilityRealtime.Application/Inspections/InspectionSummary.cs`, summary DTO/endpoint, summary unit/API tests, `frontend/src/pages/inspection-summary/{InspectionSummaryPage.tsx,SummaryTable.tsx,summaryApi.ts,InspectionSummaryPage.test.tsx}`, `frontend/src/test/reportFixtures.ts`. Create `useInspectionSummaryPage.ts`, `useSummaryTable.ts` and a small expanded-row component within the page directory as needed.
+**Files:** Modify `backend/src/JanitorialManagementDashboard.Application/Inspections/InspectionSummary.cs`, summary DTO/endpoint, summary unit/API tests, `frontend/src/pages/inspection-summary/{InspectionSummaryPage.tsx,SummaryTable.tsx,summaryApi.ts,InspectionSummaryPage.test.tsx}`, `frontend/src/test/reportFixtures.ts`. Create `useInspectionSummaryPage.ts`, `useSummaryTable.ts` and a small expanded-row component within the page directory as needed.
 
 **Interfaces:** Add row `uninspectedPoints: { pointId: number; areaCode: string; pointName: string; signCode: string }[]`. Export changes from Task 1 remain intact. Existing summary metrics and date/building deep links remain valid.
 

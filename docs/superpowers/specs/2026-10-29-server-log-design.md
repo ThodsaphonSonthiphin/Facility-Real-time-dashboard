@@ -38,7 +38,7 @@ So server errors are already logged (decision C needs no new code), SQL statemen
 
 ### 3.1 Security lines (new)
 
-One `Warning` line per event, from one logger category `FacilityRealtime.Security`, so `grep -A1 FacilityRealtime.Security` finds them all.
+One `Warning` line per event, from one logger category `JanitorialManagementDashboard.Security`, so `grep -A1 JanitorialManagementDashboard.Security` finds them all.
 
 ```mermaid
 sequenceDiagram
@@ -90,7 +90,7 @@ No code change: the Kestrel line plus EF Core's errors already carry the excepti
   ```
 
   `MaxFileSec=1day` starts a new journal file each day, so deletion at 90 days happens day by day instead of waiting for a large file to age out.
-- Every read command becomes `sudo journalctl --namespace=facility -u facility` (§2.5, §3 and the "system does not start" part). Security lines only: add `| grep -A1 FacilityRealtime.Security`. If the log is empty because the service died before writing, `systemctl status facility` or `--namespace=+facility` shows systemd's own lines.
+- Every read command becomes `sudo journalctl --namespace=facility -u facility` (§2.5, §3 and the "system does not start" part). Security lines only: add `| grep -A1 JanitorialManagementDashboard.Security`. If the log is empty because the service died before writing, `systemctl status facility` or `--namespace=+facility` shows systemd's own lines.
 - Needs systemd 245 or later.
 
 ### 3.6 Docs
@@ -105,7 +105,7 @@ No code change: the Kestrel line plus EF Core's errors already carry the excepti
 - **API tests** (capture log output through the test factory): a wrong phone writes the employee line with `wrong secret`; a turned-off account writes `account turned off`; an unknown employee ID writes `unknown account (employee login)` and neither the typed ID nor the phone appears in any captured line; the 6th attempt writes the locked line; a reused refresh token writes the reuse line; an Admin's failure names the username and not the password. Each new test fails before the change.
 - **Config**: a test that the EF command category resolves to `Warning` from `appsettings.json`.
 - **Measured again** the way section 2 did: the first start and the 6 logins no longer print SQL statements, and the security lines appear.
-- **Not testable on the Mac** (no systemd): the namespace and the 90 days. Check on the first Linux server, like `facility.test.sh`'s GNU `stat` path (`docs/handover.md` §2.3).
+- **Not testable on the Mac** (no systemd): the namespace and the 90 days. Check on the first Linux server, like `janitorial.test.sh`'s GNU `stat` path (`docs/handover.md` §2.3).
 
 ## 5. Out of scope
 

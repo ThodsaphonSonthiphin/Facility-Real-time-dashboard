@@ -1,4 +1,4 @@
-# Frontend
+# Janitorial Management Dashboard — Frontend
 
 React 19 + TypeScript on Vite 8. Current as of 2026-11-03. ADRs facility-0022–0026, 0061–0068, 0086–0088 and 0100–0107 apply with their amendments; this file is the short version.
 
@@ -35,7 +35,7 @@ src/test/                                fakeServer (fake fetch), fakeGps, fakeS
 - Admin setup and accounts data provide the cache tag `AdminSetup`, and every save that changes Areas, signs, Cleaners or accounts invalidates it (a phone change or password reset changes nothing shown, so it does not): Areas, signs, Cleaners and accounts depend on each other.
 - A new Admin page goes under the Admin `ProtectedRoute` in `router.tsx` as a lazy route (`lazy: async () => ({ Component: (await import('./pages/<page>')).<Page> })`), so phones never download it (facility-0062), and into the lazy-route list in `router.test.tsx`. It goes into `shared/components/AdminNav.tsx` if it belongs in the menu. Phone pages stay in the main file.
 - The Admin's live board uses the tags `ServicePoints`, `AttendanceBoard` (one per shift, `boardTag`) and `Alerts`; corrections and covers invalidate the last two.
-- Style with Tailwind 4 utilities and shared components. `src/index.css` is the only CSS file and owns `@theme` tokens and print `@page`. Follow [frontend standards](../docs/agents/frontend-standards.md) and [MASTER](../design-system/facility/MASTER.md); facility-0086 supersedes per-page CSS. No `style={...}`.
+- Style with Tailwind 4 utilities and shared components. `src/index.css` is the only CSS file and owns `@theme` tokens and print `@page`. Follow [frontend standards](../docs/agents/frontend-standards.md) and [MASTER](../design-system/janitorial/MASTER.md); facility-0086 supersedes per-page CSS. No `style={...}`.
 - Text people type is rendered as React text only; never build `href` or `src` from it.
 
 ## Session

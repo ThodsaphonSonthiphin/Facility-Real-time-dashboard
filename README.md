@@ -1,6 +1,6 @@
-# Facility Real-time Dashboard (POC)
+# Janitorial Management Dashboard (POC)
 
-ระบบติดตามสถานะการทำความสะอาดและสุขอนามัยแบบเรียลไทม์ (Facility Real-time Dashboard) พัฒนาสำหรับติดตามการเข้างานในพื้นที่ การส่งงาน และการตรวจงานในโรงงาน
+ระบบติดตามสถานะการทำความสะอาดและสุขอนามัยแบบเรียลไทม์ (Janitorial Management Dashboard) พัฒนาสำหรับติดตามการเข้างานในพื้นที่ การส่งงาน และการตรวจงานในโรงงาน
 
 สถานะ ณ 3 พ.ย. 2026: ฟีเจอร์ตามขอบเขตที่ตกลงพัฒนาเสร็จและรวมบน `master` แล้ว รอติดตั้ง server จริงและนำร่อง 1 Area งานนำเข้า Excel พักไว้ ส่วนงาน retention มี implementation ใน branch นี้แล้ว ดู [คู่มือ retention](docs/data-retention.md) และ [handoff](docs/handoff.md) สำหรับผลตรวจและสถานะเผยแพร่
 
@@ -8,7 +8,7 @@
 
 ## 🏗️ สถาปัตยกรรมระบบ (Architecture)
 
-- **Backend**: .NET 10 Minimal APIs + SignalR Hub (`FacilityRealtime.Api`)
+- **Backend**: .NET 10 Minimal APIs + SignalR Hub (`JanitorialManagementDashboard.Api`)
 - **Database**: MySQL 8.0.16 ขึ้นไป (ต้องเป็นเวอร์ชันที่บังคับใช้ CHECK constraint) (EF Core `MySql.EntityFrameworkCore 10.x`) — API apply migration เองตอนเริ่ม
 - **Frontend**: Vite + React 19 + TypeScript, Redux Toolkit + RTK Query, React Router 7, Tailwind CSS 4 + Enterprise Light (`frontend/`, โครงตาม facility-0025, สไตล์ตาม facility-0086, 0087, 0100, 0101) ระบบจริง API เสิร์ฟหน้าเว็บเองจาก origin เดียว (facility-0067)
 - **Real-time Pipeline**: เมื่อแม่บ้านสแกนและบันทึกข้อมูล -> Backend บันทึกลง MySQL -> ส่งผ่าน SignalR Hub (`/hubs/scan`) -> หน้า Dashboard อัปเดตการ์ดและ KPI ทันทีโดยไม่ต้องรีเฟรช
@@ -31,13 +31,13 @@ brew services start mysql
 
 repo นี้เป็น public จึงไม่มี key อยู่ในไฟล์ config และ API จะไม่ยอมเริ่มถ้ายังไม่ได้ตั้ง:
 ```bash
-dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/FacilityRealtime.Api
+dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/JanitorialManagementDashboard.Api
 ```
 
 ### 3. รัน Backend API (.NET 10)
 รัน Backend บน Port `5001` (หลีกเลี่ยง Port 5000 ของ AirPlay บน macOS):
 ```bash
-dotnet run --project backend/src/FacilityRealtime.Api --launch-profile http --urls "http://localhost:5001"
+dotnet run --project backend/src/JanitorialManagementDashboard.Api --launch-profile http --urls "http://localhost:5001"
 ```
 
 ### 4. รัน Frontend (Vite React)
@@ -51,15 +51,15 @@ npm run dev -- --host localhost --port 5173 --strictPort
 
 ให้ API เสิร์ฟหน้าเว็บเอง (แบบระบบจริง ไม่ต้องรัน Vite):
 ```bash
-npm --prefix frontend run build:api   # build ลง backend/src/FacilityRealtime.Api/wwwroot (git ไม่เก็บ)
-dotnet run --project backend/src/FacilityRealtime.Api --launch-profile http --urls "http://localhost:5001"
+npm --prefix frontend run build:api   # build ลง backend/src/JanitorialManagementDashboard.Api/wwwroot (git ไม่เก็บ)
+dotnet run --project backend/src/JanitorialManagementDashboard.Api --launch-profile http --urls "http://localhost:5001"
 # เปิด http://localhost:5001/login  ตรวจว่า API ทำงานที่ /api/health
 ```
 
 ### 5. รันชุดทดสอบ
 ชุดทดสอบ API ใช้ SQLite ในหน่วยความจำ ไม่ต้องเปิด MySQL:
 ```bash
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 npm --prefix frontend test
 ```
 

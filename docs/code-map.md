@@ -83,14 +83,14 @@ If you have just opened the repo, read in this order. Each step is one file.
 | 3 | "How does the page get data?" | `frontend/src/shared/api/baseApi.ts` | The single `createApi`. Every request in the app goes through this one file: Bearer header, 401 → refresh → retry, timeouts, cache tags. |
 | 4 | "How does login work?" | [Part 7](#part-7--login-flow) | Full trace with file names. |
 | 5 | "How does a scan work?" | [Part 8](#part-8--scan-gps-and-real-time-flow) | Full trace with file names. |
-| 6 | "What does the server do with a request?" | `backend/src/FacilityRealtime.Api/Program.cs` | Composition root, numbered 1–9 in comments. Then any file in `Endpoints/`. |
-| 7 | "Where are the business rules?" | `backend/src/FacilityRealtime.Application/` | Pure static classes, no database, no HTTP. The easiest code in the repo to read and test. |
+| 6 | "What does the server do with a request?" | `backend/src/JanitorialManagementDashboard.Api/Program.cs` | Composition root, numbered 1–9 in comments. Then any file in `Endpoints/`. |
+| 7 | "Where are the business rules?" | `backend/src/JanitorialManagementDashboard.Application/` | Pure static classes, no database, no HTTP. The easiest code in the repo to read and test. |
 
 **Three habits that make this repo readable**
 
 1. **One folder per feature.** `frontend/src/pages/scan/` owns the cleaner's scan page and nothing else. A page may not import another page — `eslint.config.js` enforces it.
 2. **One API file per feature.** Each page folder has an `*Api.ts` that calls `baseApi.injectEndpoints`. Grep for a route string there and you will find the caller.
-3. **Rules live apart from I/O.** Shared business rules sit in `backend/src/FacilityRealtime.Application/` mostly as static classes. LoginThrottle is a stateful in-memory gate; endpoints handle request validation, authorization and persistence.
+3. **Rules live apart from I/O.** Shared business rules sit in `backend/src/JanitorialManagementDashboard.Application/` mostly as static classes. LoginThrottle is a stateful in-memory gate; endpoints handle request validation, authorization and persistence.
 
 ---
 
@@ -105,7 +105,7 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 | `main.tsx` | Boot: create store → `setupListeners` → `startSession()` (refresh before React) → tap feedback → render. |
 | `App.tsx` | Three nested providers only: `<Provider store>` → `<SessionGate>` → `<RouterProvider>`. No context, no toast provider, no theme provider. |
 | `router.tsx` | The entire route table as plain data. No loaders, no actions — RTK Query owns data loading. |
-| `index.css` | Tailwind 4 setup and the `@theme` design tokens that mirror `design-system/facility/MASTER.md`. |
+| `index.css` | Tailwind 4 setup and the `@theme` design tokens that mirror `design-system/janitorial/MASTER.md`. |
 
 ### shared — the layer every page may import
 
@@ -157,7 +157,7 @@ Three slices plus RTK Query — see [Part 5](#part-5--state-management).
 
 ### e2e (facility-0094)
 
-Playwright runs through `npm run e2e` → `scripts/e2e.sh` → `scripts/e2e.py`. Each run publishes to its own ignored directory, creates a unique `facility_e2e_<timestamp>_<suffix>` database and restricted user, seeds synthetic data through `backend/tools/FacilityRealtime.E2ESeed`, and cleans up only resources it can prove it owns. It does not reset a fixed `facility_e2e_test` database or the shared `wwwroot` (facility-0102 amends 0094).
+Playwright runs through `npm run e2e` → `scripts/e2e.sh` → `scripts/e2e.py`. Each run publishes to its own ignored directory, creates a unique `facility_e2e_<timestamp>_<suffix>` database and restricted user, seeds synthetic data through `backend/tools/JanitorialManagementDashboard.E2ESeed`, and cleans up only resources it can prove it owns. It does not reset a fixed `facility_e2e_test` database or the shared `wwwroot` (facility-0102 amends 0094).
 
 `frontend/e2e/phone/` and `desktop/` cover role workflows, setup/reporting and network/GPS conditions. `frontend/e2e/support/seed.ts` centralizes fixture credentials with `DbInitializer.cs`; `pageWatch.ts` watches browser errors, CSP and layout. Chromium is headed with 350 ms slow motion by default; choose WebKit/Firefox with `E2E_BROWSER`. [E2E guide](testing/e2e.md) covers profiles, retained reports, engine skips and explicit ownership-checked cleanup.
 
@@ -233,9 +233,9 @@ graph TD
 
 ## Part 6 — Backend file map
 
-Solution `backend/FacilityRealtime.slnx` — four projects, no controllers.
+Solution `backend/JanitorialManagementDashboard.slnx` — four projects, no controllers.
 
-### `FacilityRealtime.Api`
+### `JanitorialManagementDashboard.Api`
 
 | Path | Purpose |
 |---|---|
@@ -251,7 +251,7 @@ Solution `backend/FacilityRealtime.slnx` — four projects, no controllers.
 | `PrecompressedFiles.cs` | Sends a frontend file's build-time `.br`/`.gz` copy when the browser accepts it (facility-0067 amendment). |
 | `wwwroot/` | The built frontend, copied in by `npm run build:api`; `frontend/precompress.ts` writes a `.br` and a `.gz` beside each text file. |
 
-### `FacilityRealtime.Application` — read this first, it is the rules
+### `JanitorialManagementDashboard.Application` — read this first, it is the rules
 
 Business rules without database or HTTP dependencies, mostly static; LoginThrottle holds in-memory counters:
 
@@ -266,7 +266,7 @@ Business rules without database or HTTP dependencies, mostly static; LoginThrott
 | `Common/` | `ThaiTime` — Asia/Bangkok ↔ UTC. Every wall-clock conversion goes through here. |
 | Others | `Accounts/AccountRules`, `Accounts/CommonPasswords` (the embedded `common-passwords.txt` list of common passwords, read once; facility-0089), `Alerts/AlertKind`, `Signs/SignCodes`, `Export/ExportRules`, `Shifts/ShiftCalendar` |
 
-### `FacilityRealtime.Infrastructure`
+### `JanitorialManagementDashboard.Infrastructure`
 
 | Path | Purpose |
 |---|---|
@@ -278,7 +278,7 @@ Business rules without database or HTTP dependencies, mostly static; LoginThrott
 | `Migrations/` | 6 migrations + model snapshot, applied at startup with `MigrateAsync()`. |
 | `Persistence/DbInitializer.cs` | Dev-only seed (`admin` / `admin1234`). Never runs outside Development. |
 
-### `FacilityRealtime.Domain`
+### `JanitorialManagementDashboard.Domain`
 
 `Entities/` models the 15 application tables and the `IGpsStamped` interface; `Enums/` holds shared domain values. Entities include small domain helpers such as Area.HasShift.
 
@@ -384,7 +384,7 @@ sequenceDiagram
 | Deactivated while a refresh is in flight | `AuthEndpoints.cs` revokes **all** that user's sessions | bounced to login; every other device dies too |
 | Role changed | re-read on refresh; guard `ProtectedRoute.tsx` | `ไม่มีสิทธิ์เปิดหน้านี้` with a link home |
 
-**Server Log lines** (facility-0095–0099, 0103, 0104): `Api/Auth/SecurityLog.cs`, called from `AuthEndpoints.LoginAsync` (failed, unknown account, refused while locked) and `RefreshAsync` (reused token), plus the IP cap event. Login lines include normalized IP. Category `FacilityRealtime.Security`, level Warning; the phone sees the same 401/429 as before. SQL statements stay out because `appsettings.json` sets `Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore.Database.Command` to `Warning`; Console is the only sink.
+**Server Log lines** (facility-0095–0099, 0103, 0104): `Api/Auth/SecurityLog.cs`, called from `AuthEndpoints.LoginAsync` (failed, unknown account, refused while locked) and `RefreshAsync` (reused token), plus the IP cap event. Login lines include normalized IP. Category `JanitorialManagementDashboard.Security`, level Warning; the phone sees the same 401/429 as before. SQL statements stay out because `appsettings.json` sets `Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore.Database.Command` to `Warning`; Console is the only sink.
 
 ---
 
@@ -436,7 +436,7 @@ It **never rejects**. Every branch resolves to `{ kind: 'fix', fix }` or `{ kind
 
 ### The geofence: flag, never block
 
-`backend/src/FacilityRealtime.Application/Geo/Geofence.cs`:
+`backend/src/JanitorialManagementDashboard.Application/Geo/Geofence.cs`:
 
 ```csharp
 var distance = (int)Math.Round(DistanceMeters(...));   // haversine, R = 6_371_000 m
@@ -702,20 +702,20 @@ Backend paths below are relative to `backend/tests/`; frontend paths are relativ
 
 | Behaviour | Tests |
 |---|---|
-| Login forms, pair/IP throttle and forwarded address trust | `FacilityRealtime.ApiTests/Auth/LoginTests.cs`, `FacilityRealtime.UnitTests/LoginThrottleTests.cs`, `FacilityRealtime.UnitTests/LoginPlaceTests.cs` |
-| Refresh rotation, reuse grace and revocation | `FacilityRealtime.ApiTests/Auth/RefreshTests.cs` |
-| Deactivation blocks reads and live updates | `FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs`, `FacilityRealtime.ApiTests/Admin/DeactivatedAdminLiveTests.cs` |
-| CSP, HSTS, no-store, Swagger exemption and ping interval | `FacilityRealtime.ApiTests/SecurityHeaderTests.cs`, `FacilityRealtime.ApiTests/HubKeepAliveTests.cs` |
-| Scan placement, scope blocks and far-GPS flags | `FacilityRealtime.ApiTests/Points/ScanRecordEndpointTests.cs`, `FacilityRealtime.ApiTests/Inspections/InspectionScanEndpointTests.cs`, `FacilityRealtime.UnitTests/GeofenceTests.cs` |
-| Scoped live updates and saved-record behavior when push fails | `FacilityRealtime.ApiTests/Inspections/SupervisorLiveTests.cs`, `CleanerLiveTests.cs`, `LiveUpdateFailureTests.cs` (same directory) |
-| Redacted security log and real Serilog rendering | `FacilityRealtime.ApiTests/Auth/SecurityLogTests.cs`, `FacilityRealtime.ApiTests/ServerLogTests.cs` |
+| Login forms, pair/IP throttle and forwarded address trust | `JanitorialManagementDashboard.ApiTests/Auth/LoginTests.cs`, `JanitorialManagementDashboard.UnitTests/LoginThrottleTests.cs`, `JanitorialManagementDashboard.UnitTests/LoginPlaceTests.cs` |
+| Refresh rotation, reuse grace and revocation | `JanitorialManagementDashboard.ApiTests/Auth/RefreshTests.cs` |
+| Deactivation blocks reads and live updates | `JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminTests.cs`, `JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminLiveTests.cs` |
+| CSP, HSTS, no-store, Swagger exemption and ping interval | `JanitorialManagementDashboard.ApiTests/SecurityHeaderTests.cs`, `JanitorialManagementDashboard.ApiTests/HubKeepAliveTests.cs` |
+| Scan placement, scope blocks and far-GPS flags | `JanitorialManagementDashboard.ApiTests/Points/ScanRecordEndpointTests.cs`, `JanitorialManagementDashboard.ApiTests/Inspections/InspectionScanEndpointTests.cs`, `JanitorialManagementDashboard.UnitTests/GeofenceTests.cs` |
+| Scoped live updates and saved-record behavior when push fails | `JanitorialManagementDashboard.ApiTests/Inspections/SupervisorLiveTests.cs`, `CleanerLiveTests.cs`, `LiveUpdateFailureTests.cs` (same directory) |
+| Redacted security log and real Serilog rendering | `JanitorialManagementDashboard.ApiTests/Auth/SecurityLogTests.cs`, `JanitorialManagementDashboard.ApiTests/ServerLogTests.cs` |
 | Session and one refresh/retry | `shared/auth/session.test.ts`, `shared/api/baseApi.test.ts` |
 | Browser offline/online, reconnect and timeout | `shared/api/scanHub.test.ts`, `shared/api/scanHub.noSignalR.test.ts` |
 | Fresh GPS and permission recovery | `shared/geo/readLocation.test.ts`, `pages/check-in/CheckInPage.test.tsx` |
 | Submission/inspection screens, live Dashboard and date/shift race | `pages/scan/ScanPage.test.tsx`, `pages/inspect/InspectPage.test.tsx`, `pages/dashboard/DashboardPage.test.tsx`, `pages/attendance/AttendancePage.test.tsx` |
 | Route roles and lazy boundaries | `router.test.tsx` |
 
-Retention tests are in `FacilityRealtime.ApiTests/Retention/` (real relational deletion/rollback, race cases, schedule/lifecycle and MySQL migration/provider) and `FacilityRealtime.UnitTests/RetentionRulesTests.cs` (settings/calendar/anonymous counts). See [the retention guide](data-retention.md).
+Retention tests are in `JanitorialManagementDashboard.ApiTests/Retention/` (real relational deletion/rollback, race cases, schedule/lifecycle and MySQL migration/provider) and `JanitorialManagementDashboard.UnitTests/RetentionRulesTests.cs` (settings/calendar/anonymous counts). See [the retention guide](data-retention.md).
 
 The frontend harness is `src/test/`: fake fetch, SignalR, GPS and `renderApp`. Real-API workflows and runner safety checks are described in [testing/e2e.md](testing/e2e.md). Current recorded counts belong in [handoff](handoff.md), not in this file map.
 
@@ -739,4 +739,4 @@ The frontend harness is `src/test/`: fake fetch, SignalR, GPS and `renderApp`. R
 | [`docs/adr/`](adr/) | **Why** the code is shaped this way — the ADRs are the spec |
 | [`../CONTEXT.md`](../CONTEXT.md) | What every word in the product means (glossary) |
 | [`handoff.md`](handoff.md) | Current branch, what is done, what the owner still owes a check on |
-| `design-system/facility/MASTER.md` | How it looks and why |
+| `design-system/janitorial/MASTER.md` | How it looks and why |

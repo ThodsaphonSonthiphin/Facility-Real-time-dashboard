@@ -19,7 +19,7 @@ flowchart TD
 
 1. **ที่อยู่ฐานข้อมูลตั้งต้นมีเฉพาะ Development** ย้ายจาก `appsettings.json` ไป `appsettings.Development.json` และลบค่าสำรองในโค้ด environment อื่นที่ไม่ได้ตั้ง `ConnectionStrings__DefaultConnection` (หรือตั้งเป็นค่าว่าง) ไม่ยอมเริ่มระบบ และไม่ยอมรัน `reset-admin` ข้อความบอกชื่อค่าที่ขาด เครื่องนักพัฒนาที่รัน `dotnet run` (launch profile = Development) และ `dotnet ef` ยังใช้ `facility_dashboard` เหมือนเดิม
 2. **`reset-admin` บอกก่อนว่าจะทำกับฐานข้อมูลไหน** พิมพ์ server, port และชื่อฐานข้อมูล (ไม่พิมพ์ชื่อผู้ใช้หรือรหัสผ่านของฐานข้อมูล) แล้วรอให้พิมพ์ `yes` ถ้าไม่ใช่ `yes` จบโดยไม่แตะฐานข้อมูลเลย การถามนี้เกิดก่อน migrate เพราะ migrate ฐานข้อมูลผิดตัวก็คือการแก้ฐานข้อมูลผิดตัวเหมือนกัน
-3. **สคริปต์เดียวสำหรับเริ่มระบบและรัน `reset-admin`** (`scripts/facility.sh`) อ่านค่าทุกตัวจากไฟล์ค่าไฟล์เดียวที่อยู่นอก repo
+3. **สคริปต์เดียวสำหรับเริ่มระบบและรัน `reset-admin`** (`scripts/janitorial.sh`) อ่านค่าทุกตัวจากไฟล์ค่าไฟล์เดียวที่อยู่นอก repo
    - ไฟล์ค่าเขียนแบบ `KEY=VALUE` บรรทัดละค่า ไม่มีเครื่องหมายคำพูด รูปแบบเดียวกับ `EnvironmentFile` ของ systemd จึงใช้ไฟล์เดียวกันได้ทั้งสคริปต์และ server
    - สคริปต์อ่านทีละบรรทัด ไม่ `source` ไฟล์ เพราะที่อยู่ฐานข้อมูลมี `;` ซึ่ง shell จะตัดเป็นคำสั่งใหม่
    - ไฟล์ต้องอ่านได้เฉพาะเจ้าของ (`chmod 600`) ไม่อย่างนั้นสคริปต์ไม่ทำงาน
@@ -34,7 +34,7 @@ flowchart TD
 
 - เครื่องที่เคยรัน Production โดยพึ่งค่าใน `appsettings.json` จะเริ่มไม่ได้จนกว่าจะตั้ง `ConnectionStrings__DefaultConnection` ซึ่งคือสิ่งที่ต้องการ ยังไม่มี server จริงที่ได้รับผลกระทบ
 - `reset-admin` ใน script หรือ pipe ต้องส่ง `yes` เป็นบรรทัดแรก
-- สคริปต์ใช้ bash และทดสอบด้วย `scripts/facility.test.sh` (ใช้ `dotnet` ปลอม) ใช้ได้ทั้ง macOS (bash 3.2) และ Linux ไม่ได้รันใน pre-commit
+- สคริปต์ใช้ bash และทดสอบด้วย `scripts/janitorial.test.sh` (ใช้ `dotnet` ปลอม) ใช้ได้ทั้ง macOS (bash 3.2) และ Linux ไม่ได้รันใน pre-commit
 - ถ้าเลือก Windows Server ภายหลัง ต้องเพิ่มคู่มือส่วน IIS และวิธีตั้งค่าแทนไฟล์ค่าของสคริปต์
 - `facility_dashboard` บน Mac ของเจ้าของถูกเปลี่ยนรหัสแอดมินไปแล้วหนึ่งครั้ง (ข้อมูลทดสอบ) ADR นี้ไม่ได้กู้คืน
 

@@ -42,7 +42,7 @@
 
 | Call | Answer | Source |
 |---|---|---|
-| `GET /api/my-building` | `MyBuildingDto { shiftDate, shift, buildings[] }`, each `{ buildingId, buildingCode, buildingName, isCover, canInspect, points[] }`; 403 for a non-Supervisor | `backend/src/FacilityRealtime.Api/Endpoints/MyBuildingEndpoints.cs`, `DTOs/MyBuildingDtos.cs` |
+| `GET /api/my-building` | `MyBuildingDto { shiftDate, shift, buildings[] }`, each `{ buildingId, buildingCode, buildingName, isCover, canInspect, points[] }`; 403 for a non-Supervisor | `backend/src/JanitorialManagementDashboard.Api/Endpoints/MyBuildingEndpoints.cs`, `DTOs/MyBuildingDtos.cs` |
 | `POST /api/inspections/scan` `{ qrToken, latitude, longitude, accuracyM }` | 200 `InspectionScanDto { point, submission?, refusal?, isCover, distanceM?, withinRadius? }`; 400 GPS; 403 `BlockedScanResponse` (`OtherBuilding`, `OutsideShift`, and **this call records the Blocked Scan**) or `{ message }` for another role; 404 `{ message }` | `Endpoints/InspectionEndpoints.cs`, `DTOs/InspectionDtos.cs` |
 | `POST /api/inspections` `{ qrToken, scanRecordId, result, defect?, latitude, longitude, accuracyM }` | 201 `InspectionCreatedResponse`; 400 `{ message }`; 403 `BlockedScanResponse`; 404 `{ message }`; 409 `{ message }` (new work since the scan, nothing to inspect, or a rework still owed) | same |
 | hub `/hubs/scan` (token in `?access_token=`) | `ScanRecorded` and `InspectionRecorded`, each a `PointStatusDto`, to the building's active Supervisors and to anyone covering it in the clock's shift | `Hubs/ScanHub.cs`, `Endpoints/PointNotifications.cs`, `Auth/AuthSetup.cs` |
@@ -3674,7 +3674,7 @@ The `@microsoft/signalr` package is replaced in every test by `src/test/fakeSign
 
 ```bash
 cd frontend && npm test && npx tsc -b && npm run lint && npm run build && cd ..
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 grep -rn "style={" frontend/src || echo "no inline styles"
 grep -rn "localStorage\|sessionStorage\|indexedDB" frontend/src || echo "no web storage"
 grep -rn "toLocaleString\|toLocaleTimeString" frontend/src || echo "no ad-hoc time formatting"
@@ -3709,7 +3709,7 @@ mysql -u root -p -e "CREATE DATABASE facility_supervisor_test CHARACTER SET utf8
 npm --prefix frontend run build:api
 ASPNETCORE_ENVIRONMENT=Development \
 ConnectionStrings__DefaultConnection="Server=localhost;Port=3306;Database=facility_supervisor_test;Uid=root;Pwd=<typed by the owner>;CharSet=utf8mb4;" \
-dotnet run --project backend/src/FacilityRealtime.Api --urls "http://0.0.0.0:5001"
+dotnet run --project backend/src/JanitorialManagementDashboard.Api --urls "http://0.0.0.0:5001"
 ```
 
 In a second terminal:
@@ -3741,7 +3741,7 @@ Look in the API log for warnings: there must be no "Live update … failed".
 When done, stop the API, delete the build output and drop the database:
 
 ```bash
-rm -r backend/src/FacilityRealtime.Api/wwwroot
+rm -r backend/src/JanitorialManagementDashboard.Api/wwwroot
 mysql -u root -p -e "DROP DATABASE facility_supervisor_test;"
 ```
 

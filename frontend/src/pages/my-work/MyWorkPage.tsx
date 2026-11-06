@@ -22,7 +22,7 @@ import { byUrgency, laterStatuses, sentStatuses, toDo } from './workRules';
  * shift. It changes by itself when the hub says a point changed (the Supervisor's inspection, owner 2026-10-26, which
  * amends facility-0052), and also asks each time it opens and on "อัปเดต". No card links to the scan page; the only way
  * there is the sign's QR (facility-0059). The name is not shown: the bar above already shows it.
- * The layout is variant B of the mockups (#73, `design-system/facility/pages/phone.md`): the next job first.
+ * The layout is variant B of the mockups (#73, `design-system/janitorial/pages/phone.md`): the next job first.
  */
 /** The footnote by the hub's state, as My Building's (plan 9 decision 9). */
 const liveLine: Record<HubStatus, string> = {

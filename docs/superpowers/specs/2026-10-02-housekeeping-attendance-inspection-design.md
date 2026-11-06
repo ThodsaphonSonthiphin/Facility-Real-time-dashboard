@@ -266,11 +266,11 @@ erDiagram
 
 | หน้าจอ | สิทธิ์การเข้าถึง | วัตถุประสงค์และการแสดงผล | เอกสารต้นแบบ (Mockup) |
 |---|---|---|---|
-| **Attendance Board** | Admin, Supervisor | แสดงตารางรายชื่อพนักงาน 170 คน สถานะการเข้างาน (Shift-In, Break, Out), เวลาสแกน, สถิติขาด/มา รายอาคารและกะ | [attendance-board-mockup.html](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/decision-map/facility-poc/mockups/attendance-board-mockup.html) |
-| **Service Points Grid** | ทุกคน (Read-only) | แสดงการ์ดสถานะของทุกจุดบริการแบบ Real-time แบ่งกลุ่มตามตึก/ชั้น แสดงสีตามสถานะ (Normal, Overdue, Issue, Pending Inspection) | [dashboard-prototype.html](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/decision-map/facility-poc/mockups/dashboard-prototype.html) |
-| **Flagged Scan Review** | Admin | ตรวจสอบรายการสแกนที่ติดธงผิดปกติ (สแกนข้ามพื้นที่, อยู่นอกระยะ Geofence, สแกนเร็วผิดมนุษย์) พร้อมปุ่มตรวจสอบและปลดธง | [flagged-scan-mockup.html](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/decision-map/facility-poc/mockups/flagged-scan-mockup.html) |
-| **Mobile Check-In Web** | Cleaner, Supervisor | หน้าสแกน QR บันทึกเวลาเข้า-ออก 4 จังหวะ พร้อมอ่านพิกัด GPS อัตโนมัติ | [shift-check-in-prototype.html](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/decision-map/facility-poc/mockups/shift-check-in-prototype.html) |
-| **Mobile Inspection Web** | Supervisor | หน้าจอสำหรับหัวหน้างานเมื่อสแกน QR ที่จุดบริการ แสดงแบบฟอร์มประเมิน สะอาด / ต้องแก้ไข | [scan-flow-prototype.html](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/decision-map/facility-poc/mockups/scan-flow-prototype.html) |
+| **Attendance Board** | Admin, Supervisor | แสดงตารางรายชื่อพนักงาน 170 คน สถานะการเข้างาน (Shift-In, Break, Out), เวลาสแกน, สถิติขาด/มา รายอาคารและกะ | [attendance-board-mockup.html](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/decision-map/facility-poc/mockups/attendance-board-mockup.html) |
+| **Service Points Grid** | ทุกคน (Read-only) | แสดงการ์ดสถานะของทุกจุดบริการแบบ Real-time แบ่งกลุ่มตามตึก/ชั้น แสดงสีตามสถานะ (Normal, Overdue, Issue, Pending Inspection) | [dashboard-prototype.html](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/decision-map/facility-poc/mockups/dashboard-prototype.html) |
+| **Flagged Scan Review** | Admin | ตรวจสอบรายการสแกนที่ติดธงผิดปกติ (สแกนข้ามพื้นที่, อยู่นอกระยะ Geofence, สแกนเร็วผิดมนุษย์) พร้อมปุ่มตรวจสอบและปลดธง | [flagged-scan-mockup.html](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/decision-map/facility-poc/mockups/flagged-scan-mockup.html) |
+| **Mobile Check-In Web** | Cleaner, Supervisor | หน้าสแกน QR บันทึกเวลาเข้า-ออก 4 จังหวะ พร้อมอ่านพิกัด GPS อัตโนมัติ | [shift-check-in-prototype.html](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/decision-map/facility-poc/mockups/shift-check-in-prototype.html) |
+| **Mobile Inspection Web** | Supervisor | หน้าจอสำหรับหัวหน้างานเมื่อสแกน QR ที่จุดบริการ แสดงแบบฟอร์มประเมิน สะอาด / ต้องแก้ไข | [scan-flow-prototype.html](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/decision-map/facility-poc/mockups/scan-flow-prototype.html) |
 
 ---
 

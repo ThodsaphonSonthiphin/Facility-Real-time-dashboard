@@ -7,7 +7,7 @@
 **Architecture:**
 - `Api/DatabaseSettings` is the one place that reads the connection string. It throws when the setting is missing, and it describes the target as `server:port / database`.
 - `ResetAdminCommand.ConfirmDatabase` asks for `yes` before `Program.cs` migrates anything.
-- `scripts/facility.sh` (bash, macOS and Linux) loads a `chmod 600` env file line by line and runs the API with those settings only.
+- `scripts/janitorial.sh` (bash, macOS and Linux) loads a `chmod 600` env file line by line and runs the API with those settings only.
 - The guide documents both the script and a systemd unit that reads the same file.
 
 **Tech Stack:** .NET 10 Minimal API, xUnit, bash 3.2+ (macOS) / bash 5 (Linux), `openssl`.
@@ -27,7 +27,7 @@
 - The script must run on macOS bash 3.2: no associative arrays, no `mapfile`, no `${var,,}`.
 - The deploy guide and every console text a person reads are in Thai. Startup exceptions are in English, like `AuthSetup`. Thai strings in this plan are copied verbatim.
 - MySQL: only throwaway databases named `facility_*_test`; never `facility_dashboard`. Steps that need MySQL are run by the controller, never by a subagent. The owner types the MySQL root password; it is never written to a file.
-- Backend tests: `dotnet test backend/FacilityRealtime.slnx`. Every commit passes the husky pre-commit.
+- Backend tests: `dotnet test backend/JanitorialManagementDashboard.slnx`. Every commit passes the husky pre-commit.
 - Never push, open a PR or merge without the owner's explicit OK.
 
 ## ADR decision → task
@@ -39,25 +39,25 @@
 | 3. One script, env file `KEY=VALUE` with no quotes, read line by line, `chmod 600`, stale shell values cleared, Production by default, `init`, dedicated MySQL user | 3 (script), 4 (dedicated user in the guide) |
 | 4. Deploy guide for Linux in `docs/handover.md`; Windows still open | 4 |
 | 5. Thai-keyboard warning wherever a password is typed hidden | 3 (`init` prompt), 4 (guide) |
-| Consequences: piped `reset-admin` sends `yes` first; `facility.test.sh` outside pre-commit | 2, 3, 5 |
+| Consequences: piped `reset-admin` sends `yes` first; `janitorial.test.sh` outside pre-commit | 2, 3, 5 |
 
 ## Decisions made while planning (the owner can overrule them)
 
 1. **https through Caddy** in the guide. It gets and renews the certificate by itself, and its config is 3 lines. nginx + certbot is the usual alternative.
 2. **A daily `mysqldump` backup** is in the guide. The facility-0092 guide already says "restore from backup", and nobody has written how to make one. 14 days are kept.
 3. **`yes` is accepted in any case, with spaces around it** (`YES`, ` yes `). Anything else refuses.
-4. **The env file may set `FACILITY_APP_DLL`.** On a server, the script then runs the published `FacilityRealtime.Api.dll`. Without it (the Mac trial), the script runs the API from the repo with `dotnet run --no-launch-profile`.
+4. **The env file may set `FACILITY_APP_DLL`.** On a server, the script then runs the published `JanitorialManagementDashboard.Api.dll`. Without it (the Mac trial), the script runs the API from the repo with `dotnet run --no-launch-profile`.
 5. **`init` refuses `;`, `'` and `"` in the MySQL password.** Each one would break the connection string or the env file. Choose another password.
 
 ## File Structure
 
-- `backend/src/FacilityRealtime.Api/DatabaseSettings.cs` (new): `ConnectionString(IConfiguration)` and `Describe(string)`.
-- `backend/src/FacilityRealtime.Api/appsettings.json`, `appsettings.Development.json`: the developer connection string moves.
-- `backend/src/FacilityRealtime.Api/Program.cs`: uses `DatabaseSettings`, and the `reset-admin` path checks usage and confirms before migrating.
-- `backend/src/FacilityRealtime.Api/Commands/ResetAdminCommand.cs`: `Usage` constant and `ConfirmDatabase`.
-- `backend/tests/FacilityRealtime.ApiTests/Setup/DatabaseSettingsTests.cs` (new).
-- `backend/tests/FacilityRealtime.ApiTests/Admin/ResetAdminCommandTests.cs`: tests for `ConfirmDatabase`.
-- `scripts/facility.sh` (new), `scripts/facility.test.sh` (new).
+- `backend/src/JanitorialManagementDashboard.Api/DatabaseSettings.cs` (new): `ConnectionString(IConfiguration)` and `Describe(string)`.
+- `backend/src/JanitorialManagementDashboard.Api/appsettings.json`, `appsettings.Development.json`: the developer connection string moves.
+- `backend/src/JanitorialManagementDashboard.Api/Program.cs`: uses `DatabaseSettings`, and the `reset-admin` path checks usage and confirms before migrating.
+- `backend/src/JanitorialManagementDashboard.Api/Commands/ResetAdminCommand.cs`: `Usage` constant and `ConfirmDatabase`.
+- `backend/tests/JanitorialManagementDashboard.ApiTests/Setup/DatabaseSettingsTests.cs` (new).
+- `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/ResetAdminCommandTests.cs`: tests for `ConfirmDatabase`.
+- `scripts/janitorial.sh` (new), `scripts/janitorial.test.sh` (new).
 - `docs/handover.md`: the deploy guide.
 - `docs/handoff.md`: `## Sharing a test build` points at the script.
 
@@ -66,14 +66,14 @@
 ### Task 1: The connection string is required outside Development
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Api/DatabaseSettings.cs`
-- Modify: `backend/src/FacilityRealtime.Api/appsettings.json` (remove the `ConnectionStrings` block)
-- Modify: `backend/src/FacilityRealtime.Api/appsettings.Development.json` (add it)
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs:22,46,143-146`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Setup/DatabaseSettingsTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DatabaseSettings.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/appsettings.json` (remove the `ConnectionStrings` block)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/appsettings.Development.json` (add it)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs:22,46,143-146`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Setup/DatabaseSettingsTests.cs`
 
 **Interfaces:**
-- Produces: `public static class DatabaseSettings` in namespace `FacilityRealtime.Api`, with
+- Produces: `public static class DatabaseSettings` in namespace `JanitorialManagementDashboard.Api`, with
   - `public const string VariableName = "ConnectionStrings__DefaultConnection";`
   - `public static string ConnectionString(IConfiguration configuration)`: throws `InvalidOperationException` when the value is missing or empty.
   - `public static string Describe(string connectionString)`: returns `"<server>:<port> / <database>"`.
@@ -81,10 +81,10 @@
 - [ ] **Step 1: Write the failing tests**
 
 ```csharp
-using FacilityRealtime.Api;
+using JanitorialManagementDashboard.Api;
 using Microsoft.Extensions.Configuration;
 
-namespace FacilityRealtime.ApiTests.Setup;
+namespace JanitorialManagementDashboard.ApiTests.Setup;
 
 /// <summary>facility-0093 decision 1: only Development has a default database; elsewhere a missing one stops the server.</summary>
 public class DatabaseSettingsTests
@@ -154,7 +154,7 @@ public class DatabaseSettingsTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~DatabaseSettingsTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~DatabaseSettingsTests"`
 Expected: build FAIL with "The name 'DatabaseSettings' does not exist".
 
 - [ ] **Step 3: Write `DatabaseSettings`**
@@ -162,7 +162,7 @@ Expected: build FAIL with "The name 'DatabaseSettings' does not exist".
 ```csharp
 using System.Data.Common;
 
-namespace FacilityRealtime.Api;
+namespace JanitorialManagementDashboard.Api;
 
 /// <summary>
 /// facility-0093 decision 1: the one place that reads the database setting, for serving and for reset-admin. Only
@@ -179,7 +179,7 @@ public static class DatabaseSettings
         configuration.GetConnectionString("DefaultConnection") is { } value && !string.IsNullOrWhiteSpace(value)
             ? value
             : throw new InvalidOperationException(
-                $"{VariableName} is not set. Set it on the server, or run with scripts/facility.sh and its env file (docs/handover.md). Only Development has a default database.");
+                $"{VariableName} is not set. Set it on the server, or run with scripts/janitorial.sh and its env file (docs/handover.md). Only Development has a default database.");
 
     /// <summary>"server:port / database" for a person to check; never the user name or password.</summary>
     public static string Describe(string connectionString)
@@ -225,17 +225,17 @@ In `appsettings.json`, delete the whole block:
 
 - [ ] **Step 5: Use it in `Program.cs`**
 
-Replace `ConnectionString(builder.Configuration)` on lines 22 and 46 with `DatabaseSettings.ConnectionString(builder.Configuration)`. Delete lines 143–146 (the comment `// One database for serving and for reset-admin (facility-0092)` and the local `ConnectionString` function). Add `using FacilityRealtime.Api;` to `Program.cs`'s usings: its top-level statements are in the global namespace and do not see `FacilityRealtime.Api` otherwise.
+Replace `ConnectionString(builder.Configuration)` on lines 22 and 46 with `DatabaseSettings.ConnectionString(builder.Configuration)`. Delete lines 143–146 (the comment `// One database for serving and for reset-admin (facility-0092)` and the local `ConnectionString` function). Add `using JanitorialManagementDashboard.Api;` to `Program.cs`'s usings: its top-level statements are in the global namespace and do not see `JanitorialManagementDashboard.Api` otherwise.
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS, with no other test broken. The Testing environment never calls `DatabaseSettings`.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api/DatabaseSettings.cs backend/src/FacilityRealtime.Api/appsettings.json backend/src/FacilityRealtime.Api/appsettings.Development.json backend/src/FacilityRealtime.Api/Program.cs backend/tests/FacilityRealtime.ApiTests/Setup/DatabaseSettingsTests.cs
+git add backend/src/JanitorialManagementDashboard.Api/DatabaseSettings.cs backend/src/JanitorialManagementDashboard.Api/appsettings.json backend/src/JanitorialManagementDashboard.Api/appsettings.Development.json backend/src/JanitorialManagementDashboard.Api/Program.cs backend/tests/JanitorialManagementDashboard.ApiTests/Setup/DatabaseSettingsTests.cs
 git commit -m "feat: the database setting is required outside Development (facility-0093)"
 ```
 
@@ -244,9 +244,9 @@ git commit -m "feat: the database setting is required outside Development (facil
 ### Task 2: `reset-admin` names the database and waits for `yes`
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Api/Commands/ResetAdminCommand.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs:17-27`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/ResetAdminCommandTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Commands/ResetAdminCommand.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs:17-27`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/ResetAdminCommandTests.cs`
 
 **Interfaces:**
 - Consumes: `DatabaseSettings.ConnectionString(IConfiguration)` and `DatabaseSettings.Describe(string)` from Task 1.
@@ -291,7 +291,7 @@ Add to `ResetAdminCommandTests` (it already has `FakeConsole`):
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~ResetAdminCommandTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~ResetAdminCommandTests"`
 Expected: build FAIL with "'ResetAdminCommand' does not contain a definition for 'ConfirmDatabase'".
 
 - [ ] **Step 3: Add `Usage` and `ConfirmDatabase`**
@@ -318,7 +318,7 @@ In `ResetAdminCommand`, below `public const string Name = "reset-admin";`:
     }
 ```
 
-In `RunAsync`, replace `console.WriteLine($"วิธีใช้: {Name} <ชื่อผู้ใช้แอดมิน>");` with `console.WriteLine(Usage);`. No new using: `FacilityRealtime.Api.Commands` already sees its parent namespace `FacilityRealtime.Api`.
+In `RunAsync`, replace `console.WriteLine($"วิธีใช้: {Name} <ชื่อผู้ใช้แอดมิน>");` with `console.WriteLine(Usage);`. No new using: `JanitorialManagementDashboard.Api.Commands` already sees its parent namespace `JanitorialManagementDashboard.Api`.
 
 - [ ] **Step 4: Confirm before migrating in `Program.cs`**
 
@@ -356,37 +356,37 @@ if (args.Length > 0 && args[0] == ResetAdminCommand.Name)
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS. The existing `ResetAdminCommandTests` are unchanged and still pass, because `RunAsync` does not confirm.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api/Commands/ResetAdminCommand.cs backend/src/FacilityRealtime.Api/Program.cs backend/tests/FacilityRealtime.ApiTests/Admin/ResetAdminCommandTests.cs
+git add backend/src/JanitorialManagementDashboard.Api/Commands/ResetAdminCommand.cs backend/src/JanitorialManagementDashboard.Api/Program.cs backend/tests/JanitorialManagementDashboard.ApiTests/Admin/ResetAdminCommandTests.cs
 git commit -m "feat: reset-admin names the database and waits for yes (facility-0093)"
 ```
 
 ---
 
-### Task 3: `scripts/facility.sh` with its test
+### Task 3: `scripts/janitorial.sh` with its test
 
 **Files:**
-- Create: `scripts/facility.sh` (mode 755)
-- Create: `scripts/facility.test.sh` (mode 755)
+- Create: `scripts/janitorial.sh` (mode 755)
+- Create: `scripts/janitorial.test.sh` (mode 755)
 
 **Interfaces:**
-- Produces: the commands `scripts/facility.sh init <env-file>`, `scripts/facility.sh start <env-file>`, `scripts/facility.sh reset-admin <env-file> <username>`. Exit code 2 means a refusal by the script. Otherwise the code is the API's own, because the script `exec`s it.
+- Produces: the commands `scripts/janitorial.sh init <env-file>`, `scripts/janitorial.sh start <env-file>`, `scripts/janitorial.sh reset-admin <env-file> <username>`. Exit code 2 means a refusal by the script. Otherwise the code is the API's own, because the script `exec`s it.
 
 - [ ] **Step 1: Write the failing test**
 
-`scripts/facility.test.sh`:
+`scripts/janitorial.test.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# facility-0093: checks scripts/facility.sh with a fake dotnet that prints what it was given. Run: bash scripts/facility.test.sh
+# facility-0093: checks scripts/janitorial.sh with a fake dotnet that prints what it was given. Run: bash scripts/janitorial.test.sh
 set -u
 
-script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/facility.sh"
+script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/janitorial.sh"
 repo_root="$(cd "$(dirname "$script")/.." && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -426,14 +426,14 @@ check "a missing env file is refused" 2 "not found" bash "$script" start "$work/
 cp "$good" "$work/open.env"; chmod 644 "$work/open.env"
 check "an env file others can read is refused" 2 "chmod 600" bash "$script" start "$work/open.env"
 check "start keeps the ; in the connection string" 0 "conn=Server=localhost;Port=3306;Database=facility_x_test;Uid=app;Pwd=pw|" bash "$script" start "$good"
-check "start runs the repo's API without its launch profile" 0 "args=run --no-launch-profile --project $repo_root/backend/src/FacilityRealtime.Api --" bash "$script" start "$good"
+check "start runs the repo's API without its launch profile" 0 "args=run --no-launch-profile --project $repo_root/backend/src/JanitorialManagementDashboard.Api --" bash "$script" start "$good"
 check "start is Production unless the file says otherwise" 0 "env=Production" bash "$script" start "$good"
 check "a value left in the shell does not count" 0 "stale=none" env FirstAdmin__Password=left-over bash "$script" start "$good"
 check "reset-admin passes the username" 0 "-- reset-admin first.admin" bash "$script" reset-admin "$good" first.admin
 check "reset-admin needs a username" 2 "usage:" bash "$script" reset-admin "$good"
 
-cp "$good" "$work/dll.env"; echo 'FACILITY_APP_DLL=/opt/facility/app/FacilityRealtime.Api.dll' >> "$work/dll.env"
-check "a published dll runs instead of the repo" 0 "args=/opt/facility/app/FacilityRealtime.Api.dll reset-admin first.admin" bash "$script" reset-admin "$work/dll.env" first.admin
+cp "$good" "$work/dll.env"; echo 'FACILITY_APP_DLL=/opt/facility/app/JanitorialManagementDashboard.Api.dll' >> "$work/dll.env"
+check "a published dll runs instead of the repo" 0 "args=/opt/facility/app/JanitorialManagementDashboard.Api.dll reset-admin first.admin" bash "$script" reset-admin "$work/dll.env" first.admin
 
 printf 'Jwt__SigningKey=0123456789abcdef0123456789abcdef\n' > "$work/noconn.env"; chmod 600 "$work/noconn.env"
 check "an env file without the database is refused" 2 "has no ConnectionStrings__DefaultConnection" env ConnectionStrings__DefaultConnection=Server=x bash "$script" start "$work/noconn.env"
@@ -456,10 +456,10 @@ echo "all passed"
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `bash scripts/facility.test.sh`
-Expected: every check FAILs, because `scripts/facility.sh` does not exist yet ("No such file or directory"), and the run ends with "failed".
+Run: `bash scripts/janitorial.test.sh`
+Expected: every check FAILs, because `scripts/janitorial.sh` does not exist yet ("No such file or directory"), and the run ends with "failed".
 
-- [ ] **Step 3: Write `scripts/facility.sh`**
+- [ ] **Step 3: Write `scripts/janitorial.sh`**
 
 ```bash
 #!/usr/bin/env bash
@@ -467,16 +467,16 @@ Expected: every check FAILs, because `scripts/facility.sh` does not exist yet ("
 # with `export` and no setting can be missed. The file is KEY=VALUE per line, no quotes, the same as a systemd
 # EnvironmentFile. It is read line by line, never sourced: the connection string holds ';'. See docs/handover.md.
 #
-#   scripts/facility.sh init <env-file>                    create the env file (asks; passwords hidden)
-#   scripts/facility.sh start <env-file>                   run the system
-#   scripts/facility.sh reset-admin <env-file> <username>  recover an Admin (facility-0092)
+#   scripts/janitorial.sh init <env-file>                    create the env file (asks; passwords hidden)
+#   scripts/janitorial.sh start <env-file>                   run the system
+#   scripts/janitorial.sh reset-admin <env-file> <username>  recover an Admin (facility-0092)
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 required="ConnectionStrings__DefaultConnection Jwt__SigningKey"
 
-fail() { echo "facility.sh: $*" >&2; exit 2; }
-usage() { fail "usage: scripts/facility.sh init <env-file> | start <env-file> | reset-admin <env-file> <username>"; }
+fail() { echo "janitorial.sh: $*" >&2; exit 2; }
+usage() { fail "usage: scripts/janitorial.sh init <env-file> | start <env-file> | reset-admin <env-file> <username>"; }
 
 file_mode() {
   if [ "$(uname)" = "Darwin" ]; then stat -f %Lp "$1"; else stat -c %a "$1"; fi
@@ -484,7 +484,7 @@ file_mode() {
 
 load_env() {
   local file="$1" line key value lineno=0 seen=" "
-  [ -f "$file" ] || fail "$file not found. Create it with: scripts/facility.sh init $file"
+  [ -f "$file" ] || fail "$file not found. Create it with: scripts/janitorial.sh init $file"
   [ "$(file_mode "$file")" = "600" ] || fail "$file must be readable by its owner only. Run: chmod 600 $file"
 
   # Only the file's settings count: drop anything an earlier `export` left in this shell
@@ -515,7 +515,7 @@ run_app() {
   if [ -n "${FACILITY_APP_DLL:-}" ]; then
     exec dotnet "$FACILITY_APP_DLL" "$@"
   fi
-  exec dotnet run --no-launch-profile --project "$repo_root/backend/src/FacilityRealtime.Api" -- "$@"
+  exec dotnet run --no-launch-profile --project "$repo_root/backend/src/JanitorialManagementDashboard.Api" -- "$@"
 }
 
 ask() { # prompt, default
@@ -541,7 +541,7 @@ init_env() {
   user="$(ask "ผู้ใช้ MySQL ของระบบ (ไม่ใช่ root): ")"
   password="$(ask_secret "รหัสผ่านของผู้ใช้นี้: ")"
   case "$password" in *\;*|*\'*|*\"*) fail "the MySQL password must not contain ; ' or \". Choose another one" ;; esac
-  dll="$(ask "ที่อยู่ FacilityRealtime.Api.dll (เว้นว่าง = รันจากโค้ดใน repo นี้): ")"
+  dll="$(ask "ที่อยู่ JanitorialManagementDashboard.Api.dll (เว้นว่าง = รันจากโค้ดใน repo นี้): ")"
   admin="$(ask "ชื่อผู้ใช้แอดมินคนแรก: ")"
   name="$(ask "ชื่อที่แสดงของแอดมินคนแรก: ")"
   admin_password="$(ask_secret "รหัสผ่านแอดมินคนแรก (15–100 ตัว): ")"
@@ -553,7 +553,7 @@ init_env() {
   (
     umask 077
     {
-      echo "# facility-0093: settings for scripts/facility.sh and systemd. Readable by its owner only (chmod 600)."
+      echo "# facility-0093: settings for scripts/janitorial.sh and systemd. Readable by its owner only (chmod 600)."
       echo "# Remove the FirstAdmin__Password line once that Admin has logged in (docs/handover.md)."
       echo "ASPNETCORE_ENVIRONMENT=Production"
       echo "ASPNETCORE_URLS=http://localhost:5001"
@@ -567,7 +567,7 @@ init_env() {
     } > "$file"
   )
   chmod 600 "$file"
-  echo "wrote $file (chmod 600). Next: scripts/facility.sh start $file"
+  echo "wrote $file (chmod 600). Next: scripts/janitorial.sh start $file"
 }
 
 [ $# -ge 2 ] || usage
@@ -579,17 +579,17 @@ case "$1" in
 esac
 ```
 
-Then `chmod 755 scripts/facility.sh scripts/facility.test.sh`.
+Then `chmod 755 scripts/janitorial.sh scripts/janitorial.test.sh`.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `bash scripts/facility.test.sh`
-Expected: every line starts with `ok:` and the last line is `all passed`. Also run it with macOS's own bash: `/bin/bash scripts/facility.test.sh` (bash 3.2) → `all passed`.
+Run: `bash scripts/janitorial.test.sh`
+Expected: every line starts with `ok:` and the last line is `all passed`. Also run it with macOS's own bash: `/bin/bash scripts/janitorial.test.sh` (bash 3.2) → `all passed`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/facility.sh scripts/facility.test.sh
+git add scripts/janitorial.sh scripts/janitorial.test.sh
 git commit -m "feat: one script starts the system or runs reset-admin from an env file (facility-0093)"
 ```
 
@@ -619,7 +619,7 @@ Replace the line `การติดตั้ง server, https และค่�
 Replace its last bullet with:
 
 ```markdown
-- ค่าทั้งหมดอยู่ในไฟล์ค่าไฟล์เดียว (ข้อ 2.4) ทั้งระบบที่รันด้วย systemd และ `scripts/facility.sh` อ่านไฟล์นี้ จึงไม่ต้อง `export` ค่าเองในหน้าต่าง Terminal ค่าที่ `export` ไว้มีผลแค่หน้าต่างนั้น เคยทำให้คำสั่งไปทำกับฐานข้อมูลผิดตัว
+- ค่าทั้งหมดอยู่ในไฟล์ค่าไฟล์เดียว (ข้อ 2.4) ทั้งระบบที่รันด้วย systemd และ `scripts/janitorial.sh` อ่านไฟล์นี้ จึงไม่ต้อง `export` ค่าเองในหน้าต่าง Terminal ค่าที่ `export` ไว้มีผลแค่หน้าต่างนั้น เคยทำให้คำสั่งไปทำกับฐานข้อมูลผิดตัว
 - ถ้าไม่ได้ตั้ง `ConnectionStrings__DefaultConnection` ระบบไม่ยอมเริ่ม และ `reset-admin` ไม่ทำอะไร (facility-0093)
 ```
 
@@ -659,23 +659,23 @@ GRANT ALL PRIVILEGES ON facility.* TO 'facility_app'@'localhost';
 ```bash
 npm --prefix frontend ci
 npm --prefix frontend run build:api
-dotnet publish backend/src/FacilityRealtime.Api -c Release -o publish
+dotnet publish backend/src/JanitorialManagementDashboard.Api -c Release -o publish
 ```
 
-คัดลอกโฟลเดอร์ `publish` ไปที่ `/opt/facility/app` บน server และ `scripts/facility.sh` ไปที่ `/opt/facility/facility.sh` แล้วบน server
+คัดลอกโฟลเดอร์ `publish` ไปที่ `/opt/facility/app` บน server และ `scripts/janitorial.sh` ไปที่ `/opt/facility/janitorial.sh` แล้วบน server
 
 ```bash
 sudo useradd --system --no-create-home facility
-sudo chmod 755 /opt/facility/facility.sh
+sudo chmod 755 /opt/facility/janitorial.sh
 ```
 
 ### 2.4 ไฟล์ค่า
 
 ```bash
-sudo /opt/facility/facility.sh init /etc/facility/facility.env
+sudo /opt/facility/janitorial.sh init /etc/facility/facility.env
 ```
 
-ตอบคำถามทีละข้อ ที่อยู่ `FacilityRealtime.Api.dll` คือ `/opt/facility/app/FacilityRealtime.Api.dll` สคริปต์สุ่ม `Jwt__SigningKey` ให้ ไฟล์ที่ได้อ่านได้เฉพาะ root
+ตอบคำถามทีละข้อ ที่อยู่ `JanitorialManagementDashboard.Api.dll` คือ `/opt/facility/app/JanitorialManagementDashboard.Api.dll` สคริปต์สุ่ม `Jwt__SigningKey` ให้ ไฟล์ที่ได้อ่านได้เฉพาะ root
 
 | ค่า | ความหมาย |
 |---|---|
@@ -685,7 +685,7 @@ sudo /opt/facility/facility.sh init /etc/facility/facility.env
 | `ASPNETCORE_URLS` | `http://localhost:5001` ระบบรับเฉพาะจากในเครื่อง Caddy ส่งต่อให้ |
 | `ASPNETCORE_ENVIRONMENT` | `Production` ห้ามตั้ง `Development` บน server เพราะ seed มีรหัสแอดมินที่ทุกคนเห็น (facility-0049) |
 | `FirstAdmin__*` | แอดมินคนแรก ดูข้อ 3 |
-| `FACILITY_APP_DLL` | ให้ `facility.sh` รันไฟล์ที่ publish แล้ว ระบบไม่ได้อ่านค่านี้ |
+| `FACILITY_APP_DLL` | ให้ `janitorial.sh` รันไฟล์ที่ publish แล้ว ระบบไม่ได้อ่านค่านี้ |
 
 แก้ไฟล์ภายหลังด้วย `sudo nano /etc/facility/facility.env` บรรทัดละ `ชื่อ=ค่า` ห้ามใส่เครื่องหมายคำพูด แล้ว `sudo systemctl restart facility`
 
@@ -702,7 +702,7 @@ After=network.target mysql.service
 User=facility
 WorkingDirectory=/opt/facility/app
 EnvironmentFile=/etc/facility/facility.env
-ExecStart=/usr/bin/dotnet /opt/facility/app/FacilityRealtime.Api.dll
+ExecStart=/usr/bin/dotnet /opt/facility/app/JanitorialManagementDashboard.Api.dll
 Restart=always
 RestartSec=5
 
@@ -754,8 +754,8 @@ cron รันด้วย root ซึ่งต้องเข้า MySQL ไ�
 ### 2.9 ทดลองบนเครื่องตัวเองก่อน (ไม่มี server)
 
 ```bash
-scripts/facility.sh init ~/.facility/trial.env
-scripts/facility.sh start ~/.facility/trial.env
+scripts/janitorial.sh init ~/.facility/trial.env
+scripts/janitorial.sh start ~/.facility/trial.env
 cloudflared tunnel --url http://localhost:5001
 ```
 
@@ -767,7 +767,7 @@ cloudflared tunnel --url http://localhost:5001
 In the new section 3 ("สร้างแอดมินคนแรก"), replace step 1's export example and its `read -rs` note with:
 
 ```markdown
-1. ค่า 3 ตัวนี้อยู่ในไฟล์ค่าแล้ว ถ้าสร้างด้วย `facility.sh init` (ข้อ 2.4)
+1. ค่า 3 ตัวนี้อยู่ในไฟล์ค่าแล้ว ถ้าสร้างด้วย `janitorial.sh init` (ข้อ 2.4)
    - `FirstAdmin__Username` ชื่อผู้ใช้ ตัวอักษรอังกฤษ ตัวเลข `.` `_` หรือ `-` ยาว 3–100 ตัว
    - `FirstAdmin__Password` รหัสผ่าน ยาว 15–100 ตัว และไม่ใช่รหัสที่คนใช้กันเยอะ
    - `FirstAdmin__DisplayName` ชื่อที่แสดงในระบบ ยาว 1–150 ตัว
@@ -786,9 +786,9 @@ In the new section 4 ("กู้คืน … `reset-admin`"), replace steps 1 a
 ````markdown
 1. เข้า server แล้วรัน
    ```bash
-   sudo /opt/facility/facility.sh reset-admin /etc/facility/facility.env <ชื่อผู้ใช้แอดมิน>
+   sudo /opt/facility/janitorial.sh reset-admin /etc/facility/facility.env <ชื่อผู้ใช้แอดมิน>
    ```
-   สคริปต์ใช้ไฟล์ค่าเดียวกับระบบ จึงไปที่ฐานข้อมูลเดียวกันเสมอ ถ้าทดลองบนเครื่องตัวเอง ใช้ `scripts/facility.sh reset-admin ~/.facility/trial.env <ชื่อผู้ใช้แอดมิน>`
+   สคริปต์ใช้ไฟล์ค่าเดียวกับระบบ จึงไปที่ฐานข้อมูลเดียวกันเสมอ ถ้าทดลองบนเครื่องตัวเอง ใช้ `scripts/janitorial.sh reset-admin ~/.facility/trial.env <ชื่อผู้ใช้แอดมิน>`
 2. คำสั่งบอกก่อนว่าจะเปลี่ยนข้อมูลในฐานข้อมูลไหน เช่น `localhost:3306 / facility` ตรวจว่าถูกตัว แล้วพิมพ์ `yes` ถ้าพิมพ์อย่างอื่น คำสั่งจบโดยไม่แตะฐานข้อมูล
 ````
 
@@ -796,11 +796,11 @@ In step 5 of that section, replace "ให้ตรวจ `ConnectionStrings__De
 
 - [ ] **Step 5: Point the handoff's test-build steps at the script**
 
-In `docs/handoff.md` `## Sharing a test build`, append to step 3: ` Simpler and safer since facility-0093: `scripts/facility.sh init` an env file outside the repo for the throwaway database, then `scripts/facility.sh start` it (Production, no seed: the Admin comes from `FirstAdmin__*`).`
+In `docs/handoff.md` `## Sharing a test build`, append to step 3: ` Simpler and safer since facility-0093: `scripts/janitorial.sh init` an env file outside the repo for the throwaway database, then `scripts/janitorial.sh start` it (Production, no seed: the Admin comes from `FirstAdmin__*`).`
 
 - [ ] **Step 6: Read the guide top to bottom once**
 
-Check: section numbers run 1–5; every "ข้อ N" points at the right section; no setting name is spelt two ways; the Thai-keyboard warning is in the opening note and in `facility.sh init`.
+Check: section numbers run 1–5; every "ข้อ N" points at the right section; no setting name is spelt two ways; the Thai-keyboard warning is in the opening note and in `janitorial.sh init`.
 
 - [ ] **Step 7: Commit**
 
@@ -816,9 +816,9 @@ git commit -m "docs: Thai deploy guide for a Linux server (facility-0093)"
 **Files:** none changed, unless a step fails.
 
 - [ ] **Step 1:** The owner creates a throwaway database `facility_deploy_test` and a user `facility_deploy_app` with rights on it only (the root password is typed by the owner).
-- [ ] **Step 2:** `npm --prefix frontend run build:api`, then `scripts/facility.sh init ~/.facility/deploy-test.env` (answers: `facility_deploy_test`, `facility_deploy_app`, made-up Admin).
-- [ ] **Step 3:** `scripts/facility.sh start ~/.facility/deploy-test.env` → the log has `Created the first Admin`. Log in at `http://localhost:5001/login/admin`.
-- [ ] **Step 4:** In another window with nothing exported: `ASPNETCORE_ENVIRONMENT=Production dotnet run --no-launch-profile --project backend/src/FacilityRealtime.Api` → stops with `ConnectionStrings__DefaultConnection is not set`. Then the same with `-- reset-admin admin` → the same message, and `facility_dashboard` is untouched.
-- [ ] **Step 5:** `scripts/facility.sh reset-admin ~/.facility/deploy-test.env <admin>` → shows `localhost:3306 / facility_deploy_test`. Answer `no` → exit 1, no new row in D9. Run it again, answer `yes` → the password is reset and D9 has a "ระบบ" row.
-- [ ] **Step 6:** `dotnet run --project backend/src/FacilityRealtime.Api` (launch profile, Development) still starts on `facility_dashboard`; stop it at once without logging in.
+- [ ] **Step 2:** `npm --prefix frontend run build:api`, then `scripts/janitorial.sh init ~/.facility/deploy-test.env` (answers: `facility_deploy_test`, `facility_deploy_app`, made-up Admin).
+- [ ] **Step 3:** `scripts/janitorial.sh start ~/.facility/deploy-test.env` → the log has `Created the first Admin`. Log in at `http://localhost:5001/login/admin`.
+- [ ] **Step 4:** In another window with nothing exported: `ASPNETCORE_ENVIRONMENT=Production dotnet run --no-launch-profile --project backend/src/JanitorialManagementDashboard.Api` → stops with `ConnectionStrings__DefaultConnection is not set`. Then the same with `-- reset-admin admin` → the same message, and `facility_dashboard` is untouched.
+- [ ] **Step 5:** `scripts/janitorial.sh reset-admin ~/.facility/deploy-test.env <admin>` → shows `localhost:3306 / facility_deploy_test`. Answer `no` → exit 1, no new row in D9. Run it again, answer `yes` → the password is reset and D9 has a "ระบบ" row.
+- [ ] **Step 6:** `dotnet run --project backend/src/JanitorialManagementDashboard.Api` (launch profile, Development) still starts on `facility_dashboard`; stop it at once without logging in.
 - [ ] **Step 7:** Clean up: stop the API, drop `facility_deploy_test` and the user `facility_deploy_app`, delete `~/.facility/deploy-test.env` and `wwwroot`. Write the result in `docs/handoff.md` and commit.

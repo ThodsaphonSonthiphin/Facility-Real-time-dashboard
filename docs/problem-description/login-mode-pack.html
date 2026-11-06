@@ -285,7 +285,7 @@ svg.diagram { width: 100%; min-width: 980px; height: auto; display: block; }
   <div class="wt-panel-title">📄 โค้ดส่วน Backend: AuthEndpoints.cs (LoginAsync & PBKDF2)</div>
   สังเกตเทคนิคการป้องกัน <strong>Timing Attack</strong> ด้วย <code>DummyPasswordHash</code>:
   <div class="code-block">
-<span class="hl-com">// backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs</span>
+<span class="hl-com">// backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs</span>
 <span class="hl-kw">private static async Task</span>&lt;IResult&gt; <span class="hl-fn">LoginAsync</span>(...)
 {
     <span class="hl-kw">var</span> user = <span class="hl-kw">await</span> db.Users.FirstOrDefaultAsync(u =&gt; u.Username == request.Username);
@@ -333,7 +333,7 @@ svg.diagram { width: 100%; min-width: 980px; height: auto; display: block; }
   <div class="wt-panel-title">📄 โค้ดส่วน Backend: Token Rotation & Sliding Window 30 วัน</div>
   เมื่อ Refresh สำเร็จ Token เดิมจะถูกบันทึก <code>RotatedAt = now</code> และออกใบใหม่ทันที:
   <div class="code-block">
-<span class="hl-com">// backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs</span>
+<span class="hl-com">// backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs</span>
 stored.RotatedAt ??= now; <span class="hl-com">// บันทึกเวลาที่ถูกหมุน</span>
 <span class="hl-kw">var</span> next = AddRefreshToken(db, stored.UserId, stored.SessionId, now);
 <span class="hl-kw">await</span> db.SaveChangesAsync();
@@ -353,7 +353,7 @@ WriteRefreshCookie(http, next.Token, next.ExpiresAt, jwt.Value);
   <div class="wt-panel-title">🚨 ตรวจพบ Token Reuse: Revoke ทันทีทั้ง Session (ADR facility-0015 / RFC 9700)</div>
   เซิร์ฟเวอร์ไม่สามารถรู้ได้ว่าใครคือเจ้าของจริง และใครคือ Hacker จึงต้องปกป้องข้อมูลด้วยการ <strong>ยกเลิกทุก Token ใน Session นั้น</strong>:
   <div class="code-block">
-<span class="hl-com">// backend/src/FacilityRealtime.Application/Auth/RefreshTokenRules.cs</span>
+<span class="hl-com">// backend/src/JanitorialManagementDashboard.Application/Auth/RefreshTokenRules.cs</span>
 <span class="hl-kw">public static</span> RefreshDecision <span class="hl-fn">Decide</span>(RefreshToken token, DateTime nowUtc)
 {
     <span class="hl-kw">if</span> (token.RotatedAt is not null)
@@ -371,7 +371,7 @@ WriteRefreshCookie(http, next.Token, next.ExpiresAt, jwt.Value);
   <div class="wt-panel-title">📄 โค้ดส่วน Logout: การเพิกถอน Session อย่างสมบูรณ์</div>
   เมื่อผู้ใช้กด "ออก" ในแอป:
   <div class="code-block">
-<span class="hl-com">// backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs</span>
+<span class="hl-com">// backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs</span>
 <span class="hl-kw">private static async Task</span>&lt;IResult&gt; <span class="hl-fn">LogoutAsync</span>(...)
 {
     <span class="hl-com">// ดึง SessionId จาก Token ที่ส่งมา แล้วสั่ง RevokeSession ใน Database</span>

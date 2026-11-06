@@ -1,6 +1,6 @@
 # Frontend Standards
 
-The rules `code-review` checks on any frontend change (its Standards axis). The look itself is described in `design-system/facility/MASTER.md`; the decisions behind both are facility-0086, 0087 and 0088.
+The rules `code-review` checks on any frontend change (its Standards axis). The look itself is described in `design-system/janitorial/MASTER.md`; the decisions behind both are facility-0086, 0087 and 0088.
 
 ## Styling (Tailwind 4, facility-0086)
 

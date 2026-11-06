@@ -5,7 +5,7 @@
 **Goal:** Give the Admin the accounts page (D6) to add, edit, re-phone, reset and deactivate accounts one by one, and the Excel export (D8) of attendance and submissions for a date range. Every action is logged.
 
 **Architecture:**
-- **Pure rules in `FacilityRealtime.Application`, unit-tested:**
+- **Pure rules in `JanitorialManagementDashboard.Application`, unit-tested:**
   - `AccountRules` checks what the Admin types: employee ID, username, display name, temporary password.
   - `PhoneNumber.IsComplete` checks a login phone.
   - `ExportRules.MissedRounds` finds the rounds nobody did.
@@ -51,7 +51,7 @@
   - Work on branch `feat/accounts-export`, created from `master` at `7cd8ba4` (PR #53 merged).
   - Do not merge it.
 - **No migration:** nothing in this plan changes the schema. If a task seems to need a schema change, stop and report instead of adding a migration.
-- **One new package:** add `ClosedXML` version `0.104.2` (MIT licence) to `FacilityRealtime.Infrastructure` only. Add no other package. If that version will not restore, stop and report.
+- **One new package:** add `ClosedXML` version `0.104.2` (MIT licence) to `JanitorialManagementDashboard.Infrastructure` only. Add no other package. If that version will not restore, stop and report.
 - **Endpoint security:**
   - Every new endpoint is under `/api/admin` and uses `RequireAuthorization(AuthSetup.AdminOnly)`. That gives 401 without login and 403 to Cleaners and Supervisors.
   - Each one loads the actor with `CurrentUser.LoadAsync` and answers 401 when that returns null.
@@ -133,16 +133,16 @@
 
 ```
 backend/
-  src/FacilityRealtime.Application/
+  src/JanitorialManagementDashboard.Application/
     Accounts/AccountRules.cs                 employee ID, username, display name, password checks          (new, Task 1)
     Auth/PhoneNumber.cs                      + IsComplete                                                     (modified, Task 1)
     Audit/AuditCategories.cs                 + Account, Export                                                (modified, Task 1)
     Export/ExportRules.cs                    ExportSet, MaxDays, MissedRounds                                 (new, Task 5)
-  src/FacilityRealtime.Infrastructure/
-    FacilityRealtime.Infrastructure.csproj   + ClosedXML 0.104.2                                              (modified, Task 6)
+  src/JanitorialManagementDashboard.Infrastructure/
+    JanitorialManagementDashboard.Infrastructure.csproj   + ClosedXML 0.104.2                                              (modified, Task 6)
     Persistence/ExportQuery.cs               attendance, submission and point-round rows                       (new, Task 5)
     Export/ExcelWorkbook.cs                  ExcelSheet, Write                                                (new, Task 6)
-  src/FacilityRealtime.Api/
+  src/JanitorialManagementDashboard.Api/
     DTOs/AccountDtos.cs                      AccountDto and requests                                          (new, Task 2)
     DTOs/ExportDtos.cs                       ExportRequest                                                    (new, Task 6)
     Endpoints/AccountView.cs                 list read model                                                  (new, Task 2)
@@ -152,12 +152,12 @@ backend/
     Endpoints/AdminExportEndpoints.cs        POST /api/admin/export                                           (new, Task 6)
     Endpoints/ThaiLabels.cs                  + RoleName, SubmissionResult, Gps                                (modified, Tasks 2, 6)
     Program.cs                               maps the two new endpoint files                                  (modified, Tasks 2, 6)
-  tests/FacilityRealtime.UnitTests/
+  tests/JanitorialManagementDashboard.UnitTests/
     AccountRulesTests.cs                                                                                      (new, Task 1)
     PhoneNumberTests.cs                      + IsComplete                                                     (modified, Task 1)
     AuditCategoriesTests.cs                  + new actions                                                    (modified, Task 1)
     ExportRulesTests.cs                                                                                       (new, Task 5)
-  tests/FacilityRealtime.ApiTests/
+  tests/JanitorialManagementDashboard.ApiTests/
     Infrastructure/TestData.cs               + AddAreaAsync, AddBuildingAsync, AddAttendanceAsync, BackdateSetupAsync (modified, Task 2, 5)
     Admin/AccountModels.cs, AccountApi.cs    test models and helpers                                          (new, Task 2)
     Admin/AccountEndpointTests.cs            list and create                                                  (new, Task 2)
@@ -189,12 +189,12 @@ README.md, docs/architecture.md              new routes                         
 ### Task 1: Account rules, login phone check, audit categories
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Accounts/AccountRules.cs`
-- Modify: `backend/src/FacilityRealtime.Application/Auth/PhoneNumber.cs`
-- Modify: `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs`
-- Test: `backend/tests/FacilityRealtime.UnitTests/AccountRulesTests.cs` (new)
-- Test: `backend/tests/FacilityRealtime.UnitTests/PhoneNumberTests.cs` (append)
-- Test: `backend/tests/FacilityRealtime.UnitTests/AuditCategoriesTests.cs` (append rows)
+- Create: `backend/src/JanitorialManagementDashboard.Application/Accounts/AccountRules.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Auth/PhoneNumber.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Audit/AuditCategories.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/AccountRulesTests.cs` (new)
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/PhoneNumberTests.cs` (append)
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/AuditCategoriesTests.cs` (append rows)
 
 **Interfaces:**
 - Produces:
@@ -205,12 +205,12 @@ README.md, docs/architecture.md              new routes                         
 
 - [ ] **Step 1: Write the failing tests**
 
-`backend/tests/FacilityRealtime.UnitTests/AccountRulesTests.cs`:
+`backend/tests/JanitorialManagementDashboard.UnitTests/AccountRulesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Accounts;
+using JanitorialManagementDashboard.Application.Accounts;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>Wireframe D6: what the Admin may type when adding an account (facility-0020, 0054, 0056).</summary>
 public class AccountRulesTests
@@ -277,7 +277,7 @@ public class AccountRulesTests
 }
 ```
 
-Append to the class in `backend/tests/FacilityRealtime.UnitTests/PhoneNumberTests.cs`:
+Append to the class in `backend/tests/JanitorialManagementDashboard.UnitTests/PhoneNumberTests.cs`:
 
 ```csharp
     [Theory]
@@ -302,7 +302,7 @@ Append to the class in `backend/tests/FacilityRealtime.UnitTests/PhoneNumberTest
     }
 ```
 
-In `backend/tests/FacilityRealtime.UnitTests/AuditCategoriesTests.cs`, add these rows above `[InlineData("QR_REGENERATE", AuditCategory.QrToken)]`:
+In `backend/tests/JanitorialManagementDashboard.UnitTests/AuditCategoriesTests.cs`, add these rows above `[InlineData("QR_REGENERATE", AuditCategory.QrToken)]`:
 
 ```csharp
     [InlineData("ACCOUNT_CREATE", AuditCategory.Account)]
@@ -316,17 +316,17 @@ In `backend/tests/FacilityRealtime.UnitTests/AuditCategoriesTests.cs`, add these
 
 - [ ] **Step 2: Run the tests to see them fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~AccountRulesTests|FullyQualifiedName~PhoneNumberTests|FullyQualifiedName~AuditCategoriesTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~AccountRulesTests|FullyQualifiedName~PhoneNumberTests|FullyQualifiedName~AuditCategoriesTests"`
 Expected: build FAILS with `AccountRules`, `IsComplete`, `AuditCategory.Account` not defined.
 
 - [ ] **Step 3: Write the rules**
 
-`backend/src/FacilityRealtime.Application/Accounts/AccountRules.cs`:
+`backend/src/JanitorialManagementDashboard.Application/Accounts/AccountRules.cs`:
 
 ```csharp
 using System.Text.RegularExpressions;
 
-namespace FacilityRealtime.Application.Accounts;
+namespace JanitorialManagementDashboard.Application.Accounts;
 
 /// <summary>What the Admin may type on the accounts page (wireframe D6, facility-0020, 0054, 0056).</summary>
 public static partial class AccountRules
@@ -369,7 +369,7 @@ public static partial class AccountRules
 }
 ```
 
-Add to `backend/src/FacilityRealtime.Application/Auth/PhoneNumber.cs`, inside the class after `Normalize`:
+Add to `backend/src/JanitorialManagementDashboard.Application/Auth/PhoneNumber.cs`, inside the class after `Normalize`:
 
 ```csharp
     /// <summary>facility-0056: a login phone is 10 digits starting with 0. Pass the result of <see cref="Normalize"/>.</summary>
@@ -377,7 +377,7 @@ Add to `backend/src/FacilityRealtime.Application/Auth/PhoneNumber.cs`, inside th
         normalized.Length == 10 && normalized[0] == '0' && normalized.All(char.IsAsciiDigit);
 ```
 
-In `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs`:
+In `backend/src/JanitorialManagementDashboard.Application/Audit/AuditCategories.cs`:
 - Change the summary of `AuditCategory` to `/// <summary>The "ประเภท" filter of the Admin history page (wireframe D9, facility-0057).</summary>`.
 - Add `Account,` and `Export,` after `QrToken,` in the enum.
 - Add these entries to `Actions`, after the `QrToken` entry:
@@ -392,12 +392,12 @@ In `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs`:
 
 - [ ] **Step 4: Run the tests to see them pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`
 Expected: PASS, all unit tests (215 before this task, plus the new ones).
 
 - [ ] **Step 5: Run the API tests**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests`
 Expected: PASS (the history page's category filter accepts `Account` and `Export` now; nothing else changes).
 
 - [ ] **Step 6: Update the handoff and commit**
@@ -411,7 +411,7 @@ Add under `## Task log (plan 5)` in `docs/handoff.md` (create the section if it 
 Use the real date if it is not 2026-10-14.
 
 ```bash
-git add backend/src/FacilityRealtime.Application backend/tests/FacilityRealtime.UnitTests docs/handoff.md
+git add backend/src/JanitorialManagementDashboard.Application backend/tests/JanitorialManagementDashboard.UnitTests docs/handoff.md
 git commit -m "feat(backend): account input rules, login phone check, Account and Export history categories"
 ```
 
@@ -420,16 +420,16 @@ git commit -m "feat(backend): account input rules, login phone check, Account an
 ### Task 2: Account list and create
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Api/DTOs/AccountDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AccountView.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AccountChecks.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs` (+ `RoleName`)
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs` (map the endpoints)
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs` (+ `AddAreaAsync`, `AddBuildingAsync`)
-- Create: `backend/tests/FacilityRealtime.ApiTests/Admin/AccountModels.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Admin/AccountApi.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AccountEndpointTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/AccountDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AccountView.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AccountChecks.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs` (+ `RoleName`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs` (map the endpoints)
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestData.cs` (+ `AddAreaAsync`, `AddBuildingAsync`)
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountModels.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountApi.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountEndpointTests.cs`
 
 **Interfaces:**
 - Consumes: Task 1's `AccountRules`, `PhoneNumber.IsComplete`; existing `IPasswordHasher.Hash`, `AuditTrail.Add`, `CurrentUser.LoadAsync`, `ApiResults.Message`, `ThaiLabels.ShiftName`.
@@ -442,11 +442,11 @@ git commit -m "feat(backend): account input rules, login phone check, Account an
 
 - [ ] **Step 1: Add the test helpers and models**
 
-Append to `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, inside the class:
+Append to `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestData.cs`, inside the class:
 
 ```csharp
     /// <summary>A new building with no Areas, e.g. "B".</summary>
-    public static async Task<int> AddBuildingAsync(FacilityApiFactory factory, string code)
+    public static async Task<int> AddBuildingAsync(JanitorialApiFactory factory, string code)
     {
         var id = 0;
         await factory.WithDbAsync(async db =>
@@ -461,7 +461,7 @@ Append to `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, 
 
     /// <summary>A new Area with its check-in sign and no Cleaner, e.g. "AR03" in building A.</summary>
     public static async Task<int> AddAreaAsync(
-        FacilityApiFactory factory, string code, string buildingCode = "A", ShiftPattern pattern = ShiftPattern.DayAndNight)
+        JanitorialApiFactory factory, string code, string buildingCode = "A", ShiftPattern pattern = ShiftPattern.DayAndNight)
     {
         var id = 0;
         await factory.WithDbAsync(async db =>
@@ -476,22 +476,22 @@ Append to `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, 
     }
 ```
 
-`backend/tests/FacilityRealtime.ApiTests/Admin/AccountModels.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountModels.cs`:
 
 ```csharp
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 public record AccountModel(
     int Id, string Role, string LoginName, string DisplayName, int? AreaId, string? AreaCode, int? BuildingId, string? BuildingCode,
     string? Shift, bool IsActive, DateTime CreatedAt);
 ```
 
-`backend/tests/FacilityRealtime.ApiTests/Admin/AccountApi.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountApi.cs`:
 
 ```csharp
 using System.Net.Http.Json;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>Calls of the accounts page (wireframe D6). Fields a role does not use are left out, as the page will.</summary>
 public static class AccountApi
@@ -520,17 +520,17 @@ public static class AccountApi
 
 - [ ] **Step 2: Write the failing tests**
 
-`backend/tests/FacilityRealtime.ApiTests/Admin/AccountEndpointTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>Wireframe D6, facility-0020/0054/0056: the Admin lists accounts and adds them one by one.</summary>
 public class AccountEndpointTests
@@ -538,7 +538,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task The_list_shows_every_account_admins_first_and_never_a_secret()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await admin.GetAsync(AccountApi.Path);
@@ -560,7 +560,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task A_new_cleaner_logs_in_with_the_phone_at_once_and_the_log_has_no_phone()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         var ar03 = await TestData.AddAreaAsync(factory, "AR03");
 
@@ -585,7 +585,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task A_cleaner_may_be_added_without_an_area()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await AccountApi.CreateCleanerAsync(admin, "E2002", "0000000012", areaId: null);
@@ -599,7 +599,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task A_taken_area_shift_is_refused_and_names_who_holds_it()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
 
@@ -613,7 +613,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task A_supervisor_takes_a_free_building_shift_only()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
 
@@ -630,7 +630,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task A_new_admin_logs_in_with_the_temporary_password()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await AccountApi.CreateAdminAsync(admin, "admin2", "temporary-1");
@@ -648,7 +648,7 @@ public class AccountEndpointTests
     [InlineData("E1001")]
     public async Task A_used_employee_id_is_refused_whatever_the_letter_case(string employeeId)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await AccountApi.CreateCleanerAsync(admin, employeeId, "0000000014", areaId: null);
@@ -660,7 +660,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task A_used_username_is_refused_whatever_the_letter_case()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await AccountApi.CreateAdminAsync(admin, "ADMIN", "temporary-1");
@@ -691,7 +691,7 @@ public class AccountEndpointTests
     [MemberData(nameof(BadRequests))]
     public async Task Bad_input_is_refused_and_nothing_is_saved(string body)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var before = (await AccountApi.ListAsync(admin)).Count;
 
@@ -706,7 +706,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task A_day_only_area_takes_no_night_cleaner()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");   // seeded DayOnly
 
@@ -719,7 +719,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task A_deactivated_area_takes_no_cleaner()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var ar03 = await TestData.AddAreaAsync(factory, "AR03");
         await factory.WithDbAsync(async db =>
@@ -736,7 +736,7 @@ public class AccountEndpointTests
     [Fact]
     public async Task Cleaners_and_supervisors_cannot_open_the_page()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "S2001", "0820000001");
 
@@ -750,17 +750,17 @@ public class AccountEndpointTests
 
 - [ ] **Step 3: Run the tests to see them fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AccountEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AccountEndpointTests"`
 Expected: FAIL; the route does not exist (404 where 200/201/400/409 are expected).
 
 - [ ] **Step 4: Write the DTOs**
 
-`backend/src/FacilityRealtime.Api/DTOs/AccountDtos.cs`:
+`backend/src/JanitorialManagementDashboard.Api/DTOs/AccountDtos.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 /// <summary>
 /// One row of the accounts page (wireframe D6). LoginName is the employee ID, or the username of an Admin.
@@ -804,7 +804,7 @@ public record AccountPasswordRequest(string? Password);
 
 - [ ] **Step 5: Write the read model and the checks**
 
-Add to `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs`, inside the class:
+Add to `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs`, inside the class:
 
 ```csharp
     public static string RoleName(UserRole role) => role switch
@@ -815,16 +815,16 @@ Add to `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs`, inside the cl
     };
 ```
 
-`backend/src/FacilityRealtime.Api/Endpoints/AccountView.cs`:
+`backend/src/JanitorialManagementDashboard.Api/Endpoints/AccountView.cs`:
 
 ```csharp
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>What the accounts page shows, deactivated accounts included.</summary>
 internal static class AccountView
@@ -868,15 +868,15 @@ internal static class AccountView
 }
 ```
 
-`backend/src/FacilityRealtime.Api/Endpoints/AccountChecks.cs`:
+`backend/src/JanitorialManagementDashboard.Api/Endpoints/AccountChecks.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>Where an account works (Area or building + shift), and the checks that keep login names and slots unique.</summary>
 internal static class AccountChecks
@@ -1037,21 +1037,21 @@ internal static class AccountChecks
 
 - [ ] **Step 6: Write the endpoints**
 
-`backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs`:
+`backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Accounts;
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Accounts;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using static FacilityRealtime.Api.Endpoints.AccountChecks;
+using static JanitorialManagementDashboard.Api.Endpoints.AccountChecks;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// Wireframe D6, facility-0020/0054/0056: the Admin adds, edits, re-phones, resets and deactivates accounts one by one.
@@ -1209,7 +1209,7 @@ public static class AdminAccountEndpoints
 }
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, add after `app.MapAdminAuditLogEndpoints();`:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, add after `app.MapAdminAuditLogEndpoints();`:
 
 ```csharp
 app.MapAdminAccountEndpoints();
@@ -1217,14 +1217,14 @@ app.MapAdminAccountEndpoints();
 
 - [ ] **Step 7: Run the tests to see them pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AccountEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AccountEndpointTests"`
 Expected: PASS.
 
 If `The_list_shows_every_account_admins_first_and_never_a_secret` fails on the word "secret", read the raw JSON. No property may be named after a secret, and the DTO above has none, so the failure means something leaks. Fix the leak; do not weaken the assertion.
 
 - [ ] **Step 8: Run every test**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS (3 MySQL tests skipped).
 
 - [ ] **Step 9: Update the handoff and commit**
@@ -1245,8 +1245,8 @@ git commit -m "feat(backend): Admin accounts page lists accounts and adds a Clea
 ### Task 3: Edit, deactivate, activate
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AccountEditEndpointTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountEditEndpointTests.cs`
 
 **Interfaces:**
 - Consumes: Task 2's `AccountChecks.*`, `AccountView.LoadOneAsync`, `Snapshot`, `SaveAsync`, `UpdateAccountRequest`; the existing `RefreshTokenRevocation.RevokeUserSessionsAsync(db, userId, nowUtc)`.
@@ -1254,15 +1254,15 @@ git commit -m "feat(backend): Admin accounts page lists accounts and adds a Clea
 
 - [ ] **Step 1: Write the failing tests**
 
-`backend/tests/FacilityRealtime.ApiTests/Admin/AccountEditEndpointTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountEditEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>Wireframe D6: edit, deactivate and activate. Deactivation logs the person out everywhere (facility-0014, 0020).</summary>
 public class AccountEditEndpointTests
@@ -1279,7 +1279,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task The_admin_renames_a_cleaner_and_moves_them_to_a_free_area()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
@@ -1299,7 +1299,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task Saving_the_same_values_logs_nothing()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
         var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
@@ -1313,7 +1313,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task Moving_into_a_taken_slot_is_refused()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
         var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
@@ -1328,7 +1328,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task A_supervisor_is_moved_to_another_building_shift()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var s2001 = await AdminSetupApi.UserIdAsync(factory, "S2001");
         var buildingB = await TestData.AddBuildingAsync(factory, "B");
@@ -1343,7 +1343,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task Deactivating_a_cleaner_logs_them_out_and_frees_their_area_slot()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var (_, _, cleanerRefresh) = await AuthApi.LoggedInAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
@@ -1368,7 +1368,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task An_admin_cannot_deactivate_their_own_account()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await DeactivateAsync(admin, adminAuth.User.Id);
@@ -1381,7 +1381,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task Deactivating_twice_logs_once()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1002 = await AdminSetupApi.UserIdAsync(factory, "E1002");
 
@@ -1395,7 +1395,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task An_activated_cleaner_logs_in_again_without_an_area()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
         await DeactivateAsync(admin, e1001);
@@ -1412,7 +1412,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task A_supervisor_whose_slot_was_filled_cannot_be_activated()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var s2001 = await AdminSetupApi.UserIdAsync(factory, "S2001");
         var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
@@ -1429,7 +1429,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task A_deactivated_cleaner_gets_no_area_until_activated()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
         var ar03 = await TestData.AddAreaAsync(factory, "AR03");
@@ -1447,7 +1447,7 @@ public class AccountEditEndpointTests
     [InlineData("POST", "/api/admin/accounts/9999/activate")]
     public async Task An_unknown_account_is_404(string method, string path)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         using var request = new HttpRequestMessage(new HttpMethod(method), path)
         {
@@ -1463,7 +1463,7 @@ public class AccountEditEndpointTests
     [Fact]
     public async Task A_cleaner_cannot_edit_accounts()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
 
         Assert.Equal(HttpStatusCode.Forbidden, (await DeactivateAsync(cleaner, auth.User.Id)).StatusCode);
@@ -1474,7 +1474,7 @@ public class AccountEditEndpointTests
 
 - [ ] **Step 2: Run the tests to see them fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AccountEditEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AccountEditEndpointTests"`
 Expected: FAIL; the routes answer 404 or 405.
 
 - [ ] **Step 3: Add the edit and activation endpoints**
@@ -1605,12 +1605,12 @@ Add these methods to the class:
 
 - [ ] **Step 4: Run the tests to see them pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AccountEditEndpointTests|FullyQualifiedName~AccountEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AccountEditEndpointTests|FullyQualifiedName~AccountEndpointTests"`
 Expected: PASS.
 
 - [ ] **Step 5: Run every test**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS (3 MySQL tests skipped).
 
 - [ ] **Step 6: Update the handoff and commit**
@@ -1631,9 +1631,9 @@ git commit -m "feat(backend): Admin edits, deactivates and activates accounts; d
 ### Task 4: Change phone, reset password, history never holds a secret
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AccountSecretEndpointTests.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountSecretEndpointTests.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminTests.cs`
 
 **Interfaces:**
 - Consumes: Task 2's `AccountPhoneRequest`, `AccountPasswordRequest`, `AccountChecks.Bad/NotFound`; `IPasswordHasher.Hash/Verify`; `RevokeUserSessionsAsync`.
@@ -1641,14 +1641,14 @@ git commit -m "feat(backend): Admin edits, deactivates and activates accounts; d
 
 - [ ] **Step 1: Write the failing tests**
 
-`backend/tests/FacilityRealtime.ApiTests/Admin/AccountSecretEndpointTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountSecretEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>
 /// facility-0054: "แก้เบอร์โทร" for Cleaners and Supervisors, "รีเซ็ตรหัสผ่าน" for Admins. Either one logs the person out on
@@ -1665,7 +1665,7 @@ public class AccountSecretEndpointTests
     [Fact]
     public async Task A_new_phone_replaces_the_old_one_and_logs_the_cleaner_out()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var (_, _, cleanerRefresh) = await AuthApi.LoggedInAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
@@ -1684,7 +1684,7 @@ public class AccountSecretEndpointTests
     [Fact]
     public async Task The_same_phone_again_changes_nothing()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var (_, _, cleanerRefresh) = await AuthApi.LoggedInAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
@@ -1702,7 +1702,7 @@ public class AccountSecretEndpointTests
     [InlineData(null)]
     public async Task An_incomplete_phone_is_refused(string? phone)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
 
@@ -1715,7 +1715,7 @@ public class AccountSecretEndpointTests
     [Fact]
     public async Task A_supervisor_phone_can_be_changed_too()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var s2001 = await AdminSetupApi.UserIdAsync(factory, "S2001");
 
@@ -1726,7 +1726,7 @@ public class AccountSecretEndpointTests
     [Fact]
     public async Task An_admin_has_no_phone_and_a_cleaner_has_no_password()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
 
@@ -1742,7 +1742,7 @@ public class AccountSecretEndpointTests
     [Fact]
     public async Task A_reset_password_lets_the_other_admin_in_with_the_new_one_only()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var created = await AccountApi.ReadAsync(await AccountApi.CreateAdminAsync(admin, "admin2", "temporary-1"));
         var other = await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", "temporary-1");
@@ -1761,7 +1761,7 @@ public class AccountSecretEndpointTests
     [Fact]
     public async Task A_too_short_password_is_refused()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         Assert.Equal(HttpStatusCode.BadRequest, (await PasswordAsync(admin, adminAuth.User.Id, "short")).StatusCode);
@@ -1770,7 +1770,7 @@ public class AccountSecretEndpointTests
     [Fact]
     public async Task An_unknown_account_is_404()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         Assert.Equal(HttpStatusCode.NotFound, (await PhoneAsync(admin, 9999, "0000000061")).StatusCode);
@@ -1781,7 +1781,7 @@ public class AccountSecretEndpointTests
     [Fact]
     public async Task The_history_page_never_shows_a_phone_a_password_a_hash_or_a_qr_token()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var e1001 = await AdminSetupApi.UserIdAsync(factory, "E1001");
         var created = await AccountApi.ReadAsync(await AccountApi.CreateCleanerAsync(admin, "E2001", "0000000071", areaId: null));
@@ -1806,7 +1806,7 @@ public class AccountSecretEndpointTests
 
 Add `using Microsoft.EntityFrameworkCore;` to the top of this test file for `SingleAsync`.
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs`, add these rows above the `[InlineData("GET", "/api/admin/audit-log", null)]` row:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminTests.cs`, add these rows above the `[InlineData("GET", "/api/admin/audit-log", null)]` row:
 
 ```csharp
     [InlineData("GET", "/api/admin/accounts", null)]
@@ -1822,7 +1822,7 @@ Also change the class summary's "every new Admin page" to "every Admin page".
 
 - [ ] **Step 2: Run the tests to see them fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AccountSecretEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AccountSecretEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
 Expected: FAIL, because the phone and password routes do not exist. The `DeactivatedAdminTests` rows for Tasks 2–3 already pass.
 
 - [ ] **Step 3: Add the two endpoints**
@@ -1922,12 +1922,12 @@ Add these methods:
 
 - [ ] **Step 4: Run the tests to see them pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~Account|FullyQualifiedName~DeactivatedAdminTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~Account|FullyQualifiedName~DeactivatedAdminTests"`
 Expected: PASS.
 
 - [ ] **Step 5: Run every test**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS (3 MySQL tests skipped).
 
 - [ ] **Step 6: Update the handoff and commit**
@@ -1948,11 +1948,11 @@ git commit -m "feat(backend): Admin changes a phone or resets an Admin password;
 ### Task 5: Export rules and export query
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Export/ExportRules.cs`
-- Create: `backend/src/FacilityRealtime.Infrastructure/Persistence/ExportQuery.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs` (+ `AddAttendanceAsync`, `BackdateSetupAsync`)
-- Test: `backend/tests/FacilityRealtime.UnitTests/ExportRulesTests.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Persistence/ExportQueryTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Export/ExportRules.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/ExportQuery.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestData.cs` (+ `AddAttendanceAsync`, `BackdateSetupAsync`)
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/ExportRulesTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/ExportQueryTests.cs`
 
 **Interfaces:**
 - Consumes: existing `RoundWindow.For`, `ShiftSlot`, `ShiftCalendar.EndUtc`.
@@ -1967,15 +1967,15 @@ git commit -m "feat(backend): Admin changes a phone or resets an Admin password;
 
 - [ ] **Step 1: Write the failing unit tests**
 
-`backend/tests/FacilityRealtime.UnitTests/ExportRulesTests.cs`:
+`backend/tests/JanitorialManagementDashboard.UnitTests/ExportRulesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Export;
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Export;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>facility-0047, 0053: the export lists every round of an ended shift that nobody did, as "ไม่ได้ทำ".</summary>
 public class ExportRulesTests
@@ -2036,18 +2036,18 @@ public class ExportRulesTests
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~ExportRulesTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~ExportRulesTests"`
 Expected: build FAILS; `ExportRules` is not defined.
 
 - [ ] **Step 3: Write the rules**
 
-`backend/src/FacilityRealtime.Application/Export/ExportRules.cs`:
+`backend/src/JanitorialManagementDashboard.Application/Export/ExportRules.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
 
-namespace FacilityRealtime.Application.Export;
+namespace JanitorialManagementDashboard.Application.Export;
 
 /// <summary>The sets the Admin ticks on wireframe D8. The inspection set comes with the Supervisor plan.</summary>
 public enum ExportSet
@@ -2081,12 +2081,12 @@ public static class ExportRules
 
 - [ ] **Step 4: Run them to see them pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~ExportRulesTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~ExportRulesTests"`
 Expected: PASS.
 
 - [ ] **Step 5: Add the test helpers**
 
-Append to `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, inside the class:
+Append to `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestData.cs`, inside the class:
 
 ```csharp
     /// <summary>
@@ -2094,7 +2094,7 @@ Append to `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, 
     /// check-in sign and a GPS verdict; an Admin addition has neither (facility-0051).
     /// </summary>
     public static Task AddAttendanceAsync(
-        FacilityApiFactory factory,
+        JanitorialApiFactory factory,
         string employeeId,
         DateOnly shiftDate,
         Shift shift,
@@ -2132,7 +2132,7 @@ Append to `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, 
     /// The seed stamps its points and windows with the real clock, which is later than the October 2026 test dates. Move
     /// them back to 1 October so rounds on test dates existed when they started (export "ไม่ได้ทำ").
     /// </summary>
-    public static Task BackdateSetupAsync(FacilityApiFactory factory) =>
+    public static Task BackdateSetupAsync(JanitorialApiFactory factory) =>
         factory.WithDbAsync(async db =>
         {
             var longAgo = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -2143,15 +2143,15 @@ Append to `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, 
 
 - [ ] **Step 6: Write the failing query tests**
 
-`backend/tests/FacilityRealtime.ApiTests/Persistence/ExportQueryTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/ExportQueryTests.cs`:
 
 ```csharp
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Persistence;
+namespace JanitorialManagementDashboard.ApiTests.Persistence;
 
 /// <summary>facility-0053: the rows the Excel export reads, by shift date and building, with people and places joined.</summary>
 public class ExportQueryTests
@@ -2159,7 +2159,7 @@ public class ExportQueryTests
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
     private static readonly DateOnly Oct9 = new(2026, 10, 9);
 
-    private static async Task<T> QueryAsync<T>(FacilityApiFactory factory, Func<AppDbContext, Task<T>> query)
+    private static async Task<T> QueryAsync<T>(JanitorialApiFactory factory, Func<AppDbContext, Task<T>> query)
     {
         T result = default!;
         await factory.WithDbAsync(async db => result = await query(db));
@@ -2169,7 +2169,7 @@ public class ExportQueryTests
     [Fact]
     public async Task Attendance_rows_carry_the_person_and_place_inside_the_date_range_only()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
         await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftOut, ThaiClock.At(8, 19, 2), AttendanceSource.AdminAdd);
         await TestData.AddAttendanceAsync(factory, "E1001", new DateOnly(2026, 10, 10), Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(10, 6, 59));
@@ -2187,7 +2187,7 @@ public class ExportQueryTests
     [Fact]
     public async Task The_building_filter_leaves_out_other_buildings()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await TestData.AddAttendanceAsync(factory, "E1001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
         await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 10));
         var buildingB = await TestData.AddBuildingAsync(factory, "B");
@@ -2203,7 +2203,7 @@ public class ExportQueryTests
     [Fact]
     public async Task Submission_rows_carry_point_sign_round_and_person()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 10), CleaningStatus.Issue, issueTags: "wet_floor");
 
         var row = Assert.Single(await QueryAsync(factory, db => ExportQuery.LoadSubmissionsAsync(db, Oct8, Oct8, null)));
@@ -2219,7 +2219,7 @@ public class ExportQueryTests
     [Fact]
     public async Task Points_come_with_their_windows_and_skip_deactivated_points_and_areas()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await factory.WithDbAsync(async db =>
         {
             var womenRestroom = await db.Signs.Where(s => s.Code == "AR01-02").Select(s => s.ServicePoint!).SingleAsync();
@@ -2247,18 +2247,18 @@ The seed gives each AR01 restroom four windows (Day 07–09, 16–18; Night 20�
 
 - [ ] **Step 7: Run them to see them fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~ExportQueryTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~ExportQueryTests"`
 Expected: build FAILS; `ExportQuery` is not defined.
 
 - [ ] **Step 8: Write the query**
 
-`backend/src/FacilityRealtime.Infrastructure/Persistence/ExportQuery.cs`:
+`backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/ExportQuery.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Infrastructure.Persistence;
+namespace JanitorialManagementDashboard.Infrastructure.Persistence;
 
 /// <summary>One attendance event with its person and place. No coordinates: distance and verdict only (facility-0053).</summary>
 public sealed record AttendanceExportRow(
@@ -2389,14 +2389,14 @@ public static class ExportQuery
 
 - [ ] **Step 9: Run them to see them pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~ExportQueryTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~ExportQueryTests"`
 Expected: PASS.
 
 If EF cannot translate the positional-record projection, project to an anonymous type inside the query and map to the record after `ToListAsync()`. Keep the record types as they are.
 
 - [ ] **Step 10: Run every test**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS (3 MySQL tests skipped).
 
 - [ ] **Step 11: Update the handoff and commit**
@@ -2417,15 +2417,15 @@ git commit -m "feat(backend): export rows for attendance and submissions, and th
 ### Task 6: The Excel file and `POST /api/admin/export`
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Infrastructure/FacilityRealtime.Infrastructure.csproj` (+ ClosedXML)
-- Create: `backend/src/FacilityRealtime.Infrastructure/Export/ExcelWorkbook.cs`
-- Create: `backend/src/FacilityRealtime.Api/DTOs/ExportDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/ExportSheets.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminExportEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs` (+ `SubmissionResult`, `Gps`)
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/ExportEndpointTests.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/JanitorialManagementDashboard.Infrastructure.csproj` (+ ClosedXML)
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Export/ExcelWorkbook.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/ExportDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ExportSheets.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminExportEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs` (+ `SubmissionResult`, `Gps`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/ExportEndpointTests.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminTests.cs`
 
 **Interfaces:**
 - Consumes: Task 5's `ExportQuery`, `ExportRules`, `ExportSet` and rows; `AdminQuery.TryReadDate`; `ThaiLabels.Date/Clock/ShiftName/EventName`; `RoundWindowRules.Format(TimeOnly)`.
@@ -2436,22 +2436,22 @@ git commit -m "feat(backend): export rows for attendance and submissions, and th
 
 - [ ] **Step 1: Add the package**
 
-Run: `dotnet add backend/src/FacilityRealtime.Infrastructure package ClosedXML --version 0.104.2`
+Run: `dotnet add backend/src/JanitorialManagementDashboard.Infrastructure package ClosedXML --version 0.104.2`
 Expected: the csproj gains `<PackageReference Include="ClosedXML" Version="0.104.2" />` and restore succeeds. If restore fails, stop and report (Global Constraints).
 
 - [ ] **Step 2: Write the failing tests**
 
-`backend/tests/FacilityRealtime.ApiTests/Admin/ExportEndpointTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Admin/ExportEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 using ClosedXML.Excel;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>Wireframe D8, facility-0053: the Admin downloads attendance and submissions for a date range as one .xlsx.</summary>
 public class ExportEndpointTests
@@ -2460,9 +2460,9 @@ public class ExportEndpointTests
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
 
     /// <summary>9 Oct 12:00 Thai: the Day and Night shifts of 8 Oct are over, the Day shift of 9 Oct is running.</summary>
-    private static async Task<(FacilityApiFactory Factory, HttpClient Admin)> StartAsync()
+    private static async Task<(JanitorialApiFactory Factory, HttpClient Admin)> StartAsync()
     {
-        var factory = new FacilityApiFactory();
+        var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await TestData.BackdateSetupAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(9, 12, 0));
@@ -2662,7 +2662,7 @@ public class ExportEndpointTests
     [Fact]
     public async Task A_cleaner_cannot_export()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
         Assert.Equal(HttpStatusCode.Forbidden, (await ExportAsync(cleaner, "2026-10-08", "2026-10-08", ["Attendance"])).StatusCode);
@@ -2670,7 +2670,7 @@ public class ExportEndpointTests
 }
 ```
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs`, add:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminTests.cs`, add:
 
 ```csharp
     [InlineData("POST", "/api/admin/export", """{ "from": "2026-10-08", "to": "2026-10-08", "sets": ["Attendance"] }""")]
@@ -2678,17 +2678,17 @@ In `backend/tests/FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs`, add
 
 - [ ] **Step 3: Run the tests to see them fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~ExportEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~ExportEndpointTests"`
 Expected: FAIL; the route does not exist.
 
 - [ ] **Step 4: Write the workbook writer**
 
-`backend/src/FacilityRealtime.Infrastructure/Export/ExcelWorkbook.cs`:
+`backend/src/JanitorialManagementDashboard.Infrastructure/Export/ExcelWorkbook.cs`:
 
 ```csharp
 using ClosedXML.Excel;
 
-namespace FacilityRealtime.Infrastructure.Export;
+namespace JanitorialManagementDashboard.Infrastructure.Export;
 
 /// <summary>One worksheet: a bold, frozen header row, then rows of text.</summary>
 public sealed record ExcelSheet(string Name, IReadOnlyList<string> Headers, IReadOnlyList<IReadOnlyList<string>> Rows);
@@ -2735,7 +2735,7 @@ public static class ExcelWorkbook
 
 - [ ] **Step 5: Write the labels, request, sheets and endpoint**
 
-Add to `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs`, inside the class:
+Add to `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs`, inside the class:
 
 ```csharp
     /// <summary>facility-0047: ผล of a submission on the export.</summary>
@@ -2756,28 +2756,28 @@ Add to `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs`, inside the cl
     };
 ```
 
-`backend/src/FacilityRealtime.Api/DTOs/ExportDtos.cs`:
+`backend/src/JanitorialManagementDashboard.Api/DTOs/ExportDtos.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Export;
+using JanitorialManagementDashboard.Application.Export;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 /// <summary>Wireframe D8. From and To are Thai shift dates, yyyy-MM-dd, both included. BuildingId null = every building.</summary>
 public record ExportRequest(string? From, string? To, int? BuildingId, List<ExportSet>? Sets);
 ```
 
-`backend/src/FacilityRealtime.Api/Endpoints/ExportSheets.cs`:
+`backend/src/JanitorialManagementDashboard.Api/Endpoints/ExportSheets.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Export;
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Export;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Application.Export;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Export;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>The export's rows in the Thai words of wireframe D8 and facility-0053.</summary>
 internal static class ExportSheets
@@ -2913,18 +2913,18 @@ internal static class ExportSheets
 }
 ```
 
-`backend/src/FacilityRealtime.Api/Endpoints/AdminExportEndpoints.cs`:
+`backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminExportEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Export;
-using FacilityRealtime.Infrastructure.Export;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Export;
+using JanitorialManagementDashboard.Infrastructure.Export;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// Wireframe D8, facility-0053: the Admin downloads attendance and submissions for up to 31 shift dates as one .xlsx.
@@ -3019,7 +3019,7 @@ public static class AdminExportEndpoints
 }
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, add after `app.MapAdminAccountEndpoints();`:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, add after `app.MapAdminAccountEndpoints();`:
 
 ```csharp
 app.MapAdminExportEndpoints();
@@ -3027,14 +3027,14 @@ app.MapAdminExportEndpoints();
 
 - [ ] **Step 6: Run the tests to see them pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~ExportEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~ExportEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
 Expected: PASS.
 
 If ClosedXML 0.104.2's API differs from the calls used here (`SetValue(string)`, `Columns(int, int).Width`, `SheetView.FreezeRows`, `GetString()`, `DataType`, `HasFormula`), use the equivalent in that version. Keep the test's meaning: every cell is text.
 
 - [ ] **Step 7: Run every test**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS (3 MySQL tests skipped).
 
 - [ ] **Step 8: Update the handoff and commit**
@@ -3055,7 +3055,7 @@ git commit -m "feat(backend): Admin downloads attendance and submissions as Exce
 ### Task 7: MySQL check, docs, final handoff
 
 **Files:**
-- Create: `backend/tests/FacilityRealtime.ApiTests/Persistence/MySqlExportAndAccountTests.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/MySqlExportAndAccountTests.cs`
 - Modify: `README.md` (routes)
 - Modify: `docs/architecture.md` (routes, ClosedXML)
 - Modify: `docs/handoff.md` (status)
@@ -3065,17 +3065,17 @@ git commit -m "feat(backend): Admin downloads attendance and submissions as Exce
 
 - [ ] **Step 1: Write the MySQL test**
 
-`backend/tests/FacilityRealtime.ApiTests/Persistence/MySqlExportAndAccountTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/MySqlExportAndAccountTests.cs`:
 
 ```csharp
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Auth;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Auth;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Persistence;
+namespace JanitorialManagementDashboard.ApiTests.Persistence;
 
 /// <summary>
 /// The export reads DATE ranges, joins and nullable flags, and the accounts page compares UPPER(employee_id). SQLite hides
@@ -3152,7 +3152,7 @@ public class MySqlExportAndAccountTests
 
 - [ ] **Step 2: Run without MySQL**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS, now with 4 MySQL tests skipped.
 
 - [ ] **Step 3: Run on real MySQL (controller only, not a subagent)**
@@ -3160,7 +3160,7 @@ Expected: PASS, now with 4 MySQL tests skipped.
 Ask the owner for the MySQL root password. Then, in Git Bash, typing the password only into the command:
 
 ```bash
-FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_accounts_test;Uid=root;Pwd=<local root password>;CharSet=utf8mb4;" dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~MySql"
+FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_accounts_test;Uid=root;Pwd=<local root password>;CharSet=utf8mb4;" dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~MySql"
 ```
 
 Expected: every MySQL test passes. Afterwards, check that the throwaway database is gone:

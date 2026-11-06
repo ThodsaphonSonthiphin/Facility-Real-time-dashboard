@@ -31,7 +31,7 @@ export function LoginPage() {
     <div className="mx-auto flex min-h-svh max-w-mobile flex-col text-base text-text">
       <main className="flex flex-1 flex-col gap-6 px-4 pt-[max(48px,env(safe-area-inset-top))] pb-4">
         <header className="flex flex-col gap-1">
-          <span className="text-sm font-semibold text-text-2">ระบบลงเวลาและตรวจงานแม่บ้าน</span>
+          <span className="text-sm font-semibold text-text-2">Janitorial Management Dashboard</span>
           <h1 className="text-2xl font-bold">เข้าสู่ระบบ</h1>
           <span className="text-text-2">ใช้รหัสพนักงานและเบอร์โทรของคุณ</span>
         </header>

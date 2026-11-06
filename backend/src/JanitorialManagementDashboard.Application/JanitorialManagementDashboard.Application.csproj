@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\JanitorialManagementDashboard.Domain\JanitorialManagementDashboard.Domain.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="JanitorialManagementDashboard.UnitTests" />
+    <InternalsVisibleTo Include="JanitorialManagementDashboard.ApiTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Accounts\common-passwords.txt" LogicalName="JanitorialManagementDashboard.Application.Accounts.common-passwords.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="10.0.14" />
+  </ItemGroup>
+
+</Project>

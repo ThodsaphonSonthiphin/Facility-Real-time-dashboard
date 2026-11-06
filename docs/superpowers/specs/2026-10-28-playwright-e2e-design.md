@@ -22,13 +22,13 @@ Not in this change (YAGNI):
 
 - `@playwright/test` as a devDependency of `frontend/`; tests in `frontend/e2e/`; config in `frontend/playwright.config.ts`.
 - Playwright files end in `.spec.ts`; Vitest only picks `src/**/*.test.{ts,tsx}`, so the two runners never meet without any change. ESLint and `tsc -b` (a new `tsconfig.e2e.json`) cover `e2e/` too, so the pre-commit hook checks them.
-- `scripts/e2e.sh` does the whole run, written in the style of `scripts/facility.sh`; `npm run e2e` calls it. A second script `npm run e2e:clean` removes what a killed run left behind.
+- `scripts/e2e.sh` does the whole run, written in the style of `scripts/janitorial.sh`; `npm run e2e` calls it. A second script `npm run e2e:clean` removes what a killed run left behind.
 
 ## How a run goes (`scripts/e2e.sh`)
 
 1. `npm run build:api` (the build goes to the API's git-ignored `wwwroot`).
 2. Make the database `facility_e2e_test` fresh (drop if it exists, create). The script refuses any other database name and never touches `facility_dashboard` (the 2026-10-27 trial run changed the developer database by mistake; see handoff).
-3. `dotnet build -c Release`, then start the built `FacilityRealtime.Api.dll` from the project folder (so `wwwroot` is found) in Development (so the seed runs), on `E2E_PORT` (default 5101, not the 5001 the owner uses), with the connection string and a random `Jwt__SigningKey` set only for this process. No `user-secrets` step is needed. Running the dll, not `dotnet run`, leaves one process whose id is kept in `.run/e2e-api.pid`, so stopping it is sure. The script stops first if something already answers on that port. MySQL is reached as `root`; a root password, if the machine has one, comes from `E2E_MYSQL_PASSWORD`.
+3. `dotnet build -c Release`, then start the built `JanitorialManagementDashboard.Api.dll` from the project folder (so `wwwroot` is found) in Development (so the seed runs), on `E2E_PORT` (default 5101, not the 5001 the owner uses), with the connection string and a random `Jwt__SigningKey` set only for this process. No `user-secrets` step is needed. Running the dll, not `dotnet run`, leaves one process whose id is kept in `.run/e2e-api.pid`, so stopping it is sure. The script stops first if something already answers on that port. MySQL is reached as `root`; a root password, if the machine has one, comes from `E2E_MYSQL_PASSWORD`.
 4. Wait until `/api/health` answers, then run Playwright.
 5. A `trap` on exit stops the API and drops the database even when a test fails or the run is interrupted. `e2e:clean` does the same by hand if the shell was killed.
 6. Exit code is Playwright's, so an agent can read pass or fail.

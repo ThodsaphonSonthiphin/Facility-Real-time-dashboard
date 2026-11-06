@@ -48,38 +48,38 @@
 
 | Path | Status | Responsibility |
 |---|---|---|
-| `backend/tests/FacilityRealtime.ApiTests/FacilityRealtime.ApiTests.csproj` | Create | API test project |
-| `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs` | Create | Boots the API in `Testing` environment on in-memory SQLite with a controllable clock |
-| `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestTimeProvider.cs` | Create | `TimeProvider` tests can move forward |
-| `backend/tests/FacilityRealtime.ApiTests/Infrastructure/AuthApi.cs` | Create | Login/refresh request helpers and cookie parsing |
-| `backend/tests/FacilityRealtime.ApiTests/HarnessTests.cs` | Create | Proves the harness boots and seeds |
-| `backend/tests/FacilityRealtime.ApiTests/Auth/LoginTests.cs` | Create | Login endpoint behaviour |
-| `backend/tests/FacilityRealtime.ApiTests/Auth/RefreshTests.cs` | Create | Rotation, grace, reuse, sliding expiry, logout |
-| `backend/tests/FacilityRealtime.ApiTests/Auth/ProtectedEndpointTests.cs` | Create | 401s, scanner identity, hub negotiate |
-| `backend/tests/FacilityRealtime.ApiTests/Persistence/RefreshTokenModelTests.cs` | Create | Schema rules for the new table and column |
-| `backend/tests/FacilityRealtime.UnitTests/Pbkdf2PasswordHasherTests.cs` | Create | Hash format and verification |
-| `backend/tests/FacilityRealtime.UnitTests/RefreshTokenRulesTests.cs` | Create | Rotation decisions and token generation |
-| `backend/src/FacilityRealtime.Application/Auth/IPasswordHasher.cs` | Create | Hashing contract |
-| `backend/src/FacilityRealtime.Application/Auth/RefreshTokenRules.cs` | Create | Pure rotate / grace / reuse / reject decision, token generation and hashing |
-| `backend/src/FacilityRealtime.Application/Auth/JwtSettings.cs` | Create | `Jwt` config section |
-| `backend/src/FacilityRealtime.Application/Auth/IAccessTokenIssuer.cs` | Create | Access token contract and `AccessToken` record |
-| `backend/src/FacilityRealtime.Infrastructure/Auth/Pbkdf2PasswordHasher.cs` | Create | PBKDF2 implementation |
-| `backend/src/FacilityRealtime.Infrastructure/Persistence/RefreshTokenRevocation.cs` | Create | `RevokeSessionAsync` / `RevokeUserSessionsAsync` |
-| `backend/src/FacilityRealtime.Domain/Entities/RefreshToken.cs` | Create | Refresh token row |
-| `backend/src/FacilityRealtime.Domain/Entities/User.cs` | Modify | Add `IsActive` |
-| `backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs` | Modify | `RefreshTokens` set and mapping |
-| `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs` | Modify | Seed with `IPasswordHasher`; stop calling `EnsureCreated` |
-| `backend/src/FacilityRealtime.Infrastructure/Migrations/*_Phase2AuthRefreshTokens.cs` | Create (generated) | `users.IsActive`, `refresh_tokens` |
-| `backend/src/FacilityRealtime.Api/Auth/AuthClaims.cs` | Create | Claim type names |
-| `backend/src/FacilityRealtime.Api/Auth/JwtKeys.cs` | Create | Signing key from settings |
-| `backend/src/FacilityRealtime.Api/Auth/JwtAccessTokenIssuer.cs` | Create | Issues the JWT |
-| `backend/src/FacilityRealtime.Api/Auth/AuthSetup.cs` | Create | Options validation, JwtBearer, `AdminOnly` policy |
-| `backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs` | Create | `/api/auth/login`, `/refresh`, `/logout` |
-| `backend/src/FacilityRealtime.Api/DTOs/AuthDtos.cs` | Create | `LoginRequest`, `AuthResponse`, `AuthUserDto` |
-| `backend/src/FacilityRealtime.Api/DTOs/ScanDtos.cs` | Modify | Remove old login DTOs and `UserId` |
-| `backend/src/FacilityRealtime.Api/Hubs/ScanHub.cs` | Modify | `[Authorize]` |
-| `backend/src/FacilityRealtime.Api/Program.cs` | Modify | Testing switch, migrations, auth wiring, `RequireAuthorization` |
-| `backend/src/FacilityRealtime.Api/appsettings.json` | Modify | Non-secret `Jwt` values |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/JanitorialManagementDashboard.ApiTests.csproj` | Create | API test project |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs` | Create | Boots the API in `Testing` environment on in-memory SQLite with a controllable clock |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestTimeProvider.cs` | Create | `TimeProvider` tests can move forward |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/AuthApi.cs` | Create | Login/refresh request helpers and cookie parsing |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/HarnessTests.cs` | Create | Proves the harness boots and seeds |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/LoginTests.cs` | Create | Login endpoint behaviour |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/RefreshTests.cs` | Create | Rotation, grace, reuse, sliding expiry, logout |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/ProtectedEndpointTests.cs` | Create | 401s, scanner identity, hub negotiate |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/RefreshTokenModelTests.cs` | Create | Schema rules for the new table and column |
+| `backend/tests/JanitorialManagementDashboard.UnitTests/Pbkdf2PasswordHasherTests.cs` | Create | Hash format and verification |
+| `backend/tests/JanitorialManagementDashboard.UnitTests/RefreshTokenRulesTests.cs` | Create | Rotation decisions and token generation |
+| `backend/src/JanitorialManagementDashboard.Application/Auth/IPasswordHasher.cs` | Create | Hashing contract |
+| `backend/src/JanitorialManagementDashboard.Application/Auth/RefreshTokenRules.cs` | Create | Pure rotate / grace / reuse / reject decision, token generation and hashing |
+| `backend/src/JanitorialManagementDashboard.Application/Auth/JwtSettings.cs` | Create | `Jwt` config section |
+| `backend/src/JanitorialManagementDashboard.Application/Auth/IAccessTokenIssuer.cs` | Create | Access token contract and `AccessToken` record |
+| `backend/src/JanitorialManagementDashboard.Infrastructure/Auth/Pbkdf2PasswordHasher.cs` | Create | PBKDF2 implementation |
+| `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/RefreshTokenRevocation.cs` | Create | `RevokeSessionAsync` / `RevokeUserSessionsAsync` |
+| `backend/src/JanitorialManagementDashboard.Domain/Entities/RefreshToken.cs` | Create | Refresh token row |
+| `backend/src/JanitorialManagementDashboard.Domain/Entities/User.cs` | Modify | Add `IsActive` |
+| `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AppDbContext.cs` | Modify | `RefreshTokens` set and mapping |
+| `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs` | Modify | Seed with `IPasswordHasher`; stop calling `EnsureCreated` |
+| `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/*_Phase2AuthRefreshTokens.cs` | Create (generated) | `users.IsActive`, `refresh_tokens` |
+| `backend/src/JanitorialManagementDashboard.Api/Auth/AuthClaims.cs` | Create | Claim type names |
+| `backend/src/JanitorialManagementDashboard.Api/Auth/JwtKeys.cs` | Create | Signing key from settings |
+| `backend/src/JanitorialManagementDashboard.Api/Auth/JwtAccessTokenIssuer.cs` | Create | Issues the JWT |
+| `backend/src/JanitorialManagementDashboard.Api/Auth/AuthSetup.cs` | Create | Options validation, JwtBearer, `AdminOnly` policy |
+| `backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs` | Create | `/api/auth/login`, `/refresh`, `/logout` |
+| `backend/src/JanitorialManagementDashboard.Api/DTOs/AuthDtos.cs` | Create | `LoginRequest`, `AuthResponse`, `AuthUserDto` |
+| `backend/src/JanitorialManagementDashboard.Api/DTOs/ScanDtos.cs` | Modify | Remove old login DTOs and `UserId` |
+| `backend/src/JanitorialManagementDashboard.Api/Hubs/ScanHub.cs` | Modify | `[Authorize]` |
+| `backend/src/JanitorialManagementDashboard.Api/Program.cs` | Modify | Testing switch, migrations, auth wiring, `RequireAuthorization` |
+| `backend/src/JanitorialManagementDashboard.Api/appsettings.json` | Modify | Non-secret `Jwt` values |
 | `frontend/src/services/authSession.ts` | Create | In-memory access token, single-flight refresh, `apiFetch` |
 | `frontend/src/services/authSession.test.ts` | Create | Vitest tests for the session module |
 | `frontend/src/types/index.ts` | Modify | `AuthUser`, `AuthResponse`; drop `UserSession` and `userId` |
@@ -100,25 +100,25 @@
 Phase 1 creates the schema with `EnsureCreatedAsync`, which never applies migrations, so the columns this plan adds would never reach an existing database. This task switches startup to `MigrateAsync`, skips the MySQL registration in a `Testing` environment, and adds a test project that boots the real `Program` on in-memory SQLite.
 
 **Files:**
-- Create: `backend/tests/FacilityRealtime.ApiTests/FacilityRealtime.ApiTests.csproj`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestTimeProvider.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/HarnessTests.cs`
-- Modify: `backend/FacilityRealtime.slnx`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs:28-33` (DbContext), `:66-71` (seed), end of file
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs:15`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/JanitorialManagementDashboard.ApiTests.csproj`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestTimeProvider.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/HarnessTests.cs`
+- Modify: `backend/JanitorialManagementDashboard.slnx`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs:28-33` (DbContext), `:66-71` (seed), end of file
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs:15`
 
 **Interfaces:**
 - Consumes: `Program` (top-level statements), `AppDbContext`, `DbInitializer.SeedAsync(AppDbContext)`
 - Produces:
   - `public partial class Program;` so tests can reference the entry point
-  - `FacilityApiFactory : WebApplicationFactory<Program>` with `TestTimeProvider Clock`, `Task WithDbAsync(Func<AppDbContext, Task> action)`, and constructor `FacilityApiFactory(string signingKey = FacilityApiFactory.TestSigningKey)`
+  - `JanitorialApiFactory : WebApplicationFactory<Program>` with `TestTimeProvider Clock`, `Task WithDbAsync(Func<AppDbContext, Task> action)`, and constructor `JanitorialApiFactory(string signingKey = JanitorialApiFactory.TestSigningKey)`
   - `TestTimeProvider : TimeProvider` with `void Advance(TimeSpan by)`
   - `TimeProvider` registered in DI (`TimeProvider.System` in the app); every later task reads "now" from it
 
 - [ ] **Step 1: Create the test project and add it to the solution**
 
-Create `backend/tests/FacilityRealtime.ApiTests/FacilityRealtime.ApiTests.csproj`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/JanitorialManagementDashboard.ApiTests.csproj`:
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
@@ -143,7 +143,7 @@ Create `backend/tests/FacilityRealtime.ApiTests/FacilityRealtime.ApiTests.csproj
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\FacilityRealtime.Api\FacilityRealtime.Api.csproj" />
+    <ProjectReference Include="..\..\src\JanitorialManagementDashboard.Api\JanitorialManagementDashboard.Api.csproj" />
   </ItemGroup>
 
 </Project>
@@ -152,17 +152,17 @@ Create `backend/tests/FacilityRealtime.ApiTests/FacilityRealtime.ApiTests.csproj
 Run:
 
 ```bash
-dotnet sln backend/FacilityRealtime.slnx add backend/tests/FacilityRealtime.ApiTests/FacilityRealtime.ApiTests.csproj
+dotnet sln backend/JanitorialManagementDashboard.slnx add backend/tests/JanitorialManagementDashboard.ApiTests/JanitorialManagementDashboard.ApiTests.csproj
 ```
 
 Expected: `Project ... added to the solution.`
 
 - [ ] **Step 2: Write the clock, the factory and the failing harness test**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestTimeProvider.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestTimeProvider.cs`:
 
 ```csharp
-namespace FacilityRealtime.ApiTests.Infrastructure;
+namespace JanitorialManagementDashboard.ApiTests.Infrastructure;
 
 /// <summary>A clock tests can move forward. Starts at the real "now" so JWTs issued without advancing still validate.</summary>
 public sealed class TestTimeProvider(DateTimeOffset start) : TimeProvider
@@ -175,10 +175,10 @@ public sealed class TestTimeProvider(DateTimeOffset start) : TimeProvider
 }
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs`:
 
 ```csharp
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -186,14 +186,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace FacilityRealtime.ApiTests.Infrastructure;
+namespace JanitorialManagementDashboard.ApiTests.Infrastructure;
 
 /// <summary>
 /// Boots the real Program in the "Testing" environment: Program skips its MySQL registration and
 /// startup migration there, and this factory supplies in-memory SQLite plus a movable clock.
 /// Create one per test when the test mutates data or the clock.
 /// </summary>
-public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.TestSigningKey) : WebApplicationFactory<Program>
+public sealed class JanitorialApiFactory(string signingKey = JanitorialApiFactory.TestSigningKey) : WebApplicationFactory<Program>
 {
     public const string TestSigningKey = "test-signing-key-that-is-at-least-32-bytes-long-0123456789";
 
@@ -242,21 +242,21 @@ public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.Te
 }
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/HarnessTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/HarnessTests.cs`:
 
 ```csharp
 using System.Net;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests;
+namespace JanitorialManagementDashboard.ApiTests;
 
 public class HarnessTests
 {
     [Fact]
     public async Task Api_boots_on_sqlite_and_answers_the_healthcheck()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await factory.CreateClient().GetAsync("/");
 
@@ -266,7 +266,7 @@ public class HarnessTests
     [Fact]
     public async Task Seed_runs_against_the_test_database()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var pointCount = 0;
         var userCount = 0;
 
@@ -284,12 +284,12 @@ public class HarnessTests
 
 - [ ] **Step 3: Run the harness tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo`
 Expected: FAIL. The build fails with `'Program' is inaccessible due to its protection level`, or, once that compiles, startup tries to reach MySQL on `localhost:3306` and throws.
 
 - [ ] **Step 4: Make Program testable and switch startup to migrations**
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, replace lines 28-33:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, replace lines 28-33:
 
 ```csharp
 // 1. Database Context
@@ -348,7 +348,7 @@ Append after `app.Run();` at the end of the file:
 public partial class Program;
 ```
 
-In `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs`, delete line 15 and the blank line after it:
+In `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs`, delete line 15 and the blank line after it:
 
 ```csharp
         await context.Database.EnsureCreatedAsync();
@@ -358,16 +358,16 @@ The schema now comes from `MigrateAsync` at startup, or from `EnsureCreated` in 
 
 - [ ] **Step 5: Run the harness tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo`
 Expected: PASS, `Passed: 2`.
 
-Run the whole solution to confirm nothing else broke: `dotnet test backend/FacilityRealtime.slnx --nologo`
+Run the whole solution to confirm nothing else broke: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
 Expected: PASS, unit tests 15 plus API tests 2.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/FacilityRealtime.slnx backend/tests/FacilityRealtime.ApiTests backend/src/FacilityRealtime.Api/Program.cs backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs
+git add backend/JanitorialManagementDashboard.slnx backend/tests/JanitorialManagementDashboard.ApiTests backend/src/JanitorialManagementDashboard.Api/Program.cs backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs
 git commit -m "test(api): boot Program on in-memory SQLite and apply migrations at startup (#15)"
 ```
 
@@ -382,37 +382,37 @@ mysql -u root -e "DROP DATABASE IF EXISTS facility_dashboard; CREATE DATABASE fa
 Master stores `SHA256(password)` with no salt, so two accounts with the same password share a hash and a leaked table falls to a lookup table. facility-0002 requires secure hashing, and plan 2B lets an Admin type new passwords, so this lands before any password-writing screen exists.
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Auth/IPasswordHasher.cs`
-- Create: `backend/src/FacilityRealtime.Infrastructure/Auth/Pbkdf2PasswordHasher.cs`
-- Create: `backend/tests/FacilityRealtime.UnitTests/Pbkdf2PasswordHasherTests.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Auth/LoginTests.cs`
-- Modify: `backend/tests/FacilityRealtime.UnitTests/FacilityRealtime.UnitTests.csproj` (reference Infrastructure)
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs` (seed signature, remove `HashPassword`)
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs` (register hasher, seed call, login handler)
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs` (fast hasher, seed call)
+- Create: `backend/src/JanitorialManagementDashboard.Application/Auth/IPasswordHasher.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Auth/Pbkdf2PasswordHasher.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.UnitTests/Pbkdf2PasswordHasherTests.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/LoginTests.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.UnitTests/JanitorialManagementDashboard.UnitTests.csproj` (reference Infrastructure)
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs` (seed signature, remove `HashPassword`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs` (register hasher, seed call, login handler)
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs` (fast hasher, seed call)
 
 **Interfaces:**
-- Consumes: `FacilityApiFactory` (Task 1)
+- Consumes: `JanitorialApiFactory` (Task 1)
 - Produces:
-  - `FacilityRealtime.Application.Auth.IPasswordHasher` with `string Hash(string password)` and `bool Verify(string password, string storedHash)`
-  - `FacilityRealtime.Infrastructure.Auth.Pbkdf2PasswordHasher` with `const int DefaultIterations = 600_000`, constructors `()` and `(int iterations)`
+  - `JanitorialManagementDashboard.Application.Auth.IPasswordHasher` with `string Hash(string password)` and `bool Verify(string password, string storedHash)`
+  - `JanitorialManagementDashboard.Infrastructure.Auth.Pbkdf2PasswordHasher` with `const int DefaultIterations = 600_000`, constructors `()` and `(int iterations)`
   - `DbInitializer.SeedAsync(AppDbContext context, IPasswordHasher hasher)`; `DbInitializer.HashPassword` no longer exists
 
 - [ ] **Step 1: Write the failing unit tests**
 
-Add to `backend/tests/FacilityRealtime.UnitTests/FacilityRealtime.UnitTests.csproj`, inside the existing `ProjectReference` `ItemGroup`:
+Add to `backend/tests/JanitorialManagementDashboard.UnitTests/JanitorialManagementDashboard.UnitTests.csproj`, inside the existing `ProjectReference` `ItemGroup`:
 
 ```xml
-    <ProjectReference Include="..\..\src\FacilityRealtime.Infrastructure\FacilityRealtime.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\JanitorialManagementDashboard.Infrastructure\JanitorialManagementDashboard.Infrastructure.csproj" />
 ```
 
-Create `backend/tests/FacilityRealtime.UnitTests/Pbkdf2PasswordHasherTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/Pbkdf2PasswordHasherTests.cs`:
 
 ```csharp
-using FacilityRealtime.Infrastructure.Auth;
+using JanitorialManagementDashboard.Infrastructure.Auth;
 using Xunit;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 public class Pbkdf2PasswordHasherTests
 {
@@ -480,21 +480,21 @@ public class Pbkdf2PasswordHasherTests
 }
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Auth/LoginTests.cs` (Task 5 replaces this file with the full login suite):
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/LoginTests.cs` (Task 5 replaces this file with the full login suite):
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 
-namespace FacilityRealtime.ApiTests.Auth;
+namespace JanitorialManagementDashboard.ApiTests.Auth;
 
 public class LoginTests
 {
     [Fact]
     public async Task Seeded_cleaner_logs_in_against_a_pbkdf2_hash()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         string storedHash = "";
         await factory.WithDbAsync(async db => storedHash = (await db.Users.FindAsync(1))!.PasswordHash);
 
@@ -507,7 +507,7 @@ public class LoginTests
     [Fact]
     public async Task Wrong_password_is_rejected()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new { username = "somchai", password = "wrong" });
 
@@ -518,15 +518,15 @@ public class LoginTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --nologo`
-Expected: FAIL at build with `The type or namespace name 'Auth' does not exist in the namespace 'FacilityRealtime.Infrastructure'`.
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
+Expected: FAIL at build with `The type or namespace name 'Auth' does not exist in the namespace 'JanitorialManagementDashboard.Infrastructure'`.
 
 - [ ] **Step 3: Write the contract and the implementation**
 
-Create `backend/src/FacilityRealtime.Application/Auth/IPasswordHasher.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Auth/IPasswordHasher.cs`:
 
 ```csharp
-namespace FacilityRealtime.Application.Auth;
+namespace JanitorialManagementDashboard.Application.Auth;
 
 public interface IPasswordHasher
 {
@@ -537,13 +537,13 @@ public interface IPasswordHasher
 }
 ```
 
-Create `backend/src/FacilityRealtime.Infrastructure/Auth/Pbkdf2PasswordHasher.cs`:
+Create `backend/src/JanitorialManagementDashboard.Infrastructure/Auth/Pbkdf2PasswordHasher.cs`:
 
 ```csharp
 using System.Security.Cryptography;
-using FacilityRealtime.Application.Auth;
+using JanitorialManagementDashboard.Application.Auth;
 
-namespace FacilityRealtime.Infrastructure.Auth;
+namespace JanitorialManagementDashboard.Infrastructure.Auth;
 
 /// <summary>
 /// PBKDF2-HMAC-SHA256 with a random 16-byte salt (ADR facility-0002: passwords hashed securely).
@@ -615,9 +615,9 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
 
 - [ ] **Step 4: Seed and log in through the hasher**
 
-In `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs`:
+In `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs`:
 
-1. Replace `using System.Security.Cryptography;` and `using System.Text;` with `using FacilityRealtime.Application.Auth;`.
+1. Replace `using System.Security.Cryptography;` and `using System.Text;` with `using JanitorialManagementDashboard.Application.Auth;`.
 2. Change the signature to `public static async Task SeedAsync(AppDbContext context, IPasswordHasher hasher)`.
 3. Replace `PasswordHash = HashPassword("password123"),` with `PasswordHash = hasher.Hash("password123"),`.
 4. Replace `PasswordHash = HashPassword("admin1234"),` with `PasswordHash = hasher.Hash("admin1234"),`.
@@ -625,9 +625,9 @@ In `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs`:
 
 The seed accounts `somchai / password123` and `admin / admin1234` are sample data already published in the README and the dashboard's QR modal, not secrets.
 
-In `backend/src/FacilityRealtime.Api/Program.cs`:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`:
 
-1. Add `using FacilityRealtime.Application.Auth;` and `using FacilityRealtime.Infrastructure.Auth;` to the usings.
+1. Add `using JanitorialManagementDashboard.Application.Auth;` and `using JanitorialManagementDashboard.Infrastructure.Auth;` to the usings.
 2. Directly after `builder.Services.AddSingleton(TimeProvider.System);` add:
 
 ```csharp
@@ -665,9 +665,9 @@ app.MapPost("/api/auth/login", async (LoginRequest req, AppDbContext db, IPasswo
     }
 ```
 
-In `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs`:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs`:
 
-1. Add `using FacilityRealtime.Application.Auth;` and `using FacilityRealtime.Infrastructure.Auth;`.
+1. Add `using JanitorialManagementDashboard.Application.Auth;` and `using JanitorialManagementDashboard.Infrastructure.Auth;`.
 2. Inside `ConfigureServices`, after the `TimeProvider` line, add:
 
 ```csharp
@@ -683,13 +683,13 @@ In `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --nologo`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
 Expected: PASS. Unit tests 26, API tests 4.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/Auth backend/src/FacilityRealtime.Infrastructure/Auth backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs backend/src/FacilityRealtime.Api/Program.cs backend/tests
+git add backend/src/JanitorialManagementDashboard.Application/Auth backend/src/JanitorialManagementDashboard.Infrastructure/Auth backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs backend/src/JanitorialManagementDashboard.Api/Program.cs backend/tests
 git commit -m "feat(auth): hash passwords with salted PBKDF2 instead of plain SHA-256 (#15)"
 ```
 
@@ -698,16 +698,16 @@ git commit -m "feat(auth): hash passwords with salted PBKDF2 instead of plain SH
 ### Task 3: `users.IsActive` and the `refresh_tokens` table
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Domain/Entities/RefreshToken.cs`
-- Create: `backend/src/FacilityRealtime.Infrastructure/Persistence/RefreshTokenRevocation.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Persistence/RefreshTokenModelTests.cs`
-- Create (generated): `backend/src/FacilityRealtime.Infrastructure/Migrations/<timestamp>_Phase2AuthRefreshTokens.cs` and `.Designer.cs`
-- Modify: `backend/src/FacilityRealtime.Domain/Entities/User.cs`
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs`
-- Modify (generated): `backend/src/FacilityRealtime.Infrastructure/Migrations/AppDbContextModelSnapshot.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Domain/Entities/RefreshToken.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/RefreshTokenRevocation.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/RefreshTokenModelTests.cs`
+- Create (generated): `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/<timestamp>_Phase2AuthRefreshTokens.cs` and `.Designer.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Domain/Entities/User.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AppDbContext.cs`
+- Modify (generated): `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/AppDbContextModelSnapshot.cs`
 
 **Interfaces:**
-- Consumes: `FacilityApiFactory.WithDbAsync` (Task 1)
+- Consumes: `JanitorialApiFactory.WithDbAsync` (Task 1)
 - Produces:
   - `User.IsActive` (`bool`, defaults to `true`)
   - `RefreshToken` with `long Id`, `int UserId`, `Guid SessionId`, `string TokenHash`, `DateTime CreatedAt`, `DateTime ExpiresAt`, `DateTime? RotatedAt`, `DateTime? RevokedAt`, `User? User`
@@ -716,15 +716,15 @@ git commit -m "feat(auth): hash passwords with salted PBKDF2 instead of plain SH
 
 - [ ] **Step 1: Write the failing persistence tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Persistence/RefreshTokenModelTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/RefreshTokenModelTests.cs`:
 
 ```csharp
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Persistence;
+namespace JanitorialManagementDashboard.ApiTests.Persistence;
 
 public class RefreshTokenModelTests
 {
@@ -740,7 +740,7 @@ public class RefreshTokenModelTests
     [Fact]
     public async Task Seeded_users_are_active()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var activeCount = 0;
 
         await factory.WithDbAsync(async db => activeCount = await db.Users.CountAsync(u => u.IsActive));
@@ -751,7 +751,7 @@ public class RefreshTokenModelTests
     [Fact]
     public async Task A_deactivated_user_stays_deactivated_after_saving()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         await factory.WithDbAsync(async db =>
         {
@@ -768,7 +768,7 @@ public class RefreshTokenModelTests
     [Fact]
     public async Task Token_hash_must_be_unique()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         await factory.WithDbAsync(async db =>
         {
@@ -781,7 +781,7 @@ public class RefreshTokenModelTests
     [Fact]
     public async Task Revoking_a_session_leaves_other_sessions_alone()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var sessionA = Guid.NewGuid();
         var sessionB = Guid.NewGuid();
         var now = DateTime.UtcNow;
@@ -801,7 +801,7 @@ public class RefreshTokenModelTests
     [Fact]
     public async Task Revoking_a_user_revokes_every_session_of_that_user_only()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var now = DateTime.UtcNow;
 
         await factory.WithDbAsync(async db =>
@@ -820,24 +820,24 @@ public class RefreshTokenModelTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo`
 Expected: FAIL at build with `'User' does not contain a definition for 'IsActive'` and `'AppDbContext' does not contain a definition for 'RefreshTokens'`.
 
 - [ ] **Step 3: Add the entity, the column, the mapping and the revocation helpers**
 
-In `backend/src/FacilityRealtime.Domain/Entities/User.cs`, add after the `Role` property:
+In `backend/src/JanitorialManagementDashboard.Domain/Entities/User.cs`, add after the `Role` property:
 
 ```csharp
     /// <summary>False for a Deactivated Account: cannot log in, refresh is refused (ADR facility-0012, facility-0020).</summary>
     public bool IsActive { get; set; } = true;
 ```
 
-Create `backend/src/FacilityRealtime.Domain/Entities/RefreshToken.cs`:
+Create `backend/src/JanitorialManagementDashboard.Domain/Entities/RefreshToken.cs`:
 
 ```csharp
 using System;
 
-namespace FacilityRealtime.Domain.Entities;
+namespace JanitorialManagementDashboard.Domain.Entities;
 
 /// <summary>
 /// One row per refresh token ever issued (ADR facility-0014). Only the SHA-256 hash of the token is stored.
@@ -864,7 +864,7 @@ public class RefreshToken
 }
 ```
 
-In `backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs`, add after the `ScanRecords` property:
+In `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AppDbContext.cs`, add after the `ScanRecords` property:
 
 ```csharp
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -893,7 +893,7 @@ and add at the end of `OnModelCreating`, after the `ScanRecord` block:
 
 Do **not** add `HasDefaultValue(true)` to `IsActive`: EF would then treat `false` as "not set" on insert and the database default would silently turn a new deactivated account active. Existing rows get `true` through the migration edit in Step 5 instead.
 
-Create `backend/src/FacilityRealtime.Infrastructure/Persistence/RefreshTokenRevocation.cs`:
+Create `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/RefreshTokenRevocation.cs`:
 
 ```csharp
 using System;
@@ -901,7 +901,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Infrastructure.Persistence;
+namespace JanitorialManagementDashboard.Infrastructure.Persistence;
 
 public static class RefreshTokenRevocation
 {
@@ -921,7 +921,7 @@ public static class RefreshTokenRevocation
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo`
 Expected: PASS, `Passed: 9`.
 
 - [ ] **Step 5: Generate the MySQL migration and fix the default for existing rows**
@@ -932,14 +932,14 @@ The migration is generated against MySQL types but needs no running MySQL server
 dotnet tool install --global dotnet-ef --version 10.0.12
 export PATH="$PATH:$HOME/.dotnet/tools"
 dotnet ef migrations add Phase2AuthRefreshTokens \
-  --project backend/src/FacilityRealtime.Infrastructure \
-  --startup-project backend/src/FacilityRealtime.Api \
+  --project backend/src/JanitorialManagementDashboard.Infrastructure \
+  --startup-project backend/src/JanitorialManagementDashboard.Api \
   --output-dir Migrations
 ```
 
 Expected: `Done. To undo this action, use 'ef migrations remove'`. If `dotnet tool install` reports the tool is already installed, continue.
 
-Open `backend/src/FacilityRealtime.Infrastructure/Migrations/<timestamp>_Phase2AuthRefreshTokens.cs`. In `Up`, find the `AddColumn<bool>` for `IsActive` on table `users` and change `defaultValue: false` to `defaultValue: true`, so accounts that already exist stay able to log in:
+Open `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/<timestamp>_Phase2AuthRefreshTokens.cs`. In `Up`, find the `AddColumn<bool>` for `IsActive` on table `users` and change `defaultValue: false` to `defaultValue: true`, so accounts that already exist stay able to log in:
 
 ```csharp
             migrationBuilder.AddColumn<bool>(
@@ -953,20 +953,20 @@ Open `backend/src/FacilityRealtime.Infrastructure/Migrations/<timestamp>_Phase2A
 Check the generated file contains the new table and nothing unexpected:
 
 ```bash
-grep -n "CreateTable\|AddColumn\|DropColumn\|AlterColumn\|name: \"refresh_tokens\"\|IX_refresh_tokens" backend/src/FacilityRealtime.Infrastructure/Migrations/*_Phase2AuthRefreshTokens.cs
+grep -n "CreateTable\|AddColumn\|DropColumn\|AlterColumn\|name: \"refresh_tokens\"\|IX_refresh_tokens" backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/*_Phase2AuthRefreshTokens.cs
 ```
 
 Expected, as measured on a copy of master `45e7be2` with Tasks 1-3 applied: in `Up`, one `AddColumn` named `IsActive` on `users` and one `CreateTable` named `refresh_tokens` with indexes `IX_refresh_tokens_SessionId`, `IX_refresh_tokens_TokenHash` and `IX_refresh_tokens_UserId`; in `Down`, the matching `DropTable` and `DropColumn`. An `AlterColumn` anywhere, or a `DropColumn` inside `Up`, would mean phase 1's `InitialCreate` had drifted from the model; keep such lines, because the model is the source of truth, and name them in the commit message.
 
 Rebuild and re-run everything:
 
-Run: `dotnet test backend/FacilityRealtime.slnx --nologo`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
 Expected: PASS. Unit tests 26, API tests 9.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Domain backend/src/FacilityRealtime.Infrastructure backend/tests/FacilityRealtime.ApiTests/Persistence
+git add backend/src/JanitorialManagementDashboard.Domain backend/src/JanitorialManagementDashboard.Infrastructure backend/tests/JanitorialManagementDashboard.ApiTests/Persistence
 git commit -m "feat(auth): add users.IsActive and refresh_tokens table with revocation helpers (#15)"
 ```
 
@@ -977,8 +977,8 @@ git commit -m "feat(auth): add users.IsActive and refresh_tokens table with revo
 The rotation decision is the heart of facility-0014, 0015 and 0016, so it is a pure function tested without a database or HTTP.
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Auth/RefreshTokenRules.cs`
-- Create: `backend/tests/FacilityRealtime.UnitTests/RefreshTokenRulesTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Auth/RefreshTokenRules.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.UnitTests/RefreshTokenRulesTests.cs`
 
 **Interfaces:**
 - Consumes: `RefreshToken` (Task 3)
@@ -991,14 +991,14 @@ The rotation decision is the heart of facility-0014, 0015 and 0016, so it is a p
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.UnitTests/RefreshTokenRulesTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/RefreshTokenRulesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Domain.Entities;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Domain.Entities;
 using Xunit;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 public class RefreshTokenRulesTests
 {
@@ -1101,20 +1101,20 @@ public class RefreshTokenRulesTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --nologo`
 Expected: FAIL at build with `The name 'RefreshTokenRules' does not exist in the current context`.
 
 - [ ] **Step 3: Write the rules**
 
-Create `backend/src/FacilityRealtime.Application/Auth/RefreshTokenRules.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Auth/RefreshTokenRules.cs`:
 
 ```csharp
 using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
-using FacilityRealtime.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities;
 
-namespace FacilityRealtime.Application.Auth;
+namespace JanitorialManagementDashboard.Application.Auth;
 
 public enum RefreshDecision
 {
@@ -1166,13 +1166,13 @@ public static class RefreshTokenRules
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --nologo`
 Expected: PASS, `Passed: 39`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/Auth/RefreshTokenRules.cs backend/tests/FacilityRealtime.UnitTests/RefreshTokenRulesTests.cs
+git add backend/src/JanitorialManagementDashboard.Application/Auth/RefreshTokenRules.cs backend/tests/JanitorialManagementDashboard.UnitTests/RefreshTokenRulesTests.cs
 git commit -m "feat(auth): add refresh token rotation, grace and reuse rules (#15)"
 ```
 
@@ -1181,20 +1181,20 @@ git commit -m "feat(auth): add refresh token rotation, grace and reuse rules (#1
 ### Task 5: JWT access tokens and the login endpoint
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Auth/JwtSettings.cs`
-- Create: `backend/src/FacilityRealtime.Application/Auth/IAccessTokenIssuer.cs`
-- Create: `backend/src/FacilityRealtime.Api/Auth/AuthClaims.cs`
-- Create: `backend/src/FacilityRealtime.Api/Auth/JwtKeys.cs`
-- Create: `backend/src/FacilityRealtime.Api/Auth/JwtAccessTokenIssuer.cs`
-- Create: `backend/src/FacilityRealtime.Api/Auth/AuthSetup.cs`
-- Create: `backend/src/FacilityRealtime.Api/DTOs/AuthDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/AuthApi.cs`
-- Replace: `backend/tests/FacilityRealtime.ApiTests/Auth/LoginTests.cs`
-- Modify: `backend/src/FacilityRealtime.Api/FacilityRealtime.Api.csproj` (package, `UserSecretsId`)
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/ScanDtos.cs:7-9`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`
-- Modify: `backend/src/FacilityRealtime.Api/appsettings.json`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Auth/JwtSettings.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Auth/IAccessTokenIssuer.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Auth/AuthClaims.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Auth/JwtKeys.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Auth/JwtAccessTokenIssuer.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Auth/AuthSetup.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/AuthDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/AuthApi.cs`
+- Replace: `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/LoginTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/JanitorialManagementDashboard.Api.csproj` (package, `UserSecretsId`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/ScanDtos.cs:7-9`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/appsettings.json`
 
 **Interfaces:**
 - Consumes: `IPasswordHasher` (Task 2), `User.IsActive`, `RefreshToken`, `AppDbContext.RefreshTokens` (Task 3), `RefreshTokenRules` (Task 4), `TimeProvider` (Task 1)
@@ -1206,18 +1206,18 @@ git commit -m "feat(auth): add refresh token rotation, grace and reuse rules (#1
   - `record LoginRequest(string Username, string Password)`, `record AuthUserDto(int Id, string Username, string FullName, string Role)`, `record AuthResponse(string AccessToken, DateTime ExpiresAt, AuthUserDto User)`
   - `POST /api/auth/login` → `200 AuthResponse` plus cookie `facility_refresh` (HttpOnly, SameSite=Strict, Path=/api/auth), or `401`
   - `AuthEndpoints.RefreshCookieName = "facility_refresh"`; `IEndpointRouteBuilder.MapAuthEndpoints()`
-  - Test helpers in `AuthApi`: `CreateApiClient(this FacilityApiFactory)`, `LoginAsync`, `ReadAuthAsync`, `RefreshSetCookieHeader`, `RefreshCookieValue`, `RefreshAsync`, `LogoutAsync`, `LoggedInAsync`, records `AuthUserModel`, `AuthResponseModel`
+  - Test helpers in `AuthApi`: `CreateApiClient(this JanitorialApiFactory)`, `LoginAsync`, `ReadAuthAsync`, `RefreshSetCookieHeader`, `RefreshCookieValue`, `RefreshAsync`, `LogoutAsync`, `LoggedInAsync`, records `AuthUserModel`, `AuthResponseModel`
 
 - [ ] **Step 1: Add the test helpers and write the failing login tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Infrastructure/AuthApi.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/AuthApi.cs`:
 
 ```csharp
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace FacilityRealtime.ApiTests.Infrastructure;
+namespace JanitorialManagementDashboard.ApiTests.Infrastructure;
 
 public record AuthUserModel(int Id, string Username, string FullName, string Role);
 
@@ -1228,7 +1228,7 @@ public static class AuthApi
     public const string CookieName = "facility_refresh";
 
     /// <summary>Cookies are handled by hand so a test can replay an old refresh token on purpose.</summary>
-    public static HttpClient CreateApiClient(this FacilityApiFactory factory) =>
+    public static HttpClient CreateApiClient(this JanitorialApiFactory factory) =>
         factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, AllowAutoRedirect = false });
 
     public static Task<HttpResponseMessage> LoginAsync(HttpClient client, string username = "somchai", string password = "password123") =>
@@ -1255,7 +1255,7 @@ public static class AuthApi
 
     /// <summary>Logs in and returns a client that already sends the access token.</summary>
     public static async Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> LoggedInAsync(
-        FacilityApiFactory factory, string username = "somchai", string password = "password123")
+        JanitorialApiFactory factory, string username = "somchai", string password = "password123")
     {
         var client = factory.CreateApiClient();
         var response = await LoginAsync(client, username, password);
@@ -1278,23 +1278,23 @@ public static class AuthApi
 }
 ```
 
-Replace the whole of `backend/tests/FacilityRealtime.ApiTests/Auth/LoginTests.cs` with:
+Replace the whole of `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/LoginTests.cs` with:
 
 ```csharp
 using System.Net;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Application.Auth;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Application.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 
-namespace FacilityRealtime.ApiTests.Auth;
+namespace JanitorialManagementDashboard.ApiTests.Auth;
 
 public class LoginTests
 {
     [Fact]
     public async Task Valid_login_returns_a_five_minute_access_token_and_the_user()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await AuthApi.LoginAsync(factory.CreateApiClient());
 
@@ -1310,7 +1310,7 @@ public class LoginTests
     [Fact]
     public async Task Access_token_carries_user_id_username_name_and_role()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var body = await AuthApi.ReadAuthAsync(await AuthApi.LoginAsync(factory.CreateApiClient()));
 
@@ -1325,7 +1325,7 @@ public class LoginTests
     [Fact]
     public async Task Admin_login_reports_the_admin_role()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var body = await AuthApi.ReadAuthAsync(await AuthApi.LoginAsync(factory.CreateApiClient(), "admin", "admin1234"));
 
@@ -1335,7 +1335,7 @@ public class LoginTests
     [Fact]
     public async Task Login_sets_an_http_only_strict_refresh_cookie_scoped_to_auth_routes()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await AuthApi.LoginAsync(factory.CreateApiClient());
 
@@ -1350,7 +1350,7 @@ public class LoginTests
     [Fact]
     public async Task Only_the_hash_of_the_refresh_token_is_stored()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var cookie = AuthApi.RefreshCookieValue(await AuthApi.LoginAsync(factory.CreateApiClient()))!;
         var stored = new List<string>();
 
@@ -1365,7 +1365,7 @@ public class LoginTests
     [InlineData("nobody", "password123")]
     public async Task Bad_credentials_are_401_and_set_no_cookie(string username, string password)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await AuthApi.LoginAsync(factory.CreateApiClient(), username, password);
 
@@ -1376,7 +1376,7 @@ public class LoginTests
     [Fact]
     public async Task Deactivated_account_cannot_log_in()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await factory.WithDbAsync(async db =>
         {
             (await db.Users.SingleAsync(u => u.Username == "somchai")).IsActive = false;
@@ -1391,7 +1391,7 @@ public class LoginTests
     [Fact]
     public void App_refuses_to_start_without_a_signing_key()
     {
-        using var factory = new FacilityApiFactory(signingKey: "");
+        using var factory = new JanitorialApiFactory(signingKey: "");
 
         var error = Record.Exception(() => factory.CreateClient());
 
@@ -1403,25 +1403,25 @@ public class LoginTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo`
 Expected: FAIL. `Microsoft.IdentityModel.JsonWebTokens` does not resolve until the JwtBearer package is added; after that, the login tests fail because the old endpoint returns no `accessToken` and sets no cookie.
 
 - [ ] **Step 3: Add the package and a user-secrets store for local runs**
 
 ```bash
-dotnet add backend/src/FacilityRealtime.Api package Microsoft.AspNetCore.Authentication.JwtBearer --version 10.0.12
-dotnet user-secrets init --project backend/src/FacilityRealtime.Api
-dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/FacilityRealtime.Api
+dotnet add backend/src/JanitorialManagementDashboard.Api package Microsoft.AspNetCore.Authentication.JwtBearer --version 10.0.12
+dotnet user-secrets init --project backend/src/JanitorialManagementDashboard.Api
+dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/JanitorialManagementDashboard.Api
 ```
 
 Expected: the csproj gains the package reference and a `<UserSecretsId>`. The key itself is written to `~/.microsoft/usersecrets/<id>/secrets.json`, outside the repo. Each developer machine runs the last command once.
 
 - [ ] **Step 4: Write settings, claims, key, issuer and auth setup**
 
-Create `backend/src/FacilityRealtime.Application/Auth/JwtSettings.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Auth/JwtSettings.cs`:
 
 ```csharp
-namespace FacilityRealtime.Application.Auth;
+namespace JanitorialManagementDashboard.Application.Auth;
 
 /// <summary>The "Jwt" config section. SigningKey is never committed: set it with dotnet user-secrets (ADR facility-0011).</summary>
 public sealed class JwtSettings
@@ -1440,12 +1440,12 @@ public sealed class JwtSettings
 }
 ```
 
-Create `backend/src/FacilityRealtime.Application/Auth/IAccessTokenIssuer.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Auth/IAccessTokenIssuer.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities;
 
-namespace FacilityRealtime.Application.Auth;
+namespace JanitorialManagementDashboard.Application.Auth;
 
 public sealed record AccessToken(string Token, DateTime ExpiresAtUtc);
 
@@ -1455,10 +1455,10 @@ public interface IAccessTokenIssuer
 }
 ```
 
-Create `backend/src/FacilityRealtime.Api/Auth/AuthClaims.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Auth/AuthClaims.cs`:
 
 ```csharp
-namespace FacilityRealtime.Api.Auth;
+namespace JanitorialManagementDashboard.Api.Auth;
 
 /// <summary>Claim names inside the access token. Inbound claim mapping is off, so these are also what handlers read.</summary>
 public static class AuthClaims
@@ -1470,14 +1470,14 @@ public static class AuthClaims
 }
 ```
 
-Create `backend/src/FacilityRealtime.Api/Auth/JwtKeys.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Auth/JwtKeys.cs`:
 
 ```csharp
 using System.Text;
-using FacilityRealtime.Application.Auth;
+using JanitorialManagementDashboard.Application.Auth;
 using Microsoft.IdentityModel.Tokens;
 
-namespace FacilityRealtime.Api.Auth;
+namespace JanitorialManagementDashboard.Api.Auth;
 
 public static class JwtKeys
 {
@@ -1486,17 +1486,17 @@ public static class JwtKeys
 }
 ```
 
-Create `backend/src/FacilityRealtime.Api/Auth/JwtAccessTokenIssuer.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Auth/JwtAccessTokenIssuer.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Domain.Entities;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Domain.Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
-namespace FacilityRealtime.Api.Auth;
+namespace JanitorialManagementDashboard.Api.Auth;
 
 public sealed class JwtAccessTokenIssuer(IOptions<JwtSettings> options, TimeProvider clock) : IAccessTokenIssuer
 {
@@ -1530,16 +1530,16 @@ public sealed class JwtAccessTokenIssuer(IOptions<JwtSettings> options, TimeProv
 }
 ```
 
-Create `backend/src/FacilityRealtime.Api/Auth/AuthSetup.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Auth/AuthSetup.cs`:
 
 ```csharp
 using System.Text;
-using FacilityRealtime.Application.Auth;
+using JanitorialManagementDashboard.Application.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace FacilityRealtime.Api.Auth;
+namespace JanitorialManagementDashboard.Api.Auth;
 
 public static class AuthSetup
 {
@@ -1553,7 +1553,7 @@ public static class AuthSetup
             .Validate(
                 s => Encoding.UTF8.GetByteCount(s.SigningKey) >= 32,
                 "Jwt:SigningKey must be at least 32 bytes. Set it once per machine with: " +
-                "dotnet user-secrets set \"Jwt:SigningKey\" \"$(openssl rand -base64 48)\" --project backend/src/FacilityRealtime.Api")
+                "dotnet user-secrets set \"Jwt:SigningKey\" \"$(openssl rand -base64 48)\" --project backend/src/JanitorialManagementDashboard.Api")
             .Validate(s => s.AccessTokenMinutes > 0, "Jwt:AccessTokenMinutes must be greater than 0.")
             .ValidateOnStart();
 
@@ -1604,12 +1604,12 @@ public static class AuthSetup
 
 - [ ] **Step 5: Write the DTOs and the login endpoint**
 
-Create `backend/src/FacilityRealtime.Api/DTOs/AuthDtos.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/DTOs/AuthDtos.cs`:
 
 ```csharp
 using System;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 public record LoginRequest(string Username, string Password);
 
@@ -1619,7 +1619,7 @@ public record AuthUserDto(int Id, string Username, string FullName, string Role)
 public record AuthResponse(string AccessToken, DateTime ExpiresAt, AuthUserDto User);
 ```
 
-In `backend/src/FacilityRealtime.Api/DTOs/ScanDtos.cs`, delete lines 7-9:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/ScanDtos.cs`, delete lines 7-9:
 
 ```csharp
 public record LoginRequest(string Username, string Password);
@@ -1627,17 +1627,17 @@ public record LoginRequest(string Username, string Password);
 public record LoginResponse(int Id, string Username, string FullName, string Role, string Token);
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs`:
 
 ```csharp
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 public static class AuthEndpoints
 {
@@ -1715,9 +1715,9 @@ public static class AuthEndpoints
 
 - [ ] **Step 6: Wire authentication into Program and config**
 
-In `backend/src/FacilityRealtime.Api/Program.cs`:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`:
 
-1. Add usings `using FacilityRealtime.Api.Auth;` and `using FacilityRealtime.Api.Endpoints;`.
+1. Add usings `using JanitorialManagementDashboard.Api.Auth;` and `using JanitorialManagementDashboard.Api.Endpoints;`.
 2. After `builder.Services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher());` add:
 
 ```csharp
@@ -1756,7 +1756,7 @@ with:
 app.MapAuthEndpoints();
 ```
 
-Replace the whole of `backend/src/FacilityRealtime.Api/appsettings.json` with (no signing key here; it comes from user-secrets):
+Replace the whole of `backend/src/JanitorialManagementDashboard.Api/appsettings.json` with (no signing key here; it comes from user-secrets):
 
 ```json
 {
@@ -1785,7 +1785,7 @@ Replace the whole of `backend/src/FacilityRealtime.Api/appsettings.json` with (n
 
 - [ ] **Step 7: Run the tests to verify they pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --nologo`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
 Expected: PASS. Unit tests 39, API tests 16.
 
 Confirm no signing key is committed:
@@ -1799,7 +1799,7 @@ Expected: `no key in committed config`.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/Auth backend/src/FacilityRealtime.Api backend/tests/FacilityRealtime.ApiTests
+git add backend/src/JanitorialManagementDashboard.Application/Auth backend/src/JanitorialManagementDashboard.Api backend/tests/JanitorialManagementDashboard.ApiTests
 git commit -m "feat(auth): issue 5-minute JWTs and an HttpOnly refresh cookie on login (#15)"
 ```
 
@@ -1808,33 +1808,33 @@ git commit -m "feat(auth): issue 5-minute JWTs and an HttpOnly refresh cookie on
 ### Task 6: Refresh and logout endpoints
 
 **Files:**
-- Replace: `backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Auth/RefreshTests.cs`
+- Replace: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/RefreshTests.cs`
 
 **Interfaces:**
-- Consumes: `RefreshTokenRules.Decide` and `RefreshDecision` (Task 4); `RevokeSessionAsync`, `RevokeUserSessionsAsync` (Task 3); `AuthApi` helpers and `FacilityApiFactory.Clock` (Tasks 1, 5)
+- Consumes: `RefreshTokenRules.Decide` and `RefreshDecision` (Task 4); `RevokeSessionAsync`, `RevokeUserSessionsAsync` (Task 3); `AuthApi` helpers and `JanitorialApiFactory.Clock` (Tasks 1, 5)
 - Produces:
   - `POST /api/auth/refresh` — reads cookie `facility_refresh`; `200 AuthResponse` plus a rotated cookie, or `401` plus a deleted cookie
   - `POST /api/auth/logout` — revokes the presented token's login; always `204` plus a deleted cookie
 
 - [ ] **Step 1: Write the failing refresh and logout tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Auth/RefreshTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/RefreshTests.cs`:
 
 ```csharp
 using System.Net;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 
-namespace FacilityRealtime.ApiTests.Auth;
+namespace JanitorialManagementDashboard.ApiTests.Auth;
 
 public class RefreshTests
 {
     [Fact]
     public async Task Refresh_rotates_the_cookie_and_returns_a_new_access_token()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, first) = await AuthApi.LoggedInAsync(factory);
 
         var response = await AuthApi.RefreshAsync(client, first);
@@ -1849,7 +1849,7 @@ public class RefreshTests
     [Fact]
     public async Task Rotated_token_replayed_within_30_seconds_still_refreshes()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, first) = await AuthApi.LoggedInAsync(factory);
         await AuthApi.RefreshAsync(client, first);
 
@@ -1862,7 +1862,7 @@ public class RefreshTests
     [Fact]
     public async Task Rotated_token_replayed_after_30_seconds_revokes_the_whole_login()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, first) = await AuthApi.LoggedInAsync(factory);
         var second = AuthApi.RefreshCookieValue(await AuthApi.RefreshAsync(client, first))!;
 
@@ -1877,7 +1877,7 @@ public class RefreshTests
     [Fact]
     public async Task Reuse_detection_leaves_the_same_users_other_logins_alone()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (phone, _, phoneToken) = await AuthApi.LoggedInAsync(factory);
         var (_, _, officeToken) = await AuthApi.LoggedInAsync(factory);
         await AuthApi.RefreshAsync(phone, phoneToken);
@@ -1892,7 +1892,7 @@ public class RefreshTests
     [Fact]
     public async Task Token_unused_for_30_days_expires()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, token) = await AuthApi.LoggedInAsync(factory);
 
         factory.Clock.Advance(TimeSpan.FromDays(30));
@@ -1904,7 +1904,7 @@ public class RefreshTests
     [Fact]
     public async Task Each_refresh_gives_the_session_another_30_days()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, token) = await AuthApi.LoggedInAsync(factory);
 
         factory.Clock.Advance(TimeSpan.FromDays(29));
@@ -1918,7 +1918,7 @@ public class RefreshTests
     [Fact]
     public async Task Deactivated_account_cannot_refresh_and_all_its_sessions_are_revoked()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, auth, token) = await AuthApi.LoggedInAsync(factory);
         await AuthApi.LoggedInAsync(factory); // a second login on another device
         await SetActiveAsync(factory, auth.User.Id, false);
@@ -1937,7 +1937,7 @@ public class RefreshTests
     [Fact]
     public async Task Role_change_takes_effect_on_the_next_refresh()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, auth, token) = await AuthApi.LoggedInAsync(factory);
         await factory.WithDbAsync(async db =>
         {
@@ -1956,7 +1956,7 @@ public class RefreshTests
     [InlineData("not-a-token-this-server-issued")]
     public async Task Missing_or_unknown_cookie_is_401_and_clears_the_cookie(string? cookie)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await AuthApi.RefreshAsync(factory.CreateApiClient(), cookie);
 
@@ -1967,7 +1967,7 @@ public class RefreshTests
     [Fact]
     public async Task Logout_revokes_that_login_and_deletes_the_cookie()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, first) = await AuthApi.LoggedInAsync(factory);
         var second = AuthApi.RefreshCookieValue(await AuthApi.RefreshAsync(client, first))!;
 
@@ -1982,14 +1982,14 @@ public class RefreshTests
     [Fact]
     public async Task Logout_without_a_cookie_still_succeeds()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await AuthApi.LogoutAsync(factory.CreateApiClient(), null);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
-    private static Task SetActiveAsync(FacilityApiFactory factory, int userId, bool isActive) =>
+    private static Task SetActiveAsync(JanitorialApiFactory factory, int userId, bool isActive) =>
         factory.WithDbAsync(async db =>
         {
             (await db.Users.SingleAsync(u => u.Id == userId)).IsActive = isActive;
@@ -2000,22 +2000,22 @@ public class RefreshTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo --filter "FullyQualifiedName~RefreshTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo --filter "FullyQualifiedName~RefreshTests"`
 Expected: FAIL. Every test gets `404 NotFound` because `/api/auth/refresh` and `/api/auth/logout` are not mapped.
 
 - [ ] **Step 3: Replace the auth endpoints file with login, refresh and logout**
 
-Replace the whole of `backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs` with:
+Replace the whole of `backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs` with:
 
 ```csharp
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 public static class AuthEndpoints
 {
@@ -2174,13 +2174,13 @@ public static class AuthEndpoints
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --nologo`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
 Expected: PASS. Unit tests 39, API tests 28.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs backend/tests/FacilityRealtime.ApiTests/Auth/RefreshTests.cs
+git add backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs backend/tests/JanitorialManagementDashboard.ApiTests/Auth/RefreshTests.cs
 git commit -m "feat(auth): rotate refresh tokens with 30s grace, reuse detection and logout (#15)"
 ```
 
@@ -2189,10 +2189,10 @@ git commit -m "feat(auth): rotate refresh tokens with 30s grace, reuse detection
 ### Task 7: Login-required dashboard, scan and hub; scanner from the token
 
 **Files:**
-- Create: `backend/tests/FacilityRealtime.ApiTests/Auth/ProtectedEndpointTests.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs` (three handlers)
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/ScanDtos.cs` (`CreateScanRecordRequest`)
-- Modify: `backend/src/FacilityRealtime.Api/Hubs/ScanHub.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/ProtectedEndpointTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs` (three handlers)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/ScanDtos.cs` (`CreateScanRecordRequest`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Hubs/ScanHub.cs`
 
 **Interfaces:**
 - Consumes: `AuthClaims.UserId` (Task 5), JwtBearer with `/hubs` query token (Task 5), `AuthApi.LoggedInAsync` (Task 5)
@@ -2203,15 +2203,15 @@ git commit -m "feat(auth): rotate refresh tokens with 30s grace, reuse detection
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Auth/ProtectedEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/ProtectedEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Auth;
+namespace JanitorialManagementDashboard.ApiTests.Auth;
 
 public class ProtectedEndpointTests
 {
@@ -2222,7 +2222,7 @@ public class ProtectedEndpointTests
     [InlineData("/api/service-points/by-token/" + QrToken)]
     public async Task Dashboard_and_point_lookup_require_login(string path)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await factory.CreateApiClient().GetAsync(path);
 
@@ -2232,7 +2232,7 @@ public class ProtectedEndpointTests
     [Fact]
     public async Task Any_logged_in_account_can_read_the_dashboard_and_a_point()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, _) = await AuthApi.LoggedInAsync(factory);
 
         var list = await client.GetAsync("/api/service-points");
@@ -2245,7 +2245,7 @@ public class ProtectedEndpointTests
     [Fact]
     public async Task Scanning_requires_login()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await factory.CreateApiClient().PostAsJsonAsync("/api/scan-records", new { qrToken = QrToken, status = "Normal" });
 
@@ -2255,7 +2255,7 @@ public class ProtectedEndpointTests
     [Fact]
     public async Task Scan_is_recorded_as_the_logged_in_user_even_if_the_body_names_someone_else()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, auth, _) = await AuthApi.LoggedInAsync(factory);
         var adminId = 0;
         await factory.WithDbAsync(async db => adminId = (await db.Users.SingleAsync(u => u.Username == "admin")).Id);
@@ -2272,7 +2272,7 @@ public class ProtectedEndpointTests
     [Fact]
     public async Task Admin_accounts_can_scan_too()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, _) = await AuthApi.LoggedInAsync(factory, "admin", "admin1234");
 
         var response = await client.PostAsJsonAsync("/api/scan-records", new { qrToken = QrToken, status = "Normal" });
@@ -2283,7 +2283,7 @@ public class ProtectedEndpointTests
     [Fact]
     public async Task Hub_negotiation_requires_login()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await factory.CreateApiClient().PostAsync("/hubs/scan/negotiate?negotiateVersion=1", null);
 
@@ -2293,7 +2293,7 @@ public class ProtectedEndpointTests
     [Fact]
     public async Task Hub_accepts_the_access_token_from_the_query_string()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (_, auth, _) = await AuthApi.LoggedInAsync(factory);
 
         var response = await factory.CreateApiClient().PostAsync($"/hubs/scan/negotiate?negotiateVersion=1&access_token={auth.AccessToken}", null);
@@ -2304,7 +2304,7 @@ public class ProtectedEndpointTests
     [Fact]
     public async Task Query_string_token_is_ignored_outside_hubs()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (_, auth, _) = await AuthApi.LoggedInAsync(factory);
 
         var response = await factory.CreateApiClient().GetAsync($"/api/service-points?access_token={auth.AccessToken}");
@@ -2316,12 +2316,12 @@ public class ProtectedEndpointTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo --filter "FullyQualifiedName~ProtectedEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo --filter "FullyQualifiedName~ProtectedEndpointTests"`
 Expected: FAIL. The anonymous requests get `200` instead of `401`, and the body-without-`userId` scans get `400 User ID '0' not found`.
 
 - [ ] **Step 3: Require login and read the scanner from the token**
 
-In `backend/src/FacilityRealtime.Api/DTOs/ScanDtos.cs`, replace:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/ScanDtos.cs`, replace:
 
 ```csharp
 public record CreateScanRecordRequest(
@@ -2339,7 +2339,7 @@ public record CreateScanRecordRequest(
     ScanStatus Status,
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`:
 
 1. Add `using System.Security.Claims;` to the usings.
 2. End of the `/api/service-points` handler — replace:
@@ -2437,15 +2437,15 @@ with:
 }).RequireAuthorization(); // ADR facility-0017: cleaner and admin accounts may both scan
 ```
 
-Replace the whole of `backend/src/FacilityRealtime.Api/Hubs/ScanHub.cs` with:
+Replace the whole of `backend/src/JanitorialManagementDashboard.Api/Hubs/ScanHub.cs` with:
 
 ```csharp
 using System.Threading.Tasks;
-using FacilityRealtime.Api.DTOs;
+using JanitorialManagementDashboard.Api.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
-namespace FacilityRealtime.Api.Hubs;
+namespace JanitorialManagementDashboard.Api.Hubs;
 
 /// <summary>ADR facility-0018: only logged-in accounts receive the live feed, so Clients.All needs no groups.</summary>
 [Authorize]
@@ -2461,13 +2461,13 @@ public class ScanHub : Hub
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --nologo`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
 Expected: PASS. Unit tests 39, API tests 37.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api backend/tests/FacilityRealtime.ApiTests/Auth/ProtectedEndpointTests.cs
+git add backend/src/JanitorialManagementDashboard.Api backend/tests/JanitorialManagementDashboard.ApiTests/Auth/ProtectedEndpointTests.cs
 git commit -m "feat(auth): require login for dashboard, scan and hub; take scanner from the JWT (#18)"
 ```
 
@@ -3270,7 +3270,7 @@ Replace the whole of `README.md` with:
 
 ## 🏗️ สถาปัตยกรรมระบบ (Architecture)
 
-- **Backend**: .NET 10 LTS (C# 13) Minimal APIs + SignalR Hub (`FacilityRealtime.Api`)
+- **Backend**: .NET 10 LTS (C# 13) Minimal APIs + SignalR Hub (`JanitorialManagementDashboard.Api`)
 - **Database**: MySQL 8+ (EF Core `MySql.EntityFrameworkCore 10.x`) — API apply migration เองตอนเริ่ม
 - **Frontend**: Vite + React 19 + TypeScript + Vanilla CSS (`frontend/`)
 - **Real-time Pipeline**: เมื่อแม่บ้านสแกนและบันทึกข้อมูล -> Backend บันทึกลง MySQL -> ส่งผ่าน SignalR Hub (`/hubs/scan`) -> หน้า Dashboard อัปเดตการ์ดและ KPI ทันทีโดยไม่ต้องรีเฟรช
@@ -3294,13 +3294,13 @@ mysql -u root -e "DROP DATABASE IF EXISTS facility_dashboard; CREATE DATABASE fa
 ### 2. ตั้ง JWT signing key (ครั้งเดียวต่อเครื่อง)
 repo นี้เป็น public จึงไม่มี key อยู่ในไฟล์ config และ API จะไม่ยอมเริ่มถ้ายังไม่ได้ตั้ง:
 ```bash
-dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/FacilityRealtime.Api
+dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/JanitorialManagementDashboard.Api
 ```
 
 ### 3. รัน Backend API (.NET 10)
 รัน Backend บน Port `5001` (หลีกเลี่ยง Port 5000 ของ AirPlay บน macOS):
 ```bash
-dotnet run --project backend/src/FacilityRealtime.Api --urls "http://0.0.0.0:5001"
+dotnet run --project backend/src/JanitorialManagementDashboard.Api --urls "http://0.0.0.0:5001"
 ```
 
 ### 4. รัน Frontend (Vite React)
@@ -3313,7 +3313,7 @@ npm run dev -- --host 0.0.0.0 --port 5173
 ### 5. รันชุดทดสอบ
 ชุดทดสอบ API ใช้ SQLite ในหน่วยความจำ ไม่ต้องเปิด MySQL:
 ```bash
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 npm --prefix frontend test
 ```
 
@@ -3339,7 +3339,7 @@ npm --prefix frontend test
 - [ ] **Step 2: Run every automated check from a clean state**
 
 ```bash
-dotnet test backend/FacilityRealtime.slnx --nologo
+dotnet test backend/JanitorialManagementDashboard.slnx --nologo
 npm --prefix frontend test
 npm --prefix frontend run build
 npm --prefix frontend run lint

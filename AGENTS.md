@@ -1,4 +1,4 @@
-# Facility Real-time Dashboard
+# Janitorial Management Dashboard
 
 ## Project Standards & Decisions
 - ADR Directory: `docs/adr/`
@@ -25,4 +25,4 @@ Single-context: the glossary is `CONTEXT.md`, and ADRs are `docs/adr/facility-NN
 
 ### Frontend standards
 
-Tailwind, look and accessibility rules that `code-review` checks. See `docs/agents/frontend-standards.md`; the look is in `design-system/facility/MASTER.md` (page overrides in `design-system/facility/pages/`).
+Tailwind, look and accessibility rules that `code-review` checks. See `docs/agents/frontend-standards.md`; the look is in `design-system/janitorial/MASTER.md` (page overrides in `design-system/janitorial/pages/`).

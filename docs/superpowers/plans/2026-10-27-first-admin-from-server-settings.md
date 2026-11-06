@@ -25,7 +25,7 @@
 - New audit actions: `ADMIN_FIRST_CREATE`, `ADMIN_RECOVER_CREATE`, `ADMIN_RECOVER_RESET`, all in category `Account`.
 - MySQL: only throwaway databases named `facility_*_test`; never `facility_dashboard`. Steps that need MySQL are run by the controller, never by a subagent.
 - Screen words follow facility-0085 (แอดมิน, เซิร์ฟเวอร์ …). Thai strings in this plan are copied verbatim.
-- Every commit passes the husky pre-commit (frontend lint, tsc, tests). Backend tests: `dotnet test backend/FacilityRealtime.slnx`.
+- Every commit passes the husky pre-commit (frontend lint, tsc, tests). Backend tests: `dotnet test backend/JanitorialManagementDashboard.slnx`.
 - Never push, open a PR or merge without the owner's explicit OK.
 
 ## ADR decision → task
@@ -51,20 +51,20 @@
 
 ## File Structure
 
-- `backend/src/FacilityRealtime.Domain/Entities/AuditEntry.cs`: `ActorId` becomes `int?`.
-- `backend/src/FacilityRealtime.Infrastructure/Persistence/AuditTrail.cs`: `actorId` parameter becomes `int?`.
-- `backend/src/FacilityRealtime.Infrastructure/Persistence/AuditLogQuery.cs`: a null actor reads as `ระบบ` and is left out of the actor list.
-- `backend/src/FacilityRealtime.Infrastructure/Migrations/<timestamp>_SystemAuditActor.cs` (+ Designer, snapshot): generated.
-- `backend/src/FacilityRealtime.Api/DTOs/AuditLogDtos.cs`: `ActorId` becomes `int?`.
-- `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs`: the three new actions in `Account`.
+- `backend/src/JanitorialManagementDashboard.Domain/Entities/AuditEntry.cs`: `ActorId` becomes `int?`.
+- `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AuditTrail.cs`: `actorId` parameter becomes `int?`.
+- `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AuditLogQuery.cs`: a null actor reads as `ระบบ` and is left out of the actor list.
+- `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/<timestamp>_SystemAuditActor.cs` (+ Designer, snapshot): generated.
+- `backend/src/JanitorialManagementDashboard.Api/DTOs/AuditLogDtos.cs`: `ActorId` becomes `int?`.
+- `backend/src/JanitorialManagementDashboard.Application/Audit/AuditCategories.cs`: the three new actions in `Account`.
 - `frontend/src/pages/history/historyApi.ts`, `historyRules.ts`: optional `actorId`, Thai labels for the new actions.
-- Create `backend/src/FacilityRealtime.Application/Accounts/FirstAdminSettings.cs`: the bound settings.
-- Create `backend/src/FacilityRealtime.Infrastructure/Persistence/ServerAdminAccounts.cs`: create, find and reset with the system as the actor.
-- Create `backend/src/FacilityRealtime.Infrastructure/Persistence/FirstAdmin.cs`: the startup step.
-- Create `backend/src/FacilityRealtime.Api/Commands/AdminConsole.cs`: `IAdminConsole` and the real console with hidden typing.
-- Create `backend/src/FacilityRealtime.Api/Commands/ResetAdminCommand.cs`: the command's dialogue.
-- Modify `backend/src/FacilityRealtime.Api/Program.cs`: the `reset-admin` branch, the startup step, one shared connection-string function.
-- Create `backend/tests/FacilityRealtime.ApiTests/Infrastructure/EmptyDatabase.cs` and `ListLogger.cs`: test helpers.
+- Create `backend/src/JanitorialManagementDashboard.Application/Accounts/FirstAdminSettings.cs`: the bound settings.
+- Create `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/ServerAdminAccounts.cs`: create, find and reset with the system as the actor.
+- Create `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/FirstAdmin.cs`: the startup step.
+- Create `backend/src/JanitorialManagementDashboard.Api/Commands/AdminConsole.cs`: `IAdminConsole` and the real console with hidden typing.
+- Create `backend/src/JanitorialManagementDashboard.Api/Commands/ResetAdminCommand.cs`: the command's dialogue.
+- Modify `backend/src/JanitorialManagementDashboard.Api/Program.cs`: the `reset-admin` branch, the startup step, one shared connection-string function.
+- Create `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/EmptyDatabase.cs` and `ListLogger.cs`: test helpers.
 - Create `docs/handover.md`: the Thai guide. Modify `README.md`, `CONTEXT.md`, `docs/architecture.md`, the ADR (amendment) and `docs/handoff.md`.
 
 ---
@@ -81,14 +81,14 @@ git commit -m "docs: ADR facility-0092 and its plan — first Admin from server 
 ### Task 1: The Admin history shows "ระบบ" as an actor
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Domain/Entities/AuditEntry.cs:7`
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/AuditTrail.cs:11`
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/AuditLogQuery.cs`
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/AuditLogDtos.cs:13`
-- Modify: `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs`
-- Create (generated): `backend/src/FacilityRealtime.Infrastructure/Migrations/*_SystemAuditActor.cs`, `*_SystemAuditActor.Designer.cs`; modify `AppDbContextModelSnapshot.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Domain/Entities/AuditEntry.cs:7`
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AuditTrail.cs:11`
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AuditLogQuery.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/AuditLogDtos.cs:13`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Audit/AuditCategories.cs`
+- Create (generated): `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/*_SystemAuditActor.cs`, `*_SystemAuditActor.Designer.cs`; modify `AppDbContextModelSnapshot.cs`
 - Modify: `frontend/src/pages/history/historyApi.ts`, `frontend/src/pages/history/historyRules.ts`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AuditLogEndpointTests.cs`, `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs:29`, `backend/tests/FacilityRealtime.UnitTests/AuditCategoriesTests.cs`, `frontend/src/pages/history/historyRules.test.ts`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AuditLogEndpointTests.cs`, `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs:29`, `backend/tests/JanitorialManagementDashboard.UnitTests/AuditCategoriesTests.cs`, `frontend/src/pages/history/historyRules.test.ts`
 
 **Interfaces:**
 - Produces:
@@ -108,7 +108,7 @@ Add to `AuditLogEndpointTests` (inside the class):
     [Fact]
     public async Task A_row_the_system_wrote_shows_the_system_as_its_actor()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await factory.WithDbAsync(async db =>
         {
@@ -146,7 +146,7 @@ Add to `frontend/src/pages/history/historyRules.test.ts` (inside the `describe`)
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~AuditLogEndpointTests|FullyQualifiedName~AuditCategoriesTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~AuditLogEndpointTests|FullyQualifiedName~AuditCategoriesTests"`
 Expected: compile error, because `AuditTrail.Add` does not take `null` for `actorId`. Then, once it compiles, the new cases fail.
 
 Run: `cd frontend && npx vitest run src/pages/history/historyRules.test.ts`
@@ -207,7 +207,7 @@ From the repo root:
 
 ```bash
 dotnet tool restore
-dotnet ef migrations add SystemAuditActor --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api
+dotnet ef migrations add SystemAuditActor --project backend/src/JanitorialManagementDashboard.Infrastructure --startup-project backend/src/JanitorialManagementDashboard.Api
 ```
 
 Expected: a migration whose `Up` alters `audit_log.actor_id` to `nullable: true`, and whose `Down` alters it back. EF may drop and re-add the foreign key `FK_audit_log_users_actor_id` around the change. Read the generated file. It must touch only `audit_log.actor_id` and its foreign key; if it touches anything else, stop and report. Add this comment as the first line inside `Up`:
@@ -239,7 +239,7 @@ Expected: a migration whose `Up` alters `audit_log.actor_id` to `nullable: true`
 
 - [ ] **Step 6: Run the tests**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: all pass. `MigrationTests.Migrations_match_the_model` passes because the migration exists. Every existing `Assert.Equal(adminAuth.User.Id, e.ActorId)` still compiles (`int` widens to `int?`).
 
 Run: `cd frontend && npx vitest run && npx tsc -b && npx eslint .`
@@ -255,17 +255,17 @@ git commit -m "feat: the Admin history shows ระบบ for rows the server wr
 ### Task 2: The first Admin at startup
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Accounts/FirstAdminSettings.cs`
-- Create: `backend/src/FacilityRealtime.Infrastructure/Persistence/ServerAdminAccounts.cs`
-- Create: `backend/src/FacilityRealtime.Infrastructure/Persistence/FirstAdmin.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs` (the migrate-and-seed block, "6.")
-- Create: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/EmptyDatabase.cs`, `backend/tests/FacilityRealtime.ApiTests/Infrastructure/ListLogger.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Persistence/FirstAdminTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Accounts/FirstAdminSettings.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/ServerAdminAccounts.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/FirstAdmin.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs` (the migrate-and-seed block, "6.")
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/EmptyDatabase.cs`, `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/ListLogger.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/FirstAdminTests.cs`
 
 **Interfaces:**
 - Consumes: `AuditTrail.Add(..., int? actorId, ...)` and the action names from Task 1.
 - Produces:
-  - `FirstAdminSettings { const string SectionName = "FirstAdmin"; string? Username; string? Password; string? DisplayName; }` (namespace `FacilityRealtime.Application.Accounts`).
+  - `FirstAdminSettings { const string SectionName = "FirstAdmin"; string? Username; string? Password; string? DisplayName; }` (namespace `JanitorialManagementDashboard.Application.Accounts`).
   - `ServerAdminAccounts.FirstCreateAction / RecoverCreateAction / RecoverResetAction` (string constants).
   - `ServerAdminAccounts.CreateAsync(AppDbContext db, IPasswordHasher hasher, TimeProvider clock, string username, string displayName, string password, string action, string summary) : Task<User>`.
   - `FirstAdmin.EnsureAsync(AppDbContext db, IPasswordHasher hasher, TimeProvider clock, FirstAdminSettings settings, ILogger logger) : Task<FirstAdminOutcome>`.
@@ -274,14 +274,14 @@ git commit -m "feat: the Admin history shows ระบบ for rows the server wr
 
 - [ ] **Step 1: Write the test helpers**
 
-`backend/tests/FacilityRealtime.ApiTests/Infrastructure/EmptyDatabase.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/EmptyDatabase.cs`:
 
 ```csharp
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Infrastructure;
+namespace JanitorialManagementDashboard.ApiTests.Infrastructure;
 
 /// <summary>An in-memory SQLite database with the schema and no seed: a server's first start (facility-0092).</summary>
 public sealed class EmptyDatabase : IAsyncDisposable
@@ -311,12 +311,12 @@ public sealed class EmptyDatabase : IAsyncDisposable
 }
 ```
 
-`backend/tests/FacilityRealtime.ApiTests/Infrastructure/ListLogger.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/ListLogger.cs`:
 
 ```csharp
 using Microsoft.Extensions.Logging;
 
-namespace FacilityRealtime.ApiTests.Infrastructure;
+namespace JanitorialManagementDashboard.ApiTests.Infrastructure;
 
 /// <summary>Keeps every line logged, so a test can read what a server operator would see.</summary>
 public sealed class ListLogger : ILogger
@@ -334,18 +334,18 @@ public sealed class ListLogger : ILogger
 
 - [ ] **Step 2: Write the failing tests**
 
-`backend/tests/FacilityRealtime.ApiTests/Persistence/FirstAdminTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/FirstAdminTests.cs`:
 
 ```csharp
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Application.Accounts;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Auth;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Application.Accounts;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Auth;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace FacilityRealtime.ApiTests.Persistence;
+namespace JanitorialManagementDashboard.ApiTests.Persistence;
 
 /// <summary>facility-0092: the first Admin comes from the server's settings, only while no Admin exists at all.</summary>
 public class FirstAdminTests
@@ -379,7 +379,7 @@ public class FirstAdminTests
     [Fact]
     public async Task Does_nothing_while_any_Admin_exists_even_a_turned_off_one()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await factory.WithDbAsync(async db =>
         {
             var seeded = await db.Users.SingleAsync(u => u.Username == "admin");
@@ -453,15 +453,15 @@ public class FirstAdminTests
 
 - [ ] **Step 3: Run them to see them fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~FirstAdminTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~FirstAdminTests"`
 Expected: compile error, because `FirstAdmin`, `FirstAdminSettings` and `FirstAdminOutcome` do not exist.
 
 - [ ] **Step 4: Write the settings, the shared create and the startup step**
 
-`backend/src/FacilityRealtime.Application/Accounts/FirstAdminSettings.cs`:
+`backend/src/JanitorialManagementDashboard.Application/Accounts/FirstAdminSettings.cs`:
 
 ```csharp
-namespace FacilityRealtime.Application.Accounts;
+namespace JanitorialManagementDashboard.Application.Accounts;
 
 /// <summary>
 /// facility-0092 decision 1: the server's environment variables FirstAdmin__Username, FirstAdmin__Password and
@@ -477,14 +477,14 @@ public sealed class FirstAdminSettings
 }
 ```
 
-`backend/src/FacilityRealtime.Infrastructure/Persistence/ServerAdminAccounts.cs`:
+`backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/ServerAdminAccounts.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Infrastructure.Persistence;
+namespace JanitorialManagementDashboard.Infrastructure.Persistence;
 
 /// <summary>
 /// facility-0092: Admin accounts made or recovered on the server itself, with no Admin logged in, so the audit row's
@@ -523,16 +523,16 @@ public static class ServerAdminAccounts
 }
 ```
 
-`backend/src/FacilityRealtime.Infrastructure/Persistence/FirstAdmin.cs`:
+`backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/FirstAdmin.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Accounts;
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Accounts;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace FacilityRealtime.Infrastructure.Persistence;
+namespace JanitorialManagementDashboard.Infrastructure.Persistence;
 
 public enum FirstAdminOutcome
 {
@@ -592,12 +592,12 @@ public static class FirstAdmin
 
 - [ ] **Step 5: Run the tests**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~FirstAdminTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~FirstAdminTests"`
 Expected: all PASS (10 cases).
 
 - [ ] **Step 6: Wire it into startup**
 
-`Program.cs`: add `using FacilityRealtime.Application.Accounts;` to the usings. In block "6.", after the `if (app.Environment.IsDevelopment()) { ... SeedAsync ... }` statement and still inside `if (!app.Environment.IsEnvironment("Testing")) { ... }`, add
+`Program.cs`: add `using JanitorialManagementDashboard.Application.Accounts;` to the usings. In block "6.", after the `if (app.Environment.IsDevelopment()) { ... SeedAsync ... }` statement and still inside `if (!app.Environment.IsEnvironment("Testing")) { ... }`, add
 
 ```csharp
     // facility-0092: the first Admin comes from the server's settings (FirstAdmin__*), only while no Admin exists at all.
@@ -613,7 +613,7 @@ No automated test runs this wiring: the API tests run in "Testing", which skips 
 
 - [ ] **Step 7: Run everything and commit**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: all pass (MySQL tests skipped).
 
 ```bash
@@ -624,11 +624,11 @@ git commit -m "feat: the first Admin comes from the server's settings while no A
 ### Task 3: The `reset-admin` command
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/ServerAdminAccounts.cs` (add the find and reset methods and the `RecoveryTarget` types)
-- Create: `backend/src/FacilityRealtime.Api/Commands/AdminConsole.cs`
-- Create: `backend/src/FacilityRealtime.Api/Commands/ResetAdminCommand.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/ResetAdminCommandTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/ServerAdminAccounts.cs` (add the find and reset methods and the `RecoveryTarget` types)
+- Create: `backend/src/JanitorialManagementDashboard.Api/Commands/AdminConsole.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Commands/ResetAdminCommand.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/ResetAdminCommandTests.cs`
 
 **Interfaces:**
 - Consumes: `ServerAdminAccounts.CreateAsync`, `ServerAdminAccounts.RecoverCreateAction`, `ServerAdminAccounts.RecoverResetAction` (Task 2); `AuditTrail.Add` with `actorId: null` (Task 1).
@@ -642,18 +642,18 @@ git commit -m "feat: the first Admin comes from the server's settings while no A
 
 - [ ] **Step 1: Write the failing tests**
 
-`backend/tests/FacilityRealtime.ApiTests/Admin/ResetAdminCommandTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Admin/ResetAdminCommandTests.cs`:
 
 ```csharp
 using System.Net;
-using FacilityRealtime.Api.Commands;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Api.Commands;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>facility-0092 decision 5: reset-admin recovers Admin access from the server's console.</summary>
 public class ResetAdminCommandTests
@@ -686,7 +686,7 @@ public class ResetAdminCommandTests
         private string? Next() => _answers.Count > 0 ? _answers.Dequeue() : null;
     }
 
-    private static async Task<int> RunAsync(FacilityApiFactory factory, FakeConsole console, params string[] args)
+    private static async Task<int> RunAsync(JanitorialApiFactory factory, FakeConsole console, params string[] args)
     {
         var exitCode = -1;
         await factory.WithDbAsync(async db => exitCode = await ResetAdminCommand.RunAsync(
@@ -697,7 +697,7 @@ public class ResetAdminCommandTests
     [Fact]
     public async Task Resets_a_turned_off_Admin_turns_it_on_and_ends_every_session()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await AuthApi.LoggedInAdminAsync(factory);
         await factory.WithDbAsync(async db =>
         {
@@ -731,7 +731,7 @@ public class ResetAdminCommandTests
     [Fact]
     public async Task Creates_a_new_Admin_for_a_name_nobody_has()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var console = new FakeConsole("แอดมินสำรอง", NewPassword, NewPassword);
 
         var exitCode = await RunAsync(factory, console, "backup.admin");
@@ -751,7 +751,7 @@ public class ResetAdminCommandTests
     [Fact]
     public async Task Refuses_a_Cleaners_employee_ID_and_changes_nothing()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var console = new FakeConsole(NewPassword, NewPassword);
 
         var exitCode = await RunAsync(factory, console, "e1001");
@@ -769,7 +769,7 @@ public class ResetAdminCommandTests
     [Fact]
     public async Task Two_different_passwords_change_nothing()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var console = new FakeConsole(NewPassword, NewPassword + "x");
 
         var exitCode = await RunAsync(factory, console, "admin");
@@ -784,7 +784,7 @@ public class ResetAdminCommandTests
     [InlineData("1qaz2wsx3edc4rfv")]
     public async Task A_password_against_the_rule_changes_nothing(string password)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var console = new FakeConsole(password, password);
 
         var exitCode = await RunAsync(factory, console, "admin");
@@ -797,7 +797,7 @@ public class ResetAdminCommandTests
     [Fact]
     public async Task A_new_Admin_needs_a_display_name()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var console = new FakeConsole("   ", NewPassword, NewPassword);
 
         var exitCode = await RunAsync(factory, console, "backup.admin");
@@ -818,7 +818,7 @@ public class ResetAdminCommandTests
     [MemberData(nameof(WrongUsage))]
     public async Task Wrong_usage_or_a_bad_username_changes_nothing(int expectedExitCode, string[] args)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var console = new FakeConsole(NewPassword, NewPassword);
 
         var exitCode = await RunAsync(factory, console, args);
@@ -829,7 +829,7 @@ public class ResetAdminCommandTests
     }
 
     /// <summary>The seeded Admin keeps the seed's password and nothing is logged.</summary>
-    private static Task AssertUnchangedAsync(FacilityApiFactory factory) =>
+    private static Task AssertUnchangedAsync(JanitorialApiFactory factory) =>
         factory.WithDbAsync(async db =>
         {
             var admin = await db.Users.SingleAsync(u => u.Username == "admin");
@@ -841,8 +841,8 @@ public class ResetAdminCommandTests
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~ResetAdminCommandTests"`
-Expected: compile error, because `FacilityRealtime.Api.Commands`, `IAdminConsole` and `ResetAdminCommand` do not exist.
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~ResetAdminCommandTests"`
+Expected: compile error, because `JanitorialManagementDashboard.Api.Commands`, `IAdminConsole` and `ResetAdminCommand` do not exist.
 
 - [ ] **Step 3: Find and reset**
 
@@ -903,12 +903,12 @@ Add inside the class:
 
 - [ ] **Step 4: The console and the command**
 
-`backend/src/FacilityRealtime.Api/Commands/AdminConsole.cs`:
+`backend/src/JanitorialManagementDashboard.Api/Commands/AdminConsole.cs`:
 
 ```csharp
 using System.Text;
 
-namespace FacilityRealtime.Api.Commands;
+namespace JanitorialManagementDashboard.Api.Commands;
 
 /// <summary>What reset-admin asks and says; tests answer it without a terminal.</summary>
 public interface IAdminConsole
@@ -966,15 +966,15 @@ public sealed class SystemAdminConsole : IAdminConsole
 }
 ```
 
-`backend/src/FacilityRealtime.Api/Commands/ResetAdminCommand.cs`:
+`backend/src/JanitorialManagementDashboard.Api/Commands/ResetAdminCommand.cs`:
 
 ```csharp
-using FacilityRealtime.Api.Endpoints;
-using FacilityRealtime.Application.Accounts;
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Endpoints;
+using JanitorialManagementDashboard.Application.Accounts;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 
-namespace FacilityRealtime.Api.Commands;
+namespace JanitorialManagementDashboard.Api.Commands;
 
 /// <summary>
 /// facility-0092 decision 5: `reset-admin &lt;username&gt;`, run on the server with the API's own settings, recovers
@@ -1055,12 +1055,12 @@ public static class ResetAdminCommand
 
 - [ ] **Step 5: Run the tests**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~ResetAdminCommandTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~ResetAdminCommandTests"`
 Expected: all PASS (10 cases).
 
 - [ ] **Step 6: Wire it into `Program.cs`**
 
-Add `using System.Text;`, `using FacilityRealtime.Api.Commands;` and `using FacilityRealtime.Infrastructure.Auth;` to the usings, if not already there (`FacilityRealtime.Infrastructure.Auth` already is).
+Add `using System.Text;`, `using JanitorialManagementDashboard.Api.Commands;` and `using JanitorialManagementDashboard.Infrastructure.Auth;` to the usings, if not already there (`JanitorialManagementDashboard.Infrastructure.Auth` already is).
 
 Right after `var builder = WebApplication.CreateBuilder(args);` add
 
@@ -1112,7 +1112,7 @@ The command-line configuration provider ignores `reset-admin` and the username, 
 
 - [ ] **Step 7: Run everything and commit**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: all pass (MySQL tests skipped).
 
 ```bash
@@ -1142,7 +1142,7 @@ Write exactly this (Thai, for whoever takes the system on):
 
 ## 1. ก่อนเริ่ม
 
-- ระบบคือโปรแกรม `FacilityRealtime.Api` (ไฟล์ `FacilityRealtime.Api.dll` ในโฟลเดอร์ที่ deploy)
+- ระบบคือโปรแกรม `JanitorialManagementDashboard.Api` (ไฟล์ `JanitorialManagementDashboard.Api.dll` ในโฟลเดอร์ที่ deploy)
 - ระบบอ่านค่าตั้งจาก environment variable ของ server ชื่อที่มี `__` (ขีดล่างสองตัว) เช่น `ConnectionStrings__DefaultConnection` คือที่อยู่ฐานข้อมูล
 - ทุกคำสั่งในเอกสารนี้ต้องรันด้วยค่าชุดเดียวกับที่ระบบใช้จริง โดยเฉพาะ `ConnectionStrings__DefaultConnection` ไม่อย่างนั้นคำสั่งจะไปทำกับฐานข้อมูลอื่น
 
@@ -1188,9 +1188,9 @@ Write exactly this (Thai, for whoever takes the system on):
 1. เข้า server ไปที่โฟลเดอร์ที่ deploy ระบบ แล้วตั้ง environment variable ชุดเดียวกับที่ระบบใช้ อย่างน้อย `ConnectionStrings__DefaultConnection`
 2. รัน
    ```bash
-   dotnet FacilityRealtime.Api.dll reset-admin <ชื่อผู้ใช้แอดมิน>
+   dotnet JanitorialManagementDashboard.Api.dll reset-admin <ชื่อผู้ใช้แอดมิน>
    ```
-   ถ้ารันจากโค้ด ใช้ `dotnet run --project backend/src/FacilityRealtime.Api -- reset-admin <ชื่อผู้ใช้แอดมิน>`
+   ถ้ารันจากโค้ด ใช้ `dotnet run --project backend/src/JanitorialManagementDashboard.Api -- reset-admin <ชื่อผู้ใช้แอดมิน>`
 3. คำสั่งถามรหัสผ่านใหม่สองครั้ง ตัวอักษรที่พิมพ์ไม่แสดงบนจอ คำสั่งไม่รับรหัสในบรรทัดคำสั่ง เพราะจะค้างใน history
    - ชื่อนั้นเป็นแอดมินอยู่แล้ว: ตั้งรหัสใหม่ เปิดบัญชีถ้าถูกปิด และทุกเครื่องที่เคยเข้าระบบด้วยบัญชีนี้ต้องเข้าใหม่
    - ยังไม่มีชื่อนี้: สร้างแอดมินใหม่ คำสั่งถามชื่อที่แสดงก่อน
@@ -1231,7 +1231,7 @@ with
 `docs/architecture.md`: after the paragraph that starts with `**Excel export (facility-0053).**`, add a blank line and
 
 ```markdown
-**First Admin and reset-admin (facility-0092).** After the migration (and the Development seed), `FirstAdmin.EnsureAsync` creates one Admin from the server's `FirstAdmin__Username`, `FirstAdmin__Password` and `FirstAdmin__DisplayName`, only while no Admin row exists at all. A bad value stops the startup and names the setting, never the password. Started as `FacilityRealtime.Api reset-admin <username>`, `Program` migrates, runs `Commands/ResetAdminCommand` (password asked twice with the typing hidden), and exits without serving, so it needs only the connection string. Both go through `Persistence/ServerAdminAccounts` and write audit rows whose actor is null, which the history shows as "ระบบ". The handover guide is `docs/handover.md`.
+**First Admin and reset-admin (facility-0092).** After the migration (and the Development seed), `FirstAdmin.EnsureAsync` creates one Admin from the server's `FirstAdmin__Username`, `FirstAdmin__Password` and `FirstAdmin__DisplayName`, only while no Admin row exists at all. A bad value stops the startup and names the setting, never the password. Started as `JanitorialManagementDashboard.Api reset-admin <username>`, `Program` migrates, runs `Commands/ResetAdminCommand` (password asked twice with the typing hidden), and exits without serving, so it needs only the connection string. Both go through `Persistence/ServerAdminAccounts` and write audit rows whose actor is null, which the history shows as "ระบบ". The handover guide is `docs/handover.md`.
 ```
 
 In the class diagram, replace `User "1" <-- "0..*" AuditEntry : actor` with `User "0..1" <-- "0..*" AuditEntry : actor`.
@@ -1267,7 +1267,7 @@ The controller runs this task; MySQL never goes to a subagent. Use throwaway dat
 
 ```bash
 mysql -u root -e "CREATE DATABASE facility_firstadmin_mysqltests_test CHARACTER SET utf8mb4;"
-FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_firstadmin_mysqltests_test;Uid=root;Pwd=;" dotnet test backend/FacilityRealtime.slnx
+FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_firstadmin_mysqltests_test;Uid=root;Pwd=;" dotnet test backend/JanitorialManagementDashboard.slnx
 ```
 Expected: everything passes with 0 skipped, including the MySQL tests, which migrate a fresh database with `SystemAuditActor`.
 
@@ -1280,7 +1280,7 @@ export ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://localhost:5001
 export Jwt__SigningKey="$(openssl rand -base64 48)"
 export FirstAdmin__Username=first.admin FirstAdmin__DisplayName='แอดมินทดสอบ'
 export FirstAdmin__Password="$(openssl rand -base64 24)"
-dotnet run --no-launch-profile --project backend/src/FacilityRealtime.Api > "$SCRATCH/first-start.log" 2>&1 &
+dotnet run --no-launch-profile --project backend/src/JanitorialManagementDashboard.Api > "$SCRATCH/first-start.log" 2>&1 &
 ```
 (`$SCRATCH` is the session's scratchpad directory; run the API in the background with its output captured there.) When `/api/health` answers, check:
 - The log has `Created the first Admin 'first.admin'`, and no line contains `$FirstAdmin__Password` (`grep -F` on the captured output finds nothing).
@@ -1298,7 +1298,7 @@ Recreate the database and start once with valid `FirstAdmin__*` so `first.admin`
 
 ```bash
 NEW="$(openssl rand -base64 24)"
-printf '%s\n%s\n' "$NEW" "$NEW" | dotnet run --no-launch-profile --project backend/src/FacilityRealtime.Api -- reset-admin first.admin; echo "exit $?"
+printf '%s\n%s\n' "$NEW" "$NEW" | dotnet run --no-launch-profile --project backend/src/JanitorialManagementDashboard.Api -- reset-admin first.admin; echo "exit $?"
 ```
 Expected: `exit 0`, the Thai success line, and no line containing `$NEW`. Start the API again (with `Jwt__SigningKey`): logging in with `$NEW` answers 200, and `audit_log` has `ADMIN_RECOVER_RESET` with a `NULL` actor. Then run `reset-admin backup.admin` with the piped input `แอดมินสำรอง`, `$NEW`, `$NEW`: exit 0, and a second Admin exists. (The Production database has no seed, so the employee-ID refusal is covered by the API tests only.)
 

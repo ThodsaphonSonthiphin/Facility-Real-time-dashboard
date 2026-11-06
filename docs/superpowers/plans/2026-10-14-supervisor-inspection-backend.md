@@ -8,7 +8,7 @@
 - **One migration (Task 1):**
   - `inspections` gets the GPS column set and `cover_assignment_id`.
   - `cover_assignments` gets a nullable `building_id`, and its `area_id` becomes nullable. A CHECK keeps exactly one of the two, as `docs/design/database.html` draws it.
-- **Pure rules in `FacilityRealtime.Application`, unit-tested:**
+- **Pure rules in `JanitorialManagementDashboard.Application`, unit-tested:**
   - `Inspections/SupervisorScope` decides whether a Supervisor may inspect a building now, or why not (`OTHER_BUILDING`, `OUTSIDE_SHIFT`).
   - `Inspections/InspectionRules` finds the submission a Supervisor may judge: the latest one of the current round.
   - `Rounds/RoundOutcomes` classifies a finished round as ตรวจผ่าน / ไม่ได้ตรวจ / ไม่ได้แก้.
@@ -160,12 +160,12 @@
 
 ```
 backend/
-  src/FacilityRealtime.Domain/
+  src/JanitorialManagementDashboard.Domain/
     Entities/CoverAssignment.cs              AreaId nullable, + BuildingId, Building                          (modified, Task 1)
     Entities/InspectionRecord.cs             : IGpsStamped, + CoverAssignmentId                                (modified, Task 1)
     Enums/BlockReason.cs                     + OtherBuilding, OutsideShift                                    (modified, Task 2)
     Enums/AlertType.cs                       + InspectionGps                                                  (modified, Task 7)
-  src/FacilityRealtime.Application/
+  src/JanitorialManagementDashboard.Application/
     Inspections/SupervisorScope.cs           WithoutCover                                                     (new, Task 2)
     Inspections/InspectionRules.cs           Find, InspectionTarget, InspectionRefusal, MaxDefectLength       (new, Task 2)
     Rounds/RoundFacts.cs                     InspectionFact + Defect                                          (modified, Task 4)
@@ -175,13 +175,13 @@ backend/
     Inspections/InspectionHistory.cs         RoundSubmission, FinishedRound, FinishedRounds                   (new, Task 8)
     Export/ExportRules.cs                    ExportSet + Inspections                                          (modified, Task 8)
     Inspections/InspectionSummary.cs         Tally and its records                                            (new, Task 9)
-  src/FacilityRealtime.Infrastructure/
+  src/JanitorialManagementDashboard.Infrastructure/
     Persistence/AppDbContext.cs              cover CHECK, building FK, inspection GPS and cover FK            (modified, Task 1)
     Migrations/*_SupervisorInspection.cs     generated                                                        (new, Task 1)
     Persistence/RoundFactsQuery.cs           + Defect                                                         (modified, Task 4)
     Persistence/AlertQuery.cs                + inspection flags, block reason, Supervisor cover slot          (modified, Task 7)
     Persistence/InspectionHistoryQuery.cs    round submissions, inspections, point places                     (new, Task 8)
-  src/FacilityRealtime.Api/
+  src/JanitorialManagementDashboard.Api/
     Endpoints/AttendanceBoard.cs, MyWorkEndpoints.cs   area covers only                                       (modified, Task 1)
     Endpoints/BlockedScans.cs                reason + building                                                (modified, Task 3)
     Endpoints/AttendanceEndpoints.cs, ScanRecordEndpoints.cs   pass BlockReason.OtherArea                     (modified, Task 3; ScanRecord also Task 6)
@@ -200,13 +200,13 @@ backend/
     Endpoints/ExportSheets.cs, AdminExportEndpoints.cs   "การตรวจงาน"                                         (modified, Task 8)
     DTOs/InspectionSummaryDtos.cs, Endpoints/AdminInspectionSummaryEndpoints.cs                               (new, Task 9)
     Program.cs                               map the new endpoint files, register the user id provider         (modified, Tasks 3, 6, 9)
-  tests/FacilityRealtime.UnitTests/
+  tests/JanitorialManagementDashboard.UnitTests/
     SupervisorScopeTests.cs, InspectionRulesTests.cs                                                          (new, Task 2)
     PointStatusCalculatorTests.cs            + rework carries its defect                                      (modified, Task 4)
     AlertKindsTests.cs                       + InspectionGps                                                  (modified, Task 7)
     RoundOutcomesTests.cs, InspectionHistoryTests.cs                                                          (new, Task 8)
     InspectionSummaryTests.cs                                                                                 (new, Task 9)
-  tests/FacilityRealtime.ApiTests/
+  tests/JanitorialManagementDashboard.ApiTests/
     Persistence/SchemaRuleTests.cs           + cover place CHECK, inspection GPS and cover                    (modified, Task 1)
     Infrastructure/TestData.cs               + AddPointAsync, AddSupervisorAsync, AddSupervisorCoverAsync;
                                                AddInspectionAsync options                                     (modified, Tasks 3, 8)
@@ -248,13 +248,13 @@ Hub events (`/hubs/scan`), payload `PointStatusDto`:
 ### Task 1: Schema for Supervisor covers and inspection GPS
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Domain/Entities/CoverAssignment.cs`
-- Modify: `backend/src/FacilityRealtime.Domain/Entities/InspectionRecord.cs`
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs` (the `InspectionRecord` and `CoverAssignment` blocks)
-- Create (generated): `backend/src/FacilityRealtime.Infrastructure/Migrations/<timestamp>_SupervisorInspection.cs`, its `.Designer.cs`, and the updated `AppDbContextModelSnapshot.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AttendanceBoard.cs:34-38`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/MyWorkEndpoints.cs:36-39`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Persistence/SchemaRuleTests.cs` (append)
+- Modify: `backend/src/JanitorialManagementDashboard.Domain/Entities/CoverAssignment.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Domain/Entities/InspectionRecord.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AppDbContext.cs` (the `InspectionRecord` and `CoverAssignment` blocks)
+- Create (generated): `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/<timestamp>_SupervisorInspection.cs`, its `.Designer.cs`, and the updated `AppDbContextModelSnapshot.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceBoard.cs:34-38`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/MyWorkEndpoints.cs:36-39`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/SchemaRuleTests.cs` (append)
 
 **Interfaces:**
 - Produces:
@@ -275,7 +275,7 @@ Expected: `git log -1 --format=%h` prints `3eddfa6` before any commit of yours.
 
 - [ ] **Step 1: Write the failing tests**
 
-Append inside the `SchemaRuleTests` class in `backend/tests/FacilityRealtime.ApiTests/Persistence/SchemaRuleTests.cs` (its `using` lines already cover `ApiTests.Infrastructure`, `Domain.Entities`, `Domain.Enums` and EF Core):
+Append inside the `SchemaRuleTests` class in `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/SchemaRuleTests.cs` (its `using` lines already cover `ApiTests.Infrastructure`, `Domain.Entities`, `Domain.Enums` and EF Core):
 
 ```csharp
     [Theory]
@@ -283,7 +283,7 @@ Append inside the `SchemaRuleTests` class in `backend/tests/FacilityRealtime.Api
     [InlineData(false, false)]
     public async Task A_cover_is_for_an_area_or_a_building_never_both_or_neither(bool withArea, bool withBuilding)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         await factory.WithDbAsync(async db =>
         {
@@ -307,7 +307,7 @@ Append inside the `SchemaRuleTests` class in `backend/tests/FacilityRealtime.Api
     [Fact]
     public async Task A_supervisor_cover_names_a_building_and_an_inspection_keeps_its_gps_and_cover()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         await factory.WithDbAsync(async db =>
         {
@@ -368,17 +368,17 @@ Append inside the `SchemaRuleTests` class in `backend/tests/FacilityRealtime.Api
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~SchemaRuleTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~SchemaRuleTests"`
 Expected: build FAILS with `'CoverAssignment' does not contain a definition for 'BuildingId'` (and the same for `InspectionRecord.Latitude`).
 
 - [ ] **Step 3: Change the two entities**
 
-Replace `backend/src/FacilityRealtime.Domain/Entities/CoverAssignment.cs` with:
+Replace `backend/src/JanitorialManagementDashboard.Domain/Entities/CoverAssignment.cs` with:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Domain.Entities;
+namespace JanitorialManagementDashboard.Domain.Entities;
 
 /// <summary>
 /// CONTEXT.md, Cover Assignment: an Admin lets a Cleaner work another Area for one shift (facility-0041), or a Supervisor
@@ -412,12 +412,12 @@ public class CoverAssignment
 }
 ```
 
-Replace `backend/src/FacilityRealtime.Domain/Entities/InspectionRecord.cs` with:
+Replace `backend/src/JanitorialManagementDashboard.Domain/Entities/InspectionRecord.cs` with:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Domain.Entities;
+namespace JanitorialManagementDashboard.Domain.Entities;
 
 /// <summary>CONTEXT.md, Inspection Record: a Supervisor's verdict on one Scan Record, with the GPS of the inspection (facility-0037).</summary>
 public class InspectionRecord : IGpsStamped
@@ -453,7 +453,7 @@ public class InspectionRecord : IGpsStamped
 
 - [ ] **Step 4: Map them in `AppDbContext`**
 
-In `backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs`, replace the whole `modelBuilder.Entity<InspectionRecord>(e => { ... });` block with:
+In `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AppDbContext.cs`, replace the whole `modelBuilder.Entity<InspectionRecord>(e => { ... });` block with:
 
 ```csharp
         modelBuilder.Entity<InspectionRecord>(e =>
@@ -499,7 +499,7 @@ Also update the doc comment of `MapGps` if it lists tables; it does not today, s
 
 - [ ] **Step 5: Fix the two Area-cover queries the nullable `AreaId` breaks**
 
-In `backend/src/FacilityRealtime.Api/Endpoints/AttendanceBoard.cs`, the covers query: the attendance page shows Cleaners' Area covers only. Replace
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceBoard.cs`, the covers query: the attendance page shows Cleaners' Area covers only. Replace
 
 ```csharp
             .Where(c => c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null && areaIds.Contains(c.AreaId))
@@ -512,7 +512,7 @@ with
                 && c.AreaId != null && areaIds.Contains(c.AreaId.Value))
 ```
 
-In `backend/src/FacilityRealtime.Api/Endpoints/MyWorkEndpoints.cs`, replace
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/MyWorkEndpoints.cs`, replace
 
 ```csharp
         var coveredAreaIds = await db.CoverAssignments
@@ -530,7 +530,7 @@ with
             .ToListAsync();
 ```
 
-Run `dotnet build backend/FacilityRealtime.slnx`. Expected: 0 errors. If another file fails to compile on `AreaId`, it compares `int?` with `int` in a way C# refuses. Fix it the same way (`c.AreaId != null && … c.AreaId.Value`) and list the file in your report.
+Run `dotnet build backend/JanitorialManagementDashboard.slnx`. Expected: 0 errors. If another file fails to compile on `AreaId`, it compares `int?` with `int` in a way C# refuses. Fix it the same way (`c.AreaId != null && … c.AreaId.Value`) and list the file in your report.
 
 - [ ] **Step 6: Add the migration**
 
@@ -538,7 +538,7 @@ Run from the repository root:
 
 ```bash
 dotnet tool restore
-dotnet ef migrations add SupervisorInspection --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api
+dotnet ef migrations add SupervisorInspection --project backend/src/JanitorialManagementDashboard.Infrastructure --startup-project backend/src/JanitorialManagementDashboard.Api
 ```
 
 Open the generated `<timestamp>_SupervisorInspection.cs` and check that `Up` does exactly this and nothing else:
@@ -549,10 +549,10 @@ If it drops or recreates any table, or touches another table, stop and report.
 
 - [ ] **Step 7: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~SchemaRuleTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~SchemaRuleTests"`
 Expected: PASS.
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS. Unit tests include `Migrations_match_the_model`. The API tests are the baseline plus 3, with 4 skipped.
 
 - [ ] **Step 8: Update the handoff and commit**
@@ -581,11 +581,11 @@ git commit -m "feat(backend): schema for Supervisor covers by building and inspe
 ### Task 2: Supervisor scope and inspection rules
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Inspections/SupervisorScope.cs`
-- Create: `backend/src/FacilityRealtime.Application/Inspections/InspectionRules.cs`
-- Test: `backend/tests/FacilityRealtime.UnitTests/SupervisorScopeTests.cs`
-- Test: `backend/tests/FacilityRealtime.UnitTests/InspectionRulesTests.cs`
-- Modify: `backend/src/FacilityRealtime.Domain/Enums/BlockReason.cs` (the two new values are needed here already)
+- Create: `backend/src/JanitorialManagementDashboard.Application/Inspections/SupervisorScope.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Inspections/InspectionRules.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/SupervisorScopeTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/InspectionRulesTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Domain/Enums/BlockReason.cs` (the two new values are needed here already)
 
 **Interfaces:**
 - Consumes:
@@ -601,13 +601,13 @@ git commit -m "feat(backend): schema for Supervisor covers by building and inspe
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.UnitTests/SupervisorScopeTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/SupervisorScopeTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Inspections;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>facility-0048 and its 2026-10-07 amendment: own building, own shift by the clock; anything else needs a cover.</summary>
 public class SupervisorScopeTests
@@ -627,15 +627,15 @@ public class SupervisorScopeTests
 }
 ```
 
-Create `backend/tests/FacilityRealtime.UnitTests/InspectionRulesTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/InspectionRulesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Inspections;
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>facility-0047 rules 2, 6 and 7 on 8 Oct with rounds 08:00-10:00 (id 1) and 16:00-18:00 (id 2).</summary>
 public class InspectionRulesTests
@@ -726,15 +726,15 @@ public class InspectionRulesTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~SupervisorScopeTests|FullyQualifiedName~InspectionRulesTests"`
-Expected: build FAILS with `The type or namespace name 'Inspections' does not exist in the namespace 'FacilityRealtime.Application'`.
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~SupervisorScopeTests|FullyQualifiedName~InspectionRulesTests"`
+Expected: build FAILS with `The type or namespace name 'Inspections' does not exist in the namespace 'JanitorialManagementDashboard.Application'`.
 
 - [ ] **Step 3: Add the block reasons**
 
-Replace `backend/src/FacilityRealtime.Domain/Enums/BlockReason.cs` with:
+Replace `backend/src/JanitorialManagementDashboard.Domain/Enums/BlockReason.cs` with:
 
 ```csharp
-namespace FacilityRealtime.Domain.Enums;
+namespace JanitorialManagementDashboard.Domain.Enums;
 
 /// <summary>Why a scan was refused (CONTEXT.md, Blocked Scan; database.html blocked_scans.reason).</summary>
 public enum BlockReason
@@ -754,12 +754,12 @@ The column is `VARCHAR(20)` and `OTHER_BUILDING` is 14 characters, so no migrati
 
 - [ ] **Step 4: Write the rules**
 
-Create `backend/src/FacilityRealtime.Application/Inspections/SupervisorScope.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Inspections/SupervisorScope.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Application.Inspections;
+namespace JanitorialManagementDashboard.Application.Inspections;
 
 /// <summary>facility-0048 rule 2 and its 2026-10-07 amendment: where and when a Supervisor inspects without a cover.</summary>
 public static class SupervisorScope
@@ -775,12 +775,12 @@ public static class SupervisorScope
 }
 ```
 
-Create `backend/src/FacilityRealtime.Application/Inspections/InspectionRules.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Inspections/InspectionRules.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Rounds;
+using JanitorialManagementDashboard.Application.Rounds;
 
-namespace FacilityRealtime.Application.Inspections;
+namespace JanitorialManagementDashboard.Application.Inspections;
 
 /// <summary>Why the Supervisor's screen has no inspect button.</summary>
 public enum InspectionRefusal
@@ -830,7 +830,7 @@ public static class InspectionRules
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`
 Expected: PASS: 263 plus the 16 new cases (6 + 10).
 
 - [ ] **Step 6: Update the handoff and commit**
@@ -842,7 +842,7 @@ Add under `## Task log (plan 6)`:
 ```
 
 ```bash
-git add backend/src/FacilityRealtime.Domain backend/src/FacilityRealtime.Application backend/tests/FacilityRealtime.UnitTests docs/handoff.md
+git add backend/src/JanitorialManagementDashboard.Domain backend/src/JanitorialManagementDashboard.Application backend/tests/JanitorialManagementDashboard.UnitTests docs/handoff.md
 git commit -m "feat(backend): Supervisor scope and inspection target rules (facility-0047, 0048)"
 ```
 
@@ -850,18 +850,18 @@ git commit -m "feat(backend): Supervisor scope and inspection target rules (faci
 ### Task 3: The Supervisor's scan (`POST /api/inspections/scan`) and block reasons
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/BlockedScans.cs`
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/AttendanceDtos.cs` (`BlockedScanResponse`)
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AttendanceEndpoints.cs:68`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/ScanRecordEndpoints.cs:89`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs` (+ `BlockedMessage`)
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/PointDtos.cs` (`SplitTags` becomes public)
-- Create: `backend/src/FacilityRealtime.Api/DTOs/InspectionDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/InspectionEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Inspections/InspectionApi.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Inspections/InspectionScanEndpointTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/BlockedScans.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/AttendanceDtos.cs` (`BlockedScanResponse`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceEndpoints.cs:68`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ScanRecordEndpoints.cs:89`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs` (+ `BlockedMessage`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/PointDtos.cs` (`SplitTags` becomes public)
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/InspectionDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/InspectionEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestData.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/InspectionApi.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/InspectionScanEndpointTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -887,10 +887,10 @@ git commit -m "feat(backend): Supervisor scope and inspection target rules (faci
 
 - [ ] **Step 1: Add the test helpers**
 
-In `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, add these `using` lines at the top:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestData.cs`, add these `using` lines at the top:
 
 ```csharp
-using FacilityRealtime.Application.Auth;
+using JanitorialManagementDashboard.Application.Auth;
 using Microsoft.Extensions.DependencyInjection;
 ```
 
@@ -901,7 +901,7 @@ and append inside the `TestData` class:
     /// A point in <paramref name="areaCode"/> whose sign stands at TestGps.Near (radius 50 m), with rounds Day 08:00-10:00
     /// and Night 20:00-22:00, all created on 1 October so they existed on every test date.
     /// </summary>
-    public static async Task<int> AddPointAsync(FacilityApiFactory factory, string areaCode, string signCode, string qrToken)
+    public static async Task<int> AddPointAsync(JanitorialApiFactory factory, string areaCode, string signCode, string qrToken)
     {
         var id = 0;
         await factory.WithDbAsync(async db =>
@@ -932,7 +932,7 @@ and append inside the `TestData` class:
     }
 
     /// <summary>An active Supervisor of a building and shift who can log in with <paramref name="phone"/>.</summary>
-    public static async Task<int> AddSupervisorAsync(FacilityApiFactory factory, string employeeId, string phone, string buildingCode, Shift shift)
+    public static async Task<int> AddSupervisorAsync(JanitorialApiFactory factory, string employeeId, string phone, string buildingCode, Shift shift)
     {
         var hasher = factory.Services.GetRequiredService<IPasswordHasher>();
         var id = 0;
@@ -958,7 +958,7 @@ and append inside the `TestData` class:
 
     /// <summary>A Supervisor's Cover Assignment for a building, written straight to the database, assigned by the seeded Admin.</summary>
     public static async Task<int> AddSupervisorCoverAsync(
-        FacilityApiFactory factory, string employeeId, string buildingCode, DateOnly shiftDate, Shift shift, bool cancelled = false)
+        JanitorialApiFactory factory, string employeeId, string buildingCode, DateOnly shiftDate, Shift shift, bool cancelled = false)
     {
         var id = 0;
         await factory.WithDbAsync(async db =>
@@ -985,15 +985,15 @@ and append inside the `TestData` class:
     }
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Inspections/InspectionApi.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/InspectionApi.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.ApiTests.Points;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Points;
 
-namespace FacilityRealtime.ApiTests.Inspections;
+namespace JanitorialManagementDashboard.ApiTests.Inspections;
 
 public record InspectionSubmissionModel(
     long Id, DateTime SubmittedAt, string CleanerName, string Placement, string Status, List<string> IssueTags, string? Note);
@@ -1012,7 +1012,7 @@ public static class InspectionApi
     public const string MenRestroom = "token-restroom-m1";
     public const string BuildingBPoint = "token-br01-01";
 
-    public static async Task<HttpClient> SupervisorAsync(FacilityApiFactory factory, string employeeId = "S2001", string phone = "0820000001") =>
+    public static async Task<HttpClient> SupervisorAsync(JanitorialApiFactory factory, string employeeId = "S2001", string phone = "0820000001") =>
         (await AuthApi.LoggedInAsEmployeeAsync(factory, employeeId, phone)).Client;
 
     public static Task<HttpResponseMessage> ScanAsync(
@@ -1032,7 +1032,7 @@ public static class InspectionApi
     }
 
     /// <summary>Building B with Area BR01 and one point: sign BR01-01 (token-br01-01) at TestGps.Near, rounds Day 08-10 and Night 20-22.</summary>
-    public static async Task AddBuildingBAsync(FacilityApiFactory factory)
+    public static async Task AddBuildingBAsync(JanitorialApiFactory factory)
     {
         await TestData.AddBuildingAsync(factory, "B");
         await TestData.AddAreaAsync(factory, "BR01", "B");
@@ -1043,17 +1043,17 @@ public static class InspectionApi
 
 - [ ] **Step 2: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Inspections/InspectionScanEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/InspectionScanEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Inspections;
+namespace JanitorialManagementDashboard.ApiTests.Inspections;
 
 /// <summary>
 /// facility-0047 rule 7, 0048: the Supervisor's scan. Seeded men's restroom (AR01, building A): Day rounds 07:00-09:00 and
@@ -1063,7 +1063,7 @@ public class InspectionScanEndpointTests
 {
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
 
-    private static async Task<List<BlockedScan>> BlockedAsync(FacilityApiFactory factory)
+    private static async Task<List<BlockedScan>> BlockedAsync(JanitorialApiFactory factory)
     {
         var rows = new List<BlockedScan>();
         await factory.WithDbAsync(async db => rows = await db.BlockedScans.ToListAsync());
@@ -1073,7 +1073,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task Scanning_requires_login()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await InspectionApi.ScanAsync(factory.CreateApiClient());
 
@@ -1085,7 +1085,7 @@ public class InspectionScanEndpointTests
     [InlineData("admin")]
     public async Task Only_supervisors_inspect(string who)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, _) = who == "admin" ? await AuthApi.LoggedInAdminAsync(factory) : await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
@@ -1098,7 +1098,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task Location_is_required()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
 
         var response = await supervisor.PostAsJsonAsync("/api/inspections/scan", new { qrToken = InspectionApi.MenRestroom });
@@ -1111,7 +1111,7 @@ public class InspectionScanEndpointTests
     [InlineData("token-checkin-ar01")]
     public async Task Unknown_or_check_in_tokens_are_404(string token)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
 
         var response = await InspectionApi.ScanAsync(supervisor, token);
@@ -1122,7 +1122,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task Nothing_submitted_in_this_round_means_no_inspect_button()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
@@ -1140,7 +1140,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task The_current_rounds_submission_is_offered()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var scanId = await TestData.AddScanAsync(
             factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10), CleaningStatus.Issue, issueTags: "wet_floor", note: "ก๊อกรั่ว");
@@ -1160,7 +1160,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task Rework_still_owed_means_no_inspect_button()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         await TestData.AddInspectionAsync(factory, scanId, InspectionResult.Rework, ThaiClock.At(8, 8, 20));
@@ -1176,7 +1176,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task An_earlier_rounds_work_is_not_offered()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 16, 30));
@@ -1190,7 +1190,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task A_point_in_another_building_is_a_blocked_scan()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
@@ -1212,7 +1212,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task The_own_building_outside_the_own_shift_is_a_blocked_scan()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
 
@@ -1226,7 +1226,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task A_cover_lets_the_supervisor_inspect_another_building()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         await TestData.AddSupervisorCoverAsync(factory, "S2001", "B", Oct8, Shift.Day);
@@ -1242,7 +1242,7 @@ public class InspectionScanEndpointTests
     [Fact]
     public async Task A_night_cover_of_the_own_building_lets_the_day_supervisor_inspect_at_night()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         await TestData.AddSupervisorCoverAsync(factory, "S2001", "A", Oct8, Shift.Night);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
@@ -1257,7 +1257,7 @@ public class InspectionScanEndpointTests
     [InlineData(Shift.Day, true)]
     public async Task A_cover_of_another_shift_or_a_cancelled_one_does_not_count(Shift coverShift, bool cancelled)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         await TestData.AddSupervisorCoverAsync(factory, "S2001", "B", Oct8, coverShift, cancelled);
@@ -1272,29 +1272,29 @@ public class InspectionScanEndpointTests
 
 - [ ] **Step 3: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~InspectionScanEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~InspectionScanEndpointTests"`
 Expected: FAIL. Every test gets 404 (the route does not exist) or fails its status assertion.
 
 - [ ] **Step 4: Give Blocked Scans their reason and building**
 
-In `backend/src/FacilityRealtime.Api/DTOs/AttendanceDtos.cs`, replace the `BlockedScanResponse` record with:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/AttendanceDtos.cs`, replace the `BlockedScanResponse` record with:
 
 ```csharp
 /// <summary>facility-0041, 0048: tells the phone why the scan was refused and where the scanned sign is.</summary>
 public record BlockedScanResponse(string Message, string AreaCode, string AreaName, BlockReason Reason, string BuildingCode);
 ```
 
-Replace `backend/src/FacilityRealtime.Api/Endpoints/BlockedScans.cs` with:
+Replace `backend/src/JanitorialManagementDashboard.Api/Endpoints/BlockedScans.cs` with:
 
 ```csharp
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Geo;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Geo;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 internal static class BlockedScans
 {
@@ -1343,12 +1343,12 @@ In `PointDtos.cs` change `private static IReadOnlyList<string> SplitTags(string?
 
 - [ ] **Step 5: Write the DTOs and the endpoint**
 
-Create `backend/src/FacilityRealtime.Api/DTOs/InspectionDtos.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/DTOs/InspectionDtos.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 /// <summary>The QR Token read from the point's sign and what the browser's Geolocation API reported (facility-0036, 0037).</summary>
 public record InspectionScanRequest(string? QrToken, double? Latitude, double? Longitude, double? AccuracyM);
@@ -1366,21 +1366,21 @@ public record InspectionScanDto(
     PointStatusDto Point, InspectionSubmissionDto? Submission, string? Refusal, bool IsCover, int? DistanceM, bool? WithinRadius);
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/InspectionEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/InspectionEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Geo;
-using FacilityRealtime.Application.Inspections;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Geo;
+using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// facility-0029, 0047 rule 7, 0048: a Supervisor scans a point's sign, sees the current round's submission and records
@@ -1502,10 +1502,10 @@ In `Program.cs` add `app.MapInspectionEndpoints();` on the line after `app.MapMy
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~InspectionScanEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~InspectionScanEndpointTests"`
 Expected: PASS (16 cases).
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS. The existing Blocked Scan tests still read `AreaCode` and the same message.
 
 - [ ] **Step 7: Update the handoff and commit**
@@ -1526,16 +1526,16 @@ git commit -m "feat(backend): Supervisor scans a point; other building or outsid
 ### Task 4: Record the inspection (`POST /api/inspections`) and show the defect on the card
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Application/Rounds/RoundFacts.cs` (`InspectionFact` + `Defect`)
-- Modify: `backend/src/FacilityRealtime.Application/Rounds/PointStatusCalculator.cs` (`PointStatusResult` + `Rework`)
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/RoundFactsQuery.cs`
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/PointDtos.cs` (+ `ReworkDto`, `PointStatusDto.Rework`)
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/InspectionDtos.cs` (+ request and answer)
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/InspectionEndpoints.cs` (+ `CreateAsync`)
-- Test: `backend/tests/FacilityRealtime.UnitTests/PointStatusCalculatorTests.cs` (append)
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Points/ServicePointEndpointTests.cs` (`PointModel` + `ReworkModel`)
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Inspections/InspectionApi.cs` (+ `InspectAsync`, `InspectedAsync`, `InspectionCreatedModel`)
-- Test: `backend/tests/FacilityRealtime.ApiTests/Inspections/InspectionEndpointTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Rounds/RoundFacts.cs` (`InspectionFact` + `Defect`)
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Rounds/PointStatusCalculator.cs` (`PointStatusResult` + `Rework`)
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/RoundFactsQuery.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/PointDtos.cs` (+ `ReworkDto`, `PointStatusDto.Rework`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/InspectionDtos.cs` (+ request and answer)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/InspectionEndpoints.cs` (+ `CreateAsync`)
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/PointStatusCalculatorTests.cs` (append)
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Points/ServicePointEndpointTests.cs` (`PointModel` + `ReworkModel`)
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/InspectionApi.cs` (+ `InspectAsync`, `InspectedAsync`, `InspectionCreatedModel`)
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/InspectionEndpointTests.cs`
 
 **Interfaces:**
 - Consumes: Task 3's `Visit`, `VisitAsync`, `TargetAsync` and `RefusalText`, and Task 2's `InspectionRules.MaxDefectLength`.
@@ -1549,7 +1549,7 @@ git commit -m "feat(backend): Supervisor scans a point; other building or outsid
 
 - [ ] **Step 1: Write the failing unit tests**
 
-Append inside `PointStatusCalculatorTests` in `backend/tests/FacilityRealtime.UnitTests/PointStatusCalculatorTests.cs`:
+Append inside `PointStatusCalculatorTests` in `backend/tests/JanitorialManagementDashboard.UnitTests/PointStatusCalculatorTests.cs`:
 
 ```csharp
     [Fact]
@@ -1578,12 +1578,12 @@ Append inside `PointStatusCalculatorTests` in `backend/tests/FacilityRealtime.Un
     }
 ```
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~PointStatusCalculatorTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~PointStatusCalculatorTests"`
 Expected: build FAILS: `InspectionFact` has no constructor taking 4 arguments.
 
 - [ ] **Step 2: Carry the defect through the round facts**
 
-In `backend/src/FacilityRealtime.Application/Rounds/RoundFacts.cs` replace the `InspectionFact` record with:
+In `backend/src/JanitorialManagementDashboard.Application/Rounds/RoundFacts.cs` replace the `InspectionFact` record with:
 
 ```csharp
 /// <summary>An Inspection Record of one of those Scan Records. Defect is shown while the card is ต้องแก้ไข (facility-0029).</summary>
@@ -1614,14 +1614,14 @@ and in `Calculate` replace everything from `var latest = RoundRules.LatestInspec
     }
 ```
 
-In `backend/src/FacilityRealtime.Infrastructure/Persistence/RoundFactsQuery.cs`, change the inspections projection to `.Select(i => new { i.ScanRecordId, i.ServicePointId, i.Result, i.InspectedAt, i.Defect })`, and the fact to `.Select(i => new InspectionFact(i.ScanRecordId, i.Result, i.InspectedAt, i.Defect))`.
+In `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/RoundFactsQuery.cs`, change the inspections projection to `.Select(i => new { i.ScanRecordId, i.ServicePointId, i.Result, i.InspectedAt, i.Defect })`, and the fact to `.Select(i => new InspectionFact(i.ScanRecordId, i.Result, i.InspectedAt, i.Defect))`.
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`
 Expected: PASS.
 
 - [ ] **Step 3: Put the defect on the card**
 
-In `backend/src/FacilityRealtime.Api/DTOs/PointDtos.cs`:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/PointDtos.cs`:
 
 Add after `IssueDto`:
 
@@ -1637,7 +1637,7 @@ Add `ReworkDto? Rework` as the last member of `PointStatusDto` (after `IssueDto?
             row.Status.Rework is { } rework ? new ReworkDto(rework.Defect ?? string.Empty, Utc(rework.InspectedAt)) : null);
 ```
 
-In `backend/tests/FacilityRealtime.ApiTests/Points/ServicePointEndpointTests.cs` add:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Points/ServicePointEndpointTests.cs` add:
 
 ```csharp
 public record ReworkModel(string Defect, DateTime RequestedAt);
@@ -1647,7 +1647,7 @@ and add `ReworkModel? Rework` as the last member of `PointModel`. If any test co
 
 - [ ] **Step 4: Write the failing API tests**
 
-Append to `backend/tests/FacilityRealtime.ApiTests/Inspections/InspectionApi.cs`, after `BlockedModel`:
+Append to `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/InspectionApi.cs`, after `BlockedModel`:
 
 ```csharp
 public record InspectionCreatedModel(
@@ -1678,34 +1678,34 @@ and inside the `InspectionApi` class:
     }
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Inspections/InspectionEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/InspectionEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.ApiTests.Points;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Points;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Inspections;
+namespace JanitorialManagementDashboard.ApiTests.Inspections;
 
 /// <summary>facility-0029, 0037, 0047: the Supervisor records สะอาด or ไม่สะอาด on the current round's latest submission.</summary>
 public class InspectionEndpointTests
 {
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
 
-    private static async Task<InspectionRecord> StoredAsync(FacilityApiFactory factory, long id)
+    private static async Task<InspectionRecord> StoredAsync(JanitorialApiFactory factory, long id)
     {
         InspectionRecord? record = null;
         await factory.WithDbAsync(async db => record = await db.InspectionRecords.Include(i => i.Supervisor).SingleAsync(i => i.Id == id));
         return record!;
     }
 
-    private static async Task<int> CountAsync(FacilityApiFactory factory)
+    private static async Task<int> CountAsync(JanitorialApiFactory factory)
     {
         var count = 0;
         await factory.WithDbAsync(async db => count = await db.InspectionRecords.CountAsync());
@@ -1715,7 +1715,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task Passed_is_saved_with_its_gps_and_the_dashboard_shows_it()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
@@ -1740,7 +1740,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task Rework_keeps_the_defect_and_the_cleaner_sees_it_on_my_work()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
@@ -1763,7 +1763,7 @@ public class InspectionEndpointTests
     [InlineData("Passed", "ไม่ควรมีข้อบกพร่อง")]
     public async Task Defect_is_required_for_rework_and_left_out_for_passed(string result, string? defect)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
@@ -1777,7 +1777,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task A_defect_over_1000_characters_is_refused()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
@@ -1790,7 +1790,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task Result_and_submission_are_required()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
@@ -1808,7 +1808,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task A_submission_the_supervisor_did_not_see_is_409()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var first = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 20));
@@ -1823,7 +1823,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task Rework_still_owed_is_409()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         await TestData.AddInspectionAsync(factory, scanId, InspectionResult.Rework, ThaiClock.At(8, 8, 20));
@@ -1838,7 +1838,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task Nothing_submitted_is_409()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
@@ -1850,7 +1850,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task Rework_resubmission_and_second_inspection_go_round_the_cycle()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var submit = new { qrToken = InspectionApi.MenRestroom, status = "Normal", latitude = TestGps.NearLatitude, longitude = TestGps.NearLongitude, accuracyM = 10 };
@@ -1875,7 +1875,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task Far_from_the_sign_is_recorded_and_flagged()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
@@ -1891,7 +1891,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task An_inspection_under_a_cover_is_marked()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var coverId = await TestData.AddSupervisorCoverAsync(factory, "S2001", "B", Oct8, Shift.Day);
@@ -1906,7 +1906,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task A_blocked_inspection_saves_only_the_blocked_scan()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
@@ -1923,7 +1923,7 @@ public class InspectionEndpointTests
     [Fact]
     public async Task Admins_get_the_inspection_live()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
@@ -1942,14 +1942,14 @@ public class InspectionEndpointTests
 }
 ```
 
-`MyWorkModel`, `PointModel` and `ScanCreatedModel` are the public records in the `FacilityRealtime.ApiTests.Points` namespace, and `AttendanceApi` is in `ApiTests.Infrastructure`.
+`MyWorkModel`, `PointModel` and `ScanCreatedModel` are the public records in the `JanitorialManagementDashboard.ApiTests.Points` namespace, and `AttendanceApi` is in `ApiTests.Infrastructure`.
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~InspectionEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~InspectionEndpointTests"`
 Expected: FAIL. `POST /api/inspections` answers 404 or 405.
 
 - [ ] **Step 5: Write the request, the answer and the endpoint**
 
-Append to `backend/src/FacilityRealtime.Api/DTOs/InspectionDtos.cs` (add `using FacilityRealtime.Application.Rounds;` at the top):
+Append to `backend/src/JanitorialManagementDashboard.Api/DTOs/InspectionDtos.cs` (add `using JanitorialManagementDashboard.Application.Rounds;` at the top):
 
 ```csharp
 /// <summary>
@@ -1976,7 +1976,7 @@ In `InspectionEndpoints.cs`:
 Add these `using` lines:
 
 ```csharp
-using FacilityRealtime.Api.Hubs;
+using JanitorialManagementDashboard.Api.Hubs;
 using Microsoft.AspNetCore.SignalR;
 ```
 
@@ -2067,10 +2067,10 @@ Add the handler:
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~InspectionEndpointTests|FullyQualifiedName~InspectionScanEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~InspectionEndpointTests|FullyQualifiedName~InspectionScanEndpointTests"`
 Expected: PASS.
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS. A card that is not in rework sends no `rework` field (null is not written), so the existing card tests do not change.
 
 - [ ] **Step 7: Update the handoff and commit**
@@ -2090,10 +2090,10 @@ git commit -m "feat(backend): Supervisor records สะอาด or ไม่ส
 ### Task 5: Supervisor covers by building
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/CoverDtos.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/CoverAssignmentEndpoints.cs` (`AssignAsync`, `CancelAsync`; `ListCandidatesAsync` is unchanged)
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Admin/CoverAssignmentEndpointTests.cs` (`CoverModel`, one assert)
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/SupervisorCoverTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/CoverDtos.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/CoverAssignmentEndpoints.cs` (`AssignAsync`, `CancelAsync`; `ListCandidatesAsync` is unchanged)
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/CoverAssignmentEndpointTests.cs` (`CoverModel`, one assert)
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/SupervisorCoverTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -2108,7 +2108,7 @@ git commit -m "feat(backend): Supervisor records สะอาด or ไม่ส
 
 - [ ] **Step 1: Write the failing tests**
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/CoverAssignmentEndpointTests.cs`, replace the `CoverModel` record with:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/CoverAssignmentEndpointTests.cs`, replace the `CoverModel` record with:
 
 ```csharp
 public record CoverModel(
@@ -2117,16 +2117,16 @@ public record CoverModel(
 
 and in `Admin_assigns_a_cover_and_it_is_logged` replace `cover.CleanerName` with `cover.PersonName`.
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/SupervisorCoverTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/SupervisorCoverTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.ApiTests.Inspections;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Inspections;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>
 /// facility-0048 rule 2 and its amendment: the Admin lets a Supervisor inspect another building, or their own building
@@ -2138,7 +2138,7 @@ public class SupervisorCoverTests
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
 
     private static async Task<HttpResponseMessage> AssignAsync(
-        FacilityApiFactory factory, HttpClient admin, string buildingCode, string shift, long? blockedScanId = null) =>
+        JanitorialApiFactory factory, HttpClient admin, string buildingCode, string shift, long? blockedScanId = null) =>
         await admin.PostAsJsonAsync(Path, new
         {
             userId = await AdminSetupApi.UserIdAsync(factory, "S2001"),
@@ -2151,7 +2151,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task Admin_lets_a_supervisor_inspect_another_building_and_it_is_logged()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
@@ -2175,7 +2175,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task The_own_building_in_the_own_shift_needs_no_cover()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
 
@@ -2187,7 +2187,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task The_own_building_in_the_other_shift_can_be_covered()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
 
@@ -2199,7 +2199,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task A_supervisor_cover_names_a_building_and_no_area()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
         var userId = await AdminSetupApi.UserIdAsync(factory, "S2001");
@@ -2221,7 +2221,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task A_cleaner_cover_names_an_area_and_no_building()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
         var userId = await AdminSetupApi.UserIdAsync(factory, "E1001");
@@ -2243,7 +2243,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task The_same_cover_twice_is_409()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
@@ -2257,7 +2257,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task A_shift_that_has_ended_is_refused()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 19, 0));
@@ -2270,7 +2270,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task Cancelling_ends_the_cover_and_is_logged()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
@@ -2288,7 +2288,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task Assigning_from_the_supervisors_blocked_scan_closes_its_alert()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
@@ -2310,7 +2310,7 @@ public class SupervisorCoverTests
     [InlineData("B", "Night")]
     public async Task A_blocked_scan_of_another_building_or_shift_does_not_fit(string buildingCode, string shift)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
@@ -2327,7 +2327,7 @@ public class SupervisorCoverTests
     [Fact]
     public async Task A_building_cover_stays_off_the_attendance_board()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
@@ -2343,12 +2343,12 @@ public class SupervisorCoverTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~SupervisorCoverTests|FullyQualifiedName~CoverAssignmentEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~SupervisorCoverTests|FullyQualifiedName~CoverAssignmentEndpointTests"`
 Expected: FAIL. Supervisor covers answer 400 ("ต้องเลือกแม่บ้านที่ใช้งานอยู่"), and `PersonName` is null in the Cleaner test.
 
 - [ ] **Step 3: Change the DTOs**
 
-In `backend/src/FacilityRealtime.Api/DTOs/CoverDtos.cs`, replace `AssignCoverRequest` and `CoverAssignmentDto` with:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/CoverDtos.cs`, replace `AssignCoverRequest` and `CoverAssignmentDto` with:
 
 ```csharp
 /// <summary>
@@ -2373,9 +2373,9 @@ public record CoverAssignmentDto(
 
 - [ ] **Step 4: Assign and cancel both kinds**
 
-In `backend/src/FacilityRealtime.Api/Endpoints/CoverAssignmentEndpoints.cs`:
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/CoverAssignmentEndpoints.cs`:
 
-Add `using FacilityRealtime.Application.Inspections;`. Change the class summary to:
+Add `using JanitorialManagementDashboard.Application.Inspections;`. Change the class summary to:
 
 ```csharp
 /// <summary>
@@ -2639,10 +2639,10 @@ If the file already had its own `Bad` helper, keep one.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~Cover"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~Cover"`
 Expected: PASS for `SupervisorCoverTests` (12 cases), `CoverAssignmentEndpointTests` and `CoverFromAlertTests`.
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS.
 
 - [ ] **Step 6: Update the handoff and commit**
@@ -2663,16 +2663,16 @@ git commit -m "feat(backend): Admin assigns a Supervisor to inspect another buil
 ### Task 6: "My Building" page and live updates to the building's Supervisors
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Api/Hubs/SubjectUserIdProvider.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Hubs/ScanHub.cs` (summary only)
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/PointNotifications.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/ScanRecordEndpoints.cs:136`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/InspectionEndpoints.cs` (the `SendAsync` line of `CreateAsync`)
-- Create: `backend/src/FacilityRealtime.Api/DTOs/MyBuildingDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/MyBuildingEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Inspections/MyBuildingEndpointTests.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Inspections/SupervisorLiveTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Hubs/SubjectUserIdProvider.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Hubs/ScanHub.cs` (summary only)
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/PointNotifications.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ScanRecordEndpoints.cs:136`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/InspectionEndpoints.cs` (the `SendAsync` line of `CreateAsync`)
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/MyBuildingDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/MyBuildingEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/MyBuildingEndpointTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/SupervisorLiveTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -2687,16 +2687,16 @@ git commit -m "feat(backend): Admin assigns a Supervisor to inspect another buil
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Inspections/MyBuildingEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/MyBuildingEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.ApiTests.Points;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Points;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.ApiTests.Inspections;
+namespace JanitorialManagementDashboard.ApiTests.Inspections;
 
 public record MyBuildingSectionModel(int BuildingId, string BuildingCode, string BuildingName, bool IsCover, bool CanInspect, List<PointModel> Points);
 
@@ -2710,7 +2710,7 @@ public class MyBuildingEndpointTests
     [Fact]
     public async Task My_building_requires_login()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await factory.CreateApiClient().GetAsync(Path);
 
@@ -2722,7 +2722,7 @@ public class MyBuildingEndpointTests
     [InlineData("admin")]
     public async Task Only_supervisors_have_a_building_page(string who)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, _) = who == "admin" ? await AuthApi.LoggedInAdminAsync(factory) : await AuthApi.LoggedInAsync(factory);
 
         var response = await client.GetAsync(Path);
@@ -2733,7 +2733,7 @@ public class MyBuildingEndpointTests
     [Fact]
     public async Task Every_point_of_the_own_building_with_waiting_work_first()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var womens = await TestData.AddScanAsync(factory, "token-restroom-f1", ThaiClock.At(8, 8, 5));
         await TestData.AddInspectionAsync(factory, womens, InspectionResult.Rework, ThaiClock.At(8, 8, 15));
@@ -2757,7 +2757,7 @@ public class MyBuildingEndpointTests
     [Fact]
     public async Task Other_buildings_are_not_shown()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
@@ -2771,7 +2771,7 @@ public class MyBuildingEndpointTests
     [Fact]
     public async Task Outside_the_own_shift_the_page_opens_but_cannot_inspect()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
 
@@ -2784,7 +2784,7 @@ public class MyBuildingEndpointTests
     [Fact]
     public async Task A_covered_building_follows_the_own_one()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         await TestData.AddSupervisorCoverAsync(factory, "S2001", "B", new DateOnly(2026, 10, 8), Shift.Day);
@@ -2801,7 +2801,7 @@ public class MyBuildingEndpointTests
     [Fact]
     public async Task The_page_carries_no_qr_tokens()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
@@ -2812,17 +2812,17 @@ public class MyBuildingEndpointTests
 }
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Inspections/SupervisorLiveTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Inspections/SupervisorLiveTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.AspNetCore.SignalR.Client;
 
-namespace FacilityRealtime.ApiTests.Inspections;
+namespace JanitorialManagementDashboard.ApiTests.Inspections;
 
 /// <summary>facility-0057, 0058 rule 3: a point change reaches the Admins and that building's Supervisors, nobody else.</summary>
 public class SupervisorLiveTests
@@ -2842,7 +2842,7 @@ public class SupervisorLiveTests
     [Fact]
     public async Task The_buildings_supervisors_get_a_submission_live_and_others_do_not()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         await TestData.AddSupervisorAsync(factory, "S2002", "0820000002", "A", Shift.Night);
         await TestData.AddSupervisorAsync(factory, "S2003", "0820000003", "B", Shift.Day);
@@ -2873,7 +2873,7 @@ public class SupervisorLiveTests
     [Fact]
     public async Task A_supervisor_covering_the_building_gets_it_live()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         await TestData.AddSupervisorAsync(factory, "S2003", "0820000003", "B", Shift.Day);
         await TestData.AddSupervisorCoverAsync(factory, "S2003", "A", new DateOnly(2026, 10, 8), Shift.Day);
@@ -2893,7 +2893,7 @@ public class SupervisorLiveTests
     [Fact]
     public async Task The_buildings_supervisors_get_an_inspection_live()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await TestData.AddSupervisorAsync(factory, "S2002", "0820000002", "A", Shift.Night);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (_, nightA, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "S2002", "0820000002");
@@ -2910,18 +2910,18 @@ public class SupervisorLiveTests
 }
 ```
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~MyBuildingEndpointTests|FullyQualifiedName~SupervisorLiveTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~MyBuildingEndpointTests|FullyQualifiedName~SupervisorLiveTests"`
 Expected: FAIL. `/api/my-building` answers 404, and the live tests time out waiting (`TimeoutException`).
 
 - [ ] **Step 2: Address hub clients by account id**
 
-Create `backend/src/FacilityRealtime.Api/Hubs/SubjectUserIdProvider.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Hubs/SubjectUserIdProvider.cs`:
 
 ```csharp
-using FacilityRealtime.Api.Auth;
+using JanitorialManagementDashboard.Api.Auth;
 using Microsoft.AspNetCore.SignalR;
 
-namespace FacilityRealtime.Api.Hubs;
+namespace JanitorialManagementDashboard.Api.Hubs;
 
 /// <summary>Clients.User(id) addresses the account id in the access token's "sub" claim (inbound claim mapping is off).</summary>
 public sealed class SubjectUserIdProvider : IUserIdProvider
@@ -2948,19 +2948,19 @@ builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 
 - [ ] **Step 3: Send point changes to the building's Supervisors**
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/PointNotifications.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/PointNotifications.cs`:
 
 ```csharp
 using System.Globalization;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Api.Hubs;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Api.Hubs;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// facility-0058 rule 3, 0057: a point change goes to the Admins and to the Supervisors of that point's building — its
@@ -3021,12 +3021,12 @@ Remove `using` lines the compiler now reports as unused only if the build warns 
 
 - [ ] **Step 4: Write the page**
 
-Create `backend/src/FacilityRealtime.Api/DTOs/MyBuildingDtos.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/DTOs/MyBuildingDtos.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 /// <summary>One building on the page. CanInspect: the Supervisor may inspect there now (own building in own shift, or a cover).</summary>
 public record MyBuildingSectionDto(
@@ -3036,19 +3036,19 @@ public record MyBuildingSectionDto(
 public record MyBuildingDto(DateOnly ShiftDate, Shift Shift, IReadOnlyList<MyBuildingSectionDto> Buildings);
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/MyBuildingEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/MyBuildingEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// facility-0057 rule 1 (wireframe M15): where a Supervisor should go next. It only points the way: an inspection still
@@ -3120,10 +3120,10 @@ In `Program.cs` add `app.MapMyBuildingEndpoints();` after `app.MapInspectionEndp
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~MyBuildingEndpointTests|FullyQualifiedName~SupervisorLiveTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~MyBuildingEndpointTests|FullyQualifiedName~SupervisorLiveTests"`
 Expected: PASS (8 + 3).
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS. The existing test that a Cleaner's hub gets no `ScanRecorded` still passes: Cleaners are never addressed.
 
 - [ ] **Step 6: Update the handoff and commit**
@@ -3144,15 +3144,15 @@ git commit -m "feat(backend): Supervisor's My Building page with live updates fo
 ### Task 7: Alerts: inspections far from the sign, and Supervisors' Blocked Scans
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Domain/Enums/AlertType.cs`
-- Modify: `backend/src/FacilityRealtime.Application/Alerts/AlertKind.cs`
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/AlertQuery.cs` (whole file below)
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/AdminAlertDtos.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminAlertEndpoints.cs` (`FindAsync`, `ToDto`)
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs` (`AlertName`)
-- Test: `backend/tests/FacilityRealtime.UnitTests/AlertKindsTests.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs`, `AlertEndpointTests.cs:67`, `CoverFromAlertTests.cs:84`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/InspectionAlertTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Domain/Enums/AlertType.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Alerts/AlertKind.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AlertQuery.cs` (whole file below)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminAlertDtos.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAlertEndpoints.cs` (`FindAsync`, `ToDto`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs` (`AlertName`)
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/AlertKindsTests.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs`, `AlertEndpointTests.cs:67`, `CoverFromAlertTests.cs:84`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/InspectionAlertTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -3166,9 +3166,9 @@ git commit -m "feat(backend): Supervisor's My Building page with live updates fo
 
 - [ ] **Step 1: Write the failing tests**
 
-In `backend/tests/FacilityRealtime.UnitTests/AlertKindsTests.cs` add an `[InlineData(AlertKind.InspectionGps, AlertType.InspectionGps)]` line to `Reviewable_kinds_map_to_their_alert_reviews_type`.
+In `backend/tests/JanitorialManagementDashboard.UnitTests/AlertKindsTests.cs` add an `[InlineData(AlertKind.InspectionGps, AlertType.InspectionGps)]` line to `Reviewable_kinds_map_to_their_alert_reviews_type`.
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs`:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs`:
 - Replace `CoverSuggestionModel` with `public record CoverSuggestionModel(int UserId, int? AreaId, int? BuildingId, DateOnly ShiftDate, string Shift);`
 - Add `string? BlockReason` as the last member of `AlertModel`.
 
@@ -3184,15 +3184,15 @@ In `CoverFromAlertTests.cs` line 84 use `suggestion.AreaId!.Value`:
         var response = await AssignAsync(admin, suggestion.UserId, suggestion.AreaId!.Value, blockedId);
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/InspectionAlertTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/InspectionAlertTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.ApiTests.Inspections;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Inspections;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>facility-0037, 0041, 0048 on the alert list (wireframe D3): inspections far from the sign, and Supervisors' Blocked Scans.</summary>
 public class InspectionAlertTests
@@ -3202,7 +3202,7 @@ public class InspectionAlertTests
     [Fact]
     public async Task An_inspection_far_from_the_sign_is_an_alert_the_admin_closes()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
@@ -3237,7 +3237,7 @@ public class InspectionAlertTests
     [Fact]
     public async Task An_inspection_inside_the_radius_is_no_alert_and_cannot_be_closed()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
@@ -3251,7 +3251,7 @@ public class InspectionAlertTests
     [Fact]
     public async Task A_supervisors_blocked_scan_says_why_and_offers_a_building_cover()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await InspectionApi.AddBuildingBAsync(factory);
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
@@ -3285,7 +3285,7 @@ public class InspectionAlertTests
     [Fact]
     public async Task Outside_the_shift_it_offers_a_cover_of_the_own_building_for_that_shift()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
@@ -3300,7 +3300,7 @@ public class InspectionAlertTests
     [Fact]
     public async Task No_cover_is_offered_once_that_shift_has_ended()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var supervisor = await InspectionApi.SupervisorAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 20, 30));
@@ -3314,15 +3314,15 @@ public class InspectionAlertTests
 }
 ```
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~AlertKindsTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~AlertKindsTests"`
 Expected: build FAILS: `AlertKind` has no `InspectionGps`.
 
 - [ ] **Step 2: Add the alert kind**
 
-Replace `backend/src/FacilityRealtime.Domain/Enums/AlertType.cs` with:
+Replace `backend/src/JanitorialManagementDashboard.Domain/Enums/AlertType.cs` with:
 
 ```csharp
-namespace FacilityRealtime.Domain.Enums;
+namespace JanitorialManagementDashboard.Domain.Enums;
 
 /// <summary>
 /// database.html alert_reviews.alert_type: the alerts an Admin closes with "คุยแล้ว ปิดเตือน" (facility-0035, 0037, 0041).
@@ -3337,7 +3337,7 @@ public enum AlertType
 }
 ```
 
-In `backend/src/FacilityRealtime.Application/Alerts/AlertKind.cs` add, as the last member of `AlertKind`:
+In `backend/src/JanitorialManagementDashboard.Application/Alerts/AlertKind.cs` add, as the last member of `AlertKind`:
 
 ```csharp
     /// <summary>An inspection outside its sign's radius: recorded and flagged (facility-0037).</summary>
@@ -3348,24 +3348,24 @@ and the case `AlertKind.InspectionGps => AlertType.InspectionGps,` in `AlertKind
 
 In `ThaiLabels.AlertName` add the arm `AlertKind.InspectionGps => "ตรวจงานไกลจากป้าย",` before the `_` arm.
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~AlertKindsTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~AlertKindsTests"`
 Expected: PASS.
 
 - [ ] **Step 3: Load the new alerts**
 
-Replace `backend/src/FacilityRealtime.Infrastructure/Persistence/AlertQuery.cs` with:
+Replace `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AlertQuery.cs` with:
 
 ```csharp
-using FacilityRealtime.Application.Alerts;
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Application.Common;
-using FacilityRealtime.Application.Inspections;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Alerts;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Application.Common;
+using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Infrastructure.Persistence;
+namespace JanitorialManagementDashboard.Infrastructure.Persistence;
 
 /// <summary>
 /// One line of the alert list (wireframe D3). Area is where it happened: the scanned sign's Area, or for a missing
@@ -3535,7 +3535,7 @@ Compared with the old file, only these change: `inspectionFlags`, the sign load 
 
 - [ ] **Step 4: Show and close them**
 
-In `backend/src/FacilityRealtime.Api/DTOs/AdminAlertDtos.cs`:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminAlertDtos.cs`:
 
 ```csharp
 /// <summary>
@@ -3572,10 +3572,10 @@ In `AdminAlertEndpoints.cs`:
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~InspectionAlertTests|FullyQualifiedName~AlertEndpointTests|FullyQualifiedName~CoverFromAlertTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~InspectionAlertTests|FullyQualifiedName~AlertEndpointTests|FullyQualifiedName~CoverFromAlertTests"`
 Expected: PASS.
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS.
 
 - [ ] **Step 6: Update the handoff and commit**
@@ -3595,17 +3595,17 @@ git commit -m "feat(backend): alerts for inspections far from the sign and Super
 ### Task 8: Round outcomes and the export's inspection sheet
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Rounds/RoundOutcomes.cs`
-- Create: `backend/src/FacilityRealtime.Application/Inspections/InspectionHistory.cs`
-- Modify: `backend/src/FacilityRealtime.Application/Export/ExportRules.cs` (`ExportSet` + `Inspections`)
-- Create: `backend/src/FacilityRealtime.Infrastructure/Persistence/InspectionHistoryQuery.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs` (+ `InspectionResultName`, `RoundOutcomeName`)
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/ExportSheets.cs` (+ `Inspections`)
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminExportEndpoints.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs` (`AddInspectionAsync` options)
-- Test: `backend/tests/FacilityRealtime.UnitTests/RoundOutcomesTests.cs`
-- Test: `backend/tests/FacilityRealtime.UnitTests/InspectionHistoryTests.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/InspectionExportTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Rounds/RoundOutcomes.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Inspections/InspectionHistory.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Export/ExportRules.cs` (`ExportSet` + `Inspections`)
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/InspectionHistoryQuery.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs` (+ `InspectionResultName`, `RoundOutcomeName`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ExportSheets.cs` (+ `Inspections`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminExportEndpoints.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestData.cs` (`AddInspectionAsync` options)
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/RoundOutcomesTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/InspectionHistoryTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/InspectionExportTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -3629,13 +3629,13 @@ git commit -m "feat(backend): alerts for inspections far from the sign and Super
 
 - [ ] **Step 1: Write the failing unit tests**
 
-Create `backend/tests/FacilityRealtime.UnitTests/RoundOutcomesTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/RoundOutcomesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>facility-0047 rule 5: what a finished round with a submission left in the history.</summary>
 public class RoundOutcomesTests
@@ -3678,15 +3678,15 @@ public class RoundOutcomesTests
 }
 ```
 
-Create `backend/tests/FacilityRealtime.UnitTests/InspectionHistoryTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/InspectionHistoryTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Inspections;
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>Plan 6 decision 13: outcomes of rounds with a submission, once the shift's attendance window has closed.</summary>
 public class InspectionHistoryTests
@@ -3749,17 +3749,17 @@ public class InspectionHistoryTests
 }
 ```
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~RoundOutcomesTests|FullyQualifiedName~InspectionHistoryTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~RoundOutcomesTests|FullyQualifiedName~InspectionHistoryTests"`
 Expected: build FAILS: `RoundOutcomes` and `InspectionHistory` do not exist.
 
 - [ ] **Step 2: Write the outcome rules**
 
-Create `backend/src/FacilityRealtime.Application/Rounds/RoundOutcomes.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Rounds/RoundOutcomes.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Application.Rounds;
+namespace JanitorialManagementDashboard.Application.Rounds;
 
 /// <summary>facility-0047 rule 5: what a finished round that had a submission left in the history.</summary>
 public enum RoundOutcome
@@ -3788,13 +3788,13 @@ public static class RoundOutcomes
 }
 ```
 
-Create `backend/src/FacilityRealtime.Application/Inspections/InspectionHistory.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Inspections/InspectionHistory.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
 
-namespace FacilityRealtime.Application.Inspections;
+namespace JanitorialManagementDashboard.Application.Inspections;
 
 /// <summary>A Scan Record placed in a round (OnTime, Late or Rework), with the round's start and end as copied onto it when saved.</summary>
 public sealed record RoundSubmission(long Id, int PointId, ShiftSlot Slot, TimeOnly RoundStart, TimeOnly RoundEnd, DateTime SubmittedAtUtc);
@@ -3832,17 +3832,17 @@ public static class InspectionHistory
 }
 ```
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`
 Expected: PASS.
 
 - [ ] **Step 3: Write the failing API tests**
 
-In `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, replace `AddInspectionAsync` with:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/TestData.cs`, replace `AddInspectionAsync` with:
 
 ```csharp
     /// <summary>An Inspection Record, by Supervisor S2001 unless another is named. GPS and cover stay empty unless given.</summary>
     public static Task AddInspectionAsync(
-        FacilityApiFactory factory,
+        JanitorialApiFactory factory,
         long scanRecordId,
         InspectionResult result,
         DateTimeOffset at,
@@ -3870,18 +3870,18 @@ In `backend/tests/FacilityRealtime.ApiTests/Infrastructure/TestData.cs`, replace
         });
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/InspectionExportTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/InspectionExportTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using ClosedXML.Excel;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.ApiTests.Inspections;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Inspections;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>facility-0053, 0047 rule 5: the export's "การตรวจงาน" sheet.</summary>
 public class InspectionExportTests
@@ -3891,9 +3891,9 @@ public class InspectionExportTests
     private static readonly string[] Header =
         ["วันที่กะ", "กะ", "ตึก", "Area", "จุด", "ป้าย", "รอบ", "เวลาตรวจ", "ผล", "ข้อบกพร่อง", "ตรวจแทน", "รหัสพนักงาน", "ชื่อ", "GPS"];
 
-    private static async Task<(FacilityApiFactory Factory, HttpClient Admin)> StartAsync(DateTimeOffset now)
+    private static async Task<(JanitorialApiFactory Factory, HttpClient Admin)> StartAsync(DateTimeOffset now)
     {
-        var factory = new FacilityApiFactory();
+        var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await TestData.BackdateSetupAsync(factory);
         factory.Clock.SetUtcNow(now);
@@ -4011,12 +4011,12 @@ public class InspectionExportTests
 }
 ```
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~InspectionExportTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~InspectionExportTests"`
 Expected: FAIL with 400: `Inspections` is not an `ExportSet` value, so the body does not bind.
 
 - [ ] **Step 4: Read the history**
 
-In `backend/src/FacilityRealtime.Application/Export/ExportRules.cs`, replace the `ExportSet` enum with:
+In `backend/src/JanitorialManagementDashboard.Application/Export/ExportRules.cs`, replace the `ExportSet` enum with:
 
 ```csharp
 /// <summary>The sets the Admin ticks on wireframe D8 (facility-0053).</summary>
@@ -4028,15 +4028,15 @@ public enum ExportSet
 }
 ```
 
-Create `backend/src/FacilityRealtime.Infrastructure/Persistence/InspectionHistoryQuery.cs`:
+Create `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/InspectionHistoryQuery.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Inspections;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Infrastructure.Persistence;
+namespace JanitorialManagementDashboard.Infrastructure.Persistence;
 
 /// <summary>One Inspection Record with its point, round, Supervisor and GPS verdict. No coordinates (facility-0053).</summary>
 public sealed record InspectionExportRow(
@@ -4151,7 +4151,7 @@ public static class InspectionHistoryQuery
 
 - [ ] **Step 5: Write the sheet and add it to the export**
 
-In `ThaiLabels.cs` add `using FacilityRealtime.Application.Rounds;` and:
+In `ThaiLabels.cs` add `using JanitorialManagementDashboard.Application.Rounds;` and:
 
 ```csharp
     /// <summary>facility-0029: ผล of an inspection on the export, as the Supervisor's buttons say it.</summary>
@@ -4166,7 +4166,7 @@ In `ThaiLabels.cs` add `using FacilityRealtime.Application.Rounds;` and:
     };
 ```
 
-In `ExportSheets.cs` add `using FacilityRealtime.Application.Inspections;`, the constant `public const string InspectionsName = "การตรวจงาน";` next to the other two names, and this method after `Submissions`:
+In `ExportSheets.cs` add `using JanitorialManagementDashboard.Application.Inspections;`, the constant `public const string InspectionsName = "การตรวจงาน";` next to the other two names, and this method after `Submissions`:
 
 ```csharp
     /// <summary>
@@ -4233,7 +4233,7 @@ In `ExportSheets.cs` add `using FacilityRealtime.Application.Inspections;`, the 
 ```
 
 In `AdminExportEndpoints.cs`:
-- Add `using FacilityRealtime.Application.Inspections;` and `using FacilityRealtime.Application.Rounds;`.
+- Add `using JanitorialManagementDashboard.Application.Inspections;` and `using JanitorialManagementDashboard.Application.Rounds;`.
 - Change the class summary's first sentence to say "attendance, submissions and inspections".
 - Replace everything from `var now = clock.GetUtcNow().UtcDateTime;` to the line before `return Results.File(...)` with:
 
@@ -4291,10 +4291,10 @@ The workbook is still built before the log row is saved (plan 5 fix F2).
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~InspectionExportTests|FullyQualifiedName~ExportEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~InspectionExportTests|FullyQualifiedName~ExportEndpointTests"`
 Expected: PASS. The plan-5 export tests are unchanged.
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS.
 
 - [ ] **Step 7: Update the handoff and commit**
@@ -4315,13 +4315,13 @@ git commit -m "feat(backend): Excel inspection sheet with ไม่ได้ต�
 ### Task 9: Inspection Summary (`GET /api/admin/inspection-summary`)
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Inspections/InspectionSummary.cs`
-- Create: `backend/src/FacilityRealtime.Api/DTOs/InspectionSummaryDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminInspectionSummaryEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`
-- Test: `backend/tests/FacilityRealtime.UnitTests/InspectionSummaryTests.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/InspectionSummaryEndpointTests.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Inspections/InspectionSummary.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/InspectionSummaryDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminInspectionSummaryEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/InspectionSummaryTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/InspectionSummaryEndpointTests.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -4337,15 +4337,15 @@ git commit -m "feat(backend): Excel inspection sheet with ไม่ได้ต�
 
 - [ ] **Step 1: Write the failing unit tests**
 
-Create `backend/tests/FacilityRealtime.UnitTests/InspectionSummaryTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/InspectionSummaryTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Inspections;
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>
 /// Plan 6 decision 15. Building 1 has points 10 (Area works nights), 11 (day-only Area) and 12 (deactivated); building 2
@@ -4427,19 +4427,19 @@ The expected tallies read as follows:
 - Supervisor 2's beat (building 1, Night) has only point 10.
 - Supervisor 3's beat (building 2, Day) holds submission 3, inspected by supervisor 1. Its round is ไม่ได้แก้, which does not count as ไม่ได้ตรวจ.
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~InspectionSummaryTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~InspectionSummaryTests"`
 Expected: build FAILS: `InspectionSummary` does not exist.
 
 - [ ] **Step 2: Write the tally**
 
-Create `backend/src/FacilityRealtime.Application/Inspections/InspectionSummary.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Inspections/InspectionSummary.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Application.Inspections;
+namespace JanitorialManagementDashboard.Application.Inspections;
 
 /// <summary>An active Supervisor and their beat: their own building in their own shift.</summary>
 public sealed record SummarySupervisor(int Id, int BuildingId, Shift Shift);
@@ -4506,21 +4506,21 @@ public static class InspectionSummary
 }
 ```
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`
 Expected: PASS.
 
 - [ ] **Step 3: Write the failing API tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/InspectionSummaryEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/InspectionSummaryEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.ApiTests.Inspections;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Inspections;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 public record InspectionSummaryRowModel(
     int SupervisorId, string EmployeeId, string DisplayName, string BuildingCode, string Shift,
@@ -4533,9 +4533,9 @@ public class InspectionSummaryEndpointTests
 {
     private const string Path = "/api/admin/inspection-summary";
 
-    private static async Task<(FacilityApiFactory Factory, HttpClient Admin)> StartAsync()
+    private static async Task<(JanitorialApiFactory Factory, HttpClient Admin)> StartAsync()
     {
-        var factory = new FacilityApiFactory();
+        var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await TestData.BackdateSetupAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(9, 12, 0));
@@ -4615,7 +4615,7 @@ public class InspectionSummaryEndpointTests
     [InlineData("supervisor")]
     public async Task Only_admins_see_the_summary(string who)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, _) = who == "cleaner"
             ? await AuthApi.LoggedInAsync(factory)
             : await AuthApi.LoggedInAsEmployeeAsync(factory, "S2001", "0820000001");
@@ -4633,17 +4633,17 @@ In `DeactivatedAdminTests.cs` add the line:
     [InlineData("GET", "/api/admin/inspection-summary", null)]
 ```
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~InspectionSummaryEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~InspectionSummaryEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
 Expected: FAIL. The route answers 404.
 
 - [ ] **Step 4: Write the endpoint**
 
-Create `backend/src/FacilityRealtime.Api/DTOs/InspectionSummaryDtos.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/DTOs/InspectionSummaryDtos.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 /// <summary>One Supervisor's line (plan 6 decision 15). The page shows PointsInspected "of" PointsTotal and the percentage inspected.</summary>
 public record InspectionSummaryRowDto(
@@ -4665,23 +4665,23 @@ public record InspectionSummaryRowDto(
 public record InspectionSummaryDto(DateOnly From, DateOnly To, IReadOnlyList<InspectionSummaryRowDto> Rows);
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AdminInspectionSummaryEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminInspectionSummaryEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Application.Common;
-using FacilityRealtime.Application.Export;
-using FacilityRealtime.Application.Inspections;
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Application.Common;
+using JanitorialManagementDashboard.Application.Export;
+using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// facility-0048 rule 5 (wireframe SupervisorSummary): the Admin's tab of each Supervisor's inspections. Read-only, so
@@ -4784,10 +4784,10 @@ In `Program.cs` add `app.MapAdminInspectionSummaryEndpoints();` after `app.MapAd
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~InspectionSummaryEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~InspectionSummaryEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
 Expected: PASS.
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS.
 
 - [ ] **Step 6: Update the handoff and commit**
@@ -4808,7 +4808,7 @@ git commit -m "feat(backend): Admin's Inspection Summary per Supervisor (facilit
 ### Task 10: MySQL check, docs, and the controller's real-database run
 
 **Files:**
-- Test: `backend/tests/FacilityRealtime.ApiTests/Persistence/MySqlSupervisorTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/MySqlSupervisorTests.cs`
 - Modify: `README.md`
 - Modify: `docs/architecture.md`
 - Modify: `docs/handoff.md`
@@ -4818,20 +4818,20 @@ git commit -m "feat(backend): Admin's Inspection Summary per Supervisor (facilit
 
 - [ ] **Step 1: Write the MySQL test**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Persistence/MySqlSupervisorTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/MySqlSupervisorTests.cs`:
 
 ```csharp
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Application.Alerts;
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Auth;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Application.Alerts;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Auth;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Persistence;
+namespace JanitorialManagementDashboard.ApiTests.Persistence;
 
 /// <summary>
 /// Plan 6 on the Oracle MySQL provider: the one-place CHECK on cover_assignments, nullable area_id/building_id compared
@@ -4949,7 +4949,7 @@ public class MySqlSupervisorTests
 }
 ```
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~MySqlSupervisorTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~MySqlSupervisorTests"`
 Expected: it compiles and is reported as **skipped**, because `FACILITY_MYSQL_TEST` is not set. A subagent stops here; the controller runs it in Step 4.
 
 - [ ] **Step 2: Update the README**
@@ -4998,13 +4998,13 @@ Ask the owner for the MySQL root password. Never write it into a file, this plan
 
 ```bash
 # 1. The migration applies to an empty throwaway database
-dotnet ef database update --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api \
+dotnet ef database update --project backend/src/JanitorialManagementDashboard.Infrastructure --startup-project backend/src/JanitorialManagementDashboard.Api \
   --connection "Server=localhost;Port=3306;Database=facility_supervisor_test;Uid=root;Pwd=<pw>;CharSet=utf8mb4;"
 mysql -uroot -p -e "SHOW CREATE TABLE facility_supervisor_test.cover_assignments\G" | grep -i "ck_cover_assignments_one_place"
 mysql -uroot -p -e "DROP DATABASE facility_supervisor_test"
 
 # 2. The whole suite, MySQL tests included
-FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_supervisor_test;Uid=root;Pwd=<pw>;CharSet=utf8mb4;" dotnet test backend/FacilityRealtime.slnx
+FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_supervisor_test;Uid=root;Pwd=<pw>;CharSet=utf8mb4;" dotnet test backend/JanitorialManagementDashboard.slnx
 ```
 
 Expected:
@@ -5012,7 +5012,7 @@ Expected:
 2. Every test passes, 0 skipped. The MySQL tests (now 5) drop their own database at the end.
 
 Then a short run against the real API on a throwaway database:
-- Run `ASPNETCORE_ENVIRONMENT=Development ConnectionStrings__DefaultConnection="Server=localhost;Port=3306;Database=facility_smoke_test;Uid=root;Pwd=<pw>;CharSet=utf8mb4;" dotnet run --project backend/src/FacilityRealtime.Api --urls http://localhost:5225`. Development migrates the database and seeds it.
+- Run `ASPNETCORE_ENVIRONMENT=Development ConnectionStrings__DefaultConnection="Server=localhost;Port=3306;Database=facility_smoke_test;Uid=root;Pwd=<pw>;CharSet=utf8mb4;" dotnet run --project backend/src/JanitorialManagementDashboard.Api --urls http://localhost:5225`. Development migrates the database and seeds it.
 - In a second terminal, run the script below with `python3 -X utf8 <scratchpad>/smoke.py`. The script lives in your scratchpad, not in the repo.
 - Afterwards stop the API and run `mysql -uroot -p -e "DROP DATABASE facility_smoke_test"`.
 
@@ -5102,5 +5102,5 @@ git commit -m "test(backend): Supervisor queries on MySQL; docs for inspections,
 
 ## Notes for the executor
 
-- Tasks 3–9 run `dotnet test backend/FacilityRealtime.slnx` before committing. If an earlier test breaks, fix the cause in this task's code. Change an old test only when this plan names it.
+- Tasks 3–9 run `dotnet test backend/JanitorialManagementDashboard.slnx` before committing. If an earlier test breaks, fix the cause in this task's code. Change an old test only when this plan names it.
 - The names that cross tasks are listed in each task's **Interfaces** block. If you need to rename one, stop and report: a later task's code depends on the exact name.

@@ -85,7 +85,7 @@
   - Vitest on jsdom. Only `fetch` (`src/test/fakeServer.ts`) and SignalR (`src/test/fakeSignalR.ts`, through `test.alias`) are faked.
   - No MSW, no `vi.mock`, no module mocks of our own code (regression-net #32).
   - Find elements by role, label or text, never by CSS class.
-  - Backend: xUnit, `FacilityApiFactory` (SQLite in memory), `ThaiClock.At(day, hour, minute)` on 2026-10-day. Log in before moving the clock.
+  - Backend: xUnit, `JanitorialApiFactory` (SQLite in memory), `ThaiClock.At(day, hour, minute)` on 2026-10-day. Log in before moving the clock.
 - **Public repo:** made-up names only, as in the fixtures. No secret in any file.
 - **MySQL** is used only in Task 12's controller run.
   - Only throwaway databases `facility_*_test`. Never touch `facility_dashboard`.
@@ -142,12 +142,12 @@
 
 ```
 backend/src/
-├── FacilityRealtime.Application/Attendance/AttendanceCalendar.cs   + WindowClock
-├── FacilityRealtime.Api/DTOs/MyWorkDtos.cs                         + OwnShiftDto, MyWorkDto.OwnShift
-├── FacilityRealtime.Api/Endpoints/MyWorkEndpoints.cs               sends ownShift
-├── FacilityRealtime.Api/Endpoints/AttendanceEndpoints.cs           + GET /api/attendance/signs/{token}
-├── FacilityRealtime.Api/Endpoints/ThaiLabels.cs                    words; BlockedName; AlertName(kind, reason)
-├── FacilityRealtime.Api/Endpoints/AdminAlertEndpoints.cs           AlertTarget carries the block reason
+├── JanitorialManagementDashboard.Application/Attendance/AttendanceCalendar.cs   + WindowClock
+├── JanitorialManagementDashboard.Api/DTOs/MyWorkDtos.cs                         + OwnShiftDto, MyWorkDto.OwnShift
+├── JanitorialManagementDashboard.Api/Endpoints/MyWorkEndpoints.cs               sends ownShift
+├── JanitorialManagementDashboard.Api/Endpoints/AttendanceEndpoints.cs           + GET /api/attendance/signs/{token}
+├── JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs                    words; BlockedName; AlertName(kind, reason)
+├── JanitorialManagementDashboard.Api/Endpoints/AdminAlertEndpoints.cs           AlertTarget carries the block reason
 └── (Task 11) messages and summaries in 12 endpoint files, ExportSheets headers, RoundWindowRules message
 frontend/src/
 ├── shared/api/types.ts                     + OwnShift, MyWork.ownShift
@@ -169,13 +169,13 @@ frontend/src/
 
 **Files:**
 - Modify: `docs/handoff.md`
-- Modify: `backend/src/FacilityRealtime.Application/Attendance/AttendanceCalendar.cs`
-- Test: `backend/tests/FacilityRealtime.UnitTests/AttendanceCalendarTests.cs`
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/MyWorkDtos.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/MyWorkEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AttendanceEndpoints.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Points/MyWorkEndpointTests.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Attendance/AttendanceEndpointTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Attendance/AttendanceCalendar.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/AttendanceCalendarTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/MyWorkDtos.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/MyWorkEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceEndpoints.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Points/MyWorkEndpointTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Attendance/AttendanceEndpointTests.cs`
 
 **Interfaces:**
 - Consumes: `ShiftCalendar.DayStart`, `ShiftCalendar.NightStart`, `AttendanceSettings`, `CurrentUser.LoadAsync`, `ApiResults.Message`.
@@ -223,7 +223,7 @@ Step 11 adds the first entry under it.
 
 - [ ] **Step 3: Write the failing unit test**
 
-In `backend/tests/FacilityRealtime.UnitTests/AttendanceCalendarTests.cs`, add inside the class (it already has `Settings` with 60 and 60):
+In `backend/tests/JanitorialManagementDashboard.UnitTests/AttendanceCalendarTests.cs`, add inside the class (it already has `Settings` with 60 and 60):
 
 ```csharp
     [Theory]
@@ -250,12 +250,12 @@ In `backend/tests/FacilityRealtime.UnitTests/AttendanceCalendarTests.cs`, add in
 
 - [ ] **Step 4: Run it to make sure it fails**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~AttendanceCalendarTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~AttendanceCalendarTests"`
 Expected: build error, `'AttendanceCalendar' does not contain a definition for 'WindowClock'`.
 
 - [ ] **Step 5: Implement `WindowClock`**
 
-In `backend/src/FacilityRealtime.Application/Attendance/AttendanceCalendar.cs`, add after `SlotFor`:
+In `backend/src/JanitorialManagementDashboard.Application/Attendance/AttendanceCalendar.cs`, add after `SlotFor`:
 
 ```csharp
     /// <summary>
@@ -273,12 +273,12 @@ In `backend/src/FacilityRealtime.Application/Attendance/AttendanceCalendar.cs`, 
 
 - [ ] **Step 6: Run it to make sure it passes**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~AttendanceCalendarTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~AttendanceCalendarTests"`
 Expected: PASS.
 
 - [ ] **Step 7: Write the failing API tests**
 
-In `backend/tests/FacilityRealtime.ApiTests/Points/MyWorkEndpointTests.cs`, replace the `MyWorkModel` record with these two:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Points/MyWorkEndpointTests.cs`, replace the `MyWorkModel` record with these two:
 
 ```csharp
 public record OwnShiftModel(string Shift, TimeOnly OpensAt, TimeOnly ClosesAt);
@@ -295,7 +295,7 @@ Then add to the class:
     public async Task Outside_the_window_my_work_still_names_the_own_shift_and_its_window(
         string employeeId, string phone, int thaiHour, string shift, int opensHour, int closesHour)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, employeeId, phone);
         factory.Clock.SetUtcNow(ThaiClock.At(8, thaiHour, 0));
 
@@ -308,7 +308,7 @@ Then add to the class:
     [Fact]
     public async Task Inside_the_window_my_work_also_names_the_own_shift()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
 
@@ -319,7 +319,7 @@ Then add to the class:
     }
 ```
 
-In `backend/tests/FacilityRealtime.ApiTests/Attendance/AttendanceEndpointTests.cs`, add `using System.Text.Json;` to the usings and add to the class:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Attendance/AttendanceEndpointTests.cs`, add `using System.Text.Json;` to the usings and add to the class:
 
 ```csharp
     [Theory]
@@ -327,7 +327,7 @@ In `backend/tests/FacilityRealtime.ApiTests/Attendance/AttendanceEndpointTests.c
     [InlineData("token-checkin-ar02")] // another Area's sign: told on the press, as a Blocked Scan (facility-0080)
     public async Task A_working_check_in_sign_answers_no_content_and_records_nothing(string token)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
 
@@ -344,7 +344,7 @@ In `backend/tests/FacilityRealtime.ApiTests/Attendance/AttendanceEndpointTests.c
     [InlineData("no-such-token")]
     public async Task Point_signs_and_unknown_tokens_fail_the_check_in_sign_check(string token)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
         var response = await cleaner.GetAsync($"/api/attendance/signs/{token}");
@@ -357,7 +357,7 @@ In `backend/tests/FacilityRealtime.ApiTests/Attendance/AttendanceEndpointTests.c
     [Fact]
     public async Task The_sign_of_a_deactivated_area_fails_the_check()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         await factory.WithDbAsync(async db =>
         {
@@ -373,7 +373,7 @@ In `backend/tests/FacilityRealtime.ApiTests/Attendance/AttendanceEndpointTests.c
     [Fact]
     public async Task Only_a_logged_in_cleaner_checks_a_check_in_sign()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var anonymous = await factory.CreateApiClient().GetAsync("/api/attendance/signs/token-checkin-ar01");
@@ -386,17 +386,17 @@ In `backend/tests/FacilityRealtime.ApiTests/Attendance/AttendanceEndpointTests.c
 
 - [ ] **Step 8: Run them to make sure they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~MyWorkEndpointTests|FullyQualifiedName~AttendanceEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~MyWorkEndpointTests|FullyQualifiedName~AttendanceEndpointTests"`
 Expected: FAIL. The My Work tests fail because `OwnShift` is null. The sign tests fail with 404 or 405 where 204 is expected, because the route does not exist yet.
 
 - [ ] **Step 9: Implement the DTO and both endpoints**
 
-In `backend/src/FacilityRealtime.Api/DTOs/MyWorkDtos.cs`, replace the `MyWorkDto` record (keep `MyWorkAreaDto`). The file has no `using` yet, and `Shift` is in `FacilityRealtime.Domain.Enums`, so add that line at the top:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/MyWorkDtos.cs`, replace the `MyWorkDto` record (keep `MyWorkAreaDto`). The file has no `using` yet, and `Shift` is in `JanitorialManagementDashboard.Domain.Enums`, so add that line at the top:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 public record MyWorkAreaDto(int AreaId, string AreaCode, string AreaName, bool IsCover, IReadOnlyList<PointStatusDto> Points);
 
@@ -410,7 +410,7 @@ public record OwnShiftDto(Shift Shift, TimeOnly OpensAt, TimeOnly ClosesAt);
 public record MyWorkDto(AttendanceStateDto Attendance, IReadOnlyList<MyWorkAreaDto> Areas, OwnShiftDto? OwnShift);
 ```
 
-In `backend/src/FacilityRealtime.Api/Endpoints/MyWorkEndpoints.cs`, replace the last statement of `GetAsync`:
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/MyWorkEndpoints.cs`, replace the last statement of `GetAsync`:
 
 ```csharp
         return Results.Ok(new MyWorkDto(await AttendanceEndpoints.StateForAsync(db, user, now, settings), areas));
@@ -429,9 +429,9 @@ with:
         return new OwnShiftDto(shift, opens, closes);
 ```
 
-(The method's closing brace that followed the old `return` now closes `OwnShiftOf`. `Shift` comes from `FacilityRealtime.Domain.Enums`, already imported.)
+(The method's closing brace that followed the old `return` now closes `OwnShiftOf`. `Shift` comes from `JanitorialManagementDashboard.Domain.Enums`, already imported.)
 
-In `backend/src/FacilityRealtime.Api/Endpoints/AttendanceEndpoints.cs`:
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceEndpoints.cs`:
 
 1. Under `private const string CleanersOnly = …;` add:
 
@@ -499,11 +499,11 @@ with:
             .FirstOrDefaultAsync(s => s.QrToken == token && s.ServicePointId == null && s.Area!.IsActive);
 ```
 
-`Sign` is in `FacilityRealtime.Domain.Entities`, which the file already imports.
+`Sign` is in `JanitorialManagementDashboard.Domain.Entities`, which the file already imports.
 
 - [ ] **Step 10: Run the backend suite**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: unit 302 passed (3 new cases); API 540 passed, 5 skipped (9 new cases: 3 for My Work, 6 for the sign check).
 
 - [ ] **Step 11: Log the task in the handoff and commit**
@@ -516,13 +516,13 @@ Under `## Task log (plan 13)` in `docs/handoff.md` add:
 
 ```bash
 git add docs/handoff.md \
-  backend/src/FacilityRealtime.Application/Attendance/AttendanceCalendar.cs \
-  backend/tests/FacilityRealtime.UnitTests/AttendanceCalendarTests.cs \
-  backend/src/FacilityRealtime.Api/DTOs/MyWorkDtos.cs \
-  backend/src/FacilityRealtime.Api/Endpoints/MyWorkEndpoints.cs \
-  backend/src/FacilityRealtime.Api/Endpoints/AttendanceEndpoints.cs \
-  backend/tests/FacilityRealtime.ApiTests/Points/MyWorkEndpointTests.cs \
-  backend/tests/FacilityRealtime.ApiTests/Attendance/AttendanceEndpointTests.cs
+  backend/src/JanitorialManagementDashboard.Application/Attendance/AttendanceCalendar.cs \
+  backend/tests/JanitorialManagementDashboard.UnitTests/AttendanceCalendarTests.cs \
+  backend/src/JanitorialManagementDashboard.Api/DTOs/MyWorkDtos.cs \
+  backend/src/JanitorialManagementDashboard.Api/Endpoints/MyWorkEndpoints.cs \
+  backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceEndpoints.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Points/MyWorkEndpointTests.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Attendance/AttendanceEndpointTests.cs
 git commit -m "feat(api): own shift on My Work and the check-in sign check (facility-0077, 0082)"
 ```
 
@@ -2933,20 +2933,20 @@ git commit -m "feat(frontend): users' words on the Admin setup pages and printed
 
 **Files:**
 - Modify:
-  - `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/AdminAlertEndpoints.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/CoverAssignmentEndpoints.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/ExportSheets.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/GpsInput.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/AdminPointEndpoints.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/AccountChecks.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/AdminAttendanceEndpoints.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/AdminAreaEndpoints.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/InspectionEndpoints.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/AdminSignEndpoints.cs`
-  - `backend/src/FacilityRealtime.Api/Endpoints/ScanRecordEndpoints.cs`
-  - `backend/src/FacilityRealtime.Application/Rounds/RoundWindowRules.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAlertEndpoints.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/CoverAssignmentEndpoints.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/ExportSheets.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/GpsInput.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminPointEndpoints.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/AccountChecks.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAttendanceEndpoints.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAreaEndpoints.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/InspectionEndpoints.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminSignEndpoints.cs`
+  - `backend/src/JanitorialManagementDashboard.Api/Endpoints/ScanRecordEndpoints.cs`
+  - `backend/src/JanitorialManagementDashboard.Application/Rounds/RoundWindowRules.cs`
 - Test: the files Step 1's grep finds, at least:
   - `ApiTests/Admin/ExportEndpointTests.cs`, `InspectionExportTests.cs`, `SignAdminEndpointTests.cs`
   - `AccountEditEndpointTests.cs`, `AccountSecretEndpointTests.cs`, `AreaAdminEndpointTests.cs`
@@ -2993,7 +2993,7 @@ Also add one assertion to `A_blocked_scan_can_be_reviewed` in `Admin/AlertEndpoi
 
 - [ ] **Step 2: Run them to make sure they fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: FAIL only on the changed expectations.
 
 - [ ] **Step 3: Change the server text**
@@ -3034,7 +3034,7 @@ Expected: FAIL only on the changed expectations.
 
 `CoverAssignmentEndpoints.cs`:
 
-1. In `SaveAsync`, `` $"ปิดเตือน{ThaiLabels.AlertName(AlertKind.BlockedScan)} ของ {person.DisplayName} `` → `` $"ปิดเตือน{ThaiLabels.BlockedName(scan.Reason)} ของ {person.DisplayName} ``. If `using FacilityRealtime.Application.Alerts;` is then unused in the file, delete it.
+1. In `SaveAsync`, `` $"ปิดเตือน{ThaiLabels.AlertName(AlertKind.BlockedScan)} ของ {person.DisplayName} `` → `` $"ปิดเตือน{ThaiLabels.BlockedName(scan.Reason)} ของ {person.DisplayName} ``. If `using JanitorialManagementDashboard.Application.Alerts;` is then unused in the file, delete it.
 2. The messages:
 
 | Old | New |
@@ -3103,7 +3103,7 @@ Not changed:
 
 - [ ] **Step 4: Run the suite and the gate**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: unit 302 passed; API 540 passed, 5 skipped.
 
 Gate: `grep -rnE 'Area|Admin|GPS|Location|ข้อบกพร่อง|หน้างาน|ออก QR|ถูกบล็อก|Issue|นอกรอบ|สแกนนอก' backend/src --include='*.cs' | grep -v '/Migrations/' | grep -vE ':[0-9]+:\s*///?' | grep -E '"[^"]*[ก-๙][^"]*"'`
@@ -3120,7 +3120,7 @@ Expected: only:
 ```
 
 ```bash
-git add docs/handoff.md backend/src/FacilityRealtime.Api/Endpoints backend/src/FacilityRealtime.Application/Rounds/RoundWindowRules.cs \
+git add docs/handoff.md backend/src/JanitorialManagementDashboard.Api/Endpoints backend/src/JanitorialManagementDashboard.Application/Rounds/RoundWindowRules.cs \
   backend/tests
 git status --short   # only the files of this task
 git commit -m "feat(api): users' words in messages, audit summaries and Excel (facility-0085)"
@@ -3219,7 +3219,7 @@ Plan 13 built the UX fix list (facility-0074 as amended; facility-0075 to 0085),
 Run, from the repo root:
 
 ```bash
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 cd frontend && npx vitest run && npm run lint && npx tsc -b && npm run build && cd ..
 ```
 
@@ -3260,7 +3260,7 @@ git commit -m "docs: plan 13 ADR amendments, architecture and handoff"
    - `cd frontend && npm run build:api`
    - create the throwaway database `facility_ux_test` (on this Mac MySQL has no root password; if it asks, ask the owner)
    - in the API's shell set `ConnectionStrings__DefaultConnection` to it, `ASPNETCORE_ENVIRONMENT=Development` and `ASPNETCORE_URLS=http://localhost:5001`
-   - run `dotnet run --no-launch-profile --project backend/src/FacilityRealtime.Api`
+   - run `dotnet run --no-launch-profile --project backend/src/JanitorialManagementDashboard.Api`
 2. **Script checks.** Use a Python script (`python -X utf8`) as the seed users:
    - Cleaner `E1001`:
      - `GET /api/attendance/signs/token-checkin-ar01` is 204
@@ -3286,6 +3286,6 @@ git commit -m "docs: plan 13 ADR amendments, architecture and handoff"
    6. On D6, "แก้เบอร์โทร" shows name, employee ID, role and place, and "ไม่ต้องรู้เบอร์เดิม".
    7. On D4, add a window by typing 10, 30, 12 into the boxes.
    8. Look over every page: no "Area", "Admin", "GPS", "ติดธง" in the text. Print a sign: it says "พื้นที่" and "สร้าง QR".
-4. **Clean up.** Stop the API, drop `facility_ux_test`, `rm -rf backend/src/FacilityRealtime.Api/wwwroot`.
+4. **Clean up.** Stop the API, drop `facility_ux_test`, `rm -rf backend/src/JanitorialManagementDashboard.Api/wwwroot`.
 5. **Record and review.** Add a handoff entry with the results, commit it, then run the whole-branch review (sp-subagent-driven-development's final review).
 

@@ -12,7 +12,7 @@
 - `docs/handoff.md`, #80 entry "Explanations always on screen (owner's question, 2026-10-26)": the rule. A warning about what the user is about to do and a field's help line stay; notes about how a page counts or keeps things go behind `MoreInfo`.
 - Owner, 2026-10-27: "ย้ายครับ". Use the same rule on the other Admin pages (D1–D4, D10, M17) and on the phone pages.
 - Precedent commit `dc74444` (D6–D9). No test changed there.
-- `design-system/facility/MASTER.md`, row `MoreInfo`.
+- `design-system/janitorial/MASTER.md`, row `MoreInfo`.
 
 ## Global Constraints
 
@@ -62,7 +62,7 @@ My Work and My Building have no line of this kind. D6–D9 are already done.
 - Create `frontend/src/test/moreInfo.ts`: the two test helpers `expectBehindMoreInfo` and `expectInView`.
 - Modify `frontend/src/shared/components/MoreInfo.tsx`: the `size` prop.
 - Modify the page files in the table, and their page tests (one new `it` per page test file).
-- Modify `design-system/facility/MASTER.md` (the `MoreInfo` row) and `docs/handoff.md`.
+- Modify `design-system/janitorial/MASTER.md` (the `MoreInfo` row) and `docs/handoff.md`.
 
 ---
 
@@ -370,7 +370,7 @@ git commit -m "feat(frontend): D4, D5, D10 and building explanations sit behind 
 **Files:**
 - Modify: `frontend/src/shared/components/MoreInfo.tsx`
 - Modify: `frontend/src/pages/capture/CapturePage.tsx:83`, `frontend/src/pages/check-in/CheckInPage.tsx:138-140`, `frontend/src/pages/scan/SubmitForm.tsx:106-108`
-- Modify: `design-system/facility/MASTER.md:127`
+- Modify: `design-system/janitorial/MASTER.md:127`
 - Test: `frontend/src/pages/capture/CapturePage.test.tsx`, `frontend/src/pages/check-in/CheckInPage.test.tsx`, `frontend/src/pages/scan/ScanPage.test.tsx`
 
 **Interfaces:**
@@ -514,7 +514,7 @@ with
 
 - [ ] **Step 5: Update MASTER.md**
 
-In `design-system/facility/MASTER.md`, replace the `MoreInfo` row (line 127) with:
+In `design-system/janitorial/MASTER.md`, replace the `MoreInfo` row (line 127) with:
 
 ```markdown
 | `MoreInfo` (`summary`, `size` desk / phone) | Notes on how a page counts or keeps things, shut until asked (owner, 2026-10-26; every page, phone ones too, 2026-10-27). A warning about what the user is about to do and a field's help stay in the page. `phone`: 48 px summary, `size-5` icon, `text-md` |
@@ -528,7 +528,7 @@ Expected: all tests PASS (the count before this branch plus 10 new ones), tsc an
 - [ ] **Step 7: Commit**
 
 ```bash
-git add frontend/src/shared/components/MoreInfo.tsx frontend/src/pages/capture frontend/src/pages/check-in frontend/src/pages/scan design-system/facility/MASTER.md
+git add frontend/src/shared/components/MoreInfo.tsx frontend/src/pages/capture frontend/src/pages/check-in frontend/src/pages/scan design-system/janitorial/MASTER.md
 git commit -m "feat(frontend): phone-size info link; M17, check-in and scan notes sit behind it (owner, 2026-10-27)"
 ```
 
