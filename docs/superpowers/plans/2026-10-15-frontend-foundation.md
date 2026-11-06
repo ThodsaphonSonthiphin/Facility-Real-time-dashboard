@@ -182,8 +182,8 @@ frontend/
         ├── setup.ts                  jest-dom, cleanup, unstub
         ├── fakeServer.ts (+ test)    fake fetch by "METHOD /path"
         └── renderApp.tsx             the whole app at a URL, like main.tsx
-backend/src/FacilityRealtime.Api/Program.cs        static files, fallback, no CORS, /api/health
-backend/tests/FacilityRealtime.ApiTests/FrontendHostingTests.cs
+backend/src/JanitorialManagementDashboard.Api/Program.cs        static files, fallback, no CORS, /api/health
+backend/tests/JanitorialManagementDashboard.ApiTests/FrontendHostingTests.cs
 ```
 
 ---
@@ -2470,10 +2470,10 @@ git commit -m "feat(frontend): login pages for staff (employee ID + phone) and A
 ### Task 5: The API serves the built frontend (facility-0067)
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/HarnessTests.cs:14`
-- Create: `backend/tests/FacilityRealtime.ApiTests/FrontendHostingTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/HarnessTests.cs:14`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/FrontendHostingTests.cs`
 - Modify: `frontend/package.json` (script `build:api`), `.gitignore` (repo root)
 - Modify: `docs/handoff.md`
 
@@ -2482,12 +2482,12 @@ git commit -m "feat(frontend): login pages for staff (employee ID + phone) and A
 - Produces:
   - `GET /api/health` replaces `GET /`.
   - Page paths answer with `index.html` from `wwwroot`.
-  - `FacilityApiFactory.WebRoot`, a `string?` init property for tests.
+  - `JanitorialApiFactory.WebRoot`, a `string?` init property for tests.
   - `npm run build:api`.
 
 - [ ] **Step 1: Write the failing tests**
 
-In `FacilityApiFactory.cs`, add the property after `ConfigureTestServices`:
+In `JanitorialApiFactory.cs`, add the property after `ConfigureTestServices`:
 
 ```csharp
     /// <summary>Set to serve a built frontend from this folder instead of the project's wwwroot (facility-0067 tests).</summary>
@@ -2509,9 +2509,9 @@ Create `FrontendHostingTests.cs`:
 
 ```csharp
 using System.Net;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 
-namespace FacilityRealtime.ApiTests;
+namespace JanitorialManagementDashboard.ApiTests;
 
 /// <summary>facility-0067: the API serves the built frontend from its own origin, and never in place of an API answer.</summary>
 public sealed class FrontendHostingTests : IDisposable
@@ -2536,7 +2536,7 @@ public sealed class FrontendHostingTests : IDisposable
     [InlineData("/admin/accounts")]
     public async Task Page_paths_get_the_app(string path)
     {
-        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var factory = new JanitorialApiFactory { WebRoot = _webRoot };
 
         var response = await factory.CreateClient().GetAsync(path);
 
@@ -2548,7 +2548,7 @@ public sealed class FrontendHostingTests : IDisposable
     [Fact]
     public async Task Built_assets_are_served_and_cached_for_good()
     {
-        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var factory = new JanitorialApiFactory { WebRoot = _webRoot };
 
         var response = await factory.CreateClient().GetAsync("/assets/index-abc123.js");
 
@@ -2563,7 +2563,7 @@ public sealed class FrontendHostingTests : IDisposable
     [InlineData("/assets/missing.js")]
     public async Task Api_paths_and_missing_files_are_404_not_the_app(string path)
     {
-        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var factory = new JanitorialApiFactory { WebRoot = _webRoot };
 
         var response = await factory.CreateClient().GetAsync(path);
 
@@ -2574,7 +2574,7 @@ public sealed class FrontendHostingTests : IDisposable
     [Fact]
     public async Task A_wrong_method_on_an_api_route_is_still_405()
     {
-        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var factory = new JanitorialApiFactory { WebRoot = _webRoot };
 
         var response = await factory.CreateClient().DeleteAsync("/api/admin/audit-log");
 
@@ -2584,7 +2584,7 @@ public sealed class FrontendHostingTests : IDisposable
     [Fact]
     public async Task A_page_path_that_starts_with_api_letters_still_gets_the_app()
     {
-        using var factory = new FacilityApiFactory { WebRoot = _webRoot };
+        using var factory = new JanitorialApiFactory { WebRoot = _webRoot };
 
         var response = await factory.CreateClient().GetAsync("/apiary");
 
@@ -2596,7 +2596,7 @@ public sealed class FrontendHostingTests : IDisposable
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~FrontendHostingTests|FullyQualifiedName~HarnessTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~FrontendHostingTests|FullyQualifiedName~HarnessTests"`
 
 Expected: FAIL.
 - `Page_paths_get_the_app` gets 404.
@@ -2658,8 +2658,8 @@ app.MapFallbackToFile("{*path:regex(^(?!(api|hubs)(/|$)).*$):nonfile}", "index.h
 - [ ] **Step 4: Run the new tests, then the whole backend suite**
 
 ```bash
-dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~FrontendHostingTests|FullyQualifiedName~HarnessTests|FullyQualifiedName~CorsTests|FullyQualifiedName~AuditLogEndpointTests"
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~FrontendHostingTests|FullyQualifiedName~HarnessTests|FullyQualifiedName~CorsTests|FullyQualifiedName~AuditLogEndpointTests"
+dotnet test backend/JanitorialManagementDashboard.slnx
 ```
 
 Expected: everything passes. Units 299. API 530 pass (519 + 11 new) and 5 are skipped.
@@ -2675,24 +2675,24 @@ In `Program.cs`, temporarily change the route to `"{*path:nonfile}"` and rerun `
 In `frontend/package.json` `scripts`, add after `"build"`:
 
 ```json
-    "build:api": "tsc -b && vite build --outDir ../backend/src/FacilityRealtime.Api/wwwroot --emptyOutDir",
+    "build:api": "tsc -b && vite build --outDir ../backend/src/JanitorialManagementDashboard.Api/wwwroot --emptyOutDir",
 ```
 
 Append to the root `.gitignore`:
 
 ```
 # facility-0067: the built frontend, made by `npm --prefix frontend run build:api`
-backend/src/FacilityRealtime.Api/wwwroot/
+backend/src/JanitorialManagementDashboard.Api/wwwroot/
 ```
 
 Then check it:
 
 ```bash
 npm --prefix frontend run build:api
-ls backend/src/FacilityRealtime.Api/wwwroot            # expect: index.html, assets/, favicon.svg, icons.svg
-git status --short backend/src/FacilityRealtime.Api    # expect: only Program.cs
-dotnet test backend/FacilityRealtime.slnx              # still green with a real wwwroot present
-rm -r backend/src/FacilityRealtime.Api/wwwroot
+ls backend/src/JanitorialManagementDashboard.Api/wwwroot            # expect: index.html, assets/, favicon.svg, icons.svg
+git status --short backend/src/JanitorialManagementDashboard.Api    # expect: only Program.cs
+dotnet test backend/JanitorialManagementDashboard.slnx              # still green with a real wwwroot present
+rm -r backend/src/JanitorialManagementDashboard.Api/wwwroot
 ```
 
 - [ ] **Step 7: Handoff entry and commit**
@@ -2783,8 +2783,8 @@ Insert this block right under the `# ...` title line of both `2026-09-13-phase2b
 
 ให้ API เสิร์ฟหน้าเว็บเอง (แบบระบบจริง ไม่ต้องรัน Vite):
 ```bash
-npm --prefix frontend run build:api   # build ลง backend/src/FacilityRealtime.Api/wwwroot (git ไม่เก็บ)
-dotnet run --project backend/src/FacilityRealtime.Api --urls "http://0.0.0.0:5001"
+npm --prefix frontend run build:api   # build ลง backend/src/JanitorialManagementDashboard.Api/wwwroot (git ไม่เก็บ)
+dotnet run --project backend/src/JanitorialManagementDashboard.Api --urls "http://0.0.0.0:5001"
 # เปิด http://<IP ของเครื่อง>:5001/login  ตรวจว่า API ทำงานที่ /api/health
 ```
 ````
@@ -2895,7 +2895,7 @@ In production the Vite server is not used: `npm run build:api` puts the built ap
 
 ```bash
 cd frontend && npm test && npx tsc -b && npm run lint && npm run build && cd ..
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 grep -rn "style={" frontend/src || echo "no inline styles"
 grep -rn "localStorage\|sessionStorage" frontend/src || echo "no web storage"
 ```
@@ -2925,7 +2925,7 @@ mysql -u root -p -e "CREATE DATABASE facility_frontend_test CHARACTER SET utf8mb
 npm --prefix frontend run build:api
 ASPNETCORE_ENVIRONMENT=Development \
 ConnectionStrings__DefaultConnection="Server=localhost;Port=3306;Database=facility_frontend_test;Uid=root;Pwd=<typed by the owner>;CharSet=utf8mb4;" \
-dotnet run --project backend/src/FacilityRealtime.Api --urls "http://0.0.0.0:5001"
+dotnet run --project backend/src/JanitorialManagementDashboard.Api --urls "http://0.0.0.0:5001"
 ```
 
 In a second terminal:
@@ -2946,7 +2946,7 @@ Then check that "ออกจากระบบ" returns to the plain login page
 When done, stop the API, delete the build output and drop the database:
 
 ```bash
-rm -r backend/src/FacilityRealtime.Api/wwwroot
+rm -r backend/src/JanitorialManagementDashboard.Api/wwwroot
 mysql -u root -p -e "DROP DATABASE facility_frontend_test;"
 ```
 

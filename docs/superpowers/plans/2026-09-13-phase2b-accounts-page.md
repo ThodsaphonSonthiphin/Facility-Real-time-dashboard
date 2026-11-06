@@ -18,7 +18,7 @@
 - `CONTEXT.md` (Cleaner Account, Admin Account, Deactivated Account)
 - Decision map ticket: https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/17
 
-**Depends on:** `2026-09-13-phase2a-auth-jwt-refresh.md` merged first. This plan uses its `AuthSetup.AdminOnly` policy, `IPasswordHasher`, `RevokeUserSessionsAsync`, `User.IsActive`, the `FacilityApiFactory` and `AuthApi` test helpers, `apiFetch`, and `AuthContext.isAdmin`.
+**Depends on:** `2026-09-13-phase2a-auth-jwt-refresh.md` merged first. This plan uses its `AuthSetup.AdminOnly` policy, `IPasswordHasher`, `RevokeUserSessionsAsync`, `User.IsActive`, the `JanitorialApiFactory` and `AuthApi` test helpers, `apiFetch`, and `AuthContext.isAdmin`.
 
 ## Global Constraints
 
@@ -39,12 +39,12 @@
 
 | Path | Status | Responsibility |
 |---|---|---|
-| `backend/src/FacilityRealtime.Application/Accounts/AccountRules.cs` | Create | Field rules and messages, used by every write route |
-| `backend/tests/FacilityRealtime.UnitTests/AccountRulesTests.cs` | Create | Rule tests |
-| `backend/src/FacilityRealtime.Api/DTOs/AdminUserDtos.cs` | Create | Request and row shapes |
-| `backend/src/FacilityRealtime.Api/Endpoints/AdminUserEndpoints.cs` | Create | The six admin routes |
-| `backend/src/FacilityRealtime.Api/Program.cs` | Modify | Map the routes |
-| `backend/tests/FacilityRealtime.ApiTests/Admin/AdminUsersTests.cs` | Create | Route behaviour, gate, revocation |
+| `backend/src/JanitorialManagementDashboard.Application/Accounts/AccountRules.cs` | Create | Field rules and messages, used by every write route |
+| `backend/tests/JanitorialManagementDashboard.UnitTests/AccountRulesTests.cs` | Create | Rule tests |
+| `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminUserDtos.cs` | Create | Request and row shapes |
+| `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminUserEndpoints.cs` | Create | The six admin routes |
+| `backend/src/JanitorialManagementDashboard.Api/Program.cs` | Modify | Map the routes |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminUsersTests.cs` | Create | Route behaviour, gate, revocation |
 | `frontend/src/types/index.ts` | Modify | `UserRole`, `AdminUser`, `CreateUserInput`, `UpdateUserInput` |
 | `frontend/src/services/apiError.ts` (+ `.test.ts`) | Create | Error with the server's message |
 | `frontend/src/services/adminUsersApi.ts` | Create | Calls to `/api/admin/users` |
@@ -63,8 +63,8 @@
 ### Task 1: Account field rules
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Accounts/AccountRules.cs`
-- Create: `backend/tests/FacilityRealtime.UnitTests/AccountRulesTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Accounts/AccountRules.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.UnitTests/AccountRulesTests.cs`
 
 **Interfaces:**
 - Consumes: nothing
@@ -75,13 +75,13 @@
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.UnitTests/AccountRulesTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/AccountRulesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Accounts;
+using JanitorialManagementDashboard.Application.Accounts;
 using Xunit;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 public class AccountRulesTests
 {
@@ -184,17 +184,17 @@ public class AccountRulesTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --nologo`
-Expected: FAIL at build with `The type or namespace name 'Accounts' does not exist in the namespace 'FacilityRealtime.Application'`.
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --nologo`
+Expected: FAIL at build with `The type or namespace name 'Accounts' does not exist in the namespace 'JanitorialManagementDashboard.Application'`.
 
 - [ ] **Step 3: Write the rules**
 
-Create `backend/src/FacilityRealtime.Application/Accounts/AccountRules.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Accounts/AccountRules.cs`:
 
 ```csharp
 using System.Text.RegularExpressions;
 
-namespace FacilityRealtime.Application.Accounts;
+namespace JanitorialManagementDashboard.Application.Accounts;
 
 /// <summary>
 /// Field rules for the accounts page (ADR facility-0020). The frontend's accountValidation.ts shows the same
@@ -246,13 +246,13 @@ public static partial class AccountRules
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --nologo`
 Expected: PASS, `Passed: 69`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/Accounts backend/tests/FacilityRealtime.UnitTests/AccountRulesTests.cs
+git add backend/src/JanitorialManagementDashboard.Application/Accounts backend/tests/JanitorialManagementDashboard.UnitTests/AccountRulesTests.cs
 git commit -m "feat(accounts): add account field rules shared by every admin write (#17)"
 ```
 
@@ -261,13 +261,13 @@ git commit -m "feat(accounts): add account field rules shared by every admin wri
 ### Task 2: Admin users API
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Api/DTOs/AdminUserDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminUserEndpoints.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Admin/AdminUsersTests.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs` (map the routes)
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminUserDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminUserEndpoints.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminUsersTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs` (map the routes)
 
 **Interfaces:**
-- Consumes: `AccountRules` (Task 1); `AuthSetup.AdminOnly`, `AuthClaims.UserId`, `IPasswordHasher`, `RevokeUserSessionsAsync`, `TimeProvider`, `FacilityApiFactory`, `AuthApi.LoggedInAsync` (plan 2A)
+- Consumes: `AccountRules` (Task 1); `AuthSetup.AdminOnly`, `AuthClaims.UserId`, `IPasswordHasher`, `RevokeUserSessionsAsync`, `TimeProvider`, `JanitorialApiFactory`, `AuthApi.LoggedInAsync` (plan 2A)
 - Produces (all require the `admin` role: `401` anonymous, `403` cleaner):
   - `GET /api/admin/users` → `200 AdminUserDto[]` ordered by username
   - `POST /api/admin/users` `{ username, fullName, password, role }` → `201 AdminUserDto` with `Location`; `400 { message, errors }`; `409 { message }` when the username is taken
@@ -280,17 +280,17 @@ git commit -m "feat(accounts): add account field rules shared by every admin wri
 
 - [ ] **Step 1: Write the failing API tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/AdminUsersTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminUsersTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 public record AdminUserModel(int Id, string Username, string FullName, string Role, bool IsActive, DateTime CreatedAt);
 
@@ -310,7 +310,7 @@ public class AdminUsersTests
     [MemberData(nameof(EveryRoute))]
     public async Task Anonymous_requests_are_401(string method, string path)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await SendAsync(factory.CreateApiClient(), method, path);
 
@@ -321,7 +321,7 @@ public class AdminUsersTests
     [MemberData(nameof(EveryRoute))]
     public async Task Cleaner_accounts_are_403(string method, string path)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
         var response = await SendAsync(cleaner, method, path);
@@ -332,7 +332,7 @@ public class AdminUsersTests
     [Fact]
     public async Task List_returns_every_account_by_username_without_password_hashes()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var response = await admin.GetAsync("/api/admin/users");
@@ -349,7 +349,7 @@ public class AdminUsersTests
     [InlineData("admin")]
     public async Task Created_account_logs_in_with_its_temporary_password_and_role(string role)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var created = await admin.PostAsJsonAsync("/api/admin/users", new { username = "mali.k", fullName = " แม่บ้าน มาลี ", password = "temp-pass1", role });
@@ -365,7 +365,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Create_rejects_bad_fields_and_names_each_one()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync("/api/admin/users", new { username = "Bad Name", fullName = "", password = "123", role = "manager" });
@@ -379,7 +379,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Create_rejects_a_username_that_is_taken()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync("/api/admin/users", new { username = "somchai", fullName = "อีกคน", password = "temp-pass1", role = "cleaner" });
@@ -390,7 +390,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Edit_changes_name_and_role_and_the_role_reaches_the_users_next_refresh()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
         var (somchai, somchaiAuth, somchaiRefresh) = await AuthApi.LoggedInAsync(factory);
 
@@ -407,7 +407,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Admin_cannot_demote_their_own_account()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, auth, _) = await AdminAsync(factory);
 
         var response = await admin.PutAsJsonAsync($"/api/admin/users/{auth.User.Id}", new { fullName = "ผู้ดูแลระบบ", role = "cleaner" });
@@ -421,7 +421,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Admin_can_rename_their_own_account()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, auth, _) = await AdminAsync(factory);
 
         var response = await admin.PutAsJsonAsync($"/api/admin/users/{auth.User.Id}", new { fullName = "ผู้ดูแล กะเช้า", role = "admin" });
@@ -432,7 +432,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Reset_password_swaps_the_password_and_logs_out_every_device()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
         var (somchai, somchaiAuth, somchaiRefresh) = await AuthApi.LoggedInAsync(factory);
 
@@ -450,7 +450,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Reset_password_rejects_a_short_password()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync("/api/admin/users/1/reset-password", new { password = "1234567" });
@@ -461,7 +461,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Deactivation_blocks_login_and_refresh_but_keeps_scan_history()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
         var (somchai, somchaiAuth, somchaiRefresh) = await AuthApi.LoggedInAsync(factory);
         await somchai.PostAsJsonAsync("/api/scan-records", new { qrToken = "token-restroom-m1", status = "Normal" });
@@ -483,7 +483,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Reactivation_lets_the_account_log_in_again()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
         await admin.PostAsync("/api/admin/users/1/deactivate", null);
 
@@ -497,7 +497,7 @@ public class AdminUsersTests
     [Fact]
     public async Task Admin_cannot_deactivate_their_own_account()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, auth, _) = await AdminAsync(factory);
 
         var response = await admin.PostAsync($"/api/admin/users/{auth.User.Id}/deactivate", null);
@@ -514,7 +514,7 @@ public class AdminUsersTests
     [InlineData("POST", "/api/admin/users/999/activate", null)]
     public async Task Unknown_account_is_404(string method, string path, string? json)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var response = await SendAsync(admin, method, path, json);
@@ -522,7 +522,7 @@ public class AdminUsersTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private static Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> AdminAsync(FacilityApiFactory factory) =>
+    private static Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> AdminAsync(JanitorialApiFactory factory) =>
         AuthApi.LoggedInAsync(factory, "admin", "admin1234");
 
     private static Task<HttpResponseMessage> SendAsync(HttpClient client, string method, string path, string? json = "{}")
@@ -540,17 +540,17 @@ public class AdminUsersTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo --filter "FullyQualifiedName~AdminUsersTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo --filter "FullyQualifiedName~AdminUsersTests"`
 Expected: FAIL. With no routes mapped, the gate tests get `404 NotFound` instead of `401` and `403`, and every behaviour test fails the same way.
 
 - [ ] **Step 3: Write the DTOs and the endpoints**
 
-Create `backend/src/FacilityRealtime.Api/DTOs/AdminUserDtos.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminUserDtos.cs`:
 
 ```csharp
 using System;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 /// <summary>One row on the accounts page. The password hash never leaves the server.</summary>
 public record AdminUserDto(int Id, string Username, string FullName, string Role, bool IsActive, DateTime CreatedAt);
@@ -563,19 +563,19 @@ public record UpdateUserRequest(string FullName, string Role);
 public record ResetPasswordRequest(string Password);
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AdminUserEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminUserEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Accounts;
-using FacilityRealtime.Application.Auth;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Accounts;
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// ADR facility-0020: create (cleaner or admin), edit display name and role, reset a temporary password,
@@ -725,7 +725,7 @@ public static class AdminUserEndpoints
 }
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, replace:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, replace:
 
 ```csharp
 app.MapAuthEndpoints();
@@ -742,13 +742,13 @@ app.MapAdminUserEndpoints();
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --nologo`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
 Expected: PASS. Unit tests 69, API tests 65.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api backend/tests/FacilityRealtime.ApiTests/Admin
+git add backend/src/JanitorialManagementDashboard.Api backend/tests/JanitorialManagementDashboard.ApiTests/Admin
 git commit -m "feat(accounts): add admin-only routes to create, edit, reset and deactivate accounts (#17)"
 ```
 
@@ -2270,7 +2270,7 @@ with:
 - [ ] **Step 2: Run every automated check**
 
 ```bash
-dotnet test backend/FacilityRealtime.slnx --nologo
+dotnet test backend/JanitorialManagementDashboard.slnx --nologo
 npm --prefix frontend test
 npm --prefix frontend run build
 npm --prefix frontend run lint

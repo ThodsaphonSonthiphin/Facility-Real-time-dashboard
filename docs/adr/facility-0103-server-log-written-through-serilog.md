@@ -18,7 +18,7 @@ flowchart TD
 
 1. **โค้ดยังเรียกผ่าน `ILogger<T>`** Serilog เป็นตัวรับ log ที่อยู่เบื้องหลัง (`Serilog.AspNetCore`) บรรทัดที่ ASP.NET และ EF เขียนเองก็ผ่าน Serilog ด้วย
 2. **sink และระดับ log ตั้งใน `appsettings.json`** (`Serilog.Settings.Configuration`) ระดับ log อยู่ที่ `Serilog:MinimumLevel` ที่เดียว `Logging:LogLevel` ถูกลบ ระดับเดิมยังคงอยู่ รวมถึง `Microsoft.EntityFrameworkCore.Database.Command` เป็น Warning ซึ่งกัน SQL ไม่ให้ลง log
-3. **Console เป็น sink เดียว** พิมพ์เป็นข้อความธรรมดา ไม่ใช่ JSON และพิมพ์ category กับข้อความไว้บรรทัดเดียวกัน (template มี `{SourceContext}` ไม่ใส่เวลาเพราะ journal ใส่ให้) category `FacilityRealtime.Security` ใช้ชื่อเดิม ค้นได้ด้วย `grep FacilityRealtime.Security` โดยไม่ต้องใช้ `-A1`
+3. **Console เป็น sink เดียว** พิมพ์เป็นข้อความธรรมดา ไม่ใช่ JSON และพิมพ์ category กับข้อความไว้บรรทัดเดียวกัน (template มี `{SourceContext}` ไม่ใส่เวลาเพราะ journal ใส่ให้) category `JanitorialManagementDashboard.Security` ใช้ชื่อเดิม ค้นได้ด้วย `grep JanitorialManagementDashboard.Security` โดยไม่ต้องใช้ `-A1`
 4. **ใช้ bootstrap logger** เพื่อให้กรณี server เริ่มไม่ได้ (ตาม 0095) ยังมีเหตุผลลง journal รวมถึงคำสั่ง `reset-admin`
 5. **ไม่เปิด request logging** ตาม 0095
 6. **sink ที่ส่ง log ออกนอก server** (Discord, Seq บนคลาวด์ หรืออื่น ๆ) ต้องมี ADR ใหม่มาแทนข้อ "log อยู่ที่ server เท่านั้น" ของ 0095 ก่อน เพราะ log มีรหัสพนักงานซึ่งเป็นข้อมูลส่วนบุคคล (0055) และบริการภายนอกไม่อยู่ใต้การเก็บ 90 วันของ 0098 ส่วน sink ที่อยู่บนเครื่องเดียวกันเพิ่มด้วย config ได้ แต่ต้องทำตาม 0097 และ 0098
@@ -28,6 +28,6 @@ flowchart TD
 ## Consequences
 
 - 0095–0099 ยังใช้ได้ทั้งหมด ADR นี้ไม่ได้มาแทนใบไหน
-- คู่มือ deploy (`docs/handover.md`) ต้องแก้คำสั่งค้นเหตุการณ์ด้านความปลอดภัยเป็น `grep FacilityRealtime.Security` และบอกว่าระดับ log อยู่ที่ `Serilog:MinimumLevel`
+- คู่มือ deploy (`docs/handover.md`) ต้องแก้คำสั่งค้นเหตุการณ์ด้านความปลอดภัยเป็น `grep JanitorialManagementDashboard.Security` และบอกว่าระดับ log อยู่ที่ `Serilog:MinimumLevel`
 - คนที่คุ้นกับ ASP.NET แบบปกติต้องรู้ว่าแก้ `Logging:LogLevel` แล้วไม่มีผล
 - มี package ใหม่: `Serilog.AspNetCore` และ `Serilog.Settings.Configuration` (Console sink มาด้วยกัน)

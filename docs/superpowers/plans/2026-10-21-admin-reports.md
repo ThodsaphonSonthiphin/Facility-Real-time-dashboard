@@ -61,7 +61,7 @@ JSON is camelCase and enums are strings. Times are UTC ISO strings ending in `Z`
 | `Account` | `ACCOUNT_CREATE`, `ACCOUNT_UPDATE`, `ACCOUNT_PHONE`, `ACCOUNT_PASSWORD`, `ACCOUNT_ACTIVATE`, `ACCOUNT_DEACTIVATE` |
 | `Export` | `EXPORT_EXCEL` |
 
-**The snapshots each action stores** (the C# `AuditTrail.Add` calls in `backend/src/FacilityRealtime.Api/Endpoints/`):
+**The snapshots each action stores** (the C# `AuditTrail.Add` calls in `backend/src/JanitorialManagementDashboard.Api/Endpoints/`):
 
 | Action | before → after |
 |---|---|
@@ -3691,7 +3691,7 @@ Run each, from the repo root unless it says otherwise:
 
 ```bash
 cd frontend && npm run lint && npx tsc -b && npm test && cd ..
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 git diff --stat ca59320 -- backend   # expect no output: no backend file changed
 grep -rn "toLocale" frontend/src --include='*.ts' --include='*.tsx' | grep -v thaiTime.ts   # expect no output
 grep -rn "localStorage\|sessionStorage\|indexedDB" frontend/src --include='*.ts' --include='*.tsx'   # expect no output
@@ -3716,7 +3716,7 @@ This step needs MySQL, so the controller runs it, not a subagent.
 
 1. Create the throwaway database `facility_reports_test` (Homebrew MySQL on this Mac; if root has a password, ask the owner for it and type it only into the command).
 2. Run `npm run build:api` in `frontend/`. Note the main JS size.
-3. In the shell that runs the API, set `ConnectionStrings__DefaultConnection` to `facility_reports_test`, `ASPNETCORE_ENVIRONMENT=Development` and `ASPNETCORE_URLS=http://localhost:5001`, then run `dotnet run --no-launch-profile --project backend/src/FacilityRealtime.Api`. The Development seed fills the database.
+3. In the shell that runs the API, set `ConnectionStrings__DefaultConnection` to `facility_reports_test`, `ASPNETCORE_ENVIRONMENT=Development` and `ASPNETCORE_URLS=http://localhost:5001`, then run `dotnet run --no-launch-profile --project backend/src/JanitorialManagementDashboard.Api`. The Development seed fills the database.
 4. Run a script (Python with `-X utf8`, or Node) as the seed Admin:
    - `GET /api/admin/inspection-summary` with no query: 200, `from`/`to` are the 7 dates ending today, and every active seed Supervisor has a row.
    - The same with `from`/`to` 32 dates apart: 400 "เลือกได้ไม่เกิน 31 วัน".
@@ -3736,7 +3736,7 @@ This step needs MySQL, so the controller runs it, not a subagent.
    4. ประวัติ Admin: the export from check 3 is the first row, with ก่อน → หลัง listing ตั้งแต่, ถึง, ชุดข้อมูล, จำนวนแถว. Make one attendance correction on D2 with a reason, reopen ประวัติ Admin, and it shows with เวลา / ที่มา and the reason. The ประเภท and ผู้ทำ pickers narrow the list. Search narrows the loaded rows.
    5. D2's "ส่งออก Excel" opens D8 on that shift date.
    6. Phone width (DevTools, 390 px): the three pages scroll their tables sideways and nothing overflows the page.
-6. Afterwards: stop the API, drop `facility_reports_test`, and delete `backend/src/FacilityRealtime.Api/wwwroot`.
+6. Afterwards: stop the API, drop `facility_reports_test`, and delete `backend/src/JanitorialManagementDashboard.Api/wwwroot`.
 7. Then run the whole-branch review (sp-subagent-driven-development). After it, ask the owner's OK to push and open the PR. The PR description lists the decisions at the top of this plan.
 
 ---

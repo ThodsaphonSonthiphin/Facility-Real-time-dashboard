@@ -1,12 +1,12 @@
 {
-  "name": "frontend",
+  "name": "janitorial-management-dashboard",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:api": "tsc -b && vite build --outDir ../backend/src/FacilityRealtime.Api/wwwroot --emptyOutDir",
+    "build:api": "tsc -b && vite build --outDir ../backend/src/JanitorialManagementDashboard.Api/wwwroot --emptyOutDir",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

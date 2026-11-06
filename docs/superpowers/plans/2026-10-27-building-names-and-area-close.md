@@ -23,31 +23,31 @@
 - No new npm or NuGet package. No database migration.
 - Comments and naming follow the surrounding code: short `/** */` and `///` lines that cite the ADR decision.
 - Every commit message ends with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. The husky pre-commit runs frontend lint, tsc and tests; never use `--no-verify`.
-- Test commands: backend `dotnet test backend/tests/FacilityRealtime.UnitTests` and `dotnet test backend/tests/FacilityRealtime.ApiTests` (add `--filter "FullyQualifiedName~<Class>"` for one class); frontend `cd frontend && npx vitest run <path>`, whole suite `npm test`, plus `npx tsc -b` and `npm run lint`.
+- Test commands: backend `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests` and `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests` (add `--filter "FullyQualifiedName~<Class>"` for one class); frontend `cd frontend && npx vitest run <path>`, whole suite `npm test`, plus `npx tsc -b` and `npm run lint`.
 
 ---
 
 ### Task 1: The server refuses to turn off an Area that active Cleaners hold
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Areas/AreaRules.cs`
-- Create: `backend/tests/FacilityRealtime.UnitTests/AreaRulesTests.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminAreaEndpoints.cs:173-205` (`SetActiveAsync`)
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Admin/AreaAdminEndpointTests.cs` (new tests; `A_deactivated_area_leaves_the_dashboard_and_the_scan_page_until_reactivated` at :403)
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Admin/AccountEditEndpointTests.cs:194-221`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Admin/SignAdminEndpointTests.cs:175-184`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Areas/AreaRules.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.UnitTests/AreaRulesTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAreaEndpoints.cs:173-205` (`SetActiveAsync`)
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AreaAdminEndpointTests.cs` (new tests; `A_deactivated_area_leaves_the_dashboard_and_the_scan_page_until_reactivated` at :403)
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountEditEndpointTests.cs:194-221`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/SignAdminEndpointTests.cs:175-184`
 
 **Interfaces:**
 - Produces: `AreaRules.DeactivateProblem(string code, IReadOnlyList<string> cleanerNames) : string?` (null = may turn off). `POST /api/admin/areas/{id}/deactivate` answers 409 with that message.
 
 - [ ] **Step 1: Write the failing unit test**
 
-`backend/tests/FacilityRealtime.UnitTests/AreaRulesTests.cs`:
+`backend/tests/JanitorialManagementDashboard.UnitTests/AreaRulesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Areas;
+using JanitorialManagementDashboard.Application.Areas;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>facility-0091 decision 2: an Area is turned off only once no active Cleaner holds it.</summary>
 public class AreaRulesTests
@@ -65,15 +65,15 @@ public class AreaRulesTests
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~AreaRulesTests"`
-Expected: build FAIL, `The type or namespace name 'Areas' does not exist in the namespace 'FacilityRealtime.Application'`.
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~AreaRulesTests"`
+Expected: build FAIL, `The type or namespace name 'Areas' does not exist in the namespace 'JanitorialManagementDashboard.Application'`.
 
 - [ ] **Step 3: Write the rule**
 
-`backend/src/FacilityRealtime.Application/Areas/AreaRules.cs`:
+`backend/src/JanitorialManagementDashboard.Application/Areas/AreaRules.cs`:
 
 ```csharp
-namespace FacilityRealtime.Application.Areas;
+namespace JanitorialManagementDashboard.Application.Areas;
 
 /// <summary>The answers when something is in the way of an Area change (facility-0091).</summary>
 public static class AreaRules
@@ -88,18 +88,18 @@ public static class AreaRules
 
 - [ ] **Step 4: Run the unit test to verify it passes**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~AreaRulesTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~AreaRulesTests"`
 Expected: PASS (2 tests).
 
 - [ ] **Step 5: Write the failing API tests**
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/AreaAdminEndpointTests.cs`, after `A_deactivated_area_leaves_the_dashboard_and_the_scan_page_until_reactivated`, add:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AreaAdminEndpointTests.cs`, after `A_deactivated_area_leaves_the_dashboard_and_the_scan_page_until_reactivated`, add:
 
 ```csharp
     [Fact]
     public async Task An_area_its_cleaners_hold_stays_on_until_they_are_taken_off()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
 
@@ -119,7 +119,7 @@ In `backend/tests/FacilityRealtime.ApiTests/Admin/AreaAdminEndpointTests.cs`, af
     [Fact]
     public async Task A_deactivated_cleaner_does_not_keep_an_area_on()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await factory.WithDbAsync(async db =>
         {
@@ -137,12 +137,12 @@ In `backend/tests/FacilityRealtime.ApiTests/Admin/AreaAdminEndpointTests.cs`, af
 
 - [ ] **Step 6: Run them to verify the first fails**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AreaAdminEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AreaAdminEndpointTests"`
 Expected: `An_area_its_cleaners_hold_stays_on_until_they_are_taken_off` FAILS (expected Conflict, got OK); `A_deactivated_cleaner_does_not_keep_an_area_on` passes.
 
 - [ ] **Step 7: Check the rule in the endpoint**
 
-In `backend/src/FacilityRealtime.Api/Endpoints/AdminAreaEndpoints.cs`, add `using FacilityRealtime.Application.Areas;` with the other usings, and in `SetActiveAsync` insert right after the facility-0090 off-building block (after its closing `}` at :192) and before `if (area.IsActive != active)`:
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAreaEndpoints.cs`, add `using JanitorialManagementDashboard.Application.Areas;` with the other usings, and in `SetActiveAsync` insert right after the facility-0090 off-building block (after its closing `}` at :192) and before `if (area.IsActive != active)`:
 
 ```csharp
         // facility-0091 decision 2: an Area is turned off only once no active Cleaner holds it
@@ -162,7 +162,7 @@ In `backend/src/FacilityRealtime.Api/Endpoints/AdminAreaEndpoints.cs`, add `usin
 
 - [ ] **Step 8: Run the class to verify both pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AreaAdminEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AreaAdminEndpointTests"`
 Expected: the two new tests PASS; `A_deactivated_area_leaves_the_dashboard_and_the_scan_page_until_reactivated` now FAILS (AR02 is held by E1003).
 
 - [ ] **Step 9: Fix the tests that turned off a held Area through the endpoint**
@@ -210,13 +210,13 @@ Add `using Microsoft.EntityFrameworkCore;` to any of these files that lacks it (
 
 - [ ] **Step 10: Run both test projects**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests && dotnet test backend/tests/FacilityRealtime.ApiTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests && dotnet test backend/tests/JanitorialManagementDashboard.ApiTests`
 Expected: all pass (unit 340; API 578 passed, 5 skipped). If another test fails with 409 on `/deactivate` of an Area, it turned off a held Area: clear the Cleaner's `AreaId` first as in a), and note the test name in the task report.
 
 - [ ] **Step 11: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/Areas/AreaRules.cs backend/src/FacilityRealtime.Api/Endpoints/AdminAreaEndpoints.cs backend/tests
+git add backend/src/JanitorialManagementDashboard.Application/Areas/AreaRules.cs backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAreaEndpoints.cs backend/tests
 git commit -m "feat(areas): an Area is turned off only once no active Cleaner holds it (facility-0091)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -612,9 +612,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 5: The Excel "ตึก" cell is code · current name
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/ExportSheets.cs` (`Attendance`, `Submissions`, `Inspections`)
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminExportEndpoints.cs:66-95`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/ExportEndpointTests.cs`, `backend/tests/FacilityRealtime.ApiTests/Admin/InspectionExportTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ExportSheets.cs` (`Attendance`, `Submissions`, `Inspections`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminExportEndpoints.cs:66-95`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/ExportEndpointTests.cs`, `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/InspectionExportTests.cs`
 
 **Interfaces:**
 - Produces: each `ExportSheets` method takes a last parameter `IReadOnlyDictionary<string, string> buildingNames` (code → name).
@@ -645,7 +645,7 @@ Update the expected building cells (seed building A is named `ตึก A`; `Tes
 
 - [ ] **Step 2: Run them to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~ExportEndpointTests|FullyQualifiedName~InspectionExportTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~ExportEndpointTests|FullyQualifiedName~InspectionExportTests"`
 Expected: the new test and the updated ones FAIL (cell is `A`).
 
 - [ ] **Step 3: Write the cell from the lookup**
@@ -675,7 +675,7 @@ and pass `buildingNames` as the last argument of the three `ExportSheets` calls.
 
 - [ ] **Step 4: Run both test projects**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests && dotnet test backend/tests/FacilityRealtime.ApiTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests && dotnet test backend/tests/JanitorialManagementDashboard.ApiTests`
 Expected: all pass (API 579 passed, 5 skipped).
 
 - [ ] **Step 5: Commit**
@@ -718,8 +718,8 @@ Content to carry:
 
 - [ ] **Step 4: Full check and rebuild**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests && dotnet test backend/tests/FacilityRealtime.ApiTests && cd frontend && npm test && npx tsc -b && npm run lint && npm run build:api`
-Expected: all pass; the build writes `backend/src/FacilityRealtime.Api/wwwroot`. Restart the test API on `facility_buildings_test` (handoff `## Sharing a test build`, `--no-launch-profile`, port 5001) so the owner's tunnel serves the new build.
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests && dotnet test backend/tests/JanitorialManagementDashboard.ApiTests && cd frontend && npm test && npx tsc -b && npm run lint && npm run build:api`
+Expected: all pass; the build writes `backend/src/JanitorialManagementDashboard.Api/wwwroot`. Restart the test API on `facility_buildings_test` (handoff `## Sharing a test build`, `--no-launch-profile`, port 5001) so the owner's tunnel serves the new build.
 
 - [ ] **Step 5: Commit, then give the owner the re-check (in Thai, by popup for the go/no-go)**
 

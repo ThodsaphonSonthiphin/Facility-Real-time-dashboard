@@ -6,7 +6,7 @@
 
 /*
  * Professional Enterprise Light (#121, facility-0087 as amended), from docs/design/enterprise-light/design-tokens.css and
- * documented in design-system/facility/MASTER.md: when the two disagree, this block is right and MASTER.md is fixed in
+ * documented in design-system/janitorial/MASTER.md: when the two disagree, this block is right and MASTER.md is fixed in
  * the same change. Tailwind's own colours, sizes, radii and fonts are cleared, so only these names exist as utilities
  * (bg-accent, text-text-2, rounded-md, …), never bg-blue-600.
  */

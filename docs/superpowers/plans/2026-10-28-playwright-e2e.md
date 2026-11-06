@@ -18,13 +18,13 @@
 - The script creates and drops only `facility_e2e_test`. It never names `facility_dashboard`.
 - The API runs in Development (the seed) on `E2E_PORT`, default `5101`. It never uses 5001.
 - `Jwt__SigningKey` is random per run (`openssl rand -base64 48`) and lives only in the API process's environment.
-- Cleanup (stop the API, drop the database, delete `backend/src/FacilityRealtime.Api/wwwroot`) runs on every exit, pass, fail or Ctrl-C. `npm run e2e:clean` does the same by hand.
-- Script messages to people are Thai (facility-0093 ruling); code comments are English, as in `scripts/facility.sh`.
+- Cleanup (stop the API, drop the database, delete `backend/src/JanitorialManagementDashboard.Api/wwwroot`) runs on every exit, pass, fail or Ctrl-C. `npm run e2e:clean` does the same by hand.
+- Script messages to people are Thai (facility-0093 ruling); code comments are English, as in `scripts/janitorial.sh`.
 - Chromium only. Tests run one at a time (`workers: 1`).
 - Tests find elements by role, label and text (`docs/agents/frontend-standards.md`), never by class or test id.
 - No fixed sleeps in tests. Waiting is Playwright's auto-waiting assertions; held-back requests use `page.route`.
 - CLS limit is `< 0.01`.
-- Seed values (made-up, public: `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs`) appear only in `frontend/e2e/support/seed.ts`.
+- Seed values (made-up, public: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs`) appear only in `frontend/e2e/support/seed.ts`.
 - Every new test is proved once to fail when its bug is put back (the repo's "fails on the old code" rule); the proof is undone before the commit.
 - Commits stay on branch `feat/e2e-playwright`. No push, PR or merge without the owner's explicit OK.
 
@@ -332,7 +332,7 @@ Create `scripts/e2e.sh`:
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-api_dir="$repo_root/backend/src/FacilityRealtime.Api"
+api_dir="$repo_root/backend/src/JanitorialManagementDashboard.Api"
 run_dir="$repo_root/.run"
 pid_file="$run_dir/e2e-api.pid"
 log_file="$run_dir/e2e-api.log"
@@ -408,7 +408,7 @@ run() {
     export ASPNETCORE_URLS="http://localhost:$port"
     export ConnectionStrings__DefaultConnection="Server=localhost;Port=3306;Database=$db_name;Uid=root;Pwd=${E2E_MYSQL_PASSWORD:-};CharSet=utf8mb4;"
     export Jwt__SigningKey="$signing_key"
-    exec dotnet bin/Release/net10.0/FacilityRealtime.Api.dll
+    exec dotnet bin/Release/net10.0/JanitorialManagementDashboard.Api.dll
   ) >"$log_file" 2>&1 &
   echo $! >"$pid_file"
   wait_for_api
@@ -433,7 +433,7 @@ Then: `chmod +x scripts/e2e.sh`.
 Run: `cd frontend && npm run e2e -- --project=phone`
 Expected: the build, then `3 passed`. Afterwards all three are true:
 - `mysql -u root -e "SHOW DATABASES LIKE 'facility_e2e_test'"` prints nothing
-- `ls ../backend/src/FacilityRealtime.Api/wwwroot` says no such file
+- `ls ../backend/src/JanitorialManagementDashboard.Api/wwwroot` says no such file
 - `curl -s http://localhost:5101/api/health` fails to connect
 
 - [ ] **Step 13: Check the guards and the cleanup by hand**

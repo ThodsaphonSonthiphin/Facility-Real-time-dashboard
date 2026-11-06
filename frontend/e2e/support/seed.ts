@@ -15,7 +15,7 @@ export interface Employee {
 export const areaCode = 'AR01';
 // Read from DbInitializer.cs at run time, so no password text sits in this file (GitGuardian flags password literals)
 const seedSource = readFileSync(
-  fileURLToPath(new URL('../../../backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs', import.meta.url)),
+  fileURLToPath(new URL('../../../backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs', import.meta.url)),
   'utf8',
 );
 const adminPassword = /Username = "admin"[^\n]*?Hash\("([^"]+)"\)/.exec(seedSource)?.[1];

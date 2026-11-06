@@ -1,4 +1,4 @@
-# คู่มือส่งมอบระบบ
+# คู่มือส่งมอบระบบ Janitorial Management Dashboard
 
 สำหรับคนที่รับช่วงดูแลระบบตรวจงานทำความสะอาดต่อจากเจ้าของโปรเจกต์ ทำตามทีละขั้นได้โดยไม่ต้องอ่านโค้ด แต่ต้องเข้า server ที่รันระบบได้ (พิมพ์คำสั่งใน terminal ของ server ได้)
 
@@ -10,9 +10,9 @@
 
 ## 1. ก่อนเริ่ม
 
-- ระบบคือโปรแกรม `FacilityRealtime.Api` (ไฟล์ `FacilityRealtime.Api.dll` ในโฟลเดอร์ที่ deploy)
+- ระบบคือโปรแกรม `JanitorialManagementDashboard.Api` (ไฟล์ `JanitorialManagementDashboard.Api.dll` ในโฟลเดอร์ที่ deploy)
 - ระบบอ่านค่าตั้งจาก environment variable ของ server ชื่อที่มี `__` (ขีดล่างสองตัว) เช่น `ConnectionStrings__DefaultConnection` คือที่อยู่ฐานข้อมูล
-- ค่าทั้งหมดอยู่ในไฟล์ค่าไฟล์เดียว (ข้อ 2.4) ทั้งระบบที่รันด้วย systemd และ `scripts/facility.sh` อ่านไฟล์นี้ จึงไม่ต้อง `export` ค่าเองในหน้าต่าง Terminal ค่าที่ `export` ไว้มีผลแค่หน้าต่างนั้น เคยทำให้คำสั่งไปทำกับฐานข้อมูลผิดตัว
+- ค่าทั้งหมดอยู่ในไฟล์ค่าไฟล์เดียว (ข้อ 2.4) ทั้งระบบที่รันด้วย systemd และ `scripts/janitorial.sh` อ่านไฟล์นี้ จึงไม่ต้อง `export` ค่าเองในหน้าต่าง Terminal ค่าที่ `export` ไว้มีผลแค่หน้าต่างนั้น เคยทำให้คำสั่งไปทำกับฐานข้อมูลผิดตัว
 - ถ้าไม่ได้ตั้ง `ConnectionStrings__DefaultConnection` ระบบไม่ยอมเริ่ม และ `reset-admin` ไม่ทำอะไร (facility-0093)
 
 ## 2. ติดตั้งระบบบน server (Linux)
@@ -46,29 +46,29 @@ GRANT ALL PRIVILEGES ON facility.* TO 'facility_app'@'localhost';
 ```bash
 npm --prefix frontend ci
 npm --prefix frontend run build:api
-dotnet publish backend/src/FacilityRealtime.Api -c Release -o ../facility-publish
+dotnet publish backend/src/JanitorialManagementDashboard.Api -c Release -o ../facility-publish
 ```
 
 โฟลเดอร์ `../facility-publish` อยู่นอก repo ห้ามเอาเข้า git
 
-บน server สร้างโฟลเดอร์ก่อน `sudo mkdir -p /opt/facility` แล้วคัดลอกโฟลเดอร์ `facility-publish` ไปที่ `/opt/facility/app` และ `scripts/facility.sh` ไปที่ `/opt/facility/facility.sh` แล้วบน server
+บน server สร้างโฟลเดอร์ก่อน `sudo mkdir -p /opt/facility` แล้วคัดลอกโฟลเดอร์ `facility-publish` ไปที่ `/opt/facility/app` และ `scripts/janitorial.sh` ไปที่ `/opt/facility/janitorial.sh` แล้วบน server
 
 ```bash
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin facility
 sudo chown -R root:root /opt/facility
 sudo chmod -R a+rX,go-w /opt/facility
-sudo chmod 755 /opt/facility/facility.sh
+sudo chmod 755 /opt/facility/janitorial.sh
 ```
 
-บน server เครื่องแรก หลังคัดลอกแล้วให้รัน `bash scripts/facility.test.sh` จากสำเนาของ repo เพื่อตรวจ `facility.sh` บนระบบนั้น (ใช้ `stat` ของ GNU) ซึ่งที่ผ่านมาเคยรันบน macOS เท่านั้น
+บน server เครื่องแรก หลังคัดลอกแล้วให้รัน `bash scripts/janitorial.test.sh` จากสำเนาของ repo เพื่อตรวจ `janitorial.sh` บนระบบนั้น (ใช้ `stat` ของ GNU) ซึ่งที่ผ่านมาเคยรันบน macOS เท่านั้น
 
 ### 2.4 ไฟล์ค่า
 
 ```bash
-sudo /opt/facility/facility.sh init /etc/facility/facility.env
+sudo /opt/facility/janitorial.sh init /etc/facility/facility.env
 ```
 
-ตอบคำถามทีละข้อ บน server คำถามที่อยู่ `FacilityRealtime.Api.dll` ต้องตอบ `/opt/facility/app/FacilityRealtime.Api.dll` ถ้าเว้นว่าง `facility.sh` ที่คัดลอกมาลำพังหาโปรแกรมไม่เจอ สคริปต์สุ่ม `Jwt__SigningKey` ให้ ไฟล์ที่ได้อ่านได้เฉพาะ root
+ตอบคำถามทีละข้อ บน server คำถามที่อยู่ `JanitorialManagementDashboard.Api.dll` ต้องตอบ `/opt/facility/app/JanitorialManagementDashboard.Api.dll` ถ้าเว้นว่าง `janitorial.sh` ที่คัดลอกมาลำพังหาโปรแกรมไม่เจอ สคริปต์สุ่ม `Jwt__SigningKey` ให้ ไฟล์ที่ได้อ่านได้เฉพาะ root
 
 `init` ไม่รับคำตอบที่มี `'` `"` หรือ `\` ที่ตำแหน่งใดก็ตาม หรือมีช่องว่างหน้าหรือท้าย (และ host, port, ชื่อฐานข้อมูล, ผู้ใช้, รหัสผ่าน MySQL ห้ามมี `;` ด้วย) สคริปต์บอกว่าให้แก้คำตอบข้อไหน และยังไม่เขียนอะไรลงไฟล์จนกว่าทุกคำตอบจะผ่าน
 
@@ -80,7 +80,7 @@ sudo /opt/facility/facility.sh init /etc/facility/facility.env
 | `ASPNETCORE_URLS` | `http://localhost:5001` ระบบรับเฉพาะจากในเครื่อง Caddy ส่งต่อให้ |
 | `ASPNETCORE_ENVIRONMENT` | `Production` ห้ามตั้ง `Development` บน server เพราะ seed มีรหัสแอดมินที่ทุกคนเห็น (facility-0049) |
 | `FirstAdmin__*` | แอดมินคนแรก ดูข้อ 3 |
-| `FACILITY_APP_DLL` | ให้ `facility.sh` รันไฟล์ที่ publish แล้ว ระบบไม่ได้อ่านค่านี้ |
+| `FACILITY_APP_DLL` | ให้ `janitorial.sh` รันไฟล์ที่ publish แล้ว ระบบไม่ได้อ่านค่านี้ |
 
 แก้ไฟล์ภายหลังด้วย `sudo nano /etc/facility/facility.env` บรรทัดละ `ชื่อ=ค่า` ห้ามใส่เครื่องหมายคำพูด แล้ว `sudo systemctl restart facility`
 
@@ -90,14 +90,14 @@ sudo /opt/facility/facility.sh init /etc/facility/facility.env
 
 ```ini
 [Unit]
-Description=Facility Real-time Dashboard
+Description=Janitorial Management Dashboard
 After=network.target mysql.service
 
 [Service]
 User=facility
 WorkingDirectory=/opt/facility/app
 EnvironmentFile=/etc/facility/facility.env
-ExecStart=/usr/bin/dotnet /opt/facility/app/FacilityRealtime.Api.dll
+ExecStart=/usr/bin/dotnet /opt/facility/app/JanitorialManagementDashboard.Api.dll
 Restart=always
 RestartSec=5
 LogNamespace=facility
@@ -124,9 +124,9 @@ log ต้องไม่มีข้อผิดพลาด ถ้าขึ้
 
 ถ้า log ว่างเปล่า (ระบบล้มก่อนเขียนอะไร) ดูบรรทัดของ systemd เอง: `sudo systemctl status facility` หรือ `sudo journalctl --namespace=+facility -u facility` (`+` รวม journal หลักของ systemd เข้าไปด้วย)
 
-ดูเฉพาะเหตุการณ์ด้านความปลอดภัย: `sudo journalctl --namespace=facility -u facility | grep FacilityRealtime.Security`
+ดูเฉพาะเหตุการณ์ด้านความปลอดภัย: `sudo journalctl --namespace=facility -u facility | grep JanitorialManagementDashboard.Security`
 
-ทุกบรรทัดขึ้นต้นด้วยระดับและหมวด เช่น `[WRN] FacilityRealtime.Security: Login failed: ...` ถ้าระบบเริ่มไม่ได้จะมีบรรทัด `[FTL] Program: Stopped on an error ...` ตามด้วยสาเหตุ ระบบเขียน log ผ่าน Serilog (facility-0103) ระดับ log ตั้งที่ `Serilog:MinimumLevel` ใน `appsettings.json` หรือตัวแปร `Serilog__MinimumLevel__Default` ในไฟล์ค่า ส่วน `Logging__LogLevel__*` ไม่มีผลแล้ว ห้ามเพิ่มที่ส่ง log ออกนอก server (เช่น Discord) โดยไม่มี ADR ใหม่
+ทุกบรรทัดขึ้นต้นด้วยระดับและหมวด เช่น `[WRN] JanitorialManagementDashboard.Security: Login failed: ...` ถ้าระบบเริ่มไม่ได้จะมีบรรทัด `[FTL] Program: Stopped on an error ...` ตามด้วยสาเหตุ ระบบเขียน log ผ่าน Serilog (facility-0103) ระดับ log ตั้งที่ `Serilog:MinimumLevel` ใน `appsettings.json` หรือตัวแปร `Serilog__MinimumLevel__Default` ในไฟล์ค่า ส่วน `Logging__LogLevel__*` ไม่มีผลแล้ว ห้ามเพิ่มที่ส่ง log ออกนอก server (เช่น Discord) โดยไม่มี ADR ใหม่
 
 - `Login failed: employee 1000001, wrong secret, from 203.0.113.7` ใส่เบอร์ผิด (`account turned off` คือบัญชีถูกปิดใช้งาน) ท้ายบรรทัดคือ IP ที่ส่งมา (IPv6 เขียนเป็นช่วง /64)
 - `Login failed: unknown account (employee login), from ...` รหัสพนักงานที่พิมพ์ไม่มีในระบบ ระบบไม่เขียนสิ่งที่พิมพ์ เพราะอาจเป็นเบอร์โทรที่พิมพ์สลับช่อง
@@ -173,11 +173,57 @@ find /var/backups/facility -name '*.sql.gz' -mtime +14 -delete
 
 ### 2.8 อัปเดตเป็นเวอร์ชันใหม่
 
-1. ทำข้อ 2.3 บนเครื่องที่มีโค้ด
-2. `sudo systemctl stop facility` แล้วสำรองฐานข้อมูลทันทีด้วย `sudo /etc/cron.daily/facility-backup`
-3. เก็บโฟลเดอร์เก่าไว้ถอยกลับ `sudo mv /opt/facility/app /opt/facility/app.previous` แล้วคัดลอกโฟลเดอร์ใหม่ไปเป็น `/opt/facility/app` คัดลอก `facility.sh` ตัวใหม่ไปทับด้วย แล้วทำ `chown`/`chmod` ตามข้อ 2.3 อีกครั้ง
-4. `sudo systemctl start facility` ระบบ migrate ฐานข้อมูลเองตอนเริ่ม
-5. ถ้าต้องถอยกลับ: หยุดระบบ ย้าย `app.previous` กลับเป็น `app` กู้ฐานข้อมูลจาก backup ที่ทำก่อนอัปเดต (ข้อ 2.7) แล้วเริ่มระบบ
+ก่อนเริ่มแต่ละรอบ ให้ย้ายชุดสำรอง `.previous` จากรอบก่อนออกไปเก็บเป็นชุดที่มีวันที่กำกับ ทั้งโฟลเดอร์โปรแกรม สคริปต์ และไฟล์ค่าตั้งด้านล่าง เพื่อไม่เขียนทับชุดที่ยังต้องใช้ถอยกลับ ไฟล์ environment มีรหัสผ่าน ต้องเก็บในที่ที่ root อ่านได้เท่านั้น
+
+1. สร้างไฟล์โปรแกรมบนเครื่องที่มีโค้ดด้วยคำสั่ง build/publish ในข้อ 2.3
+2. หยุดระบบ สำรองฐานข้อมูลตามข้อ 2.7 และสำรองค่าตั้งเดิมก่อนแก้ไข:
+
+   ```bash
+   sudo systemctl stop facility
+   sudo /etc/cron.daily/facility-backup
+   sudo install -m 600 /etc/systemd/system/facility.service /etc/systemd/system/facility.service.previous
+   sudo install -m 600 /etc/facility/facility.env /etc/facility/facility.env.previous
+   ```
+
+   เก็บชื่อไฟล์ backup ฐานข้อมูลจากรอบนี้ไว้คู่กับชุด `.previous` เพื่อใช้คืนข้อมูลชุดเดียวกัน
+3. ก่อนทับสคริปต์ ถ้าใช้ `/opt/facility/janitorial.sh` อยู่แล้ว ให้สำรองด้วย `sudo install -m 755 /opt/facility/janitorial.sh /opt/facility/janitorial.sh.previous` หากเป็นรุ่นเก่าที่ใช้ `/opt/facility/facility.sh` ให้เก็บไฟล์นั้นไว้ จากนั้นเก็บโฟลเดอร์เก่าไว้ถอยกลับด้วย `sudo mv /opt/facility/app /opt/facility/app.previous` แล้วคัดลอกโฟลเดอร์ publish ใหม่ไปเป็น `/opt/facility/app` และ `scripts/janitorial.sh` ไปเป็น `/opt/facility/janitorial.sh` ตั้ง `chown`/`chmod` ตามข้อ 2.3 อีกครั้ง โดยไม่ต้องสร้างผู้ใช้ `facility` ซ้ำ
+4. สำหรับการอัปเกรดจากรุ่นที่ใช้ `FacilityRealtime.Api.dll` ให้แก้ไฟล์ `/etc/systemd/system/facility.service` ด้วย `sudo nano /etc/systemd/system/facility.service` ให้บรรทัดเริ่มโปรแกรมเป็น:
+
+   ```ini
+   ExecStart=/usr/bin/dotnet /opt/facility/app/JanitorialManagementDashboard.Api.dll
+   ```
+
+   แก้ไฟล์ `/etc/facility/facility.env` ด้วย `sudo nano /etc/facility/facility.env` ให้ตัวรันสคริปต์ใช้ DLL เดียวกัน:
+
+   ```bash
+   FACILITY_APP_DLL=/opt/facility/app/JanitorialManagementDashboard.Api.dll
+   ```
+
+   ตรวจว่ามี DLL นี้ใน `/opt/facility/app` จริง และคงค่าฐานข้อมูลกับ JWT เดิมไว้ ใช้ไฟล์ environment เดิมต่อ ไม่ต้องรัน `init` ใหม่ ไฟล์นี้ต้องมีสิทธิ์ `600` ตามข้อ 2.4; `FACILITY_APP_DLL` มีผลกับคำสั่ง `start`/`reset-admin` ของ `janitorial.sh` ส่วน systemd ใช้ `ExecStart` จึงต้องแก้ทั้งสองจุด หากเป็นรุ่นชื่อใหม่อยู่แล้ว ให้ตรวจว่าสองค่านี้ตรงกับไฟล์ที่จะรัน
+5. โหลดค่าตั้ง service ใหม่ก่อนเริ่มระบบ แล้วตรวจสถานะและ log:
+
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl start facility
+   sudo systemctl status facility
+   sudo journalctl --namespace=facility -u facility -n 50
+   ```
+
+   ระบบ migrate ฐานข้อมูลเองตอนเริ่ม ตรวจว่าไม่มีข้อผิดพลาดและเปิดหน้าเข้าระบบผ่าน domain ตามข้อ 2.6 ได้
+
+#### ถ้าต้องถอยกลับ
+
+1. `sudo systemctl stop facility` แล้วย้ายโฟลเดอร์ `/opt/facility/app` รุ่นที่มีปัญหาออกไปเก็บแยก ย้าย `/opt/facility/app.previous` กลับเป็น `/opt/facility/app`
+2. คืนไฟล์ค่าตั้งจากชุดเดียวกับโปรแกรมเก่า:
+
+   ```bash
+   sudo install -m 600 /etc/systemd/system/facility.service.previous /etc/systemd/system/facility.service
+   sudo install -m 600 /etc/facility/facility.env.previous /etc/facility/facility.env
+   ```
+
+   ตรวจว่า `ExecStart` และ `FACILITY_APP_DLL` ชี้ไปที่ DLL ที่มีอยู่ในโฟลเดอร์ที่คืนแล้ว หากชุดเดิมใช้ `FacilityRealtime.Api.dll` ให้คืนชื่อนั้นด้วย หากมี `janitorial.sh.previous` จากรอบนี้ ให้คืนด้วย `sudo install -m 755 /opt/facility/janitorial.sh.previous /opt/facility/janitorial.sh` หากชุดเดิมใช้ `facility.sh` ให้ใช้ไฟล์เดิมที่เก็บไว้
+3. กู้ฐานข้อมูลจาก backup ก่อนอัปเกรดของรอบเดียวกันตามข้อ 2.7 ขณะที่ service ยังหยุดอยู่
+4. รัน `sudo systemctl daemon-reload` แล้ว `sudo systemctl start facility` ตรวจสถานะและ log ตามขั้นตอนอัปเกรดอีกครั้ง
 
 ### 2.9 ทดลองบนเครื่องตัวเองก่อน (ไม่มี server)
 
@@ -186,8 +232,8 @@ find /var/backups/facility -name '*.sql.gz' -mtime +14 -delete
 ทำ `npm --prefix frontend ci` และ `npm --prefix frontend run build:api` (สองคำสั่งแรกของข้อ 2.3) ก่อน เพื่อให้มีหน้าเว็บ แล้ว
 
 ```bash
-scripts/facility.sh init ~/.facility/trial.env
-scripts/facility.sh start ~/.facility/trial.env
+scripts/janitorial.sh init ~/.facility/trial.env
+scripts/janitorial.sh start ~/.facility/trial.env
 ```
 
 ตอน `init` คำถามที่อยู่ dll ให้เว้นว่าง `start` รันค้างอยู่ในหน้าต่างนั้น จึงเปิด Terminal หน้าต่างที่สองแล้วรัน
@@ -202,7 +248,7 @@ cloudflared tunnel --url http://localhost:5001
 
 ฐานข้อมูลใหม่ยังไม่มีบัญชีใดเลย และบัญชีทุกใบเพิ่มได้จากหน้า "บัญชีผู้ใช้" ซึ่งต้องเข้าระบบเป็นแอดมินก่อน แอดมินคนแรกจึงสร้างจากค่าใน server
 
-1. ค่า 3 ตัวนี้อยู่ในไฟล์ค่าแล้ว ถ้าสร้างด้วย `facility.sh init` (ข้อ 2.4)
+1. ค่า 3 ตัวนี้อยู่ในไฟล์ค่าแล้ว ถ้าสร้างด้วย `janitorial.sh init` (ข้อ 2.4)
    - `FirstAdmin__Username` ชื่อผู้ใช้ ตัวอักษรอังกฤษ ตัวเลข `.` `_` หรือ `-` ยาว 3–100 ตัว
    - `FirstAdmin__Password` รหัสผ่าน ยาว 15–100 ตัว และไม่ใช่รหัสที่คนใช้กันเยอะ
    - `FirstAdmin__DisplayName` ชื่อที่แสดงในระบบ ยาว 1–150 ตัว
@@ -234,9 +280,9 @@ cloudflared tunnel --url http://localhost:5001
 
 1. เข้า server แล้วรัน
    ```bash
-   sudo /opt/facility/facility.sh reset-admin /etc/facility/facility.env <ชื่อผู้ใช้แอดมิน>
+   sudo /opt/facility/janitorial.sh reset-admin /etc/facility/facility.env <ชื่อผู้ใช้แอดมิน>
    ```
-   สคริปต์ใช้ไฟล์ค่าเดียวกับระบบ จึงไปที่ฐานข้อมูลเดียวกันเสมอ ถ้าทดลองบนเครื่องตัวเอง ใช้ `scripts/facility.sh reset-admin ~/.facility/trial.env <ชื่อผู้ใช้แอดมิน>`
+   สคริปต์ใช้ไฟล์ค่าเดียวกับระบบ จึงไปที่ฐานข้อมูลเดียวกันเสมอ ถ้าทดลองบนเครื่องตัวเอง ใช้ `scripts/janitorial.sh reset-admin ~/.facility/trial.env <ชื่อผู้ใช้แอดมิน>`
 2. คำสั่งแสดง `คำสั่งนี้จะเปลี่ยนข้อมูลในฐานข้อมูล <server>:<port> / <database>` เช่น `localhost:3306 / facility` ตรวจว่าถูกตัว แล้วมันถามว่า `ถ้าถูกต้อง พิมพ์ yes แล้วกด Enter: ` พิมพ์ `yes` ถ้าพิมพ์อย่างอื่น คำสั่งพิมพ์ `ไม่ได้พิมพ์ yes ไม่ได้เปลี่ยนอะไร` แล้วจบด้วย exit code 1 โดยไม่แตะฐานข้อมูล
 3. ถ้าชื่อนั้นเป็นรหัสพนักงานของแม่บ้านหรือหัวหน้า คำสั่งไม่ทำอะไรและบอกเหตุผล โดยไม่ถามรหัสผ่าน
 4. คำสั่งถามรหัสผ่านใหม่สองครั้ง ตัวอักษรที่พิมพ์ไม่แสดงบนจอ คำสั่งไม่รับรหัสในบรรทัดคำสั่ง เพราะจะค้างใน history

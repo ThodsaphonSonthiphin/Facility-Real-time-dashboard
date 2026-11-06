@@ -10,7 +10,7 @@ flowchart TD
 - วันที่: 2026-10-22
 - ที่มา: เจ้าของโปรเจกต์ตัดสิน 2026-10-22 ตอน grill การย้ายไป Tailwind ("ทีละหน้า", "เขียนเองด้วย Tailwind", "CSS ไฟล์เดียว", ลำดับงานตามที่แนะนำ) เหตุผลของเจ้าของโปรเจกต์: ให้ทีมที่ดูแลโปรเจกต์ต่อจากเราทำงานได้ง่ายขึ้น
 - แทนที่: facility-0063 (CSS ธรรมดา, token ใน `index.css`, CSS ไฟล์ต่อหน้า, prefix `app-`)
-- เกี่ยวข้อง: facility-0087 (หน้าตาใหม่), facility-0088 (ไอคอน), facility-0062 (งบ JS 200 kB), facility-0070 (ลำดับงานก่อนนำร่อง), `docs/agents/frontend-standards.md`, `design-system/facility/MASTER.md`
+- เกี่ยวข้อง: facility-0087 (หน้าตาใหม่), facility-0088 (ไอคอน), facility-0062 (งบ JS 200 kB), facility-0070 (ลำดับงานก่อนนำร่อง), `docs/agents/frontend-standards.md`, `design-system/janitorial/MASTER.md`
 
 ## Context & Decision
 

@@ -111,7 +111,7 @@ def run(args, playwright_args):
     process, owned, exit_code = None, False, 1
     started = time.monotonic()
     try:
-        execute(['dotnet', 'publish', 'backend/src/FacilityRealtime.Api', '-c', 'Release',
+        execute(['dotnet', 'publish', 'backend/src/JanitorialManagementDashboard.Api', '-c', 'Release',
                  '-o', app_dir, '--nologo', '-v', 'quiet'], env=env)
         execute(['npx', 'tsc', '-b'], cwd=ROOT / 'frontend', env=env)
         execute(['npx', 'vite', 'build', '--outDir', app_dir / 'wwwroot'], cwd=ROOT / 'frontend', env=env)
@@ -127,7 +127,7 @@ def run(args, playwright_args):
         (run_dir / 'ownership.json').write_text(json.dumps(state, indent=2) + '\n')
         sql(f"GRANT ALL PRIVILEGES ON `{database}`.* TO '{user}'@'localhost';")
         with (run_dir / 'api.log').open('w') as log:
-            process = subprocess.Popen(['dotnet', str(app_dir / 'FacilityRealtime.Api.dll')],
+            process = subprocess.Popen(['dotnet', str(app_dir / 'JanitorialManagementDashboard.Api.dll')],
                                        cwd=app_dir, env=env, stdout=log, stderr=subprocess.STDOUT)
         deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
@@ -144,9 +144,9 @@ def run(args, playwright_args):
         if not int(sql(f'SELECT COUNT(*) FROM `{database}`.users')):
             raise RuntimeError('Development seed missing from owned database')
         if args.dataset != 'baseline':
-            execute(['dotnet', 'run', '--project', 'backend/tools/FacilityRealtime.E2ESeed',
+            execute(['dotnet', 'run', '--project', 'backend/tools/JanitorialManagementDashboard.E2ESeed',
                      '-c', 'Release', '--', args.dataset], env=env)
-            execute(['dotnet', 'run', '--no-build', '--project', 'backend/tools/FacilityRealtime.E2ESeed',
+            execute(['dotnet', 'run', '--no-build', '--project', 'backend/tools/JanitorialManagementDashboard.E2ESeed',
                      '-c', 'Release', '--', args.dataset], env=env)
             first = json.loads((run_dir / 'dataset.json').read_text())
             repeated = json.loads((run_dir / 'dataset-repeat.json').read_text())

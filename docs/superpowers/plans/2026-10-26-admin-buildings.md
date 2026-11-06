@@ -25,7 +25,7 @@
   - D9 learns the four new action names.
 
 **Tech Stack:**
-- Backend: .NET 10 Minimal API, EF Core, xUnit API tests on `FacilityApiFactory` (seeded by `DbInitializer`).
+- Backend: .NET 10 Minimal API, EF Core, xUnit API tests on `JanitorialApiFactory` (seeded by `DbInitializer`).
 - Frontend: React 19.2, TypeScript 6.0, RTK Query, Tailwind 4, Vitest 5.0 on jsdom with Testing Library, and `fakeServer` in place of fetch.
 - **No new package.**
 
@@ -46,7 +46,7 @@
   - Before Task 1 the controller commits the ADR, this plan and the handoff edits as one commit: `docs: ADR facility-0090 buildings managed by Admin, and its plan`.
   - Do not push or merge.
 - **Machine:** the Mac, zsh.
-  - Backend tests: `dotnet test backend/FacilityRealtime.slnx`. One class: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~<ClassName>"`.
+  - Backend tests: `dotnet test backend/JanitorialManagementDashboard.slnx`. One class: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~<ClassName>"`.
   - Frontend: `cd frontend && npm run lint && npx tsc -b && npx vitest run`. One file: `cd frontend && npx vitest run <path>`.
   - The pre-commit hook runs the frontend lint and the test suite.
 - **Never commit** the modified `.gitignore` or the untracked root `package-lock.json`.
@@ -93,18 +93,18 @@
 ### Task 1: Building rules and the buildings endpoints
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Buildings/BuildingRules.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminBuildingEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/AdminSetupDtos.cs` (after `BuildingDto`, line 5)
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs:107` (map the new endpoints)
-- Modify: `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs` (Setup)
-- Test: `backend/tests/FacilityRealtime.UnitTests/BuildingRulesTests.cs` (create)
-- Test: `backend/tests/FacilityRealtime.UnitTests/AuditCategoriesTests.cs` (four rows)
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/BuildingAdminEndpointTests.cs` (create)
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Admin/AdminSetupModels.cs` (one record)
+- Create: `backend/src/JanitorialManagementDashboard.Application/Buildings/BuildingRules.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminBuildingEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminSetupDtos.cs` (after `BuildingDto`, line 5)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs:107` (map the new endpoints)
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Audit/AuditCategories.cs` (Setup)
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/BuildingRulesTests.cs` (create)
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/AuditCategoriesTests.cs` (four rows)
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/BuildingAdminEndpointTests.cs` (create)
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminSetupModels.cs` (one record)
 
 **Interfaces:**
-- Produces: `public static partial class BuildingRules` in `FacilityRealtime.Application.Buildings`, with these members:
+- Produces: `public static partial class BuildingRules` in `JanitorialManagementDashboard.Application.Buildings`, with these members:
   - `MaxName` (100), `CodeProblem`, `NameProblem`, `CodeTaken`
   - `string? NormalizeCode(string?)`, `string? NormalizeName(string?)`
   - `string? DeactivateProblem(string code, int activeAreas, int activeSupervisors)`
@@ -121,12 +121,12 @@
 
 - [ ] **Step 1: Write the failing unit tests**
 
-Create `backend/tests/FacilityRealtime.UnitTests/BuildingRulesTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/BuildingRulesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Buildings;
+using JanitorialManagementDashboard.Application.Buildings;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>facility-0090: what the Admin may type on the buildings page, and the answers when a building is in the way.</summary>
 public class BuildingRulesTests
@@ -175,7 +175,7 @@ public class BuildingRulesTests
 }
 ```
 
-In `backend/tests/FacilityRealtime.UnitTests/AuditCategoriesTests.cs`, add these rows above `[InlineData("POINT_CREATE", AuditCategory.Setup)]`:
+In `backend/tests/JanitorialManagementDashboard.UnitTests/AuditCategoriesTests.cs`, add these rows above `[InlineData("POINT_CREATE", AuditCategory.Setup)]`:
 
 ```csharp
     [InlineData("BUILDING_CREATE", AuditCategory.Setup)]
@@ -186,17 +186,17 @@ In `backend/tests/FacilityRealtime.UnitTests/AuditCategoriesTests.cs`, add these
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~BuildingRulesTests|FullyQualifiedName~AuditCategoriesTests"`
-Expected: build error, because `FacilityRealtime.Application.Buildings` does not exist yet. Once Step 3 adds it, the four `BUILDING_*` rows still fail until Step 4.
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~BuildingRulesTests|FullyQualifiedName~AuditCategoriesTests"`
+Expected: build error, because `JanitorialManagementDashboard.Application.Buildings` does not exist yet. Once Step 3 adds it, the four `BUILDING_*` rows still fail until Step 4.
 
 - [ ] **Step 3: Write `BuildingRules`**
 
-Create `backend/src/FacilityRealtime.Application/Buildings/BuildingRules.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Buildings/BuildingRules.cs`:
 
 ```csharp
 using System.Text.RegularExpressions;
 
-namespace FacilityRealtime.Application.Buildings;
+namespace JanitorialManagementDashboard.Application.Buildings;
 
 /// <summary>What the Admin may type on the buildings page, and the answers when a building is in the way (facility-0090).</summary>
 public static partial class BuildingRules
@@ -252,7 +252,7 @@ public static partial class BuildingRules
 
 - [ ] **Step 4: Put the four actions in Setup**
 
-In `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs`, the Setup list becomes:
+In `backend/src/JanitorialManagementDashboard.Application/Audit/AuditCategories.cs`, the Setup list becomes:
 
 ```csharp
         [AuditCategory.Setup] =
@@ -264,27 +264,27 @@ In `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs`, the Setu
         ],
 ```
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~BuildingRulesTests|FullyQualifiedName~AuditCategoriesTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~BuildingRulesTests|FullyQualifiedName~AuditCategoriesTests"`
 Expected: PASS.
 
 - [ ] **Step 5: Write the failing API tests**
 
-Add to `backend/tests/FacilityRealtime.ApiTests/Admin/AdminSetupModels.cs`, after `BuildingModel`:
+Add to `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminSetupModels.cs`, after `BuildingModel`:
 
 ```csharp
 public record ManagedBuildingModel(int Id, string Code, string Name, bool IsActive, int ActiveAreaCount, int ActiveSupervisorCount);
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/BuildingAdminEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/BuildingAdminEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>
 /// facility-0090: the buildings page. Seed: building A ("ตึก A") with the active Areas AR01 and AR02 and the active
@@ -297,7 +297,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task The_full_list_requires_login()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await factory.CreateApiClient().GetAsync($"{Buildings}/all");
 
@@ -312,7 +312,7 @@ public class BuildingAdminEndpointTests
     [InlineData("POST", "/1/activate")]
     public async Task Cleaners_cannot_manage_buildings(string method, string suffix)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var body = method == "GET" ? null : JsonContent.Create(new { code = "B", name = "ตึก B" });
 
@@ -324,7 +324,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task The_full_list_has_off_buildings_and_counts_what_is_active_in_each()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var b = await TestData.AddBuildingAsync(factory, "B");
         Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"{Buildings}/{b}/deactivate", null)).StatusCode);
@@ -342,7 +342,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task An_admin_adds_a_building_and_the_history_keeps_it()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync(Buildings, new { code = " b2 ", name = "  ตึกผลิต " });
@@ -365,7 +365,7 @@ public class BuildingAdminEndpointTests
     [InlineData("ABCDEFGHIJ01234567890")]
     public async Task A_code_that_breaks_the_rule_is_refused(string code)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync(Buildings, new { code, name = "ตึกผลิต" });
@@ -380,7 +380,7 @@ public class BuildingAdminEndpointTests
     [InlineData(null)]
     public async Task A_building_needs_a_name(string? name)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync(Buildings, new { code = "B", name });
@@ -394,7 +394,7 @@ public class BuildingAdminEndpointTests
     [InlineData("b")]
     public async Task A_code_is_never_used_twice_even_by_an_off_building(string code)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var b = await TestData.AddBuildingAsync(factory, "B");
         await admin.PostAsync($"{Buildings}/{b}/deactivate", null);
@@ -408,7 +408,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task Two_buildings_may_share_a_name()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync(Buildings, new { code = "B", name = "ตึก A" });
@@ -419,7 +419,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task A_rename_changes_the_name_only_and_is_logged()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var a = await AdminSetupApi.BuildingIdAsync(factory);
 
@@ -437,7 +437,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task A_save_that_changes_nothing_writes_no_history()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var a = await AdminSetupApi.BuildingIdAsync(factory);
 
@@ -450,7 +450,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task A_rename_needs_a_name()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var a = await AdminSetupApi.BuildingIdAsync(factory);
 
@@ -466,7 +466,7 @@ public class BuildingAdminEndpointTests
     [InlineData("POST", "/activate")]
     public async Task Unknown_buildings_are_not_found(string method, string suffix)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var body = method == "PUT" ? JsonContent.Create(new { name = "ตึกใหม่" }) : null;
 
@@ -479,7 +479,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task A_building_with_active_areas_or_supervisors_cannot_be_turned_off()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var a = await AdminSetupApi.BuildingIdAsync(factory);
 
@@ -496,7 +496,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task Off_areas_and_off_supervisors_do_not_keep_a_building_on()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var b = await TestData.AddBuildingAsync(factory, "B");
         var area = await TestData.AddAreaAsync(factory, "AR03", "B");
@@ -518,7 +518,7 @@ public class BuildingAdminEndpointTests
     [Fact]
     public async Task An_empty_building_turns_off_and_on_and_each_change_is_logged_once()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var b = await TestData.AddBuildingAsync(factory, "B");
 
@@ -547,12 +547,12 @@ Note for the implementer:
 
 - [ ] **Step 6: Run them to see them fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~BuildingAdminEndpointTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~BuildingAdminEndpointTests"`
 Expected: FAIL. The new routes do not exist yet, so every test that expects 200, 201, 400, 409, 403 or the "ไม่พบตึกนี้" message fails. Whatever an unmapped path answers (404, 405, or the frontend fallback), it is not what the tests expect.
 
 - [ ] **Step 7: Add the DTOs**
 
-In `backend/src/FacilityRealtime.Api/DTOs/AdminSetupDtos.cs`, after `public record BuildingDto(int Id, string Code, string Name);` add:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminSetupDtos.cs`, after `public record BuildingDto(int Id, string Code, string Name);` add:
 
 ```csharp
 
@@ -567,19 +567,19 @@ public record UpdateBuildingRequest(string? Name);
 
 - [ ] **Step 8: Write the endpoints**
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AdminBuildingEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminBuildingEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Buildings;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Buildings;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// facility-0090: the Admin adds, renames and turns buildings on and off; a building is never deleted. The forms' list of
@@ -747,7 +747,7 @@ public static class AdminBuildingEndpoints
 }
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, after `app.MapAdminAreaEndpoints();` add:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, after `app.MapAdminAreaEndpoints();` add:
 
 ```csharp
 app.MapAdminBuildingEndpoints();
@@ -755,26 +755,26 @@ app.MapAdminBuildingEndpoints();
 
 - [ ] **Step 9: Run the tests to see them pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~BuildingAdminEndpointTests|FullyQualifiedName~BuildingRulesTests|FullyQualifiedName~AuditCategoriesTests|FullyQualifiedName~AreaAdminEndpointTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~BuildingAdminEndpointTests|FullyQualifiedName~BuildingRulesTests|FullyQualifiedName~AuditCategoriesTests|FullyQualifiedName~AreaAdminEndpointTests"`
 Expected: PASS. `AreaAdminEndpointTests` is in the run to show that `GET /api/admin/buildings` still answers as before.
 
 - [ ] **Step 10: Run the whole backend suite**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS. The MySQL-only tests are skipped, as before.
 
 - [ ] **Step 11: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/Buildings/BuildingRules.cs \
-  backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs \
-  backend/src/FacilityRealtime.Api/Endpoints/AdminBuildingEndpoints.cs \
-  backend/src/FacilityRealtime.Api/DTOs/AdminSetupDtos.cs \
-  backend/src/FacilityRealtime.Api/Program.cs \
-  backend/tests/FacilityRealtime.UnitTests/BuildingRulesTests.cs \
-  backend/tests/FacilityRealtime.UnitTests/AuditCategoriesTests.cs \
-  backend/tests/FacilityRealtime.ApiTests/Admin/BuildingAdminEndpointTests.cs \
-  backend/tests/FacilityRealtime.ApiTests/Admin/AdminSetupModels.cs
+git add backend/src/JanitorialManagementDashboard.Application/Buildings/BuildingRules.cs \
+  backend/src/JanitorialManagementDashboard.Application/Audit/AuditCategories.cs \
+  backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminBuildingEndpoints.cs \
+  backend/src/JanitorialManagementDashboard.Api/DTOs/AdminSetupDtos.cs \
+  backend/src/JanitorialManagementDashboard.Api/Program.cs \
+  backend/tests/JanitorialManagementDashboard.UnitTests/BuildingRulesTests.cs \
+  backend/tests/JanitorialManagementDashboard.UnitTests/AuditCategoriesTests.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Admin/BuildingAdminEndpointTests.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminSetupModels.cs
 git commit -m "feat(buildings): Admin adds, renames and turns buildings on and off (facility-0090)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -785,9 +785,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 2: Nothing in an off building turns back on
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminAreaEndpoints.cs:172-197` (`SetActiveAsync`)
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs:203-232` (`SetActiveAsync`)
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/BuildingAdminEndpointTests.cs` (append two tests)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAreaEndpoints.cs:172-197` (`SetActiveAsync`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs:203-232` (`SetActiveAsync`)
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/BuildingAdminEndpointTests.cs` (append two tests)
 
 **Interfaces:**
 - Consumes: `BuildingRules.OffForArea(string code)` and `BuildingRules.OffForSupervisor(string code)` from Task 1. Also consumes `POST /api/admin/buildings/{id}/deactivate` from Task 1, used by the tests.
@@ -801,7 +801,7 @@ Append inside `BuildingAdminEndpointTests` (before its closing brace):
     [Fact]
     public async Task An_area_of_an_off_building_stays_off_until_it_moves_or_the_building_is_on()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var a = await AdminSetupApi.BuildingIdAsync(factory);
         var b = await TestData.AddBuildingAsync(factory, "B");
@@ -829,7 +829,7 @@ Append inside `BuildingAdminEndpointTests` (before its closing brace):
     [Fact]
     public async Task A_supervisor_of_an_off_building_stays_off_until_the_building_is_on()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var b = await TestData.AddBuildingAsync(factory, "B");
         var supervisor = await TestData.AddSupervisorAsync(factory, "S3001", "0830000001", "B", Shift.Day);
@@ -849,12 +849,12 @@ Append inside `BuildingAdminEndpointTests` (before its closing brace):
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~BuildingAdminEndpointTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~BuildingAdminEndpointTests"`
 Expected: the two new tests FAIL, because `refused` is 200 OK.
 
 - [ ] **Step 3: Guard the Area**
 
-In `backend/src/FacilityRealtime.Api/Endpoints/AdminAreaEndpoints.cs`, add `using FacilityRealtime.Application.Buildings;` with the other `using` lines. In `SetActiveAsync`, between the `AreaNotFound()` check and `if (area.IsActive != active)`, add:
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAreaEndpoints.cs`, add `using JanitorialManagementDashboard.Application.Buildings;` with the other `using` lines. In `SetActiveAsync`, between the `AreaNotFound()` check and `if (area.IsActive != active)`, add:
 
 ```csharp
         // facility-0090 decision 4: an Area of a building that is off stays off
@@ -868,7 +868,7 @@ In `backend/src/FacilityRealtime.Api/Endpoints/AdminAreaEndpoints.cs`, add `usin
 
 - [ ] **Step 4: Guard the Supervisor**
 
-In `backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs`, add `using FacilityRealtime.Application.Buildings;` with the other `using` lines. In `SetActiveAsync`, just before `if (active && await HolderAsync(`, add:
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs`, add `using JanitorialManagementDashboard.Application.Buildings;` with the other `using` lines. In `SetActiveAsync`, just before `if (active && await HolderAsync(`, add:
 
 ```csharp
         // facility-0090 decision 4: a Supervisor of a building that is off stays off
@@ -884,20 +884,20 @@ In `backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs`, add `u
 
 - [ ] **Step 5: Run the tests to see them pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --filter "FullyQualifiedName~BuildingAdminEndpointTests|FullyQualifiedName~AreaAdminEndpointTests|FullyQualifiedName~AccountEndpointTests|FullyQualifiedName~AccountEditEndpointTests"`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --filter "FullyQualifiedName~BuildingAdminEndpointTests|FullyQualifiedName~AreaAdminEndpointTests|FullyQualifiedName~AccountEndpointTests|FullyQualifiedName~AccountEditEndpointTests"`
 Expected: PASS.
 
 - [ ] **Step 6: Run the whole backend suite**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: PASS.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api/Endpoints/AdminAreaEndpoints.cs \
-  backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs \
-  backend/tests/FacilityRealtime.ApiTests/Admin/BuildingAdminEndpointTests.cs
+git add backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAreaEndpoints.cs \
+  backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Admin/BuildingAdminEndpointTests.cs
 git commit -m "feat(buildings): an Area or Supervisor of an off building cannot be turned on (facility-0090)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"

@@ -6412,7 +6412,7 @@ git diff --stat master -- backend
 Expected: empty (API unchanged).
 
 ```bash
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 ```
 Expected: 299 unit tests pass; API tests 531 pass and 5 are skipped.
 

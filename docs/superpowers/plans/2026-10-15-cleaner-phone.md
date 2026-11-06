@@ -34,7 +34,7 @@
 
 | Call | Answer | Source |
 |---|---|---|
-| `GET /api/my-work` | `MyWorkDto { attendance, areas[] }`; 403 for a non-Cleaner | `backend/src/FacilityRealtime.Api/Endpoints/MyWorkEndpoints.cs`, `DTOs/MyWorkDtos.cs` |
+| `GET /api/my-work` | `MyWorkDto { attendance, areas[] }`; 403 for a non-Cleaner | `backend/src/JanitorialManagementDashboard.Api/Endpoints/MyWorkEndpoints.cs`, `DTOs/MyWorkDtos.cs` |
 | `POST /api/attendance` `{ qrToken, eventType, latitude, longitude, accuracyM }` | 200 `AttendanceStateDto` with `outcome` (`Recorded`, `AlreadyRecorded`, `TooSoon`); 400 GPS or event; 403 `BlockedScanResponse`; 404 `{ message: "ไม่พบป้ายลงเวลานี้" }`; 409 `{ message }` outside the window, or `AttendanceRefusedDto { message, nextEvents }` out of order | `Endpoints/AttendanceEndpoints.cs`, `DTOs/AttendanceDtos.cs` |
 | `GET /api/service-points/by-token/{token}` | `PointStatusDto`; 404 `{ message }` for an unknown, closed or check-in sign | `Endpoints/ServicePointEndpoints.cs`, `DTOs/PointDtos.cs` |
 | `POST /api/scan-records` `{ qrToken, status, issueTags?, notes?, latitude, longitude, accuracyM }` | 201 `ScanRecordCreatedResponse`; 400; 403 `BlockedScanResponse`; 404 `{ message }`; 409 `{ message }` (not on duty) | `Endpoints/ScanRecordEndpoints.cs` |
@@ -3469,7 +3469,7 @@ The Cleaner pages also need a location: `fakeGps(nearSign)` from `src/test/fakeG
 
 ```bash
 cd frontend && npm test && npx tsc -b && npm run lint && npm run build && cd ..
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 grep -rn "style={" frontend/src || echo "no inline styles"
 grep -rn "localStorage\|sessionStorage\|indexedDB" frontend/src || echo "no web storage"
 grep -rn "toLocaleString\|toLocaleTimeString" frontend/src || echo "no ad-hoc time formatting"
@@ -3502,7 +3502,7 @@ mysql -u root -p -e "CREATE DATABASE facility_cleaner_test CHARACTER SET utf8mb4
 npm --prefix frontend run build:api
 ASPNETCORE_ENVIRONMENT=Development \
 ConnectionStrings__DefaultConnection="Server=localhost;Port=3306;Database=facility_cleaner_test;Uid=root;Pwd=<typed by the owner>;CharSet=utf8mb4;" \
-dotnet run --project backend/src/FacilityRealtime.Api --urls "http://0.0.0.0:5001"
+dotnet run --project backend/src/JanitorialManagementDashboard.Api --urls "http://0.0.0.0:5001"
 ```
 
 In a second terminal:
@@ -3528,7 +3528,7 @@ Ask the owner to open `http://<Mac IP>:5001/login` on a phone, log in as `E1001`
 When done, stop the API, delete the build output and drop the database:
 
 ```bash
-rm -r backend/src/FacilityRealtime.Api/wwwroot
+rm -r backend/src/JanitorialManagementDashboard.Api/wwwroot
 mysql -u root -p -e "DROP DATABASE facility_cleaner_test;"
 ```
 

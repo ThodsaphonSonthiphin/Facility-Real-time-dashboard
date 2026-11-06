@@ -24,12 +24,12 @@
 ## Global Constraints
 
 - **Branch:** `feat/admin-password-15`, from `master` at `64f0c93`. It already holds the ADR commit `c92e1e9`. Do not merge it.
-- **Machine:** the Mac, zsh. Backend tests: `dotnet test backend/FacilityRealtime.slnx`. Frontend: `cd frontend && npm run lint && npx tsc -b && npx vitest run`. The pre-commit hook runs the frontend lint and test suite.
+- **Machine:** the Mac, zsh. Backend tests: `dotnet test backend/JanitorialManagementDashboard.slnx`. Frontend: `cd frontend && npm run lint && npx tsc -b && npx vitest run`. The pre-commit hook runs the frontend lint and test suite.
 - **Never commit** the modified `.gitignore` or the untracked root `package-lock.json`.
 - **Messages (exact):**
   - Length: `รหัสผ่านชั่วคราวต้องยาว 15–100 ตัวอักษร` (the dash is U+2013, as today).
   - Common: `รหัสผ่านนี้คนใช้กันเยอะ เดาง่าย ตั้งรหัสอื่น`
-- **The list file (exact):** `backend/src/FacilityRealtime.Application/Accounts/common-passwords.txt`, 10,898 lines, ASCII only, SHA-256 `cbdc28a68ea4bc20d214755fb333d816c55ceada6cc3da3bd9b70ecea42aead0`. No header line, so the hash stays the list's.
+- **The list file (exact):** `backend/src/JanitorialManagementDashboard.Application/Accounts/common-passwords.txt`, 10,898 lines, ASCII only, SHA-256 `cbdc28a68ea4bc20d214755fb333d816c55ceada6cc3da3bd9b70ecea42aead0`. No header line, so the hash stays the list's.
 - **Source of the list:** SecLists (MIT License, Daniel Miessler), `Passwords/Common-Credentials/xato-net-10-million-passwords-1000000.txt` at commit `c205c36a445bff37f8e58a9ec829105cd4975c58`. The downloaded file's SHA-256 is `424a3e03a17df0a2bc2b3ca749d81b04e79d59cb7aeec8876a5a3f308d0caf51`.
 - **Test passwords:** a password a test expects to be accepted is `temporary-pass-<digits>` (16+ characters, checked not on the list). A password expected to be refused as common is `1qaz2wsx3edc4rfv` (on the list).
 - **Commit messages** end with:
@@ -42,13 +42,13 @@
 ### Task 1: The common-password list
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Accounts/common-passwords.txt`
-- Create: `backend/src/FacilityRealtime.Application/Accounts/CommonPasswords.cs`
-- Modify: `backend/src/FacilityRealtime.Application/FacilityRealtime.Application.csproj`
-- Test: `backend/tests/FacilityRealtime.UnitTests/CommonPasswordsTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Accounts/common-passwords.txt`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Accounts/CommonPasswords.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/JanitorialManagementDashboard.Application.csproj`
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/CommonPasswordsTests.cs`
 
 **Interfaces:**
-- Produces: `internal static class CommonPasswords` in `FacilityRealtime.Application.Accounts`, with `public static int Count { get; }` and `public static bool Contains(string password)`. The class is internal; `InternalsVisibleTo` already covers `FacilityRealtime.UnitTests` and `FacilityRealtime.ApiTests`.
+- Produces: `internal static class CommonPasswords` in `JanitorialManagementDashboard.Application.Accounts`, with `public static int Count { get; }` and `public static bool Contains(string password)`. The class is internal; `InternalsVisibleTo` already covers `JanitorialManagementDashboard.UnitTests` and `JanitorialManagementDashboard.ApiTests`.
 
 - [ ] **Step 1: Build the list file**
 
@@ -62,10 +62,10 @@ shasum -a 256 "$D/source.txt"
 LC_ALL=C tr -d '\r' < "$D/source.txt" \
   | LC_ALL=C awk 'length($0) >= 15 && length($0) <= 100' \
   | LC_ALL=C tr 'A-Z' 'a-z' \
-  | LC_ALL=C sort -u > backend/src/FacilityRealtime.Application/Accounts/common-passwords.txt
-wc -l backend/src/FacilityRealtime.Application/Accounts/common-passwords.txt
+  | LC_ALL=C sort -u > backend/src/JanitorialManagementDashboard.Application/Accounts/common-passwords.txt
+wc -l backend/src/JanitorialManagementDashboard.Application/Accounts/common-passwords.txt
 # expect 10898
-shasum -a 256 backend/src/FacilityRealtime.Application/Accounts/common-passwords.txt
+shasum -a 256 backend/src/JanitorialManagementDashboard.Application/Accounts/common-passwords.txt
 # expect cbdc28a68ea4bc20d214755fb333d816c55ceada6cc3da3bd9b70ecea42aead0
 rm -rf "$D"
 ```
@@ -74,22 +74,22 @@ If either hash differs, stop and report it. Do not use a different list.
 
 - [ ] **Step 2: Embed the file**
 
-In `FacilityRealtime.Application.csproj`, add an item group after the `InternalsVisibleTo` one:
+In `JanitorialManagementDashboard.Application.csproj`, add an item group after the `InternalsVisibleTo` one:
 
 ```xml
   <ItemGroup>
-    <EmbeddedResource Include="Accounts\common-passwords.txt" LogicalName="FacilityRealtime.Application.Accounts.common-passwords.txt" />
+    <EmbeddedResource Include="Accounts\common-passwords.txt" LogicalName="JanitorialManagementDashboard.Application.Accounts.common-passwords.txt" />
   </ItemGroup>
 ```
 
 - [ ] **Step 3: Write the failing test**
 
-`backend/tests/FacilityRealtime.UnitTests/CommonPasswordsTests.cs`:
+`backend/tests/JanitorialManagementDashboard.UnitTests/CommonPasswordsTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Accounts;
+using JanitorialManagementDashboard.Application.Accounts;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 public class CommonPasswordsTests
 {
@@ -109,15 +109,15 @@ public class CommonPasswordsTests
 
 - [ ] **Step 4: Run it to see it fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~CommonPasswordsTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~CommonPasswordsTests"`
 Expected: build error, `CommonPasswords` does not exist.
 
 - [ ] **Step 5: Write `CommonPasswords`**
 
-`backend/src/FacilityRealtime.Application/Accounts/CommonPasswords.cs`:
+`backend/src/JanitorialManagementDashboard.Application/Accounts/CommonPasswords.cs`:
 
 ```csharp
-namespace FacilityRealtime.Application.Accounts;
+namespace JanitorialManagementDashboard.Application.Accounts;
 
 /// <summary>
 /// facility-0089: passwords too common to allow, compared ignoring letter case. common-passwords.txt is every entry of
@@ -127,7 +127,7 @@ namespace FacilityRealtime.Application.Accounts;
 /// </summary>
 internal static class CommonPasswords
 {
-    private const string ResourceName = "FacilityRealtime.Application.Accounts.common-passwords.txt";
+    private const string ResourceName = "JanitorialManagementDashboard.Application.Accounts.common-passwords.txt";
 
     private static readonly Lazy<HashSet<string>> List = new(Read);
 
@@ -156,16 +156,16 @@ internal static class CommonPasswords
 
 - [ ] **Step 6: Run it to see it pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~CommonPasswordsTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~CommonPasswordsTests"`
 Expected: 6 passed.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/Accounts/common-passwords.txt \
-  backend/src/FacilityRealtime.Application/Accounts/CommonPasswords.cs \
-  backend/src/FacilityRealtime.Application/FacilityRealtime.Application.csproj \
-  backend/tests/FacilityRealtime.UnitTests/CommonPasswordsTests.cs
+git add backend/src/JanitorialManagementDashboard.Application/Accounts/common-passwords.txt \
+  backend/src/JanitorialManagementDashboard.Application/Accounts/CommonPasswords.cs \
+  backend/src/JanitorialManagementDashboard.Application/JanitorialManagementDashboard.Application.csproj \
+  backend/tests/JanitorialManagementDashboard.UnitTests/CommonPasswordsTests.cs
 git commit -m "feat(accounts): a list of common passwords of 15+ characters, embedded (facility-0089)"
 ```
 
@@ -174,12 +174,12 @@ git commit -m "feat(accounts): a list of common passwords of 15+ characters, emb
 ### Task 2: The rule on create and on reset
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Application/Accounts/AccountRules.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs:75-78` (create) and `:308-311` (reset)
-- Test: `backend/tests/FacilityRealtime.UnitTests/AccountRulesTests.cs:55-66`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AccountEndpointTests.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AccountSecretEndpointTests.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs:27`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Accounts/AccountRules.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs:75-78` (create) and `:308-311` (reset)
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/AccountRulesTests.cs:55-66`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountEndpointTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountSecretEndpointTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminTests.cs:27`
 
 **Interfaces:**
 - Consumes: `CommonPasswords.Contains(string)` from Task 1.
@@ -220,7 +220,7 @@ Keep `A_password_longer_than_100_characters_is_refused`. Add after it:
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~AccountRulesTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~AccountRulesTests"`
 Expected: build error, `PasswordProblem` does not exist.
 
 - [ ] **Step 3: Change `AccountRules`**
@@ -255,7 +255,7 @@ Replace `public const int MinPassword = 8;` and the `IsAllowedPassword` member w
 
 - [ ] **Step 4: Run the unit tests to see them pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --filter "FullyQualifiedName~AccountRulesTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --filter "FullyQualifiedName~AccountRulesTests"`
 Expected: all pass.
 
 - [ ] **Step 5: Update the API tests' passwords and add the failing ones**
@@ -264,9 +264,9 @@ Accepted passwords in the API tests become `temporary-pass-<digits>`:
 
 ```bash
 sed -i '' 's/"temporary-\([0-9][0-9]*\)"/"temporary-pass-\1"/g' \
-  backend/tests/FacilityRealtime.ApiTests/Admin/AccountEndpointTests.cs \
-  backend/tests/FacilityRealtime.ApiTests/Admin/AccountSecretEndpointTests.cs \
-  backend/tests/FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs
+  backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountEndpointTests.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountSecretEndpointTests.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminTests.cs
 grep -rn '"temporary-' backend/tests
 ```
 
@@ -283,7 +283,7 @@ Add to `AccountEndpointTests` (after `A_used_username_is_refused_whatever_the_le
     [Fact]
     public async Task A_common_password_is_refused_with_its_reason_and_nothing_is_logged()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await AccountApi.CreateAdminAsync(admin, "admin2", "1qaz2wsx3edc4rfv");
@@ -302,7 +302,7 @@ In `AccountSecretEndpointTests`, replace `A_too_short_password_is_refused` with:
     [InlineData("1qaz2wsx3edc4rfv", "รหัสผ่านนี้คนใช้กันเยอะ เดาง่าย ตั้งรหัสอื่น")]
     public async Task A_short_or_common_password_is_refused_with_its_reason(string password, string message)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await PasswordAsync(admin, adminAuth.User.Id, password);
@@ -314,7 +314,7 @@ In `AccountSecretEndpointTests`, replace `A_too_short_password_is_refused` with:
 
 - [ ] **Step 6: Run the API tests to see the new ones fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AccountEndpointTests|FullyQualifiedName~AccountSecretEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AccountEndpointTests|FullyQualifiedName~AccountSecretEndpointTests|FullyQualifiedName~DeactivatedAdminTests"`
 Expected: `A_common_password_is_refused_with_its_reason_and_nothing_is_logged` fails with 201, and the `1qaz2wsx3edc4rfv` case of `A_short_or_common_password_is_refused_with_its_reason` fails with 204. The short case already passes: the endpoint builds its message from `MinPassword`, which Step 3 made 15. Every other test passes.
 
 - [ ] **Step 7: Use `PasswordProblem` in both endpoints**
@@ -341,18 +341,18 @@ Reset (around line 308): the same replacement, with the same three lines.
 
 - [ ] **Step 8: Run the backend suite**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: all pass (MySQL-only tests skipped as before).
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/Accounts/AccountRules.cs \
-  backend/src/FacilityRealtime.Api/Endpoints/AdminAccountEndpoints.cs \
-  backend/tests/FacilityRealtime.UnitTests/AccountRulesTests.cs \
-  backend/tests/FacilityRealtime.ApiTests/Admin/AccountEndpointTests.cs \
-  backend/tests/FacilityRealtime.ApiTests/Admin/AccountSecretEndpointTests.cs \
-  backend/tests/FacilityRealtime.ApiTests/Admin/DeactivatedAdminTests.cs
+git add backend/src/JanitorialManagementDashboard.Application/Accounts/AccountRules.cs \
+  backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAccountEndpoints.cs \
+  backend/tests/JanitorialManagementDashboard.UnitTests/AccountRulesTests.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountEndpointTests.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AccountSecretEndpointTests.cs \
+  backend/tests/JanitorialManagementDashboard.ApiTests/Admin/DeactivatedAdminTests.cs
 git commit -m "feat(accounts): an Admin password is 15–100 characters and not a common one (facility-0089)"
 ```
 
@@ -454,7 +454,7 @@ Append at the end of `facility-0020-accounts-page-operations.md`:
 - [ ] **Step 2: The full checks**
 
 ```bash
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 cd frontend && npm run lint && npx tsc -b && npx vitest run && npm run build
 ```
 

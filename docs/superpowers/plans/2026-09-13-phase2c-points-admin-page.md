@@ -47,20 +47,20 @@
 
 | Path | Status | Responsibility |
 |---|---|---|
-| `backend/src/FacilityRealtime.Application/Common/ScanUrlBuilder.cs` | Create | Scan link from `PublicBaseUrl` |
-| `backend/tests/FacilityRealtime.UnitTests/ScanUrlBuilderTests.cs` | Create | Link format and config validation |
-| `backend/src/FacilityRealtime.Api/Program.cs` | Modify | Register the builder, `scanUrl` in responses, 410 for deactivated points, map admin routes |
-| `backend/src/FacilityRealtime.Api/DTOs/ScanDtos.cs` | Modify | `ScanUrl` on `ServicePointStatusDto` |
-| `backend/src/FacilityRealtime.Api/appsettings.json` | Modify | Default `PublicBaseUrl` |
-| `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs` | Modify | Optional extra settings per test |
-| `backend/tests/FacilityRealtime.ApiTests/ServicePoints/ScanUrlAndDeactivatedPointTests.cs` | Create | Scan links and 410 behaviour |
-| `backend/src/FacilityRealtime.Application/ServicePoints/ServicePointRules.cs` | Create | Field rules and QR Token generation |
-| `backend/tests/FacilityRealtime.UnitTests/ServicePointRulesTests.cs` | Create | Rule tests |
-| `backend/src/FacilityRealtime.Domain/Entities/ServicePoint.cs` | Modify | `QrTokenIssuedAt` |
-| `backend/src/FacilityRealtime.Infrastructure/Migrations/*_Phase2cQrTokenIssuedAt.cs` | Create (generated, then edited) | Column plus backfill from `CreatedAt` |
-| `backend/src/FacilityRealtime.Api/DTOs/AdminServicePointDtos.cs` | Create | Row and request shapes |
-| `backend/src/FacilityRealtime.Api/Endpoints/AdminServicePointEndpoints.cs` | Create | The six admin routes |
-| `backend/tests/FacilityRealtime.ApiTests/Admin/AdminServicePointsTests.cs` | Create | Route behaviour and gate |
+| `backend/src/JanitorialManagementDashboard.Application/Common/ScanUrlBuilder.cs` | Create | Scan link from `PublicBaseUrl` |
+| `backend/tests/JanitorialManagementDashboard.UnitTests/ScanUrlBuilderTests.cs` | Create | Link format and config validation |
+| `backend/src/JanitorialManagementDashboard.Api/Program.cs` | Modify | Register the builder, `scanUrl` in responses, 410 for deactivated points, map admin routes |
+| `backend/src/JanitorialManagementDashboard.Api/DTOs/ScanDtos.cs` | Modify | `ScanUrl` on `ServicePointStatusDto` |
+| `backend/src/JanitorialManagementDashboard.Api/appsettings.json` | Modify | Default `PublicBaseUrl` |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs` | Modify | Optional extra settings per test |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/ServicePoints/ScanUrlAndDeactivatedPointTests.cs` | Create | Scan links and 410 behaviour |
+| `backend/src/JanitorialManagementDashboard.Application/ServicePoints/ServicePointRules.cs` | Create | Field rules and QR Token generation |
+| `backend/tests/JanitorialManagementDashboard.UnitTests/ServicePointRulesTests.cs` | Create | Rule tests |
+| `backend/src/JanitorialManagementDashboard.Domain/Entities/ServicePoint.cs` | Modify | `QrTokenIssuedAt` |
+| `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/*_Phase2cQrTokenIssuedAt.cs` | Create (generated, then edited) | Column plus backfill from `CreatedAt` |
+| `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminServicePointDtos.cs` | Create | Row and request shapes |
+| `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminServicePointEndpoints.cs` | Create | The six admin routes |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminServicePointsTests.cs` | Create | Route behaviour and gate |
 | `frontend/src/types/index.ts` | Modify | `scanUrl`, `AdminServicePoint`, `SaveServicePointInput` |
 | `frontend/src/services/adminPointsApi.ts` | Create | Calls to `/api/admin/service-points` |
 | `frontend/src/services/api.ts` | Modify | Deactivated and replaced sign messages |
@@ -84,8 +84,8 @@
 ### Task 1: Scan link builder
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/Common/ScanUrlBuilder.cs`
-- Create: `backend/tests/FacilityRealtime.UnitTests/ScanUrlBuilderTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Common/ScanUrlBuilder.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.UnitTests/ScanUrlBuilderTests.cs`
 
 **Interfaces:**
 - Consumes: nothing
@@ -96,13 +96,13 @@
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.UnitTests/ScanUrlBuilderTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/ScanUrlBuilderTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Common;
+using JanitorialManagementDashboard.Application.Common;
 using Xunit;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 public class ScanUrlBuilderTests
 {
@@ -150,15 +150,15 @@ public class ScanUrlBuilderTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --nologo`
 Expected: FAIL at build with `The type or namespace name 'ScanUrlBuilder' could not be found`.
 
 - [ ] **Step 3: Write the builder**
 
-Create `backend/src/FacilityRealtime.Application/Common/ScanUrlBuilder.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Common/ScanUrlBuilder.cs`:
 
 ```csharp
-namespace FacilityRealtime.Application.Common;
+namespace JanitorialManagementDashboard.Application.Common;
 
 /// <summary>
 /// ADR facility-0003: the link inside a QR Sign is built from PublicBaseUrl in config, so moving the Mac to a new
@@ -191,13 +191,13 @@ public sealed class ScanUrlBuilder
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --nologo`
 Expected: PASS, `Passed: 79`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/Common/ScanUrlBuilder.cs backend/tests/FacilityRealtime.UnitTests/ScanUrlBuilderTests.cs
+git add backend/src/JanitorialManagementDashboard.Application/Common/ScanUrlBuilder.cs backend/tests/JanitorialManagementDashboard.UnitTests/ScanUrlBuilderTests.cs
 git commit -m "feat(points): build scan links from PublicBaseUrl (#16)"
 ```
 
@@ -206,33 +206,33 @@ git commit -m "feat(points): build scan links from PublicBaseUrl (#16)"
 ### Task 2: Scan links in dashboard and scan responses; 410 for deactivated points
 
 **Files:**
-- Create: `backend/tests/FacilityRealtime.ApiTests/ServicePoints/ScanUrlAndDeactivatedPointTests.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs`
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/ScanDtos.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`
-- Modify: `backend/src/FacilityRealtime.Api/appsettings.json`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/ServicePoints/ScanUrlAndDeactivatedPointTests.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/ScanDtos.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/appsettings.json`
 
 **Interfaces:**
-- Consumes: `ScanUrlBuilder` (Task 1); `FacilityApiFactory`, `AuthApi.LoggedInAsync` (plan 2A)
+- Consumes: `ScanUrlBuilder` (Task 1); `JanitorialApiFactory`, `AuthApi.LoggedInAsync` (plan 2A)
 - Produces:
   - `ServicePointStatusDto` gains `string ScanUrl` right after `QrToken`, so `GET /api/service-points`, `GET /api/service-points/by-token/{token}` and the `ScanRecorded` SignalR message all carry `scanUrl`
   - `GET /api/service-points/by-token/{token}` and `POST /api/scan-records` answer `410 { message, reason: "deactivated" }` for a deactivated point; an unknown token stays `404`
   - `ScanUrlBuilder` registered as a singleton; startup fails when `PublicBaseUrl` cannot make a link
-  - `FacilityApiFactory(string signingKey = TestSigningKey, IReadOnlyDictionary<string, string>? settings = null)`
+  - `JanitorialApiFactory(string signingKey = TestSigningKey, IReadOnlyDictionary<string, string>? settings = null)`
 
 - [ ] **Step 1: Let tests pass extra settings, then write the failing tests**
 
-In `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs`, replace:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs`, replace:
 
 ```csharp
-public sealed class FacilityApiFactory(string signingKey = FacilityApiFactory.TestSigningKey) : WebApplicationFactory<Program>
+public sealed class JanitorialApiFactory(string signingKey = JanitorialApiFactory.TestSigningKey) : WebApplicationFactory<Program>
 ```
 
 with:
 
 ```csharp
-public sealed class FacilityApiFactory(
-    string signingKey = FacilityApiFactory.TestSigningKey,
+public sealed class JanitorialApiFactory(
+    string signingKey = JanitorialApiFactory.TestSigningKey,
     IReadOnlyDictionary<string, string>? settings = null) : WebApplicationFactory<Program>
 ```
 
@@ -252,16 +252,16 @@ with:
         }
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/ServicePoints/ScanUrlAndDeactivatedPointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/ServicePoints/ScanUrlAndDeactivatedPointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.ServicePoints;
+namespace JanitorialManagementDashboard.ApiTests.ServicePoints;
 
 public class ScanUrlAndDeactivatedPointTests
 {
@@ -270,7 +270,7 @@ public class ScanUrlAndDeactivatedPointTests
     [Fact]
     public async Task Dashboard_points_carry_the_scan_url_built_from_public_base_url()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, _) = await AuthApi.LoggedInAsync(factory);
 
         var points = await client.GetFromJsonAsync<List<JsonElement>>("/api/service-points");
@@ -282,7 +282,7 @@ public class ScanUrlAndDeactivatedPointTests
     [Fact]
     public async Task Changing_public_base_url_changes_every_scan_url()
     {
-        using var factory = new FacilityApiFactory(settings: new Dictionary<string, string> { ["PublicBaseUrl"] = "http://192.168.1.20:5173" });
+        using var factory = new JanitorialApiFactory(settings: new Dictionary<string, string> { ["PublicBaseUrl"] = "http://192.168.1.20:5173" });
         var (client, _, _) = await AuthApi.LoggedInAsync(factory);
 
         var point = await client.GetFromJsonAsync<JsonElement>($"/api/service-points/by-token/{QrToken}");
@@ -293,7 +293,7 @@ public class ScanUrlAndDeactivatedPointTests
     [Fact]
     public void App_refuses_to_start_when_public_base_url_cannot_make_a_link()
     {
-        using var factory = new FacilityApiFactory(settings: new Dictionary<string, string> { ["PublicBaseUrl"] = "192.168.1.20:5173" });
+        using var factory = new JanitorialApiFactory(settings: new Dictionary<string, string> { ["PublicBaseUrl"] = "192.168.1.20:5173" });
 
         var error = Record.Exception(() => factory.CreateClient());
 
@@ -304,7 +304,7 @@ public class ScanUrlAndDeactivatedPointTests
     [Fact]
     public async Task Opening_the_sign_of_a_deactivated_point_is_410_with_a_reason()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await DeactivateSeededPointAsync(factory);
         var (client, _, _) = await AuthApi.LoggedInAsync(factory);
 
@@ -319,7 +319,7 @@ public class ScanUrlAndDeactivatedPointTests
     [Fact]
     public async Task Scanning_a_deactivated_point_is_410_and_records_nothing()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await DeactivateSeededPointAsync(factory);
         var (client, _, _) = await AuthApi.LoggedInAsync(factory);
 
@@ -334,7 +334,7 @@ public class ScanUrlAndDeactivatedPointTests
     [Fact]
     public async Task A_token_no_point_has_is_still_404()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, _) = await AuthApi.LoggedInAsync(factory);
 
         var response = await client.GetAsync("/api/service-points/by-token/token-that-was-replaced");
@@ -342,7 +342,7 @@ public class ScanUrlAndDeactivatedPointTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private static Task DeactivateSeededPointAsync(FacilityApiFactory factory) =>
+    private static Task DeactivateSeededPointAsync(JanitorialApiFactory factory) =>
         factory.WithDbAsync(async db =>
         {
             (await db.ServicePoints.SingleAsync(p => p.QrToken == QrToken)).IsActive = false;
@@ -353,12 +353,12 @@ public class ScanUrlAndDeactivatedPointTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo --filter "FullyQualifiedName~ScanUrlAndDeactivatedPointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo --filter "FullyQualifiedName~ScanUrlAndDeactivatedPointTests"`
 Expected: FAIL. Responses have no `scanUrl` property (`KeyNotFoundException`), deactivated points answer `404` instead of `410`, and a bad `PublicBaseUrl` starts without error.
 
 - [ ] **Step 3: Add `ScanUrl` to the DTO and register the builder**
 
-In `backend/src/FacilityRealtime.Api/DTOs/ScanDtos.cs`, replace:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/ScanDtos.cs`, replace:
 
 ```csharp
     string QrToken,
@@ -373,7 +373,7 @@ with:
     PointStatus CurrentStatus,
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, replace:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, replace:
 
 ```csharp
 builder.Services.AddSingleton(workingHours);
@@ -465,7 +465,7 @@ with:
     }
 ```
 
-Replace the whole of `backend/src/FacilityRealtime.Api/appsettings.json` with (the default suits a browser on the Mac itself; phones need the Mac's LAN address, set per machine in Task 8):
+Replace the whole of `backend/src/JanitorialManagementDashboard.Api/appsettings.json` with (the default suits a browser on the Mac itself; phones need the Mac's LAN address, set per machine in Task 8):
 
 ```json
 {
@@ -495,13 +495,13 @@ Replace the whole of `backend/src/FacilityRealtime.Api/appsettings.json` with (t
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --nologo`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
 Expected: PASS. Unit tests 79, API tests 71.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api backend/tests/FacilityRealtime.ApiTests
+git add backend/src/JanitorialManagementDashboard.Api backend/tests/JanitorialManagementDashboard.ApiTests
 git commit -m "feat(points): send scan links with every point and answer 410 for deactivated signs (#16)"
 ```
 
@@ -510,8 +510,8 @@ git commit -m "feat(points): send scan links with every point and answer 410 for
 ### Task 3: Service point field rules
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Application/ServicePoints/ServicePointRules.cs`
-- Create: `backend/tests/FacilityRealtime.UnitTests/ServicePointRulesTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/ServicePoints/ServicePointRules.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.UnitTests/ServicePointRulesTests.cs`
 
 **Interfaces:**
 - Consumes: nothing
@@ -523,13 +523,13 @@ git commit -m "feat(points): send scan links with every point and answer 410 for
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.UnitTests/ServicePointRulesTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/ServicePointRulesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.ServicePoints;
+using JanitorialManagementDashboard.Application.ServicePoints;
 using Xunit;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 public class ServicePointRulesTests
 {
@@ -604,15 +604,15 @@ public class ServicePointRulesTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --nologo`
-Expected: FAIL at build with `The type or namespace name 'ServicePoints' does not exist in the namespace 'FacilityRealtime.Application'`.
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --nologo`
+Expected: FAIL at build with `The type or namespace name 'ServicePoints' does not exist in the namespace 'JanitorialManagementDashboard.Application'`.
 
 - [ ] **Step 3: Write the rules**
 
-Create `backend/src/FacilityRealtime.Application/ServicePoints/ServicePointRules.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/ServicePoints/ServicePointRules.cs`:
 
 ```csharp
-namespace FacilityRealtime.Application.ServicePoints;
+namespace JanitorialManagementDashboard.Application.ServicePoints;
 
 /// <summary>
 /// Field rules for the service points admin page (ADR facility-0021, facility-0005). The frontend's
@@ -658,13 +658,13 @@ public static class ServicePointRules
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests --nologo`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests --nologo`
 Expected: PASS, `Passed: 91`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application/ServicePoints backend/tests/FacilityRealtime.UnitTests/ServicePointRulesTests.cs
+git add backend/src/JanitorialManagementDashboard.Application/ServicePoints backend/tests/JanitorialManagementDashboard.UnitTests/ServicePointRulesTests.cs
 git commit -m "feat(points): add service point field rules and UUID token generation (#16)"
 ```
 
@@ -673,12 +673,12 @@ git commit -m "feat(points): add service point field rules and UUID token genera
 ### Task 4: QR issue date and the admin service points API
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Domain/Entities/ServicePoint.cs`
-- Create (generated, then edited): `backend/src/FacilityRealtime.Infrastructure/Migrations/<timestamp>_Phase2cQrTokenIssuedAt.cs`, `.Designer.cs`; Modify (generated): `AppDbContextModelSnapshot.cs`
-- Create: `backend/src/FacilityRealtime.Api/DTOs/AdminServicePointDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminServicePointEndpoints.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/Admin/AdminServicePointsTests.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs` (map the routes)
+- Modify: `backend/src/JanitorialManagementDashboard.Domain/Entities/ServicePoint.cs`
+- Create (generated, then edited): `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/<timestamp>_Phase2cQrTokenIssuedAt.cs`, `.Designer.cs`; Modify (generated): `AppDbContextModelSnapshot.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminServicePointDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminServicePointEndpoints.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminServicePointsTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs` (map the routes)
 
 **Interfaces:**
 - Consumes: `ServicePointRules` (Task 3); `ScanUrlBuilder` (Tasks 1-2); `AuthSetup.AdminOnly`, `TimeProvider`, test harness (plan 2A)
@@ -694,17 +694,17 @@ git commit -m "feat(points): add service point field rules and UUID token genera
 
 - [ ] **Step 1: Write the failing API tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/AdminServicePointsTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminServicePointsTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 public record AdminServicePointModel(
     int Id, string Name, string Location, int CleaningIntervalMinutes, bool IsActive,
@@ -728,7 +728,7 @@ public class AdminServicePointsTests
     [MemberData(nameof(EveryRoute))]
     public async Task Anonymous_requests_are_401(string method, string path)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         var response = await SendAsync(factory.CreateApiClient(), method, path);
 
@@ -739,7 +739,7 @@ public class AdminServicePointsTests
     [MemberData(nameof(EveryRoute))]
     public async Task Cleaner_accounts_are_403(string method, string path)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
         var response = await SendAsync(cleaner, method, path);
@@ -750,7 +750,7 @@ public class AdminServicePointsTests
     [Fact]
     public async Task List_includes_deactivated_points_with_scan_url_issue_date_and_last_scan()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         await cleaner.PostAsJsonAsync("/api/scan-records", new { qrToken = SeededToken, status = "Normal" });
@@ -774,7 +774,7 @@ public class AdminServicePointsTests
     [Fact]
     public async Task Created_point_gets_a_uuid_token_and_shows_on_the_dashboard()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync("/api/admin/service-points", new { name = " ห้องน้ำชาย ชั้น 2 ", location = "อาคาร A ชั้น 2", cleaningIntervalMinutes = 45 });
@@ -792,7 +792,7 @@ public class AdminServicePointsTests
     [Fact]
     public async Task Create_rejects_bad_fields_and_names_each_one()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync("/api/admin/service-points", new { name = "", location = "", cleaningIntervalMinutes = 0 });
@@ -805,7 +805,7 @@ public class AdminServicePointsTests
     [Fact]
     public async Task Edit_changes_name_location_and_interval_but_keeps_the_sign_working()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var response = await admin.PutAsJsonAsync("/api/admin/service-points/1", new { name = "ห้องน้ำชาย ชั้น 1 (ปรับปรุงแล้ว)", location = "อาคาร A ชั้น 1", cleaningIntervalMinutes = 30 });
@@ -821,7 +821,7 @@ public class AdminServicePointsTests
     [Fact]
     public async Task Regenerating_replaces_the_token_so_the_old_sign_stops_working_and_history_stays()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         await cleaner.PostAsJsonAsync("/api/scan-records", new { qrToken = SeededToken, status = "Normal" });
@@ -844,7 +844,7 @@ public class AdminServicePointsTests
     [Fact]
     public async Task Regenerating_a_deactivated_point_is_refused()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
         await admin.PostAsync("/api/admin/service-points/1/deactivate", null);
 
@@ -856,7 +856,7 @@ public class AdminServicePointsTests
     [Fact]
     public async Task Deactivating_hides_the_point_from_the_dashboard_and_keeps_its_history()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         await cleaner.PostAsJsonAsync("/api/scan-records", new { qrToken = SeededToken, status = "Normal" });
@@ -876,7 +876,7 @@ public class AdminServicePointsTests
     [Fact]
     public async Task Reactivating_brings_the_point_back_to_the_dashboard()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
         await admin.PostAsync("/api/admin/service-points/1/deactivate", null);
 
@@ -893,7 +893,7 @@ public class AdminServicePointsTests
     [InlineData("POST", "/api/admin/service-points/999/activate", null)]
     public async Task Unknown_point_is_404(string method, string path, string? json)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AdminAsync(factory);
 
         var response = await SendAsync(admin, method, path, json);
@@ -901,7 +901,7 @@ public class AdminServicePointsTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private static Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> AdminAsync(FacilityApiFactory factory) =>
+    private static Task<(HttpClient Client, AuthResponseModel Auth, string RefreshToken)> AdminAsync(JanitorialApiFactory factory) =>
         AuthApi.LoggedInAsync(factory, "admin", "admin1234");
 
     private static Task<HttpResponseMessage> SendAsync(HttpClient client, string method, string path, string? json = "{}")
@@ -919,12 +919,12 @@ public class AdminServicePointsTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --nologo --filter "FullyQualifiedName~AdminServicePointsTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --nologo --filter "FullyQualifiedName~AdminServicePointsTests"`
 Expected: FAIL. With no routes mapped, every request gets `404 NotFound`.
 
 - [ ] **Step 3: Store the QR issue date**
 
-In `backend/src/FacilityRealtime.Domain/Entities/ServicePoint.cs`, replace:
+In `backend/src/JanitorialManagementDashboard.Domain/Entities/ServicePoint.cs`, replace:
 
 ```csharp
     public string QrToken { get; set; } = string.Empty;
@@ -944,14 +944,14 @@ Generate the migration (no MySQL server needed):
 ```bash
 export PATH="$PATH:$HOME/.dotnet/tools"
 dotnet ef migrations add Phase2cQrTokenIssuedAt \
-  --project backend/src/FacilityRealtime.Infrastructure \
-  --startup-project backend/src/FacilityRealtime.Api \
+  --project backend/src/JanitorialManagementDashboard.Infrastructure \
+  --startup-project backend/src/JanitorialManagementDashboard.Api \
   --output-dir Migrations
 ```
 
 Expected: `Done.` The generated `Up` holds one `AddColumn<DateTime>` named `QrTokenIssuedAt` on `service_points` with `defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)`.
 
-Existing points would otherwise show year 1 as their issue date. Open `backend/src/FacilityRealtime.Infrastructure/Migrations/<timestamp>_Phase2cQrTokenIssuedAt.cs` and add this line at the end of `Up`, after the `AddColumn` call:
+Existing points would otherwise show year 1 as their issue date. Open `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/<timestamp>_Phase2cQrTokenIssuedAt.cs` and add this line at the end of `Up`, after the `AddColumn` call:
 
 ```csharp
             // Existing signs were printed from the token they were created with
@@ -960,12 +960,12 @@ Existing points would otherwise show year 1 as their issue date. Open `backend/s
 
 - [ ] **Step 4: Write the DTOs and the endpoints, and map them**
 
-Create `backend/src/FacilityRealtime.Api/DTOs/AdminServicePointDtos.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminServicePointDtos.cs`:
 
 ```csharp
 using System;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 /// <summary>One row on the service points admin page, deactivated points included (ADR facility-0021).</summary>
 public record AdminServicePointDto(
@@ -985,18 +985,18 @@ public record AdminServicePointDto(
 public record SaveServicePointRequest(string Name, string? Location, int CleaningIntervalMinutes);
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AdminServicePointEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminServicePointEndpoints.cs`:
 
 ```csharp
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Common;
-using FacilityRealtime.Application.ServicePoints;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Common;
+using JanitorialManagementDashboard.Application.ServicePoints;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// ADR facility-0021: add and edit points, deactivate instead of delete, and regenerate a QR Token.
@@ -1141,7 +1141,7 @@ public static class AdminServicePointEndpoints
 }
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, replace:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, replace:
 
 ```csharp
 app.MapAdminUserEndpoints();
@@ -1158,13 +1158,13 @@ app.MapAdminServicePointEndpoints();
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `dotnet test backend/FacilityRealtime.slnx --nologo`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx --nologo`
 Expected: PASS. Unit tests 91, API tests 94.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/src backend/tests/FacilityRealtime.ApiTests/Admin/AdminServicePointsTests.cs
+git add backend/src backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminServicePointsTests.cs
 git commit -m "feat(points): add admin routes to add, edit, deactivate and regenerate QR for service points (#16)"
 ```
 
@@ -2978,19 +2978,19 @@ git commit -m "fix(points-web): show deactivated and replaced sign messages and 
 In `README.md`, replace:
 
 ````markdown
-dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/FacilityRealtime.Api
+dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/JanitorialManagementDashboard.Api
 ```
 ````
 
 with:
 
 ````markdown
-dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/FacilityRealtime.Api
+dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/JanitorialManagementDashboard.Api
 ```
 
 ตั้ง URL ที่มือถือใช้เปิดหน้าสแกน URL นี้ถูกพิมพ์ลงป้าย QR ถ้า IP ของ Mac เปลี่ยน ให้ตั้งใหม่แล้วพิมพ์ป้ายใหม่ (ADR facility-0003):
 ```bash
-dotnet user-secrets set "PublicBaseUrl" "http://<MAC_LAN_IP>:5173" --project backend/src/FacilityRealtime.Api
+dotnet user-secrets set "PublicBaseUrl" "http://<MAC_LAN_IP>:5173" --project backend/src/JanitorialManagementDashboard.Api
 ```
 ````
 
@@ -3010,7 +3010,7 @@ with:
 - [ ] **Step 2: Run every automated check**
 
 ```bash
-dotnet test backend/FacilityRealtime.slnx --nologo
+dotnet test backend/JanitorialManagementDashboard.slnx --nologo
 npm --prefix frontend test
 npm --prefix frontend run build
 npm --prefix frontend run lint
@@ -3024,7 +3024,7 @@ Set `PublicBaseUrl` to the Mac's LAN address first (README step 2). Tick a row o
 
 | # | Do | Expect |
 |---|---|---|
-| 1 | `dotnet user-secrets set "PublicBaseUrl" "192.168.1.20:5173" --project backend/src/FacilityRealtime.Api`, start the API | The API refuses to start and the error names `PublicBaseUrl`. Set it back to `http://<MAC_LAN_IP>:5173` |
+| 1 | `dotnet user-secrets set "PublicBaseUrl" "192.168.1.20:5173" --project backend/src/JanitorialManagementDashboard.Api`, start the API | The API refuses to start and the error names `PublicBaseUrl`. Set it back to `http://<MAC_LAN_IP>:5173` |
 | 2 | Log in as `admin`, click `จัดการระบบ` | The `จุดบริการ` tab opens first; 3 seed points; the page bar reads `แสดง 1–3 จาก 3 จุด` |
 | 3 | Add 10 test points: `mysql -u root facility_dashboard -e "INSERT INTO service_points (Name, Location, CleaningIntervalMinutes, QrToken, QrTokenIssuedAt, IsActive, CreatedAt) SELECT CONCAT('จุดทดสอบ ', n), 'อาคารทดสอบ', 60, UUID(), UTC_TIMESTAMP(), 1, UTC_TIMESTAMP() FROM (SELECT 1 n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10) t;"`, reload | 13 points on 2 pages; page 2 holds 1 row; choosing 24 per page shows 1 page |
 | 4 | Go to page 2, type `ห้องน้ำ` in search | Back on page 1 with the two restroom points |

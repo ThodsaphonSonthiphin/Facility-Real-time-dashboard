@@ -19,7 +19,7 @@ export function AdminLoginPage() {
     <main className="flex min-h-svh items-center justify-center bg-bg px-4 py-12 text-sm text-text">
       <div className="flex w-full max-w-100 flex-col gap-6">
         <header className="flex flex-col gap-1">
-          <span className="font-semibold text-text-2">ระบบตรวจงานแม่บ้าน</span>
+          <span className="font-semibold text-text-2">Janitorial Management Dashboard</span>
           <h1 className="text-2xl font-bold">แอดมินเข้าสู่ระบบ</h1>
         </header>
         <form

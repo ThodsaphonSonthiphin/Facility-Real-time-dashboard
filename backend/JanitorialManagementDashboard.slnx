@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/JanitorialManagementDashboard.Api/JanitorialManagementDashboard.Api.csproj" />
+    <Project Path="src/JanitorialManagementDashboard.Application/JanitorialManagementDashboard.Application.csproj" />
+    <Project Path="src/JanitorialManagementDashboard.Domain/JanitorialManagementDashboard.Domain.csproj" />
+    <Project Path="src/JanitorialManagementDashboard.Infrastructure/JanitorialManagementDashboard.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/JanitorialManagementDashboard.ApiTests/JanitorialManagementDashboard.ApiTests.csproj" />
+    <Project Path="tests/JanitorialManagementDashboard.UnitTests/JanitorialManagementDashboard.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,85 @@
+using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Infrastructure.Auth;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Serilog.Core;
+
+namespace JanitorialManagementDashboard.ApiTests.Infrastructure;
+
+/// <summary>
+/// Boots the real Program in the "Testing" environment: Program skips its MySQL registration and
+/// startup migration there, and this factory supplies in-memory SQLite plus a movable clock.
+/// Create one per test when the test mutates data or the clock.
+/// </summary>
+public sealed class JanitorialApiFactory(string signingKey = JanitorialApiFactory.TestSigningKey) : WebApplicationFactory<Program>
+{
+    public const string TestSigningKey = "test-signing-key-that-is-at-least-32-bytes-long-0123456789";
+
+    private readonly SqliteConnection _connection = new("DataSource=:memory:");
+
+    public TestTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
+
+    /// <summary>Every line the API logged (Server Log, facility-0095).</summary>
+    public LogCapture Logs { get; } = new();
+
+    /// <summary>Set before the first request: a test-only hook to add or replace services (e.g. an EF interceptor).</summary>
+    public Action<IServiceCollection>? ConfigureTestServices { get; init; }
+
+    /// <summary>Set to serve a built frontend from this folder instead of the project's wwwroot (facility-0067 tests).</summary>
+    public string? WebRoot { get; init; }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Testing");
+        // UseSetting reaches Program before builder.Build(), unlike ConfigureAppConfiguration
+        builder.UseSetting("Jwt:SigningKey", signingKey);
+        if (WebRoot is not null)
+        {
+            builder.UseWebRoot(WebRoot);
+        }
+
+        builder.ConfigureServices(services =>
+        {
+            _connection.Open();
+            services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
+            services.AddSingleton<TimeProvider>(Clock);
+            // Serilog picks up every ILogEventSink in the container (ReadFrom.Services, facility-0103)
+            services.AddSingleton<ILogEventSink>(provider => Logs.RenderingWith(provider.GetRequiredService<IConfiguration>()));
+            // 600,000 iterations per login would make the API suite slow; the format is identical
+            services.AddSingleton<IPasswordHasher>(new Pbkdf2PasswordHasher(iterations: 1_000));
+            services.AddSingleton<IStartupFilter, TestPeerAddress>();
+            ConfigureTestServices?.Invoke(services);
+        });
+    }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.EnsureCreated();
+        DbInitializer.SeedAsync(db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>()).GetAwaiter().GetResult();
+        return host;
+    }
+
+    public async Task WithDbAsync(Func<AppDbContext, Task> action)
+    {
+        using var scope = Services.CreateScope();
+        await action(scope.ServiceProvider.GetRequiredService<AppDbContext>());
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+        {
+            _connection.Dispose();
+        }
+    }
+}

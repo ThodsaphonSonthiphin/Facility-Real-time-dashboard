@@ -1,4 +1,4 @@
-# Architecture — how the Facility Real-time Dashboard is connected
+# Architecture — how the Janitorial Management Dashboard is connected
 
 Describes the application code including the 2026-11-03 retention implementation and the documented deployment topology; current checkout/publication status is in [handoff](handoff.md), and a production installation and field pilot are not yet confirmed. See [handoff](handoff.md) for status, [code map](code-map.md) for files and [ADRs](adr/README.md) for decisions.
 
@@ -65,23 +65,23 @@ flowchart TB
     end
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
-        subgraph ApiP["FacilityRealtime.Api"]
+        subgraph ApiP["JanitorialManagementDashboard.Api"]
             Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance (+ /signs/{token}) | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>/api/inspections/scan | /api/inspections | /api/my-building<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)<br/>AdminInspectionSummaryEndpoints: /api/admin/inspection-summary"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
             Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, InspectionRecorded → active Admins + building Supervisors + Area Cleaners and covers; AttendanceRecorded → active Admins"]
             Jwt["Auth/AuthSetup.cs<br/>JWT bearer + CurrentUser database check for API<br/>LoginPlace and LoginThrottle; SecurityLog"]
         end
-        subgraph AppP["FacilityRealtime.Application"]
+        subgraph AppP["JanitorialManagementDashboard.Application"]
             Status["Shifts/ShiftCalendar<br/>Rounds/RoundPlacer, PointStatusCalculator<br/>Attendance/AttendanceCalendar, AttendanceRules<br/>Geo/Geofence, GpsStamping"]
             Rules["RefreshTokenRules<br/>IAccessTokenIssuer, IPasswordHasher"]
         end
-        subgraph InfP["FacilityRealtime.Infrastructure"]
+        subgraph InfP["JanitorialManagementDashboard.Infrastructure"]
             Ctx["AppDbContext (EF Core)<br/>Migrations, DbInitializer"]
             Hash["Pbkdf2PasswordHasher"]
             Reads["Persistence/*Query<br/>AlertQuery, AuditLogQuery, ExportQuery"]
             Xlsx["Export/ExcelWorkbook<br/>(ClosedXML 0.104.2)"]
         end
-        subgraph DomP["FacilityRealtime.Domain"]
+        subgraph DomP["JanitorialManagementDashboard.Domain"]
             Ent["Entities: User, ServicePoint,<br/>ScanRecord, RefreshToken,<br/>ShiftAttendance, BlockedScan,<br/>CoverAssignment, AuditEntry, AlertReview"]
         end
     end
@@ -125,7 +125,7 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 **Excel export (facility-0053).** `POST /api/admin/export` reads rows through `ExportQuery` (attendance, submissions, and the active points with their Round Windows, from which the "ไม่ได้ทำ" rows are computed by `ExportRules`). `ExportSheets` turns them into sheets and `Infrastructure/Export/ExcelWorkbook` writes the `.xlsx` with ClosedXML 0.104.2 (MIT licence, the only package plan 5 added). Every cell is written as text (dates `yyyy-MM-dd`, times `HH:mm`), so a name such as `=1+1` can never become a formula when the Admin opens the file. Column widths are fixed, because auto-fit needs fonts that the server may not have. The inspection set adds the "การตรวจงาน" sheet (`InspectionHistoryQuery`, `InspectionHistory.FinishedRounds`): the Inspection Records plus ไม่ได้ตรวจ / ไม่ได้แก้ rows for closed shifts. Each export writes one `EXPORT_EXCEL` audit row with the range, building, sets and row counts, and no row content.
 
-**First Admin and reset-admin (facility-0092).** After the migration (and the Development seed), `FirstAdmin.EnsureAsync` creates one Admin from the server's `FirstAdmin__Username`, `FirstAdmin__Password` and `FirstAdmin__DisplayName`, only while no Admin row exists at all. A bad value stops the startup and names the setting, never the password. Started as `FacilityRealtime.Api reset-admin <username>`, `Program` migrates, runs `Commands/ResetAdminCommand` (password asked twice with the typing hidden), and exits without serving, so it needs only the connection string. Both go through `Persistence/ServerAdminAccounts` and write audit rows whose actor is null, which the history shows as "ระบบ". The handover guide is `docs/handover.md`.
+**First Admin and reset-admin (facility-0092).** After the migration (and the Development seed), `FirstAdmin.EnsureAsync` creates one Admin from the server's `FirstAdmin__Username`, `FirstAdmin__Password` and `FirstAdmin__DisplayName`, only while no Admin row exists at all. A bad value stops the startup and names the setting, never the password. Started as `JanitorialManagementDashboard.Api reset-admin <username>`, `Program` migrates, runs `Commands/ResetAdminCommand` (password asked twice with the typing hidden), and exits without serving, so it needs only the connection string. Both go through `Persistence/ServerAdminAccounts` and write audit rows whose actor is null, which the history shows as "ระบบ". The handover guide is `docs/handover.md`.
 
 ---
 

@@ -4,7 +4,7 @@
 
 **Goal:** The server writes one journal line per security event (failed login, login refused while locked, reused refresh token), stops writing every SQL statement, and the deploy guide keeps those lines 90 days in the system's own journal namespace.
 
-**Architecture:** A small `SecurityLog` service (one logger category, `FacilityRealtime.Security`) is called from `AuthEndpoints.LoginAsync` and `RefreshAsync`. One `appsettings.json` level silences EF Core's per-statement lines. The 90 days and the namespace are server settings, written into `docs/handover.md` §2.5; nothing in the app knows about them.
+**Architecture:** A small `SecurityLog` service (one logger category, `JanitorialManagementDashboard.Security`) is called from `AuthEndpoints.LoginAsync` and `RefreshAsync`. One `appsettings.json` level silences EF Core's per-statement lines. The 90 days and the namespace are server settings, written into `docs/handover.md` §2.5; nothing in the app knows about them.
 
 **Tech Stack:** .NET 10 Minimal API, `Microsoft.Extensions.Logging`, EF Core 10, xUnit with `WebApplicationFactory`, systemd-journald (deploy guide only).
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Logger category for every security line: `FacilityRealtime.Security`. Level: `Warning`.
+- Logger category for every security line: `JanitorialManagementDashboard.Security`. Level: `Warning`.
 - Exact line texts (IT greps for them; tests pin them):
   - `Login failed: employee {EmployeeId}, wrong secret` / `..., account turned off`; for an Admin `Login failed: admin {Username}, ...`
   - `Login failed: unknown account (employee login)` / `(admin login)`
@@ -32,14 +32,14 @@
 
 | File | Change | Responsibility |
 |---|---|---|
-| `backend/src/FacilityRealtime.Api/appsettings.json` | Modify | Silence EF Core's per-statement lines |
-| `backend/src/FacilityRealtime.Api/Auth/SecurityLog.cs` | Create | The four security lines and the account-naming rule |
-| `backend/src/FacilityRealtime.Api/Auth/AuthSetup.cs` | Modify | Register `SecurityLog` |
-| `backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs` | Modify | Call `SecurityLog` at the 401s, the 429 and the reuse branch |
-| `backend/tests/FacilityRealtime.ApiTests/Infrastructure/LogCapture.cs` | Create | Test logger provider that keeps every line |
-| `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs` | Modify | Expose `Logs` (a `LogCapture`) on every factory |
-| `backend/tests/FacilityRealtime.ApiTests/ServerLogTests.cs` | Create | SQL statements stay out of the log |
-| `backend/tests/FacilityRealtime.ApiTests/Auth/SecurityLogTests.cs` | Create | Each security line, and what never appears |
+| `backend/src/JanitorialManagementDashboard.Api/appsettings.json` | Modify | Silence EF Core's per-statement lines |
+| `backend/src/JanitorialManagementDashboard.Api/Auth/SecurityLog.cs` | Create | The four security lines and the account-naming rule |
+| `backend/src/JanitorialManagementDashboard.Api/Auth/AuthSetup.cs` | Modify | Register `SecurityLog` |
+| `backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs` | Modify | Call `SecurityLog` at the 401s, the 429 and the reuse branch |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/LogCapture.cs` | Create | Test logger provider that keeps every line |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs` | Modify | Expose `Logs` (a `LogCapture`) on every factory |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/ServerLogTests.cs` | Create | SQL statements stay out of the log |
+| `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/SecurityLogTests.cs` | Create | Each security line, and what never appears |
 | `docs/handover.md` | Modify | §2.5 namespace + 90 days + read commands; §3 read command |
 | `docs/adr/facility-0055-…`, `docs/adr/facility-0093-…` | Modify | Amendment lines |
 | `docs/code-map.md` | Modify | Where the security lines are written; refreshed line numbers |
@@ -50,20 +50,20 @@
 ### Task 1: Keep SQL statements out of the log (plus the log capture the tests need)
 
 **Files:**
-- Create: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/LogCapture.cs`
-- Modify: `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs`
-- Create: `backend/tests/FacilityRealtime.ApiTests/ServerLogTests.cs`
-- Modify: `backend/src/FacilityRealtime.Api/appsettings.json`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/LogCapture.cs`
+- Modify: `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/ServerLogTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/appsettings.json`
 
 **Interfaces:**
-- Produces: `LogCapture : ILoggerProvider` with `IReadOnlyList<LogLine> Lines`; `record LogLine(string Category, LogLevel Level, string Message)`; `FacilityApiFactory.Logs` (a `LogCapture`, one per factory). Task 2's tests read `factory.Logs.Lines`.
+- Produces: `LogCapture : ILoggerProvider` with `IReadOnlyList<LogLine> Lines`; `record LogLine(string Category, LogLevel Level, string Message)`; `JanitorialApiFactory.Logs` (a `LogCapture`, one per factory). Task 2's tests read `factory.Logs.Lines`.
 
 - [ ] **Step 1: Branch and commit the design documents**
 
 The design documents from the grilling session are uncommitted on `master`. Put them on the feature branch first:
 
 ```bash
-cd /Users/macbookair/Projects/Facility-Real-time-dashboard
+cd /Users/macbookair/Projects/Janitorial-Management-Dashboard
 git switch -c feat/server-log
 git add CONTEXT.md docs/adr/facility-0095-logging-scope-security-events-and-errors.md docs/adr/facility-0096-server-log-read-from-journal-only.md docs/adr/facility-0097-server-log-names-account-by-employee-id-never-typed-text.md docs/adr/facility-0098-server-log-kept-90-days.md docs/adr/facility-0099-server-log-in-its-own-journal-namespace.md docs/superpowers/specs/2026-10-29-server-log-design.md docs/superpowers/plans/2026-10-29-server-log.md
 git add docs/handoff.md
@@ -79,13 +79,13 @@ Do not add `backend/.idea/` (the owner's IDE folder).
 
 - [ ] **Step 2: Create the test logger provider**
 
-`backend/tests/FacilityRealtime.ApiTests/Infrastructure/LogCapture.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/LogCapture.cs`:
 
 ```csharp
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
-namespace FacilityRealtime.ApiTests.Infrastructure;
+namespace JanitorialManagementDashboard.ApiTests.Infrastructure;
 
 /// <summary>
 /// Every line the API logs while a test runs. The app's level rules (appsettings.json) still apply, because the
@@ -119,7 +119,7 @@ public sealed record LogLine(string Category, LogLevel Level, string Message);
 
 - [ ] **Step 3: Give every factory a `Logs` capture**
 
-In `backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs`:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs`:
 
 Add the using with the others:
 
@@ -142,12 +142,12 @@ Register it inside `builder.ConfigureServices(services => { ... })`, just before
 
 - [ ] **Step 4: Write the failing test**
 
-`backend/tests/FacilityRealtime.ApiTests/ServerLogTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/ServerLogTests.cs`:
 
 ```csharp
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 
-namespace FacilityRealtime.ApiTests;
+namespace JanitorialManagementDashboard.ApiTests;
 
 /// <summary>facility-0095: the Server Log holds security events and server errors, not every SQL statement.</summary>
 public class ServerLogTests
@@ -155,7 +155,7 @@ public class ServerLogTests
     [Fact]
     public async Task A_login_writes_no_SQL_statement_to_the_log()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         await AuthApi.LoginAsync(factory.CreateApiClient());
 
@@ -166,12 +166,12 @@ public class ServerLogTests
 
 - [ ] **Step 5: Run it and watch it fail**
 
-Run: `cd backend && dotnet test tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~ServerLogTests"`
+Run: `cd backend && dotnet test tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~ServerLogTests"`
 Expected: FAIL. The assertion lists `Microsoft.EntityFrameworkCore.Database.Command` lines (`Executed DbCommand …`), because the default level is `Information`.
 
 - [ ] **Step 6: Silence the per-statement lines**
 
-`backend/src/FacilityRealtime.Api/appsettings.json`, the `Logging` block becomes:
+`backend/src/JanitorialManagementDashboard.Api/appsettings.json`, the `Logging` block becomes:
 
 ```json
   "Logging": {
@@ -187,7 +187,7 @@ Expected: FAIL. The assertion lists `Microsoft.EntityFrameworkCore.Database.Comm
 
 - [ ] **Step 7: Run the test and the whole API suite**
 
-Run: `cd backend && dotnet test tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~ServerLogTests"`
+Run: `cd backend && dotnet test tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~ServerLogTests"`
 Expected: PASS.
 
 Run: `cd backend && dotnet test`
@@ -196,7 +196,7 @@ Expected: unit 343 passed; API 638 passed, 5 skipped (MySQL only).
 - [ ] **Step 8: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api/appsettings.json backend/tests/FacilityRealtime.ApiTests/Infrastructure/LogCapture.cs backend/tests/FacilityRealtime.ApiTests/Infrastructure/FacilityApiFactory.cs backend/tests/FacilityRealtime.ApiTests/ServerLogTests.cs
+git add backend/src/JanitorialManagementDashboard.Api/appsettings.json backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/LogCapture.cs backend/tests/JanitorialManagementDashboard.ApiTests/Infrastructure/JanitorialApiFactory.cs backend/tests/JanitorialManagementDashboard.ApiTests/ServerLogTests.cs
 git commit -m "$(cat <<'EOF'
 feat(log): keep SQL statements out of the Server Log (facility-0095)
 
@@ -214,46 +214,46 @@ EOF
 ### Task 2: Security lines for failed logins, locked logins and reused refresh tokens
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Api/Auth/SecurityLog.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Auth/AuthSetup.cs` (in `AddFacilityAuth`, beside `services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();`)
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs` (`LoginAsync` lines 35-83, `RefreshAsync` lines 85-131)
-- Create: `backend/tests/FacilityRealtime.ApiTests/Auth/SecurityLogTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Auth/SecurityLog.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Auth/AuthSetup.cs` (in `AddFacilityAuth`, beside `services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();`)
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs` (`LoginAsync` lines 35-83, `RefreshAsync` lines 85-131)
+- Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Auth/SecurityLogTests.cs`
 
 **Interfaces:**
-- Consumes: `FacilityApiFactory.Logs.Lines` (`LogLine(Category, Level, Message)`) from Task 1.
-- Produces: `public sealed class SecurityLog(ILoggerFactory loggerFactory)` in `FacilityRealtime.Api.Auth` with `const string Category = "FacilityRealtime.Security"` and methods `LoginFailed(User user, bool secretMatched)`, `LoginFailedUnknownAccount(bool byEmployeeId)`, `LoginRefusedWhileLocked(User? user, bool byEmployeeId)`, `RefreshTokenReused(User user)`.
+- Consumes: `JanitorialApiFactory.Logs.Lines` (`LogLine(Category, Level, Message)`) from Task 1.
+- Produces: `public sealed class SecurityLog(ILoggerFactory loggerFactory)` in `JanitorialManagementDashboard.Api.Auth` with `const string Category = "JanitorialManagementDashboard.Security"` and methods `LoginFailed(User user, bool secretMatched)`, `LoginFailedUnknownAccount(bool byEmployeeId)`, `LoginRefusedWhileLocked(User? user, bool byEmployeeId)`, `RefreshTokenReused(User user)`.
 
 - [ ] **Step 1: Write the failing tests**
 
-`backend/tests/FacilityRealtime.ApiTests/Auth/SecurityLogTests.cs`:
+`backend/tests/JanitorialManagementDashboard.ApiTests/Auth/SecurityLogTests.cs`:
 
 ```csharp
 using System.Net;
-using FacilityRealtime.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace FacilityRealtime.ApiTests.Auth;
+namespace JanitorialManagementDashboard.ApiTests.Auth;
 
 /// <summary>
-/// facility-0095..0097: one Warning line per security event, in category FacilityRealtime.Security. An account is
+/// facility-0095..0097: one Warning line per security event, in category JanitorialManagementDashboard.Security. An account is
 /// named by employee ID (an Admin by username); what was typed for an account that does not exist never appears.
 /// </summary>
 public class SecurityLogTests
 {
-    private static List<string> SecurityLines(FacilityApiFactory factory) =>
+    private static List<string> SecurityLines(JanitorialApiFactory factory) =>
         factory.Logs.Lines
-            .Where(line => line.Category == "FacilityRealtime.Security")
+            .Where(line => line.Category == "JanitorialManagementDashboard.Security")
             .Select(line => { Assert.Equal(LogLevel.Warning, line.Level); return line.Message; })
             .ToList();
 
-    private static void NowhereInTheLog(FacilityApiFactory factory, string text) =>
+    private static void NowhereInTheLog(JanitorialApiFactory factory, string text) =>
         Assert.DoesNotContain(factory.Logs.Lines, line => line.Message.Contains(text, StringComparison.Ordinal));
 
     [Fact]
     public async Task A_wrong_phone_names_the_employee_and_never_the_phone()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         await AuthApi.LoginAsync(factory.CreateApiClient(), "1000001", "0899999999");
 
@@ -264,7 +264,7 @@ public class SecurityLogTests
     [Fact]
     public async Task A_turned_off_account_with_the_right_phone_says_so()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         await factory.WithDbAsync(async db =>
         {
             (await db.Users.SingleAsync(u => u.EmployeeId == "1000001")).IsActive = false;
@@ -280,7 +280,7 @@ public class SecurityLogTests
     [Fact]
     public async Task A_phone_typed_into_the_employee_id_field_is_never_written()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         // both fields take digits only (facility-0054), so the fields get swapped
         await AuthApi.LoginAsync(factory.CreateApiClient(), "0810000001", "1000001");
@@ -292,7 +292,7 @@ public class SecurityLogTests
     [Fact]
     public async Task A_login_name_longer_than_any_account_is_an_unknown_account()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         await AuthApi.LoginAsync(factory.CreateApiClient(), new string('1', 101), "0810000001");
 
@@ -302,7 +302,7 @@ public class SecurityLogTests
     [Fact]
     public async Task An_admins_wrong_password_names_the_username_and_never_the_password()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var typed = $"wrong-{Guid.NewGuid():N}"; // built at run time: no password literal in the repo
 
         await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin", typed);
@@ -314,7 +314,7 @@ public class SecurityLogTests
     [Fact]
     public async Task Each_attempt_refused_while_locked_is_written()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var client = factory.CreateApiClient();
         for (var i = 0; i < 5; i++)
         {
@@ -333,7 +333,7 @@ public class SecurityLogTests
     [Fact]
     public async Task A_locked_unknown_account_is_written_without_what_was_typed()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var client = factory.CreateApiClient();
         for (var i = 0; i < 6; i++)
         {
@@ -348,7 +348,7 @@ public class SecurityLogTests
     [Fact]
     public async Task A_reused_refresh_token_names_the_account_whose_session_ended()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (client, _, first) = await AuthApi.LoggedInAsync(factory);
         await AuthApi.RefreshAsync(client, first);
 
@@ -363,7 +363,7 @@ public class SecurityLogTests
     [Fact]
     public async Task A_successful_login_writes_no_security_line()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         await AuthApi.LoginAsync(factory.CreateApiClient());
 
@@ -374,18 +374,18 @@ public class SecurityLogTests
 
 - [ ] **Step 2: Run them and watch them fail**
 
-Run: `cd backend && dotnet test tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~SecurityLogTests"`
+Run: `cd backend && dotnet test tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~SecurityLogTests"`
 Expected: 8 FAIL (no security line is written yet; the collections are empty). `A_successful_login_writes_no_security_line` passes already; it guards against logging every login.
 
 - [ ] **Step 3: Create `SecurityLog`**
 
-`backend/src/FacilityRealtime.Api/Auth/SecurityLog.cs`:
+`backend/src/JanitorialManagementDashboard.Api/Auth/SecurityLog.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.Auth;
+namespace JanitorialManagementDashboard.Api.Auth;
 
 /// <summary>
 /// facility-0095..0097: the Server Log's security lines, one Warning each, all in one category so
@@ -395,7 +395,7 @@ namespace FacilityRealtime.Api.Auth;
 /// </summary>
 public sealed class SecurityLog(ILoggerFactory loggerFactory)
 {
-    public const string Category = "FacilityRealtime.Security";
+    public const string Category = "JanitorialManagementDashboard.Security";
 
     private readonly ILogger _logger = loggerFactory.CreateLogger(Category);
 
@@ -431,7 +431,7 @@ public sealed class SecurityLog(ILoggerFactory loggerFactory)
 
 - [ ] **Step 4: Register it**
 
-`backend/src/FacilityRealtime.Api/Auth/AuthSetup.cs`, in `AddFacilityAuth`, right after `services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();`:
+`backend/src/JanitorialManagementDashboard.Api/Auth/AuthSetup.cs`, in `AddFacilityAuth`, right after `services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();`:
 
 ```csharp
         services.AddSingleton<SecurityLog>();
@@ -439,7 +439,7 @@ public sealed class SecurityLog(ILoggerFactory loggerFactory)
 
 - [ ] **Step 5: Write the lines from `LoginAsync`**
 
-`backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs`.
+`backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs`.
 
 Add a parameter at the end of `LoginAsync`'s list, after `IOptions<JwtSettings> jwt`:
 
@@ -540,7 +540,7 @@ becomes:
 
 - [ ] **Step 7: Run the new tests, then everything**
 
-Run: `cd backend && dotnet test tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~SecurityLogTests"`
+Run: `cd backend && dotnet test tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~SecurityLogTests"`
 Expected: 9 PASS.
 
 Run: `cd backend && dotnet test`
@@ -549,11 +549,11 @@ Expected: unit 343 passed; API 647 passed, 5 skipped (MySQL only). If `LoginTest
 - [ ] **Step 8: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api/Auth/SecurityLog.cs backend/src/FacilityRealtime.Api/Auth/AuthSetup.cs backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs backend/tests/FacilityRealtime.ApiTests/Auth/SecurityLogTests.cs
+git add backend/src/JanitorialManagementDashboard.Api/Auth/SecurityLog.cs backend/src/JanitorialManagementDashboard.Api/Auth/AuthSetup.cs backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs backend/tests/JanitorialManagementDashboard.ApiTests/Auth/SecurityLogTests.cs
 git commit -m "$(cat <<'EOF'
 feat(log): security lines for failed, locked and reused logins (facility-0095, 0097)
 
-One Warning per event in category FacilityRealtime.Security. Accounts are
+One Warning per event in category JanitorialManagementDashboard.Security. Accounts are
 named by employee ID or Admin username; the typed text of an unknown
 account, phones, passwords and tokens are never written.
 
@@ -644,31 +644,31 @@ In `docs/code-map.md`, right after the failure table (the row starting `| Role c
 
 ```markdown
 
-**Server Log lines** (facility-0095..0097): `Api/Auth/SecurityLog.cs`, called from `AuthEndpoints.LoginAsync` (failed, unknown account, refused while locked) and `RefreshAsync` (reused token). Category `FacilityRealtime.Security`, level Warning; the phone sees the same 401/429 as before. SQL statements stay out because `appsettings.json` sets `Microsoft.EntityFrameworkCore.Database.Command` to `Warning`.
+**Server Log lines** (facility-0095..0097): `Api/Auth/SecurityLog.cs`, called from `AuthEndpoints.LoginAsync` (failed, unknown account, refused while locked) and `RefreshAsync` (reused token). Category `JanitorialManagementDashboard.Security`, level Warning; the phone sees the same 401/429 as before. SQL statements stay out because `appsettings.json` sets `Microsoft.EntityFrameworkCore.Database.Command` to `Warning`.
 ```
 
 Then refresh the `AuthEndpoints.cs:NN-NN` references, which Task 2 shifted:
 
-Run: `rg -n "AuthEndpoints.cs:[0-9]" docs/code-map.md` and `rg -n "private static async Task<IResult>|TryBeginAttempt|ReuseDetected|RevokeUserSessionsAsync|if \(user is null\)" backend/src/FacilityRealtime.Api/Endpoints/AuthEndpoints.cs`
+Run: `rg -n "AuthEndpoints.cs:[0-9]" docs/code-map.md` and `rg -n "private static async Task<IResult>|TryBeginAttempt|ReuseDetected|RevokeUserSessionsAsync|if \(user is null\)" backend/src/JanitorialManagementDashboard.Api/Endpoints/AuthEndpoints.cs`
 Update each code-map reference to the new line numbers (`LoginAsync` range, the 401 branch, the reuse branch, the deactivated branch, the `RefreshAsync` range).
 
 - [ ] **Step 5: Measure on the built API, as in the spec's section 2**
 
 ```bash
 set -u
-cd /Users/macbookair/Projects/Facility-Real-time-dashboard/backend/src/FacilityRealtime.Api
+cd /Users/macbookair/Projects/Janitorial-Management-Dashboard/backend/src/JanitorialManagementDashboard.Api
 LOG="$(mktemp -d)/api.log"
 mysql -u root -e "DROP DATABASE IF EXISTS facility_logcheck_test; CREATE DATABASE facility_logcheck_test CHARACTER SET utf8mb4;"
 dotnet build -c Release --nologo -v quiet
 ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://localhost:5102 \
 ConnectionStrings__DefaultConnection="Server=localhost;Port=3306;Database=facility_logcheck_test;Uid=root;Pwd=;CharSet=utf8mb4;" \
 Jwt__SigningKey="$(openssl rand -base64 48)" \
-nohup dotnet bin/Release/net10.0/FacilityRealtime.Api.dll >"$LOG" 2>&1 &
+nohup dotnet bin/Release/net10.0/JanitorialManagementDashboard.Api.dll >"$LOG" 2>&1 &
 PID=$!
 curl -s -o /dev/null --retry 40 --retry-connrefused --retry-delay 1 http://localhost:5102/api/auth/me
 echo "startup lines: $(wc -l < "$LOG")"
 for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code} " -H 'Content-Type: application/json' -d '{"employeeId":"1234567","phone":"0812345678"}' http://localhost:5102/api/auth/login; done; echo
-grep -A1 "FacilityRealtime.Security" "$LOG"
+grep -A1 "JanitorialManagementDashboard.Security" "$LOG"
 mysql -u root -e "DROP DATABASE facility_logcheck_test;"
 curl -s -o /dev/null -w "after drop: %{http_code}\n" -H 'Content-Type: application/json' -d '{"employeeId":"7654321","phone":"0899999999"}' http://localhost:5102/api/auth/login
 grep -c "An unhandled exception was thrown" "$LOG"
@@ -695,7 +695,7 @@ In `docs/handoff.md`, replace the section `## Server Log (facility-0095 to 0099)
 ## Server Log (facility-0095 to 0099, done 2026-10-29; branch `feat/server-log`, not pushed)
 
 The owner asked whether the project needs logging; grilled on 2026-10-29. Spec `docs/superpowers/specs/2026-10-29-server-log-design.md`, plan `docs/superpowers/plans/2026-10-29-server-log.md`. Glossary: **Server Log** (journal, read by whoever runs the server) is not the **Audit Log** (D9).
-- The server now writes one Warning line per security event (failed login, refused while locked, reused refresh token), category `FacilityRealtime.Security`, naming the account by employee ID or Admin username. Nothing typed for an unknown account, no phone, password, token or GPS.
+- The server now writes one Warning line per security event (failed login, refused while locked, reused refresh token), category `JanitorialManagementDashboard.Security`, naming the account by employee ID or Admin username. Nothing typed for an unknown account, no phone, password, token or GPS.
 - SQL statements are out of the log (`Microsoft.EntityFrameworkCore.Database.Command` = Warning). Server errors were already logged (Kestrel's unhandled-exception line) and are unchanged.
 - Deploy guide §2.5: `LogNamespace=facility`, `/etc/systemd/journald@facility.conf` (90 days), read with `sudo journalctl --namespace=facility -u facility`.
 - Measured on the built API (Production, throwaway `facility_logcheck_test`, dropped): <startup line count> startup lines (was 510); six logins wrote 5 failed + 1 locked line; the 500 is still logged; 0 SQL lines; 0 typed values.

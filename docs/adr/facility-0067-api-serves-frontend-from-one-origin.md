@@ -17,7 +17,7 @@ flowchart TD
 
 จึงตัดสินใจว่า **API เสิร์ฟ frontend ที่ build แล้วจาก origin เดียว** ไม่ว่าฝ่าย IT จะเลือกเครื่องในโรงงานหรือ cloud:
 
-1. ผล `npm run build` (`frontend/dist`) ไปอยู่ใน `wwwroot` ของ `FacilityRealtime.Api` ตอน publish
+1. ผล `npm run build` (`frontend/dist`) ไปอยู่ใน `wwwroot` ของ `JanitorialManagementDashboard.Api` ตอน publish
 2. API ใช้ `UseDefaultFiles` + `UseStaticFiles` และ `MapFallbackToFile("index.html")` สำหรับ path ที่ไม่ขึ้นต้นด้วย `/api` หรือ `/hubs` (path ที่ขึ้นต้นด้วยสองตัวนี้แต่ไม่มี endpoint ได้ 404 ไม่ใช่ `index.html`)
 3. cookie ของ refresh token คง `SameSite=Strict` และ hub อยู่ origin เดียวกัน
 4. ลบ CORS policy `AllowAll` ไม่มีอะไรเรียก API จาก origin อื่น ทั้งระบบจริงและตอนพัฒนา (Vite proxy)

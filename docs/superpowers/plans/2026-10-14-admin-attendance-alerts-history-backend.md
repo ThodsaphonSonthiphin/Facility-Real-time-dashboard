@@ -5,7 +5,7 @@
 **Goal:** Give the Admin the three Dashboard pages that watch the shift: the attendance page (D2) with corrections that need a reason, the alert list (D3) with "คุยแล้ว ปิดเตือน" and "assign cover" straight from a Blocked Scan, and the read-only Admin history page (D9).
 
 **Architecture:**
-- **Pure rules in `FacilityRealtime.Application`, unit-tested:**
+- **Pure rules in `JanitorialManagementDashboard.Application`, unit-tested:**
   - `AttendanceCalendar.PlaceTime` turns the Admin's typed "HH:mm" into the right moment of a shift.
   - `AttendanceRules.CheckTimes` and `MissingAtShiftEnd` check the order of events and find what a Cleaner forgot to scan.
   - `AreaAttendance.StateOf` gives an Area's state on the board.
@@ -109,21 +109,21 @@
 
 ```
 backend/
-  src/FacilityRealtime.Domain/
+  src/JanitorialManagementDashboard.Domain/
     Enums/AlertType.cs                       AttendanceGps, SubmissionGps, BlockedScan                        (new, Task 2)
     Entities/AlertReview.cs                  one closed alert                                                 (new, Task 2)
-  src/FacilityRealtime.Application/
+  src/JanitorialManagementDashboard.Application/
     Attendance/AttendanceCalendar.cs         + PlaceTime                                                      (modified, Task 1)
     Attendance/AttendanceRules.cs            + CheckTimes, MissingAtShiftEnd                                  (modified, Task 1)
     Attendance/AreaAttendance.cs             AreaAttendanceState, StateOf                                     (new, Task 1)
     Audit/AuditCategories.cs                 AuditCategory, action → category                                 (new, Task 1)
     Alerts/AlertKind.cs                      AlertKind, AlertKinds.ReviewType                                 (new, Task 2)
-  src/FacilityRealtime.Infrastructure/
+  src/JanitorialManagementDashboard.Infrastructure/
     Persistence/AppDbContext.cs              + alert_reviews                                                  (modified, Task 2)
     Migrations/*_AlertReviews.cs             generated                                                        (new, Task 2)
     Persistence/AlertQuery.cs                AlertRow, LoadAsync                                              (new, Task 5)
     Persistence/AuditLogQuery.cs             AuditLogFilter, AuditLogRow, AuditActor                          (new, Task 7)
-  src/FacilityRealtime.Api/
+  src/JanitorialManagementDashboard.Api/
     DTOs/AdminAttendanceDtos.cs              board, correction, hub payload                                   (new, Tasks 3-4)
     DTOs/AdminAlertDtos.cs                   alert list and review                                            (new, Task 5)
     DTOs/CoverDtos.cs                        + BlockedScanId, CoverCandidateDto                               (modified, Task 6)
@@ -138,9 +138,9 @@ backend/
     Endpoints/AttendanceEndpoints.cs         sends AttendanceRecorded                                         (modified, Task 3)
     Hubs/ScanHub.cs                          comment                                                          (modified, Task 3)
     Program.cs                               maps the three new endpoint files                                (modified, Tasks 3, 5, 7)
-  tests/FacilityRealtime.UnitTests/          AttendanceCalendarTests, AttendanceRulesTests (+), AreaAttendanceTests,
+  tests/JanitorialManagementDashboard.UnitTests/          AttendanceCalendarTests, AttendanceRulesTests (+), AreaAttendanceTests,
                                              AuditCategoriesTests, AlertKindsTests                            (Tasks 1-2)
-  tests/FacilityRealtime.ApiTests/
+  tests/JanitorialManagementDashboard.ApiTests/
     Admin/AdminAttendanceModels.cs, Admin/AdminAttendanceApi.cs                                               (new, Task 3; + Tasks 4-7)
     Admin/AttendanceBoardEndpointTests.cs                                                                     (new, Task 3)
     Admin/AttendanceCorrectionEndpointTests.cs                                                                (new, Task 4)
@@ -152,7 +152,7 @@ backend/
 docs/architecture.md, README.md                                                                               (modified, Task 7)
 ```
 
-Run every command from the repository root. `dotnet test backend/FacilityRealtime.slnx` runs everything.
+Run every command from the repository root. `dotnet test backend/JanitorialManagementDashboard.slnx` runs everything.
 
 **Endpoint map** (every route needs an Admin):
 
@@ -173,28 +173,28 @@ Run every command from the repository root. `dotnet test backend/FacilityRealtim
 ### Task 1: Attendance and audit rules
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Application/Attendance/AttendanceCalendar.cs`
-- Modify: `backend/src/FacilityRealtime.Application/Attendance/AttendanceRules.cs`
-- Create: `backend/src/FacilityRealtime.Application/Attendance/AreaAttendance.cs`
-- Create: `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs`
-- Test: `backend/tests/FacilityRealtime.UnitTests/AttendanceCalendarTests.cs` (add), `AttendanceRulesTests.cs` (add), `AreaAttendanceTests.cs` (new), `AuditCategoriesTests.cs` (new)
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Attendance/AttendanceCalendar.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Application/Attendance/AttendanceRules.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Attendance/AreaAttendance.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Audit/AuditCategories.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/AttendanceCalendarTests.cs` (add), `AttendanceRulesTests.cs` (add), `AreaAttendanceTests.cs` (new), `AuditCategoriesTests.cs` (new)
 
 **Interfaces:**
 - Consumes: `ShiftSlot`, `ShiftCalendar.StartUtc/EndUtc`, `ThaiTime.ToUtc`, `AttendanceSettings`, `enum AttendanceEvent { ShiftIn, BreakOut, BreakIn, ShiftOut }`.
-- Produces (namespace `FacilityRealtime.Application.Attendance`):
+- Produces (namespace `JanitorialManagementDashboard.Application.Attendance`):
   - `AttendanceCalendar.PlaceTime(ShiftSlot slot, TimeOnly thaiTime, AttendanceSettings settings) : DateTime?` returns UTC, or null outside the slot's attendance window.
   - `AttendanceRules.CheckTimes(IReadOnlyDictionary<AttendanceEvent, DateTime> events) : string?` returns null when valid, otherwise a Thai message.
   - `AttendanceRules.MissingAtShiftEnd(IReadOnlyCollection<AttendanceEvent> recorded) : IReadOnlyList<AttendanceEvent>`.
   - `enum AreaAttendanceState { Empty, Working, OnBreak, Done, Covered }`.
   - `AreaAttendance.StateOf(IReadOnlyCollection<AttendanceEvent> regularCleanerEvents, bool hasCover) : AreaAttendanceState`.
-- Produces (namespace `FacilityRealtime.Application.Audit`):
+- Produces (namespace `JanitorialManagementDashboard.Application.Audit`):
   - `enum AuditCategory { Attendance, Cover, AlertReview, Setup, QrToken }`.
   - `AuditCategories.ActionsOf(AuditCategory) : IReadOnlyList<string>`.
   - `AuditCategories.Of(string action) : AuditCategory?`.
 
 - [ ] **Step 1: Write the failing tests**
 
-In `backend/tests/FacilityRealtime.UnitTests/AttendanceCalendarTests.cs`, add these two tests inside the class, after the last test. The file already has `Settings`, `Thai(day, hour, minute)` (Thai wall-clock as UTC) and `Slot(day, shift)`:
+In `backend/tests/JanitorialManagementDashboard.UnitTests/AttendanceCalendarTests.cs`, add these two tests inside the class, after the last test. The file already has `Settings`, `Thai(day, hour, minute)` (Thai wall-clock as UTC) and `Slot(day, shift)`:
 
 ```csharp
     [Theory]
@@ -221,7 +221,7 @@ In `backend/tests/FacilityRealtime.UnitTests/AttendanceCalendarTests.cs`, add th
     }
 ```
 
-In `backend/tests/FacilityRealtime.UnitTests/AttendanceRulesTests.cs`, add inside the class, after the last test:
+In `backend/tests/JanitorialManagementDashboard.UnitTests/AttendanceRulesTests.cs`, add inside the class, after the last test:
 
 ```csharp
     private static readonly DateTime Start = new(2026, 10, 8, 0, 0, 0, DateTimeKind.Utc);
@@ -279,13 +279,13 @@ In `backend/tests/FacilityRealtime.UnitTests/AttendanceRulesTests.cs`, add insid
     }
 ```
 
-Create `backend/tests/FacilityRealtime.UnitTests/AreaAttendanceTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/AreaAttendanceTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>Wireframe D2 and facility-0050: an Area's state is whether someone is there, from its regular Cleaner's events.</summary>
 public class AreaAttendanceTests
@@ -314,12 +314,12 @@ public class AreaAttendanceTests
 }
 ```
 
-Create `backend/tests/FacilityRealtime.UnitTests/AuditCategoriesTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/AuditCategoriesTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Audit;
+using JanitorialManagementDashboard.Application.Audit;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>Wireframe D9's "ประเภท" filter over every action the Admin endpoints write.</summary>
 public class AuditCategoriesTests
@@ -361,12 +361,12 @@ public class AuditCategoriesTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`
 Expected: FAIL to compile (`PlaceTime`, `CheckTimes`, `MissingAtShiftEnd`, `AreaAttendance` and `AuditCategories` are not defined).
 
 - [ ] **Step 3: Write the implementation**
 
-In `backend/src/FacilityRealtime.Application/Attendance/AttendanceCalendar.cs`, add this method inside the class, after `SlotFor`:
+In `backend/src/JanitorialManagementDashboard.Application/Attendance/AttendanceCalendar.cs`, add this method inside the class, after `SlotFor`:
 
 ```csharp
     /// <summary>
@@ -392,7 +392,7 @@ In `backend/src/FacilityRealtime.Application/Attendance/AttendanceCalendar.cs`, 
     }
 ```
 
-In `backend/src/FacilityRealtime.Application/Attendance/AttendanceRules.cs`, add inside the class, after `IsOnDuty`:
+In `backend/src/JanitorialManagementDashboard.Application/Attendance/AttendanceRules.cs`, add inside the class, after `IsOnDuty`:
 
 ```csharp
     private static readonly AttendanceEvent[] InOrder =
@@ -444,12 +444,12 @@ In `backend/src/FacilityRealtime.Application/Attendance/AttendanceRules.cs`, add
     }
 ```
 
-Create `backend/src/FacilityRealtime.Application/Attendance/AreaAttendance.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Attendance/AreaAttendance.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Application.Attendance;
+namespace JanitorialManagementDashboard.Application.Attendance;
 
 /// <summary>The status column of the attendance page (wireframe D2). facility-0050: whether someone is in the Area, never late or early.</summary>
 public enum AreaAttendanceState
@@ -480,10 +480,10 @@ public static class AreaAttendance
 }
 ```
 
-Create `backend/src/FacilityRealtime.Application/Audit/AuditCategories.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Audit/AuditCategories.cs`:
 
 ```csharp
-namespace FacilityRealtime.Application.Audit;
+namespace JanitorialManagementDashboard.Application.Audit;
 
 /// <summary>The "ประเภท" filter of the Admin history page (wireframe D9, facility-0057). Plan 5 adds accounts and the Excel export.</summary>
 public enum AuditCategory
@@ -521,13 +521,13 @@ public static class AuditCategories
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.UnitTests`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`
 Expected: PASS, 0 failures.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Application backend/tests/FacilityRealtime.UnitTests
+git add backend/src/JanitorialManagementDashboard.Application backend/tests/JanitorialManagementDashboard.UnitTests
 git commit -m "feat(backend): rules for Admin attendance corrections, missing events, Area state and audit categories (facility-0051, 0050, 0057)"
 ```
 
@@ -536,31 +536,31 @@ git commit -m "feat(backend): rules for Admin attendance corrections, missing ev
 ### Task 2: The `alert_reviews` table
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Domain/Enums/AlertType.cs`
-- Create: `backend/src/FacilityRealtime.Domain/Entities/AlertReview.cs`
-- Create: `backend/src/FacilityRealtime.Application/Alerts/AlertKind.cs`
-- Modify: `backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs`
-- Create (generated): `backend/src/FacilityRealtime.Infrastructure/Migrations/*_AlertReviews.cs`, `*_AlertReviews.Designer.cs`; modified `AppDbContextModelSnapshot.cs`
-- Test: `backend/tests/FacilityRealtime.UnitTests/AlertKindsTests.cs` (new), `backend/tests/FacilityRealtime.ApiTests/Persistence/SchemaRuleTests.cs` (add)
+- Create: `backend/src/JanitorialManagementDashboard.Domain/Enums/AlertType.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Domain/Entities/AlertReview.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Alerts/AlertKind.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AppDbContext.cs`
+- Create (generated): `backend/src/JanitorialManagementDashboard.Infrastructure/Migrations/*_AlertReviews.cs`, `*_AlertReviews.Designer.cs`; modified `AppDbContextModelSnapshot.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.UnitTests/AlertKindsTests.cs` (new), `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/SchemaRuleTests.cs` (add)
 
 **Interfaces:**
 - Produces (Domain):
   - `enum AlertType { AttendanceGps, SubmissionGps, BlockedScan }`, stored as `ATTENDANCE_GPS`, `SUBMISSION_GPS`, `BLOCKED_SCAN`.
   - `class AlertReview { long Id; AlertType AlertType; long RecordId; int ReviewedById; DateTime ReviewedAt; }`.
-- Produces (Application, namespace `FacilityRealtime.Application.Alerts`):
+- Produces (Application, namespace `JanitorialManagementDashboard.Application.Alerts`):
   - `enum AlertKind { BlockedScan, AttendanceGps, SubmissionGps, MissingAttendance }`.
   - `AlertKinds.ReviewType(AlertKind) : AlertType?`, which is null for `MissingAttendance`.
 - Produces (Infrastructure): `AppDbContext.AlertReviews : DbSet<AlertReview>`, mapped to table `alert_reviews` with `UNIQUE (alert_type, record_id)`.
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.UnitTests/AlertKindsTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.UnitTests/AlertKindsTests.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Alerts;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Alerts;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 /// <summary>database.html alert_reviews: three kinds are closed by "คุยแล้ว"; a missing Shift-Out closes when it is filled (facility-0051).</summary>
 public class AlertKindsTests
@@ -577,13 +577,13 @@ public class AlertKindsTests
 }
 ```
 
-In `backend/tests/FacilityRealtime.ApiTests/Persistence/SchemaRuleTests.cs`, add inside the class, after the last test:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/SchemaRuleTests.cs`, add inside the class, after the last test:
 
 ```csharp
     [Fact]
     public async Task An_alert_is_reviewed_once()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
 
         await factory.WithDbAsync(async db =>
         {
@@ -602,15 +602,15 @@ In `backend/tests/FacilityRealtime.ApiTests/Persistence/SchemaRuleTests.cs`, add
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: FAIL to compile (`AlertKind`, `AlertType`, `AlertReview` and `db.AlertReviews` are not defined).
 
 - [ ] **Step 3: Write the implementation**
 
-Create `backend/src/FacilityRealtime.Domain/Enums/AlertType.cs`:
+Create `backend/src/JanitorialManagementDashboard.Domain/Enums/AlertType.cs`:
 
 ```csharp
-namespace FacilityRealtime.Domain.Enums;
+namespace JanitorialManagementDashboard.Domain.Enums;
 
 /// <summary>
 /// database.html alert_reviews.alert_type: the alerts an Admin closes with "คุยแล้ว ปิดเตือน" (facility-0035, 0041).
@@ -624,12 +624,12 @@ public enum AlertType
 }
 ```
 
-Create `backend/src/FacilityRealtime.Domain/Entities/AlertReview.cs`:
+Create `backend/src/JanitorialManagementDashboard.Domain/Entities/AlertReview.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Domain.Entities;
+namespace JanitorialManagementDashboard.Domain.Entities;
 
 /// <summary>database.html alert_reviews: an alert the Admin closed ("คุยแล้ว ปิดเตือน"). One per alert.</summary>
 public class AlertReview
@@ -645,12 +645,12 @@ public class AlertReview
 }
 ```
 
-Create `backend/src/FacilityRealtime.Application/Alerts/AlertKind.cs`:
+Create `backend/src/JanitorialManagementDashboard.Application/Alerts/AlertKind.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Application.Alerts;
+namespace JanitorialManagementDashboard.Application.Alerts;
 
 /// <summary>The kinds of line on the alert list (wireframe D3).</summary>
 public enum AlertKind
@@ -681,7 +681,7 @@ public static class AlertKinds
 }
 ```
 
-In `backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs`:
+In `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AppDbContext.cs`:
 
 Add after `public DbSet<AuditEntry> AuditLog => Set<AuditEntry>();`:
 
@@ -704,15 +704,15 @@ Add this block right after the `modelBuilder.Entity<AuditEntry>(e => { ... });` 
 
 - [ ] **Step 4: Run the SQLite tests**
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: 0 failures except `MigrationTests.Migrations_match_the_model`, which FAILS because the model changed. The next step adds the migration.
 
 - [ ] **Step 5: Generate the migration**
 
 ```bash
 dotnet tool restore
-dotnet ef migrations add AlertReviews --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api
-dotnet ef migrations script ScanRules AlertReviews --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api --output "$TMP/alert-reviews.sql"
+dotnet ef migrations add AlertReviews --project backend/src/JanitorialManagementDashboard.Infrastructure --startup-project backend/src/JanitorialManagementDashboard.Api
+dotnet ef migrations script ScanRules AlertReviews --project backend/src/JanitorialManagementDashboard.Infrastructure --startup-project backend/src/JanitorialManagementDashboard.Api --output "$TMP/alert-reviews.sql"
 grep -c "CREATE TABLE" "$TMP/alert-reviews.sql"
 grep -n "alert_reviews" "$TMP/alert-reviews.sql"
 ```
@@ -725,7 +725,7 @@ Expected:
 
 `$TMP` is any temp folder outside the repo, for example the session's scratchpad.
 
-Run: `dotnet test backend/FacilityRealtime.slnx`
+Run: `dotnet test backend/JanitorialManagementDashboard.slnx`
 Expected: 0 failures (the MySQL tests are skipped).
 
 - [ ] **Step 6: Verify the migration on real MySQL**
@@ -733,7 +733,7 @@ Expected: 0 failures (the MySQL tests are skipped).
 Ask the developer for the local root password. Type it only into these commands and never save it:
 
 ```bash
-dotnet ef database update --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api --connection "Server=localhost;Port=3306;Database=facility_migration_test;Uid=root;Pwd=<local root password>;CharSet=utf8mb4;"
+dotnet ef database update --project backend/src/JanitorialManagementDashboard.Infrastructure --startup-project backend/src/JanitorialManagementDashboard.Api --connection "Server=localhost;Port=3306;Database=facility_migration_test;Uid=root;Pwd=<local root password>;CharSet=utf8mb4;"
 MYSQL_PWD='<local root password>' "/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -uroot -e "SHOW CREATE TABLE facility_migration_test.alert_reviews\G DROP DATABASE facility_migration_test;"
 ```
 
@@ -756,13 +756,13 @@ git commit -m "feat(backend): alert_reviews table, one review per alert (databas
 ### Task 3: Attendance board (D2) and the live `AttendanceRecorded` event
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Api/DTOs/AdminAttendanceDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminQuery.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AttendanceBoard.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminAttendanceEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AttendanceEndpoints.cs`, `backend/src/FacilityRealtime.Api/Hubs/ScanHub.cs`, `backend/src/FacilityRealtime.Api/Program.cs`
-- Create (tests): `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs`, `Admin/AdminAttendanceApi.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AttendanceBoardEndpointTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminAttendanceDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminQuery.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceBoard.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAttendanceEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceEndpoints.cs`, `backend/src/JanitorialManagementDashboard.Api/Hubs/ScanHub.cs`, `backend/src/JanitorialManagementDashboard.Api/Program.cs`
+- Create (tests): `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs`, `Admin/AdminAttendanceApi.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AttendanceBoardEndpointTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -788,10 +788,10 @@ git commit -m "feat(backend): alert_reviews table, one review per alert (databas
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs`:
 
 ```csharp
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 public record BoardEventModel(long Id, string EventType, DateTime OccurredAt, string Source, bool? WithinRadius, short? DistanceM);
 
@@ -806,13 +806,13 @@ public record BoardSummaryModel(int Required, int Present, int Empty, int Covere
 public record AttendanceBoardModel(DateOnly ShiftDate, string Shift, bool ShiftEnded, BoardSummaryModel Summary, List<BoardRowModel> Rows);
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceApi.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceApi.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>Calls the Admin's attendance, alert and history pages.</summary>
 public static class AdminAttendanceApi
@@ -828,17 +828,17 @@ public static class AdminAttendanceApi
 }
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/AttendanceBoardEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AttendanceBoardEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Text.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>
 /// Wireframe D2, facility-0027/0050. Seed: AR01 (Day and Night; E1001 Day, E1002 Night) and AR02 (Day only; E1003).
@@ -849,7 +849,7 @@ public class AttendanceBoardEndpointTests
     [Fact]
     public async Task The_board_needs_an_admin()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await factory.CreateApiClient().GetAsync(AdminAttendanceApi.BoardPath)).StatusCode);
@@ -859,7 +859,7 @@ public class AttendanceBoardEndpointTests
     [Fact]
     public async Task Before_anyone_checks_in_every_area_is_empty()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 0));
 
@@ -878,7 +878,7 @@ public class AttendanceBoardEndpointTests
     [Fact]
     public async Task An_area_follows_its_cleaners_scans_and_empty_areas_come_first()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
@@ -911,7 +911,7 @@ public class AttendanceBoardEndpointTests
     [Fact]
     public async Task The_night_board_leaves_out_day_only_areas()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 21, 0));
 
@@ -926,7 +926,7 @@ public class AttendanceBoardEndpointTests
     [Fact]
     public async Task A_cover_fills_an_area_whose_cleaner_did_not_come()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
@@ -950,7 +950,7 @@ public class AttendanceBoardEndpointTests
     [Fact]
     public async Task A_check_in_far_from_the_sign_carries_its_distance()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 6, 50));
@@ -967,7 +967,7 @@ public class AttendanceBoardEndpointTests
     [Fact]
     public async Task The_board_filters_by_building_and_leaves_out_deactivated_areas()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 0));
         var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
@@ -991,7 +991,7 @@ public class AttendanceBoardEndpointTests
     [InlineData("?shiftDate=08/10/2026&shift=Day")]
     public async Task A_shift_needs_both_a_date_and_day_or_night(string query)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await admin.GetAsync(AdminAttendanceApi.BoardPath + query);
@@ -1002,7 +1002,7 @@ public class AttendanceBoardEndpointTests
     [Fact]
     public async Task A_check_in_reaches_the_admins_live()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         await using var adminHub = await HubClient.ConnectAsync(factory, adminAuth.AccessToken);
@@ -1022,18 +1022,18 @@ public class AttendanceBoardEndpointTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AttendanceBoardEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AttendanceBoardEndpointTests"`
 Expected: FAIL. The route does not exist yet, so the requests give 404 and the hub test times out.
 
 - [ ] **Step 3: Write the implementation**
 
-Create `backend/src/FacilityRealtime.Api/DTOs/AdminAttendanceDtos.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminAttendanceDtos.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 /// <summary>One attendance event. Source AdminAdd/AdminEdit is the "แก้โดย Admin" badge (facility-0051); WithinRadius false is a flag (facility-0035).</summary>
 public record BoardEventDto(long Id, AttendanceEvent EventType, DateTime OccurredAt, AttendanceSource Source, bool? WithinRadius, short? DistanceM);
@@ -1061,14 +1061,14 @@ public record AttendanceBoardDto(DateOnly ShiftDate, Shift Shift, bool ShiftEnde
 public record AttendanceChangedDto(int AreaId, DateOnly ShiftDate, Shift Shift);
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AdminQuery.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminQuery.cs`:
 
 ```csharp
 using System.Globalization;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>Query-string values of the Admin pages. Dates are Thai calendar dates written yyyy-MM-dd.</summary>
 internal static class AdminQuery
@@ -1105,20 +1105,20 @@ internal static class AdminQuery
 }
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AttendanceBoard.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceBoard.cs`:
 
 ```csharp
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Api.Hubs;
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Api.Hubs;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// The attendance page (wireframe D2, facility-0027/0050): every active Area that works the shift, its regular
@@ -1206,14 +1206,14 @@ internal static class AttendanceBoard
 }
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AdminAttendanceEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAttendanceEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>The attendance page (wireframe D2): who is in each Area this shift (facility-0027, 0050).</summary>
 public static class AdminAttendanceEndpoints
@@ -1241,12 +1241,12 @@ public static class AdminAttendanceEndpoints
 }
 ```
 
-In `backend/src/FacilityRealtime.Api/Endpoints/AttendanceEndpoints.cs`:
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/AttendanceEndpoints.cs`:
 
 Add these two usings, keeping the list in order:
 
 ```csharp
-using FacilityRealtime.Api.Hubs;
+using JanitorialManagementDashboard.Api.Hubs;
 using Microsoft.AspNetCore.SignalR;
 ```
 
@@ -1282,7 +1282,7 @@ with
         return Results.Ok(State(slot, [.. existing, entry], AttendanceOutcome.Recorded));
 ```
 
-In `backend/src/FacilityRealtime.Api/Hubs/ScanHub.cs`, replace the class comment
+In `backend/src/JanitorialManagementDashboard.Api/Hubs/ScanHub.cs`, replace the class comment
 
 ```csharp
 /// <summary>Server-to-client only. "ScanRecorded" goes to Admin Accounts only (facility-0058).</summary>
@@ -1294,7 +1294,7 @@ with
 /// <summary>Server-to-client only. "ScanRecorded" and "AttendanceRecorded" go to Admin Accounts only (facility-0058, 0027).</summary>
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, add after `app.MapAdminSignEndpoints();`:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, add after `app.MapAdminSignEndpoints();`:
 
 ```csharp
 app.MapAdminAttendanceEndpoints();
@@ -1302,15 +1302,15 @@ app.MapAdminAttendanceEndpoints();
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AttendanceBoardEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AttendanceBoardEndpointTests"`
 Expected: PASS, 13 tests.
 
-Then run `dotnet test backend/FacilityRealtime.slnx`. Expected: 0 failures.
+Then run `dotnet test backend/JanitorialManagementDashboard.slnx`. Expected: 0 failures.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api backend/tests/FacilityRealtime.ApiTests/Admin
+git add backend/src/JanitorialManagementDashboard.Api backend/tests/JanitorialManagementDashboard.ApiTests/Admin
 git commit -m "feat(backend): Admin attendance board per Area and shift, live AttendanceRecorded (facility-0027, 0050)"
 ```
 
@@ -1319,11 +1319,11 @@ git commit -m "feat(backend): Admin attendance board per Area and shift, live At
 ### Task 4: Admin adds or moves attendance times
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs`
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/AdminAttendanceDtos.cs` (add the request)
-- Replace: `backend/src/FacilityRealtime.Api/Endpoints/AdminAttendanceEndpoints.cs`
-- Modify (tests): `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceApi.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AttendanceCorrectionEndpointTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminAttendanceDtos.cs` (add the request)
+- Replace: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAttendanceEndpoints.cs`
+- Modify (tests): `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceApi.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AttendanceCorrectionEndpointTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -1346,7 +1346,7 @@ git commit -m "feat(backend): Admin attendance board per Area and shift, live At
 
 - [ ] **Step 1: Write the failing tests**
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceApi.cs`, add inside the class, after `BoardAsync`:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceApi.cs`, add inside the class, after `BoardAsync`:
 
 ```csharp
     public static Task<HttpResponseMessage> CorrectAsync(
@@ -1354,24 +1354,24 @@ In `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceApi.cs`, add in
         admin.PutAsJsonAsync(BoardPath, new { userId, shiftDate, shift, eventType, time, reason });
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/AttendanceCorrectionEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AttendanceCorrectionEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>facility-0051: the Admin adds or moves a Cleaner's attendance time with a reason, and each change is logged.</summary>
 public class AttendanceCorrectionEndpointTests
 {
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
 
-    private static Task<List<ShiftAttendance>> EventsAsync(FacilityApiFactory factory, string employeeId) =>
+    private static Task<List<ShiftAttendance>> EventsAsync(JanitorialApiFactory factory, string employeeId) =>
         AdminSetupApi.ReadAsync(factory, db => db.ShiftAttendances.AsNoTracking()
             .Where(a => a.User!.EmployeeId == employeeId)
             .OrderBy(a => a.OccurredAt)
@@ -1380,7 +1380,7 @@ public class AttendanceCorrectionEndpointTests
     [Fact]
     public async Task Admin_adds_a_forgotten_check_in_with_a_reason()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
         var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
@@ -1409,7 +1409,7 @@ public class AttendanceCorrectionEndpointTests
     [Fact]
     public async Task Admin_moves_a_scanned_time_and_the_old_time_stays_in_the_log()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
@@ -1434,7 +1434,7 @@ public class AttendanceCorrectionEndpointTests
     [Fact]
     public async Task A_missing_night_shift_out_is_filled_on_the_next_morning()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (night, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E1002", "0810000002");
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, night, ThaiClock.At(8, 18, 55));
@@ -1460,7 +1460,7 @@ public class AttendanceCorrectionEndpointTests
     [InlineData("Day", "ShiftOut", "11:00", null)]
     public async Task Invalid_corrections_are_refused_and_change_nothing(string shift, string eventType, string time, string? reason)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
@@ -1477,7 +1477,7 @@ public class AttendanceCorrectionEndpointTests
     [Fact]
     public async Task Only_active_cleaners_have_attendance()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
         var supervisor = await AdminSetupApi.UserIdAsync(factory, "S2001");
@@ -1490,7 +1490,7 @@ public class AttendanceCorrectionEndpointTests
     [Fact]
     public async Task Saving_the_same_time_again_logs_nothing()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
         var e1003 = await AdminSetupApi.UserIdAsync(factory, "E1003");
@@ -1506,7 +1506,7 @@ public class AttendanceCorrectionEndpointTests
     [Fact]
     public async Task Only_admins_correct_attendance()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
 
         var response = await AdminAttendanceApi.CorrectAsync(cleaner, auth.User.Id, Oct8, "Day", "ShiftIn", "06:58", "แก้เอง");
@@ -1518,19 +1518,19 @@ public class AttendanceCorrectionEndpointTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AttendanceCorrectionEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AttendanceCorrectionEndpointTests"`
 Expected: FAIL. The PUT route does not exist, so the endpoint answers 405 Method Not Allowed.
 
 - [ ] **Step 3: Write the implementation**
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs`:
 
 ```csharp
 using System.Globalization;
-using FacilityRealtime.Application.Common;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Common;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>Words and times in an audit row's summary, which the Admin history page shows as is (facility-0057).</summary>
 internal static class ThaiLabels
@@ -1553,30 +1553,30 @@ internal static class ThaiLabels
 }
 ```
 
-In `backend/src/FacilityRealtime.Api/DTOs/AdminAttendanceDtos.cs`, add at the end of the file:
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminAttendanceDtos.cs`, add at the end of the file:
 
 ```csharp
 /// <summary>facility-0051. Time is Thai wall-clock "HH:mm" inside the shift's attendance window (facility-0069); Reason is required.</summary>
 public record CorrectAttendanceRequest(int UserId, DateOnly? ShiftDate, Shift? Shift, AttendanceEvent? EventType, string? Time, string? Reason);
 ```
 
-Replace the whole of `backend/src/FacilityRealtime.Api/Endpoints/AdminAttendanceEndpoints.cs` with:
+Replace the whole of `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAttendanceEndpoints.cs` with:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Api.Hubs;
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Application.Rounds;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Api.Hubs;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>The attendance page (wireframe D2): who is in each Area this shift (facility-0027, 0050), and the Admin's corrections (facility-0051).</summary>
 public static class AdminAttendanceEndpoints
@@ -1757,15 +1757,15 @@ public static class AdminAttendanceEndpoints
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AttendanceCorrectionEndpointTests|FullyQualifiedName~AttendanceBoardEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AttendanceCorrectionEndpointTests|FullyQualifiedName~AttendanceBoardEndpointTests"`
 Expected: PASS, 27 tests (14 correction tests and 13 board tests).
 
-Then run `dotnet test backend/FacilityRealtime.slnx`. Expected: 0 failures.
+Then run `dotnet test backend/JanitorialManagementDashboard.slnx`. Expected: 0 failures.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api backend/tests/FacilityRealtime.ApiTests/Admin
+git add backend/src/JanitorialManagementDashboard.Api backend/tests/JanitorialManagementDashboard.ApiTests/Admin
 git commit -m "feat(backend): Admin adds or moves attendance times with a reason, logged with the old time (facility-0051)"
 ```
 
@@ -1774,12 +1774,12 @@ git commit -m "feat(backend): Admin adds or moves attendance times with a reason
 ### Task 5: Alert list (D3) and "คุยแล้ว ปิดเตือน"
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Infrastructure/Persistence/AlertQuery.cs`
-- Create: `backend/src/FacilityRealtime.Api/DTOs/AdminAlertDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminAlertEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Endpoints/AdminQuery.cs` (add `ReadDateRange`), `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs` (add `AlertName`), `backend/src/FacilityRealtime.Api/Program.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AlertQuery.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminAlertDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAlertEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminQuery.cs` (add `ReadDateRange`), `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs` (add `AlertName`), `backend/src/JanitorialManagementDashboard.Api/Program.cs`
 - Modify (tests): `Admin/AdminAttendanceModels.cs`, `Admin/AdminAttendanceApi.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AlertEndpointTests.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AlertEndpointTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -1808,7 +1808,7 @@ git commit -m "feat(backend): Admin adds or moves attendance times with a reason
 
 - [ ] **Step 1: Write the failing tests**
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs`, add at the end of the file:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs`, add at the end of the file:
 
 ```csharp
 public record AlertPersonModel(int Id, string EmployeeId, string DisplayName, string Role, string? AreaCode);
@@ -1821,7 +1821,7 @@ public record AlertModel(
     List<string> MissingEvents, bool Reviewed, DateTime? ReviewedAt, CoverSuggestionModel? Cover);
 ```
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceApi.cs`, add inside the class, after `CorrectAsync`:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceApi.cs`, add inside the class, after `CorrectAsync`:
 
 ```csharp
     public const string AlertsPath = "/api/admin/alerts";
@@ -1837,16 +1837,16 @@ In `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceApi.cs`, add in
         admin.PostAsJsonAsync(AlertsPath + "/review", new { kind, recordId, note });
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/AlertEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AlertEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>
 /// Wireframe D3: Blocked Scans (facility-0041), scans far from their sign (facility-0035/0037) and missing Shift-Outs
@@ -1857,14 +1857,14 @@ public class AlertEndpointTests
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
 
     /// <summary>E1001 (AR01, Day) checks in at 06:50, then scans AR02's check-in sign at 07:10 and is blocked.</summary>
-    private static async Task BlockedAtAr02Async(FacilityApiFactory factory, HttpClient cleaner)
+    private static async Task BlockedAtAr02Async(JanitorialApiFactory factory, HttpClient cleaner)
     {
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 10));
         Assert.Equal(HttpStatusCode.Forbidden, (await AttendanceApi.RecordAsync(cleaner, "ShiftIn", "token-checkin-ar02")).StatusCode);
     }
 
-    private static async Task FarCheckInAsync(FacilityApiFactory factory, HttpClient cleaner)
+    private static async Task FarCheckInAsync(JanitorialApiFactory factory, HttpClient cleaner)
     {
         factory.Clock.SetUtcNow(ThaiClock.At(8, 6, 50));
         var response = await AttendanceApi.RecordAsync(cleaner, "ShiftIn", latitude: TestGps.FarLatitude, longitude: TestGps.FarLongitude);
@@ -1874,7 +1874,7 @@ public class AlertEndpointTests
     [Fact]
     public async Task A_blocked_scan_is_listed_with_the_cover_the_admin_can_assign()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await BlockedAtAr02Async(factory, cleaner);
@@ -1898,7 +1898,7 @@ public class AlertEndpointTests
     [Fact]
     public async Task The_cover_offer_goes_once_the_cover_exists()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await BlockedAtAr02Async(factory, cleaner);
@@ -1911,7 +1911,7 @@ public class AlertEndpointTests
     [Fact]
     public async Task The_cover_offer_goes_once_the_shift_is_over()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await BlockedAtAr02Async(factory, cleaner);
@@ -1925,7 +1925,7 @@ public class AlertEndpointTests
     [Fact]
     public async Task A_check_in_far_from_its_sign_is_listed_with_distance_and_radius()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await FarCheckInAsync(factory, cleaner);
@@ -1945,7 +1945,7 @@ public class AlertEndpointTests
     [Fact]
     public async Task A_submission_far_from_its_sign_is_listed()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var scanId = await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(8, 8, 0));
         await factory.WithDbAsync(async db =>
@@ -1969,7 +1969,7 @@ public class AlertEndpointTests
     [Fact]
     public async Task A_missing_shift_out_shows_when_the_shift_ends_and_goes_when_the_admin_fills_it()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
@@ -1995,7 +1995,7 @@ public class AlertEndpointTests
     [Fact]
     public async Task Reviewing_closes_the_alert_once_and_is_logged()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         await FarCheckInAsync(factory, cleaner);
@@ -2023,7 +2023,7 @@ public class AlertEndpointTests
     [InlineData("BlockedScan")]     // no Blocked Scan has this id
     public async Task Only_real_alerts_can_be_reviewed(string kind)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
@@ -2038,7 +2038,7 @@ public class AlertEndpointTests
     [Fact]
     public async Task A_review_needs_a_kind()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await admin.PostAsJsonAsync(AdminAttendanceApi.AlertsPath + "/review", new { recordId = 1 });
@@ -2053,7 +2053,7 @@ public class AlertEndpointTests
     [InlineData("?from=8/10/2026&to=2026-10-08")]
     public async Task A_date_range_needs_two_dates_in_order_and_at_most_31_days(string query)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         var response = await admin.GetAsync(AdminAttendanceApi.AlertsPath + query);
@@ -2064,7 +2064,7 @@ public class AlertEndpointTests
     [Fact]
     public async Task Only_admins_see_and_close_alerts()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
         Assert.Equal(HttpStatusCode.Forbidden, (await cleaner.GetAsync(AdminAttendanceApi.AlertsPath)).StatusCode);
@@ -2075,23 +2075,23 @@ public class AlertEndpointTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AlertEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AlertEndpointTests"`
 Expected: FAIL. `/api/admin/alerts` does not exist, so the requests give 404.
 
 - [ ] **Step 3: Write the implementation**
 
-Create `backend/src/FacilityRealtime.Infrastructure/Persistence/AlertQuery.cs`:
+Create `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AlertQuery.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Alerts;
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Application.Common;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Alerts;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Application.Common;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Infrastructure.Persistence;
+namespace JanitorialManagementDashboard.Infrastructure.Persistence;
 
 /// <summary>
 /// One line of the alert list (wireframe D3). Area is where it happened: the scanned sign's Area, or for a missing
@@ -2217,13 +2217,13 @@ public static class AlertQuery
 }
 ```
 
-Create `backend/src/FacilityRealtime.Api/DTOs/AdminAlertDtos.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/DTOs/AdminAlertDtos.cs`:
 
 ```csharp
-using FacilityRealtime.Application.Alerts;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Alerts;
+using JanitorialManagementDashboard.Domain.Enums;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 public record AlertPersonDto(int Id, string EmployeeId, string DisplayName, UserRole Role, string? AreaCode);
 
@@ -2256,7 +2256,7 @@ public record AlertDto(
 public record ReviewAlertRequest(AlertKind? Kind, long RecordId, string? Note);
 ```
 
-In `backend/src/FacilityRealtime.Api/Endpoints/AdminQuery.cs`, add `using FacilityRealtime.Application.Common;` to the usings. Then add this method inside the class, after `ReadSlot`:
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminQuery.cs`, add `using JanitorialManagementDashboard.Application.Common;` to the usings. Then add this method inside the class, after `ReadSlot`:
 
 ```csharp
     /// <summary>
@@ -2294,7 +2294,7 @@ In `backend/src/FacilityRealtime.Api/Endpoints/AdminQuery.cs`, add `using Facili
     }
 ```
 
-In `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs`, add `using FacilityRealtime.Application.Alerts;` to the usings. Then add inside the class, after `Date`:
+In `backend/src/JanitorialManagementDashboard.Api/Endpoints/ThaiLabels.cs`, add `using JanitorialManagementDashboard.Application.Alerts;` to the usings. Then add inside the class, after `Date`:
 
 ```csharp
     public static string AlertName(AlertKind kind) => kind switch
@@ -2306,20 +2306,20 @@ In `backend/src/FacilityRealtime.Api/Endpoints/ThaiLabels.cs`, add `using Facili
     };
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AdminAlertEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAlertEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Alerts;
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Alerts;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>The alert list (wireframe D3): Blocked Scans, scans far from their sign and missing Shift-Outs. Closing one is logged (facility-0051).</summary>
 public static class AdminAlertEndpoints
@@ -2464,7 +2464,7 @@ public static class AdminAlertEndpoints
 }
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, add after `app.MapAdminAttendanceEndpoints();`:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, add after `app.MapAdminAttendanceEndpoints();`:
 
 ```csharp
 app.MapAdminAlertEndpoints();
@@ -2472,15 +2472,15 @@ app.MapAdminAlertEndpoints();
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AlertEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AlertEndpointTests"`
 Expected: PASS, 15 tests.
 
-Then run `dotnet test backend/FacilityRealtime.slnx`. Expected: 0 failures.
+Then run `dotnet test backend/JanitorialManagementDashboard.slnx`. Expected: 0 failures.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src backend/tests/FacilityRealtime.ApiTests/Admin
+git add backend/src backend/tests/JanitorialManagementDashboard.ApiTests/Admin
 git commit -m "feat(backend): Admin alert list with blocked scans, GPS flags and missing shift-outs; close an alert once, logged (facility-0041, 0035, 0051)"
 ```
 
@@ -2489,10 +2489,10 @@ git commit -m "feat(backend): Admin alert list with blocked scans, GPS flags and
 ### Task 6: Assign a cover from a Blocked Scan, and the candidates list
 
 **Files:**
-- Modify: `backend/src/FacilityRealtime.Api/DTOs/CoverDtos.cs`
-- Replace: `backend/src/FacilityRealtime.Api/Endpoints/CoverAssignmentEndpoints.cs`
-- Modify (tests): `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/CoverFromAlertTests.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/DTOs/CoverDtos.cs`
+- Replace: `backend/src/JanitorialManagementDashboard.Api/Endpoints/CoverAssignmentEndpoints.cs`
+- Modify (tests): `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/CoverFromAlertTests.cs`
 
 **Interfaces:**
 - Consumes:
@@ -2513,23 +2513,23 @@ git commit -m "feat(backend): Admin alert list with blocked scans, GPS flags and
 
 - [ ] **Step 1: Write the failing tests**
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs`, add at the end of the file:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs`, add at the end of the file:
 
 ```csharp
 public record CoverCandidateModel(int Id, string EmployeeId, string DisplayName, string AreaCode, DateTime? ShiftInAt, DateTime? ScannedThisAreaAt);
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/CoverFromAlertTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/CoverFromAlertTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>facility-0041 rule 4: the Admin assigns a cover straight from a Blocked Scan, choosing among the shift's Cleaners.</summary>
 public class CoverFromAlertTests
@@ -2539,7 +2539,7 @@ public class CoverFromAlertTests
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
 
     /// <summary>E1001 (AR01, Day) checks in at 06:50 and scans AR02's check-in sign at 09:10; returns that Blocked Scan's id.</summary>
-    private static async Task<long> BlockedAtAr02Async(FacilityApiFactory factory, HttpClient cleaner)
+    private static async Task<long> BlockedAtAr02Async(JanitorialApiFactory factory, HttpClient cleaner)
     {
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 10));
@@ -2548,7 +2548,7 @@ public class CoverFromAlertTests
     }
 
     /// <summary>A third Area in building A with its check-in sign, so a third Day Cleaner can have an Area.</summary>
-    private static Task AddAreaAsync(FacilityApiFactory factory, string code) =>
+    private static Task AddAreaAsync(JanitorialApiFactory factory, string code) =>
         factory.WithDbAsync(async db =>
         {
             var building = await db.Buildings.SingleAsync(b => b.Code == "A");
@@ -2557,7 +2557,7 @@ public class CoverFromAlertTests
             await db.SaveChangesAsync();
         });
 
-    private static Task AddShiftInAsync(FacilityApiFactory factory, string employeeId, DateTimeOffset at) =>
+    private static Task AddShiftInAsync(JanitorialApiFactory factory, string employeeId, DateTimeOffset at) =>
         factory.WithDbAsync(async db =>
         {
             var user = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
@@ -2588,7 +2588,7 @@ public class CoverFromAlertTests
     [Fact]
     public async Task Assigning_from_a_blocked_scan_closes_that_alert()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var blockedId = await BlockedAtAr02Async(factory, cleaner);
@@ -2611,7 +2611,7 @@ public class CoverFromAlertTests
     [Fact]
     public async Task An_alert_already_closed_is_not_closed_twice()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var blockedId = await BlockedAtAr02Async(factory, cleaner);
@@ -2628,7 +2628,7 @@ public class CoverFromAlertTests
     [Fact]
     public async Task The_blocked_scan_must_be_this_cleaners_at_this_area()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AddAreaAsync(factory, "AR03");
@@ -2648,7 +2648,7 @@ public class CoverFromAlertTests
     [Fact]
     public async Task Candidates_put_whoever_scanned_the_area_first_then_who_checked_in()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AddAreaAsync(factory, "AR03");
@@ -2680,7 +2680,7 @@ public class CoverFromAlertTests
     [InlineData("?areaId=1&shift=Day")]
     public async Task Candidates_need_an_area_a_date_and_a_shift(string query)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync(CandidatesPath + query)).StatusCode);
@@ -2689,7 +2689,7 @@ public class CoverFromAlertTests
     [Fact]
     public async Task Candidates_need_an_active_area_that_works_that_shift()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
 
@@ -2703,7 +2703,7 @@ public class CoverFromAlertTests
     [Fact]
     public async Task Only_admins_see_candidates()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
         var response = await cleaner.GetAsync($"{CandidatesPath}?areaId=1&shiftDate=2026-10-08&shift=Day");
@@ -2715,14 +2715,14 @@ public class CoverFromAlertTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~CoverFromAlertTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~CoverFromAlertTests"`
 Expected: FAIL.
 - The candidates route does not exist, so it gives 405 for GET on that path or 404.
 - `blockedScanId` is ignored, so no `ALERT_REVIEW` row is written and the mismatch is not refused.
 
 - [ ] **Step 3: Write the implementation**
 
-In `backend/src/FacilityRealtime.Api/DTOs/CoverDtos.cs`, replace
+In `backend/src/JanitorialManagementDashboard.Api/DTOs/CoverDtos.cs`, replace
 
 ```csharp
 public record AssignCoverRequest(int UserId, int AreaId, DateOnly ShiftDate, Shift? Shift);
@@ -2738,21 +2738,21 @@ public record AssignCoverRequest(int UserId, int AreaId, DateOnly ShiftDate, Shi
 public record CoverCandidateDto(int Id, string EmployeeId, string DisplayName, string AreaCode, DateTime? ShiftInAt, DateTime? ScannedThisAreaAt);
 ```
 
-Replace the whole of `backend/src/FacilityRealtime.Api/Endpoints/CoverAssignmentEndpoints.cs` with:
+Replace the whole of `backend/src/JanitorialManagementDashboard.Api/Endpoints/CoverAssignmentEndpoints.cs` with:
 
 ```csharp
 using System.Security.Claims;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Alerts;
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Application.Shifts;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Alerts;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>facility-0041: the Admin lets a Cleaner work another Area for one shift. Every change is logged (facility-0051).</summary>
 public static class CoverAssignmentEndpoints
@@ -2992,15 +2992,15 @@ public static class CoverAssignmentEndpoints
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~CoverFromAlertTests|FullyQualifiedName~CoverAssignmentEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~CoverFromAlertTests|FullyQualifiedName~CoverAssignmentEndpointTests"`
 Expected: PASS. The earlier cover tests still pass unchanged.
 
-Then run `dotnet test backend/FacilityRealtime.slnx`. Expected: 0 failures.
+Then run `dotnet test backend/JanitorialManagementDashboard.slnx`. Expected: 0 failures.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/FacilityRealtime.Api backend/tests/FacilityRealtime.ApiTests/Admin
+git add backend/src/JanitorialManagementDashboard.Api backend/tests/JanitorialManagementDashboard.ApiTests/Admin
 git commit -m "feat(backend): assign a cover from a Blocked Scan, which closes its alert; cover candidates per Area and shift (facility-0041)"
 ```
 
@@ -3009,12 +3009,12 @@ git commit -m "feat(backend): assign a cover from a Blocked Scan, which closes i
 ### Task 7: Admin history page (D9), MySQL check and docs
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Infrastructure/Persistence/AuditLogQuery.cs`
-- Create: `backend/src/FacilityRealtime.Api/DTOs/AuditLogDtos.cs`
-- Create: `backend/src/FacilityRealtime.Api/Endpoints/AdminAuditLogEndpoints.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`, `docs/architecture.md`, `README.md`
-- Modify (tests): `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs`
-- Test: `backend/tests/FacilityRealtime.ApiTests/Admin/AuditLogEndpointTests.cs`, `backend/tests/FacilityRealtime.ApiTests/Persistence/MySqlAdminQueryTests.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AuditLogQuery.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/AuditLogDtos.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAuditLogEndpoints.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`, `docs/architecture.md`, `README.md`
+- Modify (tests): `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs`
+- Test: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AuditLogEndpointTests.cs`, `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/MySqlAdminQueryTests.cs`
 
 **Interfaces:**
 - Consumes: `AuditCategories` (Task 1), `AdminQuery.ReadDateRange` and `TryReadEnum` (Tasks 3 and 5), `AlertQuery` (Task 5), `AlertReview` (Task 2).
@@ -3035,7 +3035,7 @@ git commit -m "feat(backend): assign a cover from a Blocked Scan, which closes i
 
 - [ ] **Step 1: Write the failing tests**
 
-In `backend/tests/FacilityRealtime.ApiTests/Admin/AdminAttendanceModels.cs`, add `using System.Text.Json;` at the top of the file. Then add at the end of the file:
+In `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AdminAttendanceModels.cs`, add `using System.Text.Json;` at the top of the file. Then add at the end of the file:
 
 ```csharp
 public record AuditLogEntryModel(
@@ -3047,16 +3047,16 @@ public record AuditLogPageModel(List<AuditLogEntryModel> Entries, long? NextBefo
 public record AuditActorModel(int Id, string DisplayName);
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Admin/AuditLogEndpointTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/AuditLogEndpointTests.cs`:
 
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Admin;
+namespace JanitorialManagementDashboard.ApiTests.Admin;
 
 /// <summary>Wireframe D9, facility-0057: the Admin history page is read-only, newest first, filtered by date, actor and type.</summary>
 public class AuditLogEndpointTests
@@ -3064,7 +3064,7 @@ public class AuditLogEndpointTests
     private const string Path = "/api/admin/audit-log";
 
     /// <summary>One row written by the seeded Admin at <paramref name="at"/>, as an Admin endpoint would write it.</summary>
-    private static Task AddEntryAsync(FacilityApiFactory factory, string action, DateTimeOffset at, object? after = null) =>
+    private static Task AddEntryAsync(JanitorialApiFactory factory, string action, DateTimeOffset at, object? after = null) =>
         factory.WithDbAsync(async db =>
         {
             var admin = await db.Users.SingleAsync(u => u.Username == "admin");
@@ -3082,7 +3082,7 @@ public class AuditLogEndpointTests
     [Fact]
     public async Task The_log_is_newest_first_with_actor_category_and_snapshots()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AddEntryAsync(factory, "SIGN_RADIUS", ThaiClock.At(8, 9, 0), new { RadiusM = 80 });
         await AddEntryAsync(factory, "COVER_ASSIGN", ThaiClock.At(8, 9, 5));
@@ -3103,7 +3103,7 @@ public class AuditLogEndpointTests
     [Fact]
     public async Task The_log_filters_by_category_actor_and_dates()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AddEntryAsync(factory, "SIGN_RADIUS", ThaiClock.At(8, 9, 0));
         await AddEntryAsync(factory, "COVER_ASSIGN", ThaiClock.At(8, 9, 5));
@@ -3122,7 +3122,7 @@ public class AuditLogEndpointTests
     [Fact]
     public async Task Older_pages_come_with_before_id()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AddEntryAsync(factory, "SIGN_RADIUS", ThaiClock.At(8, 9, 0));
         await AddEntryAsync(factory, "SIGN_LOCATION", ThaiClock.At(8, 9, 1));
@@ -3141,7 +3141,7 @@ public class AuditLogEndpointTests
     [Fact]
     public async Task An_action_no_category_lists_still_shows()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await AddEntryAsync(factory, "SOMETHING_NEW", ThaiClock.At(8, 9, 0));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
@@ -3155,7 +3155,7 @@ public class AuditLogEndpointTests
     [Fact]
     public async Task A_real_admin_change_appears_and_reading_the_log_is_not_logged()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 0));
         var signId = await AdminSetupApi.SignIdAsync(factory, "AR01-01");
@@ -3173,7 +3173,7 @@ public class AuditLogEndpointTests
     [Fact]
     public async Task Actors_are_everyone_who_has_a_line()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         Assert.Empty((await admin.GetFromJsonAsync<List<AuditActorModel>>(Path + "/actors"))!);
@@ -3193,7 +3193,7 @@ public class AuditLogEndpointTests
     [InlineData("?from=2026-01-01&to=2026-10-08")]
     public async Task Bad_filters_are_refused(string query)
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync(Path + query)).StatusCode);
@@ -3202,7 +3202,7 @@ public class AuditLogEndpointTests
     [Fact]
     public async Task Nobody_can_change_the_log()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
 
         Assert.Equal(HttpStatusCode.MethodNotAllowed, (await admin.DeleteAsync(Path)).StatusCode);
@@ -3212,7 +3212,7 @@ public class AuditLogEndpointTests
     [Fact]
     public async Task Only_admins_read_the_log()
     {
-        using var factory = new FacilityApiFactory();
+        using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await factory.CreateApiClient().GetAsync(Path)).StatusCode);
@@ -3222,19 +3222,19 @@ public class AuditLogEndpointTests
 }
 ```
 
-Create `backend/tests/FacilityRealtime.ApiTests/Persistence/MySqlAdminQueryTests.cs`:
+Create `backend/tests/JanitorialManagementDashboard.ApiTests/Persistence/MySqlAdminQueryTests.cs`:
 
 ```csharp
-using FacilityRealtime.ApiTests.Infrastructure;
-using FacilityRealtime.Application.Alerts;
-using FacilityRealtime.Application.Attendance;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
-using FacilityRealtime.Infrastructure.Auth;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Application.Alerts;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Auth;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.ApiTests.Persistence;
+namespace JanitorialManagementDashboard.ApiTests.Persistence;
 
 /// <summary>
 /// The alert and history queries use DATE ranges, nullable flags, IN lists and JSON columns. SQLite hides how the Oracle
@@ -3330,18 +3330,18 @@ public class MySqlAdminQueryTests
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AuditLogEndpointTests|FullyQualifiedName~MySqlAdminQueryTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AuditLogEndpointTests|FullyQualifiedName~MySqlAdminQueryTests"`
 Expected: FAIL to compile (`AuditLogQuery` and `AuditLogFilter` are not defined).
 
 - [ ] **Step 3: Write the implementation**
 
-Create `backend/src/FacilityRealtime.Infrastructure/Persistence/AuditLogQuery.cs`:
+Create `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AuditLogQuery.cs`:
 
 ```csharp
-using FacilityRealtime.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace FacilityRealtime.Infrastructure.Persistence;
+namespace JanitorialManagementDashboard.Infrastructure.Persistence;
 
 /// <summary>OccurredAt in [FromUtc, ToUtc); Actions null = every action; BeforeId gives the next, older page.</summary>
 public sealed record AuditLogFilter(DateTime FromUtc, DateTime ToUtc, int? ActorId, IReadOnlyCollection<string>? Actions, long? BeforeId, int Limit);
@@ -3394,13 +3394,13 @@ public static class AuditLogQuery
 }
 ```
 
-Create `backend/src/FacilityRealtime.Api/DTOs/AuditLogDtos.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/DTOs/AuditLogDtos.cs`:
 
 ```csharp
 using System.Text.Json;
-using FacilityRealtime.Application.Audit;
+using JanitorialManagementDashboard.Application.Audit;
 
-namespace FacilityRealtime.Api.DTOs;
+namespace JanitorialManagementDashboard.Api.DTOs;
 
 /// <summary>
 /// One line of the Admin history page (wireframe D9). Before and After are the stored snapshots, which never hold a phone
@@ -3426,17 +3426,17 @@ public record AuditLogPageDto(IReadOnlyList<AuditLogEntryDto> Entries, long? Nex
 public record AuditActorDto(int Id, string DisplayName);
 ```
 
-Create `backend/src/FacilityRealtime.Api/Endpoints/AdminAuditLogEndpoints.cs`:
+Create `backend/src/JanitorialManagementDashboard.Api/Endpoints/AdminAuditLogEndpoints.cs`:
 
 ```csharp
 using System.Security.Claims;
 using System.Text.Json;
-using FacilityRealtime.Api.Auth;
-using FacilityRealtime.Api.DTOs;
-using FacilityRealtime.Application.Audit;
-using FacilityRealtime.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Api.Auth;
+using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Application.Audit;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 
-namespace FacilityRealtime.Api.Endpoints;
+namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>The "ประวัติ Admin" tab (wireframe D9, facility-0057): Admin only and read-only. Opening it is not logged.</summary>
 public static class AdminAuditLogEndpoints
@@ -3530,7 +3530,7 @@ public static class AdminAuditLogEndpoints
 }
 ```
 
-In `backend/src/FacilityRealtime.Api/Program.cs`, add after `app.MapAdminAlertEndpoints();`:
+In `backend/src/JanitorialManagementDashboard.Api/Program.cs`, add after `app.MapAdminAlertEndpoints();`:
 
 ```csharp
 app.MapAdminAuditLogEndpoints();
@@ -3538,15 +3538,15 @@ app.MapAdminAuditLogEndpoints();
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~AuditLogEndpointTests"`
+Run: `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~AuditLogEndpointTests"`
 Expected: PASS, 13 tests.
 
-Then run `dotnet test backend/FacilityRealtime.slnx`. Expected: 0 failures, with the MySQL tests skipped.
+Then run `dotnet test backend/JanitorialManagementDashboard.slnx`. Expected: 0 failures, with the MySQL tests skipped.
 
 Then run the MySQL tests against a throwaway database. Ask the developer for the local root password and do not save it anywhere:
 
 ```bash
-FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_adminqueries_test;Uid=root;Pwd=<local root password>;CharSet=utf8mb4;" dotnet test backend/tests/FacilityRealtime.ApiTests --filter "FullyQualifiedName~MySql"
+FACILITY_MYSQL_TEST="Server=localhost;Port=3306;Database=facility_adminqueries_test;Uid=root;Pwd=<local root password>;CharSet=utf8mb4;" dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~MySql"
 ```
 
 Expected: PASS, 3 tests: `MySqlReadTests`, `MySqlAreaCleanerTests` and `MySqlAdminQueryTests`. Each one drops its database in `finally`.
@@ -3620,7 +3620,7 @@ git commit -m "feat(backend): read-only Admin history page with date, actor and 
 
 ## After the last task
 
-- **Tests:** `dotnet test backend/FacilityRealtime.slnx` passes with 0 failures. The three MySQL tests pass with `FACILITY_MYSQL_TEST` set to a throwaway database, which is dropped afterwards.
+- **Tests:** `dotnet test backend/JanitorialManagementDashboard.slnx` passes with 0 failures. The three MySQL tests pass with `FACILITY_MYSQL_TEST` set to a throwaway database, which is dropped afterwards.
 - **Real API run:** start the API in Development against a throwaway MySQL database, with `ConnectionStrings__DefaultConnection` pointing at `facility_attendance_test`. Drive it with a Python script.
   - The API reads the real clock, so pick cases that fit the Thai time of the run. During the Day shift (06:00–20:00 Thai):
     1. `E1001` checks in at `token-checkin-ar01`. The board shows AR01 Working and AR02 Empty, with AR02 first.

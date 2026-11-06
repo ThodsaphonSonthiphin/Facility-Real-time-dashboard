@@ -1,6 +1,6 @@
 # ออกแบบระบบ: Wireframe, Prototype และฐานข้อมูล
 
-เอกสารออกแบบเดิมเก็บไว้เป็นประวัติของการพัฒนา ปัจจุบันใช้ Enterprise Light ตาม facility-0087 (amendment 2026-10-29), 0100 และ 0101 ดู [DESIGN_SPEC](enterprise-light/DESIGN_SPEC.md), [MASTER](../../design-system/facility/MASTER.md) และ [คู่มืออ่าน ADR](../adr/README.md) หากแบบเดิมขัดกับ ADR ให้ถือการตัดสินใจและ amendment ล่าสุดเป็นหลัก สถานะงานอยู่ใน [handoff](../handoff.md)
+เอกสารออกแบบเดิมเก็บไว้เป็นประวัติของการพัฒนา ปัจจุบันใช้ Enterprise Light ตาม facility-0087 (amendment 2026-10-29), 0100 และ 0101 ดู [DESIGN_SPEC](enterprise-light/DESIGN_SPEC.md), [MASTER](../../design-system/janitorial/MASTER.md) และ [คู่มืออ่าน ADR](../adr/README.md) หากแบบเดิมขัดกับ ADR ให้ถือการตัดสินใจและ amendment ล่าสุดเป็นหลัก สถานะงานอยู่ใน [handoff](../handoff.md)
 
 | ไฟล์ | คืออะไร | เปิดดู |
 |---|---|---|

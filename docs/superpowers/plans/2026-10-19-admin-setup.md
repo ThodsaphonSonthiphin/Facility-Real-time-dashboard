@@ -7521,7 +7521,7 @@ In section 2:
 
 ```bash
 cd frontend && npm test && npx tsc -b && npm run lint && npm run build && cd ..
-dotnet test backend/FacilityRealtime.slnx
+dotnet test backend/JanitorialManagementDashboard.slnx
 grep -rn "style={" frontend/src || echo "no inline styles"
 grep -rn "localStorage\|sessionStorage\|indexedDB" frontend/src || echo "no web storage"
 grep -rn "toLocaleString\|toLocaleTimeString\|toLocaleDateString" frontend/src || echo "no ad-hoc time formatting"
@@ -7559,7 +7559,7 @@ mysql -u root -p -e "CREATE DATABASE facility_admin_test CHARACTER SET utf8mb4;"
 npm --prefix frontend run build:api
 ASPNETCORE_ENVIRONMENT=Development \
 ConnectionStrings__DefaultConnection="Server=localhost;Port=3306;Database=facility_admin_test;Uid=root;Pwd=<typed by the owner>;CharSet=utf8mb4;" \
-dotnet run --project backend/src/FacilityRealtime.Api --urls "http://0.0.0.0:5001"
+dotnet run --project backend/src/JanitorialManagementDashboard.Api --urls "http://0.0.0.0:5001"
 ```
 
 In a second terminal:
@@ -7590,7 +7590,7 @@ Look in the API log for warnings: there must be none.
 When done, stop the API, delete the build output and drop the database:
 
 ```bash
-rm -r backend/src/FacilityRealtime.Api/wwwroot
+rm -r backend/src/JanitorialManagementDashboard.Api/wwwroot
 mysql -u root -p -e "DROP DATABASE facility_admin_test;"
 ```
 

@@ -13,15 +13,15 @@
 - Network: Local LAN WiFi (HTTP on Mac LAN IP: Port 5000 API / 5173 Vite)
 
 **Spec:**
-- [ADR 0001: Scan Record Structure](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0001-scan-record-structure.md)
-- [ADR 0002: Scanner Authentication](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0002-scanner-authentication.md)
-- [ADR 0003: Local Network WiFi Access](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0003-phone-reaches-mac-over-same-wifi-http.md)
-- [ADR 0004: App Architecture](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0004-app-architecture.md)
-- [ADR 0005: Point Status Rules](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0005-point-status-rules.md)
-- [ADR 0006: MySQL Schema & QR Token](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0006-mysql-schema-and-qr-token.md)
-- [ADR 0007: Scan Flow Native Camera](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0007-scan-flow-native-camera.md)
-- [ADR 0008: Dashboard Cards Grid Layout](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0008-dashboard-cards-grid-layout.md)
-- [ADR 0009: Delivery Plan Walking Skeleton](file:///Users/macbookair/Desktop/Facility-Real-time-dashboard/docs/adr/facility-0009-delivery-plan-walking-skeleton.md)
+- [ADR 0001: Scan Record Structure](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/adr/facility-0001-scan-record-structure.md)
+- [ADR 0002: Scanner Authentication](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/adr/facility-0002-scanner-authentication.md)
+- [ADR 0003: Local Network WiFi Access](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/adr/facility-0003-phone-reaches-mac-over-same-wifi-http.md)
+- [ADR 0004: App Architecture](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/adr/facility-0004-app-architecture.md)
+- [ADR 0005: Point Status Rules](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/adr/facility-0005-point-status-rules.md)
+- [ADR 0006: MySQL Schema & QR Token](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/adr/facility-0006-mysql-schema-and-qr-token.md)
+- [ADR 0007: Scan Flow Native Camera](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/adr/facility-0007-scan-flow-native-camera.md)
+- [ADR 0008: Dashboard Cards Grid Layout](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/adr/facility-0008-dashboard-cards-grid-layout.md)
+- [ADR 0009: Delivery Plan Walking Skeleton](file:///Users/macbookair/Projects/Janitorial-Management-Dashboard/docs/adr/facility-0009-delivery-plan-walking-skeleton.md)
 
 ## Global Constraints
 
@@ -84,14 +84,14 @@ git commit -m "chore(env): document local dev prerequisites and database setup (
 ### Task 2: Backend Solution & Domain Layer
 
 **Files:**
-- Create: `backend/FacilityRealtime.sln`
-- Create: `backend/src/FacilityRealtime.Domain/Entities/ServicePoint.cs`
-- Create: `backend/src/FacilityRealtime.Domain/Entities/User.cs`
-- Create: `backend/src/FacilityRealtime.Domain/Entities/ScanRecord.cs`
-- Create: `backend/src/FacilityRealtime.Domain/Enums/PointStatus.cs`
-- Create: `backend/src/FacilityRealtime.Domain/Enums/ScanStatus.cs`
-- Create: `backend/src/FacilityRealtime.Application/Common/StatusCalculator.cs`
-- Create: `backend/tests/FacilityRealtime.UnitTests/StatusCalculatorTests.cs`
+- Create: `backend/JanitorialManagementDashboard.sln`
+- Create: `backend/src/JanitorialManagementDashboard.Domain/Entities/ServicePoint.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Domain/Entities/User.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Domain/Entities/ScanRecord.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Domain/Enums/PointStatus.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Domain/Enums/ScanStatus.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Application/Common/StatusCalculator.cs`
+- Create: `backend/tests/JanitorialManagementDashboard.UnitTests/StatusCalculatorTests.cs`
 
 **Interfaces:**
 - Consumes: None (pure Domain & Application logic)
@@ -102,40 +102,40 @@ git commit -m "chore(env): document local dev prerequisites and database setup (
 ```bash
 mkdir -p backend/src backend/tests
 cd backend
-dotnet new sln -n FacilityRealtime
-dotnet new classlib -n FacilityRealtime.Domain -o src/FacilityRealtime.Domain
-dotnet new classlib -n FacilityRealtime.Application -o src/FacilityRealtime.Application
-dotnet new classlib -n FacilityRealtime.Infrastructure -o src/FacilityRealtime.Infrastructure
-dotnet new web -n FacilityRealtime.Api -o src/FacilityRealtime.Api
-dotnet new xunit -n FacilityRealtime.UnitTests -o tests/FacilityRealtime.UnitTests
+dotnet new sln -n JanitorialManagementDashboard
+dotnet new classlib -n JanitorialManagementDashboard.Domain -o src/JanitorialManagementDashboard.Domain
+dotnet new classlib -n JanitorialManagementDashboard.Application -o src/JanitorialManagementDashboard.Application
+dotnet new classlib -n JanitorialManagementDashboard.Infrastructure -o src/JanitorialManagementDashboard.Infrastructure
+dotnet new web -n JanitorialManagementDashboard.Api -o src/JanitorialManagementDashboard.Api
+dotnet new xunit -n JanitorialManagementDashboard.UnitTests -o tests/JanitorialManagementDashboard.UnitTests
 
-dotnet sln add src/FacilityRealtime.Domain/FacilityRealtime.Domain.csproj
-dotnet sln add src/FacilityRealtime.Application/FacilityRealtime.Application.csproj
-dotnet sln add src/FacilityRealtime.Infrastructure/FacilityRealtime.Infrastructure.csproj
-dotnet sln add src/FacilityRealtime.Api/FacilityRealtime.Api.csproj
-dotnet sln add tests/FacilityRealtime.UnitTests/FacilityRealtime.UnitTests.csproj
+dotnet sln add src/JanitorialManagementDashboard.Domain/JanitorialManagementDashboard.Domain.csproj
+dotnet sln add src/JanitorialManagementDashboard.Application/JanitorialManagementDashboard.Application.csproj
+dotnet sln add src/JanitorialManagementDashboard.Infrastructure/JanitorialManagementDashboard.Infrastructure.csproj
+dotnet sln add src/JanitorialManagementDashboard.Api/JanitorialManagementDashboard.Api.csproj
+dotnet sln add tests/JanitorialManagementDashboard.UnitTests/JanitorialManagementDashboard.UnitTests.csproj
 
-dotnet add src/FacilityRealtime.Application reference src/FacilityRealtime.Domain
-dotnet add src/FacilityRealtime.Infrastructure reference src/FacilityRealtime.Domain
-dotnet add src/FacilityRealtime.Infrastructure reference src/FacilityRealtime.Application
-dotnet add src/FacilityRealtime.Api reference src/FacilityRealtime.Application
-dotnet add src/FacilityRealtime.Api reference src/FacilityRealtime.Infrastructure
-dotnet add tests/FacilityRealtime.UnitTests reference src/FacilityRealtime.Application
+dotnet add src/JanitorialManagementDashboard.Application reference src/JanitorialManagementDashboard.Domain
+dotnet add src/JanitorialManagementDashboard.Infrastructure reference src/JanitorialManagementDashboard.Domain
+dotnet add src/JanitorialManagementDashboard.Infrastructure reference src/JanitorialManagementDashboard.Application
+dotnet add src/JanitorialManagementDashboard.Api reference src/JanitorialManagementDashboard.Application
+dotnet add src/JanitorialManagementDashboard.Api reference src/JanitorialManagementDashboard.Infrastructure
+dotnet add tests/JanitorialManagementDashboard.UnitTests reference src/JanitorialManagementDashboard.Application
 cd ..
 ```
 
 - [ ] **Step 2: Write failing unit test for Status Calculator**
 
-Write in `backend/tests/FacilityRealtime.UnitTests/StatusCalculatorTests.cs`:
+Write in `backend/tests/JanitorialManagementDashboard.UnitTests/StatusCalculatorTests.cs`:
 ```csharp
 using System;
 using System.Collections.Generic;
-using FacilityRealtime.Application.Common;
-using FacilityRealtime.Domain.Entities;
-using FacilityRealtime.Domain.Enums;
+using JanitorialManagementDashboard.Application.Common;
+using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Enums;
 using Xunit;
 
-namespace FacilityRealtime.UnitTests;
+namespace JanitorialManagementDashboard.UnitTests;
 
 public class StatusCalculatorTests
 {
@@ -177,24 +177,24 @@ public class StatusCalculatorTests
 - [ ] **Step 3: Run test to verify it fails**
 
 ```bash
-dotnet test backend/tests/FacilityRealtime.UnitTests
+dotnet test backend/tests/JanitorialManagementDashboard.UnitTests
 ```
 Expected: FAIL with compilation error (Types not yet created).
 
 - [ ] **Step 4: Implement Domain Entities and Status Calculator**
 
 Implement:
-- `backend/src/FacilityRealtime.Domain/Enums/PointStatus.cs`: `Normal`, `Overdue`, `Issue`, `OffHours`
-- `backend/src/FacilityRealtime.Domain/Enums/ScanStatus.cs`: `Normal`, `Issue`
-- `backend/src/FacilityRealtime.Domain/Entities/ServicePoint.cs`: `Id`, `Name`, `Location`, `CleaningIntervalMinutes`, `QrToken`, `IsActive`, `CreatedAt`
-- `backend/src/FacilityRealtime.Domain/Entities/User.cs`: `Id`, `Username`, `PasswordHash`, `FullName`, `Role`, `CreatedAt`
-- `backend/src/FacilityRealtime.Domain/Entities/ScanRecord.cs`: `Id`, `ServicePointId`, `UserId`, `Status`, `IssueTags`, `Notes`, `ScannedAt`
-- `backend/src/FacilityRealtime.Application/Common/StatusCalculator.cs`: Logic calculating Priority (Issue > OffHours > Overdue > Normal).
+- `backend/src/JanitorialManagementDashboard.Domain/Enums/PointStatus.cs`: `Normal`, `Overdue`, `Issue`, `OffHours`
+- `backend/src/JanitorialManagementDashboard.Domain/Enums/ScanStatus.cs`: `Normal`, `Issue`
+- `backend/src/JanitorialManagementDashboard.Domain/Entities/ServicePoint.cs`: `Id`, `Name`, `Location`, `CleaningIntervalMinutes`, `QrToken`, `IsActive`, `CreatedAt`
+- `backend/src/JanitorialManagementDashboard.Domain/Entities/User.cs`: `Id`, `Username`, `PasswordHash`, `FullName`, `Role`, `CreatedAt`
+- `backend/src/JanitorialManagementDashboard.Domain/Entities/ScanRecord.cs`: `Id`, `ServicePointId`, `UserId`, `Status`, `IssueTags`, `Notes`, `ScannedAt`
+- `backend/src/JanitorialManagementDashboard.Application/Common/StatusCalculator.cs`: Logic calculating Priority (Issue > OffHours > Overdue > Normal).
 
 - [ ] **Step 5: Run tests and verify PASS**
 
 ```bash
-dotnet test backend/tests/FacilityRealtime.UnitTests
+dotnet test backend/tests/JanitorialManagementDashboard.UnitTests
 ```
 Expected: All tests PASS.
 
@@ -210,8 +210,8 @@ git commit -m "feat(backend): implement domain entities and status calculation l
 ### Task 3: Infrastructure, Database Migrations & Seeding
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Infrastructure/Persistence/AppDbContext.cs`
-- Create: `backend/src/FacilityRealtime.Infrastructure/Persistence/DbInitializer.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/AppDbContext.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Infrastructure/Persistence/DbInitializer.cs`
 
 **Interfaces:**
 - Consumes: `MySql.EntityFrameworkCore 10.x`
@@ -220,9 +220,9 @@ git commit -m "feat(backend): implement domain entities and status calculation l
 - [ ] **Step 1: Install MySQL EF Core packages in Infrastructure & Api**
 
 ```bash
-dotnet add backend/src/FacilityRealtime.Infrastructure package MySql.EntityFrameworkCore
-dotnet add backend/src/FacilityRealtime.Infrastructure package Microsoft.EntityFrameworkCore.Design
-dotnet add backend/src/FacilityRealtime.Api package Microsoft.EntityFrameworkCore.Design
+dotnet add backend/src/JanitorialManagementDashboard.Infrastructure package MySql.EntityFrameworkCore
+dotnet add backend/src/JanitorialManagementDashboard.Infrastructure package Microsoft.EntityFrameworkCore.Design
+dotnet add backend/src/JanitorialManagementDashboard.Api package Microsoft.EntityFrameworkCore.Design
 dotnet tool install --global dotnet-ef || true
 ```
 
@@ -245,8 +245,8 @@ Seed initial records if empty:
 - [ ] **Step 4: Create EF Core migration and apply to MySQL**
 
 ```bash
-dotnet ef migrations add InitialCreate --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api
-dotnet ef database update --project backend/src/FacilityRealtime.Infrastructure --startup-project backend/src/FacilityRealtime.Api
+dotnet ef migrations add InitialCreate --project backend/src/JanitorialManagementDashboard.Infrastructure --startup-project backend/src/JanitorialManagementDashboard.Api
+dotnet ef database update --project backend/src/JanitorialManagementDashboard.Infrastructure --startup-project backend/src/JanitorialManagementDashboard.Api
 ```
 
 - [ ] **Step 5: Verify MySQL tables and records**
@@ -268,9 +268,9 @@ git commit -m "feat(database): configure ef core mysql provider and initial migr
 ### Task 4: Backend Minimal APIs & SignalR Hub
 
 **Files:**
-- Create: `backend/src/FacilityRealtime.Api/Hubs/ScanHub.cs`
-- Create: `backend/src/FacilityRealtime.Api/DTOs/ScanDtos.cs`
-- Modify: `backend/src/FacilityRealtime.Api/Program.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/Hubs/ScanHub.cs`
+- Create: `backend/src/JanitorialManagementDashboard.Api/DTOs/ScanDtos.cs`
+- Modify: `backend/src/JanitorialManagementDashboard.Api/Program.cs`
 
 **Interfaces:**
 - Consumes: `AppDbContext`, `StatusCalculator`
@@ -287,7 +287,7 @@ git commit -m "feat(database): configure ef core mysql provider and initial migr
 ```csharp
 using Microsoft.AspNetCore.SignalR;
 
-namespace FacilityRealtime.Api.Hubs;
+namespace JanitorialManagementDashboard.Api.Hubs;
 
 public class ScanHub : Hub
 {
@@ -542,7 +542,7 @@ git commit -m "feat(dashboard): implement real-time cards grid and kpi summary b
 
 Run backend:
 ```bash
-dotnet run --project backend/src/FacilityRealtime.Api --urls "http://0.0.0.0:5000"
+dotnet run --project backend/src/JanitorialManagementDashboard.Api --urls "http://0.0.0.0:5000"
 ```
 Run frontend:
 ```bash
