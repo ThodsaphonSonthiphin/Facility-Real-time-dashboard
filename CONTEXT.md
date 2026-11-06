@@ -1,8 +1,12 @@
-# Facility Real-time Dashboard Context
+# Janitorial Management Dashboard Context
 
 ระบบติดตามและแสดงผลการทำความสะอาดและดูแลสิ่งอำนวยความสะดวกในโรงงานแบบ Real-time ผ่านการสแกน QR Code
 
 ## Language
+
+**Janitorial Management Dashboard**:
+ชื่อโครงการระบบติดตามการเข้าพื้นที่ งานทำความสะอาด และผลตรวจของหัวหน้า สำหรับฝ่าย Facility
+_Avoid_: Facility Realtime Dashboard, Facility Real-time Dashboard (ชื่อโครงการเดิม)
 
 **Scan Record**:
 รายการบันทึกธุรกรรมการสแกน QR ณ จุดบริการ 1 ครั้ง ประกอบด้วย เวลาที่สแกน, รหัสจุดบริการ, ผู้สแกน, สถานะการทำความสะอาด (Normal หรือ Issue), แท็กประเภทปัญหา และหมายเหตุ
