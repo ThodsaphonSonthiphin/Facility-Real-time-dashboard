@@ -67,16 +67,15 @@ function SignLocation({ areaId, sign }: { areaId: number; sign: AdminSign }) {
           : signPlaceLabel(sign)}
       </p>
       <Link className={linkClass} to={`/admin/areas/${areaId}/capture?sign=${sign.id}`}>
-        เก็บพิกัดที่ป้ายด้วยมือถือ (M17) ›
+        เก็บพิกัดที่ป้ายด้วยมือถือ ›
       </Link>
       <p className="text-text-2">
-        เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย แล้วกด "ใช้ตำแหน่งตรงนี้" ระบบอ่านตำแหน่งต่อเนื่อง 30 วินาที แล้วใช้ค่ากลาง
-        ให้ยืนนิ่งจนครบเวลา
+        เปิดลิงก์บนมือถือ ยืนตรงที่ติดป้าย แล้วกด “ใช้ตำแหน่งตรงนี้” ยืนนิ่ง 30 วินาที แล้วกด “บันทึกพิกัด”
       </p>
       {sign.locationSource !== 'Site' && (
         <>
           <div className={rowClass}>
-            <Field label="ยังไม่ได้ไปที่ป้าย? ปักพิกัดจากแผนที่ไปก่อน">
+            <Field label="พิกัดจากแผนที่ (ถ้ายังไปที่ป้ายไม่ได้)">
               <TextInput
                 size="desk"
                 placeholder="13.756300, 100.501800"
@@ -124,7 +123,7 @@ function SignRadius({ sign }: { sign: AdminSign }) {
           บันทึกรัศมี
         </Button>
       </div>
-      <p className="text-text-2">10–500 เมตร · สแกนห่างจากป้ายเกินรัศมีจะขึ้นว่าไกลป้าย ค่าเริ่ม 50 ม. · บันทึกรัศมีแยกจากข้อมูลพื้นที่หรือจุด</p>
+      <p className="text-text-2">กำหนดระยะจากป้ายได้ 10–500 เมตร ค่าเริ่มต้นคือ 50 เมตร ถ้าสแกนไกลเกินระยะนี้หรือมือถืออ่านตำแหน่งได้ไม่แม่น ระบบจะแสดงว่า “ไกลป้าย”</p>
       <NoteLine note={note} />
     </section>
   );

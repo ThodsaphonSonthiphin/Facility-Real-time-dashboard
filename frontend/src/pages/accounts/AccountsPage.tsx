@@ -27,7 +27,7 @@ export function AccountsPage() {
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold">บัญชีผู้ใช้</h1>
           {/* As tall as its words before the answer, so nothing under it moves */}
-          <span className="min-h-5 text-text-2">สร้างทีละคน แม่บ้านผูกกับพื้นที่ หัวหน้าผูกกับตึกและกะ</span>
+          <span className="min-h-5 text-text-2">เพิ่มบัญชีให้แม่บ้าน หัวหน้า หรือแอดมินทีละคน</span>
         </div>
         <Button variant="primary" size="desk" onClick={openCreate}>
           <Plus aria-hidden="true" className="size-4" />
@@ -102,8 +102,8 @@ export function AccountsPage() {
       </section>
       <MoreInfo summary="เกี่ยวกับการปิดใช้งาน">
         <span>
-          ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติการสแกนยังอยู่ · ปิดใช้งานแล้วทุกเครื่องของคนนั้นหลุดทันที
-          แก้เบอร์โทรหรือรีเซ็ตรหัสผ่านแล้วหลุดภายใน 5 นาที · ปิดบัญชีของตัวเองไม่ได้ · ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
+          ปิดใช้งานบัญชีเพื่อหยุดการเข้าใช้และเก็บประวัติการสแกนไว้ คุณปิดได้เฉพาะบัญชีของคนอื่น
+          ถ้าเปลี่ยนเบอร์โทรหรือรหัสผ่าน เจ้าของบัญชีต้องเข้าสู่ระบบใหม่เมื่อระบบขอ การแก้ไขจะอยู่ในหน้า “ประวัติการแก้ไขของแอดมิน”
         </span>
       </MoreInfo>
       {panel?.kind === 'create' && (

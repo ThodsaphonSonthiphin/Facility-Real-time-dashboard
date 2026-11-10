@@ -36,7 +36,7 @@ public static class AdminSignEndpoints
 
         if (request.Source is not { } source || !Enum.IsDefined(source))
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "ต้องระบุว่าพิกัดวัดที่ป้ายจริง (Site) หรือปักจากแผนที่ (Map)");
+            return ApiResults.Message(StatusCodes.Status400BadRequest, "เลือกว่าตำแหน่งนี้วัดที่ป้ายจริงหรือปักจากแผนที่");
         }
 
         // A map pick has no accuracy; only a capture at the sign has one

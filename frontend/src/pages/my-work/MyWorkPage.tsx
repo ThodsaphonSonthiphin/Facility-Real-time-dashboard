@@ -26,9 +26,9 @@ import { byUrgency, laterStatuses, sentStatuses, toDo } from './workRules';
  */
 /** The footnote by the hub's state, as My Building's (plan 9 decision 9). */
 const liveLine: Record<HubStatus, string> = {
-  connecting: 'กำลังเชื่อมต่อการอัปเดตสด...',
+  connecting: 'กำลังเตรียมอัปเดตข้อมูลอัตโนมัติ...',
   live: 'หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน',
-  reconnecting: 'การอัปเดตสดหลุด กำลังต่อใหม่ กด "อัปเดต" เพื่อดูงานล่าสุด',
+  reconnecting: 'ข้อมูลอาจยังไม่ล่าสุด กด "อัปเดต" เพื่อลองโหลดใหม่',
 };
 
 export function MyWorkPage() {
@@ -139,7 +139,7 @@ function StateCard({
 
 function WorkList({ work }: { work: MyWork }) {
   if (work.areas.length === 0) {
-    return <Note tone="info">ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับพื้นที่ หรือพื้นที่ยังไม่มีจุด แจ้งแอดมิน</Note>;
+    return <Note tone="info">ยังไม่มีจุดให้ทำความสะอาดในรายการนี้ แจ้งแอดมินให้ตรวจพื้นที่และจุดที่คุณรับผิดชอบ</Note>;
   }
   const covered = work.areas.filter((area) => area.isCover);
   const ordered = byUrgency(work.areas);
@@ -152,7 +152,7 @@ function WorkList({ work }: { work: MyWork }) {
         // The design file's cover line: purple, the colour of ทำแทน
         <p className="flex items-start gap-2 rounded-md border border-break-border bg-break-bg px-3 py-2 text-sm text-break">
           <ArrowRightLeft aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          {`วันนี้ทำแทน ${covered.map((area) => area.areaName).join(', ')} ด้วย · สิทธิ์หมดเองเมื่อหมดกะ`}
+          {`กะนี้ทำแทนที่ ${covered.map((area) => area.areaName).join(', ')}`}
         </p>
       )}
       {next ? (

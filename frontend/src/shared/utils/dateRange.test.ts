@@ -39,9 +39,9 @@ describe('dateRange', () => {
 
   it('checkRange gives the range, or the message to show before asking', () => {
     expect(checkRange({ fromText: '01/10/2026', toText: ' 07/10/2026 ' }, 31)).toEqual({ from: '2026-10-01', to: '2026-10-07' });
-    expect(checkRange({ fromText: '1/10/2026', toText: '07/10/2026' }, 31)).toBe('วันที่ต้องเป็นแบบ วว/ดด/ปปปป เช่น 15/10/2026');
-    expect(checkRange({ fromText: '01/10/2026', toText: '31/02/2026' }, 31)).toBe('วันที่ต้องเป็นแบบ วว/ดด/ปปปป เช่น 15/10/2026');
-    expect(checkRange({ fromText: '08/10/2026', toText: '07/10/2026' }, 31)).toBe('วันสุดท้ายต้องไม่ก่อนวันเริ่ม');
+    expect(checkRange({ fromText: '1/10/2026', toText: '07/10/2026' }, 31)).toBe('ใส่วัน/เดือน/ปี ค.ศ. เช่น 15/10/2026');
+    expect(checkRange({ fromText: '01/10/2026', toText: '31/02/2026' }, 31)).toBe('ใส่วัน/เดือน/ปี ค.ศ. เช่น 15/10/2026');
+    expect(checkRange({ fromText: '08/10/2026', toText: '07/10/2026' }, 31)).toBe('เลือกวันสุดท้ายให้ตรงกับหรือหลังวันเริ่ม');
     expect(checkRange({ fromText: '01/09/2026', toText: '01/10/2026' }, 31)).toEqual({ from: '2026-09-01', to: '2026-10-01' });
     expect(checkRange({ fromText: '01/09/2026', toText: '02/10/2026' }, 31)).toBe('เลือกได้ไม่เกิน 31 วัน');
   });

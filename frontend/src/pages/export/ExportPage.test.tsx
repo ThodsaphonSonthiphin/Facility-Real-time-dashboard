@@ -110,7 +110,7 @@ describe('ExportPage (D8, facility-0053)', () => {
     await user.clear(fromField());
     await user.type(fromField(), '2026-10-01');
     await user.click(download());
-    expect(screen.getByRole('alert')).toHaveTextContent('วันที่ต้องเป็นแบบ วว/ดด/ปปปป เช่น 15/10/2026');
+    expect(screen.getByRole('alert')).toHaveTextContent('ใส่วัน/เดือน/ปี ค.ศ. เช่น 15/10/2026');
     expect(screen.getByText('กรอกช่วงวันให้ถูกต้องก่อน')).toBeInTheDocument();
 
     await user.clear(fromField());

@@ -59,7 +59,7 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
     expect(
       within(inspection).getByText('ป้าย AR01-03 จุดทิ้งขยะ · AR01 Area ทดลอง · ห่าง 62 ม. (รัศมี 50 ม.) · ความแม่นยำ ±25 ม.'),
     ).toBeInTheDocument();
-    expect(within(inspection).getByText('บันทึก ติดธง')).toBeInTheDocument();
+    expect(within(inspection).getByText('บันทึกแล้ว · ไกลป้าย')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'คุยแล้ว (0)' }));
     expect(screen.getByText('ยังไม่มีรายการที่คุยแล้ว')).toBeInTheDocument();
@@ -156,7 +156,7 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
       'href',
       '/admin/attendance?date=2026-10-14&shift=Night&fill=22&event=ShiftOut',
     );
-    expect(screen.getByText(/ปิดเตือนด้วยมือไม่ได้ ต้องเติมเวลาที่หน้าการเข้างาน/)).toBeInTheDocument();
+    expect(screen.getByText(/เติมเวลาที่ขาดในหน้า “การเข้างาน”/)).toBeInTheDocument();
   });
 
   it('a refusal (another Admin closed it first) is shown at the top, and the list is asked again', async () => {

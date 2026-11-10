@@ -40,7 +40,7 @@ internal static class AccountChecks
     {
         if (shift is { } given && !Enum.IsDefined(given))
         {
-            return (null, Bad("กะต้องเป็น Day หรือ Night"));
+            return (null, Bad("เลือกกะเช้าหรือกะดึก"));
         }
 
         switch (role)

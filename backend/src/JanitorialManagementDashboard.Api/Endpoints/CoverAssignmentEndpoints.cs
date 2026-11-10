@@ -308,7 +308,7 @@ public static class CoverAssignmentEndpoints
 
         if (areaId is null || !AdminQuery.TryReadDate(shiftDate, out var date) || !AdminQuery.TryReadEnum<Shift>(shift, out var parsedShift))
         {
-            return ApiResults.Message(StatusCodes.Status400BadRequest, "ต้องระบุพื้นที่ วันที่ (yyyy-MM-dd) และกะ (Day หรือ Night)");
+            return ApiResults.Message(StatusCodes.Status400BadRequest, "เลือกพื้นที่ วันที่ และกะเช้าหรือกะดึกให้ครบ");
         }
 
         var area = await db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive);

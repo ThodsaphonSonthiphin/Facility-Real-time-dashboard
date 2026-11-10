@@ -170,7 +170,7 @@ describe('account actions (D6, facility-0020, 0054)', () => {
     await user.clear(profileName);
     await user.type(profileName, 'Unsaved profile');
     const form = screen.getByRole('form', { name: 'แก้เบอร์โทร · แม่บ้านทดสอบ' });
-    expect(within(form).getByText(/^ไม่ต้องรู้เบอร์เดิม ใส่เบอร์ที่คนนี้ใช้ตอนนี้แล้วกดบันทึก/)).toBeInTheDocument();
+    expect(within(form).getByText(/^กรอกเบอร์ที่เจ้าของบัญชีใช้ตอนนี้/)).toBeInTheDocument();
     await user.type(within(form).getByLabelText('เบอร์โทรที่คนนี้ใช้ตอนนี้'), '123');
     await user.click(within(form).getByRole('button', { name: 'บันทึกเบอร์ใหม่' }));
     expect(within(form).getByRole('alert')).toHaveTextContent('เบอร์โทรต้องเป็นเลข 10 หลัก ขึ้นต้นด้วย 0');

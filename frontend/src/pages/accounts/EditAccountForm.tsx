@@ -45,7 +45,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
 
         {/* Reference assignment is 1fr + 160px at 420px and above; no container token fits these widths. */}
         <fieldset hidden={account.role === 'Admin'} className="min-w-0 rounded-lg border border-border p-4">
-          <legend className="px-1.5 font-semibold">{account.role === 'Cleaner' ? 'ผูกกับพื้นที่' : 'ผูกกับตึกและกะ'}</legend>
+          <legend className="px-1.5 font-semibold">{account.role === 'Cleaner' ? 'พื้นที่และกะที่รับผิดชอบ' : 'ตึกและกะที่รับผิดชอบ'}</legend>
           <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-[minmax(0,1fr)_10rem]">
             {account.role === 'Cleaner' && (
               <Field label="พื้นที่ประจำ" help={account.isActive ? undefined : 'เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่'}>

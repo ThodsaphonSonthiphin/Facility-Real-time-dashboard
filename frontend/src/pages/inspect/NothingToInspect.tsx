@@ -47,7 +47,7 @@ export function NothingToInspect({ visit, notice }: { visit: InspectionVisit; no
         {point.rework && <p>{`ให้แก้ ${formatTime(point.rework.requestedAt)}: “${point.rework.defect}”`}</p>}
       </Panel>
       <DistanceLine visit={visit} />
-      <p className="text-center text-sm text-text-2">ไม่มีปุ่มตรวจจนกว่าแม่บ้านจะส่งงานในรอบนี้</p>
+      <p className="text-center text-sm text-text-2">เมื่อมีงานให้ตรวจ ให้สแกนป้ายอีกครั้ง</p>
     </PhoneScreen>
   );
 }

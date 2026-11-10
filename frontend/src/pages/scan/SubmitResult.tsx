@@ -57,13 +57,13 @@ export function SubmitResult({ point, draft, result }: SubmitResultProps) {
       <div className="flex w-full flex-col gap-3 text-left">
         {result.placement === 'Late' && (
           <Note tone="warn" title={`ส่งช้า ${formatMinutes(result.lateMinutes ?? 0)}`}>
-            <span>รอบนี้จบแล้วและยังไม่มีใครส่ง จึงนับเป็นงานของรอบนี้ แต่ติดว่าส่งช้า</span>
+            <span>งานนี้นับในรอบที่เลยเวลาแล้ว และบันทึกว่าส่งช้า</span>
           </Note>
         )}
         {result.placement === 'Rework' && <Note tone="info">นับเป็นงานแก้ของรอบนี้ หัวหน้าจะตรวจอีกครั้ง</Note>}
         {result.placement === 'OffRound' && (
           <Note tone="warn">
-            ตอนนี้ไม่มีรอบไหนรับงานนี้ ระบบบันทึกไว้แล้ว แต่ไม่นับเป็นรอบใด และสถานะของจุดไม่เปลี่ยน
+            บันทึกเป็น “ส่งเพิ่ม (ไม่นับรอบ)” สถานะของจุดยังเหมือนเดิม
           </Note>
         )}
         {far && (

@@ -111,14 +111,14 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     await user.clear(fromField());
     await user.type(fromField(), '1/10/2026');
     await user.click(show);
-    expect(screen.getByRole('alert')).toHaveTextContent('วันที่ต้องเป็นแบบ วว/ดด/ปปปป เช่น 15/10/2026');
+    expect(screen.getByRole('alert')).toHaveTextContent('ใส่วัน/เดือน/ปี ค.ศ. เช่น 15/10/2026');
 
     await user.clear(fromField());
     await user.type(fromField(), '08/10/2026');
     await user.clear(toField());
     await user.type(toField(), '01/10/2026');
     await user.click(show);
-    expect(screen.getByRole('alert')).toHaveTextContent('วันสุดท้ายต้องไม่ก่อนวันเริ่ม');
+    expect(screen.getByRole('alert')).toHaveTextContent('เลือกวันสุดท้ายให้ตรงกับหรือหลังวันเริ่ม');
 
     await user.clear(fromField());
     await user.type(fromField(), '01/09/2026');

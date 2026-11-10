@@ -27,7 +27,7 @@ export function usePointEditor({ area, point, onSaved }: PointEditorProps) {
       return;
     }
     if (windows.some((w) => !clockOf(w.start.replace(/:/g, '')) || !clockOf(w.end.replace(/:/g, '')))) {
-      setProblem('ใส่เวลารอบให้ครบเป็น HH:mm (ชั่วโมง 0–23 นาที 00–59)');
+      setProblem('ใส่เวลาเริ่มและเวลาจบให้ครบทุกรอบ เช่น 07:00 ถึง 09:00');
       return;
     }
     setProblem(null);

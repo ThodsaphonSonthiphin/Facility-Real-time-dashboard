@@ -216,7 +216,7 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
 
     expect(await screen.findByRole('heading', { name: 'ส่งเพิ่มแล้ว (ไม่นับรอบ) 13:20' })).toBeInTheDocument();
     expect(
-      screen.getByText('ตอนนี้ไม่มีรอบไหนรับงานนี้ ระบบบันทึกไว้แล้ว แต่ไม่นับเป็นรอบใด และสถานะของจุดไม่เปลี่ยน'),
+      screen.getByText('บันทึกเป็น “ส่งเพิ่ม (ไม่นับรอบ)” สถานะของจุดยังเหมือนเดิม'),
     ).toBeInTheDocument();
   });
 

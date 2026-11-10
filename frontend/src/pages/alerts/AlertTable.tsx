@@ -62,10 +62,10 @@ export function AlertTable({ alerts, today, review, onNotice }: AlertTableProps)
           </th>
           <th scope="col">เตือน</th>
           <th scope="col" className="w-32">
-            ผลของระบบ
+            ผลการบันทึก
           </th>
           <th scope="col" className="w-82.5">
-            สถานะ / การกระทำ
+            สถานะและสิ่งที่ทำได้
           </th>
         </tr>
       </thead>

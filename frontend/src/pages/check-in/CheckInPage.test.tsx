@@ -136,7 +136,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     await user.click(await screen.findByRole('button', { name: 'ออกพัก' }));
 
     expect(
-      await screen.findByText('ยังไม่บันทึกออกพัก เพราะเพิ่งลงเวลาไปไม่ถึง 5 นาที กดซ้ำภายใน 5 นาทีไม่นับ'),
+      await screen.findByText('ยังไม่ได้ลงเวลาออกพัก รอให้ครบ 5 นาทีจากครั้งก่อน แล้วกด “ออกพัก” อีกครั้ง'),
     ).toBeInTheDocument();
   });
 
@@ -204,7 +204,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(reload).not.toHaveBeenCalled();
   });
 
-  it('on plain http the page says it needs https and offers no retry (facility-0049)', async () => {
+  it('on plain http the page asks for a working link and offers no retry (facility-0049)', async () => {
     fakeGps(nearSign);
     serve({});
     Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true });
@@ -213,7 +213,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
 
     expect(await screen.findByRole('heading', { name: 'อ่านตำแหน่งไม่ได้' })).toBeInTheDocument();
-    expect(screen.getByText(/ต้องเปิดผ่าน https/)).toBeInTheDocument();
+    expect(screen.getByText(/ขอลิงก์ที่ใช้งานได้จากแอดมิน/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ลองอีกครั้ง' })).not.toBeInTheDocument();
   });
 
@@ -272,7 +272,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     await user.click(await screen.findByRole('button', { name: 'เข้างาน' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'ยังไม่ได้บันทึกเวลา เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+      'ยังไม่ได้บันทึกเวลา เชื่อมต่อระบบไม่ได้ ตรวจดูสัญญาณอินเทอร์เน็ตแล้วลองอีกครั้ง',
     );
     expect(screen.getByRole('button', { name: 'เข้างาน' })).toBeEnabled();
   });
@@ -293,7 +293,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
       await vi.advanceTimersByTimeAsync(1_000);
 
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        'ยังไม่ได้บันทึกเวลา เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+        'ยังไม่ได้บันทึกเวลา เชื่อมต่อระบบไม่ได้ ตรวจดูสัญญาณอินเทอร์เน็ตแล้วลองอีกครั้ง',
       );
       expect(screen.getByRole('button', { name: 'เข้างาน' })).toBeEnabled();
     } finally {
@@ -360,7 +360,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
 
     expect(await screen.findByRole('heading', { name: 'ป้ายนี้ใช้ไม่ได้แล้ว' })).toBeInTheDocument();
     expect(
-      screen.getByText('ยังไม่ได้ลงเวลา ป้ายนี้อาจถูกสร้าง QR ใหม่แล้ว หรือไม่มีในระบบ แจ้งแอดมิน'),
+      screen.getByText('ยังไม่ได้ลงเวลา ลองสแกนป้ายลงเวลาที่ติดอยู่ล่าสุด ถ้ายังใช้ไม่ได้ ให้แจ้งแอดมิน'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'ดูงานของฉัน' })).toHaveAttribute('href', '/my-work');
@@ -396,7 +396,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     });
     await renderApp(SIGN);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+    expect(await screen.findByRole('alert')).toHaveTextContent('เชื่อมต่อระบบไม่ได้ ตรวจดูสัญญาณอินเทอร์เน็ตแล้วลองอีกครั้ง');
     expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
   });
 
@@ -405,7 +405,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     await renderApp(SIGN);
 
     await screen.findByRole('button', { name: 'เข้างาน' });
-    expectBehindMoreInfo('ระบบแสดงปุ่มถัดไปให้เองตามลำดับ · กดซ้ำภายใน 5 นาทีไม่นับ · ไม่คิดสายหรือกลับก่อน', 'เกี่ยวกับการลงเวลา');
+    expectBehindMoreInfo('กดตามปุ่มที่ขึ้นบนหน้าจอ เว้นอย่างน้อย 5 นาทีระหว่างการลงเวลาแต่ละครั้ง ระบบนี้ใช้ดูว่าพื้นที่มีคนทำงานแล้วหรือยัง', 'เกี่ยวกับการลงเวลา');
     expect(screen.getByText('เกี่ยวกับการลงเวลา').closest('summary')).toHaveClass('min-h-12');
   });
 });

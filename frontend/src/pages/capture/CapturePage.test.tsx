@@ -50,7 +50,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
 
     await wait(12_000);
     expect(screen.getByText('อ่านครบแล้ว 3 ครั้ง ใน 30 วินาที')).toBeInTheDocument();
-    expect(screen.getByText('ค่ากลาง: 13.756400, 100.501900')).toBeInTheDocument();
+    expect(screen.getByText('พิกัดที่จะบันทึก: 13.756400, 100.501900')).toBeInTheDocument();
     expect(screen.getByText('ความแม่นยำ ±16 ม. · น้อยกว่ารัศมี ใช้ได้')).toBeInTheDocument();
     expect(gps.cleared).toBe(1);
 
@@ -115,7 +115,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง');
+    expect(await screen.findByRole('alert')).toHaveTextContent('เว็บนี้อ่านตำแหน่งมือถือไม่ได้ ให้เปิดหน้านี้จากลิงก์ HTTPS ของระบบ');
     expect(gps.watches).toBe(0);
     expect(screen.queryByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' })).not.toBeInTheDocument();
   });
@@ -193,7 +193,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกพิกัด' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('พิกัดที่ส่งมาไม่ถูกต้อง ลองเก็บพิกัดใหม่อีกครั้ง');
-    expect(screen.getByText('ค่ากลาง: 13.756400, 100.501900')).toBeInTheDocument();
+    expect(screen.getByText('พิกัดที่จะบันทึก: 13.756400, 100.501900')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'บันทึกพิกัด' })).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกพิกัด' }));
@@ -233,7 +233,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     serve();
     await openAtSign('/admin/areas/1/capture?sign=102', 'AR01-02 ห้องน้ำหญิง');
 
-    expectBehindMoreInfo('ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับหน้านี้');
+    expectBehindMoreInfo('เมื่อบันทึกพิกัดแล้ว ดูรายการย้อนหลังได้ในหน้า “ประวัติการแก้ไขของแอดมิน”', 'เกี่ยวกับหน้านี้');
     expect(screen.getByText('เกี่ยวกับหน้านี้').closest('summary')).toHaveClass('min-h-12');
   });
 });

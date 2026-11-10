@@ -20,7 +20,7 @@ export function DistanceLine({ visit }: { visit: InspectionVisit }) {
   if (visit.withinRadius === false) {
     return (
       <Note tone="warn">
-        {`ห่างป้าย ${visit.distanceM} ม. · ${accuracy} · นอกรัศมี ผลตรวจจากตรงนี้จะขึ้นว่าไกลป้ายให้แอดมินเห็น`}
+        {`ห่างป้าย ${visit.distanceM} ม. · ${accuracy} · ถ้าบันทึกผลตรวจตอนนี้ แอดมินจะเห็นว่า “ไกลป้าย”`}
       </Note>
     );
   }

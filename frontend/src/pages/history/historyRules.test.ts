@@ -110,9 +110,9 @@ describe('historyRules (D9)', () => {
   });
 
   it('names what the server did by itself, and hides the password it reset (facility-0092)', () => {
-    expect(actionText('ADMIN_FIRST_CREATE')).toBe('สร้างแอดมินคนแรกจากค่าในเซิร์ฟเวอร์');
-    expect(actionText('ADMIN_RECOVER_CREATE')).toBe('สร้างแอดมินด้วยคำสั่ง reset-admin');
-    expect(actionText('ADMIN_RECOVER_RESET')).toBe('กู้คืนแอดมินด้วยคำสั่ง reset-admin');
+    expect(actionText('ADMIN_FIRST_CREATE')).toBe('ตั้งค่าบัญชีแอดมินคนแรก');
+    expect(actionText('ADMIN_RECOVER_CREATE')).toBe('เพิ่มบัญชีแอดมินเพื่อให้กลับเข้าใช้งานได้');
+    expect(actionText('ADMIN_RECOVER_RESET')).toBe('ตั้งรหัสผ่านใหม่ให้แอดมินเพื่อให้กลับเข้าใช้งานได้');
     expect(changeLines({ action: 'ADMIN_RECOVER_RESET' })).toEqual(['รหัสผ่านเดิม → รหัสผ่านใหม่ (ไม่แสดงรหัสผ่าน)']);
   });
 

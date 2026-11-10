@@ -34,7 +34,7 @@ export function CoversThisShift({ board, ahead, onNotice }: CoversThisShiftProps
           {ahead ? `คนทำแทน${slotText(board)}` : 'คนทำแทนกะนี้'}
           <span className={`${countClass} ${countTones.break}`}>{covers.length}</span>
         </h2>
-        <span className="text-xs text-text-2">{`หมดสิทธิ์เมื่อจบกะ ${shiftEndText[board.shift]}`}</span>
+        <span className="text-xs text-text-2">{`เวลาจบกะตามตาราง ${shiftEndText[board.shift]}`}</span>
       </div>
       {covers.length === 0 && (
         <p className="px-4 py-6 text-text-2">{ahead ? `ยังไม่มีคนทำแทน${slotText(board)}` : 'ยังไม่มีคนทำแทนกะนี้'}</p>

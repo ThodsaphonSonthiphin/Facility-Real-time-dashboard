@@ -191,7 +191,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
 
     act(() => hub.latest().reconnecting());
-    expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)');
+    expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด');
     act(() => hub.latest().reconnected());
 
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
@@ -203,7 +203,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     serve();
     await renderApp('/dashboard');
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)'));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด'));
   });
 
   it("shows the server's message when the list cannot be read", async () => {
@@ -238,6 +238,6 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     await renderApp('/dashboard');
 
     await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
-    expectBehindMoreInfo(/^รอบเป็นช่วงเวลา/, 'วิธีอ่านการ์ด');
+    expectBehindMoreInfo(/^ถ้าจบรอบแล้วยังไม่มีงาน/, 'วิธีอ่านการ์ด');
   });
 });

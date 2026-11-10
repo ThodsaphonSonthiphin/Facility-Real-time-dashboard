@@ -18,8 +18,8 @@ export function CrashScreen() {
   return (
     <main className={statusScreenClass.main}>
       <CircleX aria-hidden="true" className="size-8 self-center text-rework" />
-      <h1 className={statusScreenClass.title}>เกิดข้อผิดพลาด</h1>
-      <p className="text-text-2">หน้านี้แสดงผลไม่ได้ กดโหลดใหม่เพื่อลองอีกครั้ง</p>
+      <h1 className={statusScreenClass.title}>เปิดหน้านี้ไม่ได้</h1>
+      <p className="text-text-2">กด “โหลดใหม่” เพื่อลองเปิดหน้านี้อีกครั้ง</p>
       <Button variant="primary" size="main" onClick={() => window.location.reload()}>
         โหลดใหม่
       </Button>

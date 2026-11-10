@@ -49,7 +49,7 @@ export function inspectionScan(overrides: Partial<InspectionScan> = {}): Inspect
 
 /** POST /api/inspections/scan with nothing to judge (M16): no submission key, as the server sends it. */
 export function nothingToInspect(
-  refusal = 'ยังไม่มีงานให้ตรวจ รอบนี้แม่บ้านยังไม่ส่งงาน',
+  refusal = 'ยังไม่มีงานให้ตรวจ',
   overrides: Partial<InspectionScan> = {},
 ): InspectionScan {
   return { point: point(), refusal, isCover: false, distanceM: 5, withinRadius: true, ...overrides };

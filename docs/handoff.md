@@ -17,6 +17,16 @@ Updated 2026-11-10 (Asia/Bangkok). Read this first every session and update it a
 
 เริ่มจาก [ภาพรวมระบบ](business-overview.md) สำหรับพี่เลี้ยง [Flowchart ทั้งสามบทบาท](role-workflows.md) สำหรับผู้ใช้ และ [คู่มือส่งมอบและติดตั้ง](handover.md) สำหรับทีม IT
 
+## Local review running (2026-11-10)
+
+Started the current checkout in Development for the owner's wording review. Vite is on `http://localhost:5173` and the API is on `http://localhost:5001`, using the confirmed local `facility_dashboard` database. Both login pages returned HTTP 200. Verified API health through Vite and the revised login text in the served frontend. Startup found the schema current, and the retention run reported zero records changed. The two processes are running on loopback. Logs are in the ignored `.run/local-wording-review/` directory.
+
+## Plain-language website copy (2026-11-10)
+
+Simplified Thai website copy for Cleaners, Supervisors and Admins. The changes cover location and connection help, attendance, submission and inspection results, cover assignments, account setup, round and sign settings, and report and export guidance. The local diff is limited to displayed text, including API messages shown on the web, and the corresponding tests. It follows the project's existing menu and status vocabulary. [Approved website terms](adr/facility-0085-ui-words-from-the-users-not-the-glossary.md)
+
+Frontend lint, production build, and all 546 tests passed. Reran the 27 inspection and 14 dashboard tests after their last assertion edits. Backend passed 357 unit and 702 API tests with six MySQL-specific cases skipped. All 17 inspection scan API tests passed again after the final heading change. Chromium on the final build passed seven workflow cases and a separate navigation layout check using small synthetic datasets. The earlier large-dataset run passed 35 of 36 cases. The navigation check timed out while loading service points, and the API log records a MySQL read timeout. The same case passed on the small dataset. The runners confirmed cleanup of all three owned databases.
+
 ## Plain-language handover documentation (2026-11-10)
 
 Updated the README, business overview, handover and this handoff with a Thai reading path by audience, the office-floor example and the latest recorded delivery status. Corrected the stale branch status for automatic data retention. The existing IT command blocks and task history are retained.

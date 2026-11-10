@@ -123,7 +123,7 @@ public static class InspectionEndpoints
 
     private static string? RefusalText(InspectionRefusal? refusal) => refusal switch
     {
-        InspectionRefusal.NothingSubmitted => "ยังไม่มีงานให้ตรวจ รอบนี้แม่บ้านยังไม่ส่งงาน",
+        InspectionRefusal.NothingSubmitted => "ยังไม่มีงานให้ตรวจ",
         InspectionRefusal.AwaitingRework => "รอแม่บ้านส่งงานแก้ ยังไม่มีงานใหม่ให้ตรวจ",
         _ => null,
     };

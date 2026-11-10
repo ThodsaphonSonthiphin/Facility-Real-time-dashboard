@@ -316,7 +316,7 @@ describe('AreasPage (D4, facility-0045)', () => {
     );
     await user.click(screen.getByRole('button', { name: 'แก้ไขพื้นที่' }));
     await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
-    expect(screen.getByText(/^เปิดหน้านี้บนมือถือ ยืนตรงที่ติดป้าย/)).toBeVisible();
+    expect(screen.getByText(/^เปิดลิงก์บนมือถือ ยืนตรงที่ติดป้าย/)).toBeVisible();
     const editor = await screen.findByRole('dialog', { name: 'แก้ไขพื้นที่' });
     await within(editor).findByLabelText('ชื่อพื้นที่');
     expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');

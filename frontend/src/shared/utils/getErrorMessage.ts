@@ -8,14 +8,14 @@ export function getErrorMessage(error: unknown, fallback = 'ทำรายก�
   }
   const { status, data } = error as { status: unknown; data?: unknown };
   if (status === 'FETCH_ERROR' || status === 'TIMEOUT_ERROR') {
-    return 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่';
+    return 'เชื่อมต่อระบบไม่ได้ ตรวจดูสัญญาณอินเทอร์เน็ตแล้วลองอีกครั้ง';
   }
   const message = typeof data === 'object' && data !== null ? (data as { message?: unknown }).message : undefined;
   if (typeof message === 'string' && message.trim() !== '') {
     return message;
   }
   if (status === 401) {
-    return 'หมดเวลาการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่';
+    return 'กรุณาเข้าสู่ระบบอีกครั้ง';
   }
   if (status === 403) {
     return 'บัญชีนี้ไม่มีสิทธิ์ทำรายการนี้';
@@ -24,7 +24,7 @@ export function getErrorMessage(error: unknown, fallback = 'ทำรายก�
     return 'ลองหลายครั้งเกินไป รอสักครู่แล้วลองใหม่';
   }
   if (typeof status === 'number' && status >= 500) {
-    return 'เซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง';
+    return 'ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่';
   }
   return fallback;
 }

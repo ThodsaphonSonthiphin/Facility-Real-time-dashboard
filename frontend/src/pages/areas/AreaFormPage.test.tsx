@@ -104,7 +104,7 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     await user.click(screen.getByRole('checkbox', { name: 'กะดึก' }));
     expect(screen.queryByLabelText('แม่บ้านประจำกะดึก')).not.toBeInTheDocument();
     expect(
-      screen.getByText('บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่'),
+      screen.getByText('เมื่อบันทึก ระบบจะลบเวลารอบกะดึกของทุกจุดในพื้นที่นี้ และยกเลิกการมอบหมายแม่บ้านประจำกะดึกของพื้นที่'),
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'บันทึก' }));
 

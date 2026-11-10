@@ -31,7 +31,7 @@ internal static class AdminQuery
 
         if (!TryReadDate(shiftDate, out var date) || !TryReadEnum<Shift>(shift, out var parsed))
         {
-            return "ต้องระบุวันที่ (yyyy-MM-dd) และกะ (Day หรือ Night) คู่กัน";
+            return "เลือกวันที่และกะให้ครบทั้งสองช่อง";
         }
 
         slot = new ShiftSlot(date, parsed);
@@ -54,7 +54,7 @@ internal static class AdminQuery
         }
         else if (!TryReadDate(from, out first) || !TryReadDate(to, out last))
         {
-            return "ต้องระบุทั้งวันเริ่ม (from) และวันสุดท้าย (to) แบบ yyyy-MM-dd";
+            return "ใส่วันเริ่มและวันสุดท้ายให้ครบและตรวจว่าทั้งสองวันที่ถูกต้อง";
         }
 
         if (last < first)

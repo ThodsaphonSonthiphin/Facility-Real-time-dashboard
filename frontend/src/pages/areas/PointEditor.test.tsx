@@ -97,7 +97,7 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     await user.click(within(editor).getByRole('button', { name: 'บันทึกจุด' }));
 
     expect(await within(editor).findByRole('alert')).toHaveTextContent(
-      'ใส่เวลารอบให้ครบเป็น HH:mm (ชั่วโมง 0–23 นาที 00–59)',
+      'ใส่เวลาเริ่มและเวลาจบให้ครบทุกรอบ เช่น 07:00 ถึง 09:00',
     );
     expect(server.calls.some((call) => call.path.startsWith('/api/admin') && call.method !== 'GET')).toBe(false);
   });
@@ -197,7 +197,7 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     expect(start).toHaveValue('10:3');
     expect(server.calls.some((call) => call.method === 'PUT')).toBe(false);
     await user.click(screen.getByRole('button', { name: 'บันทึกจุด' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('ใส่เวลารอบให้ครบ');
+    expect(screen.getByRole('alert')).toHaveTextContent('ใส่เวลาเริ่มและเวลาจบให้ครบทุกรอบ');
   });
 
   it('shows the server’s refusal and keeps the draft', async () => {

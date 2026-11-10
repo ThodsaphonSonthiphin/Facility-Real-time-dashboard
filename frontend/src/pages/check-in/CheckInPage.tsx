@@ -87,7 +87,7 @@ export function CheckInPage() {
     return (
       <StatusScreen
         title="ป้ายนี้ใช้ไม่ได้แล้ว"
-        detail="ยังไม่ได้ลงเวลา ป้ายนี้อาจถูกสร้าง QR ใหม่แล้ว หรือไม่มีในระบบ แจ้งแอดมิน"
+        detail="ยังไม่ได้ลงเวลา ลองสแกนป้ายลงเวลาที่ติดอยู่ล่าสุด ถ้ายังใช้ไม่ได้ ให้แจ้งแอดมิน"
         linkTo="/my-work"
         linkText="ดูงานของฉัน"
       />
@@ -146,7 +146,7 @@ export function CheckInPage() {
         <Note tone="success">ลงเวลาครบแล้วสำหรับกะนี้</Note>
       )}
       <MoreInfo size="phone" summary="เกี่ยวกับการลงเวลา">
-        ระบบแสดงปุ่มถัดไปให้เองตามลำดับ · กดซ้ำภายใน 5 นาทีไม่นับ · ไม่คิดสายหรือกลับก่อน
+        กดตามปุ่มที่ขึ้นบนหน้าจอ เว้นอย่างน้อย 5 นาทีระหว่างการลงเวลาแต่ละครั้ง ระบบนี้ใช้ดูว่าพื้นที่มีคนทำงานแล้วหรือยัง
       </MoreInfo>
     </PhoneScreen>
   );
@@ -179,7 +179,7 @@ function AnsweredNote({ eventType, state, accuracyM }: AnsweredNoteProps) {
   if (state.outcome === 'TooSoon') {
     return (
       <Note tone="warn" status>
-        {`ยังไม่บันทึก${label} เพราะเพิ่งลงเวลาไปไม่ถึง 5 นาที กดซ้ำภายใน 5 นาทีไม่นับ`}
+        {`ยังไม่ได้ลงเวลา${label} รอให้ครบ 5 นาทีจากครั้งก่อน แล้วกด “${label}” อีกครั้ง`}
       </Note>
     );
   }

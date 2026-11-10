@@ -39,7 +39,7 @@ export function CreateAccountForm({ accounts, areas, buildings, onCancel }: Crea
                   onChange={() => chooseRole(role)}
                 />
                 <span className="font-semibold ">{accountRoleLabel[role]}</span>
-                <span className="text-xs text-text-2">{role === 'Cleaner' ? 'ผูกพื้นที่ + กะ' : role === 'Supervisor' ? 'ผูกตึก + กะ' : 'ดูแลทั้งระบบ'}</span>
+                <span className="text-xs text-text-2">{role === 'Cleaner' ? 'ทำความสะอาดในพื้นที่ที่กำหนด' : role === 'Supervisor' ? 'ตรวจงานในตึกที่รับผิดชอบ' : 'ดูแลทั้งระบบ'}</span>
               </label>
             ))}
           </div>
@@ -76,7 +76,7 @@ export function CreateAccountForm({ accounts, areas, buildings, onCancel }: Crea
                 onChange={(event) => set({ password: event.target.value })}
               />
             </Field>
-            <p className="text-text-2">แอดมิน: ชื่อผู้ใช้ + รหัสผ่านชั่วคราว 15–100 ตัวอักษร เป็นวลียาว ๆ ได้ (บอกเองด้วยวาจาหรือกระดาษ)</p>
+            <p className="text-text-2">ตั้งรหัสผ่านชั่วคราว 15–100 ตัวอักษร ใช้คำหลายคำได้ แล้วบอกรหัสผ่านกับเจ้าของบัญชีด้วยตนเองหรือเขียนให้บนกระดาษ</p>
           </>
         ) : (
           <>
@@ -109,7 +109,7 @@ export function CreateAccountForm({ accounts, areas, buildings, onCancel }: Crea
               </Field>
             </div>
             <fieldset className="min-w-0 rounded-lg border border-border p-4">
-              <legend className="px-1.5 font-semibold">{draft.role === 'Cleaner' ? 'ผูกกับพื้นที่' : 'ผูกกับตึกและกะ'}</legend>
+              <legend className="px-1.5 font-semibold">{draft.role === 'Cleaner' ? 'พื้นที่และกะที่รับผิดชอบ' : 'ตึกและกะที่รับผิดชอบ'}</legend>
               {/* Reference assignment is 1fr + 160px above 420px; no container token fits. */}
               <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-[minmax(0,1fr)_10rem]">
                 {draft.role === 'Cleaner' ? (
@@ -155,14 +155,14 @@ export function CreateAccountForm({ accounts, areas, buildings, onCancel }: Crea
               </div>
               <p className="mt-3 text-xs text-text-2">
                 {draft.role === 'Cleaner'
-                  ? 'พื้นที่ละ 1 คนต่อกะ · ถ้ากะนี้มีคนประจำแล้วจะเลือกไม่ได้ · พื้นที่ที่ทำเฉพาะกะเช้าเลือกได้แค่กะเช้า · ยังไม่กำหนดพื้นที่ได้ เลือกทีหลังที่ปุ่ม "แก้ไข"'
-                  : 'หัวหน้าประจำตึกและกะ ตึกละ 1 คนต่อกะ · ตรวจได้เฉพาะในกะตัวเอง · ไม่ต้องลงเวลา'}
+                  ? 'แต่ละพื้นที่มีแม่บ้านประจำได้กะละ 1 คน เลือกได้เฉพาะกะที่พื้นที่เปิดและยังไม่มีคนประจำ หรือเว้นพื้นที่ไว้แล้วกด “แก้” ในหน้าบัญชีผู้ใช้ภายหลัง'
+                  : 'แต่ละตึกมีหัวหน้าได้กะละ 1 คน หัวหน้าตรวจงานในกะของตัวเองได้เลยโดยไม่ต้องลงเวลา'}
               </p>
             </fieldset>
-            <p className="rounded-md bg-bg p-3 text-text-3">เข้าระบบด้วยรหัสพนักงาน + เบอร์โทร ไม่ต้องตั้งรหัสผ่าน</p>
+            <p className="rounded-md bg-bg p-3 text-text-3">ใช้รหัสพนักงานและเบอร์โทรเพื่อเข้าสู่ระบบ</p>
           </>
         )}
-        {draft.role !== 'Admin' && <details className="text-xs text-text-2"><summary className="min-h-9 cursor-pointer py-2 font-semibold focus-visible:outline-2 focus-visible:outline-accent">เกี่ยวกับเบอร์โทร</summary><p>ใช้แทนรหัสผ่าน ระบบเก็บเบอร์แบบที่เปิดดูไม่ได้ ใช้ตรวจตอน login อย่างเดียว · เปลี่ยนเบอร์ทีหลังได้ด้วยปุ่ม "แก้เบอร์โทร"</p></details>}
+        {draft.role !== 'Admin' && <details className="text-xs text-text-2"><summary className="min-h-9 cursor-pointer py-2 font-semibold focus-visible:outline-2 focus-visible:outline-accent">เกี่ยวกับเบอร์โทร</summary><p>ใช้เบอร์โทรแทนรหัสผ่าน ระบบใช้ตรวจตอนเข้าสู่ระบบและไม่แสดงเบอร์ในหน้าบัญชี ถ้าเปลี่ยนเบอร์ ให้เปิดบัญชีจากปุ่ม “แก้” แล้วกรอกเบอร์ในส่วน “แก้เบอร์โทร”</p></details>}
         {problem && <Note tone="error">{problem}</Note>}
         {notice && (
           <Note tone="info" status>
