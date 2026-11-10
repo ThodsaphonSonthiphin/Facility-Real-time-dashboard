@@ -8,7 +8,7 @@ flowchart TD
 
 - วันที่: 2026-10-22
 - ที่มา: เจ้าของโปรเจกต์ 2026-10-22 เลือก A (ผู้พัฒนาแนะนำ B เพราะเกิดไม่บ่อย)
-- เกี่ยวข้อง: facility-0074 ข้อ 4.1 (ส่วนที่เหลือหลัง facility-0080), facility-0080 (ป้ายของ Area อื่นคงแบบเดิม), facility-0026 (หน้าป้ายจุดเปิดด้วย QR Token)
+- เกี่ยวข้อง: facility-0074 ข้อ 4.1 (ส่วนที่เหลือหลัง facility-0080), facility-0080 (ป้ายของ Area อื่นคงแบบเดิม), [Frontend Router Shape (0026)](facility-0026-frontend-router-shape.md) (หน้าป้ายจุดเปิดด้วย QR Token)
 
 ## Context & Decision
 

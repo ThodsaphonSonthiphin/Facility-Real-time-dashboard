@@ -18,6 +18,7 @@ function pagesOf(role: Role): RouteObject[] {
   return (guard?.children ?? []).flatMap((layout) => layout.children ?? []);
 }
 
+// Routing decision: docs/adr/facility-0026-frontend-router-shape.md.
 describe('routing (facility-0026, 0058)', () => {
   it('a live session opens the role home without showing the login page', async () => {
     fakeServer({ 'POST /api/auth/refresh': () => authAnswer('supervisor') });

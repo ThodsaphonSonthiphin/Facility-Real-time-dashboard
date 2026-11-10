@@ -1,14 +1,6 @@
-import type { AlertKind } from './alertListApi';
-import { boardTag } from './attendanceBoardApi';
-import { baseApi } from './baseApi';
-import type { Shift } from './types';
-
-/** ReviewAlertRequest: "คุยแล้ว ปิดเตือน". note is optional and kept as the history row's reason. */
-export interface ReviewRequest {
-  kind: AlertKind;
-  recordId: number;
-  note?: string;
-}
+import { boardTag } from '../api/attendanceBoardApi';
+import { baseApi } from '../api/baseApi';
+import type { Shift } from '../api/types';
 
 /** CoverCandidateDto (wireframe D3 "ให้ใครทำแทน"): their own Area, their Shift-In, and their latest scan at this Area's signs. */
 export interface CoverCandidate {
@@ -46,15 +38,11 @@ export interface AssignCoverRequest {
 }
 
 /**
- * The alert page's actions. Each one asks again for what it changes, also after a refusal (another Admin may have been
- * first): a cover changes the board and may close an alert.
+ * A cover changes the Attendance Board and may close an alert. Refetch after a refusal too, since another Admin
+ * may have acted first.
  */
-const alertsApi = baseApi.injectEndpoints({
+const coverApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    reviewAlert: build.mutation<void, ReviewRequest>({
-      query: (body) => ({ url: '/admin/alerts/review', method: 'POST', body }),
-      invalidatesTags: ['Alerts'],
-    }),
     /** Changes with every check-in and cover, so it follows the board's tag for its shift: the hub invalidates that one. */
     getCoverCandidates: build.query<CoverCandidate[], { areaId: number; shiftDate: string; shift: Shift }>({
       query: ({ areaId, shiftDate, shift }) => ({
@@ -74,5 +62,4 @@ const alertsApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useReviewAlertMutation, useGetCoverCandidatesQuery, useAssignCoverMutation, useCancelCoverMutation } =
-  alertsApi;
+export const { useGetCoverCandidatesQuery, useAssignCoverMutation, useCancelCoverMutation } = coverApi;

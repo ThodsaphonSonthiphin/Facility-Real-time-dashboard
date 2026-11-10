@@ -1,18 +1,18 @@
 import { useState } from 'react';
-import type { AttendanceBoard, BoardRow } from '../api/attendanceBoardApi';
-import { freshOnOpen } from '../api/baseApi';
-import { Button } from './Button';
-import { CandidateChoices } from './CandidateChoices';
-import { candidateFacts } from '../utils/coverCandidates';
-import { DialogFooter, DialogHeader, Modal } from './Modal';
-import { Note } from './Note';
-import { PageLoading } from './PageState';
-import { getErrorMessage } from '../utils/getErrorMessage';
-import { shiftShortLabel } from '../utils/labels';
-import { formatShiftDate, formatWeekday } from '../utils/thaiTime';
-import { useBuildingNames } from '../api/buildingNames';
-import { coverNotice } from '../utils/coverText';
-import { useAssignCoverMutation, useGetCoverCandidatesQuery } from '../api/alertsApi';
+import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
+import { freshOnOpen } from '../../shared/api/baseApi';
+import { useBuildingNames } from '../../shared/api/buildingNames';
+import { Button } from '../../shared/components/Button';
+import { DialogFooter, DialogHeader, Modal } from '../../shared/components/Modal';
+import { Note } from '../../shared/components/Note';
+import { PageLoading } from '../../shared/components/PageState';
+import { CandidateChoices } from '../../shared/cover/CandidateChoices';
+import { useAssignCoverMutation, useGetCoverCandidatesQuery } from '../../shared/cover/coverApi';
+import { candidateFacts } from '../../shared/cover/coverCandidates';
+import { coverNotice } from '../../shared/cover/coverText';
+import { getErrorMessage } from '../../shared/utils/getErrorMessage';
+import { shiftShortLabel } from '../../shared/utils/labels';
+import { formatShiftDate, formatWeekday } from '../../shared/utils/thaiTime';
 
 interface CoverFormProps {
   board: AttendanceBoard;

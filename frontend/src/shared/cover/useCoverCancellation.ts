@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCancelCoverMutation } from '../api/alertsApi';
+import { useCancelCoverMutation } from './coverApi';
 export function useCoverCancellation(onDone?: (text: string) => void) {
   const [selected, setSelected] = useState<{ id: number; areaCode: string; name: string } | null>(null);
   const [cancelCover, { isLoading }] = useCancelCoverMutation();

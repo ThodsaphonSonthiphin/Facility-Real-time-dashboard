@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { coverSlots, slotText } from '../../shared/cover/coverSlots';
+import { candidateText, coverNotice } from '../../shared/cover/coverText';
 import {
   alerts,
   attendanceGpsAlert,
@@ -16,14 +18,10 @@ import {
   alertResult,
   alertRole,
   alertTitle,
-  candidateText,
-  coverNotice,
-  coverSlots,
   fillLink,
   filterAlerts,
   matchesSearch,
   slotOfShiftEnd,
-  slotText,
 } from './alertRules';
 
 const made = { id: 72, userId: 21, personName: 'แม่บ้านทดสอบ', shiftDate: '2026-10-15', shift: 'Day' as const, assignedAt: '2026-10-15T03:20:00Z' };

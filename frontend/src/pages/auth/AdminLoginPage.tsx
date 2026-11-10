@@ -4,6 +4,7 @@ import { buildCommit } from '../../shared/version/buildInfo';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
+import { ProjectLogo } from '../../shared/components/ProjectLogo';
 import { inlineLinkClass } from '../../shared/components/styles';
 import { useAdminLoginPage } from './useAdminLoginPage';
 
@@ -19,7 +20,7 @@ export function AdminLoginPage() {
     <main className="flex min-h-svh items-center justify-center bg-bg px-4 py-12 text-sm text-text">
       <div className="flex w-full max-w-100 flex-col gap-6">
         <header className="flex flex-col gap-1">
-          <span className="font-semibold text-text-2">Janitorial Management Dashboard</span>
+          <ProjectLogo />
           <h1 className="text-2xl font-bold">แอดมินเข้าสู่ระบบ</h1>
         </header>
         <form

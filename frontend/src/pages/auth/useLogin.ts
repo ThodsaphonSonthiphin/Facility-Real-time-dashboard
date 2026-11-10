@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { setCredentials } from '../../store/slices/authSlice';
 import { useLoginMutation } from './authApi';
 
-/** What ProtectedRoute put in the location state: the page to return to after login (facility-0026 item 4). */
+/** The page to return to after login. See docs/adr/facility-0026-frontend-router-shape.md, item 4. */
 export interface LoginState {
   from?: Location;
 }

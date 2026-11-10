@@ -25,8 +25,9 @@ type Outcome =
   | { kind: 'not-sent'; triedAt: Date };
 
 /**
- * Wireframes M2, M4, M5, M8, M11, M12 and M13: the page a point's QR Sign opens (/scan/<token>, facility-0026). The
- * Cleaner presses ส่งงาน; the server decides the round, the flag and whether the Area is theirs (facility-0037,
+ * Wireframes M2, M4, M5, M8, M11, M12 and M13: a point's QR Sign opens /scan/<token>.
+ * See docs/adr/facility-0026-frontend-router-shape.md. The Cleaner presses ส่งงาน.
+ * The server decides the round, the flag and whether the Area is theirs (facility-0037,
  * 0041, 0047). A send that does not go through keeps the choices for ส่งใหม่ (facility-0052).
  */
 export function ScanPage() {

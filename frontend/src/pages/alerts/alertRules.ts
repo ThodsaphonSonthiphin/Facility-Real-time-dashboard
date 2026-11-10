@@ -149,10 +149,6 @@ export function fillLink(alert: Alert): string {
   return `/admin/attendance?${params.toString()}`;
 }
 
-export { candidateText, coverNotice } from '../../shared/utils/coverText';
-
-export { AHEAD_DAYS, coverSlots, sameSlot, slotKey, slotText, type CoverSlot } from '../../shared/utils/coverSlots';
-
 /** facility-0084: the cover box's search, by the regular Cleaner's name or the Area's code or name. */
 export function matchesSearch(row: BoardRow, search: string): boolean {
   const words = search.trim().toLowerCase();

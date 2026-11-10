@@ -9,7 +9,7 @@ flowchart TD
 ```
 
 - วันที่: 2026-10-02
-- เกี่ยวข้อง: facility-0001 (Scan Record), facility-0025 (Scan Presence Proof), facility-0027 (Attendance Board)
+- เกี่ยวข้อง: facility-0001 (Scan Record), [Scan Presence Proof (0025)](facility-0025-scan-presence-nfc-one-time-tap-link.md), facility-0027 (Attendance Board)
 
 ## Context & Decision
 

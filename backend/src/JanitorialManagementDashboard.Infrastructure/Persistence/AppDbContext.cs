@@ -171,7 +171,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.EventType).HasConversion(new UpperSnakeEnumConverter<AttendanceEvent>()).HasMaxLength(20);
             e.Property(x => x.Source).HasConversion(new UpperSnakeEnumConverter<AttendanceSource>()).HasMaxLength(20);
             MapGps(e);
-            // facility-0026: each event once per shift, the first press wins
+            // Each event counts once per shift and the first press wins.
+            // See docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md.
             e.HasIndex(x => new { x.UserId, x.ShiftDate, x.Shift, x.EventType }).IsUnique();
             e.HasIndex(x => new { x.ShiftDate, x.Shift, x.AreaId });
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);

@@ -22,7 +22,7 @@ import { AttendanceTable } from './AttendanceTable';
 import { BoardControls } from './BoardControls';
 import { CorrectionForm } from './CorrectionForm';
 import { CoverDrawer } from './CoverDrawer';
-import type { CoverSlot } from '../../shared/utils/coverSlots';
+import type { CoverSlot } from '../../shared/cover/coverSlots';
 import { readBoardArgs, readFill, searchRows, toBoardParams } from './attendanceRules';
 
 /** The row whose form is open, the event it opens on, and the slot and Cleaner it was opened for. */

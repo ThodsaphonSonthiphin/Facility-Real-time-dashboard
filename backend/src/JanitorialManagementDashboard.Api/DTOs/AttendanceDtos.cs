@@ -11,7 +11,10 @@ public enum AttendanceOutcome
 {
     Recorded,
 
-    /// <summary>facility-0026: the event already exists; the first time is kept.</summary>
+    /// <summary>
+    /// The event already exists and the first time is kept.
+    /// See docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md.
+    /// </summary>
     AlreadyRecorded,
 
     /// <summary>facility-0031: a different event within RepeatIgnoreMinutes of the latest one is not counted.</summary>

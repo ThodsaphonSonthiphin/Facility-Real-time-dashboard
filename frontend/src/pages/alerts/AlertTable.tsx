@@ -7,13 +7,15 @@ import { Button } from '../../shared/components/Button';
 import { TextArea } from '../../shared/components/Field';
 import type { Notice } from '../../shared/components/Toast';
 import { linkClass } from '../../shared/components/styles';
+import { useAssignCoverMutation } from '../../shared/cover/coverApi';
+import { coverNotice } from '../../shared/cover/coverText';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { eventLabel } from '../../shared/utils/labels';
 import { addDays } from '../../shared/utils/dateRange';
 import { formatDayTime, formatTime, thaiToday } from '../../shared/utils/thaiTime';
 import { useBuildingNames } from '../../shared/api/buildingNames';
-import { alertDetail, alertResult, alertRole, alertTitle, coverNotice, fillLink, type ReviewTab } from './alertRules';
-import { useAssignCoverMutation, useReviewAlertMutation } from '../../shared/api/alertsApi';
+import { alertDetail, alertResult, alertRole, alertTitle, fillLink, type ReviewTab } from './alertRules';
+import { useReviewAlertMutation } from './alertsApi';
 
 const MAX_NOTE = 500;
 

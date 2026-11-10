@@ -14,7 +14,7 @@ flowchart TD
 
 - Decision map: [#38 shift-check-in](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/38) บนแผนที่ [#1](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/1)
 - วันที่: 2026-10-02
-- เกี่ยวข้อง: facility-0001 (Scan Record), facility-0005 (Point Status & Working Hours), facility-0025 (Scan Presence Proof)
+- เกี่ยวข้อง: facility-0001 (Scan Record), facility-0005 (Point Status & Working Hours), [Scan Presence Proof (0025)](facility-0025-scan-presence-nfc-one-time-tap-link.md)
 - Interactive Mockup: [`docs/decision-map/facility-poc/mockups/shift-check-in-prototype.html`](../decision-map/facility-poc/mockups/shift-check-in-prototype.html)
 
 ## Context & Decision

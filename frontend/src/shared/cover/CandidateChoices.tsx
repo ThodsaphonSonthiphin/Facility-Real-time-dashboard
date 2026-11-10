@@ -1,36 +1,7 @@
-import { Search } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import type { CoverCandidate } from '../api/alertsApi';
-import { TextInput } from './Field';
-import { choiceCardClass } from '../utils/coverCandidates';
-
-/** A search box with the magnifier inside it (the design file's search fields). */
-export function SearchBox({
-  label,
-  value,
-  onChange,
-  className = 'w-full',
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  className?: string;
-}) {
-  return (
-    <span className={`relative flex items-center ${className}`}>
-      <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 size-4 text-text-2" />
-      <TextInput
-        size="desk"
-        type="search"
-        aria-label={label}
-        placeholder={label}
-        className="w-full pl-8.5"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </span>
-  );
-}
+import { SearchBox } from '../components/SearchBox';
+import type { CoverCandidate } from './coverApi';
+import { choiceCardClass } from './coverCandidates';
 
 interface CandidateChoicesProps {
   /** The radio group's name for a screen reader, such as แม่บ้านที่ทำแทน. */

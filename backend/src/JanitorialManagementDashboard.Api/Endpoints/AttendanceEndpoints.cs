@@ -117,7 +117,8 @@ public static class AttendanceEndpoints
         }
         catch (DbUpdateException)
         {
-            // facility-0026: two presses raced and the unique index kept the first; anything else is a real error
+            // The unique index keeps the first of two racing presses. Re-throw other errors.
+            // See docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md.
             db.ChangeTracker.Clear();
             var recordedNow = await LoadEventsAsync(db, user.Id, slot);
             if (!recordedNow.Any(a => a.EventType == eventType))

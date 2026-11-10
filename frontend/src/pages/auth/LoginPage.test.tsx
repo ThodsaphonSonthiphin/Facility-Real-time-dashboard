@@ -63,6 +63,7 @@ describe('LoginPage (M0)', () => {
     expect(screen.getByText(/^เวอร์ชัน /)).toBeInTheDocument();
   });
 
+  // Return-to-page rule: docs/adr/facility-0026-frontend-router-shape.md, item 4.
   it('after login, returns to the page that was opened before it (facility-0026)', async () => {
     fakeServer({ ...noSession, 'POST /api/auth/login': () => authAnswer('cleaner') });
     const { user, router } = await renderApp('/my-work?from=sign');

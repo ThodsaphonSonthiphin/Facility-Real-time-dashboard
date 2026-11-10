@@ -6,7 +6,8 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-// facility-0065: MenuNest's eslint 9 config plus eslint-plugin-boundaries for the folder rules of facility-0025.
+// facility-0065: MenuNest's eslint 9 config plus eslint-plugin-boundaries.
+// The folder rules are in docs/adr/facility-0025-frontend-target-tree.md.
 export default defineConfig([
   globalIgnores(['dist']),
   {

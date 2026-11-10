@@ -11,7 +11,7 @@ flowchart TD
 - Decision map: [#33 lint-and-boundaries](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/33) บนแผนที่ [#1](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/1) (milestone `frontend-restructure`)
 - วันที่: 2026-10-08
 - ที่มา: เจ้าของโปรเจกต์ตัดสิน 2026-10-08 ("go with recommend" ทั้งสองคำถาม)
-- เกี่ยวข้อง: facility-0025 (target tree และลำดับย้าย ขั้นที่ 1 เพิ่ม dependency), facility-0024 (store และ slice ต่อหน้า), #32 regression-net (test ที่ pre-commit รัน)
+- เกี่ยวข้อง: [Frontend Target Tree (0025)](facility-0025-frontend-target-tree.md) (target tree และลำดับย้าย ขั้นที่ 1 เพิ่ม dependency), facility-0024 (store และ slice ต่อหน้า), #32 regression-net (test ที่ pre-commit รัน)
 
 ## Context & Decision
 
@@ -23,14 +23,14 @@ flowchart TD
 2. **eslint-plugin-boundaries** ประกาศ element: `app` (`src/main.tsx`, `src/App.tsx`, `src/router.tsx`), `pages` (`src/pages/*` จับชื่อหน้า), `shared` (`src/shared/**`), `store` (`src/store/**`) ทิศที่อนุญาต:
    - `app` → `pages`, `shared`, `store`
    - `pages` → หน้าเดียวกัน, `shared`, `store`
-   - `store` → `shared`, `pages` (เพื่อลงทะเบียน slice ของแต่ละหน้า ตาม facility-0025)
+   - `store` → `shared`, `pages` (เพื่อลงทะเบียน slice ของแต่ละหน้า ตาม [Frontend Target Tree (0025)](facility-0025-frontend-target-tree.md))
    - `shared` → `shared`, `store`
    - ห้าม: หน้าหนึ่ง import อีกหน้า และ `shared` import `pages`
 3. **husky** ติดตั้งแบบ MenuNest (`"prepare": "cd .. && husky frontend/.husky"` เพราะ root ไม่มี `package.json`) แต่ pre-commit รันแค่ frontend: `npm run lint`, `npx tsc -b`, `npm test`
 
 ## Consequences
 
-- เพิ่มเข้าขั้นที่ 1 ของลำดับย้ายใน facility-0025 (deps) eslint จึงทำงานตั้งแต่ commit แรกของการย้าย
+- เพิ่มเข้าขั้นที่ 1 ของลำดับย้ายใน [Frontend Target Tree (0025)](facility-0025-frontend-target-tree.md) (deps) eslint จึงทำงานตั้งแต่ commit แรกของการย้าย
 - โฟลเดอร์เดิม `features/` และ `services/` ยังไม่อยู่ใน element ใดระหว่างการย้าย จึงต้องปิด `boundaries/no-unknown` ไว้จนขั้นสุดท้าย "ลบของเก่า" แล้วเปิดเป็น error
 - pre-commit ไม่ build หรือ test backend การแก้ backend ต้องรัน `dotnet build` และ `dotnet test` เอง จนกว่าจะมี CI
 - การตรวจก่อน commit ข้ามได้ด้วย `git commit --no-verify` เป็นตาข่าย ไม่ใช่ประตูบังคับ ถ้าต้องการประตูจริงต้องตัดสินเรื่อง CI แยก

@@ -1,7 +1,7 @@
 import type { Shift } from '../api/types';
-import { addDays } from './dateRange';
-import { shiftShortLabel } from './labels';
-import { formatShiftDate, formatWeekday } from './thaiTime';
+import { addDays } from '../utils/dateRange';
+import { shiftShortLabel } from '../utils/labels';
+import { formatShiftDate, formatWeekday } from '../utils/thaiTime';
 
 /** A shift the cover box shows (facility-0075). */
 export interface CoverSlot {

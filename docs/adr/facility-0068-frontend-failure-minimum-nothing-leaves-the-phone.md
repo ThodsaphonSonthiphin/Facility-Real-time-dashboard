@@ -10,7 +10,7 @@ flowchart TD
 - Decision map: [#35 ops-minimum](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/35) บนแผนที่ [#1](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/1) (milestone `frontend-restructure`)
 - วันที่: 2026-10-08
 - ที่มา: เจ้าของโปรเจกต์ตัดสิน 2026-10-08 ("ok" ต่อชุดขั้นต่ำที่เสนอ)
-- เกี่ยวข้อง: facility-0026 (`createBrowserRouter` ที่จอ crash ไปอยู่), facility-0065 (pre-commit), facility-0067 (API เสิร์ฟ frontend), #32 regression-net (test ที่ตรวจข้อความ error ของแต่ละหน้า)
+- เกี่ยวข้อง: [Frontend Router Shape (0026)](facility-0026-frontend-router-shape.md) (`createBrowserRouter` ที่จอ crash ไปอยู่), facility-0065 (pre-commit), facility-0067 (API เสิร์ฟ frontend), #32 regression-net (test ที่ตรวจข้อความ error ของแต่ละหน้า)
 
 ## Context & Decision
 
@@ -19,7 +19,7 @@ flowchart TD
 จึงตัดสินใจขั้นต่ำสี่ข้อ:
 
 1. ข้อความ error ของแต่ละหน้าคงไว้เหมือนวันนี้
-2. จอ crash เดียวเป็น `errorElement` ของ route ราก ใน `createBrowserRouter` (facility-0026) แสดง "เกิดข้อผิดพลาด" และปุ่ม "โหลดใหม่" แทนจอขาว
+2. จอ crash เดียวเป็น `errorElement` ของ route ราก ใน `createBrowserRouter` ([Frontend Router Shape (0026)](facility-0026-frontend-router-shape.md)) แสดง "เกิดข้อผิดพลาด" และปุ่ม "โหลดใหม่" แทนจอขาว
 3. เลข build (commit สั้น) แสดงตัวเล็กบนหน้า login ผ่าน `buildInfo` แบบ MenuNest (`define` ใน `vite.config.ts`)
 4. ไม่มีอะไรออกจากมือถือ error ไปแค่ browser console ฝั่ง server มี log ของตัวเองอยู่แล้ว
 

@@ -140,6 +140,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     ).toBeInTheDocument();
   });
 
+  // First-in rule: docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md.
   it('an event already recorded keeps its first time (facility-0026)', async () => {
     fakeGps(nearSign);
     serve({
@@ -301,6 +302,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     }
   });
 
+  // Return-to-page rule: docs/adr/facility-0026-frontend-router-shape.md, item 4.
   it('a logged-out Cleaner who scans the sign returns to it after login (facility-0026)', async () => {
     fakeServer({ 'POST /api/auth/refresh': () => ({ status: 401 }) });
     const { router } = await renderApp(SIGN);

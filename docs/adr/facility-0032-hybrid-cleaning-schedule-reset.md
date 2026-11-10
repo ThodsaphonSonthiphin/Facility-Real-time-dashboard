@@ -8,7 +8,7 @@ flowchart TD
 ```
 
 - วันที่: 2026-10-02
-- เกี่ยวข้อง: facility-0005 (Point Status Rules), facility-0026 (Shift Check-In), facility-0029 (Supervisor Inspection)
+- เกี่ยวข้อง: facility-0005 (Point Status Rules), [Shift Check-In (0026)](facility-0026-shift-check-in-two-shifts-strict-presence.md), facility-0029 (Supervisor Inspection)
 
 ## Context & Decision
 

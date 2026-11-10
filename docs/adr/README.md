@@ -6,9 +6,10 @@
 
 | เรื่อง | อ่าน ADR | สถานะ/กติกาปัจจุบันโดยย่อ |
 |---|---|---|
-| โครงสร้างและ data model | [0004](facility-0004-app-architecture.md), [0025](facility-0025-frontend-target-tree.md), [0040](facility-0040-area-is-the-unit-of-assignment.md), [0045](facility-0045-admin-manages-areas-and-captures-sign-location.md) | 4 backend projects; endpoint + rules + EF; frontend pages/shared/store ดู implementation note ของ 0004 |
+| โครงสร้างและ data model | [0004](facility-0004-app-architecture.md), [0025 Frontend Target Tree](facility-0025-frontend-target-tree.md), [0040](facility-0040-area-is-the-unit-of-assignment.md), [0045](facility-0045-admin-manages-areas-and-captures-sign-location.md) | 4 backend projects; endpoint + rules + EF; frontend pages/shared/store ดู implementation note ของ 0004 |
+| เส้นทางหน้าเว็บ | [0026 Frontend Router Shape](facility-0026-frontend-router-shape.md), [0067](facility-0067-api-serves-frontend-from-one-origin.md) | เส้นทางตามบทบาทและการกลับหน้าเดิมหลังเข้าสู่ระบบ ป้าย QR ใช้ URL ของหน้าที่เกี่ยวข้อง |
 | สถานะจุดและการตรวจ | [0046](facility-0046-issue-is-a-tag-not-a-card-status.md), [0047](facility-0047-cleaning-rounds-are-time-windows.md), [0048](facility-0048-supervisor-assigned-to-building.md) | Issue เป็นป้ายแยก; รอบเป็นช่วงเวลา; ส่ง → ตรวจ → แก้ → ตรวจซ้ำ |
-| การลงเวลาและทำแทน | [0031](facility-0031-four-stage-shift-attendance-lifecycle.md), [0041](facility-0041-scan-only-own-area-with-cover-assignment.md), [0050](facility-0050-check-in-confirms-area-presence-not-time-attendance.md), [0051](facility-0051-admin-corrections-and-audit-log.md), [0069](facility-0069-attendance-scan-window-60-minutes-around-the-shift.md), [0075](facility-0075-covers-assigned-up-to-7-days-ahead.md) | 4 จังหวะ ยืนยันคนดูแล Area; ไม่คิดค่าจ้าง; มีเหตุผลเมื่อ Admin แก้เวลา |
+| การลงเวลาและทำแทน | [0026 Shift Check-In](facility-0026-shift-check-in-two-shifts-strict-presence.md), [0031](facility-0031-four-stage-shift-attendance-lifecycle.md), [0041](facility-0041-scan-only-own-area-with-cover-assignment.md), [0050](facility-0050-check-in-confirms-area-presence-not-time-attendance.md), [0051](facility-0051-admin-corrections-and-audit-log.md), [0069](facility-0069-attendance-scan-window-60-minutes-around-the-shift.md), [0075](facility-0075-covers-assigned-up-to-7-days-ahead.md) | 4 จังหวะ ยืนยันคนดูแล Area; ไม่คิดค่าจ้าง; มีเหตุผลเมื่อ Admin แก้เวลา |
 | การเข้าระบบและ session | [0012](facility-0012-short-access-token-with-refresh.md), [0013](facility-0013-refresh-token-httponly-cookie.md), [0014](facility-0014-refresh-tokens-stored-server-side.md), [0015](facility-0015-refresh-token-reuse-detection.md), [0016](facility-0016-refresh-token-sliding-30-days.md), [0054](facility-0054-login-with-employee-id-and-phone.md), [0089](facility-0089-admin-password-15-characters-and-blocklist.md), [0104](facility-0104-login-lock-per-login-name-and-ip.md) | JWT 5 นาที + refresh cookie 30 วัน; Login Lock ตามชื่อ + IP และเพดานต่อ IP |
 | ปิดบัญชีและข่าวสด | [0052](facility-0052-cleaner-my-work-page-and-resend.md), [0057](facility-0057-supervisor-building-page-and-audit-log-page.md), [0058](facility-0058-dashboard-is-admin-only.md), [0105](facility-0105-deactivation-takes-effect-at-once-on-hub-and-api.md) | Dashboard Admin-only; มือถือได้เฉพาะขอบเขตตน; อ่าน active recipients ตอนส่ง ไม่มี admins group |
 | การเชื่อมต่อหลุด | [0061](facility-0061-dashboard-keeps-30s-poll-beside-push.md), [0064](facility-0064-dashboard-hub-offline-keeps-todays-behaviour.md), [0107](facility-0107-admin-pages-notice-a-lost-link-sooner.md) | Admin poll 30 s; browser offline ทันที; server timeout Admin 10 s / phone 30 s; ping 5 s |
@@ -18,6 +19,17 @@
 | หน้าตาและฟอร์ม | [0063](facility-0063-frontend-css-global-tokens-per-page-files.md), [0086](facility-0086-frontend-styling-with-tailwind.md), [0087](facility-0087-new-look-readable-at-the-sign.md), [0088](facility-0088-icons-from-lucide-react-beside-text.md), [0100](facility-0100-admin-pages-follow-approved-design.md), [0101](facility-0101-admin-forms-and-confirmations-follow-approved-design.md) | 0086 แทน CSS ต่อหน้า; Tailwind 4 / Enterprise Light; nested forms/confirmations ตามแบบที่อนุมัติ |
 | Server Log | [0095](facility-0095-logging-scope-security-events-and-errors.md), [0096](facility-0096-server-log-read-from-journal-only.md), [0097](facility-0097-server-log-names-account-by-employee-id-never-typed-text.md), [0098](facility-0098-server-log-kept-90-days.md), [0099](facility-0099-server-log-in-its-own-journal-namespace.md), [0103](facility-0103-server-log-written-through-serilog.md), [0104](facility-0104-login-lock-per-login-name-and-ip.md) | ILogger ผ่าน Serilog Console → journal namespace facility; 90 วัน; เพิ่ม normalized IP ใน login logs |
 | E2E | [0094](facility-0094-playwright-end-to-end.md), [0102](facility-0102-headed-e2e-datasets.md), [0107](facility-0107-admin-pages-notice-a-lost-link-sooner.md) | unique owned DB/user ต่อรอบ; private publish; Chromium/WebKit/Firefox ตามคู่มือ E2E |
+
+## เลข ADR ที่ใช้ซ้ำ
+
+เลข `facility-0025` และ `facility-0026` มีอย่างละสองเอกสาร เวลาอ้างให้ลิงก์ด้วยชื่อไฟล์เต็มและระบุหัวข้อ
+
+| เลข | เอกสาร | อ่านประกอบ |
+|---|---|---|
+| 0025 | [Frontend Target Tree](facility-0025-frontend-target-tree.md) | โครง `pages/`, `shared/`, `store/` |
+| 0025 | [Scan Presence Proof — NFC Tap Link](facility-0025-scan-presence-nfc-one-time-tap-link.md) | การตัดสินใจเดิมที่ถูกแทนที่ด้วย [0037](facility-0037-gps-for-every-scan-replaces-nfc.md) |
+| 0026 | [Frontend Router Shape](facility-0026-frontend-router-shape.md) | ตาราง route, guard และการกลับหน้าเดิมหลัง login |
+| 0026 | [Shift Check-In — Two Shifts](facility-0026-shift-check-in-two-shifts-strict-presence.md) | อ่านร่วมกับ [0031](facility-0031-four-stage-shift-attendance-lifecycle.md), [0040](facility-0040-area-is-the-unit-of-assignment.md) และ [0050](facility-0050-check-in-confirms-area-presence-not-time-attendance.md) สำหรับกติกาลงเวลาปัจจุบัน |
 
 ## จุดที่อ่านเอกสารเก่าแล้วอาจเข้าใจผิด
 
