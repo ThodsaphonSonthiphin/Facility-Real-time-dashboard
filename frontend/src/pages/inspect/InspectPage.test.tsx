@@ -102,10 +102,10 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     expect(screen.getByText('ต้องแก้ไข')).toBeInTheDocument();
     expect(screen.getByText('“พื้นใต้อ่างล้างมือยังเปียก”')).toBeInTheDocument();
     expect(
-      screen.getByText('แม่บ้านทดสอบเห็นสิ่งที่ต้องแก้นี้ทันทีในหน้างานของฉัน และเมื่อสแกนจุดนี้ แก้แล้วส่งงานใหม่ จากนั้นหัวหน้าตรวจอีกรอบ'),
+      screen.getByText('แม่บ้านทดสอบ จะเห็นสิ่งที่ต้องแก้ในหน้า “งานของฉัน” และตอนสแกนป้ายจุดนี้ เมื่อส่งงานใหม่แล้ว ให้ตรวจอีกครั้ง'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('ถ้าไม่ได้แก้จนรอบ 13:00–15:00 เริ่ม การ์ดขึ้นรอบใหม่ และรอบนี้บันทึกว่า "ไม่ได้แก้"'),
+      screen.getByText('ถ้ายังไม่ส่งงานแก้ก่อนเริ่มรอบ 13:00–15:00 ระบบจะบันทึกรอบนี้ว่า “ไม่ได้แก้”'),
     ).toBeInTheDocument();
   });
 
@@ -176,7 +176,7 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     const { user } = await renderApp(SIGN);
 
     expect(
-      await screen.findByText('ห่างป้าย 80 ม. · ±40 ม. · นอกรัศมี ผลตรวจจากตรงนี้จะขึ้นว่าไกลป้ายให้แอดมินเห็น'),
+      await screen.findByText('ห่างป้าย 80 ม. · ±40 ม. · ถ้าบันทึกผลตรวจตอนนี้ แอดมินจะเห็นว่า “ไกลป้าย”'),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('radio', { name: 'สะอาด' }));
@@ -199,7 +199,7 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     await renderApp(SIGN);
 
     expect(
-      await screen.findByRole('heading', { name: 'ยังไม่มีงานให้ตรวจ รอบนี้แม่บ้านยังไม่ส่งงาน' }),
+      await screen.findByRole('heading', { name: 'ยังไม่มีงานให้ตรวจ' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'ห้องน้ำชาย' })).toBeInTheDocument();
     expect(screen.getByText('รอบปัจจุบัน 10:00–12:00')).toBeInTheDocument();
@@ -332,7 +332,7 @@ describe('InspectPage when something stands in the way (M2, M8, M12)', () => {
 
     expect(await screen.findByRole('heading', { name: 'อ่านตำแหน่งไม่ได้' })).toBeInTheDocument();
     expect(
-      screen.getByText('หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง ยังไม่ได้ตรวจงาน แจ้งแอดมิน'),
+      screen.getByText('ยังไม่ได้ตรวจงาน เพราะเว็บนี้อ่านตำแหน่งมือถือไม่ได้ ให้ขอลิงก์ที่ใช้งานได้จากแอดมิน'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ลองอีกครั้ง' })).not.toBeInTheDocument();
   });

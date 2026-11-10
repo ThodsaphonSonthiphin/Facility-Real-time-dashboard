@@ -82,7 +82,7 @@ export function CapturePage() {
         />
       )}
       <MoreInfo size="phone" summary="เกี่ยวกับหน้านี้">
-        ต้องเปิดผ่าน HTTPS · การบันทึกเก็บลงประวัติการแก้ไขของแอดมิน
+        เมื่อบันทึกพิกัดแล้ว ดูรายการย้อนหลังได้ในหน้า “ประวัติการแก้ไขของแอดมิน”
       </MoreInfo>
       <LogoutButton />
     </PhoneScreen>
@@ -226,7 +226,7 @@ function SignCapture({ target, phase, problem, saving, onStart, onSave }: SignCa
       {result?.kind === 'fix' && (
         <>
           <p role="status">{`อ่านครบแล้ว ${result.readings} ครั้ง ใน ${SECONDS} วินาที`}</p>
-          <p>{`ค่ากลาง: ${formatCoordinates(result.fix.latitude, result.fix.longitude)}`}</p>
+          <p>{`พิกัดที่จะบันทึก: ${formatCoordinates(result.fix.latitude, result.fix.longitude)}`}</p>
           {verdict && <Note tone={verdict.ok ? 'info' : 'warn'}>{verdict.text}</Note>}
           <div className="flex flex-col gap-2">
             <Button variant="primary" size="main" disabled={saving} onClick={() => onSave(result.fix)}>
@@ -250,7 +250,7 @@ function SignCapture({ target, phase, problem, saving, onStart, onSave }: SignCa
       {result?.kind === 'unavailable' && (
         <Note tone="error">เครื่องนี้อ่านตำแหน่งไม่ได้ เปิดหน้านี้บนมือถือที่อ่านตำแหน่งได้</Note>
       )}
-      {result?.kind === 'insecure' && <Note tone="error">หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง</Note>}
+      {result?.kind === 'insecure' && <Note tone="error">เว็บนี้อ่านตำแหน่งมือถือไม่ได้ ให้เปิดหน้านี้จากลิงก์ HTTPS ของระบบ</Note>}
       {phase.kind === 'saved' && (
         <Note tone="info" status>
           {phase.text}

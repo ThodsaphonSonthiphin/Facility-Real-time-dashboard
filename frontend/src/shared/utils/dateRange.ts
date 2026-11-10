@@ -68,10 +68,10 @@ export function checkRange({ fromText, toText }: RangeTexts, maxDays: number): D
   const from = parseShiftDate(fromText);
   const to = parseShiftDate(toText);
   if (!from || !to) {
-    return 'วันที่ต้องเป็นแบบ วว/ดด/ปปปป เช่น 15/10/2026';
+    return 'ใส่วัน/เดือน/ปี ค.ศ. เช่น 15/10/2026';
   }
   if (to < from) {
-    return 'วันสุดท้ายต้องไม่ก่อนวันเริ่ม';
+    return 'เลือกวันสุดท้ายให้ตรงกับหรือหลังวันเริ่ม';
   }
   return rangeDays({ from, to }) > maxDays ? `เลือกได้ไม่เกิน ${maxDays} วัน` : { from, to };
 }

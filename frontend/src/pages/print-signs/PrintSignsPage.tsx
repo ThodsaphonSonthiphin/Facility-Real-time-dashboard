@@ -60,7 +60,7 @@ export function PrintSignsPage() {
         </div>
         <span className="ml-auto inline-flex items-center gap-1.5 rounded-sm bg-idle-bg px-2 py-0.5 text-xs text-idle">
           <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
-          หน้าตาป้ายคงเดิม เพราะติดผนังแล้ว
+          เปลี่ยนขนาดได้ รูปแบบป้ายเหมือนเดิม
         </span>
       </section>
       {(areas.isLoading || areas.error || areas.data?.length === 0 || print.isFetching || print.error ||
@@ -100,7 +100,7 @@ export function PrintSignsPage() {
         <MoreInfo summary="เกี่ยวกับ QR">ระบบสร้าง QR ในเครื่องนี้เอง ไม่ส่งรหัสออกไปเว็บภายนอก</MoreInfo>
         <p className="text-text-2">{`ที่อยู่บนป้าย: ${window.location.origin}`}</p>
         {window.location.protocol !== 'https:' && (
-          <Note tone="warn">ที่อยู่นี้ไม่ใช่ https มือถือจะอ่านตำแหน่งไม่ได้ตอนสแกน พิมพ์จากที่อยู่ https ของเซิร์ฟเวอร์</Note>
+          <Note tone="warn">ให้เปิดหน้าพิมพ์จากลิงก์ HTTPS ของระบบ มือถือจึงจะอ่านตำแหน่งได้เมื่อสแกนป้าย</Note>
         )}
         <Link className={`${linkClass} inline-flex min-h-9 items-center gap-1 self-start font-semibold`}
           to={singleArea ? `/admin/areas/${which}` : '/admin/areas'}>

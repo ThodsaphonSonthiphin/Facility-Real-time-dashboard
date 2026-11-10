@@ -115,7 +115,7 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     // The test page is plain http, where a phone at the sign cannot read its location
     expect(screen.getByText(`ที่อยู่บนป้าย: ${window.location.origin}`)).toBeInTheDocument();
     expect(
-      screen.getByText('ที่อยู่นี้ไม่ใช่ https มือถือจะอ่านตำแหน่งไม่ได้ตอนสแกน พิมพ์จากที่อยู่ https ของเซิร์ฟเวอร์'),
+      screen.getByText('ให้เปิดหน้าพิมพ์จากลิงก์ HTTPS ของระบบ มือถือจึงจะอ่านตำแหน่งได้เมื่อสแกนป้าย'),
     ).toBeInTheDocument();
   });
 

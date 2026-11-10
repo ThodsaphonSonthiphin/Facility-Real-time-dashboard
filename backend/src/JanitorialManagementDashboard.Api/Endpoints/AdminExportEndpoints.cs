@@ -35,7 +35,7 @@ public static class AdminExportEndpoints
 
         if (!AdminQuery.TryReadDate(request.From, out var first) || !AdminQuery.TryReadDate(request.To, out var last))
         {
-            return Bad("ต้องระบุทั้งวันเริ่ม (from) และวันสุดท้าย (to) แบบ yyyy-MM-dd");
+            return Bad("ใส่วันเริ่มและวันสุดท้ายให้ครบและตรวจว่าทั้งสองวันที่ถูกต้อง");
         }
 
         if (last < first)

@@ -197,7 +197,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     serveMyWork(myWork(undefined, [area(), covered]));
     await renderApp('/my-work');
 
-    expect(await screen.findByText('วันนี้ทำแทน Area 12 ด้วย · สิทธิ์หมดเองเมื่อหมดกะ')).toBeInTheDocument();
+    expect(await screen.findByText('กะนี้ทำแทนที่ Area 12')).toBeInTheDocument();
     // both points are ยังไม่ทำ: the own Area's comes first (the server's order), the covered one is the next row
     const next = screen.getByRole('region', { name: 'ทำอันนี้ก่อน' });
     expect(within(next).getByText('Area ทดลอง · รอบ 10:00–12:00')).toBeInTheDocument();
@@ -258,7 +258,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     await renderApp('/my-work');
 
     expect(
-      await screen.findByText('ยังไม่มีจุดที่ต้องทำ บัญชีนี้ยังไม่ได้รับพื้นที่ หรือพื้นที่ยังไม่มีจุด แจ้งแอดมิน'),
+      await screen.findByText('ยังไม่มีจุดให้ทำความสะอาดในรายการนี้ แจ้งแอดมินให้ตรวจพื้นที่และจุดที่คุณรับผิดชอบ'),
     ).toBeInTheDocument();
   });
 
@@ -266,7 +266,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     serveMyWork(undefined, 500);
     await renderApp('/my-work');
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('เซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง');
+    expect(await screen.findByRole('alert')).toHaveTextContent('ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่');
     expect(screen.getByRole('heading', { name: 'งานของฉัน' })).toBeInTheDocument();
   });
 
@@ -308,7 +308,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     await settled(server);
 
     act(() => hub.latest().reconnecting());
-    expect(screen.getByText('การอัปเดตสดหลุด กำลังต่อใหม่ กด "อัปเดต" เพื่อดูงานล่าสุด')).toBeInTheDocument();
+    expect(screen.getByText('ข้อมูลอาจยังไม่ล่าสุด กด "อัปเดต" เพื่อลองโหลดใหม่')).toBeInTheDocument();
 
     act(() => hub.latest().reconnected());
 

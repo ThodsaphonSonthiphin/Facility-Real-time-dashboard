@@ -64,7 +64,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
             />
           ))}
           <p className="text-text-2">
-            ช่วงห้ามซ้อนกันและต้องอยู่ในกะ · ส่งหลังช่วงจบนับเป็นส่งช้า · พื้นที่ที่ทำเฉพาะกะเช้าจะไม่มีช่องกะดึก
+            ตั้งเวลาแต่ละรอบให้อยู่ในกะและไม่ทับกัน ถ้าจบรอบแล้วยังไม่มีงาน งานที่ส่งก่อนรอบถัดไปเริ่มจะนับในรอบเดิมและขึ้นว่าส่งช้า
           </p>
         </div>
       {point && (
@@ -76,7 +76,7 @@ export function PointEditor({ area, point, onSaved, onClose }: PointEditorProps)
           canIssueQr={area.isActive && point.isActive}
         />
       )}
-        <Note tone="info">{point ? 'บันทึกชื่อและรอบเวลาของจุดแยกจากรัศมีป้าย · หากเปลี่ยนชื่อ ให้พิมพ์ป้ายใหม่' : 'บันทึกแล้วระบบสร้าง QR ให้ ไปพิมพ์ป้ายได้ที่หน้าพิมพ์ป้าย แล้วเก็บพิกัดด้วยมือถือที่ป้าย'}</Note>
+        <Note tone="info">{point ? 'ถ้าเปลี่ยนชื่อจุด ให้พิมพ์ป้ายใหม่ หากต้องการแก้รัศมี ให้ใช้ส่วน “รัศมีของป้าย”' : 'บันทึกแล้วระบบสร้าง QR ให้ ไปพิมพ์ป้ายได้ที่หน้าพิมพ์ป้าย แล้วเก็บพิกัดด้วยมือถือที่ป้าย'}</Note>
         {problem && <Note tone="error">{problem}</Note>}
       {point && (
         <div className="flex flex-col items-start gap-2 rounded-md border border-border p-3">
@@ -145,7 +145,7 @@ function ShiftWindows({ shift, windows, disabled, onAdd, onRemove, onEdit }: Shi
         <div className="flex justify-between text-xs tabular-nums text-text-2">{ticks.map((tick) => <span key={tick}>{tick}</span>)}</div>
       </div>
       <div className="flex flex-col gap-3" aria-label={`ช่วงรอบ${label}`}>
-        {mine.length === 0 && <p className="text-text-2">ยังไม่มีช่วงรอบ · จุดจะแสดงนอกเวลาในกะนี้</p>}
+        {mine.length === 0 && <p className="text-text-2">ยังไม่มีรอบทำความสะอาดในกะนี้ จุดจะแสดงว่า “นอกเวลา”</p>}
         {mine.map(({ window: w, index, duration }, n) => (
           <div key={index} role="group" aria-label={`${label} รอบ ${n + 1}`} className="flex flex-wrap items-center gap-2">
             <span className="inline-flex min-h-9 w-13 shrink-0 items-center text-xs text-text-2">รอบ {n + 1}<span className="sr-only">{`${w.start}–${w.end}`}</span></span>

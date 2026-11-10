@@ -86,7 +86,7 @@ describe('alert rules (wireframe D3)', () => {
     expect(alertRole(inspectionGpsAlert)).toBe('หัวหน้า');
     expect(alertRole(blockedAlert)).toBe('แม่บ้าน · AR03');
     expect(alertResult(blockedAlert)).toEqual({ text: 'ไม่บันทึก', refused: true });
-    expect(alertResult(attendanceGpsAlert)).toEqual({ text: 'บันทึก ติดธง', refused: false });
+    expect(alertResult(attendanceGpsAlert)).toEqual({ text: 'บันทึกแล้ว · ไกลป้าย', refused: false });
     expect(alertResult(missingAlert)).toEqual({ text: 'รอเติมเวลา', refused: false });
   });
 

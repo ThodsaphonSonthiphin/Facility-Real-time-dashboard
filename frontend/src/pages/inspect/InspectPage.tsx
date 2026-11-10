@@ -148,7 +148,7 @@ function OpenFailed({ error, onRetry }: { error: unknown; onRetry: () => void })
       >
         <div className="w-full text-left">
           <Note tone="error" alert={false}>
-            เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ยังไม่ได้ตรวจงาน เดินไปตรงที่มีสัญญาณ แล้วกดลองอีกครั้ง
+            ยังเปิดงานที่ต้องตรวจไม่ได้ ตรวจดูสัญญาณอินเทอร์เน็ต แล้วกด “ลองอีกครั้ง”
           </Note>
         </div>
       </ResultScreen>

@@ -40,12 +40,12 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     const editor = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
     const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
     expect(within(place).getByText('วัดที่ป้ายจริง ±14 ม. · 13.756300, 100.501800')).toBeInTheDocument();
-    expect(within(place).getByRole('link', { name: 'เก็บพิกัดที่ป้ายด้วยมือถือ (M17) ›' })).toHaveAttribute(
+    expect(within(place).getByRole('link', { name: 'เก็บพิกัดที่ป้ายด้วยมือถือ ›' })).toHaveAttribute(
       'href',
       '/admin/areas/1/capture?sign=100',
     );
     // Confirmed on site: a map pick is not offered (the server would refuse it)
-    expect(within(place).queryByLabelText('ยังไม่ได้ไปที่ป้าย? ปักพิกัดจากแผนที่ไปก่อน')).not.toBeInTheDocument();
+    expect(within(place).queryByLabelText('พิกัดจากแผนที่ (ถ้ายังไปที่ป้ายไม่ได้)')).not.toBeInTheDocument();
 
     const radius = within(editor).getByRole('region', { name: 'รัศมีของป้าย' });
     const field = within(radius).getByLabelText('รัศมี (เมตร)');
@@ -78,7 +78,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
     const editor = screen.getByRole('region', { name: 'ป้ายลงเวลา · AR01 Area ทดลอง' });
     const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
-    await user.type(within(place).getByLabelText('ยังไม่ได้ไปที่ป้าย? ปักพิกัดจากแผนที่ไปก่อน'), '13.7563, 100.5018');
+    await user.type(within(place).getByLabelText('พิกัดจากแผนที่ (ถ้ายังไปที่ป้ายไม่ได้)'), '13.7563, 100.5018');
     await user.click(within(place).getByRole('button', { name: 'บันทึกพิกัดที่ปักจากแผนที่' }));
     expect(await within(place).findByRole('alert')).toHaveTextContent('มีผู้แก้ไขพิกัดแล้ว เปิดพื้นที่ใหม่');
     expect(server.calls.find((call) => call.method === 'PUT')).toMatchObject({
@@ -100,7 +100,7 @@ describe('SignPanel (D4, facility-0045, 0038, 0021)', () => {
     const editor = screen.getByRole('region', { name: 'แก้ไขจุด · AR01-02' });
     const place = within(editor).getByRole('region', { name: 'พิกัดของป้าย' });
     expect(within(place).getByText('ยังไม่มีพิกัด')).toBeInTheDocument();
-    const field = within(place).getByLabelText('ยังไม่ได้ไปที่ป้าย? ปักพิกัดจากแผนที่ไปก่อน');
+    const field = within(place).getByLabelText('พิกัดจากแผนที่ (ถ้ายังไปที่ป้ายไม่ได้)');
     await user.type(field, 'ตึก A');
     await user.click(within(place).getByRole('button', { name: 'บันทึกพิกัดที่ปักจากแผนที่' }));
     expect(within(place).getByRole('alert')).toHaveTextContent('ใส่พิกัดแบบ 13.756300, 100.501800');

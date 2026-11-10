@@ -105,7 +105,7 @@ export function InspectForm({
         {alert && <Note tone="error">{alert}</Note>}
       </form>
       <p className="text-center text-sm text-text-2">
-        ไม่สะอาด = แม่บ้านเห็นสิ่งที่ต้องแก้ทันที แก้แล้วส่งงานใหม่ · ตรวจกี่ครั้งก็ได้
+        ถ้าเลือก “ไม่สะอาด” แม่บ้านจะเห็นสิ่งที่ต้องแก้ทันที เมื่อแม่บ้านส่งงานใหม่ ให้ตรวจอีกครั้ง
       </p>
     </PhoneScreen>
   );

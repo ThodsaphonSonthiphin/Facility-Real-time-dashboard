@@ -63,7 +63,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
 
     await user.click(within(empty).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
     const form = screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน AR12 Area สิบสอง' });
-    expect(within(form).getByText('กะเช้า พฤ. 15/10/2026 · ตึก B · หมดสิทธิ์เมื่อจบกะ')).toBeInTheDocument();
+    expect(within(form).getByText('กะเช้า พฤ. 15/10/2026 · ตึก B')).toBeInTheDocument();
     await within(form).findByRole('radiogroup', { name: 'แม่บ้านที่ทำแทน' });
     expect(radioNames(form)).toEqual(['แม่บ้านที่อื่น', 'แม่บ้านทดสอบ', 'แม่บ้านมาสาย']);
     const best = within(form).getByRole('radio', { name: /^แม่บ้านที่อื่นเหมาะที่สุด/ });
@@ -170,7 +170,7 @@ describe('covers on the alert page (D3, facility-0041, 0048)', () => {
     const { user } = await renderApp('/admin/alerts');
 
     const covers = await screen.findByRole('region', { name: named('คนทำแทนกะนี้', 1) });
-    expect(within(covers).getByText('หมดสิทธิ์เมื่อจบกะ 19:00')).toBeInTheDocument();
+    expect(within(covers).getByText('เวลาจบกะตามตาราง 19:00')).toBeInTheDocument();
     expect(within(covers).getByRole('listitem')).toHaveTextContent(/^แม่บ้านที่อื่น ทำแทน AR02 .*แทน แม่บ้านป่วย · แอดมินมอบหมาย 07:10ยกเลิกก่อนหมดกะ$/);
 
     await user.click(within(covers).getByRole('button', { name: 'ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR02' }));
@@ -285,7 +285,7 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
 
     await user.click(within(box).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
     const form = screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน AR12 Area สิบสอง' });
-    expect(within(form).getByText('กะเช้า ศ. 16/10/2026 · ตึก B · หมดสิทธิ์เมื่อจบกะ')).toBeInTheDocument();
+    expect(within(form).getByText('กะเช้า ศ. 16/10/2026 · ตึก B')).toBeInTheDocument();
     await within(form).findByRole('radiogroup', { name: 'แม่บ้านที่ทำแทน' });
     expect(radioNames(form)).toEqual(['แม่บ้านที่อื่น', 'แม่บ้านทดสอบ', 'แม่บ้านมาสาย']);
     // Ahead nobody has checked in, so the cards do not say so

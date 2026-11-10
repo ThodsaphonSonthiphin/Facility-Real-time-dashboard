@@ -14,7 +14,7 @@ export function ExportPage() {
     <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold">ส่งออก Excel</h1>
-        <span className="text-text-2">เลือกชุดข้อมูล ช่วงวัน และตึก แล้วดาวน์โหลดเป็นไฟล์ .xlsx</span>
+        <span className="text-text-2">เลือกข้อมูล วันที่ และตึกที่ต้องการ แล้วกด “ดาวน์โหลด Excel”</span>
       </header>
       {/* The approved summary column is 280px; no theme width token matches this page-specific layout. */}
       <div className="grid min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -89,8 +89,8 @@ export function ExportPage() {
               <ShieldAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-overdue" />
               <p>
                 <strong>ไฟล์นี้มีข้อมูลส่วนบุคคล</strong><br />
-                มีชื่อ รหัสพนักงาน และเวลาของแม่บ้าน ใช้เฉพาะงานที่เกี่ยวข้อง เก็บในที่ที่มีการควบคุมสิทธิ์
-                และลบเมื่อไม่ใช้ การส่งออกทุกครั้งถูกบันทึกในประวัติการแก้ไข
+                ไฟล์มีชื่อ รหัสพนักงาน และเวลาของแม่บ้าน ให้ใช้เฉพาะงานที่เกี่ยวข้องและเก็บในที่ที่คนมีสิทธิ์เท่านั้นเปิดได้.
+                เมื่อไม่ใช้แล้วให้ลบไฟล์ ระบบบันทึกการดาวน์โหลดแต่ละครั้งในประวัติการแก้ไข
               </p>
             </div>
             <label className="flex min-h-9 cursor-pointer items-center gap-2">
@@ -136,8 +136,8 @@ export function ExportPage() {
             <span className="wrap-anywhere">{page.fileName}</span>
             <span>{page.sets.length} แผ่นงาน · {page.setsSummary}</span>
             {page.sets.map((set) => <span key={set}><strong>{setTitle[set]}: </strong>{setDetail[set]}</span>)}
-            <span>ไม่มีพิกัดตำแหน่งดิบ มีแค่ระยะห่างจากป้าย และผลในรัศมี / นอกรัศมี</span>
-            <span>ไฟล์ที่ดาวน์โหลดแล้วห้ามส่งต่อนอกบริษัท และอยู่นอกการลบตามระยะเวลาเก็บข้อมูล</span>
+            <span>ไฟล์แสดงระยะห่างจากป้ายและผลว่าอยู่ในหรือนอกรัศมี โดยไม่แสดงพิกัดมือถือ</span>
+            <span>เก็บไฟล์ไว้ใช้ภายในบริษัทเท่านั้น คุณต้องลบไฟล์ที่ดาวน์โหลดเองเมื่อเลิกใช้</span>
           </MoreInfo>
         </aside>
       </div>

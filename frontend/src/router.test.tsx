@@ -166,7 +166,7 @@ describe('routing (facility-0026, 0058)', () => {
 
     await renderApp('/broken', withBrokenPage);
 
-    expect(screen.getByRole('heading', { name: 'เกิดข้อผิดพลาด' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'เปิดหน้านี้ไม่ได้' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'โหลดใหม่' })).toBeInTheDocument();
   });
 });

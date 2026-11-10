@@ -45,7 +45,7 @@ export function SendFailed({ point, draft, triedAt, sending, onResend }: SendFai
           <h2 id="scan-failed-title" className="text-lg font-bold">
             ยังไม่ได้บันทึก
           </h2>
-          <span>{`ส่งงานไม่สำเร็จ เพราะไม่มีสัญญาณหรือเซิร์ฟเวอร์ไม่ตอบ · ลองล่าสุด ${formatTime(triedAt)}`}</span>
+          <span>{`ส่งงานไม่สำเร็จ · ลองล่าสุด ${formatTime(triedAt)}`}</span>
         </section>
         <Panel title="สิ่งที่คุณเลือกไว้ (ยังอยู่ในหน้านี้)">
           <p>{describeDraft(draft)}</p>
@@ -57,9 +57,9 @@ export function SendFailed({ point, draft, triedAt, sending, onResend }: SendFai
             <li>กด "ส่งใหม่"</li>
           </ol>
           <p className="text-sm text-text-2">
-            เวลาที่บันทึกคือเวลาที่ส่งสำเร็จ ถ้าพ้นเวลารอบจะนับเป็นส่งช้า ถ้าเดินออกไกลจากป้าย การส่งงานจะขึ้นว่าไกลป้าย
+            ระบบใช้เวลาที่ส่งสำเร็จ ถ้าส่งจากจุดที่อยู่ไกลจากป้าย ระบบอาจขึ้นว่า “ไกลป้าย”
           </p>
-          <p className="text-sm text-text-2">ระบบไม่เก็บงานไว้ในมือถือแล้วส่งเองทีหลัง</p>
+          <p className="text-sm text-text-2">เก็บหน้านี้ไว้จนกว่าจะเห็นผลการส่งงาน</p>
         </Panel>
       </div>
     </ResultScreen>

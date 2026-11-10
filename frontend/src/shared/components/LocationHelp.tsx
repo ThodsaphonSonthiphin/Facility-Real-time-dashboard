@@ -55,7 +55,7 @@ export function LocationHelp({ problem, action, busy, onRetry }: LocationHelpPro
       <div className="flex w-full flex-col gap-4 text-left">
         {insecure && (
           <Note tone="error" alert={false}>
-            {`หน้านี้ต้องเปิดผ่าน https มือถือจึงยอมให้อ่านตำแหน่ง ยังไม่ได้${action} แจ้งแอดมิน`}
+            {`ยังไม่ได้${action} เพราะเว็บนี้อ่านตำแหน่งมือถือไม่ได้ ให้ขอลิงก์ที่ใช้งานได้จากแอดมิน`}
           </Note>
         )}
         {denied && (
@@ -65,7 +65,7 @@ export function LocationHelp({ problem, action, busy, onRetry }: LocationHelpPro
               <ol className="m-0 list-decimal pl-5">
                 <li>ปัดแถบด้านบนของจอลงมา</li>
                 <li>แตะปุ่ม "ตำแหน่ง" ให้เปิด</li>
-                <li>ถ้าเบราว์เซอร์ถาม ให้กด "อนุญาต"</li>
+                <li>ถ้าเว็บขอใช้ตำแหน่ง ให้กด "อนุญาต"</li>
               </ol>
             </Panel>
             <Panel title="iPhone">

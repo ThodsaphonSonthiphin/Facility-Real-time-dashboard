@@ -61,9 +61,9 @@ export function InspectResult({ visit, draft, result }: InspectResultProps) {
               <StatusChip status={result.newPointStatus} size="lg" />
             </p>
             <span>{`“${draft.defect.trim()}”`}</span>
-            <span>{`${cleaner}เห็นสิ่งที่ต้องแก้นี้ทันทีในหน้างานของฉัน และเมื่อสแกนจุดนี้ แก้แล้วส่งงานใหม่ จากนั้นหัวหน้าตรวจอีกรอบ`}</span>
+            <span>{`${cleaner} จะเห็นสิ่งที่ต้องแก้ในหน้า “งานของฉัน” และตอนสแกนป้ายจุดนี้ เมื่อส่งงานใหม่แล้ว ให้ตรวจอีกครั้ง`}</span>
             {point.nextRound && (
-              <span>{`ถ้าไม่ได้แก้จนรอบ ${formatRound(point.nextRound)} เริ่ม การ์ดขึ้นรอบใหม่ และรอบนี้บันทึกว่า "ไม่ได้แก้"`}</span>
+              <span>{`ถ้ายังไม่ส่งงานแก้ก่อนเริ่มรอบ ${formatRound(point.nextRound)} ระบบจะบันทึกรอบนี้ว่า “ไม่ได้แก้”`}</span>
             )}
           </section>
         )}

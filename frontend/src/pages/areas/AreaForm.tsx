@@ -96,10 +96,10 @@ export function AreaForm({ detail, buildings, cleaners, onSaved, onCancel, frame
           <label className="flex min-h-9 items-center gap-2 font-semibold"><input type="checkbox" className={`size-4 accent-accent ${focusRing}`} checked={draft.shiftPattern === 'DayAndNight'} disabled={sending} onChange={(event) => set({ shiftPattern: event.target.checked ? 'DayAndNight' : 'DayOnly' })} />กะดึก</label>
           <div className="sm:col-span-2">{draft.shiftPattern === 'DayAndNight' ? <CleanerSelect shift="Night" value={draft.nightCleanerId} choices={cleanerChoices(cleaners, 'Night', areaId, areaIsOff)} disabled={sending} onChange={(nightCleanerId) => set({ nightCleanerId })} /> : <p className="text-text-2">เฉพาะกะเช้า</p>}</div>
         </div>
-      <p className="text-xs text-text-2">กะเช้าเปิดเสมอ · ปิดกะดึกเป็นเฉพาะกะเช้า · พื้นที่ละ 1 คนต่อกะ เลือกได้เฉพาะแม่บ้านว่าง</p>
+      <p className="text-xs text-text-2">ทุกพื้นที่ทำกะเช้า ถ้าทำกะดึกด้วย ให้เลือกกะดึก แต่ละกะเลือกแม่บ้านประจำได้ 1 คนจากรายชื่อที่ยังไม่มีพื้นที่ในกะนั้น</p>
       {areaIsOff && <Note tone="warn">พื้นที่นี้ปิดใช้งานอยู่ เปิดใช้งานก่อน แล้วค่อยใส่แม่บ้าน</Note>}
       {losesNightRounds && (
-        <Note tone="warn">บันทึกแล้วเวลารอบกะดึกของทุกจุดในพื้นที่นี้จะถูกลบ และแม่บ้านกะดึกออกจากพื้นที่</Note>
+        <Note tone="warn">เมื่อบันทึก ระบบจะลบเวลารอบกะดึกของทุกจุดในพื้นที่นี้ และยกเลิกการมอบหมายแม่บ้านประจำกะดึกของพื้นที่</Note>
       )}
       </section>
       {children}

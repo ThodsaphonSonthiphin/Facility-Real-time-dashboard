@@ -64,7 +64,7 @@ export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProp
       <DialogHeader
         id={headingId}
         title={`มอบหมายคนทำแทน ${row.areaCode} ${row.areaName}`}
-        detail={`${shiftShortLabel[board.shift]} ${formatWeekday(board.shiftDate)} ${formatShiftDate(board.shiftDate)} · ตึก ${row.buildingCode} · หมดสิทธิ์เมื่อจบกะ`}
+        detail={`${shiftShortLabel[board.shift]} ${formatWeekday(board.shiftDate)} ${formatShiftDate(board.shiftDate)} · ตึก ${row.buildingCode}`}
         closeDisabled={isLoading}
         onClose={onCancel}
       />
@@ -89,7 +89,7 @@ export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProp
           <span className="text-xs text-text-2">
             {ahead
               ? 'กะนี้ยังไม่เริ่ม ยังไม่มีใครลงเวลา จึงเรียงตามรหัสพนักงาน'
-              : 'เรียงจาก: สแกนป้ายพื้นที่นี้แล้ว → ลงเวลาเข้างานก่อน'}
+              : 'คนที่สแกนป้ายพื้นที่นี้ล่าสุดในกะที่เลือกจะอยู่บนสุด คนที่ยังไม่ได้สแกนจะเรียงตามเวลาเข้างาน'}
           </span>
         )}
         {problem && <Note tone="error">{problem}</Note>}

@@ -44,7 +44,7 @@ public static class AdminInspectionSummaryEndpoints
         }
         else if (!AdminQuery.TryReadDate(from, out first) || !AdminQuery.TryReadDate(to, out last))
         {
-            return Bad("ต้องระบุทั้งวันเริ่ม (from) และวันสุดท้าย (to) แบบ yyyy-MM-dd");
+            return Bad("ใส่วันเริ่มและวันสุดท้ายให้ครบและตรวจว่าทั้งสองวันที่ถูกต้อง");
         }
 
         if (last < first)

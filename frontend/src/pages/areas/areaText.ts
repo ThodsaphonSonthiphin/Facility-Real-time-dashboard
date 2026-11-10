@@ -10,7 +10,7 @@ export function areaMeta(area: AreaSummary, names?: BuildingNames): string {
     `${area.activePointCount} จุด`,
   ];
   if (area.signsNotConfirmedOnSite > 0) {
-    parts.push(`ป้ายยังไม่ยืนยัน ${area.signsNotConfirmedOnSite}`);
+    parts.push(`ยังไม่ได้วัดที่ป้ายจริง ${area.signsNotConfirmedOnSite} ป้าย`);
   }
   return parts.join(' · ');
 }

@@ -16,9 +16,9 @@ import { MY_BUILDING_HUB, useGetMyBuildingQuery, type MyBuilding } from './myBui
 
 /** Wireframe M15's footnote "หน้านี้อัปเดตเองเมื่อแม่บ้านส่งงาน", by the hub's state (plan 9 decision 9). */
 const liveLine: Record<HubStatus, string> = {
-  connecting: 'กำลังเชื่อมต่อการอัปเดตสด...',
+  connecting: 'กำลังเตรียมอัปเดตข้อมูลอัตโนมัติ...',
   live: 'หน้านี้อัปเดตเองเมื่อแม่บ้านส่งงานหรือหัวหน้าตรวจ',
-  reconnecting: 'การอัปเดตสดหลุด กำลังต่อใหม่ กด "อัปเดต" เพื่อดูงานล่าสุด',
+  reconnecting: 'ข้อมูลอาจยังไม่ล่าสุด กด "อัปเดต" เพื่อลองโหลดใหม่',
 };
 
 /**
@@ -79,7 +79,7 @@ function Summary({ building }: { building: MyBuilding }) {
         look="border-pending-border bg-pending-bg text-pending"
       />
       <Tile label="รอแม่บ้านแก้" count={count('Rework')} icon={RotateCcw} look="border-border bg-surface text-rework" />
-      <Tile label="ตรวจแล้ว" count={count('Passed')} icon={Check} look="border-border bg-surface text-passed" />
+      <Tile label="ตรวจผ่าน" count={count('Passed')} icon={Check} look="border-border bg-surface text-passed" />
     </ul>
   );
 }
@@ -99,7 +99,7 @@ function Tile({ label, count, icon: Icon, look }: { label: string; count: number
 
 function BuildingList({ building }: { building: MyBuilding }) {
   if (building.buildings.length === 0) {
-    return <Note tone="info">บัญชีนี้ยังไม่ได้ผูกกับตึก หรือตึกปิดใช้งาน แจ้งแอดมิน</Note>;
+    return <Note tone="info">ยังไม่มีตึกให้ตรวจ แจ้งแอดมินให้ตรวจตึกที่คุณรับผิดชอบ</Note>;
   }
   return (
     <>

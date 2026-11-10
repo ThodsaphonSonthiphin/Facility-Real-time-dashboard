@@ -58,7 +58,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'ตึกของฉัน' })).toBeInTheDocument();
     expect(screen.getByText('ตอนนี้ กะเช้า 07:00–19:00')).toBeInTheDocument();
     expect(screen.getByText('2 พื้นที่ · 4 จุด')).toBeInTheDocument();
-    expect(tiles()).toEqual(['2 รอตรวจ', '1 รอแม่บ้านแก้', '0 ตรวจแล้ว']);
+    expect(tiles()).toEqual(['2 รอตรวจ', '1 รอแม่บ้านแก้', '0 ตรวจผ่าน']);
     expect(screen.getByText('ส่ง 10:05 · แม่บ้านทดสอบ')).toBeInTheDocument();
     expect(screen.getByText('Area ถัดไป · รอบ 09:00–11:00')).toBeInTheDocument();
     expect(screen.getByText('ให้แก้ 09:40: “รอบถังขยะยังมีคราบ” · รอแม่บ้านส่งใหม่')).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     serve(myBuilding([]));
     await renderApp('/my-building');
 
-    expect(await screen.findByText('บัญชีนี้ยังไม่ได้ผูกกับตึก หรือตึกปิดใช้งาน แจ้งแอดมิน')).toBeInTheDocument();
+    expect(await screen.findByText('ยังไม่มีตึกให้ตรวจ แจ้งแอดมินให้ตรวจตึกที่คุณรับผิดชอบ')).toBeInTheDocument();
   });
 
   it('a building with no points says so', async () => {
@@ -125,13 +125,13 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     // RTK Query tells the page about a cache patch on the next frame, so the first look waits for it
     await waitFor(() => expect(cardNames(own)).toEqual(['ห้องน้ำชาย', 'ห้องน้ำหญิง', 'โถงทางเดิน', 'จุดทิ้งขยะ']));
     expect(screen.getByText('ส่ง 10:20 · แม่บ้านทดสอบ')).toBeInTheDocument();
-    expect(tiles()).toEqual(['3 รอตรวจ', '1 รอแม่บ้านแก้', '0 ตรวจแล้ว']);
+    expect(tiles()).toEqual(['3 รอตรวจ', '1 รอแม่บ้านแก้', '0 ตรวจผ่าน']);
 
     act(() => hub.latest().push('InspectionRecorded', { ...fourPoints[3], status: 'Passed' }));
 
     await waitFor(() => expect(cardNames(own)).toEqual(['ห้องน้ำหญิง', 'โถงทางเดิน', 'จุดทิ้งขยะ', 'ห้องน้ำชาย']));
     expect(screen.getByText('ตรวจผ่าน · ส่ง 10:05 · แม่บ้านทดสอบ')).toBeInTheDocument();
-    expect(tiles()).toEqual(['2 รอตรวจ', '1 รอแม่บ้านแก้', '1 ตรวจแล้ว']);
+    expect(tiles()).toEqual(['2 รอตรวจ', '1 รอแม่บ้านแก้', '1 ตรวจผ่าน']);
   });
 
   it('a push that lands while an older answer is still on its way is not overwritten by it', async () => {
@@ -169,7 +169,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     await settled(server);
 
     act(() => hub.latest().reconnecting());
-    expect(screen.getByText('การอัปเดตสดหลุด กำลังต่อใหม่ กด "อัปเดต" เพื่อดูงานล่าสุด')).toBeInTheDocument();
+    expect(screen.getByText('ข้อมูลอาจยังไม่ล่าสุด กด "อัปเดต" เพื่อลองโหลดใหม่')).toBeInTheDocument();
 
     act(() => hub.latest().reconnected());
 
@@ -202,7 +202,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     fakeServer({ ...supervisorSession, 'GET /api/my-building': () => ({ status: 503 }) });
     await renderApp('/my-building');
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('เซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง');
+    expect(await screen.findByRole('alert')).toHaveTextContent('ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่');
     expect(screen.getByRole('heading', { level: 1, name: 'ตึกของฉัน' })).toBeInTheDocument();
   });
 });

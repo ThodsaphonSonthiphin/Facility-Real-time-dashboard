@@ -79,7 +79,7 @@ public static class AdminAttendanceEndpoints
 
         if (!RoundWindowRules.TryParseTime(request.Time, out var time))
         {
-            return Bad("เวลาต้องเป็นแบบ HH:mm เช่น 06:58");
+            return Bad("กรอกชั่วโมงและนาทีให้ครบ เช่น 06:58");
         }
 
         var cleaner = await db.Users.Include(u => u.Area)

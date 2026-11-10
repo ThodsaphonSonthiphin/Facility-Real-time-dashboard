@@ -47,7 +47,7 @@ export function InspectionSummaryPage() {
       {page.error && <Note tone="error" onRetry={() => void page.refetch()}>{getErrorMessage(page.error)}</Note>}
       {page.summary && <SummaryTable key={page.tableKey} rows={page.rows} filteredShift={Boolean(page.shift)} />}
       <span className="text-xs text-text-2">
-        "ส่งแล้วไม่ได้ตรวจ" = แม่บ้านส่งงานแล้ว แต่จบรอบโดยไม่มีการตรวจ · "ตรวจไกลป้าย" = ตรวจตอนพิกัดอยู่นอกรัศมีป้าย
+        “ส่งแล้วไม่ได้ตรวจ” คือรอบที่แม่บ้านส่งงานไว้และไม่มีผลตรวจ ส่วน “ตรวจไกลป้าย” คือผลตรวจที่ระบบแจ้งว่าตำแหน่งมือถืออาจอยู่ไกลจากป้ายหรืออ่านได้ไม่แม่น
       </span>
       <details open={page.controlsOpen} onToggle={(event) => page.setControlsOpen(event.currentTarget.open)}>
         <summary className={`inline-flex min-h-9 cursor-pointer items-center rounded-md text-accent ${focusRing}`}>
@@ -78,7 +78,7 @@ function SummaryNotes() {
         "ตรวจ (ครั้ง)" นับทุกครั้งที่หัวหน้าคนนั้นกดบันทึกผลตรวจ งานชิ้นเดียวตรวจซ้ำได้จึงนับหลายครั้ง และรวมตอนตรวจแทนตึกอื่น
       </span>
       <span>งานที่แม่บ้านส่งหลังจบกะไม่นับในตัวเลขของหัวหน้า เพราะไม่มีใครตรวจได้แล้ว</span>
-      <span>งานที่แม่บ้านส่งทับด้วยงานใหม่ในรอบเดียวกันก่อนที่หัวหน้าจะตรวจ ก็ไม่นับ เพราะหัวหน้าตรวจได้เฉพาะงานล่าสุดของรอบ</span>
+      <span>ถ้าแม่บ้านส่งงานใหม่ก่อนหัวหน้าตรวจในรอบเดียวกัน ระบบนับเฉพาะงานที่ส่งล่าสุด</span>
       <span>ดูรายละเอียดรายครั้งได้จากไฟล์ Excel</span>
     </MoreInfo>
   );

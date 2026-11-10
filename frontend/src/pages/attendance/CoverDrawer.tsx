@@ -216,7 +216,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
           <span className="text-xs text-text-2">
             {ahead
               ? 'แสดงแม่บ้านกะนี้ที่ทำแทนได้ · กะยังไม่เริ่ม จึงเรียงตามรหัสพนักงาน'
-              : 'แสดงแม่บ้านกะนี้ที่ทำแทนได้ · คนที่สแกนป้ายพื้นที่นี้แล้วและเข้างานก่อนขึ้นก่อน'}
+              : 'คนที่สแกนป้ายพื้นที่นี้ล่าสุดในกะที่เลือกจะอยู่บนสุด คนที่ยังไม่ได้สแกนจะเรียงตามเวลาเข้างาน'}
           </span>
         </section>
         {area && area.covers.length > 0 && (
@@ -238,7 +238,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
               area={area}
               slotWords={slotWords}
             />
-            <span className="text-xs text-text-3">{`สิทธิ์ทำแทนหมดเองเมื่อจบกะ ${shiftEndText[slot.shift]}`}</span>
+            <span className="text-xs text-text-3">{`เวลาจบกะตามตาราง ${shiftEndText[slot.shift]}`}</span>
           </div>
         )}
         {problem && <Note tone="error">{problem}</Note>}

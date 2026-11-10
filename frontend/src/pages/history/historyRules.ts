@@ -55,9 +55,9 @@ export const actionLabel: Record<string, string> = {
   ACCOUNT_PASSWORD: 'รีเซ็ตรหัสผ่าน',
   ACCOUNT_ACTIVATE: 'เปิดใช้บัญชี',
   ACCOUNT_DEACTIVATE: 'ปิดใช้บัญชี',
-  ADMIN_FIRST_CREATE: 'สร้างแอดมินคนแรกจากค่าในเซิร์ฟเวอร์',
-  ADMIN_RECOVER_CREATE: 'สร้างแอดมินด้วยคำสั่ง reset-admin',
-  ADMIN_RECOVER_RESET: 'กู้คืนแอดมินด้วยคำสั่ง reset-admin',
+  ADMIN_FIRST_CREATE: 'ตั้งค่าบัญชีแอดมินคนแรก',
+  ADMIN_RECOVER_CREATE: 'เพิ่มบัญชีแอดมินเพื่อให้กลับเข้าใช้งานได้',
+  ADMIN_RECOVER_RESET: 'ตั้งรหัสผ่านใหม่ให้แอดมินเพื่อให้กลับเข้าใช้งานได้',
   EXPORT_EXCEL: 'ส่งออก Excel',
 };
 

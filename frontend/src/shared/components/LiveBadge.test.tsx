@@ -18,7 +18,7 @@ describe('LiveBadge (facility-0064 item 1)', () => {
     act(() => store.dispatch(hubStatusChanged({ key: 'test', status: 'connecting' })));
     expect(screen.getByRole('status')).toBeEmptyDOMElement(); // owner, 2026-10-28: it flashed on every open
     act(() => store.dispatch(hubStatusChanged({ key: 'test', status: 'reconnecting' })));
-    expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)');
+    expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด');
     act(() => store.dispatch(hubStatusChanged({ key: 'test', status: 'live' })));
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });

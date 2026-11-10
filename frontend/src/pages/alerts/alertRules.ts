@@ -19,9 +19,9 @@ export const alertTabLabel: Record<AlertTab, string> = {
 /** The line under the tabs: what the kind means and what the Admin does about it (the design file's words). */
 export const alertTabHint: Record<AlertTab, string> = {
   blocked:
-    'สแกนป้ายที่ไม่ใช่ของตัวเอง ผิดตึก หรือนอกกะ ระบบไม่บันทึกงาน ถ้าพื้นที่ที่สแกนยังไม่มีคน ให้ทำแทนได้ในคลิกเดียว',
-  far: 'ลงเวลา ส่งงาน หรือตรวจงานตอนพิกัดอยู่นอกรัศมีป้าย ระบบบันทึกไว้แต่ติดธง คุยเพื่อดูว่าอยู่ที่จุดจริงหรือ GPS คลาด',
-  missing: 'ลงเวลาไม่ครบ ปิดเตือนด้วยมือไม่ได้ ต้องเติมเวลาที่หน้าการเข้างาน แล้วเตือนจะปิดเอง',
+    'ระบบไม่รับลงเวลา ส่งงาน หรือตรวจงานเมื่อสแกนผิดพื้นที่ ผิดตึก หรือนอกกะ ถ้ารายการมีปุ่มให้ทำแทน แอดมินกดเพื่อมอบหมายได้',
+  far: 'ระบบบันทึกรายการแล้ว แต่ตำแหน่งมือถืออาจอยู่ไกลจากป้ายหรืออ่านได้ไม่แม่น ให้สอบถามผู้สแกนก่อนปิดเตือน',
+  missing: 'เติมเวลาที่ขาดในหน้า “การเข้างาน” เมื่อเวลาครบ ระบบจะปิดเตือนให้',
 };
 
 const tabOf: Record<AlertKind, AlertTab> = {
@@ -119,7 +119,7 @@ export function alertResult(alert: Alert): { text: string; refused: boolean } {
   if (alert.kind === 'BlockedScan') {
     return { text: 'ไม่บันทึก', refused: true };
   }
-  return { text: alert.kind === 'MissingAttendance' ? 'รอเติมเวลา' : 'บันทึก ติดธง', refused: false };
+  return { text: alert.kind === 'MissingAttendance' ? 'รอเติมเวลา' : 'บันทึกแล้ว · ไกลป้าย', refused: false };
 }
 
 /**

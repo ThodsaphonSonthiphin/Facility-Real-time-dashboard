@@ -63,7 +63,7 @@ export function LoginPage() {
           </Field>
         </form>
         <footer className="flex flex-col gap-1 text-sm text-text-2">
-          <span>เปลี่ยนเบอร์โทร: แจ้งแอดมินให้แก้ · ไม่มีการสมัครเอง</span>
+          <span>ถ้าเปลี่ยนเบอร์โทรหรือต้องการบัญชี ให้แจ้งแอดมิน</span>
           <span>
             แอดมินเข้าด้วยชื่อผู้ใช้และรหัสผ่าน ·{' '}
             <Link className={inlineLinkClass} to="/login/admin" state={location.state}>

@@ -46,7 +46,7 @@ export function InspectSendFailed({ visit, draft, triedAt, sending, onResend }: 
           <h2 id="inspect-failed-title" className="text-lg font-bold">
             ยังไม่ได้บันทึกผลตรวจ
           </h2>
-          <span>{`บันทึกไม่สำเร็จ เพราะไม่มีสัญญาณหรือเซิร์ฟเวอร์ไม่ตอบ · ลองล่าสุด ${formatTime(triedAt)}`}</span>
+          <span>{`บันทึกผลตรวจไม่สำเร็จ · ลองล่าสุด ${formatTime(triedAt)}`}</span>
         </section>
         <Panel title="ผลที่คุณเลือกไว้ (ยังอยู่ในหน้านี้)">
           <p>{describeDraft(draft)}</p>
@@ -57,7 +57,7 @@ export function InspectSendFailed({ visit, draft, triedAt, sending, onResend }: 
             <li>เดินไปตรงที่มีสัญญาณ</li>
             <li>กด "ส่งใหม่"</li>
           </ol>
-          <p className="text-sm text-text-2">ระบบไม่เก็บผลตรวจไว้ในมือถือแล้วส่งเองทีหลัง</p>
+          <p className="text-sm text-text-2">เก็บหน้านี้ไว้จนกว่าจะขึ้นว่า “บันทึกผลตรวจแล้ว”</p>
         </Panel>
       </div>
     </ResultScreen>

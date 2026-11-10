@@ -81,7 +81,7 @@ public class InspectionScanEndpointTests
         var scan = await InspectionApi.ScannedAsync(supervisor);
 
         Assert.Null(scan.Submission);
-        Assert.Equal("ยังไม่มีงานให้ตรวจ รอบนี้แม่บ้านยังไม่ส่งงาน", scan.Refusal);
+        Assert.Equal("ยังไม่มีงานให้ตรวจ", scan.Refusal);
         Assert.Equal("NotYetDone", scan.Point.Status);
         Assert.False(scan.IsCover);
         Assert.True(scan.WithinRadius);
@@ -152,7 +152,7 @@ public class InspectionScanEndpointTests
         var scan = await InspectionApi.ScannedAsync(supervisor);
 
         Assert.Null(scan.Submission);
-        Assert.Equal("ยังไม่มีงานให้ตรวจ รอบนี้แม่บ้านยังไม่ส่งงาน", scan.Refusal);
+        Assert.Equal("ยังไม่มีงานให้ตรวจ", scan.Refusal);
     }
 
     [Fact]

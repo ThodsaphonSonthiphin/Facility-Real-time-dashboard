@@ -18,7 +18,7 @@ test('the attendance page says when it loses the network and catches up when it 
 
   await context.setOffline(true);
   const lost = Date.now();
-  const reconnecting = page.getByText('กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)', { exact: true });
+  const reconnecting = page.getByText('กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด', { exact: true });
   // facility-0107: the browser says at once that its network went, long before the connection's own wait runs out
   await expect(reconnecting).toBeVisible({ timeout: 5_000 });
   const noticed = Date.now();
@@ -65,7 +65,7 @@ test('an Admin page stays live on a quiet link and says when the server goes sil
   });
   await loginAsAdmin(page);
   await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'การเข้างาน', exact: true }).click();
-  const reconnecting = page.getByText('กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)', { exact: true });
+  const reconnecting = page.getByText('กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด', { exact: true });
   await expect.poll(() => opened).toBeGreaterThan(0);
   await expect(page.getByRole('status')).toBeEmpty(); // the hub is live
   // Opening the page may open more than one connection (two seen, 2026-11-03); count only what opens after that
