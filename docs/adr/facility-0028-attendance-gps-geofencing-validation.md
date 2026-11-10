@@ -9,7 +9,7 @@ flowchart TD
 ```
 
 - วันที่: 2026-10-02
-- เกี่ยวข้อง: facility-0025 (Scan Presence Proof), facility-0026 (Shift Check-In)
+- เกี่ยวข้อง: [Scan Presence Proof (0025)](facility-0025-scan-presence-nfc-one-time-tap-link.md), [Shift Check-In (0026)](facility-0026-shift-check-in-two-shifts-strict-presence.md)
 
 ## Context & Decision
 

@@ -11,6 +11,7 @@ import { PageLoading } from '../../shared/components/PageState';
 import { Segmented } from '../../shared/components/Segmented';
 import { Tabs } from '../../shared/components/Tabs';
 import { Toast, type Notice } from '../../shared/components/Toast';
+import { coverSlots, sameSlot, type CoverSlot } from '../../shared/cover/coverSlots';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { addDays } from '../../shared/utils/dateRange';
@@ -22,15 +23,12 @@ import {
   alertTabLabel,
   alertTabOf,
   alertTabs,
-  coverSlots,
   filterAlerts,
-  sameSlot,
   type AlertDay,
   type AlertTab,
-  type CoverSlot,
   type ReviewTab,
 } from './alertRules';
-import { CoverForm } from '../../shared/components/CoverForm';
+import { CoverForm } from './CoverForm';
 import { CoversThisShift } from './CoversThisShift';
 import { EmptyAreas } from './EmptyAreas';
 import { countClass, countTones, panelClass } from './alertStyles';

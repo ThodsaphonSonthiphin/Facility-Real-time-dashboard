@@ -17,7 +17,7 @@
 
 - **Backend**: .NET 10 Minimal APIs + SignalR Hub (`JanitorialManagementDashboard.Api`)
 - **Database**: MySQL 8.0.16 ขึ้นไป (ต้องเป็นเวอร์ชันที่บังคับใช้ CHECK constraint) (EF Core `MySql.EntityFrameworkCore 10.x`) — API apply migration เองตอนเริ่ม
-- **Frontend**: Vite + React 19 + TypeScript, Redux Toolkit + RTK Query, React Router 7, Tailwind CSS 4 + Enterprise Light (`frontend/`, โครงตาม facility-0025, สไตล์ตาม facility-0086, 0087, 0100, 0101) ระบบจริง API เสิร์ฟหน้าเว็บเองจาก origin เดียว (facility-0067)
+- **Frontend**: Vite + React 19 + TypeScript, Redux Toolkit + RTK Query, React Router 7, Tailwind CSS 4 + Enterprise Light (`frontend/`, โครงตาม [Frontend Target Tree (0025)](docs/adr/facility-0025-frontend-target-tree.md), สไตล์ตาม facility-0086, 0087, 0100, 0101) ระบบจริง API เสิร์ฟหน้าเว็บเองจาก origin เดียว (facility-0067)
 - **Real-time Pipeline**: เมื่อแม่บ้านสแกนและบันทึกข้อมูล -> Backend บันทึกลง MySQL -> ส่งผ่าน SignalR Hub (`/hubs/scan`) -> หน้า Dashboard อัปเดตการ์ดและ KPI ทันทีโดยไม่ต้องรีเฟรช
 - **Authentication**: login ได้ access token (JWT อายุ 5 นาที) ที่หน้าเว็บเก็บไว้ในหน่วยความจำ และ refresh token ใน HttpOnly cookie ที่หมุนใบใหม่ทุกครั้ง (ADR facility-0011 ถึง facility-0016) หน้า Dashboard, หน้าสแกน และ SignalR hub ต้อง login ก่อน (facility-0017, facility-0018)
 

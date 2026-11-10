@@ -1,6 +1,6 @@
-import type { CoverAssignment, CoverCandidate } from '../api/alertsApi';
 import { buildingText, type BuildingNames } from '../api/buildingNames';
-import { formatTime } from './thaiTime';
+import { formatTime } from '../utils/thaiTime';
+import type { CoverAssignment, CoverCandidate } from './coverApi';
 
 /**
  * One choice of "ให้ใครทำแทน": who, their own Area, their Shift-In, and whether they already scanned this Area's signs.

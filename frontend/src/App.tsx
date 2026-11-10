@@ -8,7 +8,7 @@ interface AppProps {
   router: ReturnType<typeof createBrowserRouter>;
 }
 
-/** Providers only (facility-0026 item 2): the store, the session gate and the router. */
+/** Store, session gate and router providers. See docs/adr/facility-0026-frontend-router-shape.md, item 2. */
 export function App({ store, router }: AppProps) {
   return (
     <Provider store={store}>

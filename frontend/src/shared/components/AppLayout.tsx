@@ -2,8 +2,8 @@ import { LogOut } from 'lucide-react';
 import { Outlet } from 'react-router';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { endSession } from '../auth/endSession';
-import { roleLabel } from '../auth/roles';
 import { AdminNav } from './AdminNav';
+import { ProjectLogo } from './ProjectLogo';
 import { focusRing } from './styles';
 
 /**
@@ -25,10 +25,7 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
     return (
       <div className="min-h-svh lg:flex print:block">
         <aside className="flex flex-col gap-6 border-b border-border bg-surface px-3 py-5 lg:sticky lg:top-0 lg:h-svh lg:w-sidebar lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0 print:hidden">
-          <div className="flex flex-col px-3">
-            <span className="text-base font-bold text-text">Janitorial Management Dashboard</span>
-            <span className="text-xs text-text-2">{roleLabel.admin}</span>
-          </div>
+          <ProjectLogo />
           <AdminNav />
           <div className="flex flex-col items-start gap-2 border-t border-border px-3 pt-4 text-sm lg:mt-auto">
             <span className="font-semibold text-text">{user?.fullName}</span>

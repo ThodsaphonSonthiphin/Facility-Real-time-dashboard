@@ -12,7 +12,7 @@ flowchart TD
 
 - Decision map: [#23 router-shape](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/23) บนแผนที่ [#21](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/21)
 - วันที่: 2026-09-23
-- เกี่ยวข้อง: facility-0025 (tree ที่จองที่ให้ `router.tsx` และ `shared/components/ProtectedRoute.tsx`), facility-0022 (API layer), facility-0010 (server ตอบ 403 เมื่อ login แล้วแต่ไม่ใช่ Admin), facility-0018 (นโยบาย AdminOnly), #34 deploy-origin (ตัวเสิร์ฟไฟล์ต้องตอบ /scan/:token ด้วยแอป)
+- เกี่ยวข้อง: [Frontend Target Tree (0025)](facility-0025-frontend-target-tree.md) (tree ที่จองที่ให้ `router.tsx` และ `shared/components/ProtectedRoute.tsx`), facility-0022 (API layer), facility-0010 (server ตอบ 403 เมื่อ login แล้วแต่ไม่ใช่ Admin), facility-0018 (นโยบาย AdminOnly), #34 deploy-origin (ตัวเสิร์ฟไฟล์ต้องตอบ /scan/:token ด้วยแอป)
 
 ## Context
 

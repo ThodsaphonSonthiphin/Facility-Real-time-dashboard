@@ -1,12 +1,11 @@
-import { CoverCancellationDialog } from '../../shared/components/CoverCancellationDialog';
-import { useCoverCancellation } from '../../shared/components/useCoverCancellation';
 import { ArrowRightLeft } from 'lucide-react';
 import type { AttendanceBoard } from '../../shared/api/attendanceBoardApi';
 import { Button } from '../../shared/components/Button';
 import type { Notice } from '../../shared/components/Toast';
-import { shiftEndText } from '../../shared/utils/coverSlots';
+import { CoverCancellationDialog } from '../../shared/cover/CoverCancellationDialog';
+import { shiftEndText, slotText } from '../../shared/cover/coverSlots';
+import { useCoverCancellation } from '../../shared/cover/useCoverCancellation';
 import { formatDayTime, formatTime } from '../../shared/utils/thaiTime';
-import { slotText } from './alertRules';
 import { countClass, countTones, panelClass, panelTitleClass } from './alertStyles';
 
 interface CoversThisShiftProps {

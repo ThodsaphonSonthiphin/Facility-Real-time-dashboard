@@ -52,9 +52,11 @@ For phone trials, a Cloudflare Quick Tunnel provides temporary HTTPS to localhos
 
 ## 2. Component diagram — what talks to what
 
+The frontend follows [Frontend Target Tree (0025)](adr/facility-0025-frontend-target-tree.md) and [Frontend Router Shape (0026)](adr/facility-0026-frontend-router-shape.md).
+
 ```mermaid
 flowchart TB
-    subgraph FE["Frontend — frontend/src (React 19 + TypeScript, tree of facility-0025)"]
+    subgraph FE["Frontend — frontend/src (React 19 + TypeScript)"]
         AppF["main.tsx · App.tsx · router.tsx<br/>store, page-load refresh, createBrowserRouter"]
         Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · inspect (M6, M7, M16) · my-building (M15) · dashboard (D1) · attendance (D2) · alerts (D3) · areas (D4, D10) · capture (M17) · print-signs (D5) · accounts (D6) · inspection-summary (D7) · export (D8) · history (D9)<br/>feature UI + hooks/rules/API where needed<br/>Tailwind 4; index.css is the only CSS file<br/>Admin pages are lazy routes (own files)"]
         Store["store/<br/>authSlice: user + access token in memory<br/>hubSlice: each hub connection live or not<br/>dashboardSlice: Dashboard filters"]

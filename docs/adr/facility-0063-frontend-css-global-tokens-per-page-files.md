@@ -10,7 +10,7 @@ flowchart TD
 - Decision map: [#31 css-organisation](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/31) บนแผนที่ [#1](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/1) (milestone `frontend-restructure`)
 - วันที่: 2026-10-08
 - ที่มา: เจ้าของโปรเจกต์ตัดสิน 2026-10-08 ("go with recommend")
-- เกี่ยวข้อง: facility-0025 (target tree — จองที่ `src/index.css` ไว้ให้ตั๋วนี้), #30 base-ui-inventory (Base UI ใส่สไตล์ผ่าน `data-*` และต้นทุนจริงคือการย้ายจาก inline style), #32 regression-net (test ตรวจข้อความและพฤติกรรม ไม่ตรวจสี), facility-0060 (ลบปุ่ม QR บนการ์ด)
+- เกี่ยวข้อง: [Frontend Target Tree (0025)](facility-0025-frontend-target-tree.md) (target tree — จองที่ `src/index.css` ไว้ให้ตั๋วนี้), #30 base-ui-inventory (Base UI ใส่สไตล์ผ่าน `data-*` และต้นทุนจริงคือการย้ายจาก inline style), #32 regression-net (test ตรวจข้อความและพฤติกรรม ไม่ตรวจสี), facility-0060 (ลบปุ่ม QR บนการ์ด)
 
 ## Context & Decision
 
@@ -33,7 +33,7 @@ MenuNest มี `src/index.css` global สำหรับ token และไฟ�
 - หน้าต่าง QR บนการ์ดจะถูกลบตาม facility-0060 จึงไม่ต้องย้ายสไตล์ของมัน
 - หน้าใหม่ (My Work, หน้าตึกของฉัน, Audit Log และหน้าของแผน 2B, 2C) เขียนสไตล์ใน CSS file ของหน้าตั้งแต่แรก ไม่ใช้ `style={...}`
 
-> **แก้ไข 2026-10-15 (แผน 7):** ไม่มี component ไหนถูกย้าย (ดู facility-0025 แก้ไข 2026-10-15) จึงไม่มีช่วงสไตล์สองแบบตามข้อ 5 ทุกหน้าเขียนสไตล์ใน CSS file ตั้งแต่แรก token ใน `index.css` มาจาก wireframe (พื้นสว่าง สีหลัก `#0E6B66` ฟอนต์ IBM Plex Sans Thai จาก `@fontsource` บน origin เดียวกัน ไม่โหลดจาก Google Fonts) class ของ component ใน `shared/components` ขึ้นต้นด้วย `app-`
+> **แก้ไข 2026-10-15 (แผน 7):** ไม่มี component ไหนถูกย้าย (ดู [Frontend Target Tree (0025)](facility-0025-frontend-target-tree.md) แก้ไข 2026-10-15) จึงไม่มีช่วงสไตล์สองแบบตามข้อ 5 ทุกหน้าเขียนสไตล์ใน CSS file ตั้งแต่แรก token ใน `index.css` มาจาก wireframe (พื้นสว่าง สีหลัก `#0E6B66` ฟอนต์ IBM Plex Sans Thai จาก `@fontsource` บน origin เดียวกัน ไม่โหลดจาก Google Fonts) class ของ component ใน `shared/components` ขึ้นต้นด้วย `app-`
 
 > **แก้ไข 2026-10-21 (รอบปรับ UX/UI):** เลิกโหลด IBM Plex Sans Thai จาก `@fontsource` และใช้ฟอนต์ของเครื่องแทน (facility-0072) token อื่นใน `index.css` ยังมาจาก wireframe เหมือนเดิม
 

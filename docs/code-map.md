@@ -122,6 +122,7 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 | | `roles.ts` | `homeOf(role)`: cleaner → `/my-work`, supervisor → `/my-building`, admin → `/dashboard`. |
 | `shared/geo/` | `readLocation.ts` | Fresh scan reads and permission-retry detection; setup capture separately uses watchPosition. See [Part 8](#part-8--scan-gps-and-real-time-flow). |
 | `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `Drawer`, `Modal`, `ConfirmationDialog`, `LocationHelp` | Shared Tailwind UI, feedback and route/layout components. |
+| `shared/cover/` | `coverApi.ts`, `CandidateChoices.tsx`, `CoverCancellationDialog.tsx`, `useCoverCancellation.ts`, `coverCandidates.ts`, `coverSlots.ts`, `coverText.ts` | Cover Assignment endpoints, UI and helpers shared by Alerts and Attendance. The Alerts form and alert review mutation live in `pages/alerts/`. |
 | `shared/utils/` | `thaiTime.ts`, `getErrorMessage.ts` (31), `labels.ts` (26), `dateRange.ts` (11), `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock — every time you see a strange time, look here first. |
 | `shared/version/` | `buildInfo.ts` | The build commit shown on the login pages. |
 

@@ -3,12 +3,13 @@ import { useState, type ReactNode } from 'react';
 import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
 import { Table } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
-import { SearchBox } from '../../shared/components/CandidateChoices';
 import { Select } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
+import { SearchBox } from '../../shared/components/SearchBox';
 import { tableCell } from '../../shared/components/styles';
+import { sameSlot, slotKey, slotText, type CoverSlot } from '../../shared/cover/coverSlots';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { matchesSearch, sameSlot, slotKey, slotText, type CoverSlot } from './alertRules';
+import { matchesSearch } from './alertRules';
 import { countClass, countTones, panelClass, panelHeadClass, panelTitleClass } from './alertStyles';
 
 interface EmptyAreasProps {

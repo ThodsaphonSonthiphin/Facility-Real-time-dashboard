@@ -14,7 +14,8 @@ import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { StatusScreen } from './shared/components/StatusScreen';
 
 /**
- * facility-0026: the whole route table as data. main.tsx feeds it to createBrowserRouter, tests to createMemoryRouter.
+ * The whole route table as data. main.tsx feeds it to createBrowserRouter, tests to createMemoryRouter.
+ * See docs/adr/facility-0026-frontend-router-shape.md.
  * No loader or action: RTK Query owns data loading (facility-0022).
  *
  * facility-0062 item 3, done before the budget ran out (owner, 2026-10-19): every Admin page is its own file, loaded
@@ -50,7 +51,8 @@ export const routes: RouteObject[] = [
           {
             element: <AppLayout />,
             children: [
-              // Printed on each point's sign (facility-0026): the Cleaner submits, the Supervisor inspects (facility-0029)
+              // Printed on each point's sign (docs/adr/facility-0026-frontend-router-shape.md).
+              // The Cleaner submits and the Supervisor inspects (facility-0029).
               {
                 path: 'scan/:token',
                 element: <ByRole pages={{ cleaner: <ScanPage />, supervisor: <InspectPage /> }} />,

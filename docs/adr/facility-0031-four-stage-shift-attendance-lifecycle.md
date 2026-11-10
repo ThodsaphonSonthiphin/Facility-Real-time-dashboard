@@ -11,7 +11,7 @@ flowchart TD
 ```
 
 - วันที่: 2026-10-02
-- เกี่ยวข้อง: facility-0026 (Shift Check-In), facility-0028 (GPS Geofencing)
+- เกี่ยวข้อง: [Shift Check-In (0026)](facility-0026-shift-check-in-two-shifts-strict-presence.md), facility-0028 (GPS Geofencing)
 
 ## Context & Decision
 

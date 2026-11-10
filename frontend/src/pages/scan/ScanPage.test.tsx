@@ -282,6 +282,7 @@ describe('ScanPage (M2, M4, M5, M11, M13)', () => {
     expect(await screen.findByRole('heading', { name: 'ส่งงานแล้ว 10:05' })).toBeInTheDocument();
   });
 
+  // Return-to-page rule: docs/adr/facility-0026-frontend-router-shape.md, item 4.
   it('a logged-out Cleaner who scans the sign returns to it after login (facility-0017, 0026)', async () => {
     fakeServer({ 'POST /api/auth/refresh': () => ({ status: 401 }) });
     const { router } = await renderApp(SIGN);

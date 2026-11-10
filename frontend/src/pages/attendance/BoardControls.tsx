@@ -2,7 +2,7 @@ import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import type { AttendanceBoard, BoardArgs } from '../../shared/api/attendanceBoardApi';
 import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
-import { SearchBox } from '../../shared/components/CandidateChoices';
+import { SearchBox } from '../../shared/components/SearchBox';
 import { Select, TextInput } from '../../shared/components/Field';
 import { Segmented } from '../../shared/components/Segmented';
 import { shiftLabel } from '../../shared/utils/labels';

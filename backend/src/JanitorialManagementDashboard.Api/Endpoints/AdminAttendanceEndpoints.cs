@@ -156,7 +156,8 @@ public static class AdminAttendanceEndpoints
             }
             catch (DbUpdateException)
             {
-                // facility-0026: the Cleaner scanned the same event a moment ago and the unique index kept theirs; anything else is a real error
+                // The Cleaner may have scanned the same event first, which the unique index keeps. Re-throw other errors.
+                // See docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md.
                 db.ChangeTracker.Clear();
                 var racedScan = await db.ShiftAttendances.AnyAsync(a =>
                     a.UserId == cleaner.Id && a.ShiftDate == slot.ShiftDate && a.Shift == slot.Shift && a.EventType == eventType);

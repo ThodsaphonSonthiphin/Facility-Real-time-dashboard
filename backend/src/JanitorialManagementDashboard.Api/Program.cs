@@ -207,7 +207,8 @@ try
     app.MapAdminExportEndpoints();
     app.MapAdminInspectionSummaryEndpoints();
 
-    // 9. Every other page path (/login, /scan/<token>, ...) gets the app, so a printed QR Sign opens it (facility-0026, 0067).
+    // 9. Every other page path (/login, /scan/<token>, ...) gets the app, so a printed QR Sign opens it.
+    // See docs/adr/facility-0026-frontend-router-shape.md and facility-0067.
     // Paths under /api and /hubs never do: they keep their own 404 and 405. A path with a file extension is a missing file, 404.
     app.MapFallbackToFile("{*path:regex(^(?!(api|hubs)(/|$)).*$):nonfile}", "index.html", appFiles);
 

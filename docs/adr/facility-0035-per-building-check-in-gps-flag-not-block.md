@@ -9,7 +9,7 @@ flowchart TD
 ```
 
 - วันที่: 2026-10-03
-- เกี่ยวข้อง: facility-0026 (Check-In Sign), facility-0028 (GPS Geofencing, ส่วน "ปฏิเสธ" ถูกแทนที่ด้วย ADR นี้), facility-0030 (Wrong-Zone Flag), facility-0034 (ขอบเขตภัย)
+- เกี่ยวข้อง: [Shift Check-In (0026)](facility-0026-shift-check-in-two-shifts-strict-presence.md), facility-0028 (GPS Geofencing, ส่วน "ปฏิเสธ" ถูกแทนที่ด้วย ADR นี้), facility-0030 (Wrong-Zone Flag), facility-0034 (ขอบเขตภัย)
 
 ## Context & Decision
 

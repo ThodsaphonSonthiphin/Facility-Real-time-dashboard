@@ -7,8 +7,8 @@ import type {
   BoardRow,
 } from '../shared/api/attendanceBoardApi';
 import type { Alert } from '../shared/api/alertListApi';
-import type { CoverCandidate } from '../shared/api/alertsApi';
 import type { AttendanceEvent, PointCard } from '../shared/api/types';
+import type { CoverCandidate } from '../shared/cover/coverApi';
 import type { AppStore } from '../store';
 import { point } from './cleanerFixtures';
 import { lastScanAt } from './supervisorFixtures';

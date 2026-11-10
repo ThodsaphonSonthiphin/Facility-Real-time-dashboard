@@ -91,7 +91,8 @@ public static class ScanRecordEndpoints
             }
         }
 
-        // facility-0026/0050: submit from Shift-In until Shift-Out (owner decision 2026-10-09: breaks do not block)
+        // Submit from Shift-In until Shift-Out (owner decision 2026-10-09: breaks do not block).
+        // See docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md and facility-0050.
         if (slot is null)
         {
             return ApiResults.Message(StatusCodes.Status409Conflict, "ตอนนี้ไม่อยู่ในกะของคุณ");

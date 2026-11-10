@@ -1,6 +1,6 @@
 # Janitorial Management Dashboard — Frontend
 
-React 19 + TypeScript on Vite 8. Current as of 2026-11-03. ADRs facility-0022–0026, 0061–0068, 0086–0088 and 0100–0107 apply with their amendments; this file is the short version.
+React 19 + TypeScript on Vite 8. Current as of 2026-11-03. ADRs facility-0022–0024, 0061–0068, 0086–0088 and 0100–0107 apply with their amendments, along with [Frontend Target Tree (0025)](../docs/adr/facility-0025-frontend-target-tree.md) and [Frontend Router Shape (0026)](../docs/adr/facility-0026-frontend-router-shape.md).
 
 ## Commands
 
@@ -15,7 +15,7 @@ React 19 + TypeScript on Vite 8. Current as of 2026-11-03. ADRs facility-0022–
 
 The pre-commit hook (husky) runs lint, `tsc -b` and the tests.
 
-## Where things go (facility-0025)
+## Where things go ([facility-0025](../docs/adr/facility-0025-frontend-target-tree.md))
 
 ```
 src/main.tsx · App.tsx · router.tsx     app: store, page-load refresh, route table

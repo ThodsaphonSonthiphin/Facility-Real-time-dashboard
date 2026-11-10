@@ -6,6 +6,7 @@ import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
 import { Spinner } from '../../shared/components/PageState';
+import { ProjectLogo } from '../../shared/components/ProjectLogo';
 import { inlineLinkClass } from '../../shared/components/styles';
 import { useLogin } from './useLogin';
 
@@ -31,7 +32,7 @@ export function LoginPage() {
     <div className="mx-auto flex min-h-svh max-w-mobile flex-col text-base text-text">
       <main className="flex flex-1 flex-col gap-6 px-4 pt-[max(48px,env(safe-area-inset-top))] pb-4">
         <header className="flex flex-col gap-1">
-          <span className="text-sm font-semibold text-text-2">Janitorial Management Dashboard</span>
+          <ProjectLogo />
           <h1 className="text-2xl font-bold">เข้าสู่ระบบ</h1>
           <span className="text-text-2">ใช้รหัสพนักงานและเบอร์โทรของคุณ</span>
         </header>

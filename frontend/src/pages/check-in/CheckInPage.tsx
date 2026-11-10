@@ -170,7 +170,10 @@ interface AnsweredNoteProps {
   accuracyM: number;
 }
 
-/** What the server did with the press: recorded (maybe flagged, M3), already recorded, or too soon (facility-0026, 0031). */
+/**
+ * The press was recorded (maybe flagged, M3), already recorded, or too soon.
+ * See docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md and facility-0031.
+ */
 function AnsweredNote({ eventType, state, accuracyM }: AnsweredNoteProps) {
   const label = eventLabel[eventType];
   const recorded = state.events.find((e) => e.eventType === eventType);

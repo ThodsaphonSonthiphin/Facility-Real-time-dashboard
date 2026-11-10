@@ -5,8 +5,8 @@ import { homeOf, roleLabel } from '../auth/roles';
 import { StatusScreen } from './StatusScreen';
 
 /**
- * facility-0026: one guard, used as a layout route. It hides pages, it does not protect data: the server's
- * policies do that (facility-0010, 0018).
+ * One guard used as a layout route. See docs/adr/facility-0026-frontend-router-shape.md.
+ * The guard hides pages. Server policies protect the data (facility-0010, 0018).
  */
 export function ProtectedRoute({ roles }: { roles: readonly Role[] }) {
   const user = useAppSelector((state) => state.auth.currentUser);

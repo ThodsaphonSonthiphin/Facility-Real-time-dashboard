@@ -9,7 +9,7 @@ flowchart TD
 
 - วันที่: 2026-10-09
 - ที่มา: เจ้าของโปรเจกต์ตัดสิน 2026-10-09 (ค่า 60 นาทีมาจากต้นแบบ `docs/design/prototype.html` และ `docs/design/database.html` หัวข้อ "ลงเวลาก่อนกะ")
-- เกี่ยวข้อง: facility-0026 (Shift Check-In, สแกนซ้ำยึดเวลาแรก), facility-0031 (ลงเวลา 4 ครั้ง), facility-0040 (กะ 07:00–19:00 และ 19:00–07:00), facility-0050 (ลงเวลา = ยืนยันว่าเข้าพื้นที่ ไม่คิดสาย)
+- เกี่ยวข้อง: [Shift Check-In (0026)](facility-0026-shift-check-in-two-shifts-strict-presence.md) (สแกนซ้ำยึดเวลาแรก), facility-0031 (ลงเวลา 4 ครั้ง), facility-0040 (กะ 07:00–19:00 และ 19:00–07:00), facility-0050 (ลงเวลา = ยืนยันว่าเข้าพื้นที่ ไม่คิดสาย)
 
 ## Context & Decision
 

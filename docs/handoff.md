@@ -17,9 +17,35 @@ Updated 2026-11-10 (Asia/Bangkok). Read this first every session and update it a
 
 เริ่มจาก [ภาพรวมระบบ](business-overview.md) สำหรับพี่เลี้ยง [Flowchart ทั้งสามบทบาท](role-workflows.md) สำหรับผู้ใช้ และ [คู่มือส่งมอบและติดตั้ง](handover.md) สำหรับทีม IT
 
-## Local review running (2026-11-10)
+## Project logo concept (2026-11-10)
 
-Started the current checkout in Development for the owner's wording review. Vite is on `http://localhost:5173` and the API is on `http://localhost:5001`, using the confirmed local `facility_dashboard` database. Both login pages returned HTTP 200. Verified API health through Vite and the revised login text in the served frontend. Startup found the schema current, and the retention run reported zero records changed. The two processes are running on loopback. Logs are in the ignored `.run/local-wording-review/` directory.
+Delivered a 2172 × 724 px transparent logo draft in the chat artifacts. It combines an office building, an inspection check mark and a cleanliness sparkle with the canonical project name.
+
+The owner then requested the emblem alone in the browser tab. Cropped it from `Logo.png` into a transparent 64 × 64 px `frontend/public/favicon.png`, linked it from the shared `frontend/index.html` and removed the old Vite SVG. The production frontend build passed and copied the PNG byte-for-byte. Chromium verified the shared icon link and decoded the served PNG on both login routes in a local Vite preview. The API was stopped during that static check. Independent diff review found no issues. This is a local change.
+
+At the owner's request, also displayed the same emblem at 32 px to the left of the system name in the shared Admin sidebar (`AppLayout.tsx`). The frontend production build, changed-file lint and 47 targeted tests passed. Chromium with synthetic Admin responses verified the Dashboard at widths of 1280 and 375 px, the shared logo on Excel export, and the existing print and login scope. Independent diff review found no issues. The sidebar update is local.
+
+The owner clarified that the sidebar should use the full supplied `Logo.png`, including the project name. Replaced the icon and separate title with the full image in `AppLayout.tsx`. The web copy is `frontend/public/admin-logo.png` (648 × 216 px, transparent, uncropped), displayed at up to 216 px wide. The Admin role label and browser-tab favicon remain separate. The production build and asset comparison, changed-file lint and 47 targeted tests passed. Chromium with synthetic Admin responses verified the running local Dashboard at 1280 and 375 px, the shared Excel export sidebar, and the print and login scope. Independent diff review found no issues. The local frontend and API are still running for review.
+
+At the owner's request, removed the visible “แอดมิน” label below the sidebar logo. The build, changed-file lint and 19 routing and navigation tests passed. Chromium with synthetic Admin responses verified the logo and menu on the running Dashboard without the label.
+
+At the owner's request, replaced the system-name text above the headings on `/login` and `/login/admin` with the full logo. Both pages and the Admin sidebar render the same `ProjectLogo` component and PNG. The production build, changed-file lint and 31 authentication, routing and navigation tests passed. Chromium verified both login routes on the running local Vite server at widths of 375 and 1280 px, including the logo, form and links between the pages, with the session endpoint mocked as signed out.
+
+Implemented item 1 of the repository layout audit with the owner's authorization. Moved the full PNG from `frontend/public/admin-logo.png` to `frontend/src/shared/assets/project-logo.png` byte-for-byte, and changed `ProjectLogo` to import it. The production frontend build emitted a hashed PNG under `dist/assets/`, and `/favicon.png` was copied unchanged. Frontend lint and 31 targeted tests passed. Chromium loaded and decoded the hashed image on `/login`, `/login/admin` and `/dashboard` in a temporary Vite preview with synthetic session and Admin responses. The preview was shut down after verification.
+
+## Repository layout skill guidance (2026-11-10)
+
+Used `ask-matt` to identify the installed `improve-codebase-architecture` skill for architecture-level placement problems and `code-review` for checking a specific diff against documented rules. For a path-only audit, start with the frontend target-tree ADR, ESLint boundaries and framework asset conventions. The logo's source and served assets were used as examples. No layout audit, file moves, or application changes were made.
+
+Implemented audit item 2 at the owner's request. Cover Assignment code shared by Alerts and Attendance now lives in `frontend/src/shared/cover/`. The Alerts-specific form and review mutation live in `frontend/src/pages/alerts/`, and the generic `SearchBox` lives in `frontend/src/shared/components/`. Both RTK Query modules inject into the same `baseApi` with the existing endpoint definitions and cache tags. The code map records the new ownership. Frontend lint, production build and all 546 tests passed. A production-preview Chromium smoke test with mocked responses assigned a cover in Alerts, cancelled it in Attendance, and verified the refreshed board with the parent drawer still open. The preview was shut down. Independent review found no issues.
+
+Implemented audit item 3 at the owner's request. The ADR index now lists both records for each of 0025 and 0026 with topic names and full-path links. Current guides, cross-references in ADRs and source comments point to the specific record. Historical filenames, decision text, archived plans and test titles are preserved. Independent review found three ambiguous references in the Supervisor requirements record, which now link to the Shift Check-In ADR. The frontend syntax comparison and backend diff confirmed comment-only source changes. Frontend lint and all 73 targeted routing, login, check-in and scan tests passed.
+
+The owner authorized commit, push and merge of the project branding and all three layout audit items under decision map #1. The publication includes the web PNGs, Cover Assignment module organization and ADR references.
+
+## Local review stopped (2026-11-10)
+
+Ran the current checkout in Development for the owner's logo review. Vite used `http://localhost:5173` and the API used `http://localhost:5001` with the confirmed local `facility_dashboard` database. The Admin login and Dashboard routes returned HTTP 200, and API health passed through Vite. Startup found the schema current, and retention reported zero records changed. The owner accepted the logo changes and asked to stop. Both processes and their launchers exited, and both ports are closed. Logs and historical PID files are in the ignored `.run/local-logo-review/` directory. The earlier wording review logs are in `.run/local-wording-review/`.
 
 ## Plain-language website copy (2026-11-10)
 

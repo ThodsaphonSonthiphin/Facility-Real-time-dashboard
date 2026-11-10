@@ -12,7 +12,7 @@ flowchart TD
 
 - Decision map: [#39 attendance-board](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/39) บนแผนที่ [#1](https://github.com/ThodsaphonSonthiphin/Facility-Real-time-dashboard/issues/1)
 - วันที่: 2026-10-02
-- เกี่ยวข้อง: facility-0008 (Cards Grid), facility-0010 (Admin Gate), facility-0026 (Shift Check-In)
+- เกี่ยวข้อง: facility-0008 (Cards Grid), facility-0010 (Admin Gate), [Shift Check-In (0026)](facility-0026-shift-check-in-two-shifts-strict-presence.md)
 - Interactive Mockup: [`docs/decision-map/facility-poc/mockups/attendance-board-mockup.html`](../decision-map/facility-poc/mockups/attendance-board-mockup.html)
 
 ## Context & Decision
@@ -45,4 +45,4 @@ flowchart TD
 
 > **แก้ไข 2026-10-07:** หน้านี้ไม่แสดงสาย/กลับก่อน (facility-0050) และมีปุ่มให้ Admin เพิ่ม/แก้เวลา (facility-0051)
 
-> **แก้ไข 2026-10-19 (แผน 11):** หน้าการเข้างานเป็นหน้าแยก `/admin/attendance` ในเมนู Admin ไม่ใช่แท็บย่อยของ Dashboard เพื่อให้แต่ละหน้ามีที่อยู่ของตัวเอง (facility-0026) วันที่ กะ และตึกอยู่ใน URL (`?date=yyyy-MM-dd&shift=Day|Night&building=<id>`) ถ้าไม่ระบุคือกะตามนาฬิกา ข้อ 5 ทำแล้ว: `AttendanceRecorded` ทำให้ตารางของกะนั้นถามเซิร์ฟเวอร์ใหม่ และหน้าถามทุก 30 วินาทีด้วย
+> **แก้ไข 2026-10-19 (แผน 11):** หน้าการเข้างานเป็นหน้าแยก `/admin/attendance` ในเมนู Admin ไม่ใช่แท็บย่อยของ Dashboard เพื่อให้แต่ละหน้ามีที่อยู่ของตัวเอง ([Frontend Router Shape (0026)](facility-0026-frontend-router-shape.md)) วันที่ กะ และตึกอยู่ใน URL (`?date=yyyy-MM-dd&shift=Day|Night&building=<id>`) ถ้าไม่ระบุคือกะตามนาฬิกา ข้อ 5 ทำแล้ว: `AttendanceRecorded` ทำให้ตารางของกะนั้นถามเซิร์ฟเวอร์ใหม่ และหน้าถามทุก 30 วินาทีด้วย

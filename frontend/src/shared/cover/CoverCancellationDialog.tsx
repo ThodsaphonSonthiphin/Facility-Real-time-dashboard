@@ -1,4 +1,4 @@
-import { ConfirmationDialog } from './ConfirmationDialog';
+import { ConfirmationDialog } from '../components/ConfirmationDialog';
 
 interface CoverCancellationDialogProps {
   areaCode: string;

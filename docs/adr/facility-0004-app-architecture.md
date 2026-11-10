@@ -1,6 +1,6 @@
 # App Architecture — Clean Architecture 4 โปรเจกต์ + Mediator (MIT) + React ตาม react-structure
 
-> **สถานะ implementation ตรวจ 2026-11-03:** คง 4 โปรเจกต์และ MySQL provider แต่โค้ด Pilot ปัจจุบันไม่ได้ใช้ Mediator/ISender: endpoint เรียกกฎใน Application และ AppDbContext โดยตรง ไม่มี MUI หรือ Base UI dependency; frontend ใช้ pages/shared/store, RTK Query, Tailwind และ shared components ของโครงการ (0025, 0086–0088) ระบบจริงใช้ HTTPS/origin เดียว (0049, 0067) เนื้อหาเดิมด้านล่างเป็นที่มาของสถาปัตยกรรมช่วงแรก ดู [architecture](../architecture.md) และ [code map](../code-map.md) สำหรับโค้ดปัจจุบัน
+> **สถานะ implementation ตรวจ 2026-11-03:** คง 4 โปรเจกต์และ MySQL provider แต่โค้ด Pilot ปัจจุบันไม่ได้ใช้ Mediator/ISender: endpoint เรียกกฎใน Application และ AppDbContext โดยตรง ไม่มี MUI หรือ Base UI dependency; frontend ใช้ pages/shared/store, RTK Query, Tailwind และ shared components ของโครงการ ([Frontend Target Tree (0025)](facility-0025-frontend-target-tree.md), 0086–0088) ระบบจริงใช้ HTTPS/origin เดียว (0049, 0067) เนื้อหาเดิมด้านล่างเป็นที่มาของสถาปัตยกรรมช่วงแรก ดู [architecture](../architecture.md) และ [code map](../code-map.md) สำหรับโค้ดปัจจุบัน
 
 ```mermaid
 flowchart TD
@@ -38,4 +38,4 @@ flowchart TD
 - Clean Architecture ทำให้แต่ละฟีเจอร์มีหลายไฟล์ข้ามโปรเจกต์ เป็นต้นทุนที่ยอมรับเพื่อซ้อมโครงสร้างแบบองค์กร
 - Repo เป็น public จึงห้าม commit connection string หรือ secret ให้ใช้ `dotnet user-secrets`
 
-> **แก้ไข 2026-10-15 (แผน 7, #37):** ข้อ 3 ไม่ตรงกับของจริง frontend ไม่ใช้ MUI และไม่ใช้ skill `react-structure` โครงจริงเป็นแบบ MenuNest: `pages/` + `shared/` + `store/` (facility-0025), Redux Toolkit + RTK Query (facility-0022 ถึง 0024), React Router 7 (facility-0026), CSS ธรรมดาต่อหน้า (facility-0063) และ Base UI เมื่อหน้าแรกต้องใช้ Dialog หรือ Toast ข้อ 5 (Vite proxy) ยังใช้ตอนพัฒนา ส่วนระบบจริง API เสิร์ฟ frontend เองจาก origin เดียว (facility-0067)
+> **แก้ไข 2026-10-15 (แผน 7, #37):** ข้อ 3 ไม่ตรงกับของจริง frontend ไม่ใช้ MUI และไม่ใช้ skill `react-structure` โครงจริงเป็นแบบ MenuNest: `pages/` + `shared/` + `store/` ([Frontend Target Tree (0025)](facility-0025-frontend-target-tree.md)), Redux Toolkit + RTK Query (facility-0022 ถึง 0024), React Router 7 ([Frontend Router Shape (0026)](facility-0026-frontend-router-shape.md)), CSS ธรรมดาต่อหน้า (facility-0063) และ Base UI เมื่อหน้าแรกต้องใช้ Dialog หรือ Toast ข้อ 5 (Vite proxy) ยังใช้ตอนพัฒนา ส่วนระบบจริง API เสิร์ฟ frontend เองจาก origin เดียว (facility-0067)

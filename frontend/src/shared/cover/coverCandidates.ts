@@ -1,6 +1,6 @@
-import type { CoverCandidate } from '../api/alertsApi';
 import type { BoardRow } from '../api/attendanceBoardApi';
-import { formatTime } from './thaiTime';
+import { formatTime } from '../utils/thaiTime';
+import type { CoverCandidate } from './coverApi';
 
 /**
  * A choice drawn as a card (the design file's cover forms): the chosen one pale blue with a 2 px blue frame; the 1 px
