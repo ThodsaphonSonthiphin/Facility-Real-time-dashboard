@@ -8,7 +8,7 @@ Updated 2026-11-10 (Asia/Bangkok). Read this first every session and update it a
 
 | เรื่อง | สถานะและขั้นต่อไป |
 |---|---|
-| คู่มือผู้ใช้ | จัดทำคู่มือ Word v1.4 แล้ว รอเจ้าของตรวจรับ การแสดงผลในโหมดอ่านและโหมดแก้ไขของ Word Online ยังต้องยืนยัน |
+| คู่มือผู้ใช้ | [คู่มือผู้ใช้ภาษาไทย Word v1.4](../Manual/Janitorial_Management_Dashboard_User_Manual_TH_v1.4.docx) การแสดงผลในโหมดอ่านและโหมดแก้ไขของ Word Online ยังต้องยืนยัน |
 | ติดตั้งบนเครื่องจริง | รอทีมรับช่วงและ IT ยืนยันเครื่อง ระบบปฏิบัติการ และที่อยู่เว็บ HTTPS แล้วตรวจการสำรองและกู้คืนฐานข้อมูลกับการลบข้อมูลเก่าบนเครื่องจริง |
 | ทดลองใช้ในพื้นที่เดียว | หลังได้ที่อยู่เว็บจริง แอดมินตั้งค่าพื้นที่และติดป้าย QR ให้แม่บ้านกับหัวหน้าลองลงเวลา ส่งงาน ตรวจ และแก้จากมือถือจริง รวมถึงตรวจการอ่านตำแหน่งบน iPhone ปัจจุบันยังไม่มีบันทึกยืนยันผลทดลองหน้างาน |
 | นำเข้าข้อมูลจาก Excel | เป็นงานเสริม เพิ่มตึก พื้นที่ ห้อง และบัญชีผ่านหน้าแอดมินได้ |
@@ -16,6 +16,10 @@ Updated 2026-11-10 (Asia/Bangkok). Read this first every session and update it a
 ขอบเขตของผู้ฝึกงานคือพัฒนาระบบและส่งต่อคู่มือ การติดตั้งและทดลองใช้จริงเป็นขั้นตอนของทีมรับช่วง ดู [ขอบเขตงานผู้ฝึกงาน](adr/facility-0109-internship-development-and-handover-scope.md) และ [งานที่เหลือและรายการตรวจ](#remaining-work-and-checks)
 
 เริ่มจาก [ภาพรวมระบบ](business-overview.md) สำหรับพี่เลี้ยง [Flowchart ทั้งสามบทบาท](role-workflows.md) สำหรับผู้ใช้ และ [คู่มือส่งมอบและติดตั้ง](handover.md) สำหรับทีม IT
+
+## User manual v1.4 publication (2026-11-10)
+
+The owner authorized publishing the Thai Word manual through a PR to `master` under decision map #1. The supplied DOCX matches the SHA-256 of the validated v1.4 delivery and contains screenshots from synthetic test data. The README links to the manual. The unused root `Logo.png` was removed locally after verifying that the web PNGs are tracked and the source file has no runtime references.
 
 ## Project logo concept (2026-11-10)
 
