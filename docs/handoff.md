@@ -1,6 +1,28 @@
 # Handoff: current status and next steps
 
-Updated 2026-11-06 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
+Updated 2026-11-10 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
+
+## Role workflow publication (2026-11-10)
+
+The owner authorized publishing the flowcharts and the related November 10 handoff notes through a PR to `master`. The publication tracks the project's decision map #1. The November 6 local notes, Word manual and Postman files are outside this publication.
+
+## Plain-language role workflow revision (2026-11-10)
+
+Rewrote the [three role flowcharts](role-workflows.md) for the owner's mentor after feedback about unclear terms. All seven diagrams use a single office-building example. The page distinguishes the QR sign for attendance from the QR at each room, explains the cleaning schedule with clock times, and retains the exact Thai menu and status labels where readers need to find them on screen. Kept the Saturday cover scenario and moved source links to the end. Rechecked the mentor's requirements, relevant rules, and on-screen wording. All seven Mermaid diagrams parsed and all 12 local links resolved. Verification was source-based without a browser render or live application test.
+
+## Role workflow diagrams (2026-11-10)
+
+Added [Cleaner, Supervisor and Admin flowcharts](role-workflows.md) as a Thai reference for the current workflow. Verified the glossary and ADRs against the relevant routes, forms, endpoints and rules at `187b2c8`. The page covers attendance, round placement, inspection and rework, Admin setup and exceptions, and the Saturday cover example. This documented existing behavior without requiring a new domain decision. All seven diagrams passed the Mermaid parser, and the document links and anchors resolved. Verification was source-based; browser rendering and live application behavior were not verified in this task.
+
+## Cleaner cover explanation (2026-11-10)
+
+Explained the Saturday absence example with a Mermaid flowchart. Checked `facility-0041`, `0050`, `0075` and `0084` against the Admin attendance and alerts screens and the cover, check-in and submission endpoints. The regular Area assignment stays in place. The Admin can assign a same-shift Cleaner from another Area up to seven days ahead in the UI. The substitute checks in at their own sign and submits point work in both Areas for the assigned date and shift. The attendance label “มีคนทำแทน” can appear on assignment before the substitute checks in. This was a source-based explanation with no application tests or runtime changes.
+
+## Codebase, handoff and ADR reading (2026-11-10)
+
+Read this handoff first, then the glossary, code map, architecture, ADR index and key decisions and amendments through `facility-0113`. Traced the React router, session and RTK Query cache, Cleaner attendance and submission, Supervisor inspection and rework, scoped SignalR updates, API startup, EF mappings and the retention worker. Current scope follows `facility-0109`–`0111`: agreed development is complete, deployment is outside the intern's scope, and Excel import is optional. The retention and rename merges are recorded below. The ADR index still lists `0107` as latest and describes retention as branch work. Deployment-host and one-Area pilot evidence and acceptance of the v1.4 manual remain pending in the handoff.
+
+Local checkout is `master` at `187b2c8`, with no ahead/behind marker against the local `origin/master` reference. Preserved the existing handoff notes and untracked `.postman/`, `Manual/` and `postman/`. This pass focused on the main flows and relevant ADRs. No app tests, runtime/database operations or live GitHub checks were performed.
 
 ## PR #148 merged; current checkout is master (2026-11-06)
 
