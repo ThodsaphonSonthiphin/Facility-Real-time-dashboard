@@ -2,6 +2,27 @@
 
 Updated 2026-11-10 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
 
+## สถานะส่งมอบสำหรับพี่เลี้ยงและทีมรับช่วง
+
+**พัฒนาตามขอบเขตที่ตกลงเสร็จแล้ว** แม่บ้านลงเวลาและส่งงาน หัวหน้าตรวจและสั่งแก้ แอดมินดูว่าใครเข้างาน งานไหนเลยเวลา และมอบหมายคนทำแทนได้ ระบบลบและสรุปข้อมูลเก่าอัตโนมัติรวมเข้าโครงการแล้วใน PR #147 ส่วน Flowchart ภาษาไทยรวมแล้วใน PR #149
+
+| เรื่อง | สถานะและขั้นต่อไป |
+|---|---|
+| คู่มือผู้ใช้ | จัดทำคู่มือ Word v1.4 แล้ว รอเจ้าของตรวจรับ การแสดงผลในโหมดอ่านและโหมดแก้ไขของ Word Online ยังต้องยืนยัน |
+| ติดตั้งบนเครื่องจริง | รอทีมรับช่วงและ IT ยืนยันเครื่อง ระบบปฏิบัติการ และที่อยู่เว็บ HTTPS แล้วตรวจการสำรองและกู้คืนฐานข้อมูลกับการลบข้อมูลเก่าบนเครื่องจริง |
+| ทดลองใช้ในพื้นที่เดียว | หลังได้ที่อยู่เว็บจริง แอดมินตั้งค่าพื้นที่และติดป้าย QR ให้แม่บ้านกับหัวหน้าลองลงเวลา ส่งงาน ตรวจ และแก้จากมือถือจริง รวมถึงตรวจการอ่านตำแหน่งบน iPhone ปัจจุบันยังไม่มีบันทึกยืนยันผลทดลองหน้างาน |
+| นำเข้าข้อมูลจาก Excel | เป็นงานเสริม เพิ่มตึก พื้นที่ ห้อง และบัญชีผ่านหน้าแอดมินได้ |
+
+ขอบเขตของผู้ฝึกงานคือพัฒนาระบบและส่งต่อคู่มือ การติดตั้งและทดลองใช้จริงเป็นขั้นตอนของทีมรับช่วง ดู [ขอบเขตงานผู้ฝึกงาน](adr/facility-0109-internship-development-and-handover-scope.md) และ [งานที่เหลือและรายการตรวจ](#remaining-work-and-checks)
+
+เริ่มจาก [ภาพรวมระบบ](business-overview.md) สำหรับพี่เลี้ยง [Flowchart ทั้งสามบทบาท](role-workflows.md) สำหรับผู้ใช้ และ [คู่มือส่งมอบและติดตั้ง](handover.md) สำหรับทีม IT
+
+## Plain-language handover documentation (2026-11-10)
+
+Updated the README, business overview, handover and this handoff with a Thai reading path by audience, the office-floor example and the latest recorded delivery status. Corrected the stale branch status for automatic data retention. The existing IT command blocks and task history are retained.
+
+Checked 61 local links and anchors and compared the IT instructions with the previous guide. The owner authorized publishing these four files through a PR to `master`, tracking decision map #1.
+
 ## Role workflow publication (2026-11-10)
 
 The owner authorized publishing the flowcharts and the related November 10 handoff notes through a PR to `master`. The publication tracks the project's decision map #1. The November 6 local notes, Word manual and Postman files are outside this publication.
