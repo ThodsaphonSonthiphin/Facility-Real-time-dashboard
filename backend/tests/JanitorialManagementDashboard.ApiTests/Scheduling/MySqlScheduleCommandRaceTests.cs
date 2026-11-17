@@ -198,7 +198,14 @@ public class MySqlScheduleCommandRaceTests
                 db.WeeklyDayOffs.Add(header);
             }
 
-            header.Revision += 1;
+            // A created header keeps its first version; only an update of an existing one bumps its revision (the same
+            // revision coupling the SQLite harness applies). A new row that started at 2 would make the audit trail claim
+            // an edit that never happened.
+            if (!created)
+            {
+                header.Revision += 1;
+            }
+
             header.UpdatedAt = request.Now.UtcDateTime;
             db.ScheduleChanges.Add(new ScheduleChange
             {

@@ -22,6 +22,13 @@ public class ScheduleCommandReceipt
     /// <summary>The expected-revision map the command was validated against, as JSON.</summary>
     public string ExpectedRevisionsJson { get; set; } = "{}";
 
+    /// <summary>
+    /// Spec §11: the building/shift anchors the command applied to, as JSON, so a status lookup can require the actor to
+    /// still hold <em>that</em> scope instead of only some scope today. Null only for a receipt written before this column
+    /// existed; a command that touched no building/shift anchor stores an empty array.
+    /// </summary>
+    public string? ScopeJson { get; set; }
+
     public string Outcome { get; set; } = string.Empty;
 
     /// <summary>The committed result payload, as JSON; retained for the configured detail window.</summary>

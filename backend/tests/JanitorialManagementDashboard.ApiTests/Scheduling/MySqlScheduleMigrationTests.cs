@@ -83,6 +83,14 @@ public class MySqlScheduleMigrationTests
             await db.Database.MigrateAsync();
             Assert.Empty(await db.Database.GetPendingMigrationsAsync());
             Assert.False(db.Database.HasPendingModelChanges());
+
+            // Task 5 fix: a command receipt now retains the scope its command applied to, so a status lookup can recheck
+            // that scope rather than any authority the actor happens to hold today.
+            var scopeColumn = await db.Database.SqlQueryRaw<string>(
+                "SELECT column_name AS Value FROM information_schema.columns " +
+                "WHERE table_schema = DATABASE() AND table_name = 'schedule_command_receipts' " +
+                "AND column_name = 'scope_json'").ToListAsync();
+            Assert.Single(scopeColumn);
         }
         finally
         {

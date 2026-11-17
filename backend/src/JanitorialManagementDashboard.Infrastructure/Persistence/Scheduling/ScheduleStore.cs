@@ -8,6 +8,7 @@ using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using MySql.Data.MySqlClient;
 
 namespace JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 
@@ -87,10 +88,11 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 await db.SaveChangesAsync(ct);
                 return created;
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException exception) when (IsDuplicateKeyViolation(exception))
             {
-                // Another writer created the anchor first, which is the case this row exists for. Anything else (a
-                // duplicate login name or slot on the same save) is not ours to explain: it leaves no anchor row behind.
+                // Another writer created the anchor first, which is the case this row exists for. Anything else (a deadlock
+                // or a foreign key on the same save) rolls the transaction back and is not ours to explain: it leaves no
+                // anchor row behind, so it is rethrown below instead of being read as "someone else won".
                 db.Entry(created).State = EntityState.Detached;
                 anchor = await FindAnchorUnderLockAsync(buildingId, shift, ct);
                 if (anchor is null)
@@ -152,6 +154,61 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     private bool IsMySql =>
         db.Database.ProviderName?.Contains("MySql", StringComparison.OrdinalIgnoreCase) == true;
 
+    /// <summary>MySQL's ER_DUP_ENTRY: the save lost a UNIQUE index to a row another connection had already stored.</summary>
+    private const int MySqlDuplicateEntry = 1062;
+
+    /// <summary>SQLite's SQLITE_CONSTRAINT_UNIQUE extended code (a foreign key failure is 787, a plain constraint 19).</summary>
+    private const int SqliteConstraintUnique = 2067;
+
+    /// <summary>Microsoft.Data.Sqlite's exception type; the tests' provider, which the API itself does not reference.</summary>
+    private const string SqliteExceptionTypeName = "Microsoft.Data.Sqlite.SqliteException";
+
+    /// <summary>The extended code property of that type, read by name for the same reason.</summary>
+    private const string SqliteExtendedCodeProperty = "SqliteExtendedErrorCode";
+
+    /// <summary>
+    /// True only when <paramref name="exception"/> is a real duplicate-key violation — MySQL 1062 or SQLite's
+    /// SQLITE_CONSTRAINT_UNIQUE (2067) — because that is the only save failure another writer can cause by inserting the
+    /// anchor first (spec §11). Everything else must reach the caller: a deadlock (MySQL 1213) or a lock wait timeout has
+    /// already rolled the whole transaction back, so a command that read it as "another writer won" would carry on writing
+    /// outside the transaction its receipt and audit rows commit in.
+    /// <para>
+    /// The SQLite branch reads the provider's extended code by name instead of by type because Microsoft.Data.Sqlite is the
+    /// test provider and the API never references it. An unreadable code answers "not a duplicate", so the fallback always
+    /// rethrows rather than swallowing an unknown failure.
+    /// </para>
+    /// </summary>
+    public static bool IsDuplicateKeyViolation(DbUpdateException exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is MySqlException { Number: MySqlDuplicateEntry })
+            {
+                return true;
+            }
+
+            if (SqliteExtendedErrorCode(current) == SqliteConstraintUnique)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>SQLite's extended error code for a Microsoft.Data.Sqlite exception, or null for anything else.</summary>
+    private static int? SqliteExtendedErrorCode(Exception exception)
+    {
+        var type = exception.GetType();
+        if (type.FullName != SqliteExceptionTypeName)
+        {
+            return null;
+        }
+
+        return type.GetProperty(SqliteExtendedCodeProperty)?.GetValue(exception) is int code ? code : null;
+    }
+
     /// <summary>
     /// The transaction one schedule command runs in (spec §11: the token, the business rows, the audit and the receipt
     /// commit together or not at all). MySQL takes ReadCommitted so every statement after a lock sees what the previous
@@ -185,9 +242,10 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 await db.SaveChangesAsync(ct);
                 return created;
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException exception) when (IsDuplicateKeyViolation(exception))
             {
-                // Another command created this slot's anchor first, which is the case the row exists for.
+                // Another command created this slot's anchor first, which is the case the row exists for. A deadlock, a lock
+                // wait timeout or a foreign key rolls the command's transaction back and must reach the engine instead.
                 db.Entry(created).State = EntityState.Detached;
                 anchor = await FindSlotAnchorUnderLockAsync(personId, shiftDate, shift, ct);
                 if (anchor is null)
@@ -221,8 +279,10 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 await db.SaveChangesAsync(ct);
                 return created;
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException exception) when (IsDuplicateKeyViolation(exception))
             {
+                // The same create/retry as the slot anchor: only a lost UNIQUE race is recoverable, never a rolled-back
+                // transaction the command would otherwise keep writing outside of.
                 db.Entry(created).State = EntityState.Detached;
                 anchor = await FindBaselineAnchorUnderLockAsync(personId, ct);
                 if (anchor is null)

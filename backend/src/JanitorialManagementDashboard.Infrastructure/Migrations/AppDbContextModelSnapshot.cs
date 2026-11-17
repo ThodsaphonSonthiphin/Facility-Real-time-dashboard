@@ -1355,6 +1355,10 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                         .HasColumnType("json")
                         .HasColumnName("result_json");
 
+                    b.Property<string>("ScopeJson")
+                        .HasColumnType("json")
+                        .HasColumnName("scope_json");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CommandId")

@@ -202,6 +202,11 @@ public static class SchedulingModel
             e.Property(x => x.Kind).HasMaxLength(50).IsRequired();
             e.Property(x => x.PayloadFingerprint).HasMaxLength(64).IsRequired();
             e.Property(x => x.ExpectedRevisionsJson).HasColumnType("json");
+
+            // Spec §11: the scope the command applied to is retained with its result, so a status lookup rechecks that
+            // scope rather than any scope the actor happens to hold today. Nullable: a receipt purged of its detail is not
+            // the same thing as a command that touched no building/shift anchor, which stores "[]".
+            e.Property(x => x.ScopeJson).HasColumnType("json");
             e.Property(x => x.Outcome).HasMaxLength(40).IsRequired();
             e.Property(x => x.ResultJson).HasColumnType("json");
             e.HasIndex(x => x.CommandId).IsUnique();

@@ -69,8 +69,12 @@ public sealed class ScheduleCommandService(
             return Refused(command.CommandId, ScheduleCommandOutcome.NotAuthorised);
         }
 
-        var actor = await db.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Id == actorId, ct);
-        if (actor is not { IsActive: true })
+        // Spec §11: no account at all reaches a handler. The engine's one generic gate is the same authority rule the
+        // status lookup asks — an active Admin, or an active Supervisor whose dated scope covers today's business date, and
+        // nothing else — because a Cleaner may never run a management command. Which building and shift a particular row
+        // may touch is still the kind's own check (Task 6); this gate only decides who may submit a command at all.
+        var authority = await ReadAuthorityAsync(actorId, ct);
+        if (authority is null)
         {
             return Refused(command.CommandId, ScheduleCommandOutcome.NotAuthorised);
         }
@@ -81,7 +85,7 @@ public sealed class ScheduleCommandService(
             .FirstOrDefaultAsync(receipt => receipt.CommandId == command.CommandId, ct);
         if (retained is not null)
         {
-            return Retained(retained, fingerprint, actorId);
+            return Retained(retained, fingerprint, actorId, authority);
         }
 
         // A27: past the window and with nothing retained, the identity can never start a mutation again. It is refused
@@ -104,7 +108,8 @@ public sealed class ScheduleCommandService(
         {
             // The stable anchors are locked, in one global sorted order, before any row is validated: a command that has
             // to create a row for a slot nobody has written yet still excludes the command doing the same thing.
-            await LockAsync(await handler.PlanLocksAsync(request, db, ct), now, ct);
+            var plan = await handler.PlanLocksAsync(request, db, ct);
+            await LockAsync(plan, now, ct);
 
             // The lock may have been granted to this transaction only after another one committed the same identity.
             var raced = await db.ScheduleCommandReceipts.AsNoTracking()
@@ -112,7 +117,7 @@ public sealed class ScheduleCommandService(
             if (raced is not null)
             {
                 await DiscardAsync(transaction, ct);
-                return Retained(raced, fingerprint, actorId);
+                return Retained(raced, fingerprint, actorId, authority);
             }
 
             var receipt = new ScheduleCommandReceipt
@@ -122,6 +127,10 @@ public sealed class ScheduleCommandService(
                 Kind = command.Kind,
                 PayloadFingerprint = fingerprint,
                 ExpectedRevisionsJson = JsonSerializer.Serialize(SortedRevisions(command.ExpectedRevisions)),
+
+                // Spec §11: the scope is retained with the result, so the status lookup can require the actor to still hold
+                // the building/shift this command applied to — not merely some authority of the same kind today.
+                ScopeJson = SerializeScope(plan.Scopes),
                 Outcome = ScheduleCommandOutcome.Committed,
                 ResultJson = "{}",
                 CommittedAt = now.UtcDateTime,
@@ -157,7 +166,7 @@ public sealed class ScheduleCommandService(
                 .FirstOrDefaultAsync(receipt => receipt.CommandId == command.CommandId, ct);
             if (committed is not null)
             {
-                return Retained(committed, fingerprint, actorId);
+                return Retained(committed, fingerprint, actorId, authority);
             }
 
             throw;
@@ -165,9 +174,11 @@ public sealed class ScheduleCommandService(
     }
 
     /// <summary>
-    /// Spec §11 and controller ruling 4: the result of an uncertain write, only to the actor that committed it. Another
-    /// actor gets "not found" — no payload, no enumeration and no timing hint — and so does the actor itself once it no
-    /// longer holds the authority the command needed or its account is no longer active.
+    /// Spec §11 and controller ruling 4: the result of an uncertain write, only to the actor that committed it, and only
+    /// while that actor still holds the scope the command applied to. Another actor gets "not found" — no payload, no
+    /// enumeration and no timing hint — and so does the actor itself once it no longer holds the authority the command
+    /// needed (a building this command touched is not one of today's periods; the account is deactivated) or its scope
+    /// cannot be read back.
     /// </summary>
     public async Task<CommandResult?> ReadResultAsync(int actorId, Guid id, CancellationToken ct = default)
     {
@@ -178,7 +189,10 @@ public sealed class ScheduleCommandService(
             return null;
         }
 
-        return await HoldsCurrentAuthorityAsync(actorId, ct) ? StoredResult(receipt) : null;
+        // The scope check is the applied scope, not "some authority today": a Supervisor who kept the role but lost this
+        // building/shift may not read what it changed there. An unreadable stored scope denies rather than widens.
+        var authority = await ReadAuthorityAsync(actorId, ct);
+        return authority is not null && HoldsRecordedScope(receipt, authority) ? StoredResult(receipt) : null;
     }
 
     /// <summary>
@@ -300,18 +314,35 @@ public sealed class ScheduleCommandService(
         db.ChangeTracker.Clear();
     }
 
-    /// <summary>The answer a retained receipt gives, and the only two ways it can still refuse: another actor, another payload.</summary>
-    private static CommandResult Retained(ScheduleCommandReceipt receipt, string fingerprint, int actorId)
+    /// <summary>
+    /// The answer a retained receipt gives, and the three ways it can still refuse: another actor, another payload, or an
+    /// actor that no longer holds the scope this command applied to. A retained answer is a status answer, so it asks the
+    /// same question <see cref="ReadResultAsync"/> asks.
+    /// </summary>
+    private static CommandResult Retained(
+        ScheduleCommandReceipt receipt, string fingerprint, int actorId, ActorAuthority authority)
     {
         if (receipt.ActorId != actorId)
         {
             return Refused(receipt.CommandId, ScheduleCommandOutcome.NotAuthorised);
         }
 
-        return string.Equals(receipt.PayloadFingerprint, fingerprint, StringComparison.Ordinal)
+        if (!string.Equals(receipt.PayloadFingerprint, fingerprint, StringComparison.Ordinal))
+        {
+            return Refused(receipt.CommandId, ScheduleCommandOutcome.PayloadMismatch);
+        }
+
+        return HoldsRecordedScope(receipt, authority)
             ? StoredResult(receipt)
-            : Refused(receipt.CommandId, ScheduleCommandOutcome.PayloadMismatch);
+            : Refused(receipt.CommandId, ScheduleCommandOutcome.NotAuthorised);
     }
+
+    /// <summary>
+    /// Spec §11: does the actor still hold the building/shift this receipt recorded? A command that touched no scope anchor
+    /// has no key to lose, and a scope that cannot be read back answers "no" rather than widening the answer.
+    /// </summary>
+    private static bool HoldsRecordedScope(ScheduleCommandReceipt receipt, ActorAuthority authority) =>
+        ReadScope(receipt.ScopeJson) is { } scope && authority.HoldsScope(scope);
 
     private static CommandResult Refused(Guid commandId, string outcome) =>
         new(commandId, outcome, NoRevisions, []);
@@ -338,30 +369,102 @@ public sealed class ScheduleCommandService(
     }
 
     /// <summary>
-    /// Spec §11: the actor's authority as it stands now, not as it stood when the command ran. Admin holds it while the
-    /// account is active, a Supervisor only while a dated period covers today, and a Cleaner never holds it.
+    /// Spec §11 and §3: the authority the actor holds <em>now</em>, as it stands today rather than as it stood when the
+    /// command ran. Admin holds it while the account is active, a Supervisor only while one of its dated periods covers
+    /// today's business date, and a Cleaner never holds it. Everything that has to decide "may this actor do a management
+    /// thing at all" asks this one method, and whether a recorded building/shift is inside it is
+    /// <see cref="ActorAuthority.HoldsScope"/>, which asks <see cref="ScheduleAuthority.CanManage"/> — the same predicate
+    /// every other management path uses.
     /// </summary>
-    private async Task<bool> HoldsCurrentAuthorityAsync(int actorId, CancellationToken ct)
+    private async Task<ActorAuthority?> ReadAuthorityAsync(int actorId, CancellationToken ct)
     {
         var actor = await db.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Id == actorId, ct);
         if (actor is not { IsActive: true })
         {
-            return false;
+            return null;
         }
 
         if (actor.Role == UserRole.Admin)
         {
-            return true;
+            return new ActorAuthority(actor.Id, UserRole.Admin, DateOnly.MinValue, []);
         }
 
         if (actor.Role != UserRole.Supervisor)
         {
-            return false;
+            return null;
         }
 
         var periods = await SupervisorScopes.ReadAsync(db, actor, clock, ct);
         var businessDate = ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
-        return periods.Any(period => ScheduleAuthority.Covers(period, businessDate));
+        return periods.Any(period => ScheduleAuthority.Covers(period, businessDate))
+            ? new ActorAuthority(actor.Id, UserRole.Supervisor, businessDate, periods)
+            : null;
+    }
+
+    /// <summary>
+    /// The building/shift anchors a plan named, as the JSON a receipt retains: distinct, in a stable order that does not
+    /// depend on the order the plan listed them, and as names rather than ordinal values so the stored fact does not change
+    /// meaning if an enum value is ever renumbered.
+    /// </summary>
+    private static string SerializeScope(IReadOnlyList<ScheduleScopeKey> scopes) =>
+        JsonSerializer.Serialize(scopes
+            .Distinct()
+            .OrderBy(scope => scope.BuildingId)
+            .ThenBy(scope => scope.Shift)
+            .Select(scope => new StoredScopeKey(scope.BuildingId, scope.Shift.ToString())));
+
+    /// <summary>
+    /// The scope a receipt retained. Empty means "no building/shift anchor", which is a command whose result has no scope
+    /// to lose (and a receipt written before the column existed); null means the stored value cannot be read, and a scope
+    /// check that cannot be answered never answers yes.
+    /// </summary>
+    private static IReadOnlyList<ScheduleScopeKey>? ReadScope(string? scopeJson)
+    {
+        if (string.IsNullOrWhiteSpace(scopeJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            if (JsonSerializer.Deserialize<List<StoredScopeKey>>(scopeJson) is not { } stored)
+            {
+                return null;
+            }
+
+            var scope = new List<ScheduleScopeKey>(stored.Count);
+            foreach (var key in stored)
+            {
+                if (!Enum.TryParse<Shift>(key.Shift, ignoreCase: false, out var shift))
+                {
+                    return null;
+                }
+
+                scope.Add(new ScheduleScopeKey(key.BuildingId, shift));
+            }
+
+            return scope;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>One retained scope key as it is stored: the building id and the shift name.</summary>
+    private sealed record StoredScopeKey(int BuildingId, string Shift);
+
+    /// <summary>
+    /// The authority an actor holds right now (spec §11). <see cref="HoldsScope"/> answers whether the building/shift keys a
+    /// command applied to are all still inside it: an Admin holds every building, and a Supervisor holds only the keys one
+    /// of today's dated periods names — through <see cref="ScheduleAuthority.CanManage"/>, never a second copy of the rule.
+    /// </summary>
+    private sealed record ActorAuthority(
+        int ActorId, UserRole Role, DateOnly BusinessDate, IReadOnlyList<ScopePeriod> Periods)
+    {
+        public bool HoldsScope(IReadOnlyList<ScheduleScopeKey> scope) =>
+            scope.All(key => ScheduleAuthority.CanManage(
+                Role, ActorId, key.BuildingId, key.Shift, BusinessDate, Periods));
     }
 
     /// <summary>A failed push is logged and swallowed: the facts are already committed, so the command did not fail.</summary>

@@ -285,7 +285,8 @@ public class ScheduleCommandTests
         Assert.Equal(ScheduleCommandOutcome.Committed, (await harness.ExecuteAsync(supervisor, envelope)).Outcome);
         Assert.NotNull(await harness.ReadResultAsync(supervisor, envelope.CommandId));
 
-        // Spec §11: losing the authority the command needed makes the result unavailable, never readable.
+        // Spec §11: losing the authority the command needed makes the result unavailable, never readable. This kind records
+        // no building/shift scope, so what it loses here is the whole membership — the scope-specific case is the test below.
         await harness.WithDbAsync(async db =>
         {
             var account = await db.Users.SingleAsync(user => user.Id == supervisor);
@@ -295,6 +296,110 @@ public class ScheduleCommandTests
         });
 
         Assert.Null(await harness.ReadResultAsync(supervisor, envelope.CommandId));
+    }
+
+    [Fact]
+    public async Task Status_requires_the_scope_the_command_applied_to_and_not_any_scope_held_today()
+    {
+        using var harness = new Harness();
+        var buildingHeld = await TestData.AddBuildingAsync(harness.Factory, "B");
+        await TestData.AddBuildingAsync(harness.Factory, "C");
+        var today = BusinessDate(harness);
+        var supervisor = await TestData.AddSupervisorAsync(harness.Factory, "2000002", "0892222222", "B", Shift.Day);
+        await TestData.AddSupervisorScopeAsync(harness.Factory, "2000002", "B", Shift.Day, today.AddDays(-7));
+        var person = await AdminSetupApi.UserIdAsync(harness.Factory, "1000001");
+
+        var envelope = harness.NewEnvelope(
+            supervisor, Payload(person, Week, "2026-11-17", buildingId: buildingHeld), Revision(person, Week, "0"));
+        Assert.Equal(ScheduleCommandOutcome.Committed, (await harness.ExecuteAsync(supervisor, envelope)).Outcome);
+
+        // Spec §11: the building/shift the command applied to is retained with its result.
+        var receipt = Assert.Single(await harness.ReceiptsAsync());
+        Assert.NotNull(receipt.ScopeJson);
+        using var stored = JsonDocument.Parse(receipt.ScopeJson!);
+        Assert.Equal(buildingHeld, Assert.Single(stored.RootElement.EnumerateArray()).GetProperty("BuildingId").GetInt32());
+
+        // While the Supervisor still holds that building, the status answer is available.
+        Assert.NotNull(await harness.ReadResultAsync(supervisor, envelope.CommandId));
+
+        // Still an active Supervisor whose period covers today — but for another building. Holding a different building is
+        // not holding the one this command changed, so the result is no longer theirs to read.
+        await harness.WithDbAsync(async db =>
+        {
+            db.SupervisorScopePeriods.RemoveRange(await db.SupervisorScopePeriods.ToListAsync());
+            await db.SaveChangesAsync();
+        });
+        await TestData.AddSupervisorScopeAsync(harness.Factory, "2000002", "C", Shift.Day, today.AddDays(-7));
+
+        Assert.Null(await harness.ReadResultAsync(supervisor, envelope.CommandId));
+
+        // A repeated submission of the same identity is a status answer too, so it refuses for the same reason instead of
+        // handing back a result from a building this actor no longer holds — and it still writes nothing.
+        var repeated = await harness.ExecuteAsync(supervisor, envelope);
+        Assert.Equal(ScheduleCommandOutcome.NotAuthorised, repeated.Outcome);
+        Assert.Empty(repeated.Revisions);
+
+        // A read refusal changes nothing: the command it committed is still stored.
+        await harness.WithDbAsync(async db =>
+        {
+            Assert.Equal(1, (await db.WeeklyDayOffs.SingleAsync()).Revision);
+            Assert.Single(await db.ScheduleCommandReceipts.ToListAsync());
+            Assert.Single(await db.ScheduleChanges.ToListAsync());
+        });
+    }
+
+    [Fact]
+    public async Task A_cleaner_cannot_start_a_command_and_nothing_is_written()
+    {
+        using var harness = new Harness();
+        var cleaner = await AdminSetupApi.UserIdAsync(harness.Factory, "1000001");
+
+        // The token is genuinely this actor's, issued by the server: what refuses the command is the authority gate, not
+        // the identity. Spec §11: no account at all reaches a handler, so a Cleaner may never change a schedule.
+        var result = await harness.ExecuteAsync(
+            cleaner, harness.NewEnvelope(cleaner, Payload(cleaner, Week, "2026-11-17"), Revision(cleaner, Week, "0")));
+
+        Assert.Equal(ScheduleCommandOutcome.NotAuthorised, result.Outcome);
+        Assert.Empty(result.Revisions);
+        Assert.Empty(result.Problems);
+        Assert.Empty(harness.Notifier.Calls);
+        await harness.WithDbAsync(async db =>
+        {
+            Assert.Empty(await db.WeeklyDayOffs.ToListAsync());
+            Assert.Empty(await db.WeeklyDayOffChoices.ToListAsync());
+            Assert.Empty(await db.ScheduleAnchors.ToListAsync());
+            Assert.Empty(await db.ScheduleBaselineAnchors.ToListAsync());
+            Assert.Empty(await db.ScheduleScopeAnchors.ToListAsync());
+            Assert.Empty(await db.ScheduleCommandReceipts.ToListAsync());
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+        });
+    }
+
+    [Fact]
+    public async Task A_supervisor_whose_periods_do_not_cover_today_cannot_start_a_command()
+    {
+        using var harness = new Harness();
+        await TestData.AddBuildingAsync(harness.Factory, "B");
+        var today = BusinessDate(harness);
+        var supervisor = await TestData.AddSupervisorAsync(harness.Factory, "2000002", "0892222222", "B", Shift.Day);
+
+        // One dated period that ended yesterday replaces the compatibility projection, so the Supervisor holds no scope
+        // today: the same gate that refuses a Cleaner refuses a Supervisor without a covering period.
+        await TestData.AddSupervisorScopeAsync(harness.Factory, "2000002", "B", Shift.Day, today.AddDays(-30), today);
+        var person = await AdminSetupApi.UserIdAsync(harness.Factory, "1000001");
+
+        var result = await harness.ExecuteAsync(
+            supervisor, harness.NewEnvelope(supervisor, Payload(person, Week, "2026-11-17"), Revision(person, Week, "0")));
+
+        Assert.Equal(ScheduleCommandOutcome.NotAuthorised, result.Outcome);
+        Assert.Empty(result.Revisions);
+        await harness.WithDbAsync(async db =>
+        {
+            Assert.Empty(await db.WeeklyDayOffs.ToListAsync());
+            Assert.Empty(await db.ScheduleAnchors.ToListAsync());
+            Assert.Empty(await db.ScheduleCommandReceipts.ToListAsync());
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+        });
     }
 
     [Fact]
@@ -429,6 +534,10 @@ public class ScheduleCommandTests
     private static string RevisionKey(int personId, DateOnly weekStart) =>
         $"week#{personId}#{weekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
 
+    /// <summary>The business date the engine's authority rule asks about, from the same clock the API under test uses.</summary>
+    private static DateOnly BusinessDate(Harness harness) =>
+        ScheduleAuthority.BusinessDate(harness.Factory.Clock.GetUtcNow().UtcDateTime);
+
     /// <summary>The same revision map, compared by key order rather than by dictionary enumeration order.</summary>
     private static void AssertSameRevisions(
         IReadOnlyDictionary<string, string> expected, IReadOnlyDictionary<string, string> actual)
@@ -441,12 +550,17 @@ public class ScheduleCommandTests
     private static Dictionary<string, string> Revision(int personId, DateOnly weekStart, string revision) =>
         new(StringComparer.Ordinal) { [RevisionKey(personId, weekStart)] = revision };
 
-    private static object Payload(int personId, DateOnly weekStart, string offDate, string? failRow = null) => new
+    /// <summary>
+    /// The synthetic kind's content. <paramref name="buildingId"/> is the building/shift the command applies to: a command
+    /// that names one locks and records that scope, which is what the status lookup has to recheck.
+    /// </summary>
+    private static object Payload(int personId, DateOnly weekStart, string offDate, string? failRow = null, int? buildingId = null) => new
     {
         personId,
         weekStart = weekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         offDates = new[] { offDate },
         failRow,
+        buildingId,
     };
 
     /// <summary>
@@ -553,13 +667,13 @@ public class ScheduleCommandTests
             return Task.FromResult(new ScheduleCommandLockSet(
                 payload.OffDates.Select(date => new ScheduleSlotKey(payload.PersonId, date, Shift.Day)).ToList(),
                 [payload.PersonId],
-                []));
+                payload.BuildingId is int buildingId ? [new ScheduleScopeKey(buildingId, Shift.Day)] : []));
         }
 
         public async Task<ScheduleCommandApplication> ValidateAndApplyAsync(
             ScheduleCommandRequest request, ScheduleCommandReceipt receipt, AppDbContext db, CancellationToken ct = default)
         {
-            var (personId, weekStart, offDates, failRow) = Read(request.Payload);
+            var (personId, weekStart, offDates, failRow, _) = Read(request.Payload);
             var key = RevisionKey(personId, weekStart);
             var header = await db.WeeklyDayOffs.Include(week => week.Choices)
                 .FirstOrDefaultAsync(week => week.UserId == personId && week.WeekStart == weekStart, ct);
@@ -623,12 +737,16 @@ public class ScheduleCommandTests
             return new ScheduleCommandApplication(revisions, []);
         }
 
-        private static (int PersonId, DateOnly WeekStart, List<DateOnly> OffDates, string? FailRow) Read(JsonElement payload) =>
+        private static (int PersonId, DateOnly WeekStart, List<DateOnly> OffDates, string? FailRow, int? BuildingId) Read(
+            JsonElement payload) =>
             (payload.GetProperty("personId").GetInt32(),
                 DateOnly.Parse(payload.GetProperty("weekStart").GetString()!, CultureInfo.InvariantCulture),
                 payload.GetProperty("offDates").EnumerateArray()
                     .Select(date => DateOnly.Parse(date.GetString()!, CultureInfo.InvariantCulture)).ToList(),
-                payload.TryGetProperty("failRow", out var failRow) ? failRow.GetString() : null);
+                payload.TryGetProperty("failRow", out var failRow) ? failRow.GetString() : null,
+                payload.TryGetProperty("buildingId", out var building) && building.ValueKind == JsonValueKind.Number
+                    ? building.GetInt32()
+                    : null);
     }
 
     /// <summary>Records the transaction outcomes the engine reaches, so a test can prove the push came after the commit.</summary>
