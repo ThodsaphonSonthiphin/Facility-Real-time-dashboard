@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JanitorialManagementDashboard.Application.Scheduling;
 
 namespace JanitorialManagementDashboard.Api.Scheduling;
 
@@ -66,4 +67,102 @@ public static class ScheduleCommandErrorCode
 
     /// <summary>The submitted row is not storable or not allowed; the whole command rolls back, never one row of it.</summary>
     public const string RowInvalid = "row-invalid";
+}
+
+/// <summary>
+/// Spec §11: one server-issued command identity as the screen receives it. <see cref="CommandId"/> is what the envelope
+/// submits, <see cref="Token"/> is the signed value it carries, and <see cref="ExpiresAt"/> is when it can no longer start
+/// a command (a retained result can still be looked up afterwards).
+/// </summary>
+public sealed record ScheduleCommandTokenDto(Guid CommandId, string Token, DateTimeOffset ExpiresAt);
+
+/// <summary>
+/// Spec §11 and §3: one authorised week as a screen reads it. Every revision is the stored integer as a decimal string and
+/// every date is an ISO date, so the contract has one number format and one date format; a person row holds the revisions
+/// its edits must send back, and each day holds the provenance of the value it resolved.
+/// <para>
+/// <see cref="Rows"/> carries only the dates this actor may see — a Supervisor whose dated period starts or ends mid-week
+/// gets fewer than seven days and must never read that as "no plan" (spec §3).
+/// </para>
+/// </summary>
+public sealed record ScheduleWeekDto(
+    DateOnly WeekStart,
+    string Revision,
+    DateTimeOffset ReadAt,
+    string Availability,
+    IReadOnlyList<SchedulePersonDto> Rows);
+
+/// <summary>
+/// Spec §10: one person's week. <see cref="WeeklyRevision"/> is the week-header version (0 when nobody has chosen),
+/// <see cref="RegularBaselineRevision"/> and <see cref="ReliefBaselineRevision"/> are the head version of each repeating
+/// week — the same keys and values the command contract names as <c>week:</c> and <c>baseline:</c>.
+/// </summary>
+public sealed record SchedulePersonDto(
+    int UserId,
+    string DisplayName,
+    string CleanerKind,
+    int? HomeBuildingId,
+    bool HasWeeklyChoice,
+    string WeeklyRevision,
+    string RegularBaselineRevision,
+    string ReliefBaselineRevision,
+    IReadOnlyList<ScheduleDayDto> Days);
+
+/// <summary>
+/// Spec §5 and §10: one resolved day with its provenance per field — a dated choice, the applicable version or nothing at
+/// all — plus the availability word and the conflicts someone has to correct. <see cref="IsUnset"/> is not a working day.
+/// </summary>
+public sealed record ScheduleDayDto(
+    DateOnly Date,
+    ScheduleValueDto Area,
+    ScheduleValueDto BreakGroup,
+    bool IsDayOff,
+    bool IsLeave,
+    bool IsUnset,
+    string Availability,
+    IReadOnlyList<ScheduleProblemDto> Problems);
+
+/// <summary>One resolved value: what it is, which row supplied it, and that row's revision (0 when nothing supplied it).</summary>
+public sealed record ScheduleValueDto(int? Value, int? SourceId, string SourceKind, string Revision);
+
+/// <summary>One conflict or gap a screen has to show rather than resolve by itself.</summary>
+public sealed record ScheduleProblemDto(string Code, string Message, DateOnly Date);
+
+/// <summary>
+/// Spec §11: the projection the store resolved, mapped to the wire contract. Nothing is re-derived here — the endpoint hands
+/// on exactly the values, provenance, availability words and problems the one resolver produced.
+/// </summary>
+public static class ScheduleDtoMapper
+{
+    public static ScheduleWeekDto ToDto(this ScheduleProjection projection) => new(
+        projection.WeekStart,
+        projection.Revision,
+        projection.ReadAt,
+        projection.Availability,
+        projection.Rows.Select(row => new SchedulePersonDto(
+            row.UserId,
+            row.DisplayName,
+            row.CleanerKind,
+            row.HomeBuildingId,
+            row.HasWeeklyChoice,
+            row.WeeklyRevision,
+            row.RegularBaselineRevision,
+            row.ReliefBaselineRevision,
+            row.Days.Select(ToDto).ToList())).ToList());
+
+    private static ScheduleDayDto ToDto(ScheduleDay day) => new(
+        day.Date,
+        ToDto(day.Area),
+        ToDto(day.BreakGroup),
+        day.IsDayOff,
+        day.IsLeave,
+        day.IsUnset,
+        day.Availability,
+        day.Problems.Select(problem => new ScheduleProblemDto(problem.Code, problem.Message, problem.Date)).ToList());
+
+    private static ScheduleValueDto ToDto<T>(ResolvedValue<T> value) =>
+        new(Value: value.Value is int number ? number : null,
+            SourceId: value.SourceId,
+            SourceKind: value.SourceKind,
+            Revision: value.Revision);
 }

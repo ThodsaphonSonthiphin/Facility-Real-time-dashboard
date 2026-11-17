@@ -541,7 +541,12 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 profile?.Kind.ToString() ?? UnknownCleanerKind,
                 HomeBuilding(memberships[person.Id], profiles.Exists(entry => entry.UserId == person.Id), person),
                 header is not null,
-                readDates[person.Id].Select(date => ScheduleResolver.Resolve(input, date)).ToList()));
+                readDates[person.Id].Select(date => ScheduleResolver.Resolve(input, date)).ToList(),
+                // The write contract's anchors (Task 6): the week header and the head version of each repeating-week kind,
+                // as the very revisions the command handlers compare. A missing row is 0, never "unknown".
+                Revision(header?.Revision ?? 0),
+                Revision(personBaselines.LastOrDefault(entry => entry.Kind == BaselineKind.Regular)?.Revision ?? 0),
+                Revision(personBaselines.LastOrDefault(entry => entry.Kind == BaselineKind.Relief)?.Revision ?? 0)));
 
             revisions.AddRange(personProfiles.Select(entry => $"profile#{entry.Id}@{Revision(entry.Revision)}"));
             revisions.AddRange(personBaselines.Select(entry => $"baseline#{entry.Id}@{Revision(entry.Revision)}"));

@@ -82,9 +82,16 @@ public sealed record ScheduleDay(DateOnly Date, ResolvedValue<int?> Area,
 /// week is one fact about the row while a day's confirmation is a fact about the day.
 /// <see cref="Days"/> holds the dates this reader may see, in order: seven for an Admin or the person themselves, and only
 /// the covered dates for a Supervisor whose dated period starts or ends mid-week (spec §3).
+/// <para>
+/// The three revisions are the write contract's own anchors, added by Task 6 as an optional extension and never changing
+/// what <see cref="Days"/> means: a screen sends them back as its expected revisions so a stale edit is refused instead of
+/// silently overwriting a newer plan (spec §11). They are the stored versions as decimal strings, and 0 when the row does
+/// not exist yet — the same values <c>ScheduleRevisionKeys</c> names in the API.
+/// </para>
 /// </summary>
 public sealed record SchedulePersonWeek(int UserId, string DisplayName, string CleanerKind,
-    int? HomeBuildingId, bool HasWeeklyChoice, IReadOnlyList<ScheduleDay> Days);
+    int? HomeBuildingId, bool HasWeeklyChoice, IReadOnlyList<ScheduleDay> Days,
+    string WeeklyRevision = "0", string RegularBaselineRevision = "0", string ReliefBaselineRevision = "0");
 
 /// <summary>
 /// Spec §10 and §11: the authorised projection of one week. <see cref="Revision"/> is an opaque token derived from every

@@ -99,6 +99,17 @@ try
     builder.Services.AddScoped<IScheduleCommandNotifier, NoOpScheduleCommandNotifier>();
     builder.Services.AddScoped<ScheduleCommandService>();
 
+    // Spec §11 and §5: one handler per command kind, resolved by kind through the seam the engine already calls. Each kind
+    // owns which building/shift/person a command may touch; the engine owns the transaction, the locks and the receipt.
+    builder.Services.AddScoped<IScheduleCommandHandler, SetWeeklyDaysOffHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, SetRegularBaselineHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, SetReliefBaselineHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, SetDatedAreaHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, SetDatedBreakHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, RecordLeaveHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, CancelLeaveHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, CorrectPlanHandler>();
+
     if (!builder.Environment.IsEnvironment("Testing"))
         builder.Services.AddHostedService<RetentionWorker>();
 
@@ -183,6 +194,8 @@ try
         });
     app.UseDefaultFiles();
     app.UseStaticFiles(appFiles);
+    // Spec §11: while scheduling is not activated the whole group is a 404 for every actor, before authentication runs.
+    app.UseScheduleFeatureGate();
     app.UseAuthentication();
     app.UseAuthorization();
 
@@ -235,6 +248,8 @@ try
     app.MapAdminAccountEndpoints();
     app.MapAdminExportEndpoints();
     app.MapAdminInspectionSummaryEndpoints();
+    // Spec §11: the scheduling group maps itself last, and maps nothing at all while Scheduling:Enabled is false.
+    app.MapScheduleEndpoints();
 
     // 9. Every other page path (/login, /scan/<token>, ...) gets the app, so a printed QR Sign opens it.
     // See docs/adr/facility-0026-frontend-router-shape.md and facility-0067.
