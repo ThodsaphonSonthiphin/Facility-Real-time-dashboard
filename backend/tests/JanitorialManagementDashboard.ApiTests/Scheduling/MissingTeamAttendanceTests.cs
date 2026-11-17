@@ -236,6 +236,30 @@ public class MissingTeamAttendanceTests
         Assert.Null(gap.RecordedById);
         Assert.Equal(2, (await EffectiveAttendanceApi.FactsAsync(factory)).Count);
     }
+
+    [Fact]
+    public async Task A_numbered_action_is_refused_on_a_legacy_slot_and_writes_nothing()
+    {
+        using var factory = new JanitorialApiFactory();
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        await TestData.AddAttendanceAsync(factory, "1000001", Day8, Shift.Day, AttendanceEvent.ShiftIn,
+            EffectiveAttendanceApi.Thai(8, 7, 0));
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
+        var revision = await TeamAttendanceApi.RevisionAsync(factory, person);
+
+        // The slot has no lifecycle row, so it is the legacy four: a numbered action is not one of its actions at all.
+        var response = await TeamAttendanceApi.AddAsync(supervisor, person, "Break1Out", "10:05", expectedRevision: revision);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(
+            "เวลาต้องเรียงกัน: เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน",
+            (await response.Content.ReadFromJsonAsync<MessageModel>())!.Message);
+        var stored = Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
+        Assert.Equal(AttendanceEvent.ShiftIn, stored.EventType);
+        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
+    }
 }
 
 /// <summary>The scoped missing-time calls and the revision a screen sends back.</summary>

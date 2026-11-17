@@ -39,7 +39,8 @@ public sealed record EffectiveDuty(
 /// <summary>
 /// Ruling A: the single reader of <see cref="EffectiveDuty"/>. It does not copy the resolver or the relief rule — it asks
 /// <see cref="ScheduleStore"/> for the live relief assignment and for the person's resolved day. A person with no dated
-/// identity at all has no history to resolve, so their account's Area answers as the compatibility projection; a home
+/// identity at all has no history to resolve, so their account's Area answers as the compatibility projection, while a person
+/// who has one never borrows it — a date their periods do not reach stays unavailable (spec §10); a home
 /// building alone grants nothing, which is why a relief with no assignment has no duty Area and is refused exactly as
 /// another Area's sign is refused today.
 /// </summary>
@@ -72,16 +73,29 @@ public static class EffectiveDutyReader
                 leave.Start, leave.End);
         }
 
-        if (await store.ReadProfileAsync(user.Id, slot.ShiftDate, ct) is not null)
+        // Spec §14 with the Task 9 review ruling: the compatibility projection answers only for a person with no dated
+        // identity at all — one CleanerProfilePeriod row on any date is enough to take it away. A slot dated before the
+        // first period's EffectiveFrom is outside history coverage, so the resolver's own "unavailable" answer stands with a
+        // null Area (spec §10) instead of borrowing today's mutable User.AreaId for a historical slot.
+        if (await HasDatedIdentityAsync(db, user.Id, ct))
         {
-            // The person has a dated identity, so nothing about today's account is history: an unset day stays unset.
+            // The person has a dated identity, so nothing about today's account is history: an unset day stays unset and a
+            // date the profile does not reach stays unavailable.
             return new EffectiveDuty(null, null, day?.Area.SourceKind, isDayOff, isLeave, leave.Start, leave.End);
         }
 
-        // Spec §14: the compatibility projection answers only for a date no dated identity covers at all.
+        // Spec §14: the compatibility Area is the whole answer for a person whose identity is only the account columns.
         return new EffectiveDuty(user.AreaId, null, user.AreaId is null ? null : EffectiveDuty.CompatibilitySource,
             isDayOff, isLeave, leave.Start, leave.End);
     }
+
+    /// <summary>
+    /// True when the person has any dated identity row at all, on any date — the one condition under which the spec §14
+    /// compatibility projection may answer. Asking for the presence of a period rather than for coverage of this date is
+    /// what keeps a slot dated before the first EffectiveFrom from falling through to today's account Area.
+    /// </summary>
+    private static Task<bool> HasDatedIdentityAsync(AppDbContext db, int userId, CancellationToken ct) =>
+        db.CleanerProfilePeriods.AsNoTracking().AnyAsync(profile => profile.UserId == userId, ct);
 
     /// <summary>
     /// The live leave interval of the slot as the half-open range the §8 rule tests against: the earliest start and the

@@ -142,6 +142,27 @@ public class EffectiveAttendanceTests
     }
 
     [Fact]
+    public async Task A_slot_before_the_dated_identity_is_unavailable_and_never_the_account_area()
+    {
+        using var factory = new JanitorialApiFactory();
+        await TestData.AddAreaAsync(factory, "AR03", "A");
+        // The dated identity starts on 1 October; 30 September is before the person's history coverage (spec §10).
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", new DateOnly(2026, 10, 1), "AR03");
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(new DateTimeOffset(2026, 9, 30, 7, 2, 0, TimeSpan.FromHours(7)));
+
+        // The resolver says "unavailable" for that date, so there is no duty Area — and the account's AR01 is not an answer
+        // for somebody who has a dated identity at all (spec §14).
+        var response = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn", "token-checkin-ar01");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Empty(await EffectiveAttendanceApi.FactsAsync(factory));
+        Assert.Empty(await EffectiveAttendanceApi.GapsAsync(factory));
+        Assert.Single(await EffectiveAttendanceApi.BlockedAsync(factory));
+    }
+
+    [Fact]
     public async Task An_account_with_no_dated_identity_keeps_its_own_area_as_the_compatibility_projection()
     {
         using var factory = new JanitorialApiFactory();

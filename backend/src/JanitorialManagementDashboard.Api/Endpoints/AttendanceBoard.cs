@@ -3,6 +3,7 @@ using JanitorialManagementDashboard.Api.Hubs;
 using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
@@ -43,8 +44,17 @@ internal static class AttendanceBoard
             .OrderBy(a => a.OccurredAt)
             .ToListAsync();
 
+        // Spec §8: the state word is read against the slot's own lifecycle, so a numbered break out is "OnBreak" and never
+        // "Working". A slot without a lifecycle row keeps the legacy four actions.
+        var version = AttendanceLifecycle.VersionFor(await db.AttendanceSlotLifecycles.AsNoTracking()
+            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift)
+            .Select(row => (AttendanceLifecycleVersion?)row.Version)
+            .FirstOrDefaultAsync());
+
         var rows = areas
-            .Select(area => Row(area, cleaners.FirstOrDefault(u => u.AreaId == area.Id), covers.Where(c => c.AreaId == area.Id).ToList(), events))
+            .Select(area => Row(
+                area, cleaners.FirstOrDefault(u => u.AreaId == area.Id), covers.Where(c => c.AreaId == area.Id).ToList(),
+                events, version))
             .OrderBy(r => r.State == AreaAttendanceState.Empty ? 0 : 1)
             .ThenBy(r => r.AreaCode)
             .ToList();
@@ -81,7 +91,9 @@ internal static class AttendanceBoard
         }
     }
 
-    private static BoardRowDto Row(Area area, User? cleaner, List<CoverAssignment> covers, List<ShiftAttendance> events)
+    private static BoardRowDto Row(
+        Area area, User? cleaner, List<CoverAssignment> covers, List<ShiftAttendance> events,
+        AttendanceLifecycleVersion version)
     {
         var own = cleaner is null ? new List<ShiftAttendance>() : events.Where(e => e.UserId == cleaner.Id).ToList();
         return new BoardRowDto(
@@ -90,7 +102,7 @@ internal static class AttendanceBoard
             area.Name,
             area.Building!.Code,
             cleaner is null ? null : new AssignedCleanerDto(cleaner.Id, cleaner.EmployeeId ?? string.Empty, cleaner.DisplayName),
-            AreaAttendance.StateOf(own.Select(e => e.EventType).ToList(), covers.Count > 0),
+            AreaAttendance.StateOf(own.Select(e => e.EventType).ToList(), covers.Count > 0, version),
             own.Select(ToDto).ToList(),
             covers.Select(c => new BoardCoverDto(
                     c.Id,

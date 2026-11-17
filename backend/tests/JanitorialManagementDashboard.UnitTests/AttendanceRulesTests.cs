@@ -136,6 +136,26 @@ public class AttendanceRulesTests
     }
 
     [Fact]
+    public void A_numbered_action_is_not_a_legacy_action()
+    {
+        // Task 9 review finding 2: the four-key check used to ignore a key outside its four, so a Supervisor could store a
+        // numbered fact on a legacy slot that no legacy surface can read. Both versions now refuse the other's actions.
+        Assert.Equal(
+            "เวลาต้องเรียงกัน: เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน",
+            AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Legacy4, Times(
+                (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break1Out, 120), (AttendanceEvent.ShiftOut, 720))));
+        // The refusal does not depend on the order of the keys: a numbered action alone is refused the same way.
+        Assert.Equal(
+            "เวลาต้องเรียงกัน: เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน",
+            AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Legacy4, Times((AttendanceEvent.Break2In, 300))));
+        // And the other way round, a legacy action is still not a numbered one.
+        Assert.Equal(
+            "เวลาต้องเรียงกัน: เข้างาน → ออกพัก 1 → กลับจากพัก 1 → ออกพัก 2 → กลับจากพัก 2 → เลิกงาน",
+            AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+                (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakOut, 120), (AttendanceEvent.ShiftOut, 720))));
+    }
+
+    [Fact]
     public void Missing_events_once_the_shift_is_over()
     {
         Assert.Empty(AttendanceRules.MissingAtShiftEnd([]));
