@@ -244,6 +244,7 @@ try
     app.MapAdminPointEndpoints();
     app.MapAdminSignEndpoints();
     app.MapAdminAttendanceEndpoints();
+    app.MapTeamAttendanceEndpoints();
     app.MapAdminAlertEndpoints();
     app.MapAdminAuditLogEndpoints();
     app.MapAdminAccountEndpoints();

@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
@@ -300,5 +302,49 @@ public class AttendanceCorrectionEndpointTests
         var response = await AdminAttendanceApi.CorrectAsync(cleaner, auth.User.Id, Oct8, "Day", "ShiftIn", "06:58", "แก้เอง");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    // ---- Task 9: the slot's effective duty and lifecycle (spec §7, §8) -----------------------------------------------
+
+    [Fact]
+    public async Task A_correction_uses_the_dated_plan_area_and_never_todays_account_area()
+    {
+        using var factory = new JanitorialApiFactory();
+        await TestData.AddAreaAsync(factory, "AR03", "A");
+        // 1000001's account still names AR01; the plan from 1 October says AR03.
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", new DateOnly(2026, 10, 1), "AR03");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
+
+        var response = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var stored = Assert.Single(await EventsAsync(factory, "1000001"));
+        Assert.Equal(await AdminSetupApi.AreaIdAsync(factory, "AR03"), stored.AreaId);
+        Assert.NotEqual(await AdminSetupApi.AreaIdAsync(factory, "AR01"), stored.AreaId);
+    }
+
+    [Fact]
+    public async Task A_numbered_slot_correction_is_validated_against_the_numbered_actions()
+    {
+        using var factory = new JanitorialApiFactory();
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Oct8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 19, 0));
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
+
+        var shiftIn = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "07:00", "ลืมสแกน");
+        // Break-Out is a legacy action and the slot holds the numbered six, so it is not an action this slot knows.
+        var legacyAction = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "BreakOut", "12:00", "ลืมสแกน");
+        var numbered = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "Break1Out", "10:00", "ลืมสแกน");
+
+        Assert.Equal(HttpStatusCode.OK, shiftIn.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, legacyAction.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, numbered.StatusCode);
+        var stored = (await EventsAsync(factory, "1000003")).Single(entry => entry.EventType == AttendanceEvent.Break1Out);
+        Assert.Equal(ThaiClock.At(8, 10, 0).UtcDateTime, stored.OccurredAt);
+        Assert.Equal(2, (await EventsAsync(factory, "1000003")).Count);
     }
 }

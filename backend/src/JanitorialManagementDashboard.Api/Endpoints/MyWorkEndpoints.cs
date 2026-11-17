@@ -5,6 +5,7 @@ using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -17,7 +18,9 @@ public static class MyWorkEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetAsync(ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, AttendanceSettings settings)
+    private static async Task<IResult> GetAsync(
+        ClaimsPrincipal principal, AppDbContext db, ScheduleStore store, TimeProvider clock, AttendanceSettings settings,
+        CancellationToken ct)
     {
         var user = await CurrentUser.LoadAsync(principal, db);
         if (user is null)
@@ -51,7 +54,7 @@ public static class MyWorkEndpoints
             .ToList();
 
         var ownShift = user.Shift is { } regular ? OwnShiftOf(regular, settings) : null;
-        return Results.Ok(new MyWorkDto(await AttendanceEndpoints.StateForAsync(db, user, now, settings), areas, ownShift));
+        return Results.Ok(new MyWorkDto(await AttendanceEndpoints.StateForAsync(db, store, user, now, settings, ct), areas, ownShift));
     }
 
     private static OwnShiftDto OwnShiftOf(Shift shift, AttendanceSettings settings)
