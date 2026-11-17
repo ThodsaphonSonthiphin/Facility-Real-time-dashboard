@@ -626,9 +626,15 @@ public class MySqlScheduleReadRaceTests
                 await using var write = new AppDbContext(options);
                 await using var transaction = await write.Database.BeginTransactionAsync();
                 var monday = await write.ScheduleBaselineDays
+                    .Include(day => day.Baseline)
                     .SingleAsync(day => day.Baseline!.UserId == personId && day.Weekday == DayOfWeek.Monday);
                 monday.AreaId = movedArea;
-                (await write.ScheduleExceptions.SingleAsync(row => row.Id == tuesdayId)).AreaId = movedArea;
+                // Spec §11: no command changes a row without bumping the version the read projects, so a realistic writer
+                // bumps the baseline header alongside its edited Monday cell (the day row carries no revision of its own).
+                monday.Baseline!.Revision += 1;
+                var tuesdayRow = await write.ScheduleExceptions.SingleAsync(row => row.Id == tuesdayId);
+                tuesdayRow.AreaId = movedArea;
+                tuesdayRow.Revision += 1;
                 await write.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
