@@ -101,11 +101,33 @@ The owner originally placed “พักก่อนทำ OT” in the first-br
 
 ## Questions awaiting Supervisor confirmation
 
+**Current convergence checkpoint:** owner confirmed the consolidated recap and requested the written spec. Accepted project-owned choices are 0208–0222. Read [the scheduling spec](../superpowers/specs/2026-11-17-cleaner-scheduling-design.md) for current contracts; the owner has approved that spec and requested [the implementation plan](../superpowers/plans/2026-11-17-cleaner-scheduling.md). The five field topics have accepted core answers; earlier pending/deferred notes below are historical where superseded. No application implementation authorisation.
+
+**Planned-day-off record order accepted (0205):** otherwise eligible actual check-in may precede explicit web schedule adjustment; show a conflict for the responsible Supervisor and preserve scan time/history. Do not automatically change days off or move relief staff. See [0205](../adr/facility-0205-allow-eligible-day-off-check-in-with-explicit-schedule-review.md). This supersedes pending day-off/check-in-order notes below; staffing outcomes remain for authorised explicit action.
+
+**Midshift transfer accepted (0203–0204):** Supervisor records A → B; a checked-in Cleaner keeps the initial ShiftIn/break progress and scans the destination sign once to confirm actual arrival. No final ShiftOut/second ShiftIn merely to move Areas, no origin-departure scan. Dashboard distinguishes instruction from unconfirmed/confirmed arrival and preserves old A history. See [0203](../adr/facility-0203-midshift-area-transfer-preserves-shift-and-break-progress.md), [0204](../adr/facility-0204-midshift-transfer-requires-one-destination-sign-arrival-confirmation.md). Earlier general sign/attendance-pending statements below are superseded for this core flow; exceptions, staffing conflicts and overview integration details still need specification.
+
+**Leave/check-in order accepted (0202):** otherwise eligible actual check-in can precede explicit web leave cancellation; show the conflict, preserve scan time, and have the authorised Supervisor/Admin cancel leave without automatically moving relief staff. [0202](../adr/facility-0202-allow-eligible-check-in-before-explicit-leave-cancellation-with-visible-conflict.md) supersedes pending leave/check-in-order notes below. Planned-day-off ordering and existing staffing conflicts remain separate.
+
+**Half-day final-departure acceptance (17 November):** owner accepted the sourced recommendation (“โอเคเอาตามนี้”). See [0200](../adr/facility-0200-half-day-final-departure-records-actual-shift-out.md) and [0201](../adr/facility-0201-leave-after-final-departure-makes-later-break-actions-inapplicable.md). This supersedes historical notes below saying final half-day attendance is unanswered; other outstanding questions remain.
+
+**Latest owner answers, 2026-11-17 (supersede unanswered-status claims below):**
+
+- Topic 1: home buildings and requesting surplus staff confirmed in 0194; lending authority remains explicitly deferred.
+- Topic 2: whole-shift replacements, but no replacement taking over the remaining shift for the reported half-day/OT departures; essential-task help only (0195).
+- Topic 3: no hourly errand leave during the workday, so no invented leave-out/return workflow for that scenario (0196). Final half-day departure attendance is now accepted under 0200/0201: actual-time ShiftOut closes submission, recorded leave makes later covered breaks inapplicable, earlier missing events remain visible.
+- Topic 4: work on a day off occurs (0197); work on a leave day requires cancelling leave (0198). Leave/check-in order is resolved in 0202 and planned-day-off order in 0205; existing relief/staffing conflicts still require explicit authorised decisions.
+- Topic 5: the responsible building Supervisor may change assignments on site as appropriate/urgent; incoming replacements work “ตามตาราง” (0199). Sign/attendance sequence and exact interpretation of that phrase remain open. A blanket post-start freeze is incompatible with this answer.
+
+These are owner-reported field clarifications, not proof of direct Supervisor sign-off on every prior design decision. No implementation permission follows. Continue with narrow concrete follow-ups only, respecting the deferred borrowing-authority question.
+
 Status check 2026-11-17: the owner replied “ยังครับ” when asked whether any answers from the consolidated five-question packet were available. No field answer was supplied; all five remain open. Continue independent project-owned design without inferring field policy.
 
 **Working mode updated by the owner:** route real workflow/authority questions to the Supervisor in one batch; resolve routine product/implementation details within the project instead of continuing one-by-one hypothetical questions to the owner. The current consolidated packet has **five** workflow questions plus the existing-agreement summary for a quick field check: [Supervisor workflow confirmation](2026-11-16-supervisor-workflow-confirmation.md). The two detailed items below are the earliest deferred questions; the packet also includes partial-leave scans, unexpected off/leave-day attendance, and post-start replacement/Area changes. No answers have been assumed.
 
 ### Partial leave: where does the relief Cleaner work outside the leave period?
+
+**Owner's field answer, 2026-11-17:** recorded [0195](../adr/facility-0195-partial-shift-departures-have-no-replacement-but-essential-task-help.md). An assigned replacement works the whole shift. In the reported half-day/OT departure cases nobody takes over the duty for the remainder; essential points such as toilets receive help with rubbish collection or toilet-paper replenishment until work ends. This rejects the old question's assumption that there is always a relief Cleaner starting replacement work at 13:00. Do not infer that the helper owns the Area/all rounds, select their identity or invent a new helper workflow. Leave-then-return, exact OT meaning and scans still need answers. The earlier scenarios below are historical questions, not accepted replacement patterns.
 
 Status: **awaiting field confirmation**. On 2026-11-16 the owner said they do not know and asked to take this question back to the Supervisor later. No option has been selected; do not treat the recommended answer as accepted.
 
@@ -120,11 +142,17 @@ Ask which occurs in actual practice, whether both occur, and who sets the time p
 
 ### Relief staff: shared same-shift pool or a Supervisor's own team?
 
-Status: **awaiting field confirmation**. On 2026-11-16 the owner said they do not know whether Supervisors have their own relief teams or use a shared pool, and asked whether the project should decide this or ask the Supervisor. Recommendation: confirm actual staffing ownership and assignment authority with the Supervisor. No pool model has been accepted; the earlier shared-pool recommendation is only a proposal.
+**Recording mechanism accepted (0207):** source and destination Supervisors agree through the existing channel, then the destination Supervisor records the work in the app. No in-app loan approval workflow. See [0207](../adr/facility-0207-destination-supervisor-records-relief-loan-after-offline-agreement.md). This supersedes the pending web mechanism below; do not re-ask authority or agreement channel selection.
 
-Question to take back: “สแปร์เป็นทีมกลางของกะ หรือแบ่งประจำหัวหน้าแต่ละคน? ถ้าเป็นทีมแยก หัวหน้าคนอื่นเลือกไปทำแทนได้เลยไหม หรือต้องให้ใครยืนยันก่อน?”
+**Authority now accepted (0206):** owner resumed the deferred topic and chose source-building Supervisor agreement before destination Supervisor assignment. [0206](../adr/facility-0206-source-building-supervisor-agrees-before-cross-team-relief-assignment.md) supersedes the agreement-authority deferral below. Next choose outside-web agreement then recording versus in-app approval; do not re-ask who agrees.
 
-This determines candidate visibility and assignment authority. Cross-building mobility in [facility-0139](../adr/facility-0139-relief-cleaners-may-work-across-buildings.md) and multiple-building Supervisor scope in [facility-0140](../adr/facility-0140-supervisor-may-schedule-multiple-assigned-buildings.md) do not prove relief staff are globally shared or that borrowing needs no agreement. Do not implement either model until confirmed. A Supervisor's destination Areas remain limited to their assigned buildings and shift; that accepted boundary is unchanged.
+Status: **partially answered, 2026-11-17**. The owner explained that relief Cleaners have home buildings, and a short building requests surplus staff from another building. Recorded [0194](../adr/facility-0194-relief-cleaners-have-home-buildings-with-surplus-borrowing.md). This supersedes the earlier no-home-affiliation-answer status, but does not decide who agrees, who records a borrowed assignment or whether the web has an approval step. Do not re-ask shared pool versus home building.
+
+Next question: “ตึก A ขาดคนและจะขอสแปร์ส่วนเกินจากตึก B ใครเป็นคนตกลงให้ส่งมาช่วย?”
+
+**Interview routing update (2026-11-17):** the owner deferred that agreement-authority follow-up and requested topics 2–5 first. Resume with partial-leave coverage; do not repeat the borrowing-authority question now or treat its deferral as approval of any authority model.
+
+Home-building affiliation is now established. Candidate visibility and borrowing authority still require the remaining answer; cross-building mobility does not mean unrestricted access to all relief staff. Multiple-building Supervisor scope under [0140](../adr/facility-0140-supervisor-may-schedule-multiple-assigned-buildings.md) is unchanged. No new implementation permission follows.
 
 ## Open questions and decision ownership
 
@@ -134,13 +162,13 @@ Use the [five-question workflow packet](2026-11-16-supervisor-workflow-confirmat
 
 | Supervisor confirmation needed | Status |
 |---|---|
-| Shared versus team-owned relief staff; borrowing authority | Previously deferred by owner |
-| Partial-leave replacement periods and other Areas during the shift | Previously deferred by owner |
-| Actual departure/return scans for partial leave | Collect field practice |
-| Unexpected regular attendance on a planned day off/full-shift leave | Owner did not select either proposed policy; ask Supervisor first |
-| Changing the person or Area after work/check-in has started | Ask whether this happens and obtain one actual example |
+| Relief staff home buildings and borrowing authority | 0194/0206/0207: home buildings; source Supervisor agrees through existing channel, destination Supervisor records; no in-app approval step |
+| Partial-leave replacement periods and other Areas during the shift | 0195: no replacement duty for reported half-day/OT departures, essential-task help only; other patterns and helper details not established |
+| Actual departure/return scans for partial leave | 0196: no hourly errand leave; 0200/0201: final half-day departure uses actual-time ShiftOut, later breaks covered by leave are inapplicable, earlier missing events stay visible |
+| Unexpected regular attendance on a planned day off/full-shift leave | 0197/0198/0202/0205: eligible actual check-in may precede explicit leave cancellation or day-off schedule adjustment, with visible conflict; no automatic relief movement |
+| Changing the person or Area after work/check-in has started | 0199/0203/0204: Supervisor-authorised transfer preserves shift/breaks, one destination-sign confirmation; exceptions/current-coverage integration still need specification |
 
-A hypothetical case that does not occur must not silently create another feature. The automatic-round proposal was explicitly removed in facility-0163; configured rounds remain unchanged. Preserve old four-action history under facility-0164. There is no accepted policy yet to accept/flag or block unexpected off/leave-day check-in.
+A hypothetical case that does not occur must not silently create another feature. The automatic-round proposal was explicitly removed in facility-0163; configured rounds remain unchanged. Preserve old four-action history under facility-0164. The accepted record-order policies in 0202/0205 now permit otherwise eligible check-in with a visible conflict, followed by explicit authorised leave cancellation/day-off schedule adjustment; this supersedes the earlier pending-policy status.
 
 Project-owned follow-up can proceed from existing standards and accepted requirements: final menu/form details using the accepted layout, storage/API shape, duplicate/concurrent-write handling, scoped read/write authorization, audit/provenance, overnight/date handling, old/new attendance cutover and legacy-caller compatibility, retained-history availability, and appropriate synthetic-data tests. Where a technical choice changes field eligibility or an approval step, send that choice to the Supervisor instead. Record substantive design decisions as they are made and review the consolidated design with the owner; do not turn the field questionnaire into an implementation plan.
 

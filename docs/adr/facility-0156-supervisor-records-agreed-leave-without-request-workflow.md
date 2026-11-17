@@ -14,3 +14,5 @@ Recorded leave supports scheduling and replacement staffing, within Supervisor a
 [facility-0157](facility-0157-recorded-leave-includes-partial-shifts.md) subsequently confirms both full-shift and partial-shift leave, including half-day and hourly absences. Leave types, required fields, cancellation/effective dates, lack of an available substitute, and treatment when attendance or work already exists remain to be specified. A leave entry is not a recorded attendance time or proof that replacement work has occurred.
 
 Accepted design only; no application, schema, database or runtime changes have been made.
+
+**Cancellation answer (2026-11-17):** [0198](facility-0198-cancel-recorded-leave-when-working-on-that-leave-day.md) confirms cancelling recorded leave when working on that leave day. Timing relative to check-in, automatic versus explicit cancellation and existing replacement handling are not selected.

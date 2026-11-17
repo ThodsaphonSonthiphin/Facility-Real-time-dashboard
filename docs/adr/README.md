@@ -6,10 +6,38 @@
 
 ## ตารางงานแม่บ้านตาม Requirement ใหม่ — 16–17 พ.ย. 2026
 
-เลขล่าสุดคือ **facility-0193** ข้อตกลงในส่วนนี้เป็นแบบที่ยืนยันระหว่าง `grill-then-plan` **ยังไม่ได้พัฒนา** ดู [ข้อมูลจาก Supervisor และคำถามที่ยังเปิด](../requirements-gathering/2026-11-16-supervisor-scheduling-requirements.md) แบบและแผนหน้าภาพรวมเดิมยังต้องทบทวนผลกระทบก่อนลงมือ
+เลขล่าสุดคือ **facility-0222** ข้อตกลงในส่วนนี้เป็นแบบที่ยืนยันระหว่าง `grill-then-plan` **ยังไม่ได้พัฒนา** ดู [ข้อมูลจาก Supervisor และคำถามที่ยังเปิด](../requirements-gathering/2026-11-16-supervisor-scheduling-requirements.md) ผลกระทบต่อแผนหน้าภาพรวมทบทวนแล้วใน [delta review](../superpowers/reviews/2026-11-17-overview-plan-assumption-delta.md)
 
 | เรื่อง | ข้อตกลงและจุดเข้าอ่าน |
 |---|---|
+| Save incomplete rosters with visible gaps | [0208](facility-0208-save-incomplete-rosters-with-visible-gaps.md) |
+| Save the submitted scheduling batch atomically | [0209](facility-0209-schedule-batches-save-atomically.md) |
+| Copy day-off choices by stable identity and preserve source gaps | [0210](facility-0210-copy-days-off-by-identity-with-visible-source-gaps.md) |
+| Choose a first-break group explicitly for relief work without a replaced Cleaner | [0211](facility-0211-standalone-relief-work-requires-explicit-break-group.md) |
+| Preserve an in-progress break across an Area transfer | [0212](facility-0212-area-transfer-preserves-an-in-progress-break.md) |
+| Cancel pending transfers; append changes after confirmed arrival | [0213](facility-0213-cancel-pending-transfer-or-append-after-arrival.md) |
+| Historical plan corrections require reason and history | [0214](facility-0214-historical-plan-corrections-require-reason-and-history.md) |
+| Use effective-dated scheduling records and a shared scoped projection | [0215](facility-0215-effective-dated-scheduling-records-and-scoped-projection.md) |
+| Overview entry includes confirmed transfer arrival | [0216](facility-0216-overview-entry-includes-confirmed-transfer-arrival.md) |
+| Do not invent a day-off quota or automatic weekly defaults | [0217](facility-0217-no-invented-day-off-quota-or-automatic-week-defaults.md) |
+| Limit schedule return memory to ongoing use | [0218](facility-0218-schedule-return-memory-is-limited-to-ongoing-use.md) |
+| Do not impose a synthetic week limit on schedule reading | [0219](facility-0219-schedule-reading-has-no-arbitrary-week-limit.md) |
+| Use the multi-person weekly roster for relief timetable editing | [0220](facility-0220-relief-editor-uses-the-multi-person-weekly-roster.md) |
+| Use revisions and durable command receipts for scheduling writes | [0221](facility-0221-schedule-commands-use-revisions-and-durable-receipts.md) |
+| Identify attendance lifecycle and preserve legacy stored event values | [0222](facility-0222-attendance-lifecycle-identifies-legacy-and-numbered-breaks.md) |
+| วิธีบันทึกยืมสแปร์ | ซุปตกลงกันก่อนตามช่องทางเดิม แล้วซุปปลายทางบันทึกงาน ไม่เพิ่มปุ่มอนุมัติในเว็บ [0207](facility-0207-destination-supervisor-records-relief-loan-after-offline-agreement.md) |
+| ใครตกลงให้ยืมสแปร์ | กรณีคนละซุป ให้ซุปตึกต้นทางตกลงก่อน แล้วซุปปลายทางจัดงาน วิธีบันทึกยืนยันใน 0207 แล้ว [0206](facility-0206-source-building-supervisor-agrees-before-cross-team-relief-assignment.md) |
+| มาวันหยุดก่อนปรับตาราง | รับสแกนที่ผ่านสิทธิ์ตามเวลาจริง แสดง conflict ให้ซุปตรวจและปรับตารางวันนั้น ไม่เปลี่ยนวันหยุด/ย้ายสแปร์เอง [0205](facility-0205-allow-eligible-day-off-check-in-with-explicit-schedule-review.md) |
+| ย้ายหน้างานระหว่างกะ | ซุปสั่งย้าย คงเวลาเข้างานและลำดับพักเดิม [0203](facility-0203-midshift-area-transfer-preserves-shift-and-break-progress.md); สแกนป้ายพื้นที่ใหม่ยืนยันถึงจริงหนึ่งครั้ง ไม่สร้าง ShiftIn ซ้ำ [0204](facility-0204-midshift-transfer-requires-one-destination-sign-arrival-confirmation.md) |
+| เข้างานก่อนยกเลิกลาในเว็บ | รับสแกนที่ผ่านสิทธิ์ตามเวลาจริง แสดงรายการขัดกันให้ซุปตรวจและยกเลิกลา ไม่ยกเลิกลา/ย้ายคนอัตโนมัติ [0202](facility-0202-allow-eligible-check-in-before-explicit-leave-cancellation-with-visible-conflict.md) |
+| ลาครึ่งวันแล้วกลับบ้าน | สแกนเลิกงานตามเวลาออกจริง แยกรายการลา และจบการส่งงานในกะนั้น [0200](facility-0200-half-day-final-departure-records-actual-shift-out.md) |
+| พักหลังออกงานเพราะลา | ช่วงลาที่บันทึกไว้หลังออกจริงแสดงไม่ต้องลงเวลาเนื่องจากลา สแกนที่ขาดก่อนออกยังขาดตามจริง [0201](facility-0201-leave-after-final-departure-makes-later-break-actions-inapplicable.md) |
+| ตึกประจำของสแปร์และการยืม | สแปร์มีตึกประจำ ตึกที่ขาดขอคนส่วนเกินจากอีกตึกมาทำแทนได้ ผู้ตกลง/ผู้บันทึกและขั้นตอนในเว็บยังเปิด [0194](facility-0194-relief-cleaners-have-home-buildings-with-surplus-borrowing.md) |
+| เปลี่ยนงานหลังเริ่มกะ | ซุปประจำตึกเปลี่ยนหน้างานได้ตามความเหมาะสม/จำเป็นเร่งด่วน คนมาทำแทนทำงานตามตาราง วิธีย้ายยืนยันเพิ่มใน 0203/0204 ส่วนกรณียกเว้นยังต้องระบุ [0199](facility-0199-building-supervisor-may-change-assignments-after-work-starts.md) |
+| มาทำงานในวันลา | ยกเลิกวันลา ลำดับกับ check-in ยืนยันเพิ่มใน 0202 แล้ว ส่วนจัดสแปร์เดิมยังเปิด [0198](facility-0198-cancel-recorded-leave-when-working-on-that-leave-day.md) |
+| มาทำงานวันหยุด | มีกรณีนี้จริง ลำดับแก้ตาราง/ลงเวลายืนยันเพิ่มใน 0205 ส่วนผลต่อคนแทนเดิมยังไม่เลือกแทนซุป [0197](facility-0197-working-on-a-planned-day-off-occurs.md) |
+| ไม่มีลาเป็นชั่วโมงไปทำธุระ | ไม่สร้างขั้นตอนออกไปลา/กลับจากลาสำหรับกรณีที่ไม่เกิด ลาเต็มกะ/ครึ่งวันยังอยู่ในขอบเขต [0196](facility-0196-no-hourly-errand-leave-and-return-workflow.md) |
+| คนออกครึ่งวัน/กรณี OT | ไม่มีคนรับหน้าที่แทนจนจบกะ แต่มีคนช่วยงานจำเป็น เช่น เก็บขยะ/เติมกระดาษในห้องน้ำ ไม่ถือว่ารับแทนทั้ง Area [0195](facility-0195-partial-shift-departures-have-no-replacement-but-essential-task-help.md) |
 | คัดลอกแล้วไม่ทับวันที่เลือกไว้ | เก็บวันหยุดที่เลือกไว้ในสัปดาห์เป้าหมาย แล้วเติมเฉพาะคนที่ยังไม่ได้เลือก [0193](facility-0193-copy-previous-week-days-off-fills-only-unset-choices.md) |
 | ใช้วันหยุดจากสัปดาห์ก่อน | มีปุ่มให้หัวหน้ากดคัดลอกวันหยุดจากสัปดาห์ก่อน แล้วแก้เฉพาะคนที่เปลี่ยน ก่อนตรวจสรุปและบันทึก [0192](facility-0192-weekly-days-off-have-an-explicit-copy-previous-week-action.md) |
 | หน้าจัดวันหยุดรายสัปดาห์ | ใช้ตารางรวมรายคน เห็นหลายคนและวันหยุดสัปดาห์ก่อน เลือกวันหยุดสัปดาห์นี้ในแต่ละแถว แล้วตรวจสรุปก่อนบันทึก [0191](facility-0191-weekly-days-off-use-the-multi-person-roster-layout.md) |
