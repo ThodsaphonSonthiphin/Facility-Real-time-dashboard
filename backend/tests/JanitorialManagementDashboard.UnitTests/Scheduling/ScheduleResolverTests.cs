@@ -113,18 +113,39 @@ public class ScheduleResolverTests
     }
 
     [Fact]
-    public void A_saved_week_without_a_choice_is_confirmed_but_a_missing_header_is_unset()
+    public void A_baseline_day_off_cell_is_a_confirmed_day_off_and_not_an_unset_gap()
     {
-        // ADR facility-0190: an empty saved week is a confirmed "no day off"; a missing header is nobody having been asked.
+        // Spec §5: "Unset ไม่เท่ากับ working ที่ยืนยันแล้ว" cuts both ways — a stored baseline cell recorded as a day off has
+        // no Area, and before this the missing Area made a confirmed non-working day read as an unconfirmed gap.
+        var input = new ScheduleInput(7, Monday,
+            [new BaselineFact(700, Monday, null, Wednesday.DayOfWeek,
+                AreaId: null, BreakGroup: null, Revision: "1", IsDayOff: true)],
+            new HashSet<DateOnly>(), [], [], []);
+
+        var day = ScheduleResolver.Resolve(input, Wednesday);
+
+        Assert.True(day.IsDayOff);
+        Assert.Equal("day-off", day.Availability);
+        Assert.False(day.IsUnset);
+        Assert.Null(day.Area.Value);
+        Assert.Empty(day.Problems);
+    }
+
+    [Fact]
+    public void A_known_Area_stays_confirmed_whether_or_not_a_week_was_saved()
+    {
+        // ADR facility-0190: the saved week is one fact about the row (SchedulePersonWeek.HasWeeklyChoice), not a per-day
+        // state. A baseline Area is confirmed either way, so no day is both "available" and unset.
         var version = Version(from: Monday, until: null, areaId: 11, breakGroup: null, revision: 1, firstCellId: 100);
         var saved = new ScheduleInput(7, Monday, version, new HashSet<DateOnly>(), [], [], []);
         var missing = new ScheduleInput(7, Monday, version, DaysOff: null, [], [], []);
 
         Assert.False(ScheduleResolver.Resolve(saved, Wednesday).IsUnset);
         Assert.False(ScheduleResolver.Resolve(saved, Wednesday).IsDayOff);
-        Assert.True(ScheduleResolver.Resolve(missing, Wednesday).IsUnset);
+        Assert.False(ScheduleResolver.Resolve(missing, Wednesday).IsUnset);
         Assert.False(ScheduleResolver.Resolve(missing, Wednesday).IsDayOff);
-        // A04: an unset week never becomes a working day or a day off by guessing; the Area stays the one on record.
+        Assert.Equal("available", ScheduleResolver.Resolve(missing, Wednesday).Availability);
+        // A04: an unsaved week never becomes a working day or a day off by guessing; the Area stays the one on record.
         Assert.Equal(11, ScheduleResolver.Resolve(missing, Wednesday).Area.Value);
     }
 
@@ -238,6 +259,95 @@ public class ScheduleResolverTests
         var problem = Assert.Single(day.Problems);
         Assert.Equal("dated-group-without-area", problem.Code);
         Assert.Equal(Wednesday, problem.Date);
+    }
+
+    [Fact]
+    public void A_dated_break_group_on_a_day_off_is_a_reported_conflict()
+    {
+        // Spec §5 and ADR facility-0189: the still-applicable dated group is kept visible on a day off, but the clash is shown
+        // for correction instead of the override being dropped silently or kept without a word.
+        var input = new ScheduleInput(7, Monday,
+            Version(from: Monday, until: null, areaId: 11, breakGroup: 1, revision: 1, firstCellId: 100),
+            new HashSet<DateOnly> { Wednesday },
+            [new DatedFact(500, Wednesday, Shift.Day, AreaId: null, BreakGroup: 9, Revision: "1")],
+            [], []);
+
+        var day = ScheduleResolver.Resolve(input, Wednesday);
+
+        Assert.True(day.IsDayOff);
+        Assert.Equal("day-off", day.Availability);
+        Assert.Equal(9, day.BreakGroup.Value);       // the dated override is still the value shown
+        Assert.Equal("dated", day.BreakGroup.SourceKind);
+        var problem = Assert.Single(day.Problems);
+        Assert.Equal("dated-group-on-non-working", problem.Code);
+        Assert.Equal(Wednesday, problem.Date);
+        // The Area is known, so the missing-Area conflict of the same day is not raised.
+        Assert.DoesNotContain(day.Problems, problem => problem.Code == "dated-group-without-area");
+    }
+
+    [Fact]
+    public void A_dated_break_group_on_a_whole_shift_leave_is_a_reported_conflict()
+    {
+        // Spec §5: a whole-shift leave is a non-working day too, so a dated group that still applies clashes with it.
+        var input = new ScheduleInput(7, Monday,
+            Version(from: Monday, until: null, areaId: 11, breakGroup: 1, revision: 1, firstCellId: 100),
+            new HashSet<DateOnly>(),
+            [new DatedFact(500, Wednesday, Shift.Day, AreaId: null, BreakGroup: 9, Revision: "1")],
+            [new LeaveFact(900, Wednesday, Shift.Day,
+                Start: new DateTimeOffset(2026, 11, 18, 0, 0, 0, TimeSpan.Zero),
+                End: new DateTimeOffset(2026, 11, 18, 12, 0, 0, TimeSpan.Zero),
+                Cancelled: false, Revision: "1")],
+            []);
+
+        var day = ScheduleResolver.Resolve(input, Wednesday);
+
+        Assert.Equal("leave", day.Availability);
+        Assert.Equal(9, day.BreakGroup.Value);
+        var problem = Assert.Single(day.Problems);
+        Assert.Equal("dated-group-on-non-working", problem.Code);
+        Assert.Equal(Wednesday, problem.Date);
+    }
+
+    [Fact]
+    public void A_partial_leave_with_a_dated_break_group_is_not_a_conflict()
+    {
+        // A half day off keeps the plan working, so a dated group on it is not a non-working-day clash.
+        var input = new ScheduleInput(7, Monday,
+            Version(from: Monday, until: null, areaId: 11, breakGroup: 1, revision: 1, firstCellId: 100),
+            new HashSet<DateOnly>(),
+            [new DatedFact(500, Wednesday, Shift.Day, AreaId: null, BreakGroup: 9, Revision: "1")],
+            [new LeaveFact(901, Wednesday, Shift.Day,
+                Start: new DateTimeOffset(2026, 11, 18, 6, 0, 0, TimeSpan.Zero),
+                End: new DateTimeOffset(2026, 11, 18, 12, 0, 0, TimeSpan.Zero),
+                Cancelled: false, Revision: "1")],
+            []);
+
+        var day = ScheduleResolver.Resolve(input, Wednesday);
+
+        Assert.Equal("available", day.Availability);
+        Assert.True(day.IsLeave);
+        Assert.Empty(day.Problems);
+    }
+
+    [Fact]
+    public void A_dated_Area_on_a_baseline_day_off_cell_is_a_reported_conflict()
+    {
+        // ADR facility-0189: the dated Area wins the day it covers, but a clash with a non-working date is shown, never
+        // silently resolved by dropping either record.
+        var input = new ScheduleInput(7, Monday,
+            [new BaselineFact(700, Monday, null, Wednesday.DayOfWeek,
+                AreaId: null, BreakGroup: null, Revision: "1", IsDayOff: true)],
+            new HashSet<DateOnly>(),
+            [new DatedFact(500, Wednesday, Shift.Day, AreaId: 12, BreakGroup: null, Revision: "1")],
+            [], []);
+
+        var day = ScheduleResolver.Resolve(input, Wednesday);
+
+        Assert.Equal(12, day.Area.Value);
+        Assert.Equal("dated", day.Area.SourceKind);
+        Assert.False(day.IsDayOff);
+        var problem = Assert.Single(day.Problems);
+        Assert.Equal("dated-area-on-day-off", problem.Code);
     }
 
     /// <summary>One baseline version: the same Area and group on every weekday, with its own cell ids and revision.</summary>

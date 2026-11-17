@@ -1,6 +1,7 @@
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Scheduling;
@@ -8,7 +9,8 @@ namespace JanitorialManagementDashboard.Api.Scheduling;
 /// <summary>
 /// Spec §3 and §14: the one reader of the dated Supervisor scope. It answers only for an active Supervisor account, so a
 /// missing, deactivated or non-Supervisor actor holds no scope at all, and it never trusts a client-supplied id: the
-/// actor comes from the access token.
+/// actor comes from the access token. The dated-plus-compatibility rule itself lives in
+/// <see cref="SupervisorScopes"/>, which the scheduling store reads through too, so no caller has its own copy of it.
 /// </summary>
 public sealed class ScheduleScopeReader(AppDbContext db, TimeProvider clock)
 {
@@ -16,29 +18,8 @@ public sealed class ScheduleScopeReader(AppDbContext db, TimeProvider clock)
     /// Every dated period of the actor, once per request. Consumers pass the list to
     /// <see cref="ScheduleAuthority.CanManage"/> rather than reading <c>User.BuildingId</c>/<c>User.Shift</c>.
     /// </summary>
-    public async Task<IReadOnlyList<ScopePeriod>> ReadAsync(int actorId, CancellationToken ct = default)
-    {
-        var actor = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == actorId, ct);
-        if (actor is not { IsActive: true, Role: UserRole.Supervisor })
-        {
-            return [];
-        }
-
-        var periods = await db.SupervisorScopePeriods.AsNoTracking()
-            .Where(p => p.SupervisorId == actorId)
-            .OrderBy(p => p.EffectiveFrom).ThenBy(p => p.BuildingId)
-            .Select(p => new ScopePeriod(p.SupervisorId, p.BuildingId, p.Shift, p.EffectiveFrom, p.EffectiveUntil))
-            .ToListAsync(ct);
-
-        // Compatibility projection (spec §14): an account created before the dated rows existed still works from its
-        // current BuildingId and Shift, effective from today and never retroactively. As soon as one dated row exists it
-        // is the only source, and this branch stops applying.
-        return periods.Count > 0
-            ? periods
-            : actor.BuildingId is int buildingId && actor.Shift is Shift shift
-                ? [new ScopePeriod(actor.Id, buildingId, shift, ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime), null)]
-                : [];
-    }
+    public Task<IReadOnlyList<ScopePeriod>> ReadAsync(int actorId, CancellationToken ct = default) =>
+        SupervisorScopes.ReadAsync(db, actorId, clock, ct);
 
     /// <summary>
     /// The active Supervisors responsible for a building on a date, both shifts, for scoped live updates (spec §12: a

@@ -45,8 +45,14 @@ public static class ScheduleResolver
     /// <summary>Spec §5: a still-applicable dated break-group override has no Area to belong to.</summary>
     public const string ProblemDatedGroupWithoutArea = "dated-group-without-area";
 
-    /// <summary>Spec §5: a dated Area is recorded on a day the person chose off.</summary>
+    /// <summary>Spec §5: a dated Area is recorded on a day the records mark as off.</summary>
     public const string ProblemDatedAreaOnDayOff = "dated-area-on-day-off";
+
+    /// <summary>
+    /// Spec §5 and ADR facility-0189: a live dated break-group override sits on a day off or a whole-shift leave, so the
+    /// override still applies to a non-working day and someone has to correct it. It is never removed silently.
+    /// </summary>
+    public const string ProblemDatedGroupOnNonWorking = "dated-group-on-non-working";
 
     /// <summary>Spec §9 and A22: an instruction's source Area no longer matches the day's Area.</summary>
     public const string ProblemTransferOriginMismatch = "transfer-origin-mismatch";
@@ -60,8 +66,9 @@ public static class ScheduleResolver
 
     /// <summary>
     /// The resolved day for <paramref name="date"/>. Before <see cref="ScheduleInput.HistoryStartsAt"/> nothing is
-    /// claimed (unavailable, no Area); afterwards a day off or leave keeps the underlying Area, an explicit choice wins
-    /// over the baseline, and a conflict between the stored records is reported rather than resolved silently.
+    /// claimed (unavailable, no Area); afterwards a day off — the week's choice or the baseline cell stored as one — or a
+    /// whole-shift leave is an absence state that keeps the underlying Area, an explicit choice wins over the baseline, and
+    /// a conflict between the stored records is reported rather than resolved silently.
     /// </summary>
     public static ScheduleDay Resolve(ScheduleInput input, DateOnly date)
     {
@@ -99,12 +106,21 @@ public static class ScheduleResolver
                 ? new ResolvedValue<int?>(baselineGroup, cell.Id, SourceBaseline, cell.Revision)
                 : new ResolvedValue<int?>(null, null, SourceUnset, NoRevision);
 
-        // facility-0190: a missing saved week is nobody having been asked; an empty saved week is a confirmed "no choice".
-        var isDayOff = input.DaysOff?.Contains(date) == true;
+        // facility-0190: the week's own choice (a null saved week is "nobody has been asked", which the row reports as
+        // SchedulePersonWeek.HasWeeklyChoice rather than as a per-day state). A baseline cell stored as a day off is the
+        // version's confirmed non-working weekday, so it resolves as "day-off" and never as an unconfirmed gap (spec §5:
+        // unset is not a confirmed working day — and a confirmed day off is not an unconfirmed one either).
+        var chosenOff = input.DaysOff?.Contains(date) == true;
+        var baselineOff = cell?.IsDayOff == true;
+
+        // A dated Area override is an explicit choice to work that date, so it wins the day over the baseline's day-off cell
+        // and the clash is reported below instead of the off state being dropped quietly (spec §5, ADR facility-0189).
+        var isDayOff = chosenOff || (baselineOff && areaOverride is null);
 
         var leaves = input.Leaves.Where(x => !x.Cancelled && x.ShiftDate == date)
             .OrderBy(x => x.Shift).ThenBy(x => x.Id).ToList();
         var isLeave = leaves.Count > 0;
+        var wholeShiftLeave = leaves.Exists(x => CoversWholeShift(x));
 
         var problems = new List<ScheduleProblem>();
         if (groupOverride is not null && area.Value is null)
@@ -113,10 +129,18 @@ public static class ScheduleResolver
                 "มีกลุ่มพักที่กำหนดเฉพาะวันนี้ แต่ไม่มี Area ที่ใช้ได้ในวันนี้ จึงต้องแก้ไขก่อนบันทึกการเข้างาน", date));
         }
 
-        if (areaOverride is not null && isDayOff)
+        if (areaOverride is not null && (chosenOff || baselineOff))
         {
             problems.Add(new ScheduleProblem(ProblemDatedAreaOnDayOff,
-                "มี Area ที่กำหนดเฉพาะวันนี้ในวันที่เลือกเป็นวันหยุด ต้องแก้ไขให้ตรงกัน", date));
+                "มี Area ที่กำหนดเฉพาะวันนี้ในวันที่เป็นวันหยุด ต้องแก้ไขให้ตรงกัน", date));
+        }
+
+        // §5 and ADR facility-0189: a still-applicable dated break group on a day off or a whole-shift leave keeps its value
+        // in BreakGroup and is shown here as a conflict to correct, rather than being silently kept or silently removed.
+        if (groupOverride is not null && (isDayOff || wholeShiftLeave))
+        {
+            problems.Add(new ScheduleProblem(ProblemDatedGroupOnNonWorking,
+                "มีกลุ่มพักที่กำหนดเฉพาะวันนี้ในวันที่ไม่ทำงาน (วันหยุดหรือลาทั้งกะ) ต้องแก้ไขให้ตรงกัน", date));
         }
 
         // A22: a transfer is a plan for later in the same shift, so it never rewrites the day's Area; an instruction whose
@@ -128,14 +152,16 @@ public static class ScheduleResolver
                 "คำสั่งย้ายมี Area ต้นทางไม่ตรงกับ Area ของแผนในวันนี้ ต้องแก้ไขก่อนยืนยันการย้าย", date));
         }
 
-        var wholeShiftLeave = leaves.Exists(x => CoversWholeShift(x));
         var availability =
             isDayOff ? AvailabilityDayOff
             : wholeShiftLeave ? AvailabilityLeave
             : area.SourceKind == SourceUnset ? AvailabilityUnset
             : AvailabilityAvailable;
 
-        var isUnset = area.SourceKind == SourceUnset || input.DaysOff is null;
+        // "No confirmed state of any kind": no Area, not a chosen or baseline day off, and not a whole-shift leave. Derived
+        // from the availability above, so the flag and the word can never disagree — a known baseline Area stays a confirmed
+        // working day even when no week was saved, and a confirmed day off is never reported as an unconfirmed gap.
+        var isUnset = availability == AvailabilityUnset;
 
         return new ScheduleDay(date, area, breakGroup, isDayOff, isLeave, isUnset, availability, problems);
     }

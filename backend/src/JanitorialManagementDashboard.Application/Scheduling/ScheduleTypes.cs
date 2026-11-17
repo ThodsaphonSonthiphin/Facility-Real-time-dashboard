@@ -67,16 +67,24 @@ public sealed record ScheduleProblem(string Code, string Message, DateOnly Date)
 /// <summary>
 /// Spec §10 and A27: one resolved day. <see cref="Area"/> and <see cref="BreakGroup"/> each carry their own source;
 /// <see cref="IsDayOff"/> and <see cref="IsLeave"/> are absence states that keep the underlying eligible Area visible,
-/// <see cref="IsUnset"/> says the day's choice is not confirmed yet, and <see cref="Availability"/> is the state the day
-/// is shown in ("available", "day-off", "leave", "unset" or "unavailable" before history coverage).
+/// <see cref="IsUnset"/> says the day has no confirmed state of any kind (so it is exactly the "unset"
+/// <see cref="Availability"/>, never a working day and never a day off), and <see cref="Availability"/> is the state the
+/// day is shown in ("available", "day-off", "leave", "unset" or "unavailable" before history coverage).
 /// </summary>
 public sealed record ScheduleDay(DateOnly Date, ResolvedValue<int?> Area,
     ResolvedValue<int?> BreakGroup, bool IsDayOff, bool IsLeave, bool IsUnset,
     string Availability, IReadOnlyList<ScheduleProblem> Problems);
 
-/// <summary>Spec §10: one person's resolved week, with the roster facts the management screen shows beside it.</summary>
+/// <summary>
+/// Spec §10 and ADR facility-0190: one person's resolved week, with the roster facts the management screen shows beside
+/// it. <see cref="HasWeeklyChoice"/> is the week-header fact — false when no <c>WeeklyDayOff</c> row exists for this week
+/// at all, which is "nobody has been asked" — and is kept away from <see cref="ScheduleDay.IsUnset"/> because a saved
+/// week is one fact about the row while a day's confirmation is a fact about the day.
+/// <see cref="Days"/> holds the dates this reader may see, in order: seven for an Admin or the person themselves, and only
+/// the covered dates for a Supervisor whose dated period starts or ends mid-week (spec §3).
+/// </summary>
 public sealed record SchedulePersonWeek(int UserId, string DisplayName, string CleanerKind,
-    int? HomeBuildingId, IReadOnlyList<ScheduleDay> Days);
+    int? HomeBuildingId, bool HasWeeklyChoice, IReadOnlyList<ScheduleDay> Days);
 
 /// <summary>
 /// Spec §10 and §11: the authorised projection of one week. <see cref="Revision"/> is an opaque token derived from every

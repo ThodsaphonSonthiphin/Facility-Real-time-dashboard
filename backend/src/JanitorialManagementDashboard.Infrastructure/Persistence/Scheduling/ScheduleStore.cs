@@ -154,9 +154,10 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     /// <summary>
     /// Spec §3, §10 and §11 (acceptance A01, A04, A20 and A27): the authorised projection of one ISO week. The roster is
     /// the active Cleaner membership itself, so a person with no scheduling row still appears — with unavailable days,
-    /// never with a guessed Area. Scope is enforced here because Infrastructure cannot see the Api project's reader:
-    /// Admin reads every building, a Supervisor only the buildings their dated periods hold for this week and shift, a
-    /// Cleaner only their own row; a supplied building or shift narrows and never widens.
+    /// never with a guessed Area. Scope is decided per date by <see cref="ScheduleAuthority.Covers"/> over the periods the
+    /// one shared <see cref="SupervisorScopes"/> reader loads: Admin reads every building, a Supervisor only the dates and
+    /// buildings its dated periods hold, a Cleaner only their own row; a supplied building or shift narrows and never
+    /// widens.
     /// <para>
     /// Every input of the week is read inside one transaction, so a multi-row write that commits meanwhile yields the
     /// whole before or the whole after projection, never half of each.
@@ -201,15 +202,18 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             ? cleaners.Where(person => person.Id == actor.Id).ToList()
             : cleaners;
 
-        HashSet<(int BuildingId, Shift Shift)>? authorised = null;
+        // The actor's dated authority, loaded by the one rule the Api's ScheduleScopeReader reads through too, so the two
+        // cannot drift (spec §14). A supplied building or shift narrows the periods and can never widen them. Which dates a
+        // period may be read on is decided below, per date, by ScheduleAuthority.Covers — not by a week-overlap test, which
+        // would hand a Supervisor the dates before their period starts and the dates after it ends.
+        List<ScopePeriod>? authorised = null;
         if (actor.Role == UserRole.Supervisor)
         {
-            authorised = (await ReadScopeAsync(actor, ct))
-                .Where(period => period.From < weekEnd && (period.Until is null || period.Until.Value > monday))
+            authorised = (await SupervisorScopes.ReadAsync(db, actor, clock ?? TimeProvider.System, ct))
                 .Where(period => buildingId is null || period.BuildingId == buildingId)
                 .Where(period => shift is null || period.Shift == shift)
-                .Select(period => (period.BuildingId, period.Shift))
-                .ToHashSet();
+                .Where(period => dates.Exists(date => ScheduleAuthority.Covers(period, date)))
+                .ToList();
             if (authorised.Count == 0)
             {
                 return Empty(monday, readAt);
@@ -230,23 +234,40 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             .ToDictionaryAsync(area => area.Id, area => area.BuildingId, ct);
 
         // Membership only (spec §14): the compatibility projection may say which building a person belongs to, never what
-        // their history was. A person nobody can attribute to a building stays visible to an unfiltered read.
-        var memberships = roster.ToDictionary(person => person.Id,
-            person => MembershipSlots(person, profiles, baselines, areaBuildings));
+        // their history was. Only the periods that overlap the read week are membership at all, so a person who left a
+        // building stops counting as its member on the dates their period no longer covers.
+        var memberships = roster.ToDictionary(person => person.Id, person => MembershipSlots(
+            person,
+            profiles.Where(profile => profile.UserId == person.Id
+                && OverlapsWeek(profile.EffectiveFrom, profile.EffectiveUntil, monday, weekEnd)).ToList(),
+            baselines.Where(baseline => baseline.UserId == person.Id).ToList(),
+            areaBuildings,
+            profiles.Exists(profile => profile.UserId == person.Id)));
 
-        var included = roster.Where(person =>
+        // Per-date scope (spec §3): a Supervisor's row holds only the dates its dated period covers, so a period that starts
+        // or ends mid-week never reads the rest of the week, and a person with no covered date of the week is not in the
+        // roster at all. Every other actor reads the seven days of the week it is entitled to.
+        IReadOnlyList<DateOnly> DatesThisReadCovers(User person)
         {
             var slots = memberships[person.Id];
-            if (slots.Count == 0)
+            if (authorised is not null)
             {
-                return authorised is null && buildingId is null && shift is null;
+                return dates.Where(date => slots.Any(slot =>
+                        ScheduleAuthority.Covers(slot, date)
+                        && authorised.Any(period => period.BuildingId == slot.BuildingId && period.Shift == slot.Shift
+                            && ScheduleAuthority.Covers(period, date))))
+                    .ToList();
             }
 
-            return slots.Any(slot =>
-                (buildingId is null || slot.BuildingId == buildingId)
-                && (shift is null || slot.Shift == shift)
-                && (authorised is null || authorised.Contains(slot)));
-        }).ToList();
+            var matchesFilters = slots.Count == 0
+                ? buildingId is null && shift is null
+                : slots.Any(slot => (buildingId is null || slot.BuildingId == buildingId)
+                    && (shift is null || slot.Shift == shift));
+            return matchesFilters ? dates : [];
+        }
+
+        var readDates = roster.ToDictionary(person => person.Id, DatesThisReadCovers);
+        var included = roster.Where(person => readDates[person.Id].Count > 0).ToList();
         if (included.Count == 0)
         {
             return Empty(monday, readAt);
@@ -291,9 +312,13 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             bool IsTheDaysSlot(DateOnly date, Shift slotShift) =>
                 shiftOn[date] is not Shift dayShift || dayShift == slotShift;
 
+            // The row's own identity is the profile that applies to the read week: the one in force on Monday, else the last
+            // one overlapping the week. A period that ended before the week therefore lends the row neither a building nor a
+            // kind, instead of the row quietly showing a current-looking identity (spec §14: compatibility is not history).
             var profile = personProfiles
                     .LastOrDefault(candidate => ScheduleResolver.Applies(candidate.EffectiveFrom, candidate.EffectiveUntil, monday))
-                ?? personProfiles.LastOrDefault();
+                ?? personProfiles.LastOrDefault(candidate =>
+                    OverlapsWeek(candidate.EffectiveFrom, candidate.EffectiveUntil, monday, weekEnd));
             var header = savedWeeks.FirstOrDefault(week => week.UserId == person.Id);
 
             var input = new ScheduleInput(
@@ -330,8 +355,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
             rows.Add(new SchedulePersonWeek(person.Id, person.DisplayName,
                 profile?.Kind.ToString() ?? UnknownCleanerKind,
-                profile?.HomeBuildingId ?? HomeBuilding(memberships[person.Id], person),
-                dates.Select(date => ScheduleResolver.Resolve(input, date)).ToList()));
+                HomeBuilding(memberships[person.Id], profiles.Exists(entry => entry.UserId == person.Id), person),
+                header is not null,
+                readDates[person.Id].Select(date => ScheduleResolver.Resolve(input, date)).ToList()));
 
             revisions.AddRange(personProfiles.Select(entry => $"profile#{entry.Id}@{Revision(entry.Revision)}"));
             revisions.AddRange(personBaselines.Select(entry => $"baseline#{entry.Id}@{Revision(entry.Revision)}"));
@@ -355,70 +381,70 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     }
 
     /// <summary>
-    /// The dated Supervisor periods of the actor, with the same pre-backfill projection
-    /// <c>Api.Scheduling.ScheduleScopeReader</c> applies (spec §14) — repeated here because Infrastructure cannot depend on
-    /// the Api project: a Supervisor with no dated row at all is their current building and shift, from the business date
-    /// of the read and never backwards.
+    /// Which dated (building, shift) memberships the person's profile periods give them, used for scope and roster
+    /// membership only. Each period that overlaps the read week is one dated membership of the same shape as a scope
+    /// period, so <see cref="ScheduleAuthority.Covers"/> answers "is this person a member on this date" with the one
+    /// day-level predicate the design has. A regular Cleaner's building comes from the Areas of their own baseline versions;
+    /// when the person has no dated identity at all the compatibility columns are the only membership there is (spec §14),
+    /// and they never become history.
     /// </summary>
-    private async Task<IReadOnlyList<ScopePeriod>> ReadScopeAsync(User actor, CancellationToken ct)
+    private static List<ScopePeriod> MembershipSlots(
+        User person, IReadOnlyList<CleanerProfilePeriod> weekProfiles, IReadOnlyList<ScheduleBaseline> baselines,
+        IReadOnlyDictionary<int, int> areaBuildings, bool hasDatedProfile)
     {
-        var periods = await db.SupervisorScopePeriods.AsNoTracking()
-            .Where(period => period.SupervisorId == actor.Id)
-            .OrderBy(period => period.EffectiveFrom).ThenBy(period => period.BuildingId)
-            .Select(period => new ScopePeriod(period.SupervisorId, period.BuildingId, period.Shift,
-                period.EffectiveFrom, period.EffectiveUntil))
-            .ToListAsync(ct);
-
-        if (periods.Count == 0 && actor.BuildingId is int buildingId && actor.Shift is Shift shift)
+        var slots = new List<ScopePeriod>();
+        foreach (var profile in weekProfiles)
         {
-            periods = [new ScopePeriod(actor.Id, buildingId, shift,
-                ScheduleAuthority.BusinessDate((clock ?? TimeProvider.System).GetUtcNow().UtcDateTime), null)];
-        }
-
-        return periods;
-    }
-
-    /// <summary>
-    /// Which (building, shift) pairs the person's dated identity puts them in, used for scope and roster membership only.
-    /// A regular Cleaner's building comes from the Areas of their own baseline versions; when no dated identity exists the
-    /// compatibility columns are the only membership there is (spec §14), and they never become history.
-    /// </summary>
-    private static List<(int BuildingId, Shift Shift)> MembershipSlots(
-        User person, IReadOnlyList<CleanerProfilePeriod> profiles, IReadOnlyList<ScheduleBaseline> baselines,
-        IReadOnlyDictionary<int, int> areaBuildings)
-    {
-        var slots = new List<(int BuildingId, Shift Shift)>();
-        foreach (var profile in profiles.Where(candidate => candidate.UserId == person.Id))
-        {
-            var building = profile.HomeBuildingId ?? baselines
-                .Where(baseline => baseline.UserId == person.Id && baseline.Kind == BaselineKind.Regular)
-                .SelectMany(baseline => baseline.Days)
-                .Select(day => day.AreaId is int areaId && areaBuildings.TryGetValue(areaId, out var id)
-                    ? id
-                    : (int?)null)
-                .FirstOrDefault(id => id is not null);
-            if (building is int known)
+            if ((profile.HomeBuildingId ?? BaselineBuilding(baselines, profile, areaBuildings)) is int building)
             {
-                slots.Add((known, profile.Shift));
+                slots.Add(new ScopePeriod(person.Id, building, profile.Shift,
+                    profile.EffectiveFrom, profile.EffectiveUntil));
             }
         }
 
-        if (slots.Count == 0)
+        if (slots.Count == 0 && !hasDatedProfile)
         {
             var building = person.AreaId is int area && areaBuildings.TryGetValue(area, out var fromArea)
                 ? fromArea
                 : person.BuildingId;
             if (building is int known && person.Shift is Shift shift)
             {
-                slots.Add((known, shift));
+                slots.Add(new ScopePeriod(person.Id, known, shift, DateOnly.MinValue, null));
             }
         }
 
         return slots;
     }
 
-    private static int? HomeBuilding(IReadOnlyList<(int BuildingId, Shift Shift)> slots, User person) =>
-        slots.Count > 0 ? slots[0].BuildingId : person.BuildingId;
+    /// <summary>
+    /// The building of the first Area named by a regular baseline version whose own range overlaps the profile's range, so a
+    /// version that never applied while the profile did cannot decide which building the person belongs to.
+    /// </summary>
+    private static int? BaselineBuilding(
+        IReadOnlyList<ScheduleBaseline> baselines, CleanerProfilePeriod profile,
+        IReadOnlyDictionary<int, int> areaBuildings) =>
+        baselines
+            .Where(baseline => baseline.Kind == BaselineKind.Regular
+                && baseline.EffectiveFrom < (profile.EffectiveUntil ?? DateOnly.MaxValue)
+                && profile.EffectiveFrom < (baseline.EffectiveUntil ?? DateOnly.MaxValue))
+            .OrderBy(baseline => baseline.EffectiveFrom).ThenBy(baseline => baseline.Id)
+            .SelectMany(baseline => baseline.Days)
+            .Select(day => day.AreaId is int areaId && areaBuildings.TryGetValue(areaId, out var building)
+                ? building
+                : (int?)null)
+            .FirstOrDefault(building => building is not null);
+
+    /// <summary>
+    /// The building the row shows. A dated identity that does not overlap the read week is not a membership of it, so such a
+    /// person shows no home building rather than the compatibility projection's current value; a person with no dated
+    /// identity at all keeps that projection as its only membership.
+    /// </summary>
+    private static int? HomeBuilding(IReadOnlyList<ScopePeriod> slots, bool hasDatedProfile, User person) =>
+        slots.Count > 0 ? slots[0].BuildingId : hasDatedProfile ? null : person.BuildingId;
+
+    /// <summary>True when a half-open effective range has a date in the read week — the same boundary as Applies.</summary>
+    private static bool OverlapsWeek(DateOnly from, DateOnly? until, DateOnly monday, DateOnly weekEnd) =>
+        from < weekEnd && (until is null || until.Value > monday);
 
     /// <summary>An opaque token over every row the week was built from, so a client can tell a changed week from a read.</summary>
     private static string WeekRevision(List<string> revisions)

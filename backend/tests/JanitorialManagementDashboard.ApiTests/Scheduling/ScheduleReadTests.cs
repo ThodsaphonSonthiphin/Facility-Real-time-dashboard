@@ -2,6 +2,7 @@ using System.Data.Common;
 using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Application.Scheduling;
+using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Auth;
@@ -214,12 +215,79 @@ public class ScheduleReadTests
         var saved = (await ReadAsync(factory, auth.User.Id, Week)).Rows.Single(r => r.UserId == person);
         var unsaved = (await ReadAsync(factory, auth.User.Id, NextWeek)).Rows.Single(r => r.UserId == person);
 
+        Assert.True(saved.HasWeeklyChoice);        // the week header exists, so somebody has chosen
+        Assert.False(saved.Days[2].IsUnset);
         Assert.True(saved.Days[2].IsDayOff);
         Assert.Equal("day-off", saved.Days[2].Availability);
         Assert.Equal(area, saved.Days[2].Area.Value); // the eligible Area stays visible for a record-first check-in
+
+        // The next week has no saved choice: that is a fact about the row, while the day itself still holds the confirmed
+        // Area on record — so it is neither a day off, nor an unconfirmed day.
+        Assert.False(unsaved.HasWeeklyChoice);
         Assert.False(unsaved.Days[2].IsDayOff);
-        Assert.True(unsaved.Days[2].IsUnset);
-        Assert.False(unsaved.Days[2].IsDayOff);
+        Assert.False(unsaved.Days[2].IsUnset);
+        Assert.Equal("available", unsaved.Days[2].Availability);
+        Assert.Equal(area, unsaved.Days[2].Area.Value);
+    }
+
+    [Fact]
+    public async Task A_baseline_day_off_cell_reads_as_a_confirmed_day_off()
+    {
+        // Spec §5: the cell's own IsDayOff reaches the resolver, so a stored day-off cell (which has no Area) is a
+        // confirmed non-working day and not an "unset" gap that looks like nobody has planned it.
+        using var factory = new JanitorialApiFactory();
+        var area = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        await AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, Week, buildingCode: "A");
+        await AddBaselineDayOffAsync(factory, "1000001", BaselineKind.Regular, Week, area, DayOfWeek.Wednesday);
+        var (_, auth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+
+        var row = (await ReadAsync(factory, auth.User.Id, Week)).Rows.Single(r => r.UserId == person);
+        var wednesday = row.Days[2];
+        var thursday = row.Days[3];
+
+        Assert.True(wednesday.IsDayOff);
+        Assert.Equal("day-off", wednesday.Availability);
+        Assert.False(wednesday.IsUnset);
+        Assert.Null(wednesday.Area.Value);
+        Assert.Equal("available", thursday.Availability);
+        Assert.Equal(area, thursday.Area.Value);
+    }
+
+    [Fact]
+    public async Task A_supervisor_whose_period_starts_mid_week_reads_only_the_covered_dates()
+    {
+        // Spec §3: the dated period is the authority per date. A period starting on Thursday must not read Monday to
+        // Wednesday, and a person whose dated identity left the building before the week is not in the roster at all.
+        using var factory = new JanitorialApiFactory();
+        await TestData.AddAreaAsync(factory, "AR03");
+        var departed = await AddDepartedCleanerAsync(factory, "1000010", "AR03", until: Week);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, Week.AddDays(3));
+        var supervisor = await AdminSetupApi.UserIdAsync(factory, "2000001");
+
+        var projection = await ReadAsync(factory, supervisor, Week);
+
+        var covered = new[] { Week.AddDays(3), Week.AddDays(4), Week.AddDays(5), Week.AddDays(6) };
+        Assert.Equal(2, projection.Rows.Count);
+        Assert.All(projection.Rows, row => Assert.Equal(covered, row.Days.Select(day => day.Date)));
+        Assert.DoesNotContain(projection.Rows, row => row.UserId == departed);
+    }
+
+    [Fact]
+    public async Task A_supervisor_whose_period_ends_mid_week_reads_only_the_covered_dates()
+    {
+        // The other half of the same rule: a period ending on Thursday reads Monday to Wednesday and nothing after it.
+        using var factory = new JanitorialApiFactory();
+        await TestData.AddSupervisorScopeAsync(
+            factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1), until: Week.AddDays(3));
+        var supervisor = await AdminSetupApi.UserIdAsync(factory, "2000001");
+
+        var projection = await ReadAsync(factory, supervisor, Week);
+
+        var covered = new[] { Week, Week.AddDays(1), Week.AddDays(2) };
+        Assert.Equal(2, projection.Rows.Count);
+        Assert.All(projection.Rows, row => Assert.Equal(covered, row.Days.Select(day => day.Date)));
+        Assert.Empty((await ReadAsync(factory, supervisor, NextWeek)).Rows);
     }
 
     /// <summary>
@@ -386,6 +454,65 @@ public class ScheduleReadTests
             db.ScheduleBaselines.Add(baseline);
             await db.SaveChangesAsync();
         });
+
+    /// <summary>
+    /// A baseline version whose <paramref name="offWeekday"/> cell is a stored day off (no Area) and the other weekdays carry
+    /// <paramref name="areaId"/>.
+    /// </summary>
+    private static Task AddBaselineDayOffAsync(
+        JanitorialApiFactory factory, string employeeId, BaselineKind kind, DateOnly from, int? areaId,
+        DayOfWeek offWeekday) =>
+        factory.WithDbAsync(async db =>
+        {
+            var person = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            var baseline = new ScheduleBaseline
+            {
+                UserId = person.Id, Kind = kind, EffectiveFrom = from, Revision = 1, CreatedById = admin.Id,
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            foreach (var weekday in Enum.GetValues<DayOfWeek>())
+            {
+                baseline.Days.Add(weekday == offWeekday
+                    ? new ScheduleBaselineDay { Weekday = weekday, IsDayOff = true }
+                    : new ScheduleBaselineDay { Weekday = weekday, AreaId = areaId });
+            }
+
+            db.ScheduleBaselines.Add(baseline);
+            await db.SaveChangesAsync();
+        });
+
+    /// <summary>
+    /// An active Cleaner whose dated identity in building A ended on <paramref name="until"/> (exclusive), i.e. someone who
+    /// has left that building: they are only a member of it on the dates their period still covers.
+    /// </summary>
+    private static async Task<int> AddDepartedCleanerAsync(
+        JanitorialApiFactory factory, string employeeId, string areaCode, DateOnly until)
+    {
+        var id = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            var building = await db.Buildings.SingleAsync(b => b.Code == "A");
+            var area = await db.Areas.SingleAsync(a => a.Code == areaCode);
+            var person = new User
+            {
+                Role = UserRole.Cleaner, EmployeeId = employeeId, DisplayName = $"แม่บ้านทดสอบ {employeeId}",
+                SecretHash = "not-a-hash", AreaId = area.Id, Shift = Shift.Day, CreatedAt = DateTime.UtcNow,
+            };
+            db.Users.Add(person);
+            await db.SaveChangesAsync();
+            db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+            {
+                UserId = person.Id, Kind = CleanerKind.Regular, HomeBuildingId = building.Id, Shift = Shift.Day,
+                EffectiveFrom = new DateOnly(2026, 10, 1), EffectiveUntil = until, Revision = 1, CreatedById = admin.Id,
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+            id = person.Id;
+        });
+        return id;
+    }
 
     private static Task AddWeekAsync(
         JanitorialApiFactory factory, string employeeId, DateOnly weekStart, params DateOnly[] offDates) =>
