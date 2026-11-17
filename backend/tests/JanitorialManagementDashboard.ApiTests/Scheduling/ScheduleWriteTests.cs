@@ -1078,6 +1078,123 @@ public class ScheduleWriteTests
             Assert.Empty(await db.ScheduleChanges.ToListAsync());
         });
     }
+
+    [Fact]
+    public async Task A_partly_scoped_actor_cannot_drop_a_stored_choice_outside_their_scope_by_omitting_it()
+    {
+        // Controller ruling: the payload replaces the stored selection rather than merging into it, so a non-empty
+        // submission deletes every stored choice it omits. The stored Wednesday is a date this person moved to building B
+        // on, so it is not this Supervisor's to delete — even though the Monday they did submit is. Old code authorised the
+        // omission by the dates it submitted and deleted the Wednesday without a lock on it.
+        using var factory = ScheduleWriteApi.NewFactory();
+        await TestData.AddBuildingAsync(factory, "B");
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day,
+            new DateOnly(2026, 10, 1), "A", until: Week.AddDays(2));
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, Week.AddDays(2), "B");
+        await ScheduleWriteApi.AddStoredWeekAsync(factory, "1000001", Week, Week.AddDays(2));
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+
+        // The submitted Monday is a past date, so a reason travels with the command: the refusal below has to be the
+        // Wednesday's missing authority, never a missing reason.
+        var answer = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(Week) } } },
+            reason = "เลื่อนวันหยุด",
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, answer.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Rejected, answer.Answer!.Outcome);
+        var problem = Assert.Single(answer.Answer.Problems);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, problem.Code);
+        Assert.Contains(ScheduleWriteApi.Iso(Week.AddDays(2)), problem.Message);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(1, header.Revision);
+            Assert.Equal(Week.AddDays(2), Assert.Single(header.Choices).OffDate);
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+        });
+    }
+
+    [Fact]
+    public async Task An_actor_whose_scope_holds_the_whole_week_can_drop_stored_choices_by_omitting_them()
+    {
+        // The other half of the ruling: every stored date this submission drops is inside the Supervisor's own building, so
+        // the replacement is one ordinary edit — revision 2, one audit row keeping the before side, no reason because the
+        // date submitted (Tuesday, today) and the dates dropped are not before today's business date.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        await ScheduleWriteApi.AddStoredWeekAsync(factory, "1000001", Week, Week.AddDays(2), Week.AddDays(4));
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+        var key = ScheduleWriteApi.WeekKey(person, Week);
+
+        var answer = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(Week.AddDays(1)) } } },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, answer.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, answer.Answer!.Outcome);
+        Assert.Equal("2", answer.Answer.Revisions[key]);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(2, header.Revision);
+            Assert.Equal(Week.AddDays(1), Assert.Single(header.Choices).OffDate);
+            var change = Assert.Single(await db.ScheduleChanges.ToListAsync());
+            Assert.Equal("update", change.Operation);
+            Assert.Null(change.Reason);
+            using var before = JsonDocument.Parse(change.BeforeJson!);
+            Assert.Equal(2, before.RootElement.GetProperty("offDates").GetArrayLength());
+        });
+
+        var week = await ScheduleWriteApi.WeekAsync(supervisor, Week);
+        var days = week.Rows.Single(row => row.UserId == person).Days;
+        Assert.True(days.Single(day => day.Date == Week.AddDays(1)).IsDayOff);
+        Assert.False(days.Single(day => day.Date == Week.AddDays(2)).IsDayOff);
+    }
+
+    [Fact]
+    public async Task A_stored_week_with_no_choices_resubmitted_empty_is_a_no_op()
+    {
+        // Finding E: "nothing would change" is decided for every shape, so a saved header that already asserts "no days off"
+        // is never judged by the all-seven-dates check — it answers committed with no write and names the revision that was
+        // already there. Old code answered 409 for this partly scoped Supervisor before it compared anything.
+        using var factory = ScheduleWriteApi.NewFactory();
+        await TestData.AddBuildingAsync(factory, "B");
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day,
+            new DateOnly(2026, 10, 1), "A", until: Week.AddDays(2));
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, Week.AddDays(2), "B");
+        await ScheduleWriteApi.AddStoredWeekAsync(factory, "1000001", Week);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+
+        var answer = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = Array.Empty<string>() } },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, answer.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, answer.Answer!.Outcome);
+        Assert.Equal("1", answer.Answer.Revisions[ScheduleWriteApi.WeekKey(person, Week)]);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(1, header.Revision);
+            Assert.Empty(header.Choices);
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+        });
+    }
 }
 
 /// <summary>

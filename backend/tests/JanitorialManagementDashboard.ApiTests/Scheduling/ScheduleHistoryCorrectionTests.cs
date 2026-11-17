@@ -348,6 +348,116 @@ public class ScheduleHistoryCorrectionTests
     }
 
     [Fact]
+    public async Task Clearing_stored_choices_that_have_already_passed_needs_a_reason()
+    {
+        // Spec §5 and finding D: removing a stored past choice is a retroactive edit like any other, so the empty submission
+        // that removes them needs the 1–500 character reason — and, once it has one, the audit row of the removal carries it.
+        // Old code computed the flag from the submitted dates only, and an empty submission has none.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+        var pastWeek = Week.AddDays(-7); // Monday the 9th: every date in it has already passed on the 17th
+        var key = ScheduleWriteApi.WeekKey(person, pastWeek);
+        await ScheduleWriteApi.AddStoredWeekAsync(factory, "1000001", pastWeek, pastWeek, pastWeek.AddDays(2));
+
+        var missing = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(pastWeek),
+            rows = new[] { new { userId = person, offDates = Array.Empty<string>() } },
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, missing.Response.StatusCode);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(missing.Answer!.Problems).Code);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(1, header.Revision);
+            Assert.Equal(2, header.Choices.Count);
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+        });
+
+        var cleared = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(pastWeek),
+            rows = new[] { new { userId = person, offDates = Array.Empty<string>() } },
+            reason = "  ลบวันหยุดที่แจ้งผิด  ",
+        }, new Dictionary<string, string> { [key] = "1" });
+
+        Assert.Equal(HttpStatusCode.OK, cleared.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, cleared.Answer!.Outcome);
+        Assert.Equal("2", cleared.Answer.Revisions[key]);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(2, header.Revision);
+            Assert.Empty(header.Choices);
+            var change = Assert.Single(await db.ScheduleChanges.ToListAsync());
+            Assert.Equal("update", change.Operation);
+            Assert.Equal("ลบวันหยุดที่แจ้งผิด", change.Reason);
+            using var before = JsonDocument.Parse(change.BeforeJson!);
+            Assert.Equal(2, before.RootElement.GetProperty("offDates").GetArrayLength());
+            using var after = JsonDocument.Parse(change.AfterJson!);
+            Assert.Empty(after.RootElement.GetProperty("offDates").EnumerateArray());
+        });
+    }
+
+    [Fact]
+    public async Task A_submission_whose_only_retroactive_effect_is_a_removal_needs_a_reason()
+    {
+        // The second shape of finding D: every submitted date is still ahead (Thursday the 19th), but the submission omits a
+        // stored Monday the 16th, so the command does change a past date's choice and is a retroactive plan edit. Old code
+        // saw only the submitted dates, called this a future edit and committed it without a reason.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory); // Asia/Bangkok on Tuesday the 17th
+        var past = Week; // Monday the 16th, already past
+        var future = Week.AddDays(3); // Thursday the 19th
+        var key = ScheduleWriteApi.WeekKey(person, Week);
+        await ScheduleWriteApi.AddStoredWeekAsync(factory, "1000001", Week, past);
+
+        var missing = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(future) } } },
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, missing.Response.StatusCode);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(missing.Answer!.Problems).Code);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(1, header.Revision);
+            Assert.Equal(past, Assert.Single(header.Choices).OffDate);
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+        });
+
+        var moved = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(future) } } },
+            reason = "ย้ายวันหยุดที่แจ้งผิด",
+        }, new Dictionary<string, string> { [key] = "1" });
+
+        Assert.Equal(HttpStatusCode.OK, moved.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, moved.Answer!.Outcome);
+        Assert.Equal("2", moved.Answer.Revisions[key]);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(2, header.Revision);
+            Assert.Equal(future, Assert.Single(header.Choices).OffDate);
+            var change = Assert.Single(await db.ScheduleChanges.ToListAsync());
+            Assert.Equal("update", change.Operation);
+            Assert.Equal("ย้ายวันหยุดที่แจ้งผิด", change.Reason);
+            using var before = JsonDocument.Parse(change.BeforeJson!);
+            Assert.Equal(ScheduleWriteApi.Iso(past),
+                Assert.Single(before.RootElement.GetProperty("offDates").EnumerateArray()).GetString());
+        });
+    }
+
+    [Fact]
     public async Task A_week_that_has_not_started_does_not_need_a_reason()
     {
         // The requirement is about retroactive edits only: a future week still commits without one.

@@ -253,9 +253,12 @@ public abstract class ScheduleCommandHandler(TimeProvider clock) : IScheduleComm
 
 /// <summary>
 /// Spec §5, §11 and A04: one atomic batch of weekly day-off choices for the people the client submitted. A person who is not
-/// submitted keeps whatever they had — unset stays unset — and only the submitted choices change. An empty submission clears
-/// that person's week, so it is authorised by every date it would remove (and, when nothing is stored yet, by all seven days of
-/// the week), never by one convenient date; and a submission that would change nothing is not a write at all.
+/// submitted keeps whatever they had — unset stays unset — and only the submitted choices change. The payload replaces a
+/// person's week rather than merging into it, so every stored choice it omits is authorised by the date it removes — the same
+/// per-date target and scope check a submitted date passes, and a lock on that date too — never by a date that happened to be
+/// submitted alongside it; a week that only confirms it holds nothing is authorised by all seven of its dates. A submission
+/// that would change nothing is not a write at all, and one that changes a date before today's business date is a retroactive
+/// plan edit that needs a reason.
 /// </summary>
 public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleCommandHandler(clock)
 {
@@ -270,16 +273,28 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
         }
 
         var weekStart = ScheduleRules.WeekStart(batch.WeekStart);
+        var weekDates = Enumerable.Range(0, 7).Select(offset => weekStart.AddDays(offset)).ToList();
         var slots = new List<ScheduleSlotKey>();
         var scopes = new List<ScheduleScopeKey>();
         foreach (var row in batch.Rows)
         {
-            // Controller ruling: the week header has no anchor of its own, so the slot of every submitted date and the
-            // building/shift the person has *on that date* are what two Supervisors of the same roster actually contend on.
-            // An empty submission clears — or confirms empty — a whole week, so all seven of its dates are what it locks.
-            var dates = row.OffDates.Count > 0
-                ? row.OffDates
-                : Enumerable.Range(0, 7).Select(offset => weekStart.AddDays(offset)).ToList();
+            // Controller ruling: the week header has no anchor of its own, so the slot of every date whose choice this row
+            // creates, changes or removes — the submitted dates and the stored choices the submission would drop alike —
+            // and the building/shift the person has *on that date* are what two commands of the same roster actually contend
+            // on. Dropping a stored choice is a delete the omitted date has to be locked for, or a concurrent clear could
+            // slip between this plan and the write. A row that touches no date at all (empty, nothing stored) asserts the
+            // whole week is empty, so all seven of its dates are what it locks.
+            var stored = await db.WeeklyDayOffs.AsNoTracking()
+                .Where(week => week.UserId == row.UserId && week.WeekStart == weekStart)
+                .SelectMany(week => week.Choices)
+                .Select(choice => choice.OffDate)
+                .ToListAsync(ct);
+            var dates = row.OffDates.Union(stored).ToList();
+            if (dates.Count == 0)
+            {
+                dates = weekDates;
+            }
+
             foreach (var date in dates)
             {
                 var (target, _) = await ReadTargetAsync(db, row.UserId, date, ct);
@@ -354,7 +369,6 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
             // actually belong to the actor's roster on, and a period that only starts mid-week can still have its days off
             // recorded — the week-start lookup the batch used to make could do neither.
             var offDates = new SortedSet<DateOnly>();
-            var retroactive = false;
             foreach (var date in row.OffDates)
             {
                 if (date < weekStart || date >= weekStart.AddDays(7))
@@ -367,7 +381,6 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
                     return Refused(revisions, key, dateProblem);
                 }
 
-                retroactive |= date < actor.BusinessDate;
                 offDates.Add(date);
             }
 
@@ -382,50 +395,54 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
 
             var stored = header?.Choices.Select(choice => choice.OffDate).ToHashSet() ?? new HashSet<DateOnly>();
 
-            // Controller ruling: an empty submission is not authorised by the one date its actor may edit — it removes choices
-            // the client never named, so each of those dates must pass the same check a submitted date passes.
-            if (offDates.Count == 0)
-            {
-                if (stored.Count > 0)
-                {
-                    foreach (var removed in stored.OrderBy(date => date))
-                    {
-                        if (await CheckDateAsync(row.UserId, removed) is { } removedProblem)
-                        {
-                            return Refused(revisions, key, removedProblem);
-                        }
-                    }
-                }
-                else
-                {
-                    // Confirming a week empty when no header exists yet (or a saved header has no choices) is a write that
-                    // asserts "no days off this week" for all seven dates, so all seven must be inside the actor's scope.
-                    var outsideScope = new List<DateOnly>();
-                    foreach (var weekDate in weekDates)
-                    {
-                        if (await CheckDateAsync(row.UserId, weekDate) is not null)
-                        {
-                            outsideScope.Add(weekDate);
-                        }
-                    }
-
-                    if (outsideScope.Count > 0)
-                    {
-                        return Refused(revisions, key,
-                            "ต้องมีสิทธิ์ทุกวันของสัปดาห์จึงจะยืนยันว่าไม่มีวันหยุดได้ ขาดสิทธิ์ในวันที่ "
-                            + string.Join(", ", outsideScope.Select(Iso)));
-                    }
-                }
-            }
-
-            // Ruling (f): the submitted set already equals the stored set, so this edit changes nothing at all — no write, no
-            // revision bump, no change row and therefore no reason either, even when the week has already started.
+            // Rulings (f) and E: "nothing would change" is decided for every shape, and before any check that exists only to
+            // authorise a write — so a saved header that already holds the submitted selection, the empty selection included,
+            // answers committed with no write, no revision bump, no change row and therefore no reason, even when the week has
+            // already started.
             if (header is not null && stored.SetEquals(offDates))
             {
                 continue;
             }
 
-            if (retroactive)
+            // Controller ruling (finding C): the payload replaces the stored selection rather than merging into it, so every
+            // stored choice a submission omits is deleted by that submission. Each of those dates passes the same per-date
+            // target and CanChange check a submitted date passes — otherwise a Supervisor of one building could delete a
+            // choice the person holds in another, and the reason rule below could not see the removal at all.
+            var removed = stored.Where(date => !offDates.Contains(date)).OrderBy(date => date).ToList();
+            foreach (var date in removed)
+            {
+                if (await CheckDateAsync(row.UserId, date) is { } removedProblem)
+                {
+                    return Refused(revisions, key, removedProblem);
+                }
+            }
+
+            if (offDates.Count == 0 && stored.Count == 0)
+            {
+                // Confirming a week empty when no header exists yet is a write that asserts "no days off this week" for all
+                // seven dates, so all seven must be inside the actor's scope.
+                var outsideScope = new List<DateOnly>();
+                foreach (var weekDate in weekDates)
+                {
+                    if (await CheckDateAsync(row.UserId, weekDate) is not null)
+                    {
+                        outsideScope.Add(weekDate);
+                    }
+                }
+
+                if (outsideScope.Count > 0)
+                {
+                    return Refused(revisions, key,
+                        "ต้องมีสิทธิ์ทุกวันของสัปดาห์จึงจะยืนยันว่าไม่มีวันหยุดได้ ขาดสิทธิ์ในวันที่ "
+                        + string.Join(", ", outsideScope.Select(Iso)));
+                }
+            }
+
+            // Spec §5 and finding D: a retroactive plan edit is one whose changed choice falls before today's business date —
+            // the dates the client submits and the stored dates it removes alike, because dropping a stored past choice
+            // changes what that date's plan says exactly as writing a new past choice does.
+            if (offDates.Any(date => date < actor.BusinessDate)
+                || removed.Any(date => date < actor.BusinessDate))
             {
                 pastWeekKey ??= key;
             }
