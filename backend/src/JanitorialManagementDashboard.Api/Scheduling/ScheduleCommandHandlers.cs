@@ -253,7 +253,9 @@ public abstract class ScheduleCommandHandler(TimeProvider clock) : IScheduleComm
 
 /// <summary>
 /// Spec §5, §11 and A04: one atomic batch of weekly day-off choices for the people the client submitted. A person who is not
-/// submitted keeps whatever they had — unset stays unset — and only the submitted choices change.
+/// submitted keeps whatever they had — unset stays unset — and only the submitted choices change. An empty submission clears
+/// that person's week, so it is authorised by every date it would remove (and, when nothing is stored yet, by all seven days of
+/// the week), never by one convenient date; and a submission that would change nothing is not a write at all.
 /// </summary>
 public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleCommandHandler(clock)
 {
@@ -274,7 +276,7 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
         {
             // Controller ruling: the week header has no anchor of its own, so the slot of every submitted date and the
             // building/shift the person has *on that date* are what two Supervisors of the same roster actually contend on.
-            // A week whose choices are all cleared still moves a whole week, so its own dates are what it locks.
+            // An empty submission clears — or confirms empty — a whole week, so all seven of its dates are what it locks.
             var dates = row.OffDates.Count > 0
                 ? row.OffDates
                 : Enumerable.Range(0, 7).Select(offset => weekStart.AddDays(offset)).ToList();
@@ -315,7 +317,30 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
         var revisions = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var planned = new List<(int UserId, DateOnly WeekStart, SortedSet<DateOnly> OffDates, WeeklyDayOff? Header)>();
         var seen = new HashSet<int>();
+        var weekDates = Enumerable.Range(0, 7).Select(offset => weekStart.AddDays(offset)).ToList();
         string? pastWeekKey = null;
+
+        // Spec §3: exactly one per-date check authorises a write, and every date this command writes goes through it — the
+        // dates a client submits and the stored choices an empty submission would delete alike, so neither can be authorised
+        // by a date the other side happened to be allowed to change.
+        async Task<string?> CheckDateAsync(int userId, DateOnly date)
+        {
+            var (target, problem) = await ReadTargetAsync(db, userId, date, ct);
+            if (target is null)
+            {
+                return problem;
+            }
+
+            if (target.BuildingId is not int buildingId)
+            {
+                return $"ยังไม่ทราบตึกของคนนี้ในวันที่ {Iso(date)} จึงยืนยันสิทธิ์ไม่ได้";
+            }
+
+            return actor.CanChange(buildingId, target.Shift, date)
+                ? null
+                : $"ไม่มีสิทธิ์แก้ตารางของคนนี้ในวันที่ {Iso(date)}";
+        }
+
         foreach (var row in batch.Rows)
         {
             var key = ScheduleRevisionKeys.Week(row.UserId, weekStart);
@@ -329,6 +354,7 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
             // actually belong to the actor's roster on, and a period that only starts mid-week can still have its days off
             // recorded — the week-start lookup the batch used to make could do neither.
             var offDates = new SortedSet<DateOnly>();
+            var retroactive = false;
             foreach (var date in row.OffDates)
             {
                 if (date < weekStart || date >= weekStart.AddDays(7))
@@ -336,48 +362,13 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
                     return Refused(revisions, key, $"วันที่ {Iso(date)} อยู่นอกสัปดาห์ที่ส่งมา");
                 }
 
-                var (dateTarget, dateProblem) = await ReadTargetAsync(db, row.UserId, date, ct);
-                if (dateTarget is null)
+                if (await CheckDateAsync(row.UserId, date) is { } dateProblem)
                 {
-                    return Refused(revisions, key, dateProblem!);
+                    return Refused(revisions, key, dateProblem);
                 }
 
-                if (dateTarget.BuildingId is not int dateBuildingId)
-                {
-                    return Refused(revisions, key, $"ยังไม่ทราบตึกของคนนี้ในวันที่ {Iso(date)} จึงยืนยันสิทธิ์ไม่ได้");
-                }
-
-                if (!actor.CanChange(dateBuildingId, dateTarget.Shift, date))
-                {
-                    return Refused(revisions, key, $"ไม่มีสิทธิ์แก้ตารางของคนนี้ในวันที่ {Iso(date)}");
-                }
-
-                if (date < actor.BusinessDate)
-                {
-                    pastWeekKey ??= key;
-                }
-
+                retroactive |= date < actor.BusinessDate;
                 offDates.Add(date);
-            }
-
-            if (offDates.Count == 0)
-            {
-                // Clearing a week submits no date to authorise it, so the week's own dates decide: the actor must be able to
-                // change at least one day this person belongs to that week. Otherwise a cleared week would be a write with
-                // no scope check at all.
-                var authorised = false;
-                for (var offset = 0; offset < 7 && !authorised; offset++)
-                {
-                    var weekday = weekStart.AddDays(offset);
-                    var (weekdayTarget, _) = await ReadTargetAsync(db, row.UserId, weekday, ct);
-                    authorised = weekdayTarget?.BuildingId is int weekdayBuildingId
-                        && actor.CanChange(weekdayBuildingId, weekdayTarget.Shift, weekday);
-                }
-
-                if (!authorised)
-                {
-                    return Refused(revisions, key, "ไม่มีสิทธิ์แก้ตารางของคนนี้ในสัปดาห์นี้");
-                }
             }
 
             var header = await db.WeeklyDayOffs.Include(week => week.Choices)
@@ -387,6 +378,56 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
             if (IsStale(request, key, current, out var expected))
             {
                 return new ScheduleCommandApplication(revisions, [Stale(key, expected, current)]);
+            }
+
+            var stored = header?.Choices.Select(choice => choice.OffDate).ToHashSet() ?? new HashSet<DateOnly>();
+
+            // Controller ruling: an empty submission is not authorised by the one date its actor may edit — it removes choices
+            // the client never named, so each of those dates must pass the same check a submitted date passes.
+            if (offDates.Count == 0)
+            {
+                if (stored.Count > 0)
+                {
+                    foreach (var removed in stored.OrderBy(date => date))
+                    {
+                        if (await CheckDateAsync(row.UserId, removed) is { } removedProblem)
+                        {
+                            return Refused(revisions, key, removedProblem);
+                        }
+                    }
+                }
+                else
+                {
+                    // Confirming a week empty when no header exists yet (or a saved header has no choices) is a write that
+                    // asserts "no days off this week" for all seven dates, so all seven must be inside the actor's scope.
+                    var outsideScope = new List<DateOnly>();
+                    foreach (var weekDate in weekDates)
+                    {
+                        if (await CheckDateAsync(row.UserId, weekDate) is not null)
+                        {
+                            outsideScope.Add(weekDate);
+                        }
+                    }
+
+                    if (outsideScope.Count > 0)
+                    {
+                        return Refused(revisions, key,
+                            "ต้องมีสิทธิ์ทุกวันของสัปดาห์จึงจะยืนยันว่าไม่มีวันหยุดได้ ขาดสิทธิ์ในวันที่ "
+                            + string.Join(", ", outsideScope.Select(Iso)));
+                    }
+                }
+            }
+
+            // Ruling (f): the submitted set already equals the stored set, so this edit changes nothing at all — no write, no
+            // revision bump, no change row and therefore no reason either, even when the week has already started.
+            if (header is not null && stored.SetEquals(offDates))
+            {
+                continue;
+            }
+
+            if (retroactive)
+            {
+                pastWeekKey ??= key;
             }
 
             planned.Add((row.UserId, weekStart, offDates, header));
@@ -407,15 +448,20 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
             var submitted = row.OffDates.ToList();
             if (row.Header is { } header)
             {
-                // Ruling: a submitted row whose stored fact is already the submitted value leaves history untouched.
-                if (header.Choices.Select(choice => choice.OffDate).ToHashSet().SetEquals(submitted))
+                // A row whose stored fact is already the submitted value never reaches this list: ruling (f) leaves its history
+                // untouched and answers committed without a write. The choice rows are the selection itself (Task 2), so the
+                // ones this submission drops are deleted, the ones it adds are inserted and the ones it keeps are left alone.
+                // The relationship is required with a restrict delete, so a dropped row is marked deleted before it leaves the
+                // collection — emptying the collection first would sever a required relationship and fail the save instead.
+                var before = WeekJson(header.Revision, header.Choices.Select(choice => choice.OffDate));
+                var keep = submitted.ToHashSet();
+                foreach (var removed in header.Choices.Where(choice => !keep.Contains(choice.OffDate)).ToList())
                 {
-                    continue;
+                    db.WeeklyDayOffChoices.Remove(removed);
+                    header.Choices.Remove(removed);
                 }
 
-                var before = WeekJson(header.Revision, header.Choices.Select(choice => choice.OffDate));
-                header.Choices.Clear();
-                foreach (var date in submitted)
+                foreach (var date in submitted.Where(date => header.Choices.All(choice => choice.OffDate != date)))
                 {
                     header.Choices.Add(new WeeklyDayOffChoice { OffDate = date });
                 }

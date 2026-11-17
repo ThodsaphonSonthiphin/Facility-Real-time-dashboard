@@ -913,6 +913,171 @@ public class ScheduleWriteTests
         Assert.Equal((int?)2, overriddenGroup.BreakGroup.Value);
         Assert.Equal("dated", overriddenGroup.BreakGroup.SourceKind);
     }
+
+    [Fact]
+    public async Task A_clear_is_authorised_by_every_date_it_removes_not_by_one_date_of_the_week()
+    {
+        // Controller ruling: an empty submission deletes choices the client never named, so each date it removes must pass the
+        // same per-date scope check a submitted date passes. This Supervisor holds building A on Monday and Tuesday, which is
+        // authority to edit those two days — not authority to delete a Wednesday the person now works in building B.
+        using var factory = ScheduleWriteApi.NewFactory();
+        await TestData.AddBuildingAsync(factory, "B");
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day,
+            new DateOnly(2026, 10, 1), "A", until: Week.AddDays(2));
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, Week.AddDays(2), "B");
+        await ScheduleWriteApi.AddStoredWeekAsync(factory, "1000001", Week, Week.AddDays(2));
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+
+        var answer = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = Array.Empty<string>() } },
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, answer.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Rejected, answer.Answer!.Outcome);
+        var problem = Assert.Single(answer.Answer.Problems);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, problem.Code);
+        Assert.Contains(ScheduleWriteApi.Iso(Week.AddDays(2)), problem.Message);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(1, header.Revision);
+            Assert.Equal(Week.AddDays(2), Assert.Single(header.Choices).OffDate);
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+        });
+    }
+
+    [Fact]
+    public async Task An_actor_with_week_wide_authority_can_clear_the_stored_week()
+    {
+        // The other half of the ruling: the dates the clear removes are all inside this Supervisor's scope, so the week is
+        // emptied as one write — the header keeps its row, its revision moves and one audit row records the before/after.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+        var key = ScheduleWriteApi.WeekKey(person, Week);
+
+        var chosen = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[]
+            {
+                new
+                {
+                    userId = person,
+                    offDates = new[] { ScheduleWriteApi.Iso(Week.AddDays(2)), ScheduleWriteApi.Iso(Week.AddDays(4)) },
+                },
+            },
+        });
+        var cleared = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = Array.Empty<string>() } },
+        }, chosen.Answer!.Revisions);
+
+        Assert.Equal(HttpStatusCode.OK, chosen.Response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, cleared.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, cleared.Answer!.Outcome);
+        Assert.Equal("2", cleared.Answer.Revisions[key]);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(2, header.Revision);
+            Assert.Empty(header.Choices);
+            var changes = await db.ScheduleChanges.OrderBy(change => change.Id).ToListAsync();
+            Assert.Equal(2, changes.Count);
+            Assert.Equal("update", changes[1].Operation);
+            using var before = JsonDocument.Parse(changes[1].BeforeJson!);
+            Assert.Equal(2, before.RootElement.GetProperty("offDates").GetArrayLength());
+            using var after = JsonDocument.Parse(changes[1].AfterJson!);
+            Assert.Empty(after.RootElement.GetProperty("offDates").EnumerateArray());
+            Assert.Equal("2", after.RootElement.GetProperty("revision").GetString());
+        });
+
+        var week = await ScheduleWriteApi.WeekAsync(supervisor, Week);
+        Assert.All(week.Rows.Single(row => row.UserId == person).Days, day => Assert.False(day.IsDayOff));
+    }
+
+    [Fact]
+    public async Task An_existing_stored_week_can_be_edited_so_one_choice_replaces_another()
+    {
+        // The update half of the same command: a header that already exists keeps its row and takes the new set, so the drop
+        // and the insert are stored as one revision and the audit keeps the before side.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+        var key = ScheduleWriteApi.WeekKey(person, Week);
+
+        var chosen = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(Week.AddDays(2)) } } },
+        });
+        var moved = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(Week.AddDays(4)) } } },
+        }, chosen.Answer!.Revisions);
+
+        Assert.Equal(HttpStatusCode.OK, moved.Response.StatusCode);
+        Assert.Equal("2", moved.Answer!.Revisions[key]);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(2, header.Revision);
+            Assert.Equal(Week.AddDays(4), Assert.Single(header.Choices).OffDate);
+            var changes = await db.ScheduleChanges.OrderBy(change => change.Id).ToListAsync();
+            Assert.Equal(2, changes.Count);
+            using var before = JsonDocument.Parse(changes[1].BeforeJson!);
+            Assert.Equal(ScheduleWriteApi.Iso(Week.AddDays(2)),
+                Assert.Single(before.RootElement.GetProperty("offDates").EnumerateArray()).GetString());
+        });
+
+        var week = await ScheduleWriteApi.WeekAsync(supervisor, Week);
+        var days = week.Rows.Single(row => row.UserId == person).Days;
+        Assert.False(days.Single(day => day.Date == Week.AddDays(2)).IsDayOff);
+        Assert.True(days.Single(day => day.Date == Week.AddDays(4)).IsDayOff);
+    }
+
+    [Fact]
+    public async Task An_actor_with_part_of_the_weeks_authority_cannot_confirm_an_empty_week()
+    {
+        // With nothing stored, "no days off this week" is an assertion about all seven dates — one authorised Monday is not
+        // enough to write it.
+        using var factory = ScheduleWriteApi.NewFactory();
+        await TestData.AddBuildingAsync(factory, "B");
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day,
+            new DateOnly(2026, 10, 1), "A", until: Week.AddDays(2));
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, Week.AddDays(2), "B");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+
+        var answer = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = Array.Empty<string>() } },
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, answer.Response.StatusCode);
+        var problem = Assert.Single(answer.Answer!.Problems);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, problem.Code);
+        Assert.Contains(ScheduleWriteApi.Iso(Week.AddDays(2)), problem.Message);
+        await factory.WithDbAsync(async db =>
+        {
+            Assert.Empty(await db.WeeklyDayOffs.ToListAsync());
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+        });
+    }
 }
 
 /// <summary>
@@ -1059,6 +1224,27 @@ internal static class ScheduleWriteApi
             }
 
             db.ScheduleBaselines.Add(baseline);
+            await db.SaveChangesAsync();
+        });
+
+    /// <summary>A week choice somebody already saved: the stored fact a later empty submission would delete.</summary>
+    public static Task AddStoredWeekAsync(
+        JanitorialApiFactory factory, string employeeId, DateOnly weekStart, params DateOnly[] offDates) =>
+        factory.WithDbAsync(async db =>
+        {
+            var person = await db.Users.SingleAsync(user => user.EmployeeId == employeeId);
+            var admin = await db.Users.SingleAsync(user => user.Username == "admin");
+            var header = new WeeklyDayOff
+            {
+                UserId = person.Id, WeekStart = weekStart, Revision = 1, CreatedById = admin.Id,
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            foreach (var date in offDates)
+            {
+                header.Choices.Add(new WeeklyDayOffChoice { OffDate = date });
+            }
+
+            db.WeeklyDayOffs.Add(header);
             await db.SaveChangesAsync();
         });
 

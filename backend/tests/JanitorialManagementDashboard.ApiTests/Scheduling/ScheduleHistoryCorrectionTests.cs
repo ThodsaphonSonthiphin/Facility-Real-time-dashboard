@@ -295,6 +295,59 @@ public class ScheduleHistoryCorrectionTests
     }
 
     [Fact]
+    public async Task A_no_op_resubmission_of_a_started_week_answers_committed_without_a_reason()
+    {
+        // Ruling (f) against the retroactive reason rule: a submission that changes nothing is not an edit, so it needs no
+        // reason and leaves the header exactly as it was — while a real change inside the same started week still needs one.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+        var pastWeek = Week.AddDays(-7); // Monday the 9th: every date in it has already passed
+        var key = ScheduleWriteApi.WeekKey(person, pastWeek);
+
+        var recorded = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(pastWeek),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(pastWeek) } } },
+            reason = "แจ้งลาย้อนหลัง",
+        });
+        var again = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(pastWeek),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(pastWeek) } } },
+        }, recorded.Answer!.Revisions);
+        var changed = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(pastWeek),
+            rows = new[]
+            {
+                new
+                {
+                    userId = person,
+                    offDates = new[] { ScheduleWriteApi.Iso(pastWeek), ScheduleWriteApi.Iso(pastWeek.AddDays(2)) },
+                },
+            },
+        }, again.Answer!.Revisions);
+
+        Assert.Equal(HttpStatusCode.OK, recorded.Response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, again.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, again.Answer!.Outcome);
+        Assert.Equal("1", again.Answer.Revisions[key]);
+        Assert.Equal(HttpStatusCode.Conflict, changed.Response.StatusCode);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(changed.Answer!.Problems).Code);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(1, header.Revision);
+            Assert.Equal(pastWeek, Assert.Single(header.Choices).OffDate);
+            var change = Assert.Single(await db.ScheduleChanges.ToListAsync());
+            Assert.Equal("create", change.Operation);
+            Assert.Equal("แจ้งลาย้อนหลัง", change.Reason);
+        });
+    }
+
+    [Fact]
     public async Task A_week_that_has_not_started_does_not_need_a_reason()
     {
         // The requirement is about retroactive edits only: a future week still commits without one.
