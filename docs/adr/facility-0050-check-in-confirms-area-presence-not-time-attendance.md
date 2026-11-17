@@ -24,3 +24,7 @@ flowchart TD
 - คำว่า "ลงเวลาเข้างาน" บนหน้าจอยังใช้ได้ แต่ใน CONTEXT.md นิยาม Shift Check-In ว่าเป็นการยืนยันว่าเข้าพื้นที่
 - ช่วงทดลองที่มีแม่บ้านประจำ 1–2 คน Admin ต้องกดมอบหมายทำแทนทุกวันที่คนประจำหยุด ถ้าตอนขยายแล้วภาระนี้มากเกินไป ค่อยพิจารณาตารางวันหยุดประจำ
 - ถ้าวันหลัง HR อยากใช้ข้อมูลนี้คิดค่าจ้าง ต้องทบทวน ADR นี้และระยะเวลาเก็บข้อมูล
+
+> **Design amendment 2026-11-16:** [facility-0135](facility-0135-cleaners-have-recurring-weekly-days-off.md) accepts recurring weekly days off for individual Cleaners, superseding the exclusion of day-off schedules in item 4 for the new design. Supervisor and Admin scheduling authority is recorded in 0131–0133. [facility-0136](facility-0136-regular-day-off-keeps-all-area-cleaning-rounds.md) confirms personal days off keep all usual Area rounds and the Supervisor arranges a substitute. Detailed substitute rules, leave and one-off changes remain under discussion. The feature is not implemented; this does not introduce payroll rules or change retention.
+
+> **Attendance lifecycle design amendment 2026-11-16:** [facility-0146](facility-0146-two-breaks-use-six-scanned-attendance-actions.md) replaces four-action references with six normal scanned actions, including departure and return for each of two breaks. This remains Area-presence evidence, not company payroll attendance. Timing enforcement, missing-action and correction policies still need discussion; the current implementation remains four-action.

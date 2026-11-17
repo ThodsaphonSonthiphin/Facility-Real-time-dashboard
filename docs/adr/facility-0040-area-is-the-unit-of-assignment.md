@@ -37,3 +37,7 @@ flowchart TD
 - ยังไม่ได้ตัดสินใจ: หัวหน้างานต้องลงเวลาด้วยไหม (คำถามข้อ 2.4)
 
 > **แก้ไข 2026-10-07:** คำถามข้อ 2.4 ตอบแล้ว: หัวหน้าไม่ต้องลงเวลา และประจำตึก (facility-0048) แม่บ้านทุกคนมี Area ประจำ ไม่มีคนสำรอง (facility-0041)
+
+> **Design clarification 2026-11-16:** [facility-0134](facility-0134-cleaners-retain-regular-areas-with-dated-exceptions.md) confirms that the new scheduling design retains regular Areas, with changes or cover only on selected days. It does not require fresh assignments every day. Detailed temporary-assignment and QR rules remain open; this is not an implemented scheduling feature.
+
+> **Design amendment 2026-11-16:** [facility-0137](facility-0137-dedicated-relief-cleaners-cover-days-off.md) supersedes the statement that all Cleaners have regular Areas and there are no relief staff. Regular Cleaners keep regular Areas; dedicated relief Cleaners have none and cover those on days off. This is the accepted new design, not the implemented workflow.

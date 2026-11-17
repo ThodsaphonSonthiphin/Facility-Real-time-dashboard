@@ -37,3 +37,5 @@ flowchart TD
 > **แก้ไข 2026-10-07:** Admin เปิดดูประวัติได้ในแท็บ "ประวัติ Admin" แบบอ่านอย่างเดียว (facility-0057)
 
 > **แก้ไข 2026-10-19 (แผน 11):** หน้าการเข้างาน (D2) มีปุ่ม "เพิ่มเวลา" / "แก้เวลา" ในแถวที่มีแม่บ้านประจำ ฟอร์มให้เลือกรายการ (บอกเวลาตอนนี้ของแต่ละรายการ) พิมพ์เวลาแบบ "HH:mm" และต้องกรอกเหตุผลไม่เกิน 500 ตัวอักษร เตือน "ไม่ได้ลงเวลาเลิกงาน" ในหน้ารายการที่ขึ้นเตือนมีลิงก์ "เติมเวลา…" ที่เปิดฟอร์มนี้ของกะนั้นให้เลย
+
+> **Missing-time authority design amendment 2026-11-16:** [facility-0154](facility-0154-supervisor-may-fill-missing-team-attendance-with-reason.md) permits the responsible Supervisor, as well as Admin, to enter a verified missing actual time for their team, with a reason and audit history. This supersedes the Admin-only restriction for missing-time entry. The clarified answer does not grant a Supervisor general rights to overwrite recorded scans; existing Admin correction rights remain. No current endpoint permissions have changed.

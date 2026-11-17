@@ -9,6 +9,11 @@ flowchart TD
 ```
 
 - วันที่: 2026-10-07
+
+> **Multiple-building scheduling amendment 2026-11-16:** [facility-0140](facility-0140-supervisor-may-schedule-multiple-assigned-buildings.md) confirms that a Supervisor may be responsible for multiple buildings and directly assign relief work between them. This changes the single-building assumption for the scheduling design. [facility-0141](facility-0141-supervisor-shares-building-scope-for-view-schedule-and-inspection.md) subsequently confirms the same set governs viewing, scheduling and inspection within the assigned shift. Current single-building inspection code has not changed.
+
+> **Design extension 2026-11-16:** [facility-0131](facility-0131-supervisor-manages-cleaner-schedules-in-web.md) adds direct web scheduling of Cleaners by Supervisors to the accepted design. [facility-0132](facility-0132-supervisor-scheduling-scoped-to-own-building-and-shift.md) subsequently confirms scheduling only within the Supervisor's own assigned building and shift; the new screen is not implemented. Existing inspection rules remain unchanged by this decision.
+
 - ที่มา: คำตอบของหัวหน้า ผ่านเจ้าของโปรเจกต์ 2026-10-07 ("บริษัทมีหัวหน้างาน 6 คน หัวหน้า A ประจำตึก 1 … ต้องตรวจ Area ทั้งหมดภายในตึกนี้ จะตรวจกี่รอบก็ได้ … Admin จะเป็นคนประเมินเอง") ตอบคำถามข้อ 2.4 และข้อ 6
 - เกี่ยวข้อง: facility-0029 (การตรวจงาน), facility-0040 (Area อยู่ในตึก), facility-0041 (บล็อก + มอบหมายทำแทน), facility-0047 (ตรวจกี่ครั้งก็ได้)
 

@@ -37,3 +37,5 @@ flowchart TD
 - Attendance Board บน Dashboard สามารถแสดงสถานะปัจจุบันของพนักงานได้ 4 สถานะ: ปฏิบัติงาน, พักเบรก, เลิกงานแล้ว, หรือยังไม่เข้างาน
 
 > **แก้ไข 2026-10-07:** ลงเวลา 4 ครั้งยังใช้ แต่ไม่คิดสาย/กลับก่อน (facility-0050) ลืมลงเวลาเลิกงานหรือกลับจากพัก = ปล่อยว่างแล้วขึ้นเตือนให้ Admin เติม (facility-0051)
+
+> **Design amendment 2026-11-16:** [facility-0146](facility-0146-two-breaks-use-six-scanned-attendance-actions.md) supersedes the four-action lifecycle for the new design: scan enter work, depart/return for break 1, depart/return for break 2, and leave work. Both breaks require actual scans. Missing-action, allowed-time, correction and legacy-history policies remain to be specified. Existing four-action code has not been changed.

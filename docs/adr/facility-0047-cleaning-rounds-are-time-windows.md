@@ -50,3 +50,5 @@ facility-0042 ใช้เวลารอบจุดเดียวบวกค
 - ข้อ 4 "ยังไม่ถึงรอบ" และข้อ 7 ได้คำตอบเพิ่มในวันเดียวกัน
 
 > **แก้ไข 2026-10-09:** ช่วงรอบห้ามจบตรงเวลาเปลี่ยนกะ (19:00 ของกะเช้า หรือ 07:00 ของกะดึก) เจ้าของโปรเจกต์ตัดสิน เพราะพ้นเวลานั้นระบบนับเป็นกะใหม่แล้ว งานที่ส่งช้าหรือส่งแก้ของรอบนั้นจึงเข้ารอบเดิมไม่ได้ หน้าตั้งค่ารอบของ Admin (facility-0045) ต้องปฏิเสธช่วงที่จบตรงเวลาเหล่านี้
+
+> **Break-aware round discussion resolved 2026-11-16:** [facility-0163](facility-0163-keep-configured-rounds-without-automatic-break-rescheduling.md) confirms configured round times remain and automatic break-driven rescheduling is excluded, superseding the hypothetical proposal in [facility-0162](facility-0162-cleaning-rounds-move-automatically-when-breaks-conflict.md). The owner clarified that actual work timetables already avoid breaks. No automatic deadline changes or new conflict-warning/validation requirement are approved by that discussion.
