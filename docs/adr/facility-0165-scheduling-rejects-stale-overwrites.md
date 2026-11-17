@@ -12,3 +12,5 @@ On 2026-11-17 the owner accepted the proposed save-protection set: when a Superv
 Apply this guarantee to the new scheduling writes. It does not decide a version-token/table design, require unrelated existing endpoints to accept new inputs, widen editing authority, or resolve the deferred field rules for competing assignments and changes after work starts. See [the requirements record](../requirements-gathering/2026-11-16-supervisor-scheduling-requirements.md). Accepted design only; no application changes.
 
 Amendment 2026-11-17: [0171](facility-0171-schedule-refresh-preserves-unsaved-input.md) also preserves input when a live refresh arrives before saving, with a notification that newer saved data exists. This complements stale-write rejection; it does not replace it or authorize automatic merging.
+
+**Storage/protocol choice:** [0221](facility-0221-schedule-commands-use-revisions-and-durable-receipts.md) binds the accepted guarantee to expected revisions, stable command identity/fingerprint and durable atomic result receipts; see the scheduling spec for expiry and transaction contracts.

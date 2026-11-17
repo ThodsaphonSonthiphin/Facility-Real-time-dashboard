@@ -16,3 +16,5 @@ Next resolve who records the assignment when the relief Cleaner moves from A to 
 **Assignment clarification:** [facility-0140](facility-0140-supervisor-may-schedule-multiple-assigned-buildings.md) confirms that one Supervisor may be responsible for multiple buildings and can assign the relief Cleaner between those buildings. The source/destination distinction does not imply two separate Supervisors. Coordination between genuinely different responsible Supervisors remains open.
 
 **Regular-shift clarification:** [facility-0143](facility-0143-relief-cleaners-keep-a-regular-shift.md) confirms cross-building relief assignments remain within the person's regular shift; they are not dated day/night switches.
+
+**Home-building clarification (2026-11-17):** [facility-0194](facility-0194-relief-cleaners-have-home-buildings-with-surplus-borrowing.md) confirms that relief Cleaners have home buildings and a short building requests surplus staff from another building. Agreement/recording authority and the web workflow remain unresolved.

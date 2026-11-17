@@ -18,3 +18,5 @@ Before spec approval, define how a shift is identified as old versus new, the cu
 Accepted design only; no application, schema, database, stored attendance or runtime changes have been made.
 
 Amendment 2026-11-17: [0168](facility-0168-six-action-attendance-starts-at-a-shift-boundary.md) resolves the shift-boundary cutover policy; [0169](facility-0169-refresh-stale-attendance-pages-for-new-flow.md) resolves stale-page compatibility for new-flow attendance. The preceding spec questions about cutover policy are resolved by these decisions; persistence/protocol details and read/export/correction integration still need definition in the spec.
+
+**Lifecycle representation selected:** [0222](facility-0222-attendance-lifecycle-identifies-legacy-and-numbered-breaks.md) keeps stored legacy event strings intact and versions slots with explicit new numbered breaks; transfer confirmation stays separate from a second ShiftIn.

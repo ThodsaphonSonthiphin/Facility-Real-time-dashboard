@@ -12,3 +12,5 @@ On 2026-11-17 the owner selected “จำตึกและกะที่เ�
 This preserves selection, not authority. A Supervisor remains in their own assigned building set and shift; the answer does not introduce a Supervisor shift-switching permission. Server authorization remains applicable to every read/write, including restored selections. Initial Admin filters still follow [0184](facility-0184-admin-schedule-starts-all-buildings-current-shift.md) when there is no return selection.
 
 This does not choose persistence across logout/reload/new tabs or later independent visits, restore a specific selected day, or decide Supervisor's initial building filter. No storage mechanism is selected. Accepted design only; no application implementation or mockup revision.
+
+**Persistence scope resolved:** [0218](facility-0218-schedule-return-memory-is-limited-to-ongoing-use.md) confines restoration to ongoing use; reload/new login/new tab use initial defaults. No durable saved-filter feature is added.

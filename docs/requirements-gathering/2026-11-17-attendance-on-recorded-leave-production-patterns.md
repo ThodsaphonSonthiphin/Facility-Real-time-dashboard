@@ -1,0 +1,29 @@
+# Working during recorded leave: production-pattern research
+
+17 November 2026 (Asia/Bangkok). Owner requested research before choosing whether leave cancellation must precede check-in. **The owner subsequently accepted this recommendation in 0202; no permission to implement.** This does not reopen accepted cancellation outcome 0198 or half-day final-departure rules 0200–0201.
+
+## Primary evidence
+
+| Source | Finding | Grade and limit |
+|---|---|---|
+| [SAP Absence and Attendance Collision Resolution](https://help.sap.com/docs/successfactors-employee-central/implementing-time-management-in-sap-successfactors/absence-and-attendance-collision-resolution?ai=true) | Configurable overlap handling includes Allow concurrent and Allow outside absence hours, with optional warning. | Verified-primary: full official indexed text, 2H 2026; direct open returned no readable lines. Configuration capability, not universal policy. |
+| [SAP KBA 3755034](https://userapps.support.sap.com/sap/support/knowledge/en/3755034) | Describes overlapping absence and attendance/time events. Example resolution warns to verify the time sheet and update or cancel absence as needed. Requires the collision rules in both directions. | Verified-primary: full official indexed KBA text; direct open timed out. Example is SAP sample data, not a customer deployment statistic. |
+| [SAP Time Recording Variants](https://help.sap.com/docs/SAP_SUCCESSFACTORS_EMPLOYEE_CENTRAL/68de09dff990417b9f0acf6ccc13a14d/time-recording-variants) | Also documents collision checks preventing overlaps. | Verified-primary: official indexed text; direct open returned no readable lines. Counter-signal: blocking overlaps is also a documented pattern, so do not claim all production systems must accept them. |
+| [University of Oregon UKG Ready operating instructions](https://ba.uoregon.edu/ukg-ready-time-attendance) | Records punches in real time; supports separate change requests and modifying/cancelling approved time off. | Verified-primary: direct read of the organisation's own operating instructions. Evidence for separation and correction workflow, not proof its clock permits attendance during leave. |
+| [ADP Mobile support](https://sbshrs.adpinfo.com/tlmsupport/mobile) | Managers can cancel approved/inaccurate time-off requests; describes correcting posted timecard entries separately. | Verified-primary: official indexed relevant text and accessible support page. Does not establish clock-in behaviour when leave remains active. |
+
+These sources establish that both collision prevention and accept-with-warning/reconciliation patterns exist. There is no demonstrated universal requirement to cancel leave before collecting the actual clock event. Product documentation does not establish a global adoption rate. No labour-law/payroll conclusion or vendor purchase/integration recommendation is made; vendor retirement registries and market counts are immaterial to this comparison and were not researched. Secondary forums were not used for technical conclusions.
+
+## Recommendation for this project — inference
+
+Prefer updating/cancelling the recorded leave before the shift when known in advance. But do not reject an otherwise eligible real check-in solely because the recorded leave has not yet been cancelled in the web app. Preserve the actual scan time, display a visible conflict such as “มีบันทึกเข้างานตรงกับวันลา — รอซุปตรวจสอบ”, and let the authorised Supervisor/Admin explicitly cancel the leave under 0198. Clear the conflict only once that change is saved successfully. Retain both the leave change history and actual scan provenance; do not move the scan timestamp to the later cancellation time.
+
+This is a proposal for handling record order, not a claim about who operationally authorises returning to work. All account, Area/sign, shift, time-window and other applicable eligibility checks still apply. A scan must not silently cancel leave, assign a new Area, borrow a relief Cleaner or displace an existing relief assignment. Any staffing conflict remains for the responsible Supervisor to resolve under the separately accepted authority. Do not imply that recording attendance itself is approval of a transfer or a new exception to Area permissions.
+
+The source check confirms current `AttendanceEndpoints` compares the sign Area to `user.AreaId`, and `AttendanceRules.IsOnDuty` uses ShiftIn without ShiftOut. A new leave-conflict indicator is not implemented. Do not introduce a hidden pending-attendance state that silently stops submission or changes the accepted Area-entry metrics: any such behaviour would need a separate explicit decision. This research selects no new submission rule.
+
+Synthetic example for review: leave exists for 17 November; a person otherwise eligible for the Area/shift scans in at 07:00; the system records 07:00 plus a visible leave conflict; the Supervisor cancels the recorded leave at 07:10; attendance remains 07:00, and the conflict is resolved with auditable cancellation. If the Supervisor disputes the attendance or a relief Cleaner is already assigned, do not silently delete a fact or rearrange staff. The review/correction and staffing outcomes still need the applicable authorised action.
+
+## Decision state
+
+After the sourced recommendation the owner replied “OK”. Recorded accepted design in [0202](../adr/facility-0202-allow-eligible-check-in-before-explicit-leave-cancellation-with-visible-conflict.md); the recommendation wording above preserves its rationale. The proposal concerns working during recorded leave. Do not extend it automatically to planned days off, borrowing or urgent transfer sign/attendance without resolving their specific requirements. The research itself made no application/schema/database/runtime changes or application tests; 0202 was recorded on the subsequent acceptance turn.

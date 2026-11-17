@@ -66,3 +66,19 @@
 - spec: เพิ่มหัวข้อ 12 “ทบทวนสมมติฐานหลังเขียนแบบ” ชี้มาที่เอกสารนี้ โดยไม่แก้ข้อ 1–11
 - handoff: บันทึกงานรอบนี้
 - ตรวจ: ลิงก์สัมพัทธ์, code fence, whitespace; ไม่มีการแก้โค้ด/ฐานข้อมูล/รันทดสอบแอป
+
+## D7: Area Transfer 0203/0204 — additional review
+
+หลังรอบทบทวน ADR 0131–0193 เจ้าของยืนยัน 0203/0204: ซุปสั่งย้ายแม่บ้านที่เริ่มกะแล้ว A → B คง initial ShiftIn/ลำดับพัก และแม่บ้านสแกนป้าย B ยืนยันถึงจริงหนึ่งครั้ง โดยไม่ใช้ ShiftOut+ShiftIn ใหม่ คำสั่งย้ายไม่ใช่หลักฐานถึง B
+
+**ผลกระทบที่ต้องผูกเพิ่ม:** entry projection ของ Task 5/6 และ DTO/detail/live/recovery/tests ใน Task 7/9/10/11 ต้องรองรับหลักฐานยืนยันปลายทาง หาก transfer ขึ้นก่อนหรือพร้อมภาพรวม ห้ามสร้าง ShiftIn ซ้ำเพื่อหลีกเลี่ยงงาน integration เก็บ initial entry ที่ A ตามจริง แยกจากการรับผิดชอบปัจจุบัน และไม่แสดงคนเดียวทำสองพื้นที่ปัจจุบันพร้อมกัน คำสั่งเวลา 13:00 กับ scan ถึง 13:05 ต้องไม่รวมเป็น timestamp เดียว ไม่เปลี่ยนยอดเป้างาน/รอบตามการย้ายคน
+
+สัญญาเดิมใน Task 5 ใช้ ShiftIn-only จึงยังไม่ executable สำหรับ transfer โดยอัตโนมัติ ต้องปิดรายละเอียดการรวมหลักฐานและ current coverage ใน spec ก่อนทำส่วนนี้ ไม่เพิ่ม category/แก้ denominator เอง ทั้งนี้ภาพรวมที่ขึ้นก่อน transfer ยังใช้ source เดิมได้ แล้วทำ integration ก่อนเปิด transfer ภายหลัง เอกสารนี้เป็นเงื่อนไขลำดับงาน ไม่ใช่ implementation หรือ blanket block ให้รอทุกเรื่องของ scheduling
+
+0200–0202 เพิ่มข้อแสดงผลที่เกี่ยวข้อง: actual ShiftOut ตามเวลาออก, จังหวะพักหลังออกที่มีลารองรับแยกจากเวลาที่ขาดก่อนออก, และบันทึกเข้างานตรงวันลาที่รอซุปยกเลิกไม่ถูกเปลี่ยนเป็นการเข้างานที่ไม่เกิดหรือซ่อนเป็น pending เพื่อปิด submission โดยพลการ สิ่งเหล่านี้ไม่ให้สิทธิ์แก้ actual scan ตามแผน
+
+อัปเดตรอบนี้เพิ่มข้อผูกพันใน spec §12 และต้น plan; ไม่ได้รันทดสอบ application หรือยืนยันว่า example code ใน task ถูกแก้เป็น transfer implementation แล้ว
+
+**0205 เพิ่มกรณีวันหยุด:** record-first + visible schedule conflict ใช้กับ otherwise eligible actual check-in ในวันหยุดเช่นเดียวกับวันลาใน 0202 ไม่ซ่อน entry จริงเป็น pending ไม่เปลี่ยนหมวด/ตัวหารหรือรอบงาน ไม่ปรับวันหยุดและไม่ย้ายสแปร์อัตโนมัติ ความขัดกันของแผนต้องแสดงแยกจากหลักฐานเข้างานและรอการปรับตารางที่บันทึกสำเร็จ
+
+**D7 contract closed after recap approval:** [0216](../../adr/facility-0216-overview-entry-includes-confirmed-transfer-arrival.md) and [scheduling spec §13](../specs/2026-11-17-cleaner-scheduling-design.md) now define distinct Area entry from initial ShiftIn OR confirmed destination arrival, persistent past entry at A, B only after confirmation, and unchanged three categories/denominator. Current responsibility stays separate. The earlier request to resolve the product aggregation contract is fulfilled; the task code examples/DTOs must still be rebased to this contract before implementation with transfer. This is an accepted design extension, not completed implementation or a rerun of the original 0131–0193 review.
