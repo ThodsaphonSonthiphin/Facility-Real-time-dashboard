@@ -633,14 +633,16 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
         // Membership only (spec §14): the compatibility projection may say which building a person belongs to, never what
         // their history was. Only the periods that overlap the read week are membership at all, so a person who left a
-        // building stops counting as its member on the dates their period no longer covers.
+        // building stops counting as its member on the dates their period no longer covers; and the projection is the
+        // membership of the dates before the person's first dated identity, so a profile written today does not remove the
+        // dates before today from the read.
         var memberships = roster.ToDictionary(person => person.Id, person => MembershipSlots(
             person,
-            profiles.Where(profile => profile.UserId == person.Id
-                && OverlapsWeek(profile.EffectiveFrom, profile.EffectiveUntil, monday, weekEnd)).ToList(),
+            profiles.Where(profile => profile.UserId == person.Id).ToList(),
             baselines.Where(baseline => baseline.UserId == person.Id).ToList(),
             areaBuildings,
-            profiles.Exists(profile => profile.UserId == person.Id)));
+            monday,
+            weekEnd));
 
         // Per-date scope (spec §3): a Supervisor's row holds only the dates its dated period covers, so a period that starts
         // or ends mid-week never reads the rest of the week, and a person with no covered date of the week is not in the
@@ -895,13 +897,21 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     /// day-level predicate the design has. A regular Cleaner's building comes from the Areas of their own baseline versions;
     /// when the person has no dated identity at all the compatibility columns are the only membership there is (spec §14),
     /// and they never become history.
+    /// <para>
+    /// Controller ruling for Task 7: the compatibility projection is the membership of the dates a dated profile does not
+    /// cover — the dates of this read that lie before the person's first dated identity — not merely of the "no dated row
+    /// at all" state. Writing a profile that starts today therefore does not delete the earlier dates from the read, and
+    /// it still adds no projection membership to a date a profile has taken over.
+    /// </para>
     /// </summary>
     private static List<ScopePeriod> MembershipSlots(
-        User person, IReadOnlyList<CleanerProfilePeriod> weekProfiles, IReadOnlyList<ScheduleBaseline> baselines,
-        IReadOnlyDictionary<int, int> areaBuildings, bool hasDatedProfile)
+        User person, IReadOnlyList<CleanerProfilePeriod> personProfiles, IReadOnlyList<ScheduleBaseline> baselines,
+        IReadOnlyDictionary<int, int> areaBuildings, DateOnly monday, DateOnly weekEnd)
     {
         var slots = new List<ScopePeriod>();
-        foreach (var profile in weekProfiles)
+        foreach (var profile in personProfiles
+                     .Where(profile => OverlapsWeek(profile.EffectiveFrom, profile.EffectiveUntil, monday, weekEnd))
+                     .OrderBy(profile => profile.EffectiveFrom).ThenBy(profile => profile.Id))
         {
             if ((profile.HomeBuildingId ?? BaselineBuilding(baselines, profile, areaBuildings)) is int building)
             {
@@ -910,14 +920,21 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             }
         }
 
-        if (slots.Count == 0 && !hasDatedProfile)
+        // The read's dates before that first dated identity — the whole week for a pre-backfill account, and the days
+        // before today for somebody whose first profile was written today. The range is the read week's own, so the
+        // projection never claims a date this read does not cover.
+        var firstDated = personProfiles.Count == 0
+            ? (DateOnly?)null
+            : personProfiles.Min(profile => profile.EffectiveFrom);
+        if ((firstDated ?? weekEnd) > monday)
         {
             var building = person.AreaId is int area && areaBuildings.TryGetValue(area, out var fromArea)
                 ? fromArea
                 : person.BuildingId;
             if (building is int known && person.Shift is Shift shift)
             {
-                slots.Add(new ScopePeriod(person.Id, known, shift, DateOnly.MinValue, null));
+                slots.Add(new ScopePeriod(person.Id, known, shift, monday,
+                    firstDated is { } start && start < weekEnd ? start : weekEnd));
             }
         }
 

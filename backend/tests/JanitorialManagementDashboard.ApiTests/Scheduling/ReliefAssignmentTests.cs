@@ -5,6 +5,7 @@ using System.Text.Json;
 using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.ApiTests.Scheduling;
@@ -106,6 +107,52 @@ public class ReliefAssignmentTests
         Assert.Equal(HttpStatusCode.BadRequest, unknownShift.StatusCode);
     }
 
+    [Theory]
+    [InlineData(ScheduleStore.ReliefShiftMismatch)]
+    [InlineData(ScheduleStore.ReliefExistingAssignment)]
+    [InlineData(ScheduleStore.ReliefExistingDuty)]
+    [InlineData(ScheduleStore.ReliefOnLeave)]
+    public async Task The_candidate_route_names_the_stored_fact_that_blocks_the_slot(string conflict)
+    {
+        // Spec §6: a screen must not offer a person the command then refuses, so each stored fact that blocks the slot is
+        // one refusal the lookup itself answers, with the code the command refuses the same fact under.
+        using var factory = ReliefApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddBuildingAsync(factory, "B");
+        var sourceBuilding = await AdminSetupApi.BuildingIdAsync(factory, "B");
+        var relief = conflict == ScheduleStore.ReliefShiftMismatch
+            // The person belongs to B but works nights, so the day slot asked for is somebody else's.
+            ? await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Night)
+            : await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
+        switch (conflict)
+        {
+            case ScheduleStore.ReliefExistingAssignment:
+                await TestData.AddAreaAsync(factory, "AR03", "B", ShiftPattern.DayOnly);
+                await ReliefApi.AddStoredReliefAsync(factory, relief, await AdminSetupApi.AreaIdAsync(factory, "AR03"),
+                    ReliefApi.Wednesday, Shift.Day, sourceBuilding);
+                break;
+            case ScheduleStore.ReliefExistingDuty:
+                await TestData.AddAreaAsync(factory, "AR03", "B");
+                // Their own applicable plan already works an Area in that slot: nothing may be moved or cancelled.
+                await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "E3001", new DateOnly(2026, 10, 1), "AR03");
+                break;
+            case ScheduleStore.ReliefOnLeave:
+                await ReliefApi.AddLeaveAsync(factory, relief, ReliefApi.Wednesday, Shift.Day);
+                break;
+        }
+
+        var response = await admin.GetAsync(
+            $"/api/schedules/relief-candidates?employeeId=E3001&sourceBuildingId={sourceBuilding}"
+            + $"&date={ReliefApi.Iso(ReliefApi.Wednesday)}&shift=Day");
+        var candidate = await ReliefApi.ReadAsync<ReliefApi.CandidateAnswer>(response);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(candidate);
+        Assert.False(candidate!.Eligible);
+        Assert.Equal(ReliefApi.Conflict, candidate.Status);
+        Assert.Equal(conflict, Assert.Single(candidate.Conflicts));
+    }
+
     [Fact]
     public async Task Standalone_relief_work_without_a_break_group_is_refused_and_writes_nothing()
     {
@@ -137,6 +184,8 @@ public class ReliefAssignmentTests
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
         await TestData.AddBuildingAsync(factory, "B");
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        // One Supervisor holds the source building too, so the loan gate asks for nothing and this test is about the row.
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, new DateOnly(2026, 10, 1));
         var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
         var destination = await AdminSetupApi.AreaIdAsync(factory, "AR01");
         var sourceBuilding = await AdminSetupApi.BuildingIdAsync(factory, "B");
@@ -272,6 +321,8 @@ public class ReliefAssignmentTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await TestData.AddBuildingAsync(factory, "B");
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        // One Supervisor holds the source building too, so the loan gate asks for nothing and the first write can commit.
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, new DateOnly(2026, 10, 1));
         var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
         var destination = await AdminSetupApi.AreaIdAsync(factory, "AR01");
         var sourceBuilding = await AdminSetupApi.BuildingIdAsync(factory, "B");

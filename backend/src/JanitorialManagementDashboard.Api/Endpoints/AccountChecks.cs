@@ -48,7 +48,9 @@ internal static class AccountChecks
     /// Controller ruling (a) for Task 7: an absent <paramref name="cleanerKind"/> keeps the behaviour every existing caller
     /// has (a regular Cleaner, whose Area may be empty), an explicit <see cref="CleanerKind.Regular"/> needs an Area because
     /// that is where its home building comes from, and a <see cref="CleanerKind.Relief"/> has a home building and no Area —
-    /// a relief's home building is not a Supervisor slot and never occupies <c>users.supervisor_slot</c>.
+    /// a relief's home building is not a Supervisor slot and never occupies <c>users.supervisor_slot</c>. A
+    /// <paramref name="cleanerKind"/> the enum does not define is refused up front, so no stored kind can be a number no
+    /// reader renders (the wire accepts integer enum values).
     /// </para>
     /// </summary>
     public static async Task<(AccountPlace? Place, IResult? Error)> ReadPlaceAsync(
@@ -58,6 +60,14 @@ internal static class AccountChecks
         if (shift is { } given && !Enum.IsDefined(given))
         {
             return (null, Bad("เลือกกะเช้าหรือกะดึก"));
+        }
+
+        // The wire accepts any number for an enum (JsonStringEnumConverter allows integer values), so a value the enum does
+        // not define must be refused here rather than compared against Regular/Relief, fall through as "neither" and reach
+        // cleaner_profile_periods.kind as a number no reader can render.
+        if (cleanerKind is { } givenKind && !Enum.IsDefined(givenKind))
+        {
+            return (null, Bad("ประเภทแม่บ้านต้องเป็นประจำหรือสแปร์เท่านั้น"));
         }
 
         switch (role)

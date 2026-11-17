@@ -295,8 +295,10 @@ public class AccountEndpointTests
     [InlineData("Relief", "AR01", true, false)]    // a relief has no regular Area
     [InlineData("Relief", null, false, false)]     // a relief needs a home building
     [InlineData("Relief", null, true, true)]       // the home building must be one that exists
+    [InlineData(5, null, false, false)]            // a number the enum does not define is not a kind to store
+    [InlineData("5", null, false, false)]          // nor is its spelling as a string
     public async Task A_cleaner_identity_that_cannot_be_stored_is_refused(
-        string cleanerKind, string? areaCode, bool withHome, bool unknownHome)
+        object? cleanerKind, string? areaCode, bool withHome, bool unknownHome)
     {
         using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
@@ -315,7 +317,8 @@ public class AccountEndpointTests
             homeBuildingId = withHome ? (unknownHome ? buildingB + 1000 : buildingB) : (int?)null,
         });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.True(response.StatusCode == HttpStatusCode.BadRequest,
+            $"{(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");
         await factory.WithDbAsync(async db =>
         {
             Assert.Empty(await db.Users.Where(user => user.EmployeeId == "E2007").ToListAsync());

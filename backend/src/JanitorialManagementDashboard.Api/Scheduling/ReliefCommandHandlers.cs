@@ -204,9 +204,34 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
         // is that Supervisor (including one person holding both buildings) nothing extra is asked, and no second approver is
         // invented. Nothing here claims the server verified a conversation.
         var responsible = await store.ResponsibleSupervisorAsync(relief.SourceBuildingId, relief.Shift, relief.ShiftDate, ct);
-        if (responsible is int sourceSupervisorId && sourceSupervisorId != actor.Id)
+        if (responsible is not int responsibleId)
         {
-            if (relief.SourceSupervisorId != sourceSupervisorId)
+            // Ruling: no Supervisor resolves for the source building, shift and date (a vacant or deactivated one, or dated
+            // rows that no longer give it to anybody). There is nobody whose agreement could be named, so a named
+            // sourceSupervisorId is a row problem rather than an unvalidated fact, and the loan still needs the note.
+            if (relief.SourceSupervisorId is not null)
+            {
+                return Refused(revisions, key, "ตึกต้นทางยังไม่มีหัวหน้าผู้รับผิดชอบในวันนั้น จึงระบุชื่อหัวหน้าตึกต้นทางไม่ได้");
+            }
+
+            if (!relief.AgreementReported)
+            {
+                return Refused(revisions, key,
+                    "ตึกต้นทางยังไม่มีหัวหน้าผู้รับผิดชอบ ต้องยืนยันว่าตึกต้นทางตกลงปล่อยคนนอกเว็บแล้ว");
+            }
+        }
+        else if (responsibleId == actor.Id)
+        {
+            // The actor is the responsible source Supervisor: naming anybody else would describe a person who does not hold
+            // the building that day, and no second approver exists to be asked.
+            if (relief.SourceSupervisorId is int namedSelf && namedSelf != responsibleId)
+            {
+                return Refused(revisions, key, "หัวหน้าตึกต้นทางที่ระบุไม่ใช่ผู้รับผิดชอบตึกนั้นในวันนั้น");
+            }
+        }
+        else
+        {
+            if (relief.SourceSupervisorId != responsibleId)
             {
                 return Refused(revisions, key, "ต้องระบุหัวหน้าตึกต้นทางที่รับผิดชอบวันนั้นให้ตรงกับข้อมูลจริง");
             }
@@ -217,10 +242,10 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
                     "ตึกต้นทางเป็นของหัวหน้าคนอื่น ต้องยืนยันว่าตึกต้นทางตกลงปล่อยคนนอกเว็บแล้ว");
             }
         }
-        else if (relief.SourceSupervisorId is int named && responsible is int actual && named != actual)
-        {
-            return Refused(revisions, key, "หัวหน้าตึกต้นทางที่ระบุไม่ใช่ผู้รับผิดชอบตึกนั้นในวันนั้น");
-        }
+
+        // The row names the Supervisor it was attested for only when one resolves: nobody else is stored for a loan whose
+        // source building had no responsible Supervisor that day.
+        var attestedSupervisorId = responsible is null ? null : relief.SourceSupervisorId;
 
         // 7. The reason: a plan date that has already passed is a retroactive edit and needs one (spec §5).
         var reason = ReadReason(relief.Reason, required: relief.ShiftDate < actor.BusinessDate, out var reasonProblem);
@@ -229,22 +254,13 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
             return Refused(revisions, key, reasonProblem);
         }
 
-        // 8. One live assignment per slot. The row that already holds it is reported with its revision and left exactly as it
-        // is: no automatic cancel, no automatic move.
-        if (live is not null)
+        // 8. Spec §6: the stored facts that block this slot, asked through the very rule the candidate lookup answers with
+        // (ScheduleStore.ReliefConflictsAsync), so a person the list offers is never refused here for a reason the list did
+        // not name. Any of them refuses the whole command and leaves every stored row exactly as it was: no automatic
+        // cancel, no automatic move, no conversion of a legacy cover row.
+        if (await store.ReliefConflictsAsync(relief.UserId, relief.ShiftDate, relief.Shift, ct) is { Count: > 0 } conflicts)
         {
-            return Refused(revisions, key, "มีงานสแปร์ของคนนี้ในกะนี้อยู่แล้ว ต้องจัดงานเดิมให้ถูกก่อนจึงจะบันทึกใหม่ได้");
-        }
-
-        if (await store.HasLiveLeaveAsync(relief.UserId, relief.ShiftDate, relief.Shift, ct))
-        {
-            return Refused(revisions, key, "คนนี้มีบันทึกการลาของกะนี้อยู่ จึงยังมอบหมายงานสแปร์ไม่ได้");
-        }
-
-        var reliefDay = await store.ReadPersonDayAsync(relief.UserId, relief.ShiftDate, relief.Shift, ct);
-        if (reliefDay is { IsDayOff: false, IsLeave: false } && reliefDay.Area.Value is not null)
-        {
-            return Refused(revisions, key, "คนนี้มีงานประจำในกะนี้อยู่แล้ว ต้องจัดงานเดิมให้ถูกก่อน");
+            return Refused(revisions, key, ConflictMessage(conflicts[0]));
         }
 
         // 9. One stored row, its audit line, and the revision the client can echo for its next edit.
@@ -257,7 +273,7 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
             BreakGroup = group.Group,
             ReplacedUserId = relief.ReplacedUserId,
             SourceBuildingId = relief.SourceBuildingId,
-            SourceSupervisorId = relief.SourceSupervisorId,
+            SourceSupervisorId = attestedSupervisorId,
             AgreementReported = relief.AgreementReported,
             Reason = reason,
             CreatedById = request.ActorId,
@@ -286,4 +302,19 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
         revisions[key] = Revision(created.Revision);
         return new ScheduleCommandApplication(revisions, []);
     }
+
+    /// <summary>
+    /// The Thai row message for one machine code <see cref="ScheduleStore.ReliefConflictsAsync"/> answers with. The codes are
+    /// the lookup's, so the command and the candidate list cannot drift apart about which stored fact blocks the slot; only
+    /// the wording a person sees lives here.
+    /// </summary>
+    private static string ConflictMessage(string code) => code switch
+    {
+        ScheduleStore.ReliefExistingAssignment =>
+            "มีงานสแปร์ของคนนี้ในกะนี้อยู่แล้ว ต้องจัดงานเดิมให้ถูกก่อนจึงจะบันทึกใหม่ได้",
+        ScheduleStore.ReliefOnLeave => "คนนี้มีบันทึกการลาของกะนี้อยู่ จึงยังมอบหมายงานสแปร์ไม่ได้",
+        ScheduleStore.ReliefExistingDuty => "คนนี้มีงานประจำในกะนี้อยู่แล้ว ต้องจัดงานเดิมให้ถูกก่อน",
+        ScheduleStore.ReliefShiftMismatch => "กะที่ส่งมาไม่ตรงกับกะของคนนี้ในวันนั้น",
+        _ => "มีข้อมูลที่ขัดกับการมอบหมายงานสแปร์นี้ ต้องจัดงานเดิมให้ถูกก่อน",
+    };
 }

@@ -118,6 +118,8 @@ public class ReliefLoanTests
         await TestData.AddBuildingAsync(factory, "B");
         await TestData.AddAreaAsync(factory, "AR03", "B");
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        // One Supervisor holds the source building too, so the loan gate asks for nothing and the conflict is what answers.
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, new DateOnly(2026, 10, 1));
         var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
         // Their own applicable plan for Wednesday already works in an Area of building B.
         await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "E3001", new DateOnly(2026, 10, 1), "AR03");
@@ -152,6 +154,8 @@ public class ReliefLoanTests
         await TestData.AddBuildingAsync(factory, "B");
         await TestData.AddAreaAsync(factory, "AR03", "B", ShiftPattern.DayOnly);
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        // One Supervisor holds the source building too, so the loan gate asks for nothing and the conflict is what answers.
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, new DateOnly(2026, 10, 1));
         var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
         var destination = await AdminSetupApi.AreaIdAsync(factory, "AR01");
         var existing = await AdminSetupApi.AreaIdAsync(factory, "AR03");
@@ -180,6 +184,8 @@ public class ReliefLoanTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await TestData.AddBuildingAsync(factory, "B");
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        // One Supervisor holds the source building too, so the loan gate asks for nothing and the conflict is what answers.
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, new DateOnly(2026, 10, 1));
         var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
         var destination = await AdminSetupApi.AreaIdAsync(factory, "AR01");
         var sourceBuilding = await AdminSetupApi.BuildingIdAsync(factory, "B");
@@ -199,6 +205,48 @@ public class ReliefLoanTests
             Assert.False(leave.IsCancelled);
             Assert.Equal(1L, leave.Revision);
         });
+    }
+
+    [Fact]
+    public async Task A_loan_from_a_building_with_no_responsible_supervisor_needs_the_note_and_names_nobody()
+    {
+        using var factory = ReliefApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddBuildingAsync(factory, "B");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var sourceSupervisor = await ReliefApi.AddSupervisorAsync(factory, admin, "2000002", "B", Shift.Day);
+        var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
+        var destination = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var sourceBuilding = await AdminSetupApi.BuildingIdAsync(factory, "B");
+        var (actor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        // Deactivating B's Supervisor is enough: the dated rows still exist, but none of them gives B to an active holder.
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/admin/accounts/{sourceSupervisor}/deactivate", null)).StatusCode);
+
+        // Naming the person who used to hold B is a row problem: nobody is the responsible Supervisor to attest for, so the
+        // client's id is refused instead of being stored as an unexplained fact.
+        var named = await ReliefApi.AssignAsync(actor, ReliefApi.Assignment(
+            relief, destination, ReliefApi.Wednesday, sourceBuilding, breakGroup: 1,
+            sourceSupervisorId: sourceSupervisor, agreementReported: true));
+        // And with no responsible Supervisor to ask, the destination actor's note is still what the row needs.
+        var unattested = await ReliefApi.AssignAsync(actor, ReliefApi.Assignment(
+            relief, destination, ReliefApi.Wednesday, sourceBuilding, breakGroup: 1));
+
+        Assert.Equal(HttpStatusCode.Conflict, named.Response.StatusCode);
+        Assert.Equal("row-invalid", Assert.Single(named.Answer!.Problems).Code);
+        Assert.Contains("หัวหน้าผู้รับผิดชอบ", Assert.Single(named.Answer.Problems).Message);
+        Assert.Equal(HttpStatusCode.Conflict, unattested.Response.StatusCode);
+        Assert.Equal("row-invalid", Assert.Single(unattested.Answer!.Problems).Code);
+        await ReliefApi.AssertNoReliefAsync(factory);
+
+        var committed = await ReliefApi.AssignAsync(actor, ReliefApi.Assignment(
+            relief, destination, ReliefApi.Wednesday, sourceBuilding, breakGroup: 1, agreementReported: true));
+
+        Assert.Equal(HttpStatusCode.OK, committed.Response.StatusCode);
+        Assert.Equal(ReliefApi.Committed, committed.Answer!.Outcome);
+        var stored = await ReliefApi.ReadSingleReliefAsync(factory);
+        Assert.Null(stored.SourceSupervisorId);
+        Assert.True(stored.AgreementReported);
+        Assert.Equal(sourceBuilding, stored.SourceBuildingId);
     }
 
     [Fact]

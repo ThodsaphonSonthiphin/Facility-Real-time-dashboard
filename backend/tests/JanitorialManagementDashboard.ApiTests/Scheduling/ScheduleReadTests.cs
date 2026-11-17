@@ -1,4 +1,6 @@
 using System.Data.Common;
+using System.Net;
+using System.Net.Http.Json;
 using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Application.Scheduling;
@@ -255,6 +257,59 @@ public class ScheduleReadTests
     }
 
     [Fact]
+    public async Task A_legacy_cleaner_edited_today_still_reads_the_dates_before_that_edit()
+    {
+        // Spec §14 and the Task 7 ruling: the compatibility projection is the membership of the dates a dated profile does
+        // not cover. Writing a profile that starts today must not delete the earlier dates from the read — the person keeps
+        // appearing, with their stored baseline, exactly as they did while no dated row existed at all.
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(new DateTimeOffset(2026, 11, 17, 9, 0, 0, TimeSpan.FromHours(7)));
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var area = await TestData.AddAreaAsync(factory, "AR03"); // building A, free of the seeded Cleaners
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
+        // A pre-backfill Cleaner: an account with a shift, no Area and no dated identity — nobody has written one yet.
+        var legacy = await TestData.AddCleanerAsync(factory, "1000011", Shift.Day);
+        // Their stored facts for the dates before today: Monday to Friday in AR03 with break group 1, ending with this week.
+        await AddWeekdayBaselineAsync(factory, "1000011", area, new DateOnly(2026, 10, 1), NextWeek);
+        var supervisor = await AdminSetupApi.UserIdAsync(factory, "2000001");
+
+        // Today the admin gives them their Area: an identity change, so the edit writes a profile that starts today.
+        var response = await admin.PutAsJsonAsync($"{AccountApi.Path}/{legacy}",
+            new { displayName = "แม่บ้านทดสอบ 1000011", areaId = area, shift = "Day" });
+        Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        Assert.Equal(HistoryStarts, Assert.Single(await AdminSetupApi.ReadAsync(factory, db => db.CleanerProfilePeriods
+            .Where(period => period.UserId == legacy).ToListAsync())).EffectiveFrom);
+
+        var earlier = (await ReadAsync(factory, supervisor, PreviousWeek)).Rows.Single(row => row.UserId == legacy);
+        var thisWeek = (await ReadAsync(factory, supervisor, Week)).Rows.Single(row => row.UserId == legacy);
+        var later = (await ReadAsync(factory, supervisor, NextWeek)).Rows.Single(row => row.UserId == legacy);
+
+        // The week before the profile: the whole row is the pre-backfill projection, and the days are the stored baseline.
+        // The kind is a dated fact, so it does not reach back before the profile — but the row and its facts are back.
+        Assert.Equal("unknown", earlier.CleanerKind);
+        Assert.Equal(buildingA, earlier.HomeBuildingId);
+        Assert.Equal(7, earlier.Days.Count);
+        Assert.All(earlier.Days.Take(5), day =>
+        {
+            Assert.Equal(area, day.Area.Value);
+            Assert.Equal(ScheduleResolver.SourceBaseline, day.Area.SourceKind);
+            Assert.Equal(1, day.BreakGroup.Value);
+        });
+        Assert.All(earlier.Days.Skip(5), day => Assert.Null(day.Area.Value)); // the weekend was never stored as working
+        // The current week keeps the dates before today too; today onwards is covered by the new profile.
+        Assert.Equal(area, thisWeek.Days[0].Area.Value);
+        Assert.Equal(ScheduleResolver.SourceBaseline, thisWeek.Days[0].Area.SourceKind);
+        Assert.Equal(7, thisWeek.Days.Count);
+        // And the projection does not invent work past what is stored: after the baseline version ends, nothing is working.
+        Assert.All(later.Days, day =>
+        {
+            Assert.Null(day.Area.Value);
+            Assert.Equal("unset", day.Availability);
+        });
+    }
+
+    [Fact]
     public async Task A_supervisor_whose_period_starts_mid_week_reads_only_the_covered_dates()
     {
         // Spec §3: the dated period is the authority per date. A period starting on Thursday must not read Monday to
@@ -449,6 +504,34 @@ public class ScheduleReadTests
             foreach (var weekday in Enum.GetValues<DayOfWeek>())
             {
                 baseline.Days.Add(new ScheduleBaselineDay { Weekday = weekday, AreaId = areaId });
+            }
+
+            db.ScheduleBaselines.Add(baseline);
+            await db.SaveChangesAsync();
+        });
+
+    /// <summary>
+    /// A Monday-to-Friday baseline version in <paramref name="areaId"/> with break group 1, in force from
+    /// <paramref name="from"/> until <paramref name="until"/> (exclusive), with the weekend left unset: the shape a
+    /// pre-backfill Cleaner's stored week has (spec §14).
+    /// </summary>
+    private static Task AddWeekdayBaselineAsync(
+        JanitorialApiFactory factory, string employeeId, int areaId, DateOnly from, DateOnly until) =>
+        factory.WithDbAsync(async db =>
+        {
+            var person = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            var baseline = new ScheduleBaseline
+            {
+                UserId = person.Id, Kind = BaselineKind.Regular, EffectiveFrom = from, EffectiveUntil = until,
+                Revision = 1, CreatedById = admin.Id, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            foreach (var weekday in new[]
+                     {
+                         DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday,
+                     })
+            {
+                baseline.Days.Add(new ScheduleBaselineDay { Weekday = weekday, AreaId = areaId, BreakGroup = 1 });
             }
 
             db.ScheduleBaselines.Add(baseline);
