@@ -55,11 +55,13 @@ public class MySqlScheduleMigrationTests
 
             // Weekly choices keep absent, confirmed-empty and selected weeks apart on MySQL dates.
             var week = new DateOnly(2026, 11, 16);
+            var actor = await db.Users.SingleAsync(u => u.Role == UserRole.Supervisor);
             db.WeeklyDayOffs.Add(new WeeklyDayOff
             {
                 UserId = person.Id,
                 WeekStart = week,
                 Revision = 1,
+                CreatedById = actor.Id, // required provenance: MySQL enforces the created-by foreign key
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
             });
