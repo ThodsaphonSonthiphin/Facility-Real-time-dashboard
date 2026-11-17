@@ -91,7 +91,8 @@ public sealed record ScheduleWeekDto(
     string Revision,
     DateTimeOffset ReadAt,
     string Availability,
-    IReadOnlyList<SchedulePersonDto> Rows);
+    IReadOnlyList<SchedulePersonDto> Rows,
+    IReadOnlyList<ScheduleReliefDto> Relief);
 
 /// <summary>
 /// Spec §10: one person's week. <see cref="WeeklyRevision"/> is the week-header version (0 when nobody has chosen),
@@ -137,6 +138,54 @@ public sealed record ScheduleValueDto(int? Value, int? SourceId, string SourceKi
 public sealed record ScheduleProblemDto(string Code, string Message, DateOnly Date);
 
 /// <summary>
+/// Spec §6 and §10 (Task 7): one relief duty of the read week as a screen shows it — who works, the destination Area and its
+/// building, the group, the regular person they replace when there is one, the source building and the Supervisor whose
+/// agreement the recorder attested, and the row's own state. <see cref="Revision"/> is the stored revision as a decimal
+/// string, the value the <c>relief:</c> write key names, so a client can send back exactly what it read.
+/// <para>
+/// A cancelled row is retained with <see cref="IsCancelled"/> rather than removed, and a row never carries the source
+/// team's schedule: only the codes and names needed to describe this duty.
+/// </para>
+/// </summary>
+public sealed record ScheduleReliefDto(
+    int Id,
+    int UserId,
+    string DisplayName,
+    DateOnly ShiftDate,
+    Shift Shift,
+    int AreaId,
+    string AreaCode,
+    int DestinationBuildingId,
+    string DestinationBuildingCode,
+    int? BreakGroup,
+    int? ReplacedUserId,
+    string? ReplacedDisplayName,
+    int SourceBuildingId,
+    string SourceBuildingCode,
+    int? SourceSupervisorId,
+    string? SourceSupervisorName,
+    bool AgreementReported,
+    bool IsCancelled,
+    string Revision);
+
+/// <summary>
+/// Spec §6 and A09: the answer of the relief lookup. It is deliberately the minimum a recorder needs — stable identity, home
+/// building, dated shift, and whether the person can be planned into that shift — plus the conflicts that block it, so the
+/// search never becomes a way to read another team's schedule. An employee who is not an active Relief Cleaner of the named
+/// source building is not described at all (the route answers 404).
+/// </summary>
+public sealed record ReliefCandidateDto(
+    int UserId,
+    string EmployeeId,
+    string DisplayName,
+    int HomeBuildingId,
+    string HomeBuildingCode,
+    Shift Shift,
+    bool Eligible,
+    string Status,
+    IReadOnlyList<string> Conflicts);
+
+/// <summary>
 /// Spec §11: the projection the store resolved, mapped to the wire contract. Nothing is re-derived here — the endpoint hands
 /// on exactly the values, provenance, availability words and problems the one resolver produced.
 /// </summary>
@@ -156,7 +205,39 @@ public static class ScheduleDtoMapper
             row.WeeklyRevision,
             row.RegularBaselineRevision,
             row.ReliefBaselineRevision,
-            row.Days.Select(ToDto).ToList())).ToList());
+            row.Days.Select(ToDto).ToList())).ToList(),
+        projection.Relief.Select(row => new ScheduleReliefDto(
+            row.Id,
+            row.UserId,
+            row.DisplayName,
+            row.ShiftDate,
+            row.Shift,
+            row.AreaId,
+            row.AreaCode,
+            row.DestinationBuildingId,
+            row.DestinationBuildingCode,
+            row.BreakGroup,
+            row.ReplacedUserId,
+            row.ReplacedDisplayName,
+            row.SourceBuildingId,
+            row.SourceBuildingCode,
+            row.SourceSupervisorId,
+            row.SourceSupervisorName,
+            row.AgreementReported,
+            row.IsCancelled,
+            row.Revision)).ToList());
+
+    /// <summary>The lookup's answer on the wire: the same facts the store resolved, nothing re-derived.</summary>
+    public static ReliefCandidateDto ToDto(this ReliefCandidateFacts candidate) => new(
+        candidate.UserId,
+        candidate.EmployeeId,
+        candidate.DisplayName,
+        candidate.HomeBuildingId,
+        candidate.HomeBuildingCode,
+        candidate.Shift,
+        candidate.Eligible,
+        candidate.Status,
+        candidate.Conflicts.ToList());
 
     private static ScheduleDayDto ToDto(ScheduleDay day) => new(
         day.Date,

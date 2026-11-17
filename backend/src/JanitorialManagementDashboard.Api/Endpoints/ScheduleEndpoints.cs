@@ -71,6 +71,7 @@ public static class ScheduleEndpoints
 
         // The management surface: an Admin anywhere, a Supervisor inside the dated periods it holds today.
         group.MapGet("", ReadManagedAsync).RequireAuthorization(AuthSetup.ScheduleManager);
+        group.MapGet("/relief-candidates", ReadReliefCandidateAsync).RequireAuthorization(AuthSetup.ScheduleManager);
         group.MapPost("/command-tokens", IssueTokenAsync).RequireAuthorization(AuthSetup.ScheduleManager);
         group.MapPost("/commands", ExecuteAsync).RequireAuthorization(AuthSetup.ScheduleManager);
         group.MapGet("/commands/{id:guid}", ReadResultAsync).RequireAuthorization(AuthSetup.ScheduleManager);
@@ -99,6 +100,39 @@ public static class ScheduleEndpoints
         return user is null
             ? Results.Unauthorized()
             : Results.Ok((await store.ReadWeekAsync(user.Id, weekStart, buildingId, shift, ct)).ToDto());
+    }
+
+    /// <summary>
+    /// Spec §6 and A09: the lookup a recorder makes by employee id and source building before borrowing a relief. It carries
+    /// the management policy like every other management route, binds the four parameters itself so a missing or unreadable
+    /// one is a 400 rather than a 500, and answers only the minimum identity, home building, dated shift and eligibility
+    /// status — never the person's schedule and never another team's rows. Somebody who is not an active Relief Cleaner of
+    /// that source building is not described at all.
+    /// </summary>
+    private static async Task<IResult> ReadReliefCandidateAsync(
+        string? employeeId, int? sourceBuildingId, string? date, string? shift, ClaimsPrincipal principal, AppDbContext db,
+        ScheduleStore store, CancellationToken ct)
+    {
+        if (await CurrentUser.LoadAsync(principal, db) is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        if (string.IsNullOrWhiteSpace(employeeId) || sourceBuildingId is null
+            || !AdminQuery.TryReadDate(date, out var shiftDate)
+            || !AdminQuery.TryReadEnum<Shift>(shift, out var parsedShift))
+        {
+            return ApiResults.Message(StatusCodes.Status400BadRequest,
+                "ต้องระบุรหัสพนักงาน ตึกต้นทาง วันที่ และกะเช้าหรือกะดึกให้ครบ");
+        }
+
+        var candidate = await store.ReadReliefCandidateAsync(
+            employeeId.Trim(), sourceBuildingId.Value, shiftDate, parsedShift, ct);
+        return candidate is null
+            // One answer for every reason the person is not a relief of that building: it never says which one it was.
+            ? ApiResults.Message(StatusCodes.Status404NotFound,
+                "ไม่พบพนักงานสแปร์ของตึกต้นทางนี้ในวันที่และกะที่เลือก")
+            : Results.Ok(candidate.ToDto());
     }
 
     /// <summary>

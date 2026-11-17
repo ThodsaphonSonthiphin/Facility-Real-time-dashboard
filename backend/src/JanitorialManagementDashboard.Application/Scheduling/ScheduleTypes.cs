@@ -104,9 +104,37 @@ public sealed record SchedulePersonWeek(int UserId, string DisplayName, string C
 /// Spec §10 and §11: the authorised projection of one week. <see cref="Revision"/> is an opaque token derived from every
 /// row the week was built from, so a client can tell a changed week from an unchanged one; <see cref="ReadAt"/> is the
 /// last successful read's server time.
+/// <para>
+/// <see cref="Relief"/> is the top-level list of relief assignments (loans) the reader may see in this week, added by Task 7
+/// without changing what <see cref="Rows"/> means: a relief row belongs to a destination Area and a person who is not on
+/// that building's roster, so it cannot live inside a person's week. Cancelled rows are retained with their state, and each
+/// row carries the destination and source names the screen shows — never another team's schedule.
+/// </para>
 /// </summary>
 public sealed record ScheduleProjection(DateOnly WeekStart, IReadOnlyList<SchedulePersonWeek> Rows,
-    string Revision, DateTimeOffset ReadAt, string Availability);
+    string Revision, DateTimeOffset ReadAt, string Availability, IReadOnlyList<ReliefAssignmentFact> Relief);
+
+/// <summary>
+/// Spec §6 and §10 (ADRs facility-0137–0139, 0144, 0145, 0152, 0155, 0206, 0207 and 0211): one recorded relief assignment
+/// — the destination Area, the person who works it, the regular person they replace or nobody for standalone work, and the
+/// source building the agreement was about. <see cref="AgreementReported"/> is the destination actor's attestation that the
+/// source agreed outside the web; it is never a source signature and never evidence that the server verified a conversation.
+/// <see cref="Revision"/> is the stored revision as a decimal string, the value the write contract names for the slot.
+/// </summary>
+public sealed record ReliefAssignmentFact(int Id, int UserId, string DisplayName, DateOnly ShiftDate, Shift Shift,
+    int AreaId, string AreaCode, int DestinationBuildingId, string DestinationBuildingCode, int? BreakGroup,
+    int? ReplacedUserId, string? ReplacedDisplayName, int SourceBuildingId, string SourceBuildingCode,
+    int? SourceSupervisorId, string? SourceSupervisorName, bool AgreementReported, bool IsCancelled, string Revision);
+
+/// <summary>
+/// Spec §6 and A09: what a lookup for a relief of a named source building answers. It is the minimum a destination recorder
+/// needs — the stable identity, the home building, the dated shift and whether the person can be planned into the shift —
+/// so a search never becomes a way to read another team's schedule. <see cref="Conflicts"/> carries machine codes
+/// (<c>shift-mismatch</c>, <c>existing-assignment</c>, <c>existing-duty</c>, <c>on-leave</c>) and
+/// <see cref="Eligible"/> is exactly "no conflict at all".
+/// </summary>
+public sealed record ReliefCandidateFacts(int UserId, string EmployeeId, string DisplayName, int HomeBuildingId,
+    string HomeBuildingCode, Shift Shift, bool Eligible, string Status, IReadOnlyList<string> Conflicts);
 
 /// <summary>
 /// Spec §10 and §11: everything the pure resolver needs about one person. <see cref="HistoryStartsAt"/>, the baseline

@@ -7,8 +7,10 @@ using JanitorialManagementDashboard.Application.Auth;
 using JanitorialManagementDashboard.Application.Buildings;
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using static JanitorialManagementDashboard.Api.Endpoints.AccountChecks;
 
@@ -23,8 +25,8 @@ public static class AdminAccountEndpoints
     public static IEndpointRouteBuilder MapAdminAccountEndpoints(this IEndpointRouteBuilder app)
     {
         var accounts = app.MapGroup("/api/admin/accounts").RequireAuthorization(AuthSetup.AdminOnly);
-        accounts.MapGet("", async (ClaimsPrincipal principal, AppDbContext db) =>
-            await CurrentUser.LoadAsync(principal, db) is null ? Results.Unauthorized() : Results.Ok(await AccountView.LoadAsync(db)));
+        accounts.MapGet("", async (ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
+            await CurrentUser.LoadAsync(principal, db) is null ? Results.Unauthorized() : Results.Ok(await AccountView.LoadAsync(db, clock)));
         accounts.MapPost("", CreateAsync);
         accounts.MapPut("/{id:int}", UpdateAsync);
         accounts.MapPost("/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership) =>
@@ -44,7 +46,7 @@ public static class AdminAccountEndpoints
 
     private static async Task<IResult> CreateAsync(
         CreateAccountRequest request, ClaimsPrincipal principal, AppDbContext db, IPasswordHasher hasher, TimeProvider clock,
-        SupervisorMembership membership)
+        SupervisorMembership membership, ScheduleStore store)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -55,6 +57,12 @@ public static class AdminAccountEndpoints
         if (request.Role is not { } role || !Enum.IsDefined(role))
         {
             return Bad("ต้องเลือกบทบาท");
+        }
+
+        // Task 7: the regular/relief fields belong to a Cleaner's account; a Supervisor's building is the existing field.
+        if (role != UserRole.Cleaner && (request.CleanerKind is not null || request.HomeBuildingId is not null))
+        {
+            return Bad("ประเภทแม่บ้านและตึกต้นทางใช้กับบัญชีแม่บ้านเท่านั้น");
         }
 
         if (AccountRules.NormalizeDisplayName(request.DisplayName) is not { } displayName)
@@ -117,7 +125,8 @@ public static class AdminAccountEndpoints
         }
 
         var (place, error) = await ReadPlaceAsync(
-            db, role, userId: 0, request.AreaId, request.BuildingId, request.Shift, BusinessDate(clock));
+            db, role, userId: 0, request.AreaId, request.BuildingId, request.Shift, BusinessDate(clock),
+            cleanerKind: request.CleanerKind, homeBuildingId: request.HomeBuildingId);
         if (place is null)
         {
             return error!;
@@ -145,6 +154,16 @@ public static class AdminAccountEndpoints
                     $"เพิ่มบัญชี{ThaiLabels.RoleName(role)} {user.LoginName} {user.DisplayName}",
                     before: null, after: Snapshot(user));
                 await db.SaveChangesAsync();
+                if (role == UserRole.Cleaner)
+                {
+                    // Spec §10 and controller ruling (a): the dated identity starts today, in this very transaction and
+                    // under this very audit row — never a fabricated history. A Cleaner with no Area and no kind keeps
+                    // having no dated row, exactly as before this task.
+                    await ApplyCleanerProfileAsync(db, store, user,
+                        request.CleanerKind ?? CleanerKind.Regular, place.HomeBuildingId, admin.Id,
+                        clock.GetUtcNow().UtcDateTime);
+                    await db.SaveChangesAsync();
+                }
             },
             beforeSave: role == UserRole.Supervisor
                 ? async () => (await membership.ApplyAsync(user, open: true, admin.Id)).Refusal
@@ -154,12 +173,12 @@ public static class AdminAccountEndpoints
             return conflict;
         }
 
-        return Results.Created($"/api/admin/accounts/{user.Id}", await AccountView.LoadOneAsync(db, user.Id));
+        return Results.Created($"/api/admin/accounts/{user.Id}", await AccountView.LoadOneAsync(db, clock, user.Id));
     }
 
     private static async Task<IResult> UpdateAsync(
         int id, UpdateAccountRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        SupervisorMembership membership)
+        SupervisorMembership membership, ScheduleStore store)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -178,21 +197,49 @@ public static class AdminAccountEndpoints
             return Bad($"ต้องใส่ชื่อที่แสดง ไม่เกิน {AccountRules.MaxDisplayName} ตัวอักษร");
         }
 
+        if (user.Role != UserRole.Cleaner && (request.CleanerKind is not null || request.HomeBuildingId is not null))
+        {
+            return Bad("ประเภทแม่บ้านและตึกต้นทางใช้กับบัญชีแม่บ้านเท่านั้น");
+        }
+
         // Decision 4: a deactivated Cleaner holds no Area; the Area's slot may already be someone else's
         if (!user.IsActive && user.Role == UserRole.Cleaner && request.AreaId is not null)
         {
             return Bad("เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่");
         }
 
+        // Task 7: an absent CleanerKind keeps the identity the person already has, so a form that predates this task changes
+        // nothing about the kind. A relief being edited keeps their dated home building when the form does not resend it.
+        var businessDate = BusinessDate(clock);
+        var profileNow = user.Role == UserRole.Cleaner
+            ? await CurrentCleanerProfileAsync(db, user.Id, businessDate)
+            : null;
+        var kind = request.CleanerKind ?? profileNow?.Kind ?? CleanerKind.Regular;
+        var homeBuildingId = kind == CleanerKind.Relief
+            ? request.HomeBuildingId ?? profileNow?.HomeBuildingId
+            : request.HomeBuildingId;
+
+        // Only an explicitly requested regular identity needs an Area: the defaulted one keeps the pre-existing behaviour
+        // where a Cleaner may be left without one, and a relief is recognised whichever way its kind was decided.
+        var placeKind = kind == CleanerKind.Relief ? CleanerKind.Relief : request.CleanerKind;
+
         var (place, error) = await ReadPlaceAsync(
-            db, user.Role, user.Id, request.AreaId, request.BuildingId, request.Shift, BusinessDate(clock),
-            checkSlot: user.IsActive, currentAreaId: user.AreaId);
+            db, user.Role, user.Id, request.AreaId, request.BuildingId, request.Shift, businessDate,
+            checkSlot: user.IsActive, currentAreaId: user.AreaId, cleanerKind: placeKind,
+            homeBuildingId: homeBuildingId);
         if (place is null)
         {
             return error!;
         }
 
         var before = Snapshot(user);
+        // The identity the stored records state, before this edit: the account row's own projection when the person has no
+        // dated profile, so "saving the same values" still writes nothing (spec §14).
+        var beforeIdentity = user.Role == UserRole.Cleaner
+            ? await CurrentCleanerIdentityAsync(db, user, businessDate)
+            : null;
+        var identityChanged = beforeIdentity is not null
+            && beforeIdentity != new CleanerIdentity(kind, place.HomeBuildingId, place.Shift);
         // The building and shift the form replaces: only that pair's membership ends, so another building the same
         // Supervisor also holds stays theirs (spec §3: several buildings per Supervisor is the normal case).
         var replaced = user.BuildingId is int beforeBuilding && user.Shift is Shift beforeShift
@@ -203,9 +250,9 @@ public static class AdminAccountEndpoints
         user.BuildingId = place.Building?.Id;
         user.Shift = place.Shift;
         var after = Snapshot(user);
-        if (after == before)
+        if (after == before && !identityChanged)
         {
-            return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+            return Results.Ok(await AccountView.LoadOneAsync(db, clock, user.Id));
         }
 
         // Only a real building/shift change is a membership write: renaming a Supervisor must not end a building
@@ -215,7 +262,7 @@ public static class AdminAccountEndpoints
         if (await SaveAsync(
                 db,
                 ClaimOf(user),
-                BusinessDate(clock),
+                businessDate,
                 async () =>
                 {
                     // The period rows say only the dates, so the audit line names the buildings and shifts this edit ended
@@ -224,19 +271,30 @@ public static class AdminAccountEndpoints
                         await UpdateSummaryAsync(db, user, ended), before, after);
                     await db.SaveChangesAsync();
                 },
-                beforeSave: moved && user.Role == UserRole.Supervisor
-                    ? async () =>
+                beforeSave: async () =>
+                {
+                    if (user.Role == UserRole.Supervisor && moved)
                     {
                         var outcome = await membership.ApplyAsync(user, open: user.IsActive, admin.Id, replaced);
                         ended.AddRange(outcome.Ended);
                         return outcome.Refusal;
                     }
-                    : null) is { } conflict)
+
+                    if (user.Role == UserRole.Cleaner && identityChanged)
+                    {
+                        // Spec §10 and controller ruling (a): today's date starts the new identity; the period it replaces is
+                        // closed at today in this transaction, beside the audit row that records the change.
+                        return await ApplyCleanerProfileAsync(db, store, user, kind, place.HomeBuildingId, admin.Id,
+                            clock.GetUtcNow().UtcDateTime);
+                    }
+
+                    return null;
+                }) is { } conflict)
         {
             return conflict;
         }
 
-        return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+        return Results.Ok(await AccountView.LoadOneAsync(db, clock, user.Id));
     }
 
     /// <summary>The clock's Thai business date: the date a dated membership write takes effect.</summary>
@@ -292,7 +350,7 @@ public static class AdminAccountEndpoints
 
         if (user.IsActive == active)
         {
-            return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+            return Results.Ok(await AccountView.LoadOneAsync(db, clock, user.Id));
         }
 
         // facility-0090 decision 4: a Supervisor of a building that is off stays off
@@ -336,7 +394,7 @@ public static class AdminAccountEndpoints
             return conflict;
         }
 
-        return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+        return Results.Ok(await AccountView.LoadOneAsync(db, clock, user.Id));
     }
 
     /// <summary>facility-0054 rule 4: the Admin types the Cleaner's or Supervisor's new phone; every device of theirs must log in again.</summary>

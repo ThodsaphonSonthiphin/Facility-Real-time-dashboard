@@ -109,6 +109,7 @@ try
     builder.Services.AddScoped<IScheduleCommandHandler, RecordLeaveHandler>();
     builder.Services.AddScoped<IScheduleCommandHandler, CancelLeaveHandler>();
     builder.Services.AddScoped<IScheduleCommandHandler, CorrectPlanHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, AssignReliefHandler>();
 
     if (!builder.Environment.IsEnvironment("Testing"))
         builder.Services.AddHostedService<RetentionWorker>();

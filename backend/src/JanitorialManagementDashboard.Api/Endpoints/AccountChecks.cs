@@ -1,6 +1,9 @@
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -11,8 +14,15 @@ internal static class AccountChecks
     public const string EmployeeIdTaken = "รหัสพนักงานนี้มีแล้ว";
     public const string UsernameTaken = "ชื่อผู้ใช้นี้มีแล้ว";
 
-    /// <summary>The place a form asks for, checked against the role. Area and Building are tracked entities or null.</summary>
-    public sealed record AccountPlace(Area? Area, Building? Building, Shift? Shift);
+    /// <summary>
+    /// The place a form asks for, checked against the role. Area and Building are tracked entities or null.
+    /// <see cref="HomeBuildingId"/> is the dated identity a Cleaner's profile will state: a Relief Cleaner's own home
+    /// building, or the building a regular Cleaner's Area belongs to (facility-0137/0143/0194).
+    /// </summary>
+    public sealed record AccountPlace(Area? Area, Building? Building, Shift? Shift, int? HomeBuildingId = null);
+
+    /// <summary>The regular/relief identity of a Cleaner as the stored records state it on a date.</summary>
+    public sealed record CleanerIdentity(CleanerKind Kind, int? HomeBuildingId, Shift? Shift);
 
     /// <summary>What a save claims: its login name and its slot. A new account has UserId 0.</summary>
     public sealed record AccountClaim(int UserId, UserRole Role, string? Username, string? EmployeeId, int? AreaId, int? BuildingId, Shift? Shift);
@@ -34,10 +44,16 @@ internal static class AccountChecks
     /// <paramref name="checkSlot"/> is false for a deactivated account, which holds no slot; activation checks it later.
     /// <paramref name="currentAreaId"/> is the Cleaner's Area now: keeping it is allowed even after the Area was deactivated
     /// (Area deactivation does not unassign Cleaners), but moving to an inactive Area is not.
+    /// <para>
+    /// Controller ruling (a) for Task 7: an absent <paramref name="cleanerKind"/> keeps the behaviour every existing caller
+    /// has (a regular Cleaner, whose Area may be empty), an explicit <see cref="CleanerKind.Regular"/> needs an Area because
+    /// that is where its home building comes from, and a <see cref="CleanerKind.Relief"/> has a home building and no Area —
+    /// a relief's home building is not a Supervisor slot and never occupies <c>users.supervisor_slot</c>.
+    /// </para>
     /// </summary>
     public static async Task<(AccountPlace? Place, IResult? Error)> ReadPlaceAsync(
         AppDbContext db, UserRole role, int userId, int? areaId, int? buildingId, Shift? shift, DateOnly businessDate,
-        bool checkSlot = true, int? currentAreaId = null)
+        bool checkSlot = true, int? currentAreaId = null, CleanerKind? cleanerKind = null, int? homeBuildingId = null)
     {
         if (shift is { } given && !Enum.IsDefined(given))
         {
@@ -63,9 +79,35 @@ internal static class AccountChecks
                     return (null, Bad("ต้องเลือกกะของแม่บ้าน"));
                 }
 
+                if (cleanerKind == CleanerKind.Relief)
+                {
+                    if (areaId is not null)
+                    {
+                        return (null, Bad("สแปร์ไม่มีพื้นที่ประจำ เลือกได้เฉพาะตึกต้นทางกับกะ"));
+                    }
+
+                    if (homeBuildingId is null)
+                    {
+                        return (null, Bad("ต้องเลือกตึกต้นทางของสแปร์"));
+                    }
+
+                    var home = await db.Buildings.FirstOrDefaultAsync(b => b.Id == homeBuildingId && b.IsActive);
+                    return home is null
+                        ? (null, Bad("ต้องเลือกตึกต้นทางที่ใช้งานอยู่"))
+                        // A relief's home building lives in the dated profile, not in the Supervisor building column.
+                        : (new AccountPlace(null, null, cleanerShift, home.Id), null);
+                }
+
+                if (cleanerKind == CleanerKind.Regular && areaId is null)
+                {
+                    return (null, Bad("แม่บ้านประจำต้องเลือกพื้นที่ เพื่อทราบตึกที่สังกัด"));
+                }
+
                 if (areaId is null)
                 {
-                    return (new AccountPlace(null, null, cleanerShift), null);
+                    return homeBuildingId is null
+                        ? (new AccountPlace(null, null, cleanerShift), null)
+                        : (null, Bad("ตึกของแม่บ้านประจำมาจากพื้นที่ เลือกเองไม่ได้"));
                 }
 
                 var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && (a.IsActive || a.Id == currentAreaId));
@@ -80,9 +122,14 @@ internal static class AccountChecks
                     return (null, Bad($"{area.Code} ทำเฉพาะกะเช้า เลือกกะดึกไม่ได้"));
                 }
 
+                if (homeBuildingId is int chosen && chosen != area.BuildingId)
+                {
+                    return (null, Bad("ตึกของแม่บ้านประจำมาจากพื้นที่ เลือกเองไม่ได้"));
+                }
+
                 return checkSlot && await HolderAsync(db, role, area.Id, null, cleanerShift, userId, businessDate) is { } holder
                     ? (null, Conflict(SlotTaken(holder)))
-                    : (new AccountPlace(area, null, cleanerShift), null);
+                    : (new AccountPlace(area, null, cleanerShift, area.BuildingId), null);
             }
 
             default:
@@ -108,6 +155,126 @@ internal static class AccountChecks
                     : (new AccountPlace(null, building, supervisorShift), null);
             }
         }
+    }
+
+    /// <summary>
+    /// The identity a Cleaner's stored records state on <paramref name="businessDate"/>: their dated profile when one covers
+    /// the date, else the account row's own projection — the same compatibility rule the week read applies (spec §14), so the
+    /// form can tell "nothing changed" from "this edit starts a new identity today" without inventing a past.
+    /// </summary>
+    public static async Task<CleanerIdentity> CurrentCleanerIdentityAsync(
+        AppDbContext db, User user, DateOnly businessDate, CancellationToken ct = default)
+    {
+        var period = await CurrentCleanerProfileAsync(db, user.Id, businessDate, ct);
+        if (period is not null)
+        {
+            return new CleanerIdentity(period.Kind, period.HomeBuildingId, period.Shift);
+        }
+
+        // A pre-backfill Cleaner has no dated row at all; their Area is the only statement of which building they belong to.
+        var home = user.AreaId is int areaId
+            ? await db.Areas.AsNoTracking().Where(area => area.Id == areaId)
+                .Select(area => (int?)area.BuildingId).FirstOrDefaultAsync(ct)
+            : null;
+        return new CleanerIdentity(CleanerKind.Regular, home, user.Shift);
+    }
+
+    /// <summary>The dated profile period in force on that date, or null when the person has none covering it.</summary>
+    public static async Task<CleanerProfilePeriod?> CurrentCleanerProfileAsync(
+        AppDbContext db, int userId, DateOnly businessDate, CancellationToken ct = default)
+    {
+        var periods = await db.CleanerProfilePeriods.AsNoTracking()
+            .Where(period => period.UserId == userId)
+            .OrderBy(period => period.EffectiveFrom).ThenBy(period => period.Id)
+            .ToListAsync(ct);
+        return periods.LastOrDefault(period =>
+            ScheduleResolver.Applies(period.EffectiveFrom, period.EffectiveUntil, businessDate));
+    }
+
+    /// <summary>
+    /// Spec §10 and §14 (ADRs facility-0137, 0143, 0194 and 0215) with controller ruling (a): writes the dated Cleaner
+    /// profile the account form's fields describe, from today's Thai business date — never a fabricated past — inside the
+    /// caller's transaction and under the person's own baseline-head anchor. The period being replaced is closed
+    /// end-exclusive at today; a period that has not taken effect yet is corrected in place, so the same start date is never
+    /// stored twice; and a period that already states exactly this identity is left alone, which is what makes "saving the
+    /// same values writes nothing" still true.
+    /// <para>
+    /// A Cleaner with no Area and no dated row at all keeps having none: the account row remains the only projection for the
+    /// pre-backfill accounts of spec §14 rather than this edit inventing a schedule for them.
+    /// </para>
+    /// </summary>
+    public static async Task<IResult?> ApplyCleanerProfileAsync(
+        AppDbContext db, ScheduleStore store, User user, CleanerKind kind, int? homeBuildingId, int? actorId, DateTime now,
+        CancellationToken ct = default)
+    {
+        if (user.Role != UserRole.Cleaner || user.Shift is not Shift shift)
+        {
+            return null;
+        }
+
+        var businessDate = ScheduleAuthority.BusinessDate(now);
+        var periods = await db.CleanerProfilePeriods
+            .Where(period => period.UserId == user.Id)
+            .OrderBy(period => period.EffectiveFrom).ThenBy(period => period.Id)
+            .ToListAsync(ct);
+        var current = periods.LastOrDefault(period =>
+            ScheduleResolver.Applies(period.EffectiveFrom, period.EffectiveUntil, businessDate));
+        if (current is not null
+            && current.Kind == kind && current.HomeBuildingId == homeBuildingId && current.Shift == shift)
+        {
+            return null;
+        }
+
+        if (current is null && periods.Count == 0 && homeBuildingId is null && kind == CleanerKind.Regular)
+        {
+            return null;
+        }
+
+        // The per-person head anchor (Task 5): the profile write serialises with the person's baseline writes instead of
+        // inventing a second lock for the same person.
+        await store.LockBaselineHeadAsync(user.Id, now, ct);
+
+        var pending = periods.FirstOrDefault(period => period.EffectiveFrom >= businessDate);
+        if (pending is not null)
+        {
+            if (periods.Any(period => period.Id != pending.Id && period.Kind == kind
+                && period.EffectiveFrom == pending.EffectiveFrom))
+            {
+                return Conflict("มีข้อมูลตัวตนของคนนี้ซ้ำกันในวันเดียวกัน ต้องตรวจสอบก่อนบันทึก");
+            }
+
+            pending.Kind = kind;
+            pending.HomeBuildingId = homeBuildingId;
+            pending.Shift = shift;
+            pending.Revision += 1;
+            pending.UpdatedAt = now;
+            pending.CreatedById ??= actorId;
+            return null;
+        }
+
+        if (current is not null)
+        {
+            current.EffectiveUntil = businessDate;
+            current.Revision += 1;
+            current.UpdatedAt = now;
+        }
+
+        db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+        {
+            UserId = user.Id,
+            Kind = kind,
+            HomeBuildingId = homeBuildingId,
+            Shift = shift,
+            EffectiveFrom = businessDate,
+            // A version that already starts later owns its dates, so this period stops where that one begins.
+            EffectiveUntil = periods.Where(period => period.EffectiveFrom > businessDate)
+                .Select(period => (DateOnly?)period.EffectiveFrom).Min(),
+            Revision = 1,
+            CreatedById = actorId,
+            CreatedAt = now,
+            UpdatedAt = now,
+        });
+        return null;
     }
 
     /// <summary>

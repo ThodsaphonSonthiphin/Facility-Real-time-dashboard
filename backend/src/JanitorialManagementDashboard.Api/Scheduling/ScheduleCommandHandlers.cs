@@ -40,6 +40,13 @@ public static class ScheduleCommandKinds
 
     /// <summary>ADR facility-0214: a reasoned correction of a plan date that has already been planned.</summary>
     public const string CorrectPlan = "correct-plan";
+
+    /// <summary>
+    /// Spec §6 and ADRs facility-0206/0207 (Task 7): a relief duty in a destination Area, including a loan recorded by the
+    /// destination actor after the two Supervisors agreed outside the web. There is no approval command and no cancellation
+    /// kind in this task: a second live row for the same person and slot is a conflict, never an automatic move.
+    /// </summary>
+    public const string AssignRelief = "assign-relief";
 }
 
 /// <summary>
@@ -66,6 +73,13 @@ public static class ScheduleRevisionKeys
     /// <summary>The live leave row of one person's slot: 0 when nobody has recorded leave for it.</summary>
     public static string Leave(int userId, DateOnly date, Shift shift) =>
         $"leave:{userId}:{Iso(date)}:{shift}";
+
+    /// <summary>
+    /// The live relief assignment of one person's slot (Task 7): 0 when the slot has no live row. A cancelled row keeps its
+    /// own revision as history but never holds the slot, so it is not what this key names.
+    /// </summary>
+    public static string Relief(int userId, DateOnly date, Shift shift) =>
+        $"relief:{userId}:{Iso(date)}:{shift}";
 
     private static string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }
@@ -1371,6 +1385,14 @@ internal static class SchedulePayload
     internal sealed record LeaveSlot(int UserId, DateOnly Date, Shift Shift, string? Reason);
 
     /// <summary>
+    /// Spec §6 (Task 7): one relief duty as the client submits it. <see cref="ReplacedUserId"/> and
+    /// <see cref="SourceSupervisorId"/> are absent for standalone work and for a source the actor already is; a break group
+    /// that was not chosen is absent, which is what lets the replaced person's group apply instead of a guess.
+    /// </summary>
+    internal sealed record ReliefRequest(int UserId, int AreaId, DateOnly ShiftDate, Shift Shift, int? ReplacedUserId,
+        int? BreakGroup, int SourceBuildingId, int? SourceSupervisorId, bool AgreementReported, string? Reason);
+
+    /// <summary>
     /// One optional numeric field, read as the three things JSON can say (controller ruling): the key is absent
     /// (<see cref="Present"/> false, nothing was asked), an explicit <c>null</c> (<see cref="Present"/> true, no value — a
     /// removal), or a value. A key that is present with anything else is not a removal and not a value: the payload is
@@ -1492,6 +1514,32 @@ internal static class SchedulePayload
         }
 
         slot = new LeaveSlot(userId, date, shift, OptionalString(payload, "reason"));
+        return true;
+    }
+
+    /// <summary>
+    /// The relief payload of spec §6. Every optional field is read as the same three things JSON can say: absent, an
+    /// explicit <c>null</c> (both "nothing chosen"), or a value; a key that is present with anything else is unreadable, so a
+    /// typo in a break group can never be read as "inherit the replaced person's group" (controller ruling).
+    /// </summary>
+    internal static bool TryReadRelief(JsonElement payload, out ReliefRequest relief)
+    {
+        relief = null!;
+        if (!TryInt(payload, "userId", out var userId)
+            || !TryInt(payload, "areaId", out var areaId)
+            || !TryDate(payload, "shiftDate", out var shiftDate)
+            || !TryShift(payload, out var shift)
+            || !TryReadOptionalInt(payload, "replacedUserId", out var replacedUserId)
+            || !TryReadOptionalInt(payload, "breakGroup", out var breakGroup)
+            || !TryInt(payload, "sourceBuildingId", out var sourceBuildingId)
+            || !TryReadOptionalInt(payload, "sourceSupervisorId", out var sourceSupervisorId)
+            || !TryReadOptionalBool(payload, "agreementReported", out var agreementReported))
+        {
+            return false;
+        }
+
+        relief = new ReliefRequest(userId, areaId, shiftDate, shift, replacedUserId.Value, breakGroup.Value,
+            sourceBuildingId, sourceSupervisorId.Value, agreementReported ?? false, OptionalString(payload, "reason"));
         return true;
     }
 

@@ -364,6 +364,214 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         return await ReadSnapshotAsync(actorId, monday, buildingId, shift, readAt, ct);
     }
 
+    /// <summary>The machine codes a relief lookup answers with, one per stored fact that blocks the assignment.</summary>
+    public const string ReliefShiftMismatch = "shift-mismatch";
+
+    /// <summary>Another live relief assignment already holds the person's slot (spec §6: a second row is a conflict).</summary>
+    public const string ReliefExistingAssignment = "existing-assignment";
+
+    /// <summary>The person's own applicable plan already works an Area in that slot; nothing may be moved or cancelled.</summary>
+    public const string ReliefExistingDuty = "existing-duty";
+
+    /// <summary>An agreed leave interval covers the slot, so the person is not available for a loan.</summary>
+    public const string ReliefOnLeave = "on-leave";
+
+    /// <summary>The candidate may be planned into that shift: no conflict at all.</summary>
+    public const string ReliefEligible = "eligible";
+
+    /// <summary>At least one stored fact blocks it; <see cref="ReliefCandidateFacts.Conflicts"/> names which.</summary>
+    public const string ReliefConflict = "conflict";
+
+    /// <summary>
+    /// Spec §3, §6 and §14: the dated profile period in force on <paramref name="date"/>, or null when no period covers it.
+    /// The half-open boundary is <see cref="ScheduleResolver.Applies"/>, so a period that ends on that date does not answer
+    /// for it, and the latest start wins exactly as the week read resolves a person's identity.
+    /// </summary>
+    public async Task<CleanerProfilePeriod?> ReadProfileAsync(int userId, DateOnly date, CancellationToken ct = default)
+    {
+        var profiles = await db.CleanerProfilePeriods.AsNoTracking()
+            .Where(profile => profile.UserId == userId)
+            .OrderBy(profile => profile.EffectiveFrom).ThenBy(profile => profile.Id)
+            .ToListAsync(ct);
+        return profiles.LastOrDefault(profile =>
+            ScheduleResolver.Applies(profile.EffectiveFrom, profile.EffectiveUntil, date));
+    }
+
+    /// <summary>
+    /// The live relief assignment of one person's slot, or null. A cancelled row keeps its history but does not hold the
+    /// slot, so it is never what a new assignment (or the revision key that names the slot) contends with.
+    /// </summary>
+    public Task<ReliefAssignment?> LiveReliefAsync(
+        int userId, DateOnly date, Shift shift, CancellationToken ct = default) =>
+        db.ReliefAssignments.AsNoTracking().FirstOrDefaultAsync(row => row.UserId == userId
+            && row.ShiftDate == date && row.Shift == shift && !row.IsCancelled, ct);
+
+    /// <summary>The live leave row of one person's slot: an agreed absence that no plan may quietly work through.</summary>
+    public Task<bool> HasLiveLeaveAsync(
+        int userId, DateOnly date, Shift shift, CancellationToken ct = default) =>
+        db.ScheduleExceptions.AsNoTracking().AnyAsync(row => row.UserId == userId
+            && row.ShiftDate == date && row.Shift == shift
+            && row.Kind == ScheduleExceptionKind.Leave && !row.IsCancelled, ct);
+
+    /// <summary>
+    /// The one person's resolved day, through the very resolver the week read uses, or null when the person does not exist.
+    /// It exists so a command can ask "what do the stored records say this person works that day" without re-implementing
+    /// precedence: a dated Area, else the versioned baseline, and the day-off/leave states kept apart from both.
+    /// </summary>
+    public async Task<ScheduleDay?> ReadPersonDayAsync(
+        int userId, DateOnly date, Shift shift, CancellationToken ct = default)
+    {
+        if (!await db.Users.AsNoTracking().AnyAsync(user => user.Id == userId, ct))
+        {
+            return null;
+        }
+
+        var profiles = await db.CleanerProfilePeriods.AsNoTracking()
+            .Where(profile => profile.UserId == userId)
+            .ToListAsync(ct);
+        var baselines = await db.ScheduleBaselines.AsNoTracking().Include(baseline => baseline.Days)
+            .Where(baseline => baseline.UserId == userId
+                && baseline.EffectiveFrom <= date
+                && (baseline.EffectiveUntil == null || date < baseline.EffectiveUntil.Value))
+            .OrderBy(baseline => baseline.EffectiveFrom).ThenBy(baseline => baseline.Id)
+            .ToListAsync(ct);
+        var header = await db.WeeklyDayOffs.AsNoTracking().Include(week => week.Choices)
+            .FirstOrDefaultAsync(week => week.UserId == userId && week.WeekStart == ScheduleRules.WeekStart(date), ct);
+        var exceptions = await db.ScheduleExceptions.AsNoTracking()
+            .Where(row => row.UserId == userId && row.ShiftDate == date && row.Shift == shift)
+            .OrderBy(row => row.Id)
+            .ToListAsync(ct);
+
+        // History coverage is the person's own earliest dated identity or baseline version, exactly as the week read decides
+        // it: before that the resolver answers "unavailable" rather than inventing a plan.
+        var historyStartsAt = profiles.Select(profile => (DateOnly?)profile.EffectiveFrom)
+            .Concat(baselines.Select(baseline => (DateOnly?)baseline.EffectiveFrom))
+            .Min() ?? DateOnly.MaxValue;
+
+        var input = new ScheduleInput(
+            userId,
+            historyStartsAt,
+            baselines.SelectMany(baseline => baseline.Days.Select(day => new BaselineFact(day.Id,
+                baseline.EffectiveFrom, baseline.EffectiveUntil, day.Weekday, day.AreaId, day.BreakGroup,
+                Revision(baseline.Revision), day.IsDayOff))).ToList(),
+            header?.Choices.Select(choice => choice.OffDate).ToHashSet(),
+            exceptions.Where(row => !row.IsCancelled && row.Kind != ScheduleExceptionKind.Leave)
+                .Select(row => new DatedFact(row.Id, row.ShiftDate, row.Shift, row.AreaId, row.BreakGroup,
+                    Revision(row.Revision)))
+                .ToList(),
+            exceptions.Where(row => row.Kind == ScheduleExceptionKind.Leave)
+                .Select(row => new LeaveFact(row.Id, row.ShiftDate, row.Shift, Utc(row.StartsAt!.Value),
+                    Utc(row.EndsAt!.Value), row.IsCancelled, Revision(row.Revision)))
+                .ToList(),
+            []);
+        return ScheduleResolver.Resolve(input, date);
+    }
+
+    /// <summary>
+    /// Spec §3 and §6: the active Supervisor responsible for a building and shift on a date — the person whose agreement a
+    /// cross-building loan has to be reported from. The dated rows answer first; the account projection is read only while no
+    /// dated row exists at all (spec §14), which is the same rule the account forms hold a building slot to.
+    /// </summary>
+    public async Task<int?> ResponsibleSupervisorAsync(
+        int buildingId, Shift shift, DateOnly date, CancellationToken ct = default)
+    {
+        var dated = await (
+                from period in db.SupervisorScopePeriods.AsNoTracking()
+                join holder in db.Users.AsNoTracking() on period.SupervisorId equals holder.Id
+                where period.BuildingId == buildingId && period.Shift == shift
+                    && period.EffectiveFrom <= date
+                    && (period.EffectiveUntil == null || date < period.EffectiveUntil.Value)
+                    && holder.Role == UserRole.Supervisor && holder.IsActive
+                orderby period.EffectiveFrom
+                select (int?)period.SupervisorId)
+            .FirstOrDefaultAsync(ct);
+        if (dated is not null)
+        {
+            return dated;
+        }
+
+        if (await db.SupervisorScopePeriods.AsNoTracking().AnyAsync(ct))
+        {
+            return null;
+        }
+
+        return await db.Users.AsNoTracking()
+            .Where(user => user.Role == UserRole.Supervisor && user.IsActive
+                && user.BuildingId == buildingId && user.Shift == shift)
+            .Select(user => (int?)user.Id)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>
+    /// Spec §6: every stored fact that blocks planning this person into a slot, as machine codes. It is one rule for the
+    /// command and the lookup, because a screen that offered a person the command then refuses is worse than no list: a
+    /// second live assignment, an agreed leave interval, or a regular duty the person already holds. Nothing here cancels or
+    /// moves the blocking row.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> ReliefConflictsAsync(
+        int userId, DateOnly date, Shift shift, CancellationToken ct = default)
+    {
+        var conflicts = new List<string>();
+        if (await LiveReliefAsync(userId, date, shift, ct) is not null)
+        {
+            conflicts.Add(ReliefExistingAssignment);
+        }
+
+        if (await HasLiveLeaveAsync(userId, date, shift, ct))
+        {
+            conflicts.Add(ReliefOnLeave);
+        }
+
+        var day = await ReadPersonDayAsync(userId, date, shift, ct);
+        if (day is { IsDayOff: false, IsLeave: false } && day.Area.Value is not null)
+        {
+            conflicts.Add(ReliefExistingDuty);
+        }
+
+        return conflicts;
+    }
+
+    /// <summary>
+    /// Spec §6 and A09: the lookup a destination recorder makes by employee id and source building. It answers only for an
+    /// active Relief Cleaner whose dated profile on that date puts them in that very source building — anyone else is not
+    /// returned at all — and it describes eligibility, never the person's schedule or another team's rows.
+    /// </summary>
+    public async Task<ReliefCandidateFacts?> ReadReliefCandidateAsync(
+        string employeeId, int sourceBuildingId, DateOnly date, Shift shift, CancellationToken ct = default)
+    {
+        var person = await db.Users.AsNoTracking().FirstOrDefaultAsync(user =>
+            user.EmployeeId == employeeId && user.Role == UserRole.Cleaner && user.IsActive, ct);
+        if (person is null)
+        {
+            return null;
+        }
+
+        var profile = await ReadProfileAsync(person.Id, date, ct);
+        if (profile is not { Kind: CleanerKind.Relief } || profile.HomeBuildingId != sourceBuildingId)
+        {
+            return null;
+        }
+
+        var code = await db.Buildings.AsNoTracking()
+            .Where(building => building.Id == sourceBuildingId)
+            .Select(building => building.Code)
+            .FirstOrDefaultAsync(ct);
+        if (code is null)
+        {
+            return null;
+        }
+
+        var conflicts = new List<string>();
+        if (profile.Shift != shift)
+        {
+            conflicts.Add(ReliefShiftMismatch);
+        }
+
+        conflicts.AddRange(await ReliefConflictsAsync(person.Id, date, shift, ct));
+        return new ReliefCandidateFacts(person.Id, employeeId, person.DisplayName, sourceBuildingId, code,
+            profile.Shift, conflicts.Count == 0, conflicts.Count == 0 ? ReliefEligible : ReliefConflict, conflicts);
+    }
+
     private async Task<ScheduleProjection> ReadSnapshotAsync(
         int actorId, DateOnly monday, int? buildingId, Shift? shift, DateTimeOffset readAt, CancellationToken ct)
     {
@@ -405,9 +613,15 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         }
 
         var personIds = roster.Select(person => person.Id).ToHashSet();
+
+        // Spec §6 and controller ruling (e): the relief rows are a top-level list of their own, scoped to what this reader may
+        // see — a Cleaner only their own, a Supervisor only a destination building/shift/date of theirs, an Admin all — so a
+        // week can carry relief work even when no roster row of the week survived the scope.
+        var relief = await ReadReliefAsync(actor, monday, weekEnd, buildingId, shift, authorised, ct);
+
         if (personIds.Count == 0)
         {
-            return Empty(monday, readAt);
+            return Empty(monday, readAt, relief);
         }
 
         var profiles = await db.CleanerProfilePeriods.AsNoTracking()
@@ -454,7 +668,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         var included = roster.Where(person => readDates[person.Id].Count > 0).ToList();
         if (included.Count == 0)
         {
-            return Empty(monday, readAt);
+            return Empty(monday, readAt, relief);
         }
 
         var includedIds = included.Select(person => person.Id).ToList();
@@ -574,7 +788,104 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             ? ScheduleResolver.AvailabilityUnavailable
             : ScheduleResolver.AvailabilityAvailable;
 
-        return new ScheduleProjection(monday, rows, WeekRevision(revisions), readAt, availability);
+        // A relief row is part of what the week was built from, so its revision moves the week digest too.
+        revisions.AddRange(relief.Select(row => $"relief#{row.Id}@{row.Revision}"));
+        return new ScheduleProjection(monday, rows, WeekRevision(revisions), readAt, availability, relief);
+    }
+
+    /// <summary>
+    /// Spec §3 and §6 (controller ruling e): the relief assignments of the read week, scoped to the reader. A Cleaner sees
+    /// only their own; a Supervisor only rows whose destination building, shift and date their dated periods hold; an Admin
+    /// everything. A supplied building or shift narrows and never widens, exactly as it does for the roster. Cancelled rows
+    /// stay in the list with their state, because history that vanished would make "it was recorded, then cancelled"
+    /// unreadable (spec §10), and each row carries the names and codes the screen shows — never another team's schedule.
+    /// </summary>
+    private async Task<IReadOnlyList<ReliefAssignmentFact>> ReadReliefAsync(
+        User actor, DateOnly monday, DateOnly weekEnd, int? buildingId, Shift? shift,
+        IReadOnlyList<ScopePeriod>? authorised, CancellationToken ct)
+    {
+        var stored = await db.ReliefAssignments.AsNoTracking()
+            .Where(row => row.ShiftDate >= monday && row.ShiftDate < weekEnd)
+            .OrderBy(row => row.ShiftDate).ThenBy(row => row.Shift).ThenBy(row => row.Id)
+            .ToListAsync(ct);
+        if (stored.Count == 0)
+        {
+            return [];
+        }
+
+        var areaIds = stored.Select(row => row.AreaId).Distinct().ToList();
+        var areas = await db.Areas.AsNoTracking()
+            .Where(area => areaIds.Contains(area.Id))
+            .Select(area => new { area.Id, area.Code, area.BuildingId })
+            .ToDictionaryAsync(area => area.Id, area => area, ct);
+        var buildings = await db.Buildings.AsNoTracking()
+            .Select(building => new { building.Id, building.Code })
+            .ToDictionaryAsync(building => building.Id, building => building.Code, ct);
+        var personIds = stored.Select(row => row.UserId)
+            .Concat(stored.Where(row => row.ReplacedUserId != null).Select(row => row.ReplacedUserId!.Value))
+            .Concat(stored.Where(row => row.SourceSupervisorId != null).Select(row => row.SourceSupervisorId!.Value))
+            .Distinct()
+            .ToList();
+        var names = await db.Users.AsNoTracking()
+            .Where(person => personIds.Contains(person.Id))
+            .Select(person => new { person.Id, person.DisplayName })
+            .ToDictionaryAsync(person => person.Id, person => person.DisplayName, ct);
+
+        var visible = new List<ReliefAssignmentFact>();
+        foreach (var row in stored)
+        {
+            if (!areas.TryGetValue(row.AreaId, out var area))
+            {
+                continue; // a row whose destination the read cannot name is not describable, so it is not shown
+            }
+
+            if (buildingId is int onlyBuilding && area.BuildingId != onlyBuilding)
+            {
+                continue;
+            }
+
+            if (shift is Shift onlyShift && row.Shift != onlyShift)
+            {
+                continue;
+            }
+
+            if (actor.Role == UserRole.Cleaner)
+            {
+                if (row.UserId != actor.Id)
+                {
+                    continue;
+                }
+            }
+            else if (authorised is not null && !authorised.Any(period =>
+                period.BuildingId == area.BuildingId && period.Shift == row.Shift
+                && ScheduleAuthority.Covers(period, row.ShiftDate)))
+            {
+                continue;
+            }
+
+            visible.Add(new ReliefAssignmentFact(
+                row.Id,
+                row.UserId,
+                names.GetValueOrDefault(row.UserId, string.Empty),
+                row.ShiftDate,
+                row.Shift,
+                row.AreaId,
+                area.Code,
+                area.BuildingId,
+                buildings.GetValueOrDefault(area.BuildingId, string.Empty),
+                row.BreakGroup,
+                row.ReplacedUserId,
+                row.ReplacedUserId is int replaced ? names.GetValueOrDefault(replaced) : null,
+                row.SourceBuildingId,
+                buildings.GetValueOrDefault(row.SourceBuildingId, string.Empty),
+                row.SourceSupervisorId,
+                row.SourceSupervisorId is int source ? names.GetValueOrDefault(source) : null,
+                row.AgreementReported,
+                row.IsCancelled,
+                Revision(row.Revision)));
+        }
+
+        return visible;
     }
 
     /// <summary>
@@ -658,8 +969,25 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     private static DateTimeOffset Utc(DateTime value) =>
         new(DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
-    private static ScheduleProjection Empty(DateOnly monday, DateTimeOffset readAt) =>
-        new(monday, [], ScheduleResolver.NoRevision, readAt, AvailabilityEmpty);
+    /// <summary>
+    /// A week the actor has no roster row for. It is not "an empty week of work": nothing is readable at all, so the
+    /// availability word says so — unless the reader may still see relief rows of the week, which are top-level facts of
+    /// their own and made the week readable.
+    /// </summary>
+    private static ScheduleProjection Empty(
+        DateOnly monday, DateTimeOffset readAt, IReadOnlyList<ReliefAssignmentFact>? relief = null)
+    {
+        IReadOnlyList<ReliefAssignmentFact> rows = relief ?? [];
+        return new ScheduleProjection(
+            monday,
+            [],
+            rows.Count == 0
+                ? ScheduleResolver.NoRevision
+                : WeekRevision(rows.Select(row => $"relief#{row.Id}@{row.Revision}").ToList()),
+            readAt,
+            rows.Count == 0 ? AvailabilityEmpty : ScheduleResolver.AvailabilityAvailable,
+            rows);
+    }
 
     /// <summary>The same rule the ck_*_effective_range CHECK constraints apply, so a caller hears about it first.</summary>
     private static void EnsureRangeIsForward(DateOnly effectiveFrom, DateOnly? effectiveUntil)
