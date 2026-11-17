@@ -70,10 +70,17 @@ public sealed record ScheduleProblem(string Code, string Message, DateOnly Date)
 /// <see cref="IsUnset"/> says the day has no confirmed state of any kind (so it is exactly the "unset"
 /// <see cref="Availability"/>, never a working day and never a day off), and <see cref="Availability"/> is the state the
 /// day is shown in ("available", "day-off", "leave", "unset" or "unavailable" before history coverage).
+/// <para>
+/// <see cref="Shift"/> is the shift this date's slot belongs to, resolved the same way the write contract resolves it — the
+/// dated profile period in force that day, else the spec §14 compatibility projection when the person has no dated row at
+/// all — and null when the person has no shift on that date at all. It is a named extension record (spec §11: a write must
+/// identify the row from what it read), not a change to what the other members mean, and it is per day because a person's
+/// shift can change inside one week.
+/// </para>
 /// </summary>
 public sealed record ScheduleDay(DateOnly Date, ResolvedValue<int?> Area,
     ResolvedValue<int?> BreakGroup, bool IsDayOff, bool IsLeave, bool IsUnset,
-    string Availability, IReadOnlyList<ScheduleProblem> Problems);
+    string Availability, IReadOnlyList<ScheduleProblem> Problems, Shift? Shift = null);
 
 /// <summary>
 /// Spec §10 and ADR facility-0190: one person's resolved week, with the roster facts the management screen shows beside

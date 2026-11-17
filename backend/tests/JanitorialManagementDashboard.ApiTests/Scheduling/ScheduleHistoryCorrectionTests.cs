@@ -231,6 +231,94 @@ public class ScheduleHistoryCorrectionTests
     }
 
     [Fact]
+    public async Task A_week_that_has_already_started_needs_a_reason_for_its_day_off_edit()
+    {
+        // Spec §5: a retroactive plan edit needs a reason. The weekly day-off editor accepts one date inside the current week
+        // that has already passed, so that edit is retroactive and is refused with nothing written until it carries one.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+        var past = Week; // Monday the 16th; today's business date is Tuesday the 17th
+
+        var missing = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(past) } } },
+        });
+        var blank = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(past) } } },
+            reason = "   ",
+        });
+
+        Assert.All(new[] { missing, blank }, answer =>
+        {
+            Assert.Equal(HttpStatusCode.Conflict, answer.Response.StatusCode);
+            Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(answer.Answer!.Problems).Code);
+        });
+        await factory.WithDbAsync(async db =>
+        {
+            Assert.Empty(await db.WeeklyDayOffs.ToListAsync());
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+        });
+    }
+
+    [Fact]
+    public async Task A_reasoned_week_that_has_already_started_commits_and_the_audit_carries_the_reason()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+        var past = Week; // Monday the 16th, already past on the 17th
+
+        var answer = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(past) } } },
+            reason = "  แจ้งลาย้อนหลัง  ",
+        });
+
+        Assert.Equal(HttpStatusCode.OK, answer.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, answer.Answer!.Outcome);
+        Assert.Equal("1", answer.Answer.Revisions[ScheduleWriteApi.WeekKey(person, Week)]);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(past, Assert.Single(header.Choices).OffDate);
+            var change = Assert.Single(await db.ScheduleChanges.ToListAsync());
+            Assert.Equal("create", change.Operation);
+            Assert.Equal("แจ้งลาย้อนหลัง", change.Reason);
+        });
+    }
+
+    [Fact]
+    public async Task A_week_that_has_not_started_does_not_need_a_reason()
+    {
+        // The requirement is about retroactive edits only: a future week still commits without one.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+        var week = Week.AddDays(7);
+
+        var answer = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(week.AddDays(2)) } } },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, answer.Response.StatusCode);
+        await factory.WithDbAsync(async db =>
+        {
+            Assert.Equal(week, Assert.Single(await db.WeeklyDayOffs.ToListAsync()).WeekStart);
+            Assert.Null(Assert.Single(await db.ScheduleChanges.ToListAsync()).Reason);
+        });
+    }
+
+    [Fact]
     public async Task A_supervisor_corrects_only_the_history_of_a_building_they_still_hold()
     {
         // Spec §3: a correction needs the responsibility of the edited date and the one held today.

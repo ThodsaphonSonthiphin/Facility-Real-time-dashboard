@@ -568,6 +568,351 @@ public class ScheduleWriteTests
         Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(answer.Answer!.Problems).Code);
         await factory.WithDbAsync(async db => Assert.Empty(await db.WeeklyDayOffs.ToListAsync()));
     }
+
+    [Fact]
+    public async Task A_day_off_is_authorised_by_the_date_it_is_written_not_by_the_week_start()
+    {
+        // Spec §3: a person whose dated period moves building inside the week is authorised on the identity of each date,
+        // so the Supervisor of their old building cannot record Wednesday's day off on Monday's authority.
+        using var factory = ScheduleWriteApi.NewFactory();
+        await TestData.AddBuildingAsync(factory, "B");
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day,
+            new DateOnly(2026, 10, 1), "A", until: Week.AddDays(2));
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day,
+            Week.AddDays(2), "B");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+
+        var across = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(Week.AddDays(1)), ScheduleWriteApi.Iso(Week.AddDays(2)) } } },
+        });
+        var beforeTheMove = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(Week.AddDays(1)) } } },
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, across.Response.StatusCode);
+        var refused = Assert.Single(across.Answer!.Problems);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, refused.Code);
+        Assert.Contains(ScheduleWriteApi.Iso(Week.AddDays(2)), refused.Message);
+        Assert.Equal(HttpStatusCode.OK, beforeTheMove.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, beforeTheMove.Answer!.Outcome);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(Week.AddDays(1), Assert.Single(header.Choices).OffDate);
+        });
+    }
+
+    [Fact]
+    public async Task A_dated_identity_that_starts_mid_week_can_still_have_that_weeks_days_off_recorded()
+    {
+        // The other half of §3: the week header is one fact for the week, so a period that only starts on Wednesday must not
+        // make that week's choices impossible to record.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000001", Week.AddDays(2));
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+
+        var answer = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = ScheduleWriteApi.Iso(Week),
+            rows = new[] { new { userId = person, offDates = new[] { ScheduleWriteApi.Iso(Week.AddDays(2)) } } },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, answer.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, answer.Answer!.Outcome);
+        Assert.Equal("1", answer.Answer.Revisions[ScheduleWriteApi.WeekKey(person, Week)]);
+        await factory.WithDbAsync(async db =>
+        {
+            var header = Assert.Single(await db.WeeklyDayOffs.Include(week => week.Choices).ToListAsync());
+            Assert.Equal(Week, header.WeekStart);
+            Assert.Equal(Week.AddDays(2), Assert.Single(header.Choices).OffDate);
+        });
+    }
+
+    [Fact]
+    public async Task A_malformed_dated_value_is_refused_instead_of_cancelling_the_override()
+    {
+        // Controller ruling: only an explicit JSON null removes a dated override. A value no removal means ("2", 2.5, true)
+        // is an unreadable payload, never a silent cancellation that answers committed.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var area2 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+        var live = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
+            new { userId = person, date = "2026-11-18", shift = "Day", areaId = area2 });
+        Assert.Equal(HttpStatusCode.OK, live.Response.StatusCode);
+
+        var asString = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
+            new { userId = person, date = "2026-11-18", shift = "Day", areaId = "2" });
+        var fractional = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
+            new { userId = person, date = "2026-11-18", shift = "Day", areaId = 2.5 });
+        var boolean = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
+            new { userId = person, date = "2026-11-18", shift = "Day", areaId = true });
+        var group = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedBreak,
+            new { userId = person, date = "2026-11-18", shift = "Day", breakGroup = "1" });
+
+        Assert.All(new[] { asString, fractional, boolean, group }, answer =>
+        {
+            Assert.Equal(HttpStatusCode.Conflict, answer.Response.StatusCode);
+            Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(answer.Answer!.Problems).Code);
+        });
+        await factory.WithDbAsync(async db =>
+        {
+            var row = Assert.Single(await db.ScheduleExceptions.ToListAsync());
+            Assert.False(row.IsCancelled);
+            Assert.Equal(area2, row.AreaId);
+            Assert.Equal(1, row.Revision);
+            Assert.Equal("create", Assert.Single(await db.ScheduleChanges.ToListAsync()).Operation);
+        });
+    }
+
+    [Fact]
+    public async Task A_malformed_baseline_cell_is_refused_instead_of_being_stored_as_unset()
+    {
+        // The same three-state rule on a baseline cell: "2" is not areaId 2 and is not "no Area" either.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+
+        var areaAsString = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
+        {
+            userId = person,
+            effectiveFrom = "2026-12-02",
+            days = new[] { new { weekday = "Tuesday", areaId = "2" } },
+        });
+        var dayOffAsString = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
+        {
+            userId = person,
+            effectiveFrom = "2026-12-02",
+            days = new[] { new { weekday = "Tuesday", isDayOff = "true" } },
+        });
+        var spokenNull = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
+        {
+            userId = person,
+            effectiveFrom = "2026-12-02",
+            days = new object[] { new { weekday = "Tuesday", areaId = (int?)null } },
+        });
+
+        Assert.All(new[] { areaAsString, dayOffAsString }, answer =>
+        {
+            Assert.Equal(HttpStatusCode.Conflict, answer.Response.StatusCode);
+            Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(answer.Answer!.Problems).Code);
+        });
+        // An explicit null is a real value for a cell ("this weekday carries no Area"), so it still stores.
+        Assert.Equal(HttpStatusCode.OK, spokenNull.Response.StatusCode);
+        await factory.WithDbAsync(async db =>
+        {
+            var versions = await db.ScheduleBaselines.Include(baseline => baseline.Days).ToListAsync();
+            Assert.Equal(2, versions.Count);
+            var added = versions.Single(version => version.EffectiveFrom == new DateOnly(2026, 12, 2));
+            Assert.Null(added.Days.Single(day => day.Weekday == DayOfWeek.Tuesday).AreaId);
+        });
+    }
+
+    [Fact]
+    public async Task The_baseline_answer_names_the_head_revision_the_read_exposes()
+    {
+        // A18 and spec §11: the answer is what the next edit sends back, so it names the version the read names — the head,
+        // not the version the new one merely precedes.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+
+        async Task<(HttpResponseMessage Response, ScheduleWriteApi.CommandAnswer? Answer)> Version(string from,
+            DayOfWeek weekday)
+        {
+            var answer = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
+            {
+                userId = person,
+                effectiveFrom = from,
+                days = new[] { new { weekday = weekday.ToString(), areaId = area1 } },
+            });
+            Assert.Equal(HttpStatusCode.OK, answer.Response.StatusCode);
+            return answer;
+        }
+
+        await Version("2026-12-02", DayOfWeek.Tuesday);
+        await Version("2026-12-16", DayOfWeek.Wednesday);
+        await Version("2026-12-23", DayOfWeek.Thursday);
+        var inserted = await Version("2026-12-09", DayOfWeek.Monday);
+
+        var week = await ScheduleWriteApi.WeekAsync(admin, new DateOnly(2026, 12, 14));
+        var row = week.Rows.Single(entry => entry.UserId == person);
+        Assert.Equal("1", row.RegularBaselineRevision); // the 23 December version is the head and was never revised
+        Assert.Equal(row.RegularBaselineRevision,
+            inserted.Answer!.Revisions[ScheduleWriteApi.BaselineKey(person, "regular")]);
+    }
+
+    [Fact]
+    public async Task The_week_read_names_each_days_shift_so_a_write_can_identify_the_row()
+    {
+        // Spec §4 and §11: an Admin reads every building and clock shift, and a write has to name the shift of the date it
+        // edits. A person's shift can change inside one week, so the read carries it per day.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        var area2 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day,
+            new DateOnly(2026, 10, 1), "A", until: Week.AddDays(2));
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Night, Week.AddDays(2), "A");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+
+        var week = await ScheduleWriteApi.WeekAsync(admin, Week);
+        var days = week.Rows.Single(entry => entry.UserId == person).Days;
+        Assert.Equal("Day", days.Single(day => day.Date == Week.AddDays(1)).Shift);
+        Assert.Equal("Night", days.Single(day => day.Date == Week.AddDays(2)).Shift);
+
+        var guessed = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
+            new { userId = person, date = ScheduleWriteApi.Iso(Week.AddDays(2)), shift = "Day", areaId = area2 });
+        var named = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
+            new { userId = person, date = ScheduleWriteApi.Iso(Week.AddDays(2)), shift = "Night", areaId = area2 });
+
+        Assert.Equal(HttpStatusCode.Conflict, guessed.Response.StatusCode);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(guessed.Answer!.Problems).Code);
+        Assert.Equal(HttpStatusCode.OK, named.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Cancelling_a_dated_Area_keeps_the_row_and_falls_back_to_the_baseline()
+    {
+        // Spec §5 and ADR facility-0202/0189: an explicit null cancels the override instead of deleting it, and the week
+        // then resolves from the baseline again.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var area2 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        var (admin, auth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+
+        var created = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
+            new { userId = person, date = "2026-11-18", shift = "Day", areaId = area2 });
+        var cancelled = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
+            new { userId = person, date = "2026-11-18", shift = "Day", areaId = (int?)null },
+            created.Answer!.Revisions);
+
+        Assert.Equal(HttpStatusCode.OK, cancelled.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Committed, cancelled.Answer!.Outcome);
+        Assert.Equal("2", cancelled.Answer.Revisions[ScheduleWriteApi.DatedKey(person, new DateOnly(2026, 11, 18), "Day", "area")]);
+        await factory.WithDbAsync(async db =>
+        {
+            var row = Assert.Single(await db.ScheduleExceptions.ToListAsync());
+            Assert.True(row.IsCancelled);
+            Assert.NotNull(row.CancelledAt);
+            Assert.Equal(auth.User.Id, row.CancelledById);
+            Assert.Equal(area2, row.AreaId);
+            Assert.Equal(2, row.Revision);
+            var changes = await db.ScheduleChanges.OrderBy(change => change.Id).ToListAsync();
+            Assert.Equal(2, changes.Count);
+            Assert.Equal("cancel", changes[1].Operation);
+        });
+
+        var day = (await ScheduleWriteApi.WeekAsync(admin, Week)).Rows.Single(row => row.UserId == person)
+            .Days.Single(entry => entry.Date == new DateOnly(2026, 11, 18));
+        Assert.Equal(area1, day.Area.Value);
+        Assert.Equal("baseline", day.Area.SourceKind);
+    }
+
+    [Fact]
+    public async Task Cancelling_a_leave_that_does_not_exist_is_refused_and_writes_nothing()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+
+        var answer = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.CancelLeave,
+            new { userId = person, date = "2026-11-18", shift = "Day", reason = "ยกเลิกการลา" });
+
+        Assert.Equal(HttpStatusCode.Conflict, answer.Response.StatusCode);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(answer.Answer!.Problems).Code);
+        Assert.Equal("0", answer.Answer.Revisions[ScheduleWriteApi.LeaveKey(person, new DateOnly(2026, 11, 18), "Day")]);
+        await factory.WithDbAsync(async db =>
+        {
+            Assert.Empty(await db.ScheduleExceptions.ToListAsync());
+            Assert.Empty(await db.ScheduleChanges.ToListAsync());
+            Assert.Empty(await db.ScheduleCommandReceipts.ToListAsync());
+        });
+    }
+
+    [Fact]
+    public async Task A_baseline_that_would_strand_a_dated_override_is_refused_with_the_affected_date()
+    {
+        // Plan Task 6: "incompatible dated settings return affected-date conflicts". A version that would leave a live dated
+        // override on a day-off cell, or a break group on a cell with no Area, is refused for each affected date instead of
+        // being stored and stranding the override; a compatible version still keeps both overrides.
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001", breakGroup: 1);
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var area2 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+        var areaDate = new DateOnly(2026, 12, 15);   // a Tuesday
+        var groupDate = new DateOnly(2026, 12, 16);  // a Wednesday
+
+        var datedArea = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
+            new { userId = person, date = ScheduleWriteApi.Iso(areaDate), shift = "Day", areaId = area2 });
+        var datedGroup = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedBreak,
+            new { userId = person, date = ScheduleWriteApi.Iso(groupDate), shift = "Day", breakGroup = 2 });
+        Assert.Equal(HttpStatusCode.OK, datedArea.Response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, datedGroup.Response.StatusCode);
+
+        var dayOffTuesday = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
+        {
+            userId = person,
+            effectiveFrom = "2026-12-02",
+            days = new[] { new { weekday = "Tuesday", isDayOff = true } },
+        });
+        var areaLessWednesday = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
+        {
+            userId = person,
+            effectiveFrom = "2026-12-02",
+            days = new object[]
+            {
+                new { weekday = "Tuesday", areaId = area1 },
+                new { weekday = "Wednesday" },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, dayOffTuesday.Response.StatusCode);
+        Assert.Contains(dayOffTuesday.Answer!.Problems,
+            problem => problem.Code == ScheduleCommandErrorCode.RowInvalid
+                && problem.RowId.Contains(ScheduleWriteApi.Iso(areaDate), StringComparison.Ordinal));
+        Assert.Equal(HttpStatusCode.Conflict, areaLessWednesday.Response.StatusCode);
+        Assert.Contains(areaLessWednesday.Answer!.Problems,
+            problem => problem.Code == ScheduleCommandErrorCode.RowInvalid
+                && problem.RowId.Contains(ScheduleWriteApi.Iso(groupDate), StringComparison.Ordinal));
+        await factory.WithDbAsync(async db => Assert.Single(await db.ScheduleBaselines.ToListAsync()));
+
+        var compatible = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
+        {
+            userId = person,
+            effectiveFrom = "2026-12-02",
+            days = new[] { new { weekday = "Tuesday", areaId = area1, breakGroup = 2 } },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, compatible.Response.StatusCode);
+        var week = await ScheduleWriteApi.WeekAsync(admin, new DateOnly(2026, 12, 14));
+        var days = week.Rows.Single(row => row.UserId == person).Days;
+        var overriddenArea = days.Single(day => day.Date == areaDate);
+        var overriddenGroup = days.Single(day => day.Date == groupDate);
+        Assert.Equal((int?)area2, overriddenArea.Area.Value);
+        Assert.Equal("dated", overriddenArea.Area.SourceKind);
+        Assert.Equal((int?)2, overriddenGroup.BreakGroup.Value);
+        Assert.Equal("dated", overriddenGroup.BreakGroup.SourceKind);
+    }
 }
 
 /// <summary>
@@ -658,7 +1003,7 @@ internal static class ScheduleWriteApi
     /// <summary>A person's dated identity from <paramref name="from"/> in a building, as the migration backfill writes it.</summary>
     public static Task AddProfileAsync(
         JanitorialApiFactory factory, string employeeId, CleanerKind kind, Shift shift, DateOnly from,
-        string? buildingCode = "A") =>
+        string? buildingCode = "A", DateOnly? until = null) =>
         factory.WithDbAsync(async db =>
         {
             var person = await db.Users.SingleAsync(user => user.EmployeeId == employeeId);
@@ -667,7 +1012,7 @@ internal static class ScheduleWriteApi
             db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
             {
                 UserId = person.Id, Kind = kind, HomeBuildingId = building?.Id, Shift = shift,
-                EffectiveFrom = from, Revision = 1, CreatedById = admin.Id,
+                EffectiveFrom = from, EffectiveUntil = until, Revision = 1, CreatedById = admin.Id,
                 CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
             });
             await db.SaveChangesAsync();
@@ -754,7 +1099,7 @@ internal static class ScheduleWriteApi
 
     public sealed record DayAnswer(
         DateOnly Date, ValueAnswer Area, ValueAnswer BreakGroup, bool IsDayOff, bool IsLeave, bool IsUnset,
-        string Availability, List<ProblemAnswer> Problems);
+        string Availability, List<ProblemAnswer> Problems, string? Shift = null);
 
     public sealed record ValueAnswer(int? Value, int? SourceId, string SourceKind, string Revision);
 }

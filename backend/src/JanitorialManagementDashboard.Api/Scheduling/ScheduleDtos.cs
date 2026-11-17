@@ -1,5 +1,6 @@
 using System.Text.Json;
 using JanitorialManagementDashboard.Application.Scheduling;
+using JanitorialManagementDashboard.Domain.Enums;
 
 namespace JanitorialManagementDashboard.Api.Scheduling;
 
@@ -109,11 +110,18 @@ public sealed record SchedulePersonDto(
     IReadOnlyList<ScheduleDayDto> Days);
 
 /// <summary>
-/// Spec §5 and §10: one resolved day with its provenance per field — a dated choice, the applicable version or nothing at
-/// all — plus the availability word and the conflicts someone has to correct. <see cref="IsUnset"/> is not a working day.
+/// Spec §5, §10 and §11: one resolved day with its provenance per field — a dated choice, the applicable version or nothing
+/// at all — plus the availability word and the conflicts someone has to correct. <see cref="IsUnset"/> is not a working day.
+/// <para>
+/// <see cref="Shift"/> is the shift that day's slot belongs to, resolved by the store exactly as the command handlers resolve
+/// it (a dated profile period, else the spec §14 compatibility projection, else nothing). It is per day because a person's
+/// shift can change inside a week, and it exists so a client can name the row it read in a dated/leave payload instead of
+/// guessing a shift the server will refuse (spec §11: a write identifies the row from what it read).
+/// </para>
 /// </summary>
 public sealed record ScheduleDayDto(
     DateOnly Date,
+    Shift? Shift,
     ScheduleValueDto Area,
     ScheduleValueDto BreakGroup,
     bool IsDayOff,
@@ -152,6 +160,7 @@ public static class ScheduleDtoMapper
 
     private static ScheduleDayDto ToDto(ScheduleDay day) => new(
         day.Date,
+        day.Shift,
         ToDto(day.Area),
         ToDto(day.BreakGroup),
         day.IsDayOff,

@@ -272,18 +272,25 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
         var scopes = new List<ScheduleScopeKey>();
         foreach (var row in batch.Rows)
         {
-            var (target, _) = await ReadTargetAsync(db, row.UserId, weekStart, ct);
-            if (target is null)
-            {
-                continue;
-            }
-
             // Controller ruling: the week header has no anchor of its own, so the slot of every submitted date and the
-            // person's regular building/shift are what two Supervisors of the same roster actually contend on.
-            slots.AddRange(row.OffDates.Select(date => new ScheduleSlotKey(row.UserId, date, target.Shift)));
-            if (target.BuildingId is int buildingId)
+            // building/shift the person has *on that date* are what two Supervisors of the same roster actually contend on.
+            // A week whose choices are all cleared still moves a whole week, so its own dates are what it locks.
+            var dates = row.OffDates.Count > 0
+                ? row.OffDates
+                : Enumerable.Range(0, 7).Select(offset => weekStart.AddDays(offset)).ToList();
+            foreach (var date in dates)
             {
-                scopes.Add(new ScheduleScopeKey(buildingId, target.Shift));
+                var (target, _) = await ReadTargetAsync(db, row.UserId, date, ct);
+                if (target is null)
+                {
+                    continue;
+                }
+
+                slots.Add(new ScheduleSlotKey(row.UserId, date, target.Shift));
+                if (target.BuildingId is int buildingId)
+                {
+                    scopes.Add(new ScheduleScopeKey(buildingId, target.Shift));
+                }
             }
         }
 
@@ -308,20 +315,19 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
         var revisions = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var planned = new List<(int UserId, DateOnly WeekStart, SortedSet<DateOnly> OffDates, WeeklyDayOff? Header)>();
         var seen = new HashSet<int>();
+        string? pastWeekKey = null;
         foreach (var row in batch.Rows)
         {
             var key = ScheduleRevisionKeys.Week(row.UserId, weekStart);
-            var (target, problem) = await ReadTargetAsync(db, row.UserId, weekStart, ct);
-            if (target is null)
-            {
-                return Refused(revisions, key, problem!);
-            }
-
             if (!seen.Add(row.UserId))
             {
                 return Refused(revisions, key, "มีคนเดิมซ้ำในคำสั่งเดียว");
             }
 
+            // Spec §3: the submitted date's own identity decides the scope of that write, not the week's first day. A person
+            // whose dated period changes building or shift inside the week is therefore authorised for the dates they
+            // actually belong to the actor's roster on, and a period that only starts mid-week can still have its days off
+            // recorded — the week-start lookup the batch used to make could do neither.
             var offDates = new SortedSet<DateOnly>();
             foreach (var date in row.OffDates)
             {
@@ -330,17 +336,48 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
                     return Refused(revisions, key, $"วันที่ {Iso(date)} อยู่นอกสัปดาห์ที่ส่งมา");
                 }
 
-                if (target.BuildingId is not int buildingId)
+                var (dateTarget, dateProblem) = await ReadTargetAsync(db, row.UserId, date, ct);
+                if (dateTarget is null)
                 {
-                    return Refused(revisions, key, "ยังไม่ทราบตึกของคนนี้ในสัปดาห์นี้ จึงยืนยันสิทธิ์ไม่ได้");
+                    return Refused(revisions, key, dateProblem!);
                 }
 
-                if (!actor.CanChange(buildingId, target.Shift, date))
+                if (dateTarget.BuildingId is not int dateBuildingId)
+                {
+                    return Refused(revisions, key, $"ยังไม่ทราบตึกของคนนี้ในวันที่ {Iso(date)} จึงยืนยันสิทธิ์ไม่ได้");
+                }
+
+                if (!actor.CanChange(dateBuildingId, dateTarget.Shift, date))
                 {
                     return Refused(revisions, key, $"ไม่มีสิทธิ์แก้ตารางของคนนี้ในวันที่ {Iso(date)}");
                 }
 
+                if (date < actor.BusinessDate)
+                {
+                    pastWeekKey ??= key;
+                }
+
                 offDates.Add(date);
+            }
+
+            if (offDates.Count == 0)
+            {
+                // Clearing a week submits no date to authorise it, so the week's own dates decide: the actor must be able to
+                // change at least one day this person belongs to that week. Otherwise a cleared week would be a write with
+                // no scope check at all.
+                var authorised = false;
+                for (var offset = 0; offset < 7 && !authorised; offset++)
+                {
+                    var weekday = weekStart.AddDays(offset);
+                    var (weekdayTarget, _) = await ReadTargetAsync(db, row.UserId, weekday, ct);
+                    authorised = weekdayTarget?.BuildingId is int weekdayBuildingId
+                        && actor.CanChange(weekdayBuildingId, weekdayTarget.Shift, weekday);
+                }
+
+                if (!authorised)
+                {
+                    return Refused(revisions, key, "ไม่มีสิทธิ์แก้ตารางของคนนี้ในสัปดาห์นี้");
+                }
             }
 
             var header = await db.WeeklyDayOffs.Include(week => week.Choices)
@@ -353,6 +390,15 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
             }
 
             planned.Add((row.UserId, weekStart, offDates, header));
+        }
+
+        // Spec §5: a week that has already started is a retroactive plan edit, so it needs a reason and the reason belongs
+        // on the audit row of every change this command writes (controller ruling). A future week's optional reason is kept
+        // when it is usable and never has to be invented.
+        var reason = ReadReason(batch.Reason, required: pastWeekKey is not null, out var reasonProblem);
+        if (reasonProblem is not null)
+        {
+            return Refused(revisions, pastWeekKey ?? "payload", reasonProblem);
         }
 
         foreach (var row in planned)
@@ -378,7 +424,7 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
                 header.Revision += 1;
                 header.UpdatedAt = request.Now.UtcDateTime;
                 db.ScheduleChanges.Add(Change(request, receipt, "WeeklyDayOff", header.Id, "update",
-                    before, WeekJson(header.Revision, submitted)));
+                    before, WeekJson(header.Revision, submitted), reason));
                 revisions[key] = Revision(header.Revision);
                 continue;
             }
@@ -398,7 +444,7 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
 
             db.WeeklyDayOffs.Add(created);
             db.ScheduleChanges.Add(Change(request, receipt, "WeeklyDayOff", null, "create",
-                null, WeekJson(created.Revision, submitted)));
+                null, WeekJson(created.Revision, submitted), reason));
             revisions[key] = Revision(created.Revision);
         }
 
@@ -904,6 +950,17 @@ internal static class ScheduleBaselineWrite
             }
         }
 
+        // Plan line "For future baselines preserve earlier versions and applicable dated breaks; incompatible dated settings
+        // return affected-date conflicts" and spec §5/ADR facility-0189: a new version may not be stored while a live dated
+        // override it cannot honour stays behind it — an override on a cell this version makes a day off, or a first-break
+        // override on a cell with no Area. Only the stored dated rows from the new effective date onwards are examined (no
+        // projected date horizon), and a date a later version already owns is that version's business.
+        var conflicts = await DatedConflictsAsync(db, payload.UserId, payload.EffectiveFrom, next?.EffectiveFrom, created, ct);
+        if (conflicts.Count > 0)
+        {
+            return new ScheduleCommandApplication(revisions, conflicts);
+        }
+
         db.ScheduleBaselines.Add(created);
         db.ScheduleChanges.Add(ScheduleCommandHandler.Change(request, receipt, "ScheduleBaseline", null, "create",
             null, VersionJson(created)));
@@ -920,8 +977,57 @@ internal static class ScheduleBaselineWrite
                 previous.Id, "update", before, VersionRangeJson(previous)));
         }
 
-        revisions[key] = ScheduleCommandHandler.Revision(next?.Revision ?? created.Revision);
+        // The answer names the head the read exposes (<c>SchedulePersonWeek.RegularBaselineRevision</c>), which is the
+        // version with the latest start — not a version the new one merely precedes. Naming an intermediate revision would
+        // make a client that echoes the answer look stale on its next edit.
+        revisions[key] = ScheduleCommandHandler.Revision(next is null ? created.Revision : head!.Revision);
         return new ScheduleCommandApplication(revisions, []);
+    }
+
+    /// <summary>
+    /// The live dated overrides a new baseline version would leave stranded: an override on a cell the version stores as a
+    /// day off (spec §5: show and correct, never delete quietly — so the edit that would create the clash is refused with
+    /// the affected date), or a first-break override on a cell with no Area to belong to (ADR facility-0189). Only stored
+    /// dated rows from <paramref name="effectiveFrom"/> onwards are read, and a date at or after
+    /// <paramref name="nextFrom"/> belongs to the version that starts there.
+    /// </summary>
+    private static async Task<List<RowProblem>> DatedConflictsAsync(
+        AppDbContext db, int userId, DateOnly effectiveFrom, DateOnly? nextFrom, ScheduleBaseline created,
+        CancellationToken ct)
+    {
+        var dated = await db.ScheduleExceptions.AsNoTracking()
+            .Where(row => row.UserId == userId && !row.IsCancelled
+                && row.Kind != ScheduleExceptionKind.Leave && row.ShiftDate >= effectiveFrom)
+            .OrderBy(row => row.ShiftDate).ThenBy(row => row.Id)
+            .ToListAsync(ct);
+
+        var conflicts = new List<RowProblem>();
+        foreach (var row in dated)
+        {
+            if (nextFrom is DateOnly later && row.ShiftDate >= later)
+            {
+                continue; // a later version owns this date and was validated with the cells it stores
+            }
+
+            var cell = created.Days.FirstOrDefault(day => day.Weekday == row.ShiftDate.DayOfWeek);
+            var key = ScheduleRevisionKeys.DatedOverride(row.UserId, row.ShiftDate, row.Shift, row.Kind);
+            if (cell?.IsDayOff == true)
+            {
+                conflicts.Add(new RowProblem(key, ScheduleCommandErrorCode.RowInvalid,
+                    $"ตารางประจำใหม่กำหนดให้วันที่ {ScheduleCommandHandler.Iso(row.ShiftDate)} เป็นวันหยุด "
+                    + "แต่ยังมี Area/กลุ่มพักที่กำหนดเฉพาะวันนั้นอยู่ ต้องแก้หรือยกเลิกก่อน"));
+                continue;
+            }
+
+            if (row.BreakGroup is not null && cell?.AreaId is null)
+            {
+                conflicts.Add(new RowProblem(key, ScheduleCommandErrorCode.RowInvalid,
+                    $"ตารางประจำใหม่ไม่มี Area ในวันที่ {ScheduleCommandHandler.Iso(row.ShiftDate)} "
+                    + "แต่ยังมีกลุ่มพักที่กำหนดเฉพาะวันนั้นอยู่ ต้องแก้หรือยกเลิกก่อน"));
+            }
+        }
+
+        return conflicts;
     }
 
     private static string VersionJson(ScheduleBaseline version) => ScheduleCommandHandler.Json(new
@@ -1186,7 +1292,7 @@ internal static class SchedulePayload
 {
     internal sealed record WeeklyRow(int UserId, IReadOnlyList<DateOnly> OffDates);
 
-    internal sealed record WeeklyBatch(DateOnly WeekStart, IReadOnlyList<WeeklyRow> Rows);
+    internal sealed record WeeklyBatch(DateOnly WeekStart, string? Reason, IReadOnlyList<WeeklyRow> Rows);
 
     internal sealed record BaselineCell(DayOfWeek Weekday, int? AreaId, int? BreakGroup, bool IsDayOff);
 
@@ -1200,6 +1306,14 @@ internal static class SchedulePayload
         int UserId, DateOnly Date, Shift Shift, DateTimeOffset StartsAt, DateTimeOffset EndsAt, string? Reason);
 
     internal sealed record LeaveSlot(int UserId, DateOnly Date, Shift Shift, string? Reason);
+
+    /// <summary>
+    /// One optional numeric field, read as the three things JSON can say (controller ruling): the key is absent
+    /// (<see cref="Present"/> false, nothing was asked), an explicit <c>null</c> (<see cref="Present"/> true, no value — a
+    /// removal), or a value. A key that is present with anything else is not a removal and not a value: the payload is
+    /// unreadable, so the command is refused instead of a live row being cancelled by a typo.
+    /// </summary>
+    internal readonly record struct PayloadInt(bool Present, int? Value);
 
     internal static bool TryReadWeekly(JsonElement payload, out WeeklyBatch batch)
     {
@@ -1237,7 +1351,7 @@ internal static class SchedulePayload
             parsed.Add(new WeeklyRow(userId, offDates));
         }
 
-        batch = new WeeklyBatch(weekStart, parsed);
+        batch = new WeeklyBatch(weekStart, OptionalString(payload, "reason"), parsed);
         return true;
     }
 
@@ -1256,13 +1370,15 @@ internal static class SchedulePayload
         {
             if (!TryProperty(day, "weekday", out var weekdayElement)
                 || weekdayElement.ValueKind != JsonValueKind.String
-                || !Enum.TryParse<DayOfWeek>(weekdayElement.GetString(), ignoreCase: true, out var weekday))
+                || !Enum.TryParse<DayOfWeek>(weekdayElement.GetString(), ignoreCase: true, out var weekday)
+                || !TryReadOptionalInt(day, "areaId", out var areaId)
+                || !TryReadOptionalInt(day, "breakGroup", out var breakGroup)
+                || !TryReadOptionalBool(day, "isDayOff", out var isDayOff))
             {
                 return false;
             }
 
-            cells.Add(new BaselineCell(weekday, OptionalInt(day, "areaId"), OptionalInt(day, "breakGroup"),
-                OptionalBool(day, "isDayOff") ?? false));
+            cells.Add(new BaselineCell(weekday, areaId.Value, breakGroup.Value, isDayOff ?? false));
         }
 
         baseline = new BaselineRequest(userId, effectiveFrom, cells);
@@ -1274,13 +1390,15 @@ internal static class SchedulePayload
         slot = null!;
         if (!TryInt(payload, "userId", out var userId)
             || !TryDate(payload, "date", out var date)
-            || !TryShift(payload, out var shift))
+            || !TryShift(payload, out var shift)
+            || !TryReadOptionalInt(payload, "areaId", out var area)
+            || !TryReadOptionalInt(payload, "breakGroup", out var breakGroup))
         {
             return false;
         }
 
-        slot = new DatedSlot(userId, date, shift, Has(payload, "areaId"), OptionalInt(payload, "areaId"),
-            Has(payload, "breakGroup"), OptionalInt(payload, "breakGroup"), OptionalString(payload, "reason"));
+        slot = new DatedSlot(userId, date, shift, area.Present, area.Value,
+            breakGroup.Present, breakGroup.Value, OptionalString(payload, "reason"));
         return true;
     }
 
@@ -1320,7 +1438,57 @@ internal static class SchedulePayload
         return element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out value);
     }
 
-    private static bool Has(JsonElement payload, string name) => TryProperty(payload, name, out _);
+    /// <summary>
+    /// A numeric field a payload may leave out, null or fill in. Returns false only for a key that is present with something
+    /// that is neither an integer nor <c>null</c> — a value no removal means, so the payload is refused rather than read as
+    /// one.
+    /// </summary>
+    private static bool TryReadOptionalInt(JsonElement payload, string name, out PayloadInt value)
+    {
+        value = new PayloadInt(false, null);
+        if (!TryProperty(payload, name, out var element))
+        {
+            return true;
+        }
+
+        if (element.ValueKind == JsonValueKind.Null)
+        {
+            value = new PayloadInt(true, null);
+            return true;
+        }
+
+        if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var number))
+        {
+            value = new PayloadInt(true, number);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>A boolean a payload may leave out or fill in; a present non-boolean value is unreadable, not "false".</summary>
+    private static bool TryReadOptionalBool(JsonElement payload, string name, out bool? value)
+    {
+        value = null;
+        if (!TryProperty(payload, name, out var element))
+        {
+            return true;
+        }
+
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Null:
+                return true;
+            case JsonValueKind.True:
+                value = true;
+                return true;
+            case JsonValueKind.False:
+                value = false;
+                return true;
+            default:
+                return false;
+        }
+    }
 
     private static bool TryInt(JsonElement payload, string name, out int value)
     {
@@ -1359,22 +1527,6 @@ internal static class SchedulePayload
             && DateTimeOffset.TryParse(element.GetString(), CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out value);
     }
-
-    private static int? OptionalInt(JsonElement payload, string name) =>
-        TryProperty(payload, name, out var element) && element.ValueKind == JsonValueKind.Number
-            && element.TryGetInt32(out var value)
-            ? value
-            : null;
-
-    private static bool? OptionalBool(JsonElement payload, string name) =>
-        TryProperty(payload, name, out var element)
-            ? element.ValueKind switch
-            {
-                JsonValueKind.True => true,
-                JsonValueKind.False => false,
-                _ => null,
-            }
-            : null;
 
     private static string? OptionalString(JsonElement payload, string name) =>
         TryProperty(payload, name, out var element) && element.ValueKind == JsonValueKind.String

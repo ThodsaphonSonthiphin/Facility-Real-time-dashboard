@@ -496,6 +496,13 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             bool IsTheDaysSlot(DateOnly date, Shift slotShift) =>
                 shiftOn[date] is not Shift dayShift || dayShift == slotShift;
 
+            // The shift a write must name for a date, resolved exactly as the command handlers resolve it: the dated period
+            // in force that day, else — only when the person has no dated row at all — the compatibility projection (spec
+            // §14). It is per date because a person's shift can change inside one week, and it is exposed so a client can
+            // identify the row it read instead of guessing (spec §11).
+            var writtenShiftOn = dates.ToDictionary(date => date,
+                date => shiftOn[date] ?? (personProfiles.Count == 0 ? person.Shift : null));
+
             // The row's own identity is the profile that applies to the read week: the one in force on Monday, else the last
             // one overlapping the week. A period that ended before the week therefore lends the row neither a building nor a
             // kind, instead of the row quietly showing a current-looking identity (spec §14: compatibility is not history).
@@ -541,7 +548,8 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 profile?.Kind.ToString() ?? UnknownCleanerKind,
                 HomeBuilding(memberships[person.Id], profiles.Exists(entry => entry.UserId == person.Id), person),
                 header is not null,
-                readDates[person.Id].Select(date => ScheduleResolver.Resolve(input, date)).ToList(),
+                readDates[person.Id].Select(date =>
+                    ScheduleResolver.Resolve(input, date) with { Shift = writtenShiftOn[date] }).ToList(),
                 // The write contract's anchors (Task 6): the week header and the head version of each repeating-week kind,
                 // as the very revisions the command handlers compare. A missing row is 0, never "unknown".
                 Revision(header?.Revision ?? 0),
