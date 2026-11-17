@@ -27,3 +27,5 @@ flowchart TD
 - ถ้าแม่บ้านมีวันหยุดประจำ Admin ต้องมอบหมายซ้ำทุกสัปดาห์ ถ้าตอนขยายระบบภาระนี้มากไป ค่อยพิจารณาตารางวันหยุดประจำ (facility-0050)
 
 > **แก้ไข 2026-10-22:** วิธีให้ Admin เลือก Area ของกะล่วงหน้าตัดสินแล้วใน facility-0084
+
+> **Weekly scheduling design amendment 2026-11-16:** [facility-0145](facility-0145-relief-schedules-repeat-weekly-with-dated-overrides.md) accepts recurring weekly relief timetables with selected-date changes. Unlike the original manually repeated cover flow, the weekly timetable must not require re-entry every seven days. This applies to the new scheduling design; explicit-date horizons, effective dates and storage expansion remain to be specified, and no existing UI or endpoint has been changed.
