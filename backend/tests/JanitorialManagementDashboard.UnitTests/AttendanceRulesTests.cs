@@ -30,41 +30,6 @@ public class AttendanceRulesTests
         Assert.Empty(Next(AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut));
 
     [Fact]
-    public void The_versioned_answer_for_a_legacy_slot_is_still_the_legacy_answer()
-    {
-        // ADR facility-0222 with spec §8 Cutover: a slot without a lifecycle row, or an old correction, keeps the four.
-        Assert.Equal(new[] { AttendanceEvent.ShiftIn }, AttendanceRules.NextAllowed(AttendanceLifecycleVersion.Legacy4, []));
-        Assert.Equal(
-            new[] { AttendanceEvent.BreakOut, AttendanceEvent.ShiftOut },
-            AttendanceRules.NextAllowed(AttendanceLifecycleVersion.Legacy4, [AttendanceEvent.ShiftIn]));
-        Assert.Equal(
-            new[] { AttendanceEvent.ShiftOut },
-            AttendanceRules.NextAllowed(
-                AttendanceLifecycleVersion.Legacy4, [AttendanceEvent.ShiftIn, AttendanceEvent.BreakOut, AttendanceEvent.BreakIn]));
-        Assert.Empty(AttendanceRules.NextAllowed(
-            AttendanceLifecycleVersion.Legacy4, [AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut]));
-    }
-
-    [Fact]
-    public void The_versioned_answer_for_a_numbered_slot_is_the_six_action_lifecycle()
-    {
-        Assert.Equal(new[] { AttendanceEvent.ShiftIn }, AttendanceRules.NextAllowed(AttendanceLifecycleVersion.Numbered6, []));
-        Assert.Equal(
-            new[]
-            {
-                AttendanceEvent.Break1Out, AttendanceEvent.Break1In, AttendanceEvent.Break2Out, AttendanceEvent.Break2In,
-                AttendanceEvent.ShiftOut,
-            },
-            AttendanceRules.NextAllowed(AttendanceLifecycleVersion.Numbered6, [AttendanceEvent.ShiftIn]));
-        Assert.Empty(AttendanceRules.NextAllowed(
-            AttendanceLifecycleVersion.Numbered6,
-            [
-                AttendanceEvent.ShiftIn, AttendanceEvent.Break1Out, AttendanceEvent.Break1In, AttendanceEvent.Break2Out,
-                AttendanceEvent.Break2In, AttendanceEvent.ShiftOut,
-            ]));
-    }
-
-    [Fact]
     public void On_duty_from_shift_in_until_shift_out_breaks_included()
     {
         Assert.False(AttendanceRules.IsOnDuty(Array.Empty<AttendanceEvent>()));
@@ -110,6 +75,65 @@ public class AttendanceRulesTests
     public void Shift_out_must_be_last() =>
         Assert.Contains("เรียงกัน", AttendanceRules.CheckTimes(Times(
             (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakOut, 300), (AttendanceEvent.BreakIn, 360), (AttendanceEvent.ShiftOut, 330))));
+
+    // ---- the same order check for a known lifecycle version ----
+
+    [Fact]
+    public void A_numbered_slot_in_full_lifecycle_order_is_valid() =>
+        Assert.Null(AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break1Out, 120), (AttendanceEvent.Break1In, 180),
+            (AttendanceEvent.Break2Out, 240), (AttendanceEvent.Break2In, 300), (AttendanceEvent.ShiftOut, 720))));
+
+    [Fact]
+    public void An_earlier_ordinal_event_recorded_after_a_later_ordinal_one_is_rejected() =>
+        // Break-1-In sits at ordinal 2 but at minute 300, after Break-2-Out at ordinal 3 and minute 240: out of order.
+        Assert.Contains("เรียงกัน", AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break1Out, 120), (AttendanceEvent.Break1In, 300),
+            (AttendanceEvent.Break2Out, 240), (AttendanceEvent.Break2In, 360), (AttendanceEvent.ShiftOut, 720))));
+
+    [Fact]
+    public void A_numbered_shift_out_before_the_last_break_is_rejected() =>
+        Assert.Contains("เรียงกัน", AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break2In, 300), (AttendanceEvent.ShiftOut, 240))));
+
+    [Fact]
+    public void A_numbered_break_needs_a_shift_in() =>
+        Assert.Contains("เข้างานก่อน", AttendanceRules.CheckTimes(
+            AttendanceLifecycleVersion.Numbered6, Times((AttendanceEvent.Break1Out, 120))));
+
+    [Fact]
+    public void A_legacy_event_is_not_a_numbered_action() =>
+        Assert.Contains("เรียงกัน", AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakOut, 120), (AttendanceEvent.ShiftOut, 720))));
+
+    [Fact]
+    public void A_forgotten_numbered_break_is_an_allowed_explicit_gap() =>
+        // Spec §8: an explicit gap is exactly how a forgotten break is represented, so the missing pair time is never required.
+        Assert.Null(AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break1In, 180), (AttendanceEvent.Break2Out, 240),
+            (AttendanceEvent.Break2In, 300), (AttendanceEvent.ShiftOut, 720))));
+
+    [Fact]
+    public void No_numbered_events_is_valid() =>
+        Assert.Null(AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times()));
+
+    [Fact]
+    public void A_legacy_slot_answers_the_legacy_check_unchanged()
+    {
+        // Controller ruling: Legacy4 delegates byte-for-byte, so its Thai messages stay exactly what the existing Admin
+        // correction page already shows.
+        foreach (var events in new[]
+        {
+            Times(),
+            Times((AttendanceEvent.ShiftOut, 720)),
+            Times((AttendanceEvent.ShiftIn, 0), (AttendanceEvent.ShiftOut, 0)),
+            Times((AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakIn, 360)),
+            Times((AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakOut, 300), (AttendanceEvent.BreakIn, 360)),
+        })
+        {
+            Assert.Equal(AttendanceRules.CheckTimes(events), AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Legacy4, events));
+        }
+    }
 
     [Fact]
     public void Missing_events_once_the_shift_is_over()

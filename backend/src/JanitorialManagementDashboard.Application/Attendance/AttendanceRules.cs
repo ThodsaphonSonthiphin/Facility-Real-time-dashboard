@@ -13,18 +13,6 @@ public static class AttendanceRules
         : recorded.Contains(AttendanceEvent.ShiftIn) ? [AttendanceEvent.BreakOut, AttendanceEvent.ShiftOut]
         : [AttendanceEvent.ShiftIn];
 
-    /// <summary>
-    /// Spec §8 (ADR facility-0222): the same question for a slot whose lifecycle version is known. A legacy slot answers
-    /// exactly as above, so every existing caller and old correction keeps its meaning; a numbered slot answers with the
-    /// shared six-action lifecycle. There is no global required version — each caller names its slot's version, so nothing
-    /// silently moves a legacy slot to numbered breaks.
-    /// </summary>
-    public static IReadOnlyList<AttendanceEvent> NextAllowed(
-        AttendanceLifecycleVersion version, IReadOnlyCollection<AttendanceEvent> recorded) =>
-        version == AttendanceLifecycleVersion.Legacy4
-            ? NextAllowed(recorded)
-            : AttendanceLifecycle.NextActions(version, recorded, []).Select(choice => choice.Action).ToArray();
-
     /// <summary>Owner decision 2026-10-09: a Cleaner may submit from Shift-In until Shift-Out; a break does not stop it.</summary>
     public static bool IsOnDuty(IReadOnlyCollection<AttendanceEvent> recorded) =>
         recorded.Contains(AttendanceEvent.ShiftIn) && !recorded.Contains(AttendanceEvent.ShiftOut);
@@ -53,6 +41,39 @@ public static class AttendanceRules
         return times.Zip(times.Skip(1)).Any(pair => pair.Second <= pair.First)
             ? "เวลาต้องเรียงกัน: เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน"
             : null;
+    }
+
+    private const string NumberedOrderMessage =
+        "เวลาต้องเรียงกัน: เข้างาน → ออกพัก 1 → กลับจากพัก 1 → ออกพัก 2 → กลับจากพัก 2 → เลิกงาน";
+
+    /// <summary>
+    /// Spec §8 (ADR facility-0222): <c>Actual recorded times ต้องเรียงตาม ordinal ของ lifecycle</c>. A Legacy4 slot is
+    /// checked exactly as before — same rule, same Thai message — so an old correction keeps its meaning; a Numbered6 slot
+    /// is checked against <see cref="AttendanceLifecycle.Order(AttendanceLifecycleVersion.Numbered6)"/>. A missing pair is
+    /// allowed, because an explicit gap is exactly how a forgotten break is recorded: a Break-1-In needs no Break-1-Out.
+    /// </summary>
+    public static string? CheckTimes(AttendanceLifecycleVersion version, IReadOnlyDictionary<AttendanceEvent, DateTime> events) =>
+        version == AttendanceLifecycleVersion.Legacy4 ? CheckTimes(events) : CheckNumberedTimes(events);
+
+    /// <summary>
+    /// The numbered six in lifecycle order: a Shift-In comes first, only numbered actions may appear, and each later-ordinal
+    /// action is strictly later than the earlier-ordinal ones present.
+    /// </summary>
+    private static string? CheckNumberedTimes(IReadOnlyDictionary<AttendanceEvent, DateTime> events)
+    {
+        if (events.Count > 0 && !events.ContainsKey(AttendanceEvent.ShiftIn))
+        {
+            return "ต้องมีเวลาเข้างานก่อน";
+        }
+
+        var order = AttendanceLifecycle.Order(AttendanceLifecycleVersion.Numbered6);
+        if (events.Keys.Any(action => !order.Contains(action)))
+        {
+            return NumberedOrderMessage;
+        }
+
+        var times = order.Where(events.ContainsKey).Select(action => events[action]).ToList();
+        return times.Zip(times.Skip(1)).Any(pair => pair.Second <= pair.First) ? NumberedOrderMessage : null;
     }
 
     /// <summary>facility-0051 rule 2: what a Cleaner who came forgot to scan, once the shift is over. Nothing for one who never checked in.</summary>

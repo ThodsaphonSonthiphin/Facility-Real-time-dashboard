@@ -55,20 +55,39 @@ public static class AttendanceLifecycle
     public static bool IsSkippable(AttendanceEvent action) =>
         action is not (AttendanceEvent.ShiftIn or AttendanceEvent.ShiftOut);
 
+    private static readonly IReadOnlyList<AttendanceEvent> NoGaps = Array.AsReadOnly<AttendanceEvent>([]);
+
     /// <summary>
-    /// Spec §8: the permitted next actions of a slot, in lifecycle order, each with the gaps it would skip. Nothing before
-    /// Shift-In but Shift-In itself (never skippable, nothing precedes it); nothing once the final Shift-Out is recorded.
-    /// Afterwards every action that is neither recorded nor already skipped is offered, and its
-    /// <see cref="AttendanceChoice.RequiredGaps"/> are the unrecorded, unskipped actions before it — already-skipped markers
-    /// need no second confirmation. Actual times stay ordered by lifecycle ordinal because each recorded action closes the
-    /// choices before it. For a legacy slot this is the four-action list; the shorter chain an existing endpoint already
-    /// offered (a Break-In only after a Break-Out) is still answered by <see cref="AttendanceRules.NextAllowed(IReadOnlyCollection{AttendanceEvent})"/>.
+    /// Spec §8: the one answer to "what may be recorded next" for a slot — nothing else answers it. For a numbered slot the
+    /// choices are in lifecycle order, each with the gaps it would step over: nothing before Shift-In but Shift-In itself
+    /// (never skippable, nothing precedes it); nothing once the final Shift-Out is recorded; otherwise every action that is
+    /// neither recorded nor already skipped, its <see cref="AttendanceChoice.RequiredGaps"/> being the unrecorded, unskipped
+    /// actions before it, because a skipped marker already answered that gap. A Legacy4 slot keeps the legacy meaning — the
+    /// same actions <see cref="AttendanceRules.NextAllowed(IReadOnlyCollection{AttendanceEvent})"/> offers (a Break-In only
+    /// after a Break-Out) and no gaps at all, since the legacy contract has no gap markers.
     /// </summary>
+    /// <remarks>
+    /// Only the intermediate breaks can be skipped, so the incoming markers are filtered through <see cref="IsSkippable"/>
+    /// before they are trusted: a marker on Shift-In or on the final Shift-Out can never hide that action, and therefore can
+    /// never leave a shift with no way to reach <c>Finished</c>.
+    /// </remarks>
     public static IReadOnlyList<AttendanceChoice> NextActions(
         AttendanceLifecycleVersion version,
         IReadOnlyCollection<AttendanceEvent> recorded,
         IReadOnlyCollection<AttendanceEvent> skipped)
     {
+        if (version == AttendanceLifecycleVersion.Legacy4)
+        {
+            // The legacy contract carries neither intermediate gaps nor skip markers, so the markers add nothing here: a
+            // legacy slot answers exactly the legacy chain for its recorded set, whatever the caller passes as skipped.
+            return AttendanceRules.NextAllowed(recorded)
+                .Select(action => new AttendanceChoice(action, NoGaps))
+                .ToArray();
+        }
+
+        // Only the intermediate breaks can be skipped, so a marker on Shift-In or the final Shift-Out is not a skip at all.
+        var confirmed = skipped.Where(IsSkippable).ToHashSet();
+
         var order = Order(version);
         if (recorded.Contains(AttendanceEvent.ShiftOut))
         {
@@ -77,20 +96,20 @@ public static class AttendanceLifecycle
 
         if (!recorded.Contains(AttendanceEvent.ShiftIn))
         {
-            return [new AttendanceChoice(AttendanceEvent.ShiftIn, [])];
+            return [new AttendanceChoice(AttendanceEvent.ShiftIn, NoGaps)];
         }
 
         var choices = new List<AttendanceChoice>(order.Count - 1);
         for (var index = 1; index < order.Count; index++)
         {
             var action = order[index];
-            if (recorded.Contains(action) || skipped.Contains(action))
+            if (recorded.Contains(action) || confirmed.Contains(action))
             {
                 continue;
             }
 
             var gaps = order.Take(index)
-                .Where(preceding => !recorded.Contains(preceding) && !skipped.Contains(preceding))
+                .Where(preceding => !recorded.Contains(preceding) && !confirmed.Contains(preceding))
                 .ToArray();
             choices.Add(new AttendanceChoice(action, Array.AsReadOnly(gaps)));
         }

@@ -115,16 +115,64 @@ public class AttendanceLifecycleTests
         Assert.Equal(Six.Skip(1), Offered(AttendanceLifecycleVersion.Numbered6, [AttendanceEvent.ShiftIn]));
 
     [Fact]
-    public void A_legacy_slot_offers_its_own_four_actions_and_never_a_numbered_break()
+    public void A_skip_marker_cannot_hide_the_final_shift_out()
     {
-        // The lifecycle surface answers with the slot's four actions; the older short-chain answer that the existing
-        // endpoints already use (Break-In only after a Break-Out) stays untouched in AttendanceRules.NextAllowed.
+        // Spec §8 "ทำหลัง final ShiftOut": the departure is never skippable, so a stray marker for it can never deadlock
+        // the shift — the final action is still offered, and the breaks before it are still the gaps to confirm.
+        Assert.Equal(
+            Six.Skip(1),
+            Offered(AttendanceLifecycleVersion.Numbered6, [AttendanceEvent.ShiftIn], [AttendanceEvent.ShiftOut]));
+        Assert.Equal(
+            new[]
+            {
+                AttendanceEvent.Break1Out, AttendanceEvent.Break1In, AttendanceEvent.Break2Out, AttendanceEvent.Break2In,
+            },
+            ChoiceOf(
+                AttendanceLifecycleVersion.Numbered6, AttendanceEvent.ShiftOut, [AttendanceEvent.ShiftIn], [AttendanceEvent.ShiftOut])
+                .RequiredGaps);
+    }
+
+    [Fact]
+    public void A_skip_marker_for_a_non_skippable_action_hides_nothing_else_either()
+    {
+        // Filtered through IsSkippable before it is trusted: a marker on Shift-In or Shift-Out is not a skip at all, so it
+        // is neither offered nor counted as a confirmed gap.
+        AttendanceEvent[] straySkips = [AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut];
+
+        Assert.Equal(Six.Skip(1), Offered(AttendanceLifecycleVersion.Numbered6, [AttendanceEvent.ShiftIn], straySkips));
+        Assert.Equal(
+            new[] { AttendanceEvent.Break1Out, AttendanceEvent.Break1In },
+            ChoiceOf(AttendanceLifecycleVersion.Numbered6, AttendanceEvent.Break2Out, [AttendanceEvent.ShiftIn], straySkips)
+                .RequiredGaps);
+    }
+
+    [Fact]
+    public void A_legacy_slot_offers_the_legacy_answer_and_never_a_numbered_break()
+    {
+        // Spec §8 legacy = ShiftIn/BreakOut/BreakIn/ShiftOut with its old meaning: a Break-In only after a Break-Out, so a
+        // legacy slot answers exactly the chain AttendanceRules.NextAllowed answers and never a numbered break.
         var offered = Offered(AttendanceLifecycleVersion.Legacy4, [AttendanceEvent.ShiftIn]);
 
-        Assert.Equal(
-            new[] { AttendanceEvent.BreakOut, AttendanceEvent.BreakIn, AttendanceEvent.ShiftOut },
-            offered);
+        Assert.Equal(new[] { AttendanceEvent.BreakOut, AttendanceEvent.ShiftOut }, offered);
         Assert.DoesNotContain(AttendanceEvent.Break1Out, offered);
+    }
+
+    [Fact]
+    public void A_legacy_slot_never_disagrees_with_the_legacy_next_allowed()
+    {
+        // Controller ruling: one answer per (version, recorded). Every recorded subset of every defined action — numbered
+        // strays included — must offer exactly what the legacy method offers, with no gap markers to confirm.
+        var everyAction = Enum.GetValues<AttendanceEvent>();
+
+        for (var mask = 0; mask < 1 << everyAction.Length; mask++)
+        {
+            var recorded = everyAction.Where((_, index) => (mask & (1 << index)) != 0).ToArray();
+
+            Assert.Equal(AttendanceRules.NextAllowed(recorded), Offered(AttendanceLifecycleVersion.Legacy4, recorded));
+            Assert.All(
+                AttendanceLifecycle.NextActions(AttendanceLifecycleVersion.Legacy4, recorded, []),
+                choice => Assert.Empty(choice.RequiredGaps));
+        }
     }
 
     [Fact]
