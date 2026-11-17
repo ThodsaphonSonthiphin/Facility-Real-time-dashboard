@@ -25,13 +25,23 @@
 
 **สถานะ 16 พ.ย. 2026:** เจ้าของเรียก `sp-writing-plans` หลังได้รับ spec จึงเดินหน้าขั้นแผนนี้ การพัฒนายังพักอยู่ ทุก checkbox ยังไม่เริ่ม; โค้ด/คำสั่งด้านล่างเป็นคำแนะนำสำหรับการพัฒนาภายหลัง ไม่ใช่สิ่งที่รันแล้ว
 
+## ทบทวนสมมติฐานกับ ADR 0131–0193 (2026-11-17)
+
+ผลทบทวนเต็มอยู่ที่ [2026-11-17 overview plan assumption delta](../reviews/2026-11-17-overview-plan-assumption-delta.md) ข้อผูกพันเพิ่มเติมกับแผนนี้ (ไม่เปลี่ยนตัวเลข/กติกา 0114–0130 และไม่ใช่ product decision ใหม่):
+
+- **การลงเวลา:** entry นับจาก `ShiftAttendance.AreaId` ของ `ShiftIn` เท่านั้น ซึ่งยังถูกต้องทั้งกะสี่และหกปุ่ม; ห้าม hard-code ว่าทุกกะมีสี่ปุ่ม. ถ้าหกปุ่ม (0146/0164/0168/0169) หรือการลา (0156–0158) ขึ้นก่อนงานนี้ Task 7–9 ต้อง rebase ตาม D2–D3 ในเอกสารทบทวน
+- **วันหยุด/ลา:** ไม่ปิด Area ไม่ลดรอบ และไม่เปลี่ยนสามหมวดหรือตัวหาร (0136/0158); “รอจัดคนทำแทน” ไม่นับเป็น covered; `ShiftIn` ที่ป้ายของ Area ที่คนแทนได้รับมอบหมายนับเป็น entry ของ Area นั้น (0155)
+- **ค่าเริ่มต้น:** ทุกตึก + กะตามนาฬิกา และวันที่ของกะดึกคือ shift start date (0183/0184); ภาพรวมไม่รับกลไกจำสัปดาห์/ตัวกรองของหน้า schedule (0180–0182/0185) — คืนบริบทจาก URL ตาม Task 7
+- **ความสด:** read หลังต่อกลับที่ล้มเหลวต้องคงสถานะ “อาจไม่เป็นปัจจุบัน” จนอ่านสำเร็จ (0172)
+- **เมนู:** ภาพรวม → สถานะจุด → การเข้างาน → ตารางงาน → รายการที่ขึ้นเตือน → สรุปการตรวจ → ส่งออก Excel (0178)
+
 ---
 
 ## Read first, scope and working agreement
 
 Repository root: `/Users/macbookair/Projects/Janitorial-Management-Dashboard`. Paths ในรายการ Files เป็น paths จาก root นี้ คำสั่ง backend รันจาก root; คำสั่ง frontend ที่ขึ้นต้น `npm --prefix frontend` รันจาก root เช่นกัน
 
-อ่าน `docs/handoff.md` ก่อนเริ่ม execution ตรวจ diff แล้วสร้าง worktree/branch `codex/combined-overview-dashboard` ตาม workflow ที่เลือก อย่า reset/stash/ย้ายไฟล์ที่เจ้าของค้างไว้โดยพลการ ตอนเขียนแผน HEAD คือ `7853ae6` บน `master`; มีเอกสารออกแบบ/ADRs ที่ยังไม่ commit และ Postman directories ที่ไม่ใช่งานนี้ ต้องนำ spec/ADRs ที่อนุมัติเข้า checkout สำหรับ execution อย่างชัดเจนก่อนเริ่ม ไม่ใช้ `git add .`
+อ่าน `docs/handoff.md` ก่อนเริ่ม execution ตรวจ diff แล้วสร้าง worktree/branch `codex/combined-overview-dashboard` ตาม workflow ที่เลือก ฐานที่ตรวจล่าสุด (17 พ.ย. 2026) คือ `master` `55932c6` สะอาด ไม่มีไฟล์ค้าง: spec/ADR 0114–0193 ถูก merge ผ่าน PR #154 แล้ว และ `.postman/`/`postman/` ถูก cleanup ออกไป อย่า reset/stash หรือย้ายไฟล์โดยพลการ และไม่ใช้ `git add .`
 
 เป็นแผนเดียวเพราะ storage history → projection → drill-through เป็น dependency ของ feature เดียวกัน ไม่มี subsystem อิสระที่ใช้งานแทน feature นี้ได้ Task boundaries เป็นหน่วยที่รัน tests และ review ได้แยกกัน ต้องทำตาม dependency: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
 
@@ -1001,7 +1011,7 @@ Run `npm --prefix frontend test -- src/pages/overview/OverviewPage.test.tsx`; ex
 { path: 'admin/overview', lazy: async () => ({ Component: (await import('./pages/overview')).OverviewPage }) },
 ```
 
-Place under existing Admin/AppLayout wide branch before dashboard. Export only OverviewPage through pages/overview/index.ts. Add `{ to:'/admin/overview', label:'ภาพรวม', Icon:ChartNoAxesCombined, counted:false }` above สถานะจุด using existing named lucide import. Keep HomeRedirect and existing menu labels/order otherwise unchanged. Route tests assert Cleaner/Supervisor denied, Admin allowed, default Admin home still Dashboard, and no overview UI import in phone's eager route bundle.
+Place under existing Admin/AppLayout wide branch before dashboard. Export only OverviewPage through pages/overview/index.ts. Add `{ to:'/admin/overview', label:'ภาพรวม', Icon:ChartNoAxesCombined, counted:false }` above สถานะจุด using existing named lucide import. Keep the new Admin `ตารางงาน` entry after `การเข้างาน` (facility-0178); the resulting order is ภาพรวม → สถานะจุด → การเข้างาน → ตารางงาน → รายการที่ขึ้นเตือน → สรุปการตรวจ → ส่งออก Excel. Keep HomeRedirect and existing menu labels/order otherwise unchanged. Route tests assert Cleaner/Supervisor denied, Admin allowed, default Admin home still Dashboard, and no overview UI import in phone's eager route bundle.
 
 - [ ] **Step 3: Implement selection/query hook with response identity.**
 
@@ -1132,7 +1142,7 @@ export function OverviewAreaPage({ view, actions }: OverviewAreaPageProps) {
 }
 ```
 
-Add `periodText:string` and `view:OverviewView` to model, `actions?:ReactNode` to props. Header includes selected date, Day/Night, building historical name and receiving/closed explanation. AreaAttendance lists only that Area's ShiftIn/break/out events, edited marker, cover assignment status vs recorded entry and referenced people. AreaWork shows point names, submitted/required counts, latest submission/result IDs and times, Issue separately, next rounds and selected history with finalization/cancellation reason. Show every relevant missed round link when Area has multiple; selecting one sets exact emitted roundKey and reads that round. Do not use current ServicePoints endpoint or its current PointTile to replace historical truth.
+Add `periodText:string` and `view:OverviewView` to model, `actions?:ReactNode` to props. Header includes selected date, Day/Night, building historical name and receiving/closed explanation. AreaAttendance lists only that Area's ShiftIn/break/out events, edited marker, cover assignment status vs recorded entry and referenced people. If six-action attendance or recorded leave ships before this task, rebase this list on the accepted lifecycle: legacy four-action shifts stay as recorded (facility-0164), a new shift may show six actions, a deliberate skip stays visibly empty (facility-0153), and a Supervisor-entered time keeps its reason and provenance (facility-0154). Never fabricate break-2 or a time, and do not hard-code four actions in UI text. AreaWork shows point names, submitted/required counts, latest submission/result IDs and times, Issue separately, next rounds and selected history with finalization/cancellation reason. Show every relevant missed round link when Area has multiple; selecting one sets exact emitted roundKey and reads that round. Do not use current ServicePoints endpoint or its current PointTile to replace historical truth.
 
 The API fills context.isClockCurrent using `slot == ShiftCalendar.SlotAt(readAtUtc)`; the browser uses this flag rather than its local time to authorize the current-mode adapter. Hook parses full context before fetching; invalid input skips request. `readOnly` is true when selected slot is not the clock current slot, selected old round exists, or phase is receiving/closed/notStarted. Facts may still refresh during receiving even though actions hidden. API404/error/partial states retain exact requested context and retry link; never query a fallback Area. `matchesGroup=false` shows change notice but retains Area ID.
 
@@ -1243,7 +1253,7 @@ return { pollingInterval: context?.phase === 'closed' ? 0 : 30_000,
   refetchOnFocus: context?.phase !== 'closed' };
 ```
 
-Use the server phase/CloseUtc, not a hardcoded19:00 cutoff. `readAtUtc` reflects response time; `evaluationUtc` can remain at original close on historical reads. When a response crosses to closed, polling stops. Closed context still refetches on mount/filter and receives attendance-correction invalidation. A query error with retained last response shows read timestamp plus “ข้อมูลอาจยังไม่ล่าสุด” and retry; current LiveBadge follows the new hub key using existing reconnect semantics. Do not show current live status as proof of complete historical targets. Test focus and30s refetch with fake timers, receiving after19:00, exact inclusive20:00 boundary, no closed polling, reconnect refetch, target update, failed poll recovery, and rapid selection while an event request is in flight.
+Use the server phase/CloseUtc, not a hardcoded19:00 cutoff. `readAtUtc` reflects response time; `evaluationUtc` can remain at original close on historical reads. When a response crosses to closed, polling stops. Closed context still refetches on mount/filter and receives attendance-correction invalidation. A query error with retained last response shows read timestamp plus “ข้อมูลอาจยังไม่ล่าสุด” and retry; current LiveBadge follows the new hub key using existing reconnect semantics. A reconnect recovery read that fails keeps the “ข้อมูลอาจยังไม่ล่าสุด” wording until a read succeeds (facility-0172); a completed transport retry is not proof that the projection is fresh. Do not show current live status as proof of complete historical targets. Test focus and30s refetch with fake timers, receiving after19:00, exact inclusive20:00 boundary, no closed polling, reconnect refetch, target update, failed poll recovery, and rapid selection while an event request is in flight.
 
 - [ ] **Step 5: Run live regressions and commit.**
 
