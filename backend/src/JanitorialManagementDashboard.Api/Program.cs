@@ -6,6 +6,7 @@ using JanitorialManagementDashboard.Api.Commands;
 using JanitorialManagementDashboard.Api.Endpoints;
 using JanitorialManagementDashboard.Api.Hubs;
 using JanitorialManagementDashboard.Api.Retention;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Retention;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Retention;
 using JanitorialManagementDashboard.Application.Accounts;
@@ -13,6 +14,7 @@ using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Auth;
 using JanitorialManagementDashboard.Infrastructure.Auth;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -70,6 +72,10 @@ try
     retention.Validate();
     builder.Services.AddSingleton(retention);
     builder.Services.AddScoped<IRetentionRunner, RetentionRunner>();
+    // Spec §3: the dated Supervisor scope and its writes are the authority for management, work and inspection
+    builder.Services.AddScoped<ScheduleStore>();
+    builder.Services.AddScoped<ScheduleScopeReader>();
+    builder.Services.AddScoped<SupervisorMembership>();
     if (!builder.Environment.IsEnvironment("Testing"))
         builder.Services.AddHostedService<RetentionWorker>();
 

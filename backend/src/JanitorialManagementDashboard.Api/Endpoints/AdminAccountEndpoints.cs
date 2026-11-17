@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Accounts;
 using JanitorialManagementDashboard.Application.Auth;
 using JanitorialManagementDashboard.Application.Buildings;
@@ -25,10 +26,10 @@ public static class AdminAccountEndpoints
             await CurrentUser.LoadAsync(principal, db) is null ? Results.Unauthorized() : Results.Ok(await AccountView.LoadAsync(db)));
         accounts.MapPost("", CreateAsync);
         accounts.MapPut("/{id:int}", UpdateAsync);
-        accounts.MapPost("/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
-            SetActiveAsync(id, false, principal, db, clock));
-        accounts.MapPost("/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
-            SetActiveAsync(id, true, principal, db, clock));
+        accounts.MapPost("/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership) =>
+            SetActiveAsync(id, false, principal, db, clock, membership));
+        accounts.MapPost("/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership) =>
+            SetActiveAsync(id, true, principal, db, clock, membership));
         accounts.MapPut("/{id:int}/phone", ChangePhoneAsync);
         accounts.MapPut("/{id:int}/password", ResetPasswordAsync);
         return app;
@@ -41,7 +42,8 @@ public static class AdminAccountEndpoints
         new(user.Role.ToString(), user.LoginName, user.DisplayName, user.AreaId, user.BuildingId, user.Shift?.ToString(), user.IsActive);
 
     private static async Task<IResult> CreateAsync(
-        CreateAccountRequest request, ClaimsPrincipal principal, AppDbContext db, IPasswordHasher hasher, TimeProvider clock)
+        CreateAccountRequest request, ClaimsPrincipal principal, AppDbContext db, IPasswordHasher hasher, TimeProvider clock,
+        SupervisorMembership membership)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -127,15 +129,23 @@ public static class AdminAccountEndpoints
         db.Users.Add(user);
 
         var claim = ClaimOf(user);
-        var conflict = await SaveAsync(db, claim, async () =>
-        {
-            // The audit row needs the new id, so it is a second save inside the same transaction
-            AuditTrail.Add(
-                db, admin.Id, user.CreatedAt, "ACCOUNT_CREATE", "users", user.Id,
-                $"เพิ่มบัญชี{ThaiLabels.RoleName(role)} {user.LoginName} {user.DisplayName}",
-                before: null, after: Snapshot(user));
-            await db.SaveChangesAsync();
-        });
+        // Spec §3: the new Supervisor's building and shift is a dated membership from the business date, written inside
+        // the same transaction and only once the building/shift anchor says nobody else holds it.
+        var conflict = await SaveAsync(
+            db,
+            claim,
+            async () =>
+            {
+                // The audit row needs the new id, so it is a second save inside the same transaction
+                AuditTrail.Add(
+                    db, admin.Id, user.CreatedAt, "ACCOUNT_CREATE", "users", user.Id,
+                    $"เพิ่มบัญชี{ThaiLabels.RoleName(role)} {user.LoginName} {user.DisplayName}",
+                    before: null, after: Snapshot(user));
+                await db.SaveChangesAsync();
+            },
+            beforeSave: role == UserRole.Supervisor
+                ? () => membership.ApplyAsync(user, open: true, admin.Id)
+                : null);
         if (conflict is not null)
         {
             return conflict;
@@ -144,7 +154,9 @@ public static class AdminAccountEndpoints
         return Results.Created($"/api/admin/accounts/{user.Id}", await AccountView.LoadOneAsync(db, user.Id));
     }
 
-    private static async Task<IResult> UpdateAsync(int id, UpdateAccountRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> UpdateAsync(
+        int id, UpdateAccountRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        SupervisorMembership membership)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -189,7 +201,15 @@ public static class AdminAccountEndpoints
         AuditTrail.Add(
             db, admin.Id, clock.GetUtcNow().UtcDateTime, "ACCOUNT_UPDATE", "users", user.Id,
             $"แก้บัญชี{ThaiLabels.RoleName(user.Role)} {user.LoginName} {user.DisplayName}", before, after);
-        if (await SaveAsync(db, ClaimOf(user)) is { } conflict)
+        // Only a real building/shift change is a membership write: renaming a Supervisor must not end another building
+        // they also hold (a dated write ends whatever it replaces).
+        var moved = (before.BuildingId, before.Shift) != (after.BuildingId, after.Shift);
+        if (await SaveAsync(
+                db,
+                ClaimOf(user),
+                beforeSave: moved && user.Role == UserRole.Supervisor
+                    ? () => membership.ApplyAsync(user, open: user.IsActive, admin.Id)
+                    : null) is { } conflict)
         {
             return conflict;
         }
@@ -201,7 +221,8 @@ public static class AdminAccountEndpoints
     /// facility-0020: no delete, only deactivate. A deactivated account cannot log in and every refresh token is revoked
     /// (facility-0014), so its devices drop within 5 minutes. History keeps its name.
     /// </summary>
-    private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> SetActiveAsync(
+        int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -252,7 +273,15 @@ public static class AdminAccountEndpoints
             $"{(active ? "เปิด" : "ปิด")}ใช้งานบัญชี{ThaiLabels.RoleName(user.Role)} {user.LoginName} {user.DisplayName}",
             before, Snapshot(user));
         Func<Task>? revokeSessions = active ? null : () => db.RevokeUserSessionsAsync(user.Id, now);
-        var conflict = await SaveAsync(db, ClaimOf(user), revokeSessions);
+        // Spec §3: a deactivated account holds no scope, so its membership is closed on the business date; activating
+        // opens the period again once the building/shift anchor shows the slot is free.
+        var conflict = await SaveAsync(
+            db,
+            ClaimOf(user),
+            revokeSessions,
+            beforeSave: user.Role == UserRole.Supervisor
+                ? () => membership.ApplyAsync(user, open: active, admin.Id)
+                : null);
         if (conflict is not null)
         {
             return conflict;
@@ -345,13 +374,21 @@ public static class AdminAccountEndpoints
 
     /// <summary>
     /// Saves what is tracked, then runs <paramref name="afterSave"/>, all in one transaction. Another save that took the
-    /// login name or the slot first becomes a 409; any other database error is rethrown.
+    /// login name or the slot first becomes a 409; any other database error is rethrown. <paramref name="beforeSave"/> is
+    /// a check that runs inside the transaction before the save and can refuse it with its own answer.
     /// </summary>
-    internal static async Task<IResult?> SaveAsync(AppDbContext db, AccountClaim claim, Func<Task>? afterSave = null)
+    internal static async Task<IResult?> SaveAsync(
+        AppDbContext db, AccountClaim claim, Func<Task>? afterSave = null, Func<Task<IResult?>>? beforeSave = null)
     {
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync();
+            if (beforeSave is not null && await beforeSave() is { } refused)
+            {
+                // Disposing the transaction rolls back whatever the check had to write (the anchor row, a closed period)
+                return refused;
+            }
+
             await db.SaveChangesAsync();
             if (afterSave is not null)
             {

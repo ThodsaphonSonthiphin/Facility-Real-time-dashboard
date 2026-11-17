@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
@@ -26,7 +28,9 @@ public static class CoverAssignmentEndpoints
         return app;
     }
 
-    private static async Task<IResult> AssignAsync(AssignCoverRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, AttendanceSettings settings)
+    private static async Task<IResult> AssignAsync(
+        AssignCoverRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, AttendanceSettings settings,
+        ScheduleScopeReader scope, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -48,7 +52,7 @@ public static class CoverAssignmentEndpoints
         var slot = new ShiftSlot(request.ShiftDate, shift);
         var now = clock.GetUtcNow().UtcDateTime;
         return person.Role == UserRole.Supervisor
-            ? await AssignBuildingAsync(request, db, admin, person, slot, now)
+            ? await AssignBuildingAsync(request, db, admin, person, slot, now, scope, ct)
             : await AssignAreaAsync(request, db, admin, person, slot, now, settings);
     }
 
@@ -138,7 +142,8 @@ public static class CoverAssignmentEndpoints
     /// Any shift may be covered except the one they already hold (decision 7). The shift is the clock's.
     /// </summary>
     private static async Task<IResult> AssignBuildingAsync(
-        AssignCoverRequest request, AppDbContext db, User admin, User supervisor, ShiftSlot slot, DateTime now)
+        AssignCoverRequest request, AppDbContext db, User admin, User supervisor, ShiftSlot slot, DateTime now,
+        ScheduleScopeReader scopeReader, CancellationToken ct)
     {
         if (request.AreaId is not null)
         {
@@ -151,7 +156,9 @@ public static class CoverAssignmentEndpoints
             return Bad("ไม่พบตึกนี้ หรือปิดใช้งานแล้ว");
         }
 
-        if (SupervisorScope.WithoutCover(supervisor.BuildingId, supervisor.Shift, building.Id, slot.Shift) is null)
+        // Spec §3: a cover is only for what the dated scope does not already give them for that shift date
+        var periods = await scopeReader.ReadAsync(supervisor.Id, ct);
+        if (SupervisorScope.WithoutCover(periods, supervisor.Id, building.Id, slot.Shift, slot.ShiftDate) is null)
         {
             return Bad("ตึกและกะนี้เป็นของหัวหน้าคนนี้อยู่แล้ว");
         }

@@ -122,7 +122,11 @@ internal static class AccountChecks
 
     public static string SlotTaken(User holder) => holder.Role == UserRole.Cleaner
         ? $"กะ{ThaiLabels.ShiftName(holder.Shift!.Value)}ของ {holder.Area!.Code} มีแม่บ้านประจำแล้ว ({holder.DisplayName})"
-        : $"กะ{ThaiLabels.ShiftName(holder.Shift!.Value)}ของตึก {holder.Building!.Code} มีหัวหน้าประจำแล้ว ({holder.DisplayName})";
+        : SupervisorSlotTaken(holder.Building!.Code, holder.Shift!.Value, holder.DisplayName);
+
+    /// <summary>The Supervisor slot words, also said for a building and shift a dated period already gives another person.</summary>
+    public static string SupervisorSlotTaken(string buildingCode, Shift shift, string holderName) =>
+        $"กะ{ThaiLabels.ShiftName(shift)}ของตึก {buildingCode} มีหัวหน้าประจำแล้ว ({holderName})";
 
     /// <summary>Unique ignoring case: MySQL's collation already treats "e1001" and "E1001" as one; SQLite would not.</summary>
     public static Task<bool> EmployeeIdTakenAsync(AppDbContext db, string employeeId, int exceptUserId)

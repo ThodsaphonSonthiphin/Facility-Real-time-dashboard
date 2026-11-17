@@ -2,6 +2,7 @@ using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
 using JanitorialManagementDashboard.Api.Hubs;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Geo;
 using JanitorialManagementDashboard.Application.Inspections;
 using JanitorialManagementDashboard.Application.Shifts;
@@ -34,7 +35,8 @@ public static class InspectionEndpoints
 
     /// <summary>The Visit, or the answer to stop with: 401, 403 (another role, or a Blocked Scan it has just written), 400 or 404.</summary>
     private static async Task<(Visit? Visit, IResult? Stop)> VisitAsync(
-        ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, string? qrToken, double? latitude, double? longitude, double? accuracyM)
+        ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, ScheduleScopeReader scope,
+        string? qrToken, double? latitude, double? longitude, double? accuracyM)
     {
         // facility-0017: the inspector is the account in the access token
         var user = await CurrentUser.LoadAsync(principal, db);
@@ -66,8 +68,10 @@ public static class InspectionEndpoints
         var slot = ShiftCalendar.SlotAt(now);
         var buildingId = point.Area!.BuildingId;
 
+        // Spec §3: the dated scope decides it, not the account's single building; the shift is still the clock's
+        var periods = await scope.ReadAsync(user.Id);
         CoverAssignment? cover = null;
-        if (SupervisorScope.WithoutCover(user.BuildingId, user.Shift, buildingId, slot.Shift) is { } reason)
+        if (SupervisorScope.WithoutCover(periods, user.Id, buildingId, slot.Shift, slot.ShiftDate) is { } reason)
         {
             cover = await db.CoverAssignments.FirstOrDefaultAsync(c =>
                 c.UserId == user.Id && c.BuildingId == buildingId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null);
@@ -81,9 +85,10 @@ public static class InspectionEndpoints
     }
 
     /// <summary>The scan itself: nothing is stored unless it is blocked.</summary>
-    private static async Task<IResult> ScanAsync(InspectionScanRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> ScanAsync(
+        InspectionScanRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, ScheduleScopeReader scope)
     {
-        var (visit, stop) = await VisitAsync(principal, db, clock, request.QrToken, request.Latitude, request.Longitude, request.AccuracyM);
+        var (visit, stop) = await VisitAsync(principal, db, clock, scope, request.QrToken, request.Latitude, request.Longitude, request.AccuracyM);
         if (visit is null)
         {
             return stop!;
@@ -130,9 +135,10 @@ public static class InspectionEndpoints
 
     /// <summary>The verdict. Every check of the scan runs again, so a direct call is blocked the same way.</summary>
     private static async Task<IResult> CreateAsync(
-        CreateInspectionRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, IHubContext<ScanHub> hub, ILogger<ScanHub> logger)
+        CreateInspectionRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, ScheduleScopeReader scope,
+        IHubContext<ScanHub> hub, ILogger<ScanHub> logger)
     {
-        var (visit, stop) = await VisitAsync(principal, db, clock, request.QrToken, request.Latitude, request.Longitude, request.AccuracyM);
+        var (visit, stop) = await VisitAsync(principal, db, clock, scope, request.QrToken, request.Latitude, request.Longitude, request.AccuracyM);
         if (visit is null)
         {
             return stop!;

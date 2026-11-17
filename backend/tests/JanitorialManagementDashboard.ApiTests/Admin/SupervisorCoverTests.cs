@@ -134,6 +134,37 @@ public class SupervisorCoverTests
         Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
     }
 
+
+    [Fact]
+    public async Task A_building_the_dated_scope_also_gives_them_needs_no_cover()
+    {
+        using var factory = new JanitorialApiFactory();
+        await InspectionApi.AddBuildingBAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        // Spec §3: 2000001 holds building B on days from 1 October as well as its own building A
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, new DateOnly(2026, 10, 1));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        var response = await AssignAsync(factory, admin, "B", "Day");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.CoverAssignments.ToListAsync()));
+    }
+
+    [Fact]
+    public async Task A_cover_is_allowed_again_once_the_membership_has_ended()
+    {
+        using var factory = new JanitorialApiFactory();
+        await InspectionApi.AddBuildingBAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, new DateOnly(2026, 10, 1), until: Oct8);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        var response = await AssignAsync(factory, admin, "B", "Day");
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
     [Fact]
     public async Task A_shift_that_has_ended_is_refused()
     {
