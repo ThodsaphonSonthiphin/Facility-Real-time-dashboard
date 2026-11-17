@@ -1,3 +1,9 @@
+using System.Data;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using JanitorialManagementDashboard.Application.Scheduling;
+using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -9,8 +15,14 @@ namespace JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 /// as a portable unique index on MySQL and SQLite, so regular Supervisor ownership is checked here while the caller
 /// holds the building/shift <see cref="Domain.Entities.Scheduling.ScheduleScopeAnchor"/>.
 /// </summary>
-public sealed class ScheduleStore(AppDbContext db)
+public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 {
+    /// <summary>Nothing the actor may read in this week: no roster row at all, not an empty week of work.</summary>
+    private const string AvailabilityEmpty = "empty";
+
+    /// <summary>The person has no dated identity yet, so the roster shows them without claiming a Cleaner kind.</summary>
+    private const string UnknownCleanerKind = "unknown";
+
     /// <summary>
     /// True when another regular Supervisor period for the building and shift overlaps the proposed end-exclusive range.
     /// A null <paramref name="effectiveUntil"/> is an open-ended claim. An inverted range throws instead of answering
@@ -138,6 +150,293 @@ public sealed class ScheduleStore(AppDbContext db)
 
     private bool IsMySql =>
         db.Database.ProviderName?.Contains("MySql", StringComparison.OrdinalIgnoreCase) == true;
+
+    /// <summary>
+    /// Spec §3, §10 and §11 (acceptance A01, A04, A20 and A27): the authorised projection of one ISO week. The roster is
+    /// the active Cleaner membership itself, so a person with no scheduling row still appears — with unavailable days,
+    /// never with a guessed Area. Scope is enforced here because Infrastructure cannot see the Api project's reader:
+    /// Admin reads every building, a Supervisor only the buildings their dated periods hold for this week and shift, a
+    /// Cleaner only their own row; a supplied building or shift narrows and never widens.
+    /// <para>
+    /// Every input of the week is read inside one transaction, so a multi-row write that commits meanwhile yields the
+    /// whole before or the whole after projection, never half of each.
+    /// </para>
+    /// </summary>
+    public async Task<ScheduleProjection> ReadWeekAsync(
+        int actorId, DateOnly weekStart, int? buildingId, Shift? shift, CancellationToken ct = default)
+    {
+        var monday = ScheduleRules.WeekStart(weekStart);
+        var readAt = (clock ?? TimeProvider.System).GetUtcNow();
+
+        // MySQL answers from the transaction's REPEATABLE READ snapshot, and SERIALIZABLE there would take shared locks on
+        // every read of a projection. SQLite's Serializable transaction is the closest equivalent it offers, so the level
+        // is chosen per provider instead of being inferred from whichever one a test happens to run on.
+        await using var transaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(
+                IsMySql ? IsolationLevel.RepeatableRead : IsolationLevel.Serializable, ct)
+            : null;
+
+        return await ReadSnapshotAsync(actorId, monday, buildingId, shift, readAt, ct);
+    }
+
+    private async Task<ScheduleProjection> ReadSnapshotAsync(
+        int actorId, DateOnly monday, int? buildingId, Shift? shift, DateTimeOffset readAt, CancellationToken ct)
+    {
+        var weekEnd = monday.AddDays(7);
+        var dates = Enumerable.Range(0, 7).Select(offset => monday.AddDays(offset)).ToList();
+
+        var actor = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == actorId, ct);
+        if (actor is not { IsActive: true })
+        {
+            return Empty(monday, readAt);
+        }
+
+        var cleaners = await db.Users.AsNoTracking()
+            .Where(u => u.Role == UserRole.Cleaner && u.IsActive)
+            .OrderBy(u => u.DisplayName).ThenBy(u => u.Id)
+            .ToListAsync(ct);
+
+        // A Cleaner reads their own row only; a management read starts from the whole roster and is narrowed below.
+        var roster = actor.Role == UserRole.Cleaner
+            ? cleaners.Where(person => person.Id == actor.Id).ToList()
+            : cleaners;
+
+        HashSet<(int BuildingId, Shift Shift)>? authorised = null;
+        if (actor.Role == UserRole.Supervisor)
+        {
+            authorised = (await ReadScopeAsync(actor, ct))
+                .Where(period => period.From < weekEnd && (period.Until is null || period.Until.Value > monday))
+                .Where(period => buildingId is null || period.BuildingId == buildingId)
+                .Where(period => shift is null || period.Shift == shift)
+                .Select(period => (period.BuildingId, period.Shift))
+                .ToHashSet();
+            if (authorised.Count == 0)
+            {
+                return Empty(monday, readAt);
+            }
+        }
+
+        var personIds = roster.Select(person => person.Id).ToHashSet();
+        if (personIds.Count == 0)
+        {
+            return Empty(monday, readAt);
+        }
+
+        var profiles = await db.CleanerProfilePeriods.AsNoTracking()
+            .Where(period => personIds.Contains(period.UserId)).ToListAsync(ct);
+        var baselines = await db.ScheduleBaselines.AsNoTracking().Include(baseline => baseline.Days)
+            .Where(baseline => personIds.Contains(baseline.UserId)).ToListAsync(ct);
+        var areaBuildings = await db.Areas.AsNoTracking().Select(area => new { area.Id, area.BuildingId })
+            .ToDictionaryAsync(area => area.Id, area => area.BuildingId, ct);
+
+        // Membership only (spec §14): the compatibility projection may say which building a person belongs to, never what
+        // their history was. A person nobody can attribute to a building stays visible to an unfiltered read.
+        var memberships = roster.ToDictionary(person => person.Id,
+            person => MembershipSlots(person, profiles, baselines, areaBuildings));
+
+        var included = roster.Where(person =>
+        {
+            var slots = memberships[person.Id];
+            if (slots.Count == 0)
+            {
+                return authorised is null && buildingId is null && shift is null;
+            }
+
+            return slots.Any(slot =>
+                (buildingId is null || slot.BuildingId == buildingId)
+                && (shift is null || slot.Shift == shift)
+                && (authorised is null || authorised.Contains(slot)));
+        }).ToList();
+        if (included.Count == 0)
+        {
+            return Empty(monday, readAt);
+        }
+
+        var includedIds = included.Select(person => person.Id).ToList();
+        var exceptions = await db.ScheduleExceptions.AsNoTracking()
+            .Where(row => includedIds.Contains(row.UserId) && row.ShiftDate >= monday && row.ShiftDate < weekEnd)
+            .ToListAsync(ct);
+        var savedWeeks = await db.WeeklyDayOffs.AsNoTracking().Include(week => week.Choices)
+            .Where(week => includedIds.Contains(week.UserId) && week.WeekStart == monday)
+            .ToListAsync(ct);
+        var transfers = await db.AreaTransfers.AsNoTracking()
+            .Where(row => includedIds.Contains(row.PersonId) && row.ShiftDate >= monday && row.ShiftDate < weekEnd)
+            .ToListAsync(ct);
+        var transferIds = transfers.Select(row => row.Id).ToList();
+        var confirmations = transferIds.Count == 0
+            ? []
+            : await db.AreaTransferConfirmations.AsNoTracking()
+                .Where(row => transferIds.Contains(row.TransferId)).ToListAsync(ct);
+
+        var rows = new List<SchedulePersonWeek>(included.Count);
+        var revisions = new List<string>();
+        foreach (var person in included)
+        {
+            var personProfiles = profiles.Where(profile => profile.UserId == person.Id)
+                .OrderBy(profile => profile.EffectiveFrom).ThenBy(profile => profile.Id).ToList();
+            var personBaselines = baselines.Where(baseline => baseline.UserId == person.Id)
+                .OrderBy(baseline => baseline.EffectiveFrom).ThenBy(baseline => baseline.Id).ToList();
+
+            // History coverage is the person's own earliest dated identity or baseline version; no global start exists yet.
+            var historyStartsAt = personProfiles.Select(profile => (DateOnly?)profile.EffectiveFrom)
+                .Concat(personBaselines.Select(baseline => (DateOnly?)baseline.EffectiveFrom))
+                .Min() ?? DateOnly.MaxValue;
+
+            // The shift each date of the week belongs to decides which dated rows are that day's slot, so a night shift
+            // keeps the date it started on (ADR facility-0183, A20) instead of borrowing the other shift's rows.
+            var shiftOn = dates.ToDictionary(date => date,
+                date => personProfiles
+                    .LastOrDefault(profile => ScheduleResolver.Applies(profile.EffectiveFrom, profile.EffectiveUntil, date))
+                    ?.Shift);
+            bool IsTheDaysSlot(DateOnly date, Shift slotShift) =>
+                shiftOn[date] is not Shift dayShift || dayShift == slotShift;
+
+            var profile = personProfiles
+                    .LastOrDefault(candidate => ScheduleResolver.Applies(candidate.EffectiveFrom, candidate.EffectiveUntil, monday))
+                ?? personProfiles.LastOrDefault();
+            var header = savedWeeks.FirstOrDefault(week => week.UserId == person.Id);
+
+            var input = new ScheduleInput(
+                person.Id,
+                historyStartsAt,
+                personBaselines
+                    .Where(baseline => baseline.EffectiveFrom < weekEnd
+                        && (baseline.EffectiveUntil is null || baseline.EffectiveUntil.Value > monday))
+                    .SelectMany(baseline => baseline.Days.Select(day => new BaselineFact(day.Id,
+                        baseline.EffectiveFrom, baseline.EffectiveUntil, day.Weekday, day.AreaId, day.BreakGroup,
+                        Revision(baseline.Revision), day.IsDayOff)))
+                    .ToList(),
+                header?.Choices.Select(choice => choice.OffDate).ToHashSet(),
+                exceptions
+                    .Where(row => row.UserId == person.Id && !row.IsCancelled
+                        && row.Kind != ScheduleExceptionKind.Leave && IsTheDaysSlot(row.ShiftDate, row.Shift))
+                    .Select(row => new DatedFact(row.Id, row.ShiftDate, row.Shift, row.AreaId, row.BreakGroup,
+                        Revision(row.Revision)))
+                    .ToList(),
+                exceptions
+                    .Where(row => row.UserId == person.Id && row.Kind == ScheduleExceptionKind.Leave
+                        && IsTheDaysSlot(row.ShiftDate, row.Shift))
+                    .Select(row => new LeaveFact(row.Id, row.ShiftDate, row.Shift,
+                        Utc(row.StartsAt!.Value), Utc(row.EndsAt!.Value), row.IsCancelled, Revision(row.Revision)))
+                    .ToList(),
+                transfers
+                    .Where(row => row.PersonId == person.Id && IsTheDaysSlot(row.ShiftDate, row.Shift))
+                    .Select(row => new TransferFact(row.Id, row.ShiftDate, row.Shift, row.FromAreaId, row.ToAreaId,
+                        Utc(row.EffectiveAt),
+                        confirmations.Where(confirmation => confirmation.TransferId == row.Id)
+                            .Select(confirmation => (DateTimeOffset?)Utc(confirmation.OccurredAt)).FirstOrDefault(),
+                        row.IsCancelled, Revision(row.Revision)))
+                    .ToList());
+
+            rows.Add(new SchedulePersonWeek(person.Id, person.DisplayName,
+                profile?.Kind.ToString() ?? UnknownCleanerKind,
+                profile?.HomeBuildingId ?? HomeBuilding(memberships[person.Id], person),
+                dates.Select(date => ScheduleResolver.Resolve(input, date)).ToList()));
+
+            revisions.AddRange(personProfiles.Select(entry => $"profile#{entry.Id}@{Revision(entry.Revision)}"));
+            revisions.AddRange(personBaselines.Select(entry => $"baseline#{entry.Id}@{Revision(entry.Revision)}"));
+            if (header is not null)
+            {
+                revisions.Add($"week#{header.Id}@{Revision(header.Revision)}");
+            }
+
+            revisions.AddRange(exceptions.Where(row => row.UserId == person.Id)
+                .Select(row => $"exception#{row.Id}@{Revision(row.Revision)}"));
+            revisions.AddRange(transfers.Where(row => row.PersonId == person.Id)
+                .Select(row => $"transfer#{row.Id}@{Revision(row.Revision)}"));
+        }
+
+        var availability = rows.All(row =>
+            row.Days.All(day => day.Availability == ScheduleResolver.AvailabilityUnavailable))
+            ? ScheduleResolver.AvailabilityUnavailable
+            : ScheduleResolver.AvailabilityAvailable;
+
+        return new ScheduleProjection(monday, rows, WeekRevision(revisions), readAt, availability);
+    }
+
+    /// <summary>
+    /// The dated Supervisor periods of the actor, with the same pre-backfill projection
+    /// <c>Api.Scheduling.ScheduleScopeReader</c> applies (spec §14) — repeated here because Infrastructure cannot depend on
+    /// the Api project: a Supervisor with no dated row at all is their current building and shift, from the business date
+    /// of the read and never backwards.
+    /// </summary>
+    private async Task<IReadOnlyList<ScopePeriod>> ReadScopeAsync(User actor, CancellationToken ct)
+    {
+        var periods = await db.SupervisorScopePeriods.AsNoTracking()
+            .Where(period => period.SupervisorId == actor.Id)
+            .OrderBy(period => period.EffectiveFrom).ThenBy(period => period.BuildingId)
+            .Select(period => new ScopePeriod(period.SupervisorId, period.BuildingId, period.Shift,
+                period.EffectiveFrom, period.EffectiveUntil))
+            .ToListAsync(ct);
+
+        if (periods.Count == 0 && actor.BuildingId is int buildingId && actor.Shift is Shift shift)
+        {
+            periods = [new ScopePeriod(actor.Id, buildingId, shift,
+                ScheduleAuthority.BusinessDate((clock ?? TimeProvider.System).GetUtcNow().UtcDateTime), null)];
+        }
+
+        return periods;
+    }
+
+    /// <summary>
+    /// Which (building, shift) pairs the person's dated identity puts them in, used for scope and roster membership only.
+    /// A regular Cleaner's building comes from the Areas of their own baseline versions; when no dated identity exists the
+    /// compatibility columns are the only membership there is (spec §14), and they never become history.
+    /// </summary>
+    private static List<(int BuildingId, Shift Shift)> MembershipSlots(
+        User person, IReadOnlyList<CleanerProfilePeriod> profiles, IReadOnlyList<ScheduleBaseline> baselines,
+        IReadOnlyDictionary<int, int> areaBuildings)
+    {
+        var slots = new List<(int BuildingId, Shift Shift)>();
+        foreach (var profile in profiles.Where(candidate => candidate.UserId == person.Id))
+        {
+            var building = profile.HomeBuildingId ?? baselines
+                .Where(baseline => baseline.UserId == person.Id && baseline.Kind == BaselineKind.Regular)
+                .SelectMany(baseline => baseline.Days)
+                .Select(day => day.AreaId is int areaId && areaBuildings.TryGetValue(areaId, out var id)
+                    ? id
+                    : (int?)null)
+                .FirstOrDefault(id => id is not null);
+            if (building is int known)
+            {
+                slots.Add((known, profile.Shift));
+            }
+        }
+
+        if (slots.Count == 0)
+        {
+            var building = person.AreaId is int area && areaBuildings.TryGetValue(area, out var fromArea)
+                ? fromArea
+                : person.BuildingId;
+            if (building is int known && person.Shift is Shift shift)
+            {
+                slots.Add((known, shift));
+            }
+        }
+
+        return slots;
+    }
+
+    private static int? HomeBuilding(IReadOnlyList<(int BuildingId, Shift Shift)> slots, User person) =>
+        slots.Count > 0 ? slots[0].BuildingId : person.BuildingId;
+
+    /// <summary>An opaque token over every row the week was built from, so a client can tell a changed week from a read.</summary>
+    private static string WeekRevision(List<string> revisions)
+    {
+        revisions.Sort(StringComparer.Ordinal);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(";", revisions))))
+            .ToLowerInvariant();
+    }
+
+    /// <summary>A stored revision as the decimal string the contract serialises it as.</summary>
+    private static string Revision(long revision) => revision.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>A stored DATETIME is UTC; the offset is attached explicitly instead of from the machine's zone.</summary>
+    private static DateTimeOffset Utc(DateTime value) =>
+        new(DateTime.SpecifyKind(value, DateTimeKind.Utc));
+
+    private static ScheduleProjection Empty(DateOnly monday, DateTimeOffset readAt) =>
+        new(monday, [], ScheduleResolver.NoRevision, readAt, AvailabilityEmpty);
 
     /// <summary>The same rule the ck_*_effective_range CHECK constraints apply, so a caller hears about it first.</summary>
     private static void EnsureRangeIsForward(DateOnly effectiveFrom, DateOnly? effectiveUntil)
