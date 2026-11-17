@@ -30,13 +30,14 @@ internal static class AccountChecks
     /// <summary>
     /// Cleaner: shift required, Area optional, no building. Supervisor: building and shift, no Area. Admin: none of them.
     /// <paramref name="userId"/> is the account being edited (0 for a new one), so it never collides with itself.
+    /// <paramref name="businessDate"/> is the clock's Thai date, the date the dated Supervisor membership is read for.
     /// <paramref name="checkSlot"/> is false for a deactivated account, which holds no slot; activation checks it later.
     /// <paramref name="currentAreaId"/> is the Cleaner's Area now: keeping it is allowed even after the Area was deactivated
     /// (Area deactivation does not unassign Cleaners), but moving to an inactive Area is not.
     /// </summary>
     public static async Task<(AccountPlace? Place, IResult? Error)> ReadPlaceAsync(
-        AppDbContext db, UserRole role, int userId, int? areaId, int? buildingId, Shift? shift, bool checkSlot = true,
-        int? currentAreaId = null)
+        AppDbContext db, UserRole role, int userId, int? areaId, int? buildingId, Shift? shift, DateOnly businessDate,
+        bool checkSlot = true, int? currentAreaId = null)
     {
         if (shift is { } given && !Enum.IsDefined(given))
         {
@@ -79,7 +80,7 @@ internal static class AccountChecks
                     return (null, Bad($"{area.Code} ทำเฉพาะกะเช้า เลือกกะดึกไม่ได้"));
                 }
 
-                return checkSlot && await HolderAsync(db, role, area.Id, null, cleanerShift, userId) is { } holder
+                return checkSlot && await HolderAsync(db, role, area.Id, null, cleanerShift, userId, businessDate) is { } holder
                     ? (null, Conflict(SlotTaken(holder)))
                     : (new AccountPlace(area, null, cleanerShift), null);
             }
@@ -102,23 +103,78 @@ internal static class AccountChecks
                     return (null, Bad("ต้องเลือกตึกที่ใช้งานอยู่"));
                 }
 
-                return checkSlot && await HolderAsync(db, role, null, building.Id, supervisorShift, userId) is { } holder
+                return checkSlot && await HolderAsync(db, role, null, building.Id, supervisorShift, userId, businessDate) is { } holder
                     ? (null, Conflict(SlotTaken(holder)))
                     : (new AccountPlace(null, building, supervisorShift), null);
             }
         }
     }
 
-    /// <summary>The other active account in that Area-shift (Cleaner) or building-shift (Supervisor) slot, with its Area or Building loaded.</summary>
-    public static Task<User?> HolderAsync(AppDbContext db, UserRole role, int? areaId, int? buildingId, Shift? shift, int exceptUserId) =>
+    /// <summary>
+    /// The other active account in that Area-shift (Cleaner) or building-shift (Supervisor) slot on
+    /// <paramref name="businessDate"/>, with its Area or Building loaded so the message can name it.
+    /// </summary>
+    public static async Task<User?> HolderAsync(
+        AppDbContext db, UserRole role, int? areaId, int? buildingId, Shift? shift, int exceptUserId, DateOnly businessDate) =>
         role switch
         {
-            UserRole.Cleaner when areaId is not null && shift is not null => db.Users.AsNoTracking().Include(u => u.Area)
+            UserRole.Cleaner when areaId is not null && shift is not null => await db.Users.AsNoTracking().Include(u => u.Area)
                 .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == areaId && u.Shift == shift),
-            UserRole.Supervisor when buildingId is not null && shift is not null => db.Users.AsNoTracking().Include(u => u.Building)
-                .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == buildingId && u.Shift == shift),
-            _ => Task.FromResult<User?>(null),
+            UserRole.Supervisor when buildingId is not null && shift is not null => await SupervisorHolderAsync(
+                db, buildingId.Value, shift.Value, exceptUserId, businessDate),
+            _ => null,
         };
+
+    /// <summary>
+    /// Spec §3: the active Supervisor whose dated period covers <paramref name="businessDate"/> for that building and
+    /// shift. The dated rows are the authority, so a building and shift the dated rows have freed is free even when the
+    /// account projection still says otherwise. The projection is read only while no dated row exists at all, the
+    /// pre-backfill state of spec §14; once one exists it is the only source, both ways.
+    /// </summary>
+    private static async Task<User?> SupervisorHolderAsync(
+        AppDbContext db, int buildingId, Shift shift, int exceptUserId, DateOnly businessDate)
+    {
+        var holderId = await (
+                from period in db.SupervisorScopePeriods.AsNoTracking()
+                join holder in db.Users.AsNoTracking() on period.SupervisorId equals holder.Id
+                where period.BuildingId == buildingId && period.Shift == shift && period.SupervisorId != exceptUserId
+                    && period.EffectiveFrom <= businessDate
+                    && (period.EffectiveUntil == null || businessDate < period.EffectiveUntil.Value)
+                    && holder.Role == UserRole.Supervisor && holder.IsActive
+                select (int?)period.SupervisorId)
+            .FirstOrDefaultAsync();
+        if (holderId is not null)
+        {
+            return await HeldAsUserAsync(db, holderId.Value, buildingId, shift);
+        }
+
+        if (await db.SupervisorScopePeriods.AsNoTracking().AnyAsync())
+        {
+            // Dated rows exist and none of them gives that building and shift to anyone on that date: it is free
+            return null;
+        }
+
+        return await db.Users.AsNoTracking().Include(u => u.Building)
+            .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == buildingId && u.Shift == shift);
+    }
+
+    /// <summary>
+    /// The dated holder as the slot message reads it: <see cref="SlotTaken"/> names the holder's Building and Shift, and the
+    /// dated rows may already have replaced that projection (a Supervisor moved from A to B still carries A on the account
+    /// row until the edit lands), so the building and shift the claim is for take their place.
+    /// </summary>
+    private static async Task<User?> HeldAsUserAsync(AppDbContext db, int holderId, int buildingId, Shift shift)
+    {
+        var holder = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == holderId);
+        if (holder is null)
+        {
+            return null;
+        }
+
+        holder.Building = await db.Buildings.AsNoTracking().FirstOrDefaultAsync(b => b.Id == buildingId);
+        holder.Shift = shift;
+        return holder;
+    }
 
     public static string SlotTaken(User holder) => holder.Role == UserRole.Cleaner
         ? $"กะ{ThaiLabels.ShiftName(holder.Shift!.Value)}ของ {holder.Area!.Code} มีแม่บ้านประจำแล้ว ({holder.DisplayName})"
@@ -145,7 +201,7 @@ internal static class AccountChecks
     /// After a DbUpdateException: the 409 to give when another save took the login name or the slot first.
     /// Null means the database failed for another reason, and the caller must rethrow.
     /// </summary>
-    public static async Task<IResult?> ExplainRaceAsync(AppDbContext db, AccountClaim claim)
+    public static async Task<IResult?> ExplainRaceAsync(AppDbContext db, AccountClaim claim, DateOnly businessDate)
     {
         db.ChangeTracker.Clear();
         if (claim.Username is { } username && await UsernameTakenAsync(db, username, claim.UserId))
@@ -158,7 +214,7 @@ internal static class AccountChecks
             return Conflict(EmployeeIdTaken);
         }
 
-        return await HolderAsync(db, claim.Role, claim.AreaId, claim.BuildingId, claim.Shift, claim.UserId) is { } holder
+        return await HolderAsync(db, claim.Role, claim.AreaId, claim.BuildingId, claim.Shift, claim.UserId, businessDate) is { } holder
             ? Conflict(SlotTaken(holder))
             : null;
     }

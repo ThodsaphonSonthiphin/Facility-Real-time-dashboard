@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using JanitorialManagementDashboard.Api.Hubs;
 using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.ApiTests.Inspections;
@@ -8,7 +9,9 @@ using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JanitorialManagementDashboard.ApiTests.Scheduling;
 
@@ -239,6 +242,112 @@ public class ScheduleScopeEndpointTests
         // An empty range cannot be stored, and an inverted one would be refused: the row for the replaced day goes
         var period = await AdminSetupApi.ReadAsync(factory, db => db.SupervisorScopePeriods.AsNoTracking().SingleAsync());
         Assert.Equal((buildingB, Oct8, (DateOnly?)null), (period.BuildingId, period.EffectiveFrom, period.EffectiveUntil));
+        // Nothing in the period table remembers the removed building, so the audit line names it
+        var audit = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Contains("ปิดความรับผิดชอบ ตึก A กะเช้า", audit.Summary);
+    }
+
+    /// <summary>
+    /// The review's Critical finding: a single-field edit replaces the building and shift the form carried and nothing
+    /// else. Building B is still theirs (spec §3), so its period stays open and its scans keep working.
+    /// </summary>
+    [Fact]
+    public async Task Editing_the_shift_of_one_building_leaves_the_other_building_held()
+    {
+        using var factory = new JanitorialApiFactory();
+        await InspectionApi.AddBuildingBAsync(factory);
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
+        var buildingB = await AdminSetupApi.BuildingIdAsync(factory, "B");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var supervisorId = await AdminSetupApi.UserIdAsync(factory, "2000001");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, Oct1);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, Oct1);
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        // The typo is on building A: A moves to nights, and B must stay exactly as it was
+        var response = await admin.PutAsJsonAsync(
+            $"{AccountApi.Path}/{supervisorId}",
+            new { displayName = "สมปอง ตรวจดี", buildingId = buildingA, shift = "Night" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var periods = await AdminSetupApi.ReadAsync(factory, db =>
+            db.SupervisorScopePeriods.AsNoTracking().OrderBy(p => p.Id).ToListAsync());
+        Assert.Equal(3, periods.Count);
+        Assert.Equal((buildingA, Shift.Day, Oct1, (DateOnly?)Oct8),
+            (periods[0].BuildingId, periods[0].Shift, periods[0].EffectiveFrom, periods[0].EffectiveUntil));
+        Assert.Equal((buildingB, Shift.Day, Oct1, (DateOnly?)null),
+            (periods[1].BuildingId, periods[1].Shift, periods[1].EffectiveFrom, periods[1].EffectiveUntil));
+        Assert.Equal((buildingA, Shift.Night, Oct8, (DateOnly?)null),
+            (periods[2].BuildingId, periods[2].Shift, periods[2].EffectiveFrom, periods[2].EffectiveUntil));
+        // The audit names only the building the edit ended
+        var audit = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Contains("ปิดความรับผิดชอบ ตึก A กะเช้า", audit.Summary);
+        Assert.DoesNotContain("ตึก B", audit.Summary);
+
+        // The next scan at B in the day shift is still theirs, and it is not a Blocked Scan
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+        var scanned = await InspectionApi.ScannedAsync(supervisor, InspectionApi.BuildingBPoint);
+        Assert.False(scanned.IsCover);
+        Assert.Equal(0, await AdminSetupApi.ReadAsync(factory, db => db.BlockedScans.CountAsync()));
+    }
+
+    /// <summary>
+    /// The edit side of the slot conflict: the create side is covered above, and a refused move must leave the account, the
+    /// periods and the audit log exactly as they were.
+    /// </summary>
+    [Fact]
+    public async Task Moving_a_supervisor_onto_a_slot_a_dated_period_holds_is_refused_and_changes_nothing()
+    {
+        using var factory = new JanitorialApiFactory();
+        await InspectionApi.AddBuildingBAsync(factory);
+        var buildingB = await AdminSetupApi.BuildingIdAsync(factory, "B");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddSupervisorAsync(factory, "S2002", "0820000002", "B", Shift.Day);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, Oct1);
+        await TestData.AddSupervisorScopeAsync(factory, "S2002", "B", Shift.Day, Oct1);
+        var supervisorId = await AdminSetupApi.UserIdAsync(factory, "2000001");
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        var response = await admin.PutAsJsonAsync(
+            $"{AccountApi.Path}/{supervisorId}",
+            new { displayName = "สมปอง ตรวจดี", buildingId = buildingB, shift = "Day" });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("กะเช้าของตึก B มีหัวหน้าประจำแล้ว (หัวหน้าทดสอบ S2002)", await AdminSetupApi.MessageAsync(response));
+        Assert.Equal("A", await AdminSetupApi.ReadAsync(factory, db => db.Buildings
+            .Where(b => b.Id == db.Users.Single(u => u.Id == supervisorId).BuildingId).Select(b => b.Code).SingleAsync()));
+        var periods = await AdminSetupApi.ReadAsync(factory, db => db.SupervisorScopePeriods.AsNoTracking().ToListAsync());
+        Assert.Equal(2, periods.Count);
+        Assert.All(periods, p => Assert.Null(p.EffectiveUntil));
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.AuditLog.ToListAsync()));
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.ScheduleScopeAnchors.ToListAsync()));
+    }
+
+    /// <summary>
+    /// The pre-check reads the dated rows, so the holder it names is the one the dates give the slot even when another
+    /// account's projection also claims it. Nothing is written: no period, no anchor and no audit row.
+    /// </summary>
+    [Fact]
+    public async Task A_dated_period_holding_a_slot_is_named_by_the_pre_check_before_anything_is_written()
+    {
+        using var factory = new JanitorialApiFactory();
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        // The account rows claim A/day for 2000001 and A/night for S2002, but the dates give A/day to S2002
+        await TestData.AddSupervisorAsync(factory, "S2002", "0820000002", "A", Shift.Night);
+        await TestData.AddSupervisorScopeAsync(factory, "S2002", "A", Shift.Day, Oct1);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Night, Oct1);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        var response = await AccountApi.CreateSupervisorAsync(admin, "S2003", "0820000003", buildingA, "Day");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("กะเช้าของตึก A มีหัวหน้าประจำแล้ว (หัวหน้าทดสอบ S2002)", await AdminSetupApi.MessageAsync(response));
+        Assert.False(await AdminSetupApi.ReadAsync(factory, db => db.Users.AnyAsync(u => u.EmployeeId == "S2003")));
+        Assert.Equal(2, await AdminSetupApi.ReadAsync(factory, db => db.SupervisorScopePeriods.CountAsync()));
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.ScheduleScopeAnchors.ToListAsync()));
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.AuditLog.ToListAsync()));
     }
 
     [Fact]
@@ -269,7 +378,7 @@ public class ScheduleScopeEndpointTests
 
 
     [Fact]
-    public async Task The_buildings_live_updates_go_to_the_supervisors_the_dated_scope_names()
+    public async Task The_live_update_reader_names_the_supervisors_the_dated_scope_gives_the_building()
     {
         using var factory = new JanitorialApiFactory();
         var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
@@ -294,7 +403,7 @@ public class ScheduleScopeEndpointTests
     }
 
     [Fact]
-    public async Task A_deactivated_supervisor_gets_no_live_update()
+    public async Task The_live_update_reader_skips_a_deactivated_supervisor()
     {
         using var factory = new JanitorialApiFactory();
         var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
@@ -310,7 +419,7 @@ public class ScheduleScopeEndpointTests
     }
 
     [Fact]
-    public async Task A_supervisor_with_no_dated_row_still_gets_their_projection_building()
+    public async Task The_live_update_reader_falls_back_to_the_projection_before_any_dated_row()
     {
         // Spec §14 compatibility projection: before any dated row exists the current projection is the only membership
         using var factory = new JanitorialApiFactory();
@@ -322,8 +431,109 @@ public class ScheduleScopeEndpointTests
     }
 
     /// <summary>
-    /// Spec §11 and ADR facility-0140: the building/shift anchor is what stops two people claiming the same regular
-    /// responsibility. Needs a throwaway MySQL database: SQLite cannot show two transactions waiting on one row lock.
+    /// The fan-out itself, not just the reader behind it: the account rows say building A for 2000001 (day) and S2003
+    /// (night), while the dated rows give A to S2002 only, so a real point change at A must reach S2002 and neither of the
+    /// two the projection names.
+    /// </summary>
+    [Fact]
+    public async Task A_point_change_reaches_the_supervisors_the_dated_scope_names()
+    {
+        var hub = new RecordingHub();
+        using var factory = new JanitorialApiFactory
+        {
+            ConfigureTestServices = services => services.AddSingleton<IHubContext<ScanHub>>(hub),
+        };
+        await InspectionApi.AddBuildingBAsync(factory);
+        await TestData.AddSupervisorAsync(factory, "S2002", "0820000002", "B", Shift.Day);
+        await TestData.AddSupervisorAsync(factory, "S2003", "0820000003", "A", Shift.Night);
+        var projectedDayA = await AdminSetupApi.UserIdAsync(factory, "2000001");
+        var heldA = await AdminSetupApi.UserIdAsync(factory, "S2002");
+        var projectedNightA = await AdminSetupApi.UserIdAsync(factory, "S2003");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, Oct1);
+        await TestData.AddSupervisorScopeAsync(factory, "S2002", "A", Shift.Day, Oct1);
+        await TestData.AddSupervisorScopeAsync(factory, "S2003", "B", Shift.Night, Oct1);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 7, 0));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 10));
+
+        var response = await cleaner.PostAsJsonAsync("/api/scan-records", new
+        {
+            qrToken = InspectionApi.MenRestroom, status = "Normal",
+            latitude = TestGps.NearLatitude, longitude = TestGps.NearLongitude, accuracyM = 10,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var recipients = hub.Sends.Where(s => s.Method == "ScanRecorded").SelectMany(s => s.UserIds).ToList();
+        Assert.Contains(heldA.ToString(), recipients);
+        Assert.DoesNotContain(projectedDayA.ToString(), recipients);
+        Assert.DoesNotContain(projectedNightA.ToString(), recipients);
+    }
+
+    /// <summary>Records who each push was sent to, so a test can assert the fan-out and not only the query behind it.</summary>
+    private sealed class RecordingHub : IHubContext<ScanHub>
+    {
+        private readonly RecordingClients _clients = new();
+
+        public List<(string Method, IReadOnlyList<string> UserIds)> Sends => _clients.Sends;
+
+        public IHubClients Clients => _clients;
+
+        public IGroupManager Groups => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingClients : IHubClients
+    {
+        private readonly IClientProxy _nowhere = new QuietProxy();
+
+        public List<(string Method, IReadOnlyList<string> UserIds)> Sends { get; } = [];
+
+        public IClientProxy All => _nowhere;
+
+        public IClientProxy AllExcept(IReadOnlyList<string> excludedConnectionIds) => _nowhere;
+
+        public IClientProxy Client(string connectionId) => _nowhere;
+
+        public IClientProxy Clients(IReadOnlyList<string> connectionIds) => _nowhere;
+
+        public IClientProxy Group(string groupName) => _nowhere;
+
+        public IClientProxy GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => _nowhere;
+
+        public IClientProxy Groups(IReadOnlyList<string> groupNames) => _nowhere;
+
+        public IClientProxy User(string userId) => _nowhere;
+
+        public IClientProxy Users(IReadOnlyList<string> userIds) => new RecordingProxy(this, userIds);
+
+        private sealed class RecordingProxy(RecordingClients owner, IReadOnlyList<string> userIds) : IClientProxy
+        {
+            public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default)
+            {
+                owner.Sends.Add((method, userIds));
+                return Task.CompletedTask;
+            }
+        }
+
+        private sealed class QuietProxy : IClientProxy
+        {
+            public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default) =>
+                Task.CompletedTask;
+        }
+    }
+}
+
+/// <summary>
+/// Spec §11 and ADR facility-0140: the building/shift anchor is what stops two people claiming the same regular
+/// responsibility. MySQL only, because SQLite cannot show two transactions waiting on one row lock; alone in the MySQL
+/// collection, because it owns a throwaway database.
+/// </summary>
+[Collection("MySQL")]
+public class ScheduleScopeMySqlTests
+{
+    /// <summary>
+    /// The anchor already exists, so the serialisation point both writers take is its revision UPDATE (the row lock) and
+    /// the <c>FOR UPDATE</c> read of the periods behind it. The loser must reach the overlap check and hear
+    /// <c>scope-overlap</c>, never a raw duplicate-key failure.
     /// </summary>
     [MySqlFact]
     public async Task Two_writers_cannot_both_claim_one_building_and_shift()
@@ -343,8 +553,21 @@ public class ScheduleScopeEndpointTests
             var second = (await setup.Users.SingleAsync(u => u.EmployeeId == "3000002")).Id;
             var businessDate = new DateOnly(2026, 11, 17);
             var now = new DateTime(2026, 11, 17, 3, 0, 0, DateTimeKind.Utc);
+            // Created before either writer: what both of them then contend for is the anchor's row lock
+            setup.ScheduleScopeAnchors.Add(new ScheduleScopeAnchor
+            {
+                BuildingId = buildingId,
+                Shift = Shift.Day,
+                Revision = 1,
+                UpdatedAt = now,
+            });
+            await setup.SaveChangesAsync();
 
-            var firstLocked = new TaskCompletionSource();
+            // Signals, never a sleep: the first writer holds the anchor until the second one is claiming it
+            var firstLocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var secondIsClaiming = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var firstMayCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
             var firstWriter = Task.Run(async () =>
             {
                 await using var db = new AppDbContext(options);
@@ -352,19 +575,21 @@ public class ScheduleScopeEndpointTests
                 var store = new ScheduleStore(db);
                 await store.LockRegularScopeAsync(buildingId, Shift.Day, now);
                 firstLocked.SetResult();
-                // Long enough for the second writer to be sitting on the anchor lock
-                await Task.Delay(500);
+                await firstMayCommit.Task;
                 await store.EnsureRegularScopeAvailableUnderLockAsync(buildingId, Shift.Day, businessDate, null);
                 db.SupervisorScopePeriods.Add(Period(first, buildingId, businessDate));
                 await db.SaveChangesAsync();
                 await transaction.CommitAsync();
             });
+
             await firstLocked.Task;
             var secondWriter = Task.Run(async () =>
             {
                 await using var db = new AppDbContext(options);
                 await using var transaction = await db.Database.BeginTransactionAsync();
                 var store = new ScheduleStore(db);
+                secondIsClaiming.SetResult();
+                // Waits here for the first writer's row lock; its period is committed by the time this returns
                 await store.LockRegularScopeAsync(buildingId, Shift.Day, now);
                 await store.EnsureRegularScopeAvailableUnderLockAsync(buildingId, Shift.Day, businessDate, null);
                 db.SupervisorScopePeriods.Add(Period(second, buildingId, businessDate));
@@ -372,6 +597,8 @@ public class ScheduleScopeEndpointTests
                 await transaction.CommitAsync();
             });
 
+            await secondIsClaiming.Task;
+            firstMayCommit.SetResult();
             await firstWriter;
             var refused = await Assert.ThrowsAsync<ScheduleConflictException>(() => secondWriter);
             Assert.Equal("scope-overlap", refused.Code);

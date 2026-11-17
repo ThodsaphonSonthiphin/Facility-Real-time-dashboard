@@ -79,14 +79,11 @@ public sealed class ScheduleStore(AppDbContext db)
                 // Another writer created the anchor first, which is the case this row exists for. Anything else (a
                 // duplicate login name or slot on the same save) is not ours to explain: it leaves no anchor row behind.
                 db.Entry(created).State = EntityState.Detached;
-                var existing = await db.ScheduleScopeAnchors.AsNoTracking()
-                    .FirstOrDefaultAsync(a => a.BuildingId == buildingId && a.Shift == shift, ct);
-                if (existing is null)
+                anchor = await FindAnchorUnderLockAsync(buildingId, shift, ct);
+                if (anchor is null)
                 {
                     throw;
                 }
-
-                anchor = await db.ScheduleScopeAnchors.FirstAsync(a => a.Id == existing.Id, ct);
             }
         }
 
@@ -94,6 +91,26 @@ public sealed class ScheduleStore(AppDbContext db)
         anchor.UpdatedAt = nowUtc;
         await db.SaveChangesAsync(ct);
         return anchor;
+    }
+
+    /// <summary>
+    /// The building/shift anchor this transaction just failed to create, read with a locking read on MySQL: the winner
+    /// may still be open, and its period must be visible to the overlap check that follows instead of being answered from
+    /// this transaction's snapshot. A plain read (SQLite) cannot answer from an older snapshot, so it stays plain.
+    /// </summary>
+    private async Task<ScheduleScopeAnchor?> FindAnchorUnderLockAsync(int buildingId, Shift shift, CancellationToken ct)
+    {
+        if (IsMySql)
+        {
+            var rows = await db.ScheduleScopeAnchors
+                .FromSqlRaw("SELECT * FROM schedule_scope_anchors WHERE building_id = {0} FOR UPDATE", buildingId)
+                .ToListAsync(ct);
+            return rows.FirstOrDefault(a => a.Shift == shift);
+        }
+
+        var existing = await db.ScheduleScopeAnchors.AsNoTracking()
+            .FirstOrDefaultAsync(a => a.BuildingId == buildingId && a.Shift == shift, ct);
+        return existing is null ? null : await db.ScheduleScopeAnchors.FirstAsync(a => a.Id == existing.Id, ct);
     }
 
     /// <summary>

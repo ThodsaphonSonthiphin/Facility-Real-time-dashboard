@@ -5,6 +5,7 @@ using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Accounts;
 using JanitorialManagementDashboard.Application.Auth;
 using JanitorialManagementDashboard.Application.Buildings;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
@@ -115,7 +116,8 @@ public static class AdminAccountEndpoints
             secret = phone;
         }
 
-        var (place, error) = await ReadPlaceAsync(db, role, userId: 0, request.AreaId, request.BuildingId, request.Shift);
+        var (place, error) = await ReadPlaceAsync(
+            db, role, userId: 0, request.AreaId, request.BuildingId, request.Shift, BusinessDate(clock));
         if (place is null)
         {
             return error!;
@@ -134,6 +136,7 @@ public static class AdminAccountEndpoints
         var conflict = await SaveAsync(
             db,
             claim,
+            BusinessDate(clock),
             async () =>
             {
                 // The audit row needs the new id, so it is a second save inside the same transaction
@@ -144,7 +147,7 @@ public static class AdminAccountEndpoints
                 await db.SaveChangesAsync();
             },
             beforeSave: role == UserRole.Supervisor
-                ? () => membership.ApplyAsync(user, open: true, admin.Id)
+                ? async () => (await membership.ApplyAsync(user, open: true, admin.Id)).Refusal
                 : null);
         if (conflict is not null)
         {
@@ -181,13 +184,20 @@ public static class AdminAccountEndpoints
             return Bad("เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่");
         }
 
-        var (place, error) = await ReadPlaceAsync(db, user.Role, user.Id, request.AreaId, request.BuildingId, request.Shift, checkSlot: user.IsActive, currentAreaId: user.AreaId);
+        var (place, error) = await ReadPlaceAsync(
+            db, user.Role, user.Id, request.AreaId, request.BuildingId, request.Shift, BusinessDate(clock),
+            checkSlot: user.IsActive, currentAreaId: user.AreaId);
         if (place is null)
         {
             return error!;
         }
 
         var before = Snapshot(user);
+        // The building and shift the form replaces: only that pair's membership ends, so another building the same
+        // Supervisor also holds stays theirs (spec §3: several buildings per Supervisor is the normal case).
+        var replaced = user.BuildingId is int beforeBuilding && user.Shift is Shift beforeShift
+            ? (BuildingId: beforeBuilding, Shift: beforeShift)
+            : ((int BuildingId, Shift Shift)?)null;
         user.DisplayName = displayName;
         user.AreaId = place.Area?.Id;
         user.BuildingId = place.Building?.Id;
@@ -198,23 +208,61 @@ public static class AdminAccountEndpoints
             return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
         }
 
-        AuditTrail.Add(
-            db, admin.Id, clock.GetUtcNow().UtcDateTime, "ACCOUNT_UPDATE", "users", user.Id,
-            $"แก้บัญชี{ThaiLabels.RoleName(user.Role)} {user.LoginName} {user.DisplayName}", before, after);
-        // Only a real building/shift change is a membership write: renaming a Supervisor must not end another building
-        // they also hold (a dated write ends whatever it replaces).
+        // Only a real building/shift change is a membership write: renaming a Supervisor must not end a building
+        // they also hold (a dated write ends the pair it replaces).
         var moved = (before.BuildingId, before.Shift) != (after.BuildingId, after.Shift);
+        var ended = new List<EndedScope>();
         if (await SaveAsync(
                 db,
                 ClaimOf(user),
+                BusinessDate(clock),
+                async () =>
+                {
+                    // The period rows say only the dates, so the audit line names the buildings and shifts this edit ended
+                    AuditTrail.Add(
+                        db, admin.Id, clock.GetUtcNow().UtcDateTime, "ACCOUNT_UPDATE", "users", user.Id,
+                        await UpdateSummaryAsync(db, user, ended), before, after);
+                    await db.SaveChangesAsync();
+                },
                 beforeSave: moved && user.Role == UserRole.Supervisor
-                    ? () => membership.ApplyAsync(user, open: user.IsActive, admin.Id)
+                    ? async () =>
+                    {
+                        var outcome = await membership.ApplyAsync(user, open: user.IsActive, admin.Id, replaced);
+                        ended.AddRange(outcome.Ended);
+                        return outcome.Refusal;
+                    }
                     : null) is { } conflict)
         {
             return conflict;
         }
 
         return Results.Ok(await AccountView.LoadOneAsync(db, user.Id));
+    }
+
+    /// <summary>The clock's Thai business date: the date a dated membership write takes effect.</summary>
+    private static DateOnly BusinessDate(TimeProvider clock) => ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
+
+    /// <summary>
+    /// The ACCOUNT_UPDATE line, naming the buildings and shifts the edit ended, e.g. "… ปิดความรับผิดชอบ ตึก A กะเช้า".
+    /// The period row keeps only the dates, and a period that started today is removed rather than stored, so this line is
+    /// the only record of which responsibility the change took away.
+    /// </summary>
+    private static async Task<string> UpdateSummaryAsync(AppDbContext db, User user, IReadOnlyList<EndedScope> ended)
+    {
+        var summary = $"แก้บัญชี{ThaiLabels.RoleName(user.Role)} {user.LoginName} {user.DisplayName}";
+        if (ended.Count == 0)
+        {
+            return summary;
+        }
+
+        var ids = ended.Select(e => e.BuildingId).Distinct().ToList();
+        var codes = await db.Buildings.AsNoTracking()
+            .Where(b => ids.Contains(b.Id))
+            .Select(b => new { b.Id, b.Code })
+            .ToDictionaryAsync(b => b.Id, b => b.Code);
+        var names = ended.Select(e =>
+            $"ตึก {codes.GetValueOrDefault(e.BuildingId, $"#{e.BuildingId}")} กะ{ThaiLabels.ShiftName(e.Shift)}");
+        return $"{summary} ปิดความรับผิดชอบ {string.Join(" ", names)}";
     }
 
     /// <summary>
@@ -254,7 +302,7 @@ public static class AdminAccountEndpoints
             return Conflict(BuildingRules.OffForSupervisor(offCode));
         }
 
-        if (active && await HolderAsync(db, user.Role, user.AreaId, user.BuildingId, user.Shift, user.Id) is { } holder)
+        if (active && await HolderAsync(db, user.Role, user.AreaId, user.BuildingId, user.Shift, user.Id, BusinessDate(clock)) is { } holder)
         {
             return Conflict(SlotTaken(holder));
         }
@@ -278,9 +326,10 @@ public static class AdminAccountEndpoints
         var conflict = await SaveAsync(
             db,
             ClaimOf(user),
+            BusinessDate(clock),
             revokeSessions,
             beforeSave: user.Role == UserRole.Supervisor
-                ? () => membership.ApplyAsync(user, open: active, admin.Id)
+                ? async () => (await membership.ApplyAsync(user, open: active, admin.Id)).Refusal
                 : null);
         if (conflict is not null)
         {
@@ -378,7 +427,8 @@ public static class AdminAccountEndpoints
     /// a check that runs inside the transaction before the save and can refuse it with its own answer.
     /// </summary>
     internal static async Task<IResult?> SaveAsync(
-        AppDbContext db, AccountClaim claim, Func<Task>? afterSave = null, Func<Task<IResult?>>? beforeSave = null)
+        AppDbContext db, AccountClaim claim, DateOnly businessDate, Func<Task>? afterSave = null,
+        Func<Task<IResult?>>? beforeSave = null)
     {
         try
         {
@@ -400,7 +450,7 @@ public static class AdminAccountEndpoints
         }
         catch (DbUpdateException)
         {
-            if (await ExplainRaceAsync(db, claim) is { } conflict)
+            if (await ExplainRaceAsync(db, claim, businessDate) is { } conflict)
             {
                 return conflict;
             }
