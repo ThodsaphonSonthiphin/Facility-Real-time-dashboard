@@ -16,7 +16,8 @@ public static class SchedulingModel
     {
         model.Entity<SupervisorScopePeriod>(e =>
         {
-            e.ToTable("supervisor_scope_periods");
+            e.ToTable("supervisor_scope_periods", t => t.HasCheckConstraint(
+                "ck_supervisor_scope_periods_effective_range", EffectiveRangeShape));
             e.Property(x => x.Shift).HasConversion(new UpperSnakeEnumConverter<Shift>()).HasMaxLength(10);
             e.HasIndex(x => new { x.SupervisorId, x.BuildingId, x.Shift, x.EffectiveFrom }).IsUnique();
             e.HasIndex(x => new { x.BuildingId, x.Shift, x.EffectiveFrom });
@@ -27,7 +28,8 @@ public static class SchedulingModel
 
         model.Entity<CleanerProfilePeriod>(e =>
         {
-            e.ToTable("cleaner_profile_periods");
+            e.ToTable("cleaner_profile_periods", t => t.HasCheckConstraint(
+                "ck_cleaner_profile_periods_effective_range", EffectiveRangeShape));
             e.Property(x => x.Kind).HasConversion(new UpperSnakeEnumConverter<CleanerKind>()).HasMaxLength(10);
             e.Property(x => x.Shift).HasConversion(new UpperSnakeEnumConverter<Shift>()).HasMaxLength(10);
             e.HasIndex(x => new { x.UserId, x.Kind, x.EffectiveFrom }).IsUnique();
@@ -39,7 +41,8 @@ public static class SchedulingModel
 
         model.Entity<ScheduleBaseline>(e =>
         {
-            e.ToTable("schedule_baselines");
+            e.ToTable("schedule_baselines", t => t.HasCheckConstraint(
+                "ck_schedule_baselines_effective_range", EffectiveRangeShape));
             e.Property(x => x.Kind).HasConversion(new UpperSnakeEnumConverter<BaselineKind>()).HasMaxLength(10);
             e.HasIndex(x => new { x.UserId, x.Kind, x.EffectiveFrom }).IsUnique();
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
@@ -86,6 +89,12 @@ public static class SchedulingModel
             e.Property(x => x.Reason).HasMaxLength(500);
             e.HasIndex(x => new { x.UserId, x.ShiftDate, x.Shift });
             e.HasIndex(x => new { x.UserId, x.StartsAt });
+
+            // One live override per slot and kind: the database computes the key so a duplicate cannot be stored, while a
+            // cancelled row (and every leave row, which may legitimately overlap) stores NULL and never blocks another.
+            e.Property(x => x.ActiveKey).HasComputedColumnSql(
+                "CASE WHEN kind IN ('AREA', 'BREAK_GROUP') AND is_cancelled = 0 THEN 1 END", stored: true);
+            e.HasIndex(x => new { x.UserId, x.ShiftDate, x.Shift, x.Kind, x.ActiveKey }).IsUnique();
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Area>().WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedById).OnDelete(DeleteBehavior.Restrict);
@@ -214,6 +223,12 @@ public static class SchedulingModel
             e.HasOne(x => x.Receipt).WithMany().HasForeignKey(x => x.ReceiptId).OnDelete(DeleteBehavior.Restrict);
         });
     }
+
+    /// <summary>
+    /// Every effective period is half-open, so an end that is not after the start describes no dates at all. Storing one
+    /// would occupy the natural key while protecting nothing; the store rejects it before writing for a readable error.
+    /// </summary>
+    private const string EffectiveRangeShape = "effective_until IS NULL OR effective_until > effective_from";
 
     /// <summary>database.html GPS column set, the same mapping AppDbContext's private helper applies to legacy records.</summary>
     private static void MapGps<T>(EntityTypeBuilder<T> e) where T : class, IGpsStamped

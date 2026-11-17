@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JanitorialManagementDashboard.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261117091244_AddCleanerScheduling")]
+    [Migration("20261117092427_AddCleanerScheduling")]
     partial class AddCleanerScheduling
     {
         /// <inheritdoc />
@@ -988,7 +988,10 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     b.HasIndex("UserId", "Kind", "EffectiveFrom")
                         .IsUnique();
 
-                    b.ToTable("cleaner_profile_periods", (string)null);
+                    b.ToTable("cleaner_profile_periods", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_cleaner_profile_periods_effective_range", "effective_until IS NULL OR effective_until > effective_from");
+                        });
                 });
 
             modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ReliefAssignment", b =>
@@ -1180,7 +1183,10 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     b.HasIndex("UserId", "Kind", "EffectiveFrom")
                         .IsUnique();
 
-                    b.ToTable("schedule_baselines", (string)null);
+                    b.ToTable("schedule_baselines", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_schedule_baselines_effective_range", "effective_until IS NULL OR effective_until > effective_from");
+                        });
                 });
 
             modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleBaselineAnchor", b =>
@@ -1369,6 +1375,12 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("id");
 
+                    b.Property<int?>("ActiveKey")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("int")
+                        .HasColumnName("active_key")
+                        .HasComputedColumnSql("CASE WHEN kind IN ('AREA', 'BREAK_GROUP') AND is_cancelled = 0 THEN 1 END", true);
+
                     b.Property<int?>("AreaId")
                         .HasColumnType("int")
                         .HasColumnName("area_id");
@@ -1449,6 +1461,9 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     b.HasIndex("UserId", "StartsAt");
 
                     b.HasIndex("UserId", "ShiftDate", "Shift");
+
+                    b.HasIndex("UserId", "ShiftDate", "Shift", "Kind", "ActiveKey")
+                        .IsUnique();
 
                     b.ToTable("schedule_exceptions", null, t =>
                         {
@@ -1543,7 +1558,10 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     b.HasIndex("SupervisorId", "BuildingId", "Shift", "EffectiveFrom")
                         .IsUnique();
 
-                    b.ToTable("supervisor_scope_periods", (string)null);
+                    b.ToTable("supervisor_scope_periods", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_supervisor_scope_periods_effective_range", "effective_until IS NULL OR effective_until > effective_from");
+                        });
                 });
 
             modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.WeeklyDayOff", b =>

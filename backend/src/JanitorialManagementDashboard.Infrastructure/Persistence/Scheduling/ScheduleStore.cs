@@ -12,7 +12,8 @@ public sealed class ScheduleStore(AppDbContext db)
 {
     /// <summary>
     /// True when another regular Supervisor period for the building and shift overlaps the proposed end-exclusive range.
-    /// A null <paramref name="effectiveUntil"/> is an open-ended claim.
+    /// A null <paramref name="effectiveUntil"/> is an open-ended claim. An inverted range throws instead of answering
+    /// "free", because no stored row can ever overlap a range that describes no dates.
     /// </summary>
     public Task<bool> RegularScopeOverlapsAsync(
         int buildingId,
@@ -22,6 +23,7 @@ public sealed class ScheduleStore(AppDbContext db)
         int? excludingPeriodId = null,
         CancellationToken ct = default)
     {
+        EnsureRangeIsForward(effectiveFrom, effectiveUntil);
         var proposedEnd = effectiveUntil ?? DateOnly.MaxValue;
         return db.SupervisorScopePeriods.AnyAsync(
             period => period.BuildingId == buildingId
@@ -33,8 +35,8 @@ public sealed class ScheduleStore(AppDbContext db)
     }
 
     /// <summary>
-    /// Rejects a regular Supervisor period that overlaps another one. Call inside the write transaction, after locking
-    /// the building/shift anchor, so two people cannot both claim the same range.
+    /// Rejects a regular Supervisor period that overlaps another one, or whose own range is inverted. Call inside the
+    /// write transaction, after locking the building/shift anchor, so two people cannot both claim the same range.
     /// </summary>
     public async Task EnsureRegularScopeAvailableAsync(
         int buildingId,
@@ -44,9 +46,19 @@ public sealed class ScheduleStore(AppDbContext db)
         int? excludingPeriodId = null,
         CancellationToken ct = default)
     {
+        EnsureRangeIsForward(effectiveFrom, effectiveUntil);
         if (await RegularScopeOverlapsAsync(buildingId, shift, effectiveFrom, effectiveUntil, excludingPeriodId, ct))
         {
             throw new ScheduleConflictException("scope-overlap");
+        }
+    }
+
+    /// <summary>The same rule the ck_*_effective_range CHECK constraints apply, so a caller hears about it first.</summary>
+    private static void EnsureRangeIsForward(DateOnly effectiveFrom, DateOnly? effectiveUntil)
+    {
+        if (effectiveUntil is { } until && until <= effectiveFrom)
+        {
+            throw new ScheduleConflictException("invalid-range");
         }
     }
 }

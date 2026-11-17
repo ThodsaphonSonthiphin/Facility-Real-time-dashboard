@@ -129,6 +129,150 @@ public class SchedulePersistenceTests
     }
 
     [Fact]
+    public async Task Inverted_effective_range_is_rejected_by_the_store_and_the_database()
+    {
+        using var factory = new JanitorialApiFactory();
+
+        await factory.WithDbAsync(async db =>
+        {
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "2000001");
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
+            var building = await db.Buildings.SingleAsync(b => b.Code == "A");
+            var store = new ScheduleStore(db);
+            var from = new DateOnly(2026, 3, 1);
+            var until = new DateOnly(2026, 2, 1);
+
+            // A range that ends before it starts covers no dates, so the only ownership guard must not answer "free".
+            var inverted = await Assert.ThrowsAsync<ScheduleConflictException>(
+                () => store.EnsureRegularScopeAvailableAsync(building.Id, Shift.Day, from, until));
+            Assert.Equal("invalid-range", inverted.Code);
+            await Assert.ThrowsAsync<ScheduleConflictException>(
+                () => store.RegularScopeOverlapsAsync(building.Id, Shift.Day, from, until));
+
+            // The end date is exclusive, so an empty range is inverted too.
+            var empty = await Assert.ThrowsAsync<ScheduleConflictException>(
+                () => store.EnsureRegularScopeAvailableAsync(building.Id, Shift.Day, from, from));
+            Assert.Equal("invalid-range", empty.Code);
+
+            // The same rule is a CHECK, so a caller that skips the store cannot persist it either.
+            db.SupervisorScopePeriods.Add(new SupervisorScopePeriod
+            {
+                SupervisorId = supervisor.Id,
+                BuildingId = building.Id,
+                Shift = Shift.Day,
+                EffectiveFrom = from,
+                EffectiveUntil = until,
+                Revision = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+            db.ChangeTracker.Clear();
+
+            db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+            {
+                UserId = cleaner.Id,
+                Kind = CleanerKind.Regular,
+                Shift = Shift.Day,
+                EffectiveFrom = from,
+                EffectiveUntil = until,
+                Revision = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+            db.ChangeTracker.Clear();
+
+            db.ScheduleBaselines.Add(new ScheduleBaseline
+            {
+                UserId = cleaner.Id,
+                Kind = BaselineKind.Regular,
+                EffectiveFrom = from,
+                EffectiveUntil = until,
+                Revision = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+            db.ChangeTracker.Clear();
+
+            Assert.Empty(await db.SupervisorScopePeriods.ToListAsync());
+            Assert.Empty(await db.CleanerProfilePeriods.ToListAsync());
+            Assert.Empty(await db.ScheduleBaselines.ToListAsync());
+        });
+    }
+
+    [Theory]
+    [InlineData(ScheduleExceptionKind.Area)]
+    [InlineData(ScheduleExceptionKind.BreakGroup)]
+    public async Task A_slot_holds_one_live_override_of_each_kind(ScheduleExceptionKind kind)
+    {
+        using var factory = new JanitorialApiFactory();
+
+        await factory.WithDbAsync(async db =>
+        {
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000002");
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "2000001");
+            var firstArea = await db.Areas.SingleAsync(a => a.Code == "AR01");
+            var secondArea = await db.Areas.SingleAsync(a => a.Code == "AR02");
+            var shiftDate = new DateOnly(2026, 11, 17);
+            var isArea = kind == ScheduleExceptionKind.Area;
+
+            db.ScheduleExceptions.Add(Override(
+                cleaner.Id, supervisor.Id, kind, shiftDate, isArea ? firstArea.Id : null, isArea ? null : 1));
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+            Assert.Equal(1, (await db.ScheduleExceptions.SingleAsync()).ActiveKey);
+
+            // A second live override would make "the effective Area" ambiguous, so the unique index refuses it.
+            db.ScheduleExceptions.Add(Override(
+                cleaner.Id, supervisor.Id, kind, shiftDate, isArea ? secondArea.Id : null, isArea ? null : 2));
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+            db.ChangeTracker.Clear();
+            Assert.Single(await db.ScheduleExceptions.ToListAsync());
+
+            // Cancelling keeps the history and frees the slot: the computed key is NULL, which a unique index ignores.
+            var stored = await db.ScheduleExceptions.SingleAsync();
+            stored.IsCancelled = true;
+            stored.CancelledAt = DateTime.UtcNow;
+            stored.CancelledById = supervisor.Id;
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+            Assert.Null((await db.ScheduleExceptions.SingleAsync()).ActiveKey);
+
+            db.ScheduleExceptions.Add(Override(
+                cleaner.Id, supervisor.Id, kind, shiftDate, isArea ? secondArea.Id : null, isArea ? null : 2));
+            await db.SaveChangesAsync();
+            Assert.Equal(2, await db.ScheduleExceptions.CountAsync());
+            Assert.Single(await db.ScheduleExceptions.Where(x => x.ActiveKey != null).ToListAsync());
+        });
+    }
+
+    [Fact]
+    public async Task Overlapping_leave_intervals_stay_storable()
+    {
+        using var factory = new JanitorialApiFactory();
+
+        await factory.WithDbAsync(async db =>
+        {
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000003");
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == "2000001");
+            var shiftDate = new DateOnly(2026, 11, 17);
+            var morning = new DateTime(2026, 11, 17, 1, 0, 0, DateTimeKind.Utc);
+            var noon = new DateTime(2026, 11, 17, 5, 0, 0, DateTimeKind.Utc);
+
+            // Two leave spells on one shift are legitimate partial-shift facts, so leave rows carry a NULL active key.
+            db.ScheduleExceptions.Add(Leave(cleaner.Id, supervisor.Id, shiftDate, morning, morning.AddHours(1)));
+            db.ScheduleExceptions.Add(Leave(cleaner.Id, supervisor.Id, shiftDate, noon, noon.AddHours(1)));
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+
+            Assert.Equal(2, await db.ScheduleExceptions.CountAsync());
+            Assert.All(await db.ScheduleExceptions.ToListAsync(), row => Assert.Null(row.ActiveKey));
+        });
+    }
+
+    [Fact]
     public async Task Transfer_confirmation_is_unique_per_instruction()
     {
         using var factory = new JanitorialApiFactory();
@@ -288,6 +432,41 @@ public class SchedulePersistenceTests
         Shift = Shift.Day,
         EffectiveFrom = new DateOnly(2026, 11, 17),
         Revision = 1,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow,
+    };
+
+    private static ScheduleException Override(
+        int userId,
+        int createdById,
+        ScheduleExceptionKind kind,
+        DateOnly shiftDate,
+        int? areaId = null,
+        int? breakGroup = null) => new()
+    {
+        UserId = userId,
+        Kind = kind,
+        ShiftDate = shiftDate,
+        Shift = Shift.Day,
+        AreaId = areaId,
+        BreakGroup = breakGroup,
+        Revision = 1,
+        CreatedById = createdById,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow,
+    };
+
+    private static ScheduleException Leave(
+        int userId, int createdById, DateOnly shiftDate, DateTime startsAt, DateTime endsAt) => new()
+    {
+        UserId = userId,
+        Kind = ScheduleExceptionKind.Leave,
+        ShiftDate = shiftDate,
+        Shift = Shift.Day,
+        StartsAt = startsAt,
+        EndsAt = endsAt,
+        Revision = 1,
+        CreatedById = createdById,
         CreatedAt = DateTime.UtcNow,
         UpdatedAt = DateTime.UtcNow,
     };

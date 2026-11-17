@@ -159,6 +159,7 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_cleaner_profile_periods", x => x.id);
+                    table.CheckConstraint("ck_cleaner_profile_periods_effective_range", "effective_until IS NULL OR effective_until > effective_from");
                     table.ForeignKey(
                         name: "FK_cleaner_profile_periods_buildings_home_building_id",
                         column: x => x.home_building_id,
@@ -317,6 +318,7 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_schedule_baselines", x => x.id);
+                    table.CheckConstraint("ck_schedule_baselines_effective_range", "effective_until IS NULL OR effective_until > effective_from");
                     table.ForeignKey(
                         name: "FK_schedule_baselines_users_created_by_id",
                         column: x => x.created_by_id,
@@ -376,6 +378,7 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     is_cancelled = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     cancelled_at = table.Column<DateTime>(type: "datetime(6)", nullable: true),
                     cancelled_by_id = table.Column<int>(type: "int", nullable: true),
+                    active_key = table.Column<int>(type: "int", nullable: true, computedColumnSql: "CASE WHEN kind IN ('AREA', 'BREAK_GROUP') AND is_cancelled = 0 THEN 1 END", stored: true),
                     revision = table.Column<long>(type: "bigint", nullable: false),
                     reason = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: true),
                     created_by_id = table.Column<int>(type: "int", nullable: false),
@@ -455,6 +458,7 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_supervisor_scope_periods", x => x.id);
+                    table.CheckConstraint("ck_supervisor_scope_periods_effective_range", "effective_until IS NULL OR effective_until > effective_from");
                     table.ForeignKey(
                         name: "FK_supervisor_scope_periods_buildings_building_id",
                         column: x => x.building_id,
@@ -843,6 +847,12 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                 name: "IX_schedule_exceptions_user_id_shift_date_shift",
                 table: "schedule_exceptions",
                 columns: new[] { "user_id", "shift_date", "shift" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_schedule_exceptions_user_id_shift_date_shift_kind_active_key",
+                table: "schedule_exceptions",
+                columns: new[] { "user_id", "shift_date", "shift", "kind", "active_key" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_schedule_exceptions_user_id_starts_at",

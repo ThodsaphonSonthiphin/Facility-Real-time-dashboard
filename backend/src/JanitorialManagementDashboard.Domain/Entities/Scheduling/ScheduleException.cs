@@ -13,7 +13,8 @@ public enum ScheduleExceptionKind
 /// <summary>
 /// ADRs facility-0134, 0145, 0157, 0189, 0202 and 0214: one dated override for a person's slot. An Area or break-group
 /// row replaces the baseline for that date only; a leave row stores an agreed interval (possibly partial) and keeps
-/// actual scans untouched. Cancelling keeps the row and its history instead of deleting it.
+/// actual scans untouched. Cancelling keeps the row and its history instead of deleting it. One slot has at most one
+/// live row of each kind, enforced by a unique index over the database-computed <see cref="ActiveKey"/>.
 /// </summary>
 public class ScheduleException
 {
@@ -42,6 +43,13 @@ public class ScheduleException
     public bool IsCancelled { get; set; }
     public DateTime? CancelledAt { get; set; }
     public int? CancelledById { get; set; }
+
+    /// <summary>
+    /// Computed by the database: 1 while a live Area or break-group override occupies the slot, NULL once it is cancelled
+    /// or when the kind is leave. The unique index over it means one slot has at most one active override of each kind, so
+    /// "which Area applies" stays answerable; leave intervals keep overlapping freely because they store NULL here.
+    /// </summary>
+    public int? ActiveKey { get; private set; }
 
     public long Revision { get; set; } = 1;
 
