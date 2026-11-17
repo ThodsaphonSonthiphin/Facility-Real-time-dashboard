@@ -350,6 +350,36 @@ public class ScheduleScopeEndpointTests
         Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.AuditLog.ToListAsync()));
     }
 
+    /// <summary>
+    /// Fix round 2: the pre-backfill state of spec §14 is mixed as soon as one dated row exists somewhere. Here 2000001
+    /// holds A/day through a dated row, which switches the projection gate off, while S2002 holds B/day through its
+    /// account row alone and has no dated row at all. The pre-check cannot name S2002, so the write gets as far as the
+    /// <c>users.supervisor_slot</c> unique index: that refusal must read as the same slot conflict, never a server error,
+    /// and must leave no account, period, anchor or audit row behind.
+    /// </summary>
+    [Fact]
+    public async Task A_projection_only_supervisor_keeps_the_slot_conflict_a_409_after_a_dated_row_exists_elsewhere()
+    {
+        using var factory = new JanitorialApiFactory();
+        await InspectionApi.AddBuildingBAsync(factory);
+        var buildingB = await AdminSetupApi.BuildingIdAsync(factory, "B");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        // One dated row exists, and it is for a different person and slot: the global gate is off, B/day has no dated row
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, Oct1);
+        await TestData.AddSupervisorAsync(factory, "S2002", "0820000002", "B", Shift.Day);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 30));
+
+        var response = await AccountApi.CreateSupervisorAsync(admin, "S2003", "0820000003", buildingB, "Day");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("กะเช้าของตึก B มีหัวหน้าประจำแล้ว (หัวหน้าทดสอบ S2002)", await AdminSetupApi.MessageAsync(response));
+        Assert.False(await AdminSetupApi.ReadAsync(factory, db => db.Users.AnyAsync(u => u.EmployeeId == "S2003")));
+        // The dated row the write would have added, and the anchor it took to claim the slot, are rolled back with it
+        Assert.Equal(1, await AdminSetupApi.ReadAsync(factory, db => db.SupervisorScopePeriods.CountAsync()));
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.ScheduleScopeAnchors.ToListAsync()));
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.AuditLog.ToListAsync()));
+    }
+
     [Fact]
     public async Task Deactivating_closes_the_membership_and_activating_opens_it_again()
     {

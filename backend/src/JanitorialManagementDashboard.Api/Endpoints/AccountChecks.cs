@@ -154,9 +154,17 @@ internal static class AccountChecks
             return null;
         }
 
-        return await db.Users.AsNoTracking().Include(u => u.Building)
-            .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == buildingId && u.Shift == shift);
+        return await ProjectionSupervisorAsync(db, buildingId, shift, exceptUserId);
     }
+
+    /// <summary>
+    /// The Supervisor the account projection alone says holds that building and shift: the pre-backfill membership of
+    /// spec §14. Only <see cref="SupervisorHolderAsync"/> (before any dated row exists) and the post-race explanation may
+    /// read it.
+    /// </summary>
+    private static Task<User?> ProjectionSupervisorAsync(AppDbContext db, int buildingId, Shift shift, int exceptUserId) =>
+        db.Users.AsNoTracking().Include(u => u.Building)
+            .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == buildingId && u.Shift == shift);
 
     /// <summary>
     /// The dated holder as the slot message reads it: <see cref="SlotTaken"/> names the holder's Building and Shift, and the
@@ -214,9 +222,19 @@ internal static class AccountChecks
             return Conflict(EmployeeIdTaken);
         }
 
-        return await HolderAsync(db, claim.Role, claim.AreaId, claim.BuildingId, claim.Shift, claim.UserId, businessDate) is { } holder
-            ? Conflict(SlotTaken(holder))
-            : null;
+        if (await HolderAsync(db, claim.Role, claim.AreaId, claim.BuildingId, claim.Shift, claim.UserId, businessDate) is { } holder)
+        {
+            return Conflict(SlotTaken(holder));
+        }
+
+        // The pre-check already refused every dated holder, so a DbUpdateException reaching here is by definition the
+        // projection: users.supervisor_slot. In the pre-backfill state (spec §14) an active Supervisor with no dated row
+        // at all still holds their account row's building and shift, which the dated lookup cannot see once any dated row
+        // exists elsewhere. Explaining that as the slot conflict keeps it a 409 instead of a 500.
+        return claim is { Role: UserRole.Supervisor, BuildingId: { } buildingId, Shift: { } shift }
+            && await ProjectionSupervisorAsync(db, buildingId, shift, claim.UserId) is { } projected
+                ? Conflict(SlotTaken(projected))
+                : null;
     }
 
     public static IResult Bad(string message) => ApiResults.Message(StatusCodes.Status400BadRequest, message);
