@@ -642,6 +642,971 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     b.ToTable("scan_records", (string)null);
                 });
 
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AreaTransfer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("cancellation_reason");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<int?>("CancelledById")
+                        .HasColumnType("int")
+                        .HasColumnName("cancelled_by_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("CreatedById")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime>("EffectiveAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("effective_at");
+
+                    b.Property<int>("FromAreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("from_area_id");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_cancelled");
+
+                    b.Property<int>("PersonId")
+                        .HasColumnType("int")
+                        .HasColumnName("person_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<DateTime>("ShiftDate")
+                        .HasColumnType("date")
+                        .HasColumnName("shift_date");
+
+                    b.Property<int>("ToAreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("to_area_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CancelledById");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("FromAreaId");
+
+                    b.HasIndex("PersonId", "ShiftDate", "Shift");
+
+                    b.HasIndex("ToAreaId", "ShiftDate", "Shift");
+
+                    b.ToTable("area_transfers", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_area_transfers_other_area", "from_area_id <> to_area_id");
+                        });
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AreaTransferConfirmation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<short?>("AccuracyM")
+                        .HasColumnType("smallint")
+                        .HasColumnName("accuracy_m");
+
+                    b.Property<int>("AreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("area_id");
+
+                    b.Property<int>("ConfirmedById")
+                        .HasColumnType("int")
+                        .HasColumnName("confirmed_by_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<short?>("DistanceM")
+                        .HasColumnType("smallint")
+                        .HasColumnName("distance_m");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)")
+                        .HasColumnName("latitude");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)")
+                        .HasColumnName("longitude");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<int>("SignId")
+                        .HasColumnType("int")
+                        .HasColumnName("sign_id");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("source");
+
+                    b.Property<int>("TransferId")
+                        .HasColumnType("int")
+                        .HasColumnName("transfer_id");
+
+                    b.Property<bool?>("WithinRadius")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("within_radius");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("ConfirmedById");
+
+                    b.HasIndex("SignId");
+
+                    b.HasIndex("TransferId")
+                        .IsUnique();
+
+                    b.ToTable("area_transfer_confirmations", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AttendanceGap", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("AreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("area_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("event_type");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTime?>("RecordedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<int?>("RecordedById")
+                        .HasColumnType("int")
+                        .HasColumnName("recorded_by_id");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<DateTime>("ShiftDate")
+                        .HasColumnType("date")
+                        .HasColumnName("shift_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("RecordedById");
+
+                    b.HasIndex("UserId", "ShiftDate", "Shift", "EventType")
+                        .IsUnique();
+
+                    b.ToTable("attendance_gaps", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AttendanceSlotLifecycle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ActivatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("activated_at");
+
+                    b.Property<int?>("ActivatedById")
+                        .HasColumnType("int")
+                        .HasColumnName("activated_by_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<DateTime>("ShiftDate")
+                        .HasColumnType("date")
+                        .HasColumnName("shift_date");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivatedById");
+
+                    b.HasIndex("ShiftDate", "Shift")
+                        .IsUnique();
+
+                    b.ToTable("attendance_slot_lifecycles", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.CleanerProfilePeriod", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("CreatedById")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<DateTime?>("EffectiveUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_until");
+
+                    b.Property<int?>("HomeBuildingId")
+                        .HasColumnType("int")
+                        .HasColumnName("home_building_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("kind");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("HomeBuildingId");
+
+                    b.HasIndex("UserId", "Kind", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("cleaner_profile_periods", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ReliefAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AgreementReported")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("agreement_reported");
+
+                    b.Property<int>("AreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("area_id");
+
+                    b.Property<int?>("BreakGroup")
+                        .HasColumnType("int")
+                        .HasColumnName("break_group");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("cancellation_reason");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<int?>("CancelledById")
+                        .HasColumnType("int")
+                        .HasColumnName("cancelled_by_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("CreatedById")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_cancelled");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<int?>("ReplacedUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("replaced_user_id");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<DateTime>("ShiftDate")
+                        .HasColumnType("date")
+                        .HasColumnName("shift_date");
+
+                    b.Property<int>("SourceBuildingId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_building_id");
+
+                    b.Property<int?>("SourceSupervisorId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_supervisor_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CancelledById");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("SourceBuildingId");
+
+                    b.HasIndex("SourceSupervisorId");
+
+                    b.HasIndex("AreaId", "ShiftDate", "Shift");
+
+                    b.HasIndex("ReplacedUserId", "ShiftDate", "Shift");
+
+                    b.HasIndex("UserId", "ShiftDate", "Shift");
+
+                    b.ToTable("relief_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleAnchor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int>("PersonId")
+                        .HasColumnType("int")
+                        .HasColumnName("person_id");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<DateTime>("ShiftDate")
+                        .HasColumnType("date")
+                        .HasColumnName("shift_date");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShiftDate", "Shift");
+
+                    b.HasIndex("PersonId", "ShiftDate", "Shift")
+                        .IsUnique();
+
+                    b.ToTable("schedule_anchors", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleBaseline", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("CreatedById")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<DateTime?>("EffectiveUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_until");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("kind");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UserId", "Kind", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("schedule_baselines", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleBaselineAnchor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int>("PersonId")
+                        .HasColumnType("int")
+                        .HasColumnName("person_id");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId")
+                        .IsUnique();
+
+                    b.ToTable("schedule_baseline_anchors", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleBaselineDay", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("AreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("area_id");
+
+                    b.Property<int>("BaselineId")
+                        .HasColumnType("int")
+                        .HasColumnName("baseline_id");
+
+                    b.Property<int?>("BreakGroup")
+                        .HasColumnType("int")
+                        .HasColumnName("break_group");
+
+                    b.Property<bool>("IsDayOff")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_day_off");
+
+                    b.Property<int>("Weekday")
+                        .HasColumnType("int")
+                        .HasColumnName("weekday");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("BaselineId", "Weekday")
+                        .IsUnique();
+
+                    b.ToTable("schedule_baseline_days", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_schedule_baseline_days_shape", "(is_day_off = 1 AND area_id IS NULL AND break_group IS NULL) OR (is_day_off = 0 AND (break_group IS NULL OR area_id IS NOT NULL))");
+                        });
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleChange", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AfterJson")
+                        .HasColumnType("json")
+                        .HasColumnName("after_json");
+
+                    b.Property<string>("BeforeJson")
+                        .HasColumnType("json")
+                        .HasColumnName("before_json");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("EntityId")
+                        .HasColumnType("int")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("entity_type");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("operation");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<int>("ReceiptId")
+                        .HasColumnType("int")
+                        .HasColumnName("receipt_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ReceiptId");
+
+                    b.HasIndex("EntityType", "EntityId");
+
+                    b.ToTable("schedule_changes", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleCommandReceipt", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int>("ActorId")
+                        .HasColumnType("int")
+                        .HasColumnName("actor_id");
+
+                    b.Property<Guid>("CommandId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("command_id");
+
+                    b.Property<DateTime>("CommittedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("committed_at");
+
+                    b.Property<string>("ExpectedRevisionsJson")
+                        .IsRequired()
+                        .HasColumnType("json")
+                        .HasColumnName("expected_revisions_json");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("PayloadFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("payload_fingerprint");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("json")
+                        .HasColumnName("result_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommandId")
+                        .IsUnique();
+
+                    b.HasIndex("ActorId", "CommittedAt");
+
+                    b.ToTable("schedule_command_receipts", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleException", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("AreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("area_id");
+
+                    b.Property<int?>("BreakGroup")
+                        .HasColumnType("int")
+                        .HasColumnName("break_group");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<int?>("CancelledById")
+                        .HasColumnType("int")
+                        .HasColumnName("cancelled_by_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("CreatedById")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime?>("EndsAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("ends_at");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_cancelled");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<DateTime>("ShiftDate")
+                        .HasColumnType("date")
+                        .HasColumnName("shift_date");
+
+                    b.Property<DateTime?>("StartsAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("starts_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("CancelledById");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UserId", "StartsAt");
+
+                    b.HasIndex("UserId", "ShiftDate", "Shift");
+
+                    b.ToTable("schedule_exceptions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_schedule_exceptions_shape", "(kind = 'AREA' AND area_id IS NOT NULL AND break_group IS NULL AND starts_at IS NULL AND ends_at IS NULL) OR (kind = 'BREAK_GROUP' AND area_id IS NULL AND break_group IS NOT NULL AND starts_at IS NULL AND ends_at IS NULL) OR (kind = 'LEAVE' AND area_id IS NULL AND break_group IS NULL AND starts_at IS NOT NULL AND ends_at IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleScopeAnchor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BuildingId")
+                        .HasColumnType("int")
+                        .HasColumnName("building_id");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildingId", "Shift")
+                        .IsUnique();
+
+                    b.ToTable("schedule_scope_anchors", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.SupervisorScopePeriod", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BuildingId")
+                        .HasColumnType("int")
+                        .HasColumnName("building_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("CreatedById")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<DateTime?>("EffectiveUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_until");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("shift");
+
+                    b.Property<int>("SupervisorId")
+                        .HasColumnType("int")
+                        .HasColumnName("supervisor_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("BuildingId", "Shift", "EffectiveFrom");
+
+                    b.HasIndex("SupervisorId", "BuildingId", "Shift", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("supervisor_scope_periods", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.WeeklyDayOff", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("CreatedById")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime>("WeekStart")
+                        .HasColumnType("date")
+                        .HasColumnName("week_start");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UserId", "WeekStart")
+                        .IsUnique();
+
+                    b.ToTable("weekly_days_off", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.WeeklyDayOffChoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("OffDate")
+                        .HasColumnType("date")
+                        .HasColumnName("off_date");
+
+                    b.Property<int>("WeeklyDayOffId")
+                        .HasColumnType("int")
+                        .HasColumnName("weekly_day_off_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WeeklyDayOffId", "OffDate")
+                        .IsUnique();
+
+                    b.ToTable("weekly_day_off_choices", (string)null);
+                });
+
             modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.ServicePoint", b =>
                 {
                     b.Property<int>("Id")
@@ -1123,6 +2088,301 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AreaTransfer", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Area", null)
+                        .WithMany()
+                        .HasForeignKey("FromAreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Area", null)
+                        .WithMany()
+                        .HasForeignKey("ToAreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AreaTransferConfirmation", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Area", null)
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ConfirmedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Sign", null)
+                        .WithMany()
+                        .HasForeignKey("SignId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Scheduling.AreaTransfer", null)
+                        .WithMany()
+                        .HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AttendanceGap", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Area", null)
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AttendanceSlotLifecycle", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActivatedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.CleanerProfilePeriod", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Building", null)
+                        .WithMany()
+                        .HasForeignKey("HomeBuildingId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ReliefAssignment", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Area", null)
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReplacedUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Building", null)
+                        .WithMany()
+                        .HasForeignKey("SourceBuildingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("SourceSupervisorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleAnchor", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleBaseline", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleBaselineAnchor", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleBaselineDay", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Area", null)
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleBaseline", "Baseline")
+                        .WithMany("Days")
+                        .HasForeignKey("BaselineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Baseline");
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleChange", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleCommandReceipt", "Receipt")
+                        .WithMany()
+                        .HasForeignKey("ReceiptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Receipt");
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleCommandReceipt", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleException", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Area", null)
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleScopeAnchor", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Building", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.SupervisorScopePeriod", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Building", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("SupervisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.WeeklyDayOff", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.WeeklyDayOffChoice", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.Scheduling.WeeklyDayOff", "WeeklyDayOff")
+                        .WithMany("Choices")
+                        .HasForeignKey("WeeklyDayOffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("WeeklyDayOff");
+                });
+
             modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.ServicePoint", b =>
                 {
                     b.HasOne("JanitorialManagementDashboard.Domain.Entities.Area", "Area")
@@ -1189,6 +2449,16 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     b.Navigation("Area");
 
                     b.Navigation("Building");
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.ScheduleBaseline", b =>
+                {
+                    b.Navigation("Days");
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.WeeklyDayOff", b =>
+                {
+                    b.Navigation("Choices");
                 });
 #pragma warning restore 612, 618
         }
