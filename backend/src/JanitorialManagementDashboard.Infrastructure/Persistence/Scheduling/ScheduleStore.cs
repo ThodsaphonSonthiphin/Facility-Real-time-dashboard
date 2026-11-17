@@ -7,6 +7,7 @@ using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 
@@ -150,6 +151,129 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
     private bool IsMySql =>
         db.Database.ProviderName?.Contains("MySql", StringComparison.OrdinalIgnoreCase) == true;
+
+    /// <summary>
+    /// The transaction one schedule command runs in (spec §11: the token, the business rows, the audit and the receipt
+    /// commit together or not at all). MySQL takes ReadCommitted so every statement after a lock sees what the previous
+    /// owner of that lock committed; REPEATABLE READ would keep answering from the snapshot taken before the lock was
+    /// granted, which is exactly how two writers both "see" a free slot. SQLite has one writer at a time, so it keeps the
+    /// strongest level it offers.
+    /// </summary>
+    public Task<IDbContextTransaction> BeginCommandTransactionAsync(CancellationToken ct = default) =>
+        db.Database.BeginTransactionAsync(IsMySql ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable, ct);
+
+    /// <summary>
+    /// Takes the person/slot <see cref="Domain.Entities.Scheduling.ScheduleAnchor"/> for the rest of the caller's
+    /// transaction, creating it when the slot has never been written and bumping its revision so the row is written and
+    /// therefore locked (spec §11: two commands that both see an empty slot still contend on this row, so only one of them
+    /// can commit the first create).
+    /// </summary>
+    public async Task<ScheduleAnchor> LockSlotAsync(
+        int personId, DateOnly shiftDate, Shift shift, DateTime nowUtc, CancellationToken ct = default)
+    {
+        var anchor = await db.ScheduleAnchors.FirstOrDefaultAsync(
+            row => row.PersonId == personId && row.ShiftDate == shiftDate && row.Shift == shift, ct);
+        if (anchor is null)
+        {
+            var created = new ScheduleAnchor
+            {
+                PersonId = personId, ShiftDate = shiftDate, Shift = shift, Revision = 1, UpdatedAt = nowUtc,
+            };
+            db.ScheduleAnchors.Add(created);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                return created;
+            }
+            catch (DbUpdateException)
+            {
+                // Another command created this slot's anchor first, which is the case the row exists for.
+                db.Entry(created).State = EntityState.Detached;
+                anchor = await FindSlotAnchorUnderLockAsync(personId, shiftDate, shift, ct);
+                if (anchor is null)
+                {
+                    throw;
+                }
+            }
+        }
+
+        anchor.Revision += 1;
+        anchor.UpdatedAt = nowUtc;
+        await db.SaveChangesAsync(ct);
+        return anchor;
+    }
+
+    /// <summary>
+    /// Takes the per-person baseline head <see cref="Domain.Entities.Scheduling.ScheduleBaselineAnchor"/> for the rest of
+    /// the caller's transaction, creating it when the person has no baseline yet: a version's first row and a range edit
+    /// of an existing one both serialise here, so neither can be decided from a state the other is about to change.
+    /// </summary>
+    public async Task<ScheduleBaselineAnchor> LockBaselineHeadAsync(
+        int personId, DateTime nowUtc, CancellationToken ct = default)
+    {
+        var anchor = await db.ScheduleBaselineAnchors.FirstOrDefaultAsync(row => row.PersonId == personId, ct);
+        if (anchor is null)
+        {
+            var created = new ScheduleBaselineAnchor { PersonId = personId, Revision = 1, UpdatedAt = nowUtc };
+            db.ScheduleBaselineAnchors.Add(created);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                return created;
+            }
+            catch (DbUpdateException)
+            {
+                db.Entry(created).State = EntityState.Detached;
+                anchor = await FindBaselineAnchorUnderLockAsync(personId, ct);
+                if (anchor is null)
+                {
+                    throw;
+                }
+            }
+        }
+
+        anchor.Revision += 1;
+        anchor.UpdatedAt = nowUtc;
+        await db.SaveChangesAsync(ct);
+        return anchor;
+    }
+
+    /// <summary>
+    /// The slot anchor this transaction just failed to create, read with a locking read on MySQL so the winner's row is
+    /// visible even though this transaction began before that commit. A plain read (SQLite) cannot answer from an older
+    /// snapshot, so it stays plain.
+    /// </summary>
+    private async Task<ScheduleAnchor?> FindSlotAnchorUnderLockAsync(
+        int personId, DateOnly shiftDate, Shift shift, CancellationToken ct)
+    {
+        if (IsMySql)
+        {
+            var rows = await db.ScheduleAnchors
+                .FromSqlRaw("SELECT * FROM schedule_anchors WHERE person_id = {0} FOR UPDATE", personId)
+                .ToListAsync(ct);
+            return rows.FirstOrDefault(row => row.ShiftDate == shiftDate && row.Shift == shift);
+        }
+
+        var existing = await db.ScheduleAnchors.AsNoTracking().FirstOrDefaultAsync(
+            row => row.PersonId == personId && row.ShiftDate == shiftDate && row.Shift == shift, ct);
+        return existing is null ? null : await db.ScheduleAnchors.FirstAsync(row => row.Id == existing.Id, ct);
+    }
+
+    /// <summary>The per-person baseline head, read with the same locking read for the same reason.</summary>
+    private async Task<ScheduleBaselineAnchor?> FindBaselineAnchorUnderLockAsync(int personId, CancellationToken ct)
+    {
+        if (IsMySql)
+        {
+            var rows = await db.ScheduleBaselineAnchors
+                .FromSqlRaw("SELECT * FROM schedule_baseline_anchors WHERE person_id = {0} FOR UPDATE", personId)
+                .ToListAsync(ct);
+            return rows.FirstOrDefault(row => row.PersonId == personId);
+        }
+
+        var existing = await db.ScheduleBaselineAnchors.AsNoTracking()
+            .FirstOrDefaultAsync(row => row.PersonId == personId, ct);
+        return existing is null ? null : await db.ScheduleBaselineAnchors.FirstAsync(row => row.Id == existing.Id, ct);
+    }
 
     /// <summary>
     /// Spec §3, §10 and §11 (acceptance A01, A04, A20 and A27): the authorised projection of one ISO week. The roster is

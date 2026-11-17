@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json.Serialization;
 using JanitorialManagementDashboard.Api;
@@ -8,6 +9,7 @@ using JanitorialManagementDashboard.Api.Hubs;
 using JanitorialManagementDashboard.Api.Retention;
 using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Retention;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Retention;
 using JanitorialManagementDashboard.Application.Accounts;
 using JanitorialManagementDashboard.Application.Attendance;
@@ -76,6 +78,27 @@ try
     builder.Services.AddScoped<ScheduleStore>();
     builder.Services.AddScoped<ScheduleScopeReader>();
     builder.Services.AddScoped<SupervisorMembership>();
+
+    // Spec §11: the command engine and its seams. The settings are built without demanding a signing key, and the token
+    // service resolves the key only when a command is actually issued or verified, so a server that leaves scheduling off
+    // still starts, logs in and serves the legacy endpoints with no key configured at all (Task 6 adds the routes and the
+    // real command kinds; Task 12 replaces the no-op notification).
+    var scheduling = builder.Configuration.GetSection(SchedulingSettings.SectionName);
+    var schedulingSettings = new SchedulingSettings(scheduling[SchedulingSettings.CommandSigningKeyName])
+    {
+        Enabled = scheduling.GetValue("Enabled", false),
+        // A stored date format, read with the invariant culture so a machine's calendar never reinterprets it.
+        HistoryStartsAt = DateOnly.TryParse(
+            scheduling["HistoryStartsAt"], CultureInfo.InvariantCulture, out var historyStartsAt)
+            ? historyStartsAt
+            : null,
+    };
+    builder.Services.AddSingleton(schedulingSettings);
+    builder.Services.AddScoped(provider =>
+        new ScheduleCommandTokenService(provider.GetRequiredService<SchedulingSettings>().CommandSigningKey));
+    builder.Services.AddScoped<IScheduleCommandNotifier, NoOpScheduleCommandNotifier>();
+    builder.Services.AddScoped<ScheduleCommandService>();
+
     if (!builder.Environment.IsEnvironment("Testing"))
         builder.Services.AddHostedService<RetentionWorker>();
 
