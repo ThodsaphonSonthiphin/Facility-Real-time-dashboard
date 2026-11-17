@@ -1,4 +1,5 @@
 using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 
 namespace JanitorialManagementDashboard.UnitTests;
@@ -27,6 +28,41 @@ public class AttendanceRulesTests
     [Fact]
     public void After_shift_out_nothing() =>
         Assert.Empty(Next(AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut));
+
+    [Fact]
+    public void The_versioned_answer_for_a_legacy_slot_is_still_the_legacy_answer()
+    {
+        // ADR facility-0222 with spec §8 Cutover: a slot without a lifecycle row, or an old correction, keeps the four.
+        Assert.Equal(new[] { AttendanceEvent.ShiftIn }, AttendanceRules.NextAllowed(AttendanceLifecycleVersion.Legacy4, []));
+        Assert.Equal(
+            new[] { AttendanceEvent.BreakOut, AttendanceEvent.ShiftOut },
+            AttendanceRules.NextAllowed(AttendanceLifecycleVersion.Legacy4, [AttendanceEvent.ShiftIn]));
+        Assert.Equal(
+            new[] { AttendanceEvent.ShiftOut },
+            AttendanceRules.NextAllowed(
+                AttendanceLifecycleVersion.Legacy4, [AttendanceEvent.ShiftIn, AttendanceEvent.BreakOut, AttendanceEvent.BreakIn]));
+        Assert.Empty(AttendanceRules.NextAllowed(
+            AttendanceLifecycleVersion.Legacy4, [AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut]));
+    }
+
+    [Fact]
+    public void The_versioned_answer_for_a_numbered_slot_is_the_six_action_lifecycle()
+    {
+        Assert.Equal(new[] { AttendanceEvent.ShiftIn }, AttendanceRules.NextAllowed(AttendanceLifecycleVersion.Numbered6, []));
+        Assert.Equal(
+            new[]
+            {
+                AttendanceEvent.Break1Out, AttendanceEvent.Break1In, AttendanceEvent.Break2Out, AttendanceEvent.Break2In,
+                AttendanceEvent.ShiftOut,
+            },
+            AttendanceRules.NextAllowed(AttendanceLifecycleVersion.Numbered6, [AttendanceEvent.ShiftIn]));
+        Assert.Empty(AttendanceRules.NextAllowed(
+            AttendanceLifecycleVersion.Numbered6,
+            [
+                AttendanceEvent.ShiftIn, AttendanceEvent.Break1Out, AttendanceEvent.Break1In, AttendanceEvent.Break2Out,
+                AttendanceEvent.Break2In, AttendanceEvent.ShiftOut,
+            ]));
+    }
 
     [Fact]
     public void On_duty_from_shift_in_until_shift_out_breaks_included()

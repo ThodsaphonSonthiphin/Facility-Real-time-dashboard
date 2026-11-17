@@ -1,3 +1,4 @@
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 
 namespace JanitorialManagementDashboard.Application.Attendance;
@@ -11,6 +12,18 @@ public static class AttendanceRules
         : recorded.Contains(AttendanceEvent.BreakOut) ? [AttendanceEvent.BreakIn, AttendanceEvent.ShiftOut]
         : recorded.Contains(AttendanceEvent.ShiftIn) ? [AttendanceEvent.BreakOut, AttendanceEvent.ShiftOut]
         : [AttendanceEvent.ShiftIn];
+
+    /// <summary>
+    /// Spec §8 (ADR facility-0222): the same question for a slot whose lifecycle version is known. A legacy slot answers
+    /// exactly as above, so every existing caller and old correction keeps its meaning; a numbered slot answers with the
+    /// shared six-action lifecycle. There is no global required version — each caller names its slot's version, so nothing
+    /// silently moves a legacy slot to numbered breaks.
+    /// </summary>
+    public static IReadOnlyList<AttendanceEvent> NextAllowed(
+        AttendanceLifecycleVersion version, IReadOnlyCollection<AttendanceEvent> recorded) =>
+        version == AttendanceLifecycleVersion.Legacy4
+            ? NextAllowed(recorded)
+            : AttendanceLifecycle.NextActions(version, recorded, []).Select(choice => choice.Action).ToArray();
 
     /// <summary>Owner decision 2026-10-09: a Cleaner may submit from Shift-In until Shift-Out; a break does not stop it.</summary>
     public static bool IsOnDuty(IReadOnlyCollection<AttendanceEvent> recorded) =>

@@ -100,4 +100,43 @@ public class AttendanceCalendarTests
         Assert.Equal(new TimeOnly(17, 30), opens);
         Assert.Equal(new TimeOnly(7, 30), closes);
     }
+
+    /// <summary>Spec §8 Cutover (ADR facility-0222): the one definition of the receiving window edges, in UTC.</summary>
+    [Fact]
+    public void The_window_of_a_slot_is_the_configured_margin_around_the_shift()
+    {
+        var (opens, closes) = AttendanceCalendar.Window(new ShiftSlot(new DateOnly(2026, 10, 8), Shift.Day), Settings);
+        Assert.Equal(Thai(8, 6, 0), opens);
+        Assert.Equal(Thai(8, 20, 0), closes);
+    }
+
+    [Fact]
+    public void A_night_slots_window_closes_on_the_next_morning()
+    {
+        var (opens, closes) = AttendanceCalendar.Window(new ShiftSlot(new DateOnly(2026, 10, 8), Shift.Night), Settings);
+        Assert.Equal(Thai(8, 18, 0), opens);
+        Assert.Equal(Thai(9, 8, 0), closes);
+    }
+
+    [Fact]
+    public void The_window_edges_are_the_instants_slot_for_accepts()
+    {
+        var slot = new ShiftSlot(new DateOnly(2026, 10, 8), Shift.Day);
+        var (opens, closes) = AttendanceCalendar.Window(slot, Settings);
+
+        Assert.Equal(slot, AttendanceCalendar.SlotFor(Shift.Day, opens, Settings));
+        Assert.Null(AttendanceCalendar.SlotFor(Shift.Day, opens.AddTicks(-1), Settings));
+        Assert.Equal(slot, AttendanceCalendar.SlotFor(Shift.Day, closes, Settings));
+        Assert.Null(AttendanceCalendar.SlotFor(Shift.Day, closes.AddTicks(1), Settings));
+    }
+
+    [Fact]
+    public void The_window_edges_place_an_admins_time_rather_than_refusing_it()
+    {
+        var slot = new ShiftSlot(new DateOnly(2026, 10, 8), Shift.Day);
+        var (opens, closes) = AttendanceCalendar.Window(slot, Settings);
+
+        Assert.Equal((DateTime?)opens, AttendanceCalendar.PlaceTime(slot, new TimeOnly(6, 0), Settings));
+        Assert.Equal((DateTime?)closes, AttendanceCalendar.PlaceTime(slot, new TimeOnly(20, 0), Settings));
+    }
 }
