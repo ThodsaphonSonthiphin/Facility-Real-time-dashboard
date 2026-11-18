@@ -104,6 +104,13 @@ public sealed class SchedulingRetention(AppDbContext db)
             .Where(confirmation => obsoleteTransfers.Any(transfer => transfer.Id == confirmation.TransferId))
             .ExecuteDeleteAsync(ct);
         deleted += await obsoleteTransfers.ExecuteDeleteAsync(ct);
+        // An overnight slot can begin before the boundary and still have an actual time inside it.
+        deleted += await db.AttendanceGaps.Where(gap => gap.ShiftDate < earliestRetained
+            && !db.ShiftAttendances.Any(fact => fact.UserId == gap.UserId
+                && fact.ShiftDate == gap.ShiftDate && fact.Shift == gap.Shift)).ExecuteDeleteAsync(ct);
+        deleted += await db.ScheduleAnchors.Where(anchor => anchor.ShiftDate < earliestRetained
+            && !db.ShiftAttendances.Any(fact => fact.UserId == anchor.PersonId
+                && fact.ShiftDate == anchor.ShiftDate && fact.Shift == anchor.Shift)).ExecuteDeleteAsync(ct);
         return deleted;
     }
 

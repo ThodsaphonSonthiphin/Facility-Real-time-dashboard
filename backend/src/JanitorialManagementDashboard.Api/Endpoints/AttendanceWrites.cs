@@ -4,7 +4,6 @@ using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
 
@@ -41,12 +40,6 @@ internal static class AttendanceWrites
     {
         ArgumentNullException.ThrowIfNull(fact);
         var slot = new ShiftSlot(fact.ShiftDate, fact.Shift);
-
-        // A single SaveChanges is already one atomic unit, so the scan path needs no explicit transaction — and the unique
-        // index on the facts is what decides a race, exactly as it always has. The scoped correction additionally writes an
-        // audit row, which is a second save and therefore needs the two to share one transaction.
-        IDbContextTransaction? transaction = also is null ? null : await db.Database.BeginTransactionAsync(ct);
-        await using var scope = transaction;
 
         var gaps = await db.AttendanceGaps
             .Where(gap => gap.UserId == fact.UserId && gap.ShiftDate == fact.ShiftDate && gap.Shift == fact.Shift)
@@ -99,10 +92,6 @@ internal static class AttendanceWrites
             // Another writer stored this action first, which the unique index keeps. Anything else is not ours to explain.
             // See docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md.
             db.ChangeTracker.Clear();
-            if (transaction is not null)
-            {
-                await transaction.RollbackAsync(ct);
-            }
 
             var facts = await AttendanceEndpoints.LoadEventsAsync(db, fact.UserId, slot);
             if (!facts.Any(row => row.EventType == fact.EventType))
@@ -116,11 +105,6 @@ internal static class AttendanceWrites
         if (also is not null)
         {
             await also(fact);
-        }
-
-        if (transaction is not null)
-        {
-            await transaction.CommitAsync(ct);
         }
 
         return new Written(true, await AttendanceEndpoints.LoadEventsAsync(db, fact.UserId, slot));

@@ -85,4 +85,5 @@ public sealed record ScheduleScopedDate(ScheduleScopeKey Scope, DateOnly Date);
 /// command" — there is no partial success and no automatic merge.
 /// </summary>
 public sealed record ScheduleCommandApplication(
-    IReadOnlyDictionary<string, string> Revisions, IReadOnlyList<RowProblem> Problems);
+    IReadOnlyDictionary<string, string> Revisions, IReadOnlyList<RowProblem> Problems,
+    IReadOnlyList<ScheduleScopeKey>? ReceiptScopes = null);

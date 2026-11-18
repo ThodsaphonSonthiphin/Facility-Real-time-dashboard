@@ -200,7 +200,7 @@ public sealed class InstructTransferHandler(TimeProvider clock, ScheduleStore st
                 effectiveAt = created.EffectiveAt,
             }), reason));
         revisions[key] = Revision(created.Revision);
-        return new ScheduleCommandApplication(revisions, []);
+        return new ScheduleCommandApplication(revisions, [], [new ScheduleScopeKey(fromArea.BuildingId, transfer.Shift)]);
     }
 }
 
@@ -302,7 +302,7 @@ public sealed class CancelTransferHandler(TimeProvider clock) : ScheduleCommandH
         db.ScheduleChanges.Add(Change(request, receipt, "AreaTransfer", instruction.Id, "cancel", before,
             Json(new { revision = Revision(instruction.Revision), cancelled = true }), reason));
         revisions[key] = Revision(instruction.Revision);
-        return new ScheduleCommandApplication(revisions, []);
+        return new ScheduleCommandApplication(revisions, [], [new ScheduleScopeKey(fromArea.BuildingId, instruction.Shift)]);
     }
 
     /// <summary>The one confirmation of an instruction, if somebody already arrived under it.</summary>

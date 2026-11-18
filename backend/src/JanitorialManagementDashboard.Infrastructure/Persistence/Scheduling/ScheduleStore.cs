@@ -230,8 +230,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     public async Task<ScheduleAnchor> LockSlotAsync(
         int personId, DateOnly shiftDate, Shift shift, DateTime nowUtc, CancellationToken ct = default)
     {
-        var anchor = await db.ScheduleAnchors.FirstOrDefaultAsync(
-            row => row.PersonId == personId && row.ShiftDate == shiftDate && row.Shift == shift, ct);
+        var anchor = await FindSlotAnchorUnderLockAsync(personId, shiftDate, shift, ct);
         if (anchor is null)
         {
             var created = new ScheduleAnchor
@@ -309,9 +308,8 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     }
 
     /// <summary>
-    /// The slot anchor this transaction just failed to create, read with a locking read on MySQL so the winner's row is
-    /// visible even though this transaction began before that commit. A plain read (SQLite) cannot answer from an older
-    /// snapshot, so it stays plain.
+    /// Lock this exact slot before modifying its anchor so a concurrent retention delete or another slot writer
+    /// serialises with this transaction. SQLite serialises writers at the transaction level.
     /// </summary>
     private async Task<ScheduleAnchor?> FindSlotAnchorUnderLockAsync(
         int personId, DateOnly shiftDate, Shift shift, CancellationToken ct)
@@ -319,14 +317,14 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         if (IsMySql)
         {
             var rows = await db.ScheduleAnchors
-                .FromSqlRaw("SELECT * FROM schedule_anchors WHERE person_id = {0} FOR UPDATE", personId)
+                .FromSqlRaw("SELECT * FROM schedule_anchors WHERE person_id = {0} AND shift_date = {1} AND shift = {2} FOR UPDATE",
+                    personId, shiftDate.ToDateTime(TimeOnly.MinValue), shift.ToString().ToUpperInvariant())
                 .ToListAsync(ct);
-            return rows.FirstOrDefault(row => row.ShiftDate == shiftDate && row.Shift == shift);
+            return rows.SingleOrDefault();
         }
 
-        var existing = await db.ScheduleAnchors.AsNoTracking().FirstOrDefaultAsync(
+        return await db.ScheduleAnchors.FirstOrDefaultAsync(
             row => row.PersonId == personId && row.ShiftDate == shiftDate && row.Shift == shift, ct);
-        return existing is null ? null : await db.ScheduleAnchors.FirstAsync(row => row.Id == existing.Id, ct);
     }
 
     /// <summary>The per-person baseline head, read with the same locking read for the same reason.</summary>

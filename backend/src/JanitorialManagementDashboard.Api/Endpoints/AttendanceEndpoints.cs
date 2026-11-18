@@ -107,6 +107,9 @@ public static class AttendanceEndpoints
             return ApiResults.Message(StatusCodes.Status409Conflict, OutsideWindow);
         }
 
+        await using var transaction = await store.BeginCommandTransactionAsync(ct);
+        await store.LockSlotAsync(user.Id, slot.ShiftDate, slot.Shift, now, ct);
+
         // Spec §7 and ruling A: the sign's Area must be the slot's effective duty Area — a live relief assignment's Area, a
         // dated plan's Area, or the compatibility projection for a person with no dated identity. Home building alone grants
         // nothing, so a relief with no assignment is refused exactly as another Area's sign is refused today.
@@ -122,7 +125,9 @@ public static class AttendanceEndpoints
 
         if (area.Id != duty.AreaId)
         {
-            return await BlockedScans.BlockAsync(db, user, sign, area, BlockReason.OtherArea, gps, now);
+            var blocked = await BlockedScans.BlockAsync(db, user, sign, area, BlockReason.OtherArea, gps, now);
+            await transaction.CommitAsync(ct);
+            return blocked;
         }
 
         if (!area.HasShift(slot.Shift))
@@ -197,6 +202,7 @@ public static class AttendanceEndpoints
         var written = await AttendanceWrites.RecordAsync(
             db, entry, choice.RequiredGaps, area.Id, user.Id, now, also: null, ct);
 
+        await transaction.CommitAsync(ct);
         if (!written.Stored)
         {
             // The unique index keeps the first press; the loser reads the facts as they now stand.
@@ -259,7 +265,8 @@ public static class AttendanceEndpoints
         {
             var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, now, ct);
             canConfirmTransfer = duty.Transfer is { IsPending: true } transfer
-                && transfer.Id == transferId && transfer.ToAreaId == sign.AreaId;
+                && transfer.Id == transferId && transfer.ToAreaId == sign.AreaId
+                && !await TransferCommandService.HasFinalOutAsync(db, user.Id, slot, ct);
         }
 
         return Results.Ok(new { canConfirmTransfer });

@@ -132,9 +132,6 @@ public sealed class ScheduleCommandService(
                 PayloadFingerprint = fingerprint,
                 ExpectedRevisionsJson = JsonSerializer.Serialize(SortedRevisions(command.ExpectedRevisions)),
 
-                // Spec §11: the scope is retained with the result, so the status lookup can require the actor to still hold
-                // the building/shift this command applied to — not merely some authority of the same kind today.
-                ScopeJson = SerializeScope(plan.Scopes),
                 Outcome = ScheduleCommandOutcome.Committed,
                 ResultJson = "{}",
                 CommittedAt = now.UtcDateTime,
@@ -153,6 +150,7 @@ public sealed class ScheduleCommandService(
 
             var result = new CommandResult(
                 command.CommandId, ScheduleCommandOutcome.Committed, applied.Revisions, []);
+            receipt.ScopeJson = SerializeScope(applied.ReceiptScopes ?? plan.Scopes);
             receipt.ResultJson = JsonSerializer.Serialize(result);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -326,7 +324,7 @@ public sealed class ScheduleCommandService(
     private static CommandResult Retained(
         ScheduleCommandReceipt receipt, string fingerprint, int actorId, ActorAuthority authority)
     {
-        if (receipt.ActorId != actorId)
+        if (receipt.ActorId != actorId || !HoldsRecordedScope(receipt, authority))
         {
             return Refused(receipt.CommandId, ScheduleCommandOutcome.NotAuthorised);
         }
@@ -336,17 +334,17 @@ public sealed class ScheduleCommandService(
             return Refused(receipt.CommandId, ScheduleCommandOutcome.PayloadMismatch);
         }
 
-        return HoldsRecordedScope(receipt, authority)
-            ? StoredResult(receipt)
-            : Refused(receipt.CommandId, ScheduleCommandOutcome.NotAuthorised);
+        return StoredResult(receipt);
     }
 
     /// <summary>
-    /// Spec §11: does the actor still hold the building/shift this receipt recorded? A command that touched no scope anchor
-    /// has no key to lose, and a scope that cannot be read back answers "no" rather than widening the answer.
+    /// A Supervisor needs the original authority for this receipt. Old transfer receipts lack the origin proof.
     /// </summary>
     private static bool HoldsRecordedScope(ScheduleCommandReceipt receipt, ActorAuthority authority) =>
-        ReadScope(receipt.ScopeJson) is { } scope && authority.HoldsScope(scope);
+        ReadScope(receipt.ScopeJson) is { } scope
+        && (scope.Count > 0 || authority.Role == UserRole.Admin
+            || receipt.Kind is not (ScheduleCommandKinds.InstructTransfer or ScheduleCommandKinds.CancelTransfer))
+        && authority.HoldsScope(scope);
 
     private static CommandResult Refused(Guid commandId, string outcome) =>
         new(commandId, outcome, NoRevisions, []);

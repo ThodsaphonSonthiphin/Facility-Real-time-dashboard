@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
-using JanitorialManagementDashboard.Api.Hubs;
 using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Rounds;
@@ -13,7 +12,6 @@ using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -183,8 +181,7 @@ public static class TeamAttendanceEndpoints
         ScheduleScopeReader scopes,
         TimeProvider clock,
         AttendanceSettings settings,
-        IHubContext<ScanHub> hub,
-        ILogger<ScanHub> logger,
+        ScheduleNotifications notifications,
         CancellationToken ct)
     {
         var actor = await CurrentUser.LoadAsync(principal, db);
@@ -233,6 +230,8 @@ public static class TeamAttendanceEndpoints
 
         // The actual fact belongs to the effective duty Area. A pending transfer permits no attendance write.
         var nowOffset = clock.GetUtcNow();
+        await using var transaction = await store.BeginCommandTransactionAsync(ct);
+        await store.LockSlotAsync(person.Id, slot.ShiftDate, slot.Shift, nowOffset.UtcDateTime, ct);
         var duty = await EffectiveDutyReader.ReadAsync(db, store, person, slot, nowOffset, ct);
         if (duty.AreaId is not { } areaId)
         {
@@ -322,7 +321,8 @@ public static class TeamAttendanceEndpoints
             return ApiResults.Message(StatusCodes.Status409Conflict, AlreadyRecorded);
         }
 
-        await AttendanceBoard.NotifyAsync(hub, db, logger, areaId, slot);
+        await transaction.CommitAsync(ct);
+        await notifications.ActualChangedAsync(person.Id, areaId, slot, ct);
         return Results.Ok(await AttendanceEndpoints.StateForSlotAsync(db, store, person, slot, now, ct));
     }
 

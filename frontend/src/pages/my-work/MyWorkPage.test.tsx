@@ -242,6 +242,16 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3));
   });
 
+  it('refetches My Work when another client changes the Cleaner’s slot', async () => {
+    const server = serveMyWork(myWork());
+    await renderApp('/my-work');
+    await settled(server);
+
+    act(() => hub.latest().push('ScheduleChanged', { commandId: 'slot-change' }));
+
+    await waitFor(() => expect(server.calls.filter((call) => call.path === '/api/my-work')).toHaveLength(3));
+  });
+
   it('asks the server again each time the page opens (facility-0052)', async () => {
     const server = serveMyWork(myWork());
     const { router } = await renderApp('/my-work');

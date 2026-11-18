@@ -96,7 +96,8 @@ try
     builder.Services.AddSingleton(schedulingSettings);
     builder.Services.AddScoped(provider =>
         new ScheduleCommandTokenService(provider.GetRequiredService<SchedulingSettings>().CommandSigningKey));
-    builder.Services.AddScoped<IScheduleCommandNotifier, ScheduleNotifications>();
+    builder.Services.AddScoped<ScheduleNotifications>();
+    builder.Services.AddScoped<IScheduleCommandNotifier>(provider => provider.GetRequiredService<ScheduleNotifications>());
     builder.Services.AddScoped<ScheduleCommandService>();
 
     // Spec §11 and §5: one handler per command kind, resolved by kind through the seam the engine already calls. Each kind

@@ -1,3 +1,6 @@
+using System.Data.Common;
+using System.Net;
+using System.Net.Http.Json;
 using JanitorialManagementDashboard.Api.Endpoints;
 using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
@@ -10,6 +13,8 @@ using JanitorialManagementDashboard.Infrastructure.Auth;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JanitorialManagementDashboard.ApiTests.Scheduling;
 
@@ -28,6 +33,69 @@ public class MySqlAttendanceRaceTests
 
     private static DbContextOptions<AppDbContext> Options() =>
         new DbContextOptionsBuilder<AppDbContext>().UseMySQL(MySqlTestDatabase.ConnectionString()).Options;
+
+    [MySqlFact]
+    public async Task Two_different_numbered_scans_from_one_revision_commit_only_one_action()
+    {
+        await FreshDatabaseAsync();
+        var gate = new RacingSlotLocks();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseMySQL(MySqlTestDatabase.ConnectionString()).AddInterceptors(gate).Options;
+        using var factory = new JanitorialApiFactory
+        {
+            ConfigureTestServices = services => services.AddScoped(_ => new AppDbContext(options)),
+        };
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Date, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+        factory.Clock.SetUtcNow(new DateTimeOffset(2026, 11, 17, 7, 5, 0, TimeSpan.FromHours(7)));
+        var initial = await EffectiveAttendanceApi.StateAsync(cleaner);
+        await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, factory.Clock.GetUtcNow(), "ShiftIn",
+            lifecycleVersion: "Numbered6", stateRevision: initial.StateRevision);
+
+        factory.Clock.SetUtcNow(factory.Clock.GetUtcNow().AddHours(5));
+        var working = await EffectiveAttendanceApi.StateAsync(cleaner);
+        gate.Armed = true;
+        var responses = await Task.WhenAll(Scan("Break1Out"), Scan("ShiftOut"));
+        Assert.Equal(2, gate.Attempts);
+        Assert.Single(responses, response => response.StatusCode == HttpStatusCode.OK);
+        var refused = Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Conflict);
+        Assert.Equal("refresh-required", (await refused.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+
+        var final = await EffectiveAttendanceApi.StateAsync(cleaner);
+        Assert.Equal(2, final.Events.Count);
+        var actual = final.Events.Select(row => row.EventType).ToList();
+        Assert.DoesNotContain(final.Gaps!, gap => actual.Contains(gap.EventType) && gap.Status == "Skipped");
+        return;
+
+        Task<HttpResponseMessage> Scan(string action) => EffectiveAttendanceApi.RecordAsync(cleaner, action,
+            lifecycleVersion: "Numbered6", stateRevision: working.StateRevision,
+            confirmGaps: working.NextActions!.Single(choice => choice.Action == action).RequiredGaps);
+    }
+
+    // Wait for both independent request transactions immediately before either can obtain the slot.
+    private sealed class RacingSlotLocks : DbCommandInterceptor
+    {
+        private readonly TaskCompletionSource _both = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _attempts;
+        public bool Armed { get; set; }
+        public int Attempts => _attempts;
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Armed && command.CommandText.Contains("FROM schedule_anchors", StringComparison.Ordinal)
+                && command.CommandText.Contains("FOR UPDATE", StringComparison.Ordinal))
+            {
+                if (Interlocked.Increment(ref _attempts) == 2)
+                {
+                    _both.TrySetResult();
+                }
+                await _both.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+            }
+            return result;
+        }
+    }
 
     [MySqlFact]
     public async Task Two_parallel_fills_of_the_same_missing_action_keep_the_first_fact()

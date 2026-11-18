@@ -56,6 +56,19 @@ public class MySqlSchedulingRetentionTests
                 UserId = person.Id, Kind = BaselineKind.Regular, EffectiveFrom = new(2026, 1, 1), Revision = 1,
                 CreatedById = admin.Id, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
             };
+            var oldest = new DateOnly(2025, 11, 3);
+            var dates = new[] { oldest.AddDays(-2), oldest.AddDays(-1), oldest, oldest.AddDays(1) };
+            foreach (var date in dates)
+            {
+                db.ScheduleAnchors.Add(new ScheduleAnchor { PersonId = person.Id, ShiftDate = date,
+                    Shift = Shift.Night, UpdatedAt = now.UtcDateTime });
+                db.AttendanceGaps.Add(new AttendanceGap { UserId = person.Id, ShiftDate = date, Shift = Shift.Night,
+                    EventType = AttendanceEvent.Break1Out, RecordedById = admin.Id, AreaId = areas[0], CreatedAt = now.UtcDateTime });
+            }
+            // The previous night's slot still has detail just inside the UTC cutoff.
+            db.ShiftAttendances.Add(new Domain.Entities.ShiftAttendance { UserId = person.Id, ShiftDate = oldest.AddDays(-1),
+                Shift = Shift.Night, AreaId = areas[0], EventType = AttendanceEvent.ShiftOut,
+                OccurredAt = now.UtcDateTime.AddYears(-1).AddMinutes(1), CreatedAt = now.UtcDateTime });
             db.ScheduleBaselines.AddRange(obsolete, boundary, active);
 
             db.ScheduleExceptions.AddRange(
@@ -104,6 +117,8 @@ public class MySqlSchedulingRetentionTests
             Assert.Equal(1, result.GpsCleared);
             db.ChangeTracker.Clear();
 
+            Assert.Equal(dates.Skip(1), await db.ScheduleAnchors.OrderBy(row => row.ShiftDate).Select(row => row.ShiftDate).ToListAsync());
+            Assert.Equal(dates.Skip(1), await db.AttendanceGaps.OrderBy(row => row.ShiftDate).Select(row => row.ShiftDate).ToListAsync());
             var baselines = await db.ScheduleBaselines.OrderBy(baseline => baseline.Id).ToListAsync();
             Assert.Equal(new[] { boundary.Id, active.Id }, baselines.Select(baseline => baseline.Id));
             Assert.Empty(await db.ScheduleBaselineDays.ToListAsync());

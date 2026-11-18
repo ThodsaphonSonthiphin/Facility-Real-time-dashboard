@@ -27,6 +27,85 @@ public class AreaTransferTests
     // The happy path: an instruction at 13:00, an arrival at 13:05, and nothing about the shift rewritten.
     // ---------------------------------------------------------------------------------------------------------------
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Transfer_receipt_requires_the_original_scope_on_lookup_and_replay(bool cancel)
+    {
+        using var factory = TransferApi.NewFactory();
+        var originBuilding = await AdminSetupApi.BuildingIdAsync(factory);
+        await TestData.AddBuildingAsync(factory, "B");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var destination = await TestData.AddAreaAsync(factory, "AR03", "B");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new(2026, 10, 1));
+        var (owner, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await TransferApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
+        var at = TransferApi.Thai(13, 0);
+        var expected = new Dictionary<string, string>();
+        object payload = new { userId = auth.User.Id, fromAreaId = origin, toAreaId = destination,
+            shiftDate = "2026-10-08", shift = "Day", effectiveAt = at, reason = "test move" };
+        if (cancel)
+        {
+            var transferId = await TransferApi.InstructForIdAsync(factory, owner, auth.User.Id, origin, destination, at);
+            expected[TransferApi.Key(auth.User.Id)] = "1";
+            payload = new { transferId, reason = "test cancellation" };
+        }
+        var token = (await ScheduleWriteApi.IssueAsync(owner))!;
+        var envelope = new { token = token.Token, commandId = token.CommandId, expectedRevisions = expected,
+            kind = cancel ? TransferApi.Cancel : TransferApi.Instruct, payload };
+        var status = $"/api/schedules/commands/{token.CommandId}";
+        var committed = await owner.PostAsJsonAsync("/api/schedules/commands", envelope);
+        Assert.Equal(HttpStatusCode.OK, committed.StatusCode);
+        var body = await committed.Content.ReadAsStringAsync();
+        Assert.Equal(body, await owner.GetStringAsync(status));
+        Assert.Equal(body, await (await owner.PostAsJsonAsync("/api/schedules/commands", envelope)).Content.ReadAsStringAsync());
+
+        // A new building keeps the same account active as a Supervisor after its origin responsibility ends.
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, new(2026, 10, 1));
+        await factory.WithDbAsync(db => db.SupervisorScopePeriods.Where(row => row.BuildingId == originBuilding)
+            .ExecuteUpdateAsync(set => set.SetProperty(row => row.EffectiveUntil, new DateOnly(2026, 10, 8))));
+        Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync(status)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await owner.PostAsJsonAsync("/api/schedules/commands", envelope)).StatusCode);
+
+        // Old transfer receipts did not store the checked origin. Restoring the origin cannot recover that proof.
+        await factory.WithDbAsync(async db =>
+        {
+            await db.SupervisorScopePeriods.Where(row => row.BuildingId == originBuilding)
+                .ExecuteUpdateAsync(set => set.SetProperty(row => row.EffectiveUntil, (DateOnly?)null));
+            await db.ScheduleCommandReceipts.Where(row => row.CommandId == token.CommandId)
+                .ExecuteUpdateAsync(set => set.SetProperty(row => row.ScopeJson, "[]"));
+        });
+        Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync(status)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await owner.PostAsJsonAsync("/api/schedules/commands", envelope)).StatusCode);
+        Assert.Equal(cancel, Assert.Single(await TransferApi.InstructionsAsync(factory)).IsCancelled);
+    }
+
+    [Fact]
+    public async Task An_instruction_effective_after_final_out_cannot_create_arrival_evidence()
+    {
+        using var factory = TransferApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var destination = await TestData.AddAreaAsync(factory, "AR03", "A");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await TransferApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
+        var id = await TransferApi.InstructForIdAsync(factory, admin, auth.User.Id, origin, destination, TransferApi.Thai(13, 0));
+        await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, TransferApi.Thai(12, 59), "ShiftOut");
+
+        factory.Clock.SetUtcNow(TransferApi.Thai(13, 0));
+        var check = await cleaner.GetFromJsonAsync<SignTransferCheck>(
+            $"/api/attendance/signs/{TransferApi.Destination}?transferId={id}");
+        Assert.False(check!.CanConfirmTransfer);
+        var refused = await TransferApi.ConfirmAsync(factory, cleaner, id, "1");
+
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Empty(await TransferApi.ConfirmationsAsync(factory));
+        var facts = await EffectiveAttendanceApi.FactsAsync(factory);
+        Assert.All(facts, fact => Assert.Equal(origin, fact.AreaId));
+        Assert.Equal(new[] { AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut }, facts.Select(fact => fact.EventType));
+    }
+
     [Fact]
     public async Task An_instruction_and_a_destination_confirmation_keep_the_initial_check_in_and_the_origin_area()
     {
@@ -134,6 +213,8 @@ public class AreaTransferTests
         var shiftOut = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftOut", TransferApi.Destination);
         Assert.Equal(HttpStatusCode.OK, shiftOut.StatusCode);
 
+        var replay = await TransferApi.ReadConfirmAsync(await TransferApi.ConfirmAsync(factory, cleaner, transferId, "1"));
+        Assert.Equal(TransferApi.Thai(13, 5), replay.ConfirmedAt);
         var facts = await EffectiveAttendanceApi.FactsAsync(factory);
         Assert.Equal(new[] { AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut }, facts.Select(fact => fact.EventType));
         Assert.Equal(origin, facts[0].AreaId);

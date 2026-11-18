@@ -31,6 +31,7 @@ public static class AreaTransferEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         TransferCommandService transfers,
+        ScheduleNotifications notifications,
         CancellationToken ct)
     {
         var user = await CurrentUser.LoadAsync(principal, db);
@@ -39,9 +40,15 @@ public static class AreaTransferEndpoints
             return Results.Unauthorized();
         }
 
-        var (result, refusal) = await transfers.ConfirmAsync(
+        var (result, refusal, arrival) = await transfers.ConfirmAsync(
             user.Id, id, request.ExpectedRevision, request.QrToken,
             new GpsInputDto(request.Latitude, request.Longitude, request.AccuracyM), ct);
+
+        if (arrival is not null)
+        {
+            await notifications.ActualChangedAsync(arrival.PersonId, arrival.ToAreaId,
+                new(arrival.ShiftDate, arrival.Shift), ct);
+        }
 
         return result is not null
             ? Results.Ok(result)

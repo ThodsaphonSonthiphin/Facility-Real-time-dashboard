@@ -1,4 +1,6 @@
 using System.Globalization;
+using JanitorialManagementDashboard.Api.Endpoints;
+using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Api.Hubs;
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
@@ -37,7 +39,7 @@ public sealed record ScheduleInvalidation(Guid CommandId);
 /// change the outcome of a committed command.
 /// </para>
 /// </summary>
-public sealed class ScheduleNotifications(IHubContext<ScanHub> hub, AppDbContext db, TimeProvider clock)
+public sealed class ScheduleNotifications(IHubContext<ScanHub> hub, AppDbContext db, TimeProvider clock, ILogger<ScheduleNotifications> logger)
     : IScheduleCommandNotifier
 {
     public const string EventName = "ScheduleChanged";
@@ -60,6 +62,21 @@ public sealed class ScheduleNotifications(IHubContext<ScanHub> hub, AppDbContext
         }
 
         await hub.Clients.Users(recipients).SendAsync(EventName, new ScheduleInvalidation(commandId), ct);
+    }
+
+    public async Task ActualChangedAsync(int personId, int areaId, ShiftSlot slot, CancellationToken ct)
+    {
+        await AttendanceBoard.NotifyAsync(hub, db, logger, areaId, slot);
+        try
+        {
+            var buildingId = await db.Areas.Where(area => area.Id == areaId).Select(area => area.BuildingId).SingleAsync(ct);
+            await ChangedAsync(Guid.NewGuid(), new ScheduleChangeScope(
+                [new(personId, slot.ShiftDate, slot.Shift)], [new(buildingId, slot.Shift)], []), ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Live schedule update failed after the attendance change committed");
+        }
     }
 
     private async Task<IReadOnlyList<string>> RecipientsAsync(ScheduleChangeScope scope, CancellationToken ct)

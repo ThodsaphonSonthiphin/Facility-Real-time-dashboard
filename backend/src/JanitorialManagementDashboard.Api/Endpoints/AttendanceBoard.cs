@@ -44,10 +44,16 @@ internal static class AttendanceBoard
                 || areaIds.Contains(pair.Value.Instruction.ToAreaId)
                 || pair.Value.LastConfirmedAreaId is { } last && areaIds.Contains(last))
             .Select(pair => pair.Key).ToList();
+        var relief = await db.ReliefAssignments.AsNoTracking()
+            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift && !row.IsCancelled)
+            .OrderBy(row => row.Id)
+            .Select(row => new { row.UserId, row.AreaId }).ToListAsync(ct);
+        var reliefAreas = relief.GroupBy(row => row.UserId).ToDictionary(group => group.Key, group => group.Last().AreaId);
+        var reliefHere = relief.Where(row => areaIds.Contains(row.AreaId)).Select(row => row.UserId).Distinct().ToList();
         var cleaners = await db.Users.AsNoTracking()
             .Where(u => u.Role == UserRole.Cleaner && u.IsActive
                 && ((u.Shift == slot.Shift && u.AreaId != null && areaIds.Contains(u.AreaId.Value))
-                    || transferredIds.Contains(u.Id)))
+                    || transferredIds.Contains(u.Id) || reliefHere.Contains(u.Id)))
             .ToListAsync(ct);
         var covers = await db.CoverAssignments.AsNoTracking()
             .Include(c => c.User!).ThenInclude(u => u.Area)
@@ -72,9 +78,11 @@ internal static class AttendanceBoard
         // arrival), and current responsibility is a separate answer derived from the same transfer chain Task 10 stores.
         var evidence = await store.ReadEntryEvidenceAsync(slot, ct);
         var enteredAreas = ScheduleEntryEvidence.EnteredAreas(new ScheduleSlot(slot.ShiftDate, slot.Shift), evidence);
+        var baseAreas = cleaners.ToDictionary(user => user.Id,
+            user => reliefAreas.TryGetValue(user.Id, out var assigned) ? (int?)assigned : user.AreaId);
         var positions = transfers.ToDictionary(
             pair => pair.Key,
-            pair => PositionOf(cleaners.FirstOrDefault(u => u.Id == pair.Key)?.AreaId, pair.Value, nowUtc));
+            pair => PositionOf(baseAreas.GetValueOrDefault(pair.Key), pair.Value, nowUtc));
 
         var factsByPerson = events.ToLookup(fact => fact.UserId);
         var rows = areas
@@ -82,7 +90,8 @@ internal static class AttendanceBoard
             {
                 // The person shown is whoever is currently responsible here. A pending instruction has no confirmed
                 // presence at its destination, so it is assigned there (covered) without papering over the missing arrival.
-                var assignedHere = cleaners.Where(user => AreaOf(user, positions) == area.Id).ToList();
+                var assignedHere = cleaners.Where(user => (positions.TryGetValue(user.Id, out var position)
+                    ? position.AreaId : baseAreas[user.Id]) == area.Id).ToList();
                 var responsible = assignedHere
                     .Where(user => !(positions.TryGetValue(user.Id, out var position) && position.IsPending))
                     .OrderByDescending(user => user.AreaId == area.Id).ThenBy(user => user.Id)
@@ -185,13 +194,6 @@ internal static class AttendanceBoard
 
     private static AssignedCleanerDto CleanerDto(User cleaner) =>
         new(cleaner.Id, cleaner.EmployeeId ?? string.Empty, cleaner.DisplayName);
-
-    /// <summary>
-    /// The Area a person is currently responsible for: the transfer chain's answer when the slot has one, else their account
-    /// Area (the board's pre-existing legacy answer for a person with no transfer).
-    /// </summary>
-    private static int? AreaOf(User user, IReadOnlyDictionary<int, TransferPosition> positions) =>
-        positions.TryGetValue(user.Id, out var position) ? position.AreaId : user.AreaId;
 
     /// <summary>
     /// Spec §13 and ADR facility-0216: the responsibility a stored transfer chain means at <paramref name="nowUtc"/>. A

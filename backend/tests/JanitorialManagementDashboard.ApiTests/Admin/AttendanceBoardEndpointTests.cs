@@ -16,6 +16,36 @@ namespace JanitorialManagementDashboard.ApiTests.Admin;
 public class AttendanceBoardEndpointTests
 {
     [Fact]
+    public async Task A_standalone_loan_is_assigned_before_entry_and_entered_only_after_the_destination_scan()
+    {
+        using var factory = ReliefApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var source = await TestData.AddBuildingAsync(factory, "B");
+        var destination = await TestData.AddAreaAsync(factory, "AR03", "A");
+        var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E3001", ReliefApi.Phone("E3001"));
+        var date = DateOnly.FromDateTime(factory.Clock.GetUtcNow().ToOffset(TimeSpan.FromHours(7)).DateTime).AddDays(1);
+        var dateString = ReliefApi.Iso(date);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, date.AddDays(-1));
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, date.AddDays(-1));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var assignment = await ReliefApi.AssignAsync(supervisor, ReliefApi.Assignment(relief, destination, date, source, breakGroup: 1));
+        Assert.Equal(ReliefApi.Committed, assignment.Answer!.Outcome);
+
+        factory.Clock.SetUtcNow(new DateTimeOffset(date.ToDateTime(new TimeOnly(7, 5)), TimeSpan.FromHours(7)));
+        var query = $"?shiftDate={dateString}&shift=Day";
+        var before = (await AdminAttendanceApi.BoardAsync(admin, query)).Rows.Single(row => row.AreaId == destination);
+        Assert.Equal("E3001", before.Cleaner!.EmployeeId);
+        Assert.Equal("covered", before.Entry);
+        Assert.Empty(before.EntryEvidence!);
+        Assert.Equal(HttpStatusCode.OK, (await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn", TransferApi.Destination)).StatusCode);
+        var after = (await AdminAttendanceApi.BoardAsync(admin, query)).Rows.Single(row => row.AreaId == destination);
+        Assert.Equal("entered", after.Entry);
+        Assert.Single(after.EntryEvidence!);
+        Assert.Equal("ShiftIn", Assert.Single(after.Events).EventType);
+    }
+
+    [Fact]
     public async Task The_board_needs_an_admin()
     {
         using var factory = new JanitorialApiFactory();

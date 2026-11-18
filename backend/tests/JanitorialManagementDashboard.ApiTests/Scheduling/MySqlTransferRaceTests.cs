@@ -142,7 +142,7 @@ public class MySqlTransferRaceTests
         var service = new TransferCommandService(db, new ScheduleStore(db, clock), clock,
             new AttendanceSettings());
         await gate.WaitAsync();
-        var (result, refusal) = await service.ConfirmAsync(
+        var (result, refusal, _) = await service.ConfirmAsync(
             seed.PersonId, seed.TransferId, "1", "token-checkin-ar03",
             new GpsInputDto(13.7563, 100.5018, 10));
 

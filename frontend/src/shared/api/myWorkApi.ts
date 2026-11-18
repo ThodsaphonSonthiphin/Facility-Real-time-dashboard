@@ -28,6 +28,7 @@ export const myWorkApi = baseApi.injectEndpoints({
           dispatch,
           accessToken: () => getValidAccessToken(() => getState() as RootState, dispatch),
           onPoint: askAgain,
+          onSchedule: askAgain,
           onMissed: askAgain,
         });
       },

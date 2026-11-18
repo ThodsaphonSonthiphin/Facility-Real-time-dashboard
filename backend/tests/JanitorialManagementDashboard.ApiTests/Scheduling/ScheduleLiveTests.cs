@@ -35,6 +35,60 @@ public class ScheduleLiveTests
         return got;
     }
 
+    [Theory]
+    [InlineData("arrival")]
+    [InlineData("supervisor-add")]
+    [InlineData("admin-edit")]
+    public async Task Actual_changes_invalidate_other_open_authorised_clients(string change)
+    {
+        using var factory = TransferApi.NewFactory();
+        await TestData.AddBuildingAsync(factory, "B");
+        var destination = await TestData.AddAreaAsync(factory, "AR03", "B");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new(2026, 10, 1));
+        await TestData.AddSupervisorAsync(factory, "2000002", "0820000002", "B", Shift.Day);
+        await TestData.AddSupervisorAsync(factory, "2000003", "0820000003", "A", Shift.Night);
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (owner, ownerAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var (_, destinationAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000002", "0820000002");
+        var (_, nightAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000003", "0820000003");
+
+        await TransferApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
+        var id = change == "arrival" ? await TransferApi.InstructForIdAsync(factory, owner, auth.User.Id, origin,
+            destination, TransferApi.Thai(13, 0)) : 0;
+        factory.Clock.SetUtcNow(TransferApi.Thai(13, 5));
+        await using var cleanerHub = await HubClient.ConnectAsync(factory, auth.AccessToken);
+        await using var ownerHub = await HubClient.ConnectAsync(factory, ownerAuth.AccessToken);
+        await using var destinationHub = await HubClient.ConnectAsync(factory, destinationAuth.AccessToken);
+        await using var nightHub = await HubClient.ConnectAsync(factory, nightAuth.AccessToken);
+        var cleanerGot = Listen(cleanerHub);
+        var ownerGot = Listen(ownerHub);
+        var destinationGot = Listen(destinationHub);
+        var nightGot = Listen(nightHub);
+
+        var response = change switch
+        {
+            "arrival" => await TransferApi.ConfirmAsync(factory, cleaner, id, "1"),
+            "admin-edit" => await AdminAttendanceApi.CorrectAsync(admin, auth.User.Id, EffectiveAttendanceApi.Day8,
+                "Day", "ShiftIn", "07:10", "corrected time"),
+            _ => await TeamAttendanceApi.AddAsync(owner, auth.User.Id, "BreakOut", "10:05",
+                expectedRevision: await TeamAttendanceApi.RevisionAsync(factory, auth.User.Id)),
+        };
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await cleanerGot.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var field = Assert.Single(payload.EnumerateObject());
+        Assert.Equal("commandId", field.Name);
+        Assert.NotEqual(Guid.Empty, field.Value.GetGuid());
+        Assert.Equal(field.Value.GetGuid(), (await ownerGot.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("commandId").GetGuid());
+        if (change == "arrival")
+        {
+            Assert.Equal(field.Value.GetGuid(), (await destinationGot.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("commandId").GetGuid());
+        }
+        await Assert.ThrowsAsync<TimeoutException>(() => nightGot.Task.WaitAsync(TimeSpan.FromMilliseconds(300)));
+        Assert.Equal(change == "arrival", destinationGot.Task.IsCompleted);
+    }
+
     [Fact]
     public async Task A_committed_command_invalidates_only_active_authorised_accounts()
     {
