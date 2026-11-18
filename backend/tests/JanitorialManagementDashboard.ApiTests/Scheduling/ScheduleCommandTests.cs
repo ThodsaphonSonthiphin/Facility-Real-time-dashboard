@@ -62,8 +62,14 @@ public class ScheduleCommandTests
         Assert.True(service.Verify(first.Value, 10, now.AddHours(24).AddTicks(-1)).Accepted);
         Assert.False(service.Verify(first.Value, 10, now.AddHours(24)).Accepted);
 
-        // A value the server did not sign is never accepted, whatever it looks like.
-        var tampered = first.Value[..^1] + (first.Value[^1] == 'A' ? 'B' : 'A');
+        // A value the server did not sign is never accepted, whatever it looks like. Tamper a character that carries
+        // six whole signature bits: the final character of a 43-character base64url HMAC holds only four bits of
+        // signature data, so swapping its padding bits decodes to the same bytes and the token would still verify.
+        var separator = first.Value.LastIndexOf('.');
+        var tampered = first.Value[..(separator + 1)]
+            + (first.Value[separator + 1] == 'A' ? 'B' : 'A')
+            + first.Value[(separator + 2)..];
+        Assert.NotEqual(first.Value, tampered);
         Assert.False(service.Verify(tampered, 10, now).Accepted);
         Assert.False(service.Verify("not-a-token", 10, now).Accepted);
         Assert.False(service.Verify(string.Empty, 10, now).Accepted);

@@ -86,7 +86,12 @@ public class ScheduleLiveTests
             Assert.Equal(field.Value.GetGuid(), (await destinationGot.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("commandId").GetGuid());
         }
         await Assert.ThrowsAsync<TimeoutException>(() => nightGot.Task.WaitAsync(TimeSpan.FromMilliseconds(300)));
-        Assert.Equal(change == "arrival", destinationGot.Task.IsCompleted);
+        if (change != "arrival")
+        {
+            // A settled negative: the push is sent before the HTTP response returns, so a wrongly-scoped event would
+            // already have arrived by now and must not be dismissed by an instantaneous IsCompleted probe.
+            await Assert.ThrowsAsync<TimeoutException>(() => destinationGot.Task.WaitAsync(TimeSpan.FromMilliseconds(300)));
+        }
     }
 
     [Fact]
