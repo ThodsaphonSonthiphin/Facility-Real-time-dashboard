@@ -1,3 +1,4 @@
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 
@@ -42,6 +43,14 @@ public static class AreaAttendance
         : regularCleanerEvents.Contains(AttendanceEvent.ShiftIn) ? AreaAttendanceState.Working
         : hasCover ? AreaAttendanceState.Covered
         : AreaAttendanceState.Empty;
+
+    /// <summary>
+    /// Spec §13 and ADR facility-0216 (Task 11): the entry category of one Area, from the shared actual-entry evidence and
+    /// whether anybody is assigned to it. The three categories keep the target denominator, and evidence always beats an
+    /// assignment, so a live cover or a transfer instruction cannot hide that somebody really entered.
+    /// </summary>
+    public static string EntryOf(bool hasEntryEvidence, bool isAssigned) =>
+        ScheduleEntryEvidence.EntryOf(hasEntryEvidence, isAssigned);
 
     /// <summary>A break that went out without its matching return; each numbered break is answered by its own pair.</summary>
     private static bool IsOnBreak(IReadOnlyCollection<AttendanceEvent> events, AttendanceLifecycleVersion version) =>

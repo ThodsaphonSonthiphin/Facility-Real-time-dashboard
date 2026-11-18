@@ -30,7 +30,8 @@ public static class AdminAttendanceEndpoints
     }
 
     private static async Task<IResult> GetBoardAsync(
-        string? shiftDate, string? shift, int? buildingId, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+        string? shiftDate, string? shift, int? buildingId, ClaimsPrincipal principal, AppDbContext db,
+        ScheduleStore store, TimeProvider clock, CancellationToken ct)
     {
         if (await CurrentUser.LoadAsync(principal, db) is null)
         {
@@ -40,7 +41,7 @@ public static class AdminAttendanceEndpoints
         var now = clock.GetUtcNow().UtcDateTime;
         return AdminQuery.ReadSlot(shiftDate, shift, now, out var slot) is { } error
             ? Bad(error)
-            : Results.Ok(await AttendanceBoard.LoadAsync(db, slot, buildingId, now));
+            : Results.Ok(await AttendanceBoard.LoadAsync(db, store, slot, buildingId, now, ct));
     }
 
     /// <summary>

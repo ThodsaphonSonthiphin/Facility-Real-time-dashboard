@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using JanitorialManagementDashboard.Application.Scheduling;
+using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
@@ -435,12 +436,80 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         var confirmations = await db.AreaTransferConfirmations.AsNoTracking()
             .Where(row => ids.Contains(row.TransferId))
             .ToListAsync(ct);
+        return BuildSlotTransfer(instructions, confirmations);
+    }
 
+    /// <summary>
+    /// Spec §13 (Task 11): every person's stored transfer chain in one slot, read in two queries. The attendance board needs
+    /// the current responsibility per person, and asking <see cref="ReadSlotTransferAsync"/> once per person would multiply
+    /// the same two reads across the roster.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<int, SlotTransfer>> ReadSlotTransfersAsync(
+        ShiftSlot slot, CancellationToken ct = default)
+    {
+        var instructions = await db.AreaTransfers.AsNoTracking()
+            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift)
+            .OrderBy(row => row.Id)
+            .ToListAsync(ct);
+        if (instructions.Count == 0)
+        {
+            return new Dictionary<int, SlotTransfer>();
+        }
+
+        var ids = instructions.Select(row => row.Id).ToList();
+        var confirmations = await db.AreaTransferConfirmations.AsNoTracking()
+            .Where(row => ids.Contains(row.TransferId))
+            .ToListAsync(ct);
+        return instructions
+            .GroupBy(row => row.PersonId)
+            .ToDictionary(group => group.Key, group => BuildSlotTransfer(group.ToList(), confirmations));
+    }
+
+    /// <summary>
+    /// Spec §13 and ADR facility-0216 (Task 11): the legitimate actual entry facts of one slot, for the shared entry
+    /// projection. It emits exactly two kinds — the initial Shift-In recorded at the Area (filed under the handover the
+    /// Admin sees, admin and supervisor corrections included) and a confirmed transfer arrival at its destination. An
+    /// instruction, a loan, a skip marker or a pending replacement is never evidence and is not read here.
+    /// </summary>
+    public async Task<IReadOnlyList<AreaEntryEvidence>> ReadEntryEvidenceAsync(
+        ShiftSlot slot, CancellationToken ct = default)
+    {
+        var shiftIns = await db.ShiftAttendances.AsNoTracking()
+            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift
+                && row.EventType == AttendanceEvent.ShiftIn)
+            .Select(row => new { row.AreaId, row.OccurredAt })
+            .ToListAsync(ct);
+
+        // The confirmation carries the Area and time; the instruction only supplies the slot, because a confirmation has no
+        // date/shift of its own. A cancelled instruction never has a confirmation (Task 10), and the guard states that.
+        var arrivals = await db.AreaTransferConfirmations.AsNoTracking()
+            .Join(db.AreaTransfers.AsNoTracking(),
+                confirmation => confirmation.TransferId,
+                instruction => instruction.Id,
+                (confirmation, instruction) => new { confirmation, instruction })
+            .Where(row => row.instruction.ShiftDate == slot.ShiftDate
+                && row.instruction.Shift == slot.Shift
+                && !row.instruction.IsCancelled)
+            .Select(row => new { row.confirmation.AreaId, row.confirmation.OccurredAt, row.instruction.Id })
+            .ToListAsync(ct);
+
+        return shiftIns
+            .Select(row => new AreaEntryEvidence(row.AreaId, slot.ShiftDate, slot.Shift, Utc(row.OccurredAt),
+                EntryEvidenceKinds.ShiftIn, null))
+            .Concat(arrivals.Select(row => new AreaEntryEvidence(row.AreaId, slot.ShiftDate, slot.Shift,
+                Utc(row.OccurredAt), EntryEvidenceKinds.TransferArrival, row.Id)))
+            .ToList();
+    }
+
+    /// <summary>The one chain reading both callers share: latest instruction, its confirmation and the last confirmed Area.</summary>
+    private static SlotTransfer BuildSlotTransfer(
+        IReadOnlyList<AreaTransfer> instructions, IReadOnlyList<AreaTransferConfirmation> confirmations)
+    {
         var latest = instructions[^1];
         // A confirmed arrival is evidence that stays: the latest confirmed row is where responsibility has actually moved to,
         // and a forward instruction or a cancelled one only builds on it.
         var lastConfirmedAreaId = instructions
-            .Where(row => confirmations.Exists(confirmation => confirmation.TransferId == row.Id))
+            .Where(row => confirmations.Any(confirmation => confirmation.TransferId == row.Id))
             .Select(row => (int?)row.ToAreaId)
             .LastOrDefault();
         return new SlotTransfer(

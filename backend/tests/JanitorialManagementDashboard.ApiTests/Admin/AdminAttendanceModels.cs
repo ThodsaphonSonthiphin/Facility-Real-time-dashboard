@@ -2,13 +2,20 @@ using System.Text.Json;
 
 namespace JanitorialManagementDashboard.ApiTests.Admin;
 
-public record BoardEventModel(long Id, string EventType, DateTime OccurredAt, string Source, bool? WithinRadius, short? DistanceM);
+public record BoardEventModel(long Id, string EventType, DateTime OccurredAt, string Source, bool? WithinRadius, short? DistanceM, int AreaId = 0);
 
 public record BoardCoverModel(int Id, int UserId, string EmployeeId, string DisplayName, string? OwnAreaCode, DateTime AssignedAt, DateTime? ShiftInAt);
 
+public record BoardEntryEvidenceModel(string Kind, DateTime RecordedAt, int? TransferId);
+
+public record BoardResponsibilityModel(
+    int UserId, string EmployeeId, string DisplayName, string State, int? LastConfirmedAreaId, DateTime? ConfirmedAt);
+
 public record BoardRowModel(
     int AreaId, string AreaCode, string AreaName, string BuildingCode, AssignedCleanerModel? Cleaner,
-    string State, List<BoardEventModel> Events, List<BoardCoverModel> Covers);
+    string State, List<BoardEventModel> Events, List<BoardCoverModel> Covers,
+    string? Entry = null, List<BoardEntryEvidenceModel>? EntryEvidence = null,
+    BoardResponsibilityModel? Responsibility = null);
 
 public record BoardSummaryModel(int Required, int Present, int Empty, int Covered);
 

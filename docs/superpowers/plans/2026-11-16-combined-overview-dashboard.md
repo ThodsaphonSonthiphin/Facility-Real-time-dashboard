@@ -29,13 +29,16 @@
 
 ผลทบทวนเต็มอยู่ที่ [2026-11-17 overview plan assumption delta](../reviews/2026-11-17-overview-plan-assumption-delta.md) ข้อผูกพันเพิ่มเติมกับแผนนี้ (ไม่เปลี่ยนตัวเลข/กติกา 0114–0130 และไม่ใช่ product decision ใหม่):
 
-- **การลงเวลา:** ก่อนมี Area Transfer, entry นับจาก `ShiftAttendance.AreaId` ของ `ShiftIn` ซึ่งยังถูกต้องทั้งกะสี่และหกปุ่ม; เมื่อ 0203/0204 ขึ้นใช้ ต้องรวมหลักฐานยืนยันถึงพื้นที่ปลายทางโดยไม่สร้าง ShiftIn ซ้ำ (ดู D7); ห้าม hard-code ว่าทุกกะมีสี่ปุ่ม. ถ้าหกปุ่ม (0146/0164/0168/0169) หรือการลา (0156–0158) ขึ้นก่อนงานนี้ Task 7–9 ต้อง rebase ตาม D2–D3 ในเอกสารทบทวน
+- **การลงเวลา:** entry นับจากหลักฐานจริงคือ initial ShiftIn หรือ confirmed destination arrival ผ่าน `ScheduleEntryEvidence` (Task 11, ADR 0216) ไม่ใช่สูตร ShiftIn-only; ต้องรวมหลักฐานยืนยันถึงพื้นที่ปลายทางโดยไม่สร้าง ShiftIn ซ้ำ (ดู D7); ห้าม hard-code ว่าทุกกะมีสี่ปุ่ม. ถ้าหกปุ่ม (0146/0164/0168/0169) หรือการลา (0156–0158) ขึ้นก่อนงานนี้ Task 7–9 ต้อง rebase ตาม D2–D3 ในเอกสารทบทวน
 - **วันหยุด/ลา:** ไม่ปิด Area ไม่ลดรอบ และไม่เปลี่ยนสามหมวดหรือตัวหาร (0136/0158); “รอจัดคนทำแทน” ไม่นับเป็น covered; `ShiftIn` ที่ป้ายของ Area ที่คนแทนได้รับมอบหมายนับเป็น entry ของ Area นั้น (0155)
 - **ค่าเริ่มต้น:** ทุกตึก + กะตามนาฬิกา และวันที่ของกะดึกคือ shift start date (0183/0184); ภาพรวมไม่รับกลไกจำสัปดาห์/ตัวกรองของหน้า schedule (0180–0182/0185) — คืนบริบทจาก URL ตาม Task 7
 - **ความสด:** read หลังต่อกลับที่ล้มเหลวต้องคงสถานะ “อาจไม่เป็นปัจจุบัน” จนอ่านสำเร็จ (0172)
 - **เมนู:** ภาพรวม → สถานะจุด → การเข้างาน → ตารางงาน → รายการที่ขึ้นเตือน → สรุปการตรวจ → ส่งออก Excel (0178)
 
 **ข้อผูกพันเพิ่มหลังยืนยัน Area Transfer (0203–0204):** หาก transfer ขึ้นก่อนหรือพร้อมภาพรวม Task 5/6/7/9/10/11 ต้องปรับ projection/DTO/detail/live events/acceptance เพื่อแยกคำสั่งย้ายกับหลักฐานถึงปลายทางจริง คง initial ShiftIn และประวัติ A ไม่สร้าง ShiftIn ใหม่ที่ B ไม่รีเซ็ตพัก ไม่แสดงว่าถึง B ก่อนยืนยัน และไม่แสดงผู้ย้ายรับผิดชอบปัจจุบันสองพื้นที่พร้อมกัน ต้องปิดสัญญาการรวมหลักฐาน/สถานะ current coverage ใน spec ก่อนทำส่วนนี้ ห้ามถือว่าสูตร ShiftIn-only ในตัวอย่าง task ด้านล่างครอบ transfer แล้ว ไม่เพิ่มหมวด/แก้ตัวหารเอง ถ้าภาพรวมขึ้นก่อน transfer ใช้ฐานเดิมได้ แต่ต้องทำ integration ก่อนเปิด transfer จริง ดู [D7](../reviews/2026-11-17-overview-plan-assumption-delta.md) กรณี 0200–0202 ต้องแสดงเวลาออกจริง เหตุพักที่ไม่เกี่ยวข้องเพราะลา และ conflict วันลาแยกจากข้อเท็จจริงการเข้างาน โดยไม่แต่งเวลา/เพิ่มสถานะ pending ที่บล็อกงานเอง
+
+**Rebase หลัง Task 11 ของแผน scheduling (2026-11-18):** สัญญา D7 ถูก implement แล้วใน `Application/Scheduling/ScheduleEntryEvidence.cs` — `AreaEntryEvidence(AreaId, ShiftDate, Shift, RecordedAt, Kind, TransferId)` โดย `Kind` เป็น `"shift-in"` หรือ `"transfer-arrival"` เท่านั้น, `ScheduleEntryEvidence.EnteredAreas(slot, evidence)` คืน Area ID ไม่ซ้ำ และ `ScheduleEntryEvidence.EntryOf(hasEntryEvidence, isAssigned)` คืน `entered|covered|unassigned`; store adapter `ScheduleStore.ReadEntryEvidenceAsync(slot)` อ่านเฉพาะ Shift-In จริงกับ confirmation ที่ยืนยันแล้ว (ไม่ใช่ instruction/loan/skip/pending) และ `AttendanceBoard` ใช้ adapter นี้กับ responsibility แยก DTO แล้ว. Task 5/6/7/9/10/11 ด้านล่างถูก rebase ให้ consume contract นี้: ห้ามใช้ตัวอย่าง ShiftIn-only เดิมเป็นแหล่ง entry, ห้ามสร้าง ShiftIn ที่สองที่ B, และต้องแยก historical entry (A คงอยู่, B หลังยืนยัน) จาก current responsibility/last confirmed Area/time. `TransferId` เป็น `int` ตาม identity ของ `area_transfers` (ruling Task 10) ไม่ใช่ `Guid`.
+
 
 ---
 
@@ -535,7 +538,7 @@ Create three old revisions plus anchor/head in an isolated factory, run `Retenti
 **Interfaces:**
 - Consumes Task 1 targets/obligations, Task 4 availability and the immutable facts below.
 - `OverviewRules.Work(IReadOnlyList<OverviewPoint> points) : AreaWork`.
-- `OverviewRules.Entry(int areaId, DateTime evaluationUtc, IReadOnlyList<OverviewAttendance> attendance, IReadOnlyList<OverviewCover> covers) : string` returning `entered|covered|unassigned`.
+- `OverviewRules.Entry(int areaId, IReadOnlySet<int> enteredAreas, IReadOnlySet<int> assignedAreas) : string` returning `entered|covered|unassigned`. `enteredAreas` comes from `ScheduleEntryEvidence.EnteredAreas(slot, facts.EntryEvidence)` (Task 11's shared contract); `assignedAreas` is assignment without entry — a live cover or an effective relief/loan/transfer instruction arranged within scope.
 - `OverviewRules.Latest(ShiftSlot slot, RoundObligation round, IReadOnlyList<OverviewSubmission> scans, IReadOnlyList<OverviewInspection> inspections, DateTime at) : OverviewPoint`.
 - `OverviewProjection.Build(ShiftSlot slot, OverviewMoment moment, TargetTimeline targets, OverviewFacts facts, SectionAvailability availability, int? buildingId) : OverviewSnapshot`.
 - `OverviewProjection.Members(OverviewSnapshot snapshot, string group) : IReadOnlyList<OverviewArea>`; summary counts are derived from this exact collection, not separately implemented filters.
@@ -592,7 +595,8 @@ public sealed record OverviewPerson(int Id, string DisplayName);
 public sealed record OverviewFacts(IReadOnlyList<OverviewSubmission> Submissions,
     IReadOnlyList<OverviewInspection> Inspections,
     IReadOnlyList<OverviewAttendance> Attendance, IReadOnlyList<OverviewCover> Covers,
-    IReadOnlyList<OverviewPerson> People, bool OriginsComplete, bool IssueStateKnown);
+    IReadOnlyList<OverviewPerson> People, IReadOnlyList<AreaEntryEvidence> EntryEvidence,
+    IReadOnlySet<int> AssignedAreas, bool OriginsComplete, bool IssueStateKnown);
 public sealed record OverviewPoint(int PointId, bool IsDue, bool IsSubmitted,
     bool IsInspected, bool NeedsRework, bool IsIssue, bool IsOverdue,
     bool IsUpcoming, long? SubmissionId, long? InspectionId);
@@ -629,17 +633,11 @@ public static AreaWork Work(IReadOnlyList<OverviewPoint> points)
         due.Any(p => p.NeedsRework), points.Any(p => p.IsIssue),
         due.Any(p => p.IsOverdue));
 }
-public static string Entry(int areaId, DateTime evaluationUtc,
-    IReadOnlyList<OverviewAttendance> attendance, IReadOnlyList<OverviewCover> covers)
-{
-    if (attendance.Any(a => a.AreaId == areaId && a.Event == AttendanceEvent.ShiftIn
-        && a.OccurredAt <= evaluationUtc)) return "entered";
-    return covers.Any(c => c.AreaId == areaId && c.AssignedAt <= evaluationUtc
-        && (c.CancelledAt is null || c.CancelledAt > evaluationUtc)) ? "covered" : "unassigned";
-}
+public static string Entry(int areaId, IReadOnlySet<int> enteredAreas, IReadOnlySet<int> assignedAreas) =>
+    ScheduleEntryEvidence.EntryOf(enteredAreas.Contains(areaId), assignedAreas.Contains(areaId));
 ```
 
-Attendance/cover input is already scoped to slot in the loader. Never join ShiftIn to current active regular Cleaner as a membership condition. Break/ShiftOut remain supporting facts. Add 100 distinct target Areas, 90 ShiftIns, five active covers and five absent; assert partition90/5/5, notEntered10. Add ShiftOut/break and reassigned/inactive-person cases; duplicates count once per Area.
+`OverviewFactLoader` fills `EntryEvidence` from the Task 11 store adapter (`ScheduleStore.ReadEntryEvidenceAsync(slot)`; add `using JanitorialManagementDashboard.Application.Scheduling;`) and `AssignedAreas` from live covers plus effective relief/loan/transfer instructions — never from `ShiftAttendance` alone, and never by joining ShiftIn to the current active regular Cleaner. Break/ShiftOut remain supporting facts, not entry. A confirmed transfer arrival adds B without removing A (ADR facility-0216); an instruction alone adds assignment only, so B is `covered` until the confirmation. Add 100 distinct target Areas, 90 entered (a mix of Shift-In and one confirmed transfer whose A and B both count), five assigned-without-entry and five absent; assert partition90/5/5, notEntered10. Add ShiftOut/break, reassigned/inactive-person, cancelled-instruction and historical-A cases; duplicates count once per Area.
 
 - [ ] **Step 4: Match latest round work and inspected submission identity.**
 
@@ -751,13 +749,16 @@ public sealed record OverviewAreaListDto(OverviewSummaryDto Summary, string Grou
     int Page, int PageSize, OverviewCount Total, IReadOnlyList<OverviewAreaRowDto> Rows);
 public sealed record OverviewPointDetailDto(OverviewPoint Work, string? Code, string Name, int SortOrder,
     string? RoundKey, TimeOnly? Start, TimeOnly? End);
+public sealed record OverviewResponsibilityDto(int UserId, int AreaId, string State,
+    int? LastConfirmedAreaId, DateTime? ConfirmedAt);
 public sealed record OverviewAreaDetailDto(OverviewContextDto Context,
     SectionAvailability Availability, OverviewAreaRowDto Area, bool MatchesGroup,
+    IReadOnlyList<AreaEntryEvidence> EntryEvidence, OverviewResponsibilityDto? CurrentResponsibility,
     OverviewFacts Facts, IReadOnlyList<OverviewPointDetailDto> Points,
     IReadOnlyList<OverviewRoundResult> Rounds, string? SelectedRoundKey);
 ```
 
-The last DTO must filter Facts to this Area's relevant point/attendance/cover/person IDs; never return factory-wide people or facts. Submission Note/IssueTags and Inspection Defect render as text only. No GPS/secrets. Add point name/order/round time labels to detail via `OverviewPointDetailDto(OverviewPoint Work, string? Code, string Name, int SortOrder, string? RoundKey, TimeOnly? Start, TimeOnly? End)` as declared above; this gives Task 9 a usable UI without another current-config request.
+The last DTO must filter Facts to this Area's relevant point/attendance/cover/person IDs; never return factory-wide people or facts. `EntryEvidence` is this Area's provenance (kind/time/transfer) and `CurrentResponsibility` is the transfer-derived current answer (state, last confirmed Area, actual confirmation time); the two are separate and neither is inferred from the other, and a pending instruction is never entry. Submission Note/IssueTags and Inspection Defect render as text only. No GPS/secrets. Add point name/order/round time labels to detail via `OverviewPointDetailDto(OverviewPoint Work, string? Code, string Name, int SortOrder, string? RoundKey, TimeOnly? Start, TimeOnly? End)` as declared above; this gives Task 9 a usable UI without another current-config request.
 
 - [ ] **Step 3: Implement one consistent read, including batched Issue lookup.**
 
@@ -882,6 +883,10 @@ export interface OverviewPoint { pointId:number; isDue:boolean; isSubmitted:bool
   submissionId?:number|null; inspectionId?:number|null }
 export interface OverviewPointDetail { work:OverviewPoint; code?:string|null; name:string; sortOrder:number;
   roundKey?:string|null; start?:string|null; end?:string|null }
+export interface OverviewEntryEvidence { kind:'shift-in'|'transfer-arrival'; recordedAt:string;
+  transferId?:number|null }
+export interface OverviewResponsibility { userId:number; areaId:number; state:'instructed'|'confirmed';
+  lastConfirmedAreaId?:number|null; confirmedAt?:string|null }
 export interface OverviewAreaRow { areaId:number; buildingId:number; code:string; name:string;
   buildingCode:string; buildingName:string; entry:'entered'|'covered'|'unassigned';
   work:AreaWork; reasons:string[]; roundKeys:string[] }
@@ -899,6 +904,7 @@ export interface OverviewCover { id:number; areaId:number; userId:number; assign
   cancelledAt?:string|null }
 export interface OverviewFacts { submissions:OverviewSubmission[]; inspections:OverviewInspection[];
   attendance:OverviewAttendance[]; covers:OverviewCover[]; people:{id:number;displayName:string}[];
+  entryEvidence:OverviewEntryEvidence[]; assignedAreas:number[];
   originsComplete:boolean; issueStateKnown:boolean }
 export interface RoundObligation { pointId:number; areaId:number; buildingId:number; areaCode:string;
   areaName:string; buildingCode:string; buildingName:string; originId:number; start:string; end:string;
@@ -906,7 +912,8 @@ export interface RoundObligation { pointId:number; areaId:number; buildingId:num
 export interface OverviewRoundResult { roundKey:string; round:RoundObligation;
   outcome:'notDone'|'notInspected'|'notReworked'|'passed'; submissionId?:number|null; inspectionId?:number|null }
 export interface OverviewAreaDetail { context:OverviewContext; availability:SectionAvailability;
-  area:OverviewAreaRow; matchesGroup:boolean; facts:OverviewFacts; points:OverviewPointDetail[];
+  area:OverviewAreaRow; matchesGroup:boolean; entryEvidence:OverviewEntryEvidence[];
+  currentResponsibility?:OverviewResponsibility|null; facts:OverviewFacts; points:OverviewPointDetail[];
   rounds:OverviewRoundResult[]; selectedRoundKey?:string|null }
 ```
 
@@ -1144,7 +1151,7 @@ export function OverviewAreaPage({ view, actions }: OverviewAreaPageProps) {
 }
 ```
 
-Add `periodText:string` and `view:OverviewView` to model, `actions?:ReactNode` to props. Header includes selected date, Day/Night, building historical name and receiving/closed explanation. AreaAttendance lists only that Area's ShiftIn/break/out events, edited marker, cover assignment status vs recorded entry and referenced people. If six-action attendance or recorded leave ships before this task, rebase this list on the accepted lifecycle: legacy four-action shifts stay as recorded (facility-0164), a new shift may show six actions, a deliberate skip stays visibly empty (facility-0153), and a Supervisor-entered time keeps its reason and provenance (facility-0154). Never fabricate break-2 or a time, and do not hard-code four actions in UI text. AreaWork shows point names, submitted/required counts, latest submission/result IDs and times, Issue separately, next rounds and selected history with finalization/cancellation reason. Show every relevant missed round link when Area has multiple; selecting one sets exact emitted roundKey and reads that round. Do not use current ServicePoints endpoint or its current PointTile to replace historical truth.
+Add `periodText:string` and `view:OverviewView` to model, `actions?:ReactNode` to props. Header includes selected date, Day/Night, building historical name and receiving/closed explanation. AreaAttendance lists only that Area's facts with their recorded `areaId` (a transferred person's origin Shift-In is not a fact of the destination), edited marker, the detail's `entryEvidence` provenance (kind/time/transfer) and `currentResponsibility` as a separate current answer, cover assignment status vs recorded entry and referenced people. It never presents current responsibility as historical entry and never invents presence at B before the confirmation. If six-action attendance, recorded leave or the transfer flow ships before this task, rebase this list on the accepted lifecycle: legacy four-action shifts stay as recorded (facility-0164), a new shift may show six actions, a deliberate skip stays visibly empty (facility-0153), a Supervisor-entered time keeps its reason and provenance (facility-0154), and a confirmed transfer arrival is provenance rather than a second Shift-In. Never fabricate break-2 or a time, and do not hard-code four actions in UI text. AreaWork shows point names, submitted/required counts, latest submission/result IDs and times, Issue separately, next rounds and selected history with finalization/cancellation reason. Show every relevant missed round link when Area has multiple; selecting one sets exact emitted roundKey and reads that round. Do not use current ServicePoints endpoint or its current PointTile to replace historical truth.
 
 The API fills context.isClockCurrent using `slot == ShiftCalendar.SlotAt(readAtUtc)`; the browser uses this flag rather than its local time to authorize the current-mode adapter. Hook parses full context before fetching; invalid input skips request. `readOnly` is true when selected slot is not the clock current slot, selected old round exists, or phase is receiving/closed/notStarted. Facts may still refresh during receiving even though actions hidden. API404/error/partial states retain exact requested context and retry link; never query a fallback Area. `matchesGroup=false` shows change notice but retains Area ID.
 
@@ -1218,7 +1225,7 @@ it('asks for a complete aggregate after a target revision event', async () => {
 });
 ```
 
-This callback must be the single aggregate update mechanism for all four event kinds. Test no subscription/retained cached data starts a second connection after StrictMode remount; removed cache entry stops it. Run `npm --prefix frontend test -- src/shared/overview/overviewLive.test.tsx`; expect target-change/live refetch assertions fail before wiring.
+This callback must be the single aggregate update mechanism for every event kind that moves a projection: ScanRecorded, InspectionRecorded, AttendanceRecorded, the confirmed transfer-arrival event the scheduling task's notifier publishes, and OverviewChanged/TargetChanged. A transfer instruction alone changes no entry, so it must not refresh an entry metric; the confirmation must. Test no subscription/retained cached data starts a second connection after StrictMode remount; removed cache entry stops it. Run `npm --prefix frontend test -- src/shared/overview/overviewLive.test.tsx`; expect target-change/live refetch assertions fail before wiring.
 
 - [ ] **Step 2: Add post-commit active-Admin target notification.**
 
@@ -1388,6 +1395,7 @@ Check `git diff --check`, scope, no secrets/real personnel, names match CONTEXT.
 | §1–2 Admin overview/layout/limits | 7–9 | route/nav, UI integration and browser1280/375 |
 | §3 Day/Night, receiving grace, policy history, future shift | 1,3,4,6,10 | temporal unit tests + API receiving cases + polling tests |
 | §4.1 100/90/5/5; entry survives break/out/reassignment | 5,6,8,9 | unit partition + API list equality + historical detail |
+| §4.1/D7 transfer-aware entry (ADR 0216) | 5–7,9,10 | Task 11 shared `ScheduleEntryEvidence` + `AttendanceBoard` projection; unit partition (A and B both entered), API instruction-only/confirmation/cancelled/leave cases, and provenance vs current responsibility shown separately |
 | §4.2 whole-Area4/5, Rework coverage/reset, no vacuous completion | 5,6,8 | predicate tests and rendered counts |
 | §4.2 overlap, OffRound, Issue as-of and missing source | 4–6 | independent Issue coverage, temporal facts tests |
 | §4.3 earlier misses, current late work, final round and canceled rounds | 1,5,6,9 | timeline/outcome tests + exact emitted roundKey detail |
@@ -1413,4 +1421,4 @@ Plan self-review: dependencies and names checked against this spec; count/list/d
 
 ทั้งสองทางต้องอ่าน spec/plan/handoff จาก checkout เดียวกันและยึดคำสั่งของเจ้าของ การตอบเลือกวิธีพร้อมสั่งเริ่มจึงเป็นคำสั่ง execution; การรับทราบแผนเฉย ๆ ยังไม่ยกเลิก implementation hold
 
-**สัญญา D7 ยืนยันแล้ว:** [0216](../../adr/facility-0216-overview-entry-includes-confirmed-transfer-arrival.md) และ [scheduling spec §13](../specs/2026-11-17-cleaner-scheduling-design.md) กำหนดให้ entry ใช้ initial ShiftIn หรือ confirmed destination arrival นับ Area ไม่ซ้ำ คง A ที่เคยเข้าจนจบ slot และนับ B หลังยืนยันเท่านั้น ไม่เพิ่มหมวด/ตัวหาร และแยก current responsibility ตัวอย่าง task/code เดิมต้อง rebase ตามสัญญานี้ก่อน implement ร่วมกับ transfer ไม่ใช่ยังรอเลือกวิธีนับ และไม่ใช่เริ่มพัฒนาแล้ว
+**สัญญา D7 ยืนยันแล้วและ implement แล้วใน Task 11 ของแผน scheduling:** [0216](../../adr/facility-0216-overview-entry-includes-confirmed-transfer-arrival.md) และ [scheduling spec §13](../specs/2026-11-17-cleaner-scheduling-design.md) กำหนดให้ entry ใช้ initial ShiftIn หรือ confirmed destination arrival นับ Area ไม่ซ้ำ คง A ที่เคยเข้าจนจบ slot และนับ B หลังยืนยันเท่านั้น ไม่เพิ่มหมวด/ตัวหาร และแยก current responsibility. Task 11 สร้าง `Application/Scheduling/ScheduleEntryEvidence.cs`, store adapter และปรับ attendance board ตามสัญญานี้แล้ว; ตัวอย่าง task/code ด้านบนถูก rebase แล้ว ห้ามใช้สูตร ShiftIn-only เดิมหรือสร้าง ShiftIn ที่สองที่ B. แผนนี้ยังไม่เริ่มพัฒนา overview.
