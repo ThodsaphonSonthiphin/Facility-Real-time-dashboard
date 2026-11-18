@@ -47,6 +47,8 @@ const tiles = () =>
   within(screen.getByRole('list', { name: 'สรุปการตรวจ' }))
     .getAllByRole('listitem')
     .map((li) => li.textContent);
+/** Every link inside a point card: facility-0059 says an inspection starts only from the sign's QR. */
+const cardLinks = () => screen.queryAllByRole('link').filter((link) => link.closest('article, li') !== null);
 
 describe('MyBuildingPage (M15, facility-0057)', () => {
   it('lists what waits for the Supervisor first, with the summary and the clock shift', async () => {
@@ -64,8 +66,10 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     expect(screen.getByText('ให้แก้ 09:40: “รอบถังขยะยังมีคราบ” · รอแม่บ้านส่งใหม่')).toBeInTheDocument();
     expect(screen.getByText('ยังไม่ส่ง · ส่งได้ถึง 12:00')).toBeInTheDocument();
     expect(screen.getAllByText('ไปที่จุดนี้แล้วสแกน QR เพื่อตรวจ')).toHaveLength(2);
-    // facility-0059: only the sign's QR opens the inspection
-    expect(within(screen.getByRole('main')).queryAllByRole('link')).toHaveLength(0);
+    // facility-0059: only the sign's QR opens the inspection, so no point card is a link
+    expect(cardLinks()).toHaveLength(0);
+    // facility-0177: the one link on the page is the timetable entry, before the building list
+    expect(within(screen.getByRole('main')).getAllByRole('link').map((link) => link.textContent)).toEqual(['จัดตารางงาน']);
   });
 
   it('outside the own shift it says so and does not send anyone to scan (facility-0048)', async () => {

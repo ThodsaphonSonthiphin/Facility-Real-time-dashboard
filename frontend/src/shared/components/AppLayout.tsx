@@ -26,7 +26,8 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
       <div className="min-h-svh lg:flex print:block">
         <aside className="flex flex-col gap-6 border-b border-border bg-surface px-3 py-5 lg:sticky lg:top-0 lg:h-svh lg:w-sidebar lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0 print:hidden">
           <ProjectLogo />
-          <AdminNav />
+          {/* The menu is the Admin's: a Supervisor's roster is wide too (facility-0177), but the Admin links are not theirs */}
+          {user?.role === 'admin' && <AdminNav />}
           <div className="flex flex-col items-start gap-2 border-t border-border px-3 pt-4 text-sm lg:mt-auto">
             <span className="font-semibold text-text">{user?.fullName}</span>
             {/* A button, since it acts; drawn as the mockup's link: accent words and icon, no underline */}

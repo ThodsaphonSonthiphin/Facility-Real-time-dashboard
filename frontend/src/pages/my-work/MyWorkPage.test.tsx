@@ -184,7 +184,8 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
 
     expect(await screen.findByText('หัวหน้าให้แก้ 09:40: “รอบถังขยะยังมีคราบ”')).toBeInTheDocument();
     expect(screen.getByText('แก้แล้วสแกน QR ที่จุดนี้เพื่อส่งงานใหม่')).toBeInTheDocument();
-    expect(within(screen.getByRole('main')).queryAllByRole('link')).toHaveLength(0);
+    // facility-0059: a point card is never a link to the scan page; facility-0176's schedule entry is the only link here
+    expect(within(screen.getByRole('main')).getAllByRole('link').map((link) => link.textContent)).toEqual(['ตารางของฉัน']);
   });
 
   it('a covered Area\'s points join the same groups, marked ทำแทน, under the cover line (M14)', async () => {

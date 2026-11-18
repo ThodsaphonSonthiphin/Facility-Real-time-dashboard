@@ -68,6 +68,7 @@ describe('routing (facility-0026, 0058)', () => {
     expect(within(menu).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'สถานะจุด',
       'การเข้างาน',
+      'ตารางงาน',
       'รายการที่ขึ้นเตือน',
       'สรุปการตรวจ',
       'ส่งออก Excel',
@@ -93,12 +94,28 @@ describe('routing (facility-0026, 0058)', () => {
     expect(screen.queryByRole('navigation', { name: 'เมนูแอดมิน' })).not.toBeInTheDocument();
   });
 
+  it("a Supervisor's roster is wide, and the Admin menu is not theirs (facility-0177)", async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('supervisor') });
+    await renderApp('/schedule-management');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'จัดตารางงาน' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'เมนูแอดมิน' })).not.toBeInTheDocument();
+  });
+
+  it('a Cleaner cannot open the management pages (facility-0058)', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('cleaner') });
+    await renderApp('/admin/schedules');
+
+    expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
+  });
+
   it('every Admin page is a lazy route, so a phone never downloads Admin code (facility-0062 item 3)', () => {
     const pages = pagesOf('admin');
 
     expect(pages.map((page) => page.path)).toEqual([
       'dashboard',
       'admin/attendance',
+      'admin/schedules',
       'admin/alerts',
       'admin/inspection-summary',
       'admin/export',

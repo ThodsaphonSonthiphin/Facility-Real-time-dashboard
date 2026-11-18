@@ -1,4 +1,5 @@
-import { Check, Hourglass, RefreshCw, RotateCcw, type LucideIcon } from 'lucide-react';
+import { CalendarDays, Check, ChevronRight, Hourglass, RefreshCw, RotateCcw, type LucideIcon } from 'lucide-react';
+import { NavLink } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import type { PointStatus } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
@@ -6,6 +7,7 @@ import { LogoutButton } from '../../shared/components/LogoutButton';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
+import { focusRing } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { useAppSelector } from '../../store/hooks';
@@ -47,6 +49,8 @@ export function MyBuildingPage() {
     <PhoneScreen header={header}>
       {isLoading && <PageLoading lines={3}>กำลังโหลดจุด...</PageLoading>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
+      {/* facility-0177: the timetable sits before the building list; reading it needs no QR and no location (0179) */}
+      <ScheduleLink />
       {data && <BuildingList building={data} />}
       <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
         <span className="text-sm text-text-2">{liveLine[hubStatus]}</span>
@@ -64,6 +68,21 @@ function countLine(building: MyBuilding): string {
   const points = building.buildings.flatMap((section) => section.points);
   const areas = new Set(points.map((point) => point.areaId));
   return `${areas.size} พื้นที่ · ${points.length} จุด`;
+}
+
+/** facility-0177: "จัดตารางงาน" before the building list, on the same route as the rest of this page. */
+function ScheduleLink() {
+  return (
+    <NavLink
+      to="/schedule-management"
+      data-tap=""
+      className={`flex min-h-12 items-center gap-3 rounded-md border border-border-control bg-surface px-4 text-base font-semibold no-underline text-text hover:border-accent ${focusRing}`}
+    >
+      <CalendarDays aria-hidden="true" className="size-5 shrink-0 text-accent" />
+      <span className="flex-1">จัดตารางงาน</span>
+      <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-text-2" />
+    </NavLink>
+  );
 }
 
 /** The three counts in the header (รอตรวจ in its own cyan so what waits for the Supervisor stands out, #76); every count says its words. */

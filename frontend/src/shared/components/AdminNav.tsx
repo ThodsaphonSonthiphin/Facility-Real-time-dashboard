@@ -1,5 +1,6 @@
 import {
   Building2,
+  CalendarDays,
   ClipboardCheck,
   Download,
   History,
@@ -26,6 +27,8 @@ const adminGroups = [
     links: [
       { to: '/dashboard', label: 'สถานะจุด', Icon: LayoutGrid, counted: false },
       { to: '/admin/attendance', label: 'การเข้างาน', Icon: Users, counted: false },
+      // facility-0178: the schedule follows attendance in the group that follows the work
+      { to: '/admin/schedules', label: 'ตารางงาน', Icon: CalendarDays, counted: false },
       { to: '/admin/alerts', label: 'รายการที่ขึ้นเตือน', Icon: TriangleAlert, counted: true },
       { to: '/admin/inspection-summary', label: 'สรุปการตรวจ', Icon: ClipboardCheck, counted: false },
       { to: '/admin/export', label: 'ส่งออก Excel', Icon: Download, counted: false },

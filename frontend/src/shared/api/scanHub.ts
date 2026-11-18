@@ -1,5 +1,6 @@
 import type { Dispatch } from '@reduxjs/toolkit';
 import { hubFollowEnded, hubStatusChanged, type HubStatus } from '../../store/slices/hubSlice';
+import type { ScheduleInvalidation } from './scheduleTypes';
 import type { AttendanceChanged, PointCard } from './types';
 
 /** facility-0064: the automatic reconnect's waits; after it gives up, a fresh start every 3 s. */
@@ -19,6 +20,12 @@ export const HUB_ONLINE_ASK_MS = 1_000;
 /** ScanHub's point events (facility-0057, 0058): each carries the point's whole card as the clock's shift sees it. */
 const POINT_EVENTS = ['ScanRecorded', 'InspectionRecorded'] as const;
 
+/**
+ * ScheduleHub's invalidation (spec §12, ScheduleNotifications.EventName). The payload is the command's identity only, so a
+ * recipient learns "refetch", never a person or a schedule value it is not entitled to.
+ */
+const SCHEDULE_EVENT = 'ScheduleChanged';
+
 export interface ScanHubFollow {
   /** This connection's name in hubSlice (plan 11 decision 4); the page's badge or footer reads the same key. */
   key: string;
@@ -32,6 +39,8 @@ export interface ScanHubFollow {
   onPoint?: (point: PointCard) => void;
   /** AttendanceRecorded, sent to Admins only (facility-0027 rule 5); left out by a page that shows no attendance. */
   onAttendance?: (change: AttendanceChanged) => void;
+  /** ScheduleChanged (spec §12): a committed schedule command touched a slot or building this follower may read. */
+  onSchedule?: (change: ScheduleInvalidation) => void;
   /** Pushes may have been missed while the connection was down: ask the server again (facility-0064 item 2). */
   onMissed: () => void;
   /** How long to wait to hear from the server before the link counts as lost; left out, the client's own 30 s. */
@@ -50,6 +59,7 @@ export async function followScanHub({
   accessToken,
   onPoint,
   onAttendance,
+  onSchedule,
   onMissed,
   serverTimeoutMs,
 }: ScanHubFollow): Promise<void> {
@@ -135,6 +145,11 @@ export async function followScanHub({
       onAttendance(change);
     });
   }
+  if (onSchedule) {
+    connection.on(SCHEDULE_EVENT, (change: ScheduleInvalidation) => {
+      onSchedule(change);
+    });
+  }
   // A handler for each event this follower does not take: an Admin gets all three, and the client logs a
   // warning for every message with no handler
   if (!onPoint) {
@@ -144,6 +159,9 @@ export async function followScanHub({
   }
   if (!onAttendance) {
     connection.on('AttendanceRecorded', () => {});
+  }
+  if (!onSchedule) {
+    connection.on(SCHEDULE_EVENT, () => {});
   }
   connection.onreconnecting(() => setStatus('reconnecting'));
   connection.onreconnected(() => {

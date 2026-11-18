@@ -4,6 +4,7 @@ import { CheckInPage } from './pages/check-in';
 import { InspectPage } from './pages/inspect';
 import { MyBuildingPage } from './pages/my-building';
 import { MyWorkPage } from './pages/my-work';
+import { OwnSchedulePage, ScheduleManagementPage } from './pages/schedules';
 import { ScanPage } from './pages/scan';
 import { AppLayout } from './shared/components/AppLayout';
 import { Splash } from './shared/components/Boxes';
@@ -39,6 +40,8 @@ export const routes: RouteObject[] = [
             element: <AppLayout />,
             children: [
               { path: 'my-work', element: <MyWorkPage /> },
+              // facility-0176: the Cleaner's own read-only week, before the work list on งานของฉัน
+              { path: 'my-schedule', element: <OwnSchedulePage /> },
               // Printed on each Area's check-in sign (plan 8 decision 1); only the sign carries the token (facility-0059)
               { path: 'check-in/:token', element: <CheckInPage /> },
             ],
@@ -63,7 +66,15 @@ export const routes: RouteObject[] = [
       },
       {
         element: <ProtectedRoute roles={['supervisor']} />,
-        children: [{ element: <AppLayout />, children: [{ path: 'my-building', element: <MyBuildingPage /> }] }],
+        children: [
+          // ตึกของฉัน stays the phone column it is (facility-0057); its timetable entry opens the wide roster below
+          { element: <AppLayout />, children: [{ path: 'my-building', element: <MyBuildingPage /> }] },
+          // facility-0177: the Supervisor's timetable is a roster, so it takes the desk's width
+          {
+            element: <AppLayout wide />,
+            children: [{ path: 'schedule-management', element: <ScheduleManagementPage /> }],
+          },
+        ],
       },
       {
         element: <ProtectedRoute roles={['admin']} />,
@@ -76,6 +87,11 @@ export const routes: RouteObject[] = [
               {
                 path: 'admin/attendance',
                 lazy: async () => ({ Component: (await import('./pages/attendance')).AttendancePage }),
+              },
+              // facility-0178: the Admin's timetable, every building and any shift; lazily loaded like every Admin page
+              {
+                path: 'admin/schedules',
+                lazy: async () => ({ Component: (await import('./pages/schedules/AdminSchedulesPage')).AdminSchedulesPage }),
               },
               // facility-0035, 0041, 0048, 0051, wireframe D3
               { path: 'admin/alerts', lazy: async () => ({ Component: (await import('./pages/alerts')).AlertsPage }) },

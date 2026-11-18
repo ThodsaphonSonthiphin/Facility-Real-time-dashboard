@@ -1,5 +1,6 @@
-import { ArrowRightLeft, Check, Moon, RefreshCw } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, Check, ChevronRight, Moon, RefreshCw } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { NavLink } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { MY_WORK_HUB, useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import type { AttendanceState, MyWork, OwnShift, Shift } from '../../shared/api/types';
@@ -8,6 +9,7 @@ import { LogoutButton } from '../../shared/components/LogoutButton';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
+import { focusRing } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { formatClock, formatTime } from '../../shared/utils/thaiTime';
@@ -67,6 +69,8 @@ export function MyWorkPage() {
     >
       {isLoading && <PageLoading lines={3}>กำลังโหลดงาน...</PageLoading>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
+      {/* facility-0176: the schedule sits before the work list, and this is the only way there from a phone */}
+      <ScheduleLink />
       {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
       {/* Not before the first answer: the list then pushed it down the screen (layout shift, measured 2026-10-28) */}
       {!isLoading && (
@@ -80,6 +84,24 @@ export function MyWorkPage() {
         </footer>
       )}
     </PhoneScreen>
+  );
+}
+
+/**
+ * facility-0176: "ตารางของฉัน" before the work list. It is a plain route, so it needs no QR and no location (0179); the
+ * page returns here with its own back control.
+ */
+function ScheduleLink() {
+  return (
+    <NavLink
+      to="/my-schedule"
+      data-tap=""
+      className={`flex min-h-12 items-center gap-3 rounded-md border border-border-control bg-surface px-4 text-base font-semibold no-underline text-text hover:border-accent ${focusRing}`}
+    >
+      <CalendarDays aria-hidden="true" className="size-5 shrink-0 text-accent" />
+      <span className="flex-1">ตารางของฉัน</span>
+      <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-text-2" />
+    </NavLink>
   );
 }
 

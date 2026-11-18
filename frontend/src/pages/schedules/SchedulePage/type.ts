@@ -1,0 +1,41 @@
+import type { ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
+import type { ScheduleRole, ScheduleSelection } from '../scheduleRules';
+
+/**
+ * What the page's hook hands its JSX: the answer, what to say while there is none, and the one week control. Nothing here
+ * fetches or decides authority — the server's own scoped read is the only authority, and the hook passes it through.
+ */
+export interface SchedulePageView {
+  /** The role whose week this is, so the body can show the words for it without a second parameter. */
+  role: ScheduleRole;
+  week: ScheduleWeek | undefined;
+  /** The selection actually asked for, after a restored filter the server has nothing readable for was dropped. */
+  selection: ScheduleSelection;
+  /** True when a restored building was dropped this read, so the page can say the filter changed rather than pretend. */
+  filterDropped: boolean;
+  isLoading: boolean;
+  /** Another answer is on its way over an older one already on screen. */
+  isFetching: boolean;
+  error: unknown;
+  /**
+   * Spec §12: the read on screen may be older than the stored plan. It stays until a read that started after the push
+   * succeeded; a reconnect, a request start or a failed read never clears it.
+   */
+  mayBeStale: boolean;
+  /** What the hub said about this read's connection, for the footnote beside it. */
+  hubStatus: 'connecting' | 'live' | 'reconnecting';
+  /** Ask again now: the "อัปเดต" control and a failed read's retry. */
+  refetch: () => void;
+  /** The week the person chose: it is what returning to the page restores (facility-0181, 0185, 0218). */
+  chooseWeek: (weekStart: string) => void;
+  chooseBuilding: (buildingId: number | undefined) => void;
+  chooseShift: (shift: ScheduleSelection['shift']) => void;
+  /** The previous or next week, always a Monday (a week is read one at a time). */
+  goWeek: (weeks: number) => void;
+}
+
+/** One table row of the management view: a person and the days the reader may see (seven, or fewer mid-week). */
+export interface ScheduleRow {
+  person: SchedulePerson;
+  days: ScheduleDay[];
+}
