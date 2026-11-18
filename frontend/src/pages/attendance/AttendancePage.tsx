@@ -23,7 +23,7 @@ import { BoardControls } from './BoardControls';
 import { CorrectionForm } from './CorrectionForm';
 import { CoverDrawer } from './CoverDrawer';
 import type { CoverSlot } from '../../shared/cover/coverSlots';
-import { readBoardArgs, readFill, searchRows, toBoardParams } from './attendanceRules';
+import { attendanceTargets, readBoardArgs, readFill, searchRows, toBoardParams } from './attendanceRules';
 
 /** The row whose form is open, the event it opens on, and the slot and Cleaner it was opened for. */
 type Editing = { areaId: number; event?: AttendanceEvent; shiftDate: string; shift: Shift; userId: number };
@@ -58,24 +58,26 @@ export function AttendancePage() {
   const setPage = (next: number) => setPaging({ key: pageKey, page: next });
 
   // From an alert's "เติมเวลา…" link (plan 11 decision 9): the form opens on that Cleaner once the board is in
-  const fillRow = fill && board ? board.rows.find((row) => row.cleaner?.id === fill.userId) : undefined;
+  const fillRow = fill && board ? board.rows.find((row) => attendanceTargets(row).some(({ cleaner }) => cleaner.id === fill.userId)) : undefined;
 
   // A form opened by hand belongs to the slot and Cleaner it was opened for: when the board under it changes, it closes
   const openRow = editing && board ? board.rows.find((row) => row.areaId === editing.areaId) : undefined;
+  const canStillEdit = openRow && attendanceTargets(openRow).some(({ cleaner }) => cleaner.id === editing?.userId);
   if (
     editing &&
     board &&
-    (board.shiftDate !== editing.shiftDate || board.shift !== editing.shift || openRow?.cleaner?.id !== editing.userId)
+    (board.shiftDate !== editing.shiftDate || board.shift !== editing.shift || !canStillEdit)
   ) {
     setEditing(null);
     setNotice({ kind: 'warn', text: 'กะที่แสดงเปลี่ยนแล้ว ฟอร์มแก้เวลาถูกปิด เปิดใหม่จากแถวของแม่บ้าน' });
   }
   const open: Editing | null =
     editing ??
-    (fillRow?.cleaner && board
-      ? { areaId: fillRow.areaId, event: fill?.event, shiftDate: board.shiftDate, shift: board.shift, userId: fillRow.cleaner.id }
+    (fill && fillRow && board
+      ? { areaId: fillRow.areaId, event: fill.event, shiftDate: board.shiftDate, shift: board.shift, userId: fill.userId }
       : null);
   const formRow = open && board ? board.rows.find((row) => row.areaId === open.areaId) : undefined;
+  const formTarget = formRow && attendanceTargets(formRow).find(({ cleaner }) => cleaner.id === open?.userId);
   const openKey = open ? formKey(open) : null;
   const openKeyRef = useRef(openKey);
   useEffect(() => {
@@ -142,12 +144,12 @@ export function AttendancePage() {
       {board && (
         <>
           <Tiles summary={board.summary} onBreak={board.rows.filter((row) => row.state === 'OnBreak').length} />
-          {open && openKey && formRow?.cleaner && (
+          {open && openKey && formRow && formTarget && (
             <CorrectionForm
               key={openKey}
               board={board}
-              row={formRow}
-              cleaner={formRow.cleaner}
+              row={{ ...formRow, events: formTarget.events }}
+              cleaner={formTarget.cleaner}
               initialEvent={open.event}
               onDone={(text) => {
                 setNotice({ kind: 'ok', text });
@@ -168,17 +170,16 @@ export function AttendancePage() {
             />
           )}
           <AttendanceTable
+            lifecycleVersion={board.lifecycleVersion}
             onCover={(row) => {
               setNotice(null);
               setCover({ areaId: row.areaId, shiftDate: board.shiftDate, shift: board.shift });
             }}
             rows={shown.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)}
             footer={shown.length > 0 && <TableFooter page={page} total={shown.length} onPage={setPage} />}
-            onCorrect={(row) => {
+            onCorrect={(row, userId) => {
               setNotice(null);
-              if (board && row.cleaner) {
-                setEditing({ areaId: row.areaId, shiftDate: board.shiftDate, shift: board.shift, userId: row.cleaner.id });
-              }
+              setEditing({ areaId: row.areaId, shiftDate: board.shiftDate, shift: board.shift, userId });
             }}
           />
         </>

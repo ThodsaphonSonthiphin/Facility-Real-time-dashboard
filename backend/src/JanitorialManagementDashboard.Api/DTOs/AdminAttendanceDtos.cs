@@ -1,4 +1,5 @@
 using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 
 namespace JanitorialManagementDashboard.Api.DTOs;
@@ -30,10 +31,13 @@ public record BoardResponsibilityDto(
     int? LastConfirmedAreaId,
     DateTime? ConfirmedAt);
 
+public record BoardCleanerAttendanceDto(AssignedCleanerDto Cleaner, IReadOnlyList<BoardEventDto> Events);
+
 /// <summary>
-/// Cleaner is the Area's current Cleaner for the shift (null when none is responsible); Events are theirs. Entry is the
+/// Cleaner is the Area's primary displayed Cleaner for the shift (null when none is responsible); Events are theirs. Entry is the
 /// spec §13 category — "entered" from actual evidence, "covered" when assigned without entry, or "unassigned" — and
-/// EntryEvidence is its provenance. Responsibility is the transfer-derived current answer and stays separate from Entry.
+/// EntryEvidence is its provenance. AdditionalCleaners carry the other current people and their own correction facts
+/// when an arrival shares the Area. Transfer responsibilities stay separate from actual Entry.
 /// </summary>
 public record BoardRowDto(
     int AreaId,
@@ -46,12 +50,14 @@ public record BoardRowDto(
     IReadOnlyList<BoardCoverDto> Covers,
     string Entry,
     IReadOnlyList<BoardEntryEvidenceDto> EntryEvidence,
-    BoardResponsibilityDto? Responsibility = null);
+    BoardResponsibilityDto? Responsibility = null,
+    IReadOnlyList<BoardCleanerAttendanceDto>? AdditionalCleaners = null,
+    IReadOnlyList<BoardResponsibilityDto>? Responsibilities = null);
 
 /// <summary>Required = Areas that work this shift; Present = Working, OnBreak or Done. Required = Present + Empty + Covered.</summary>
 public record BoardSummaryDto(int Required, int Present, int Empty, int Covered);
 
-public record AttendanceBoardDto(DateOnly ShiftDate, Shift Shift, bool ShiftEnded, BoardSummaryDto Summary, IReadOnlyList<BoardRowDto> Rows);
+public record AttendanceBoardDto(DateOnly ShiftDate, Shift Shift, bool ShiftEnded, BoardSummaryDto Summary, IReadOnlyList<BoardRowDto> Rows, AttendanceLifecycleVersion LifecycleVersion);
 
 /// <summary>SignalR "AttendanceRecorded" to Admins (facility-0027 rule 5): the page reloads that shift's board.</summary>
 public record AttendanceChangedDto(int AreaId, DateOnly ShiftDate, Shift Shift);

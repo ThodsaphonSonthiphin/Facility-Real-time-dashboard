@@ -226,9 +226,11 @@ public static class AttendanceEndpoints
 
     /// <summary>
     /// facility-0082: the check-in page asks on opening whether its sign still works. It records nothing, and it never
-    /// says whose sign it is: another Area's sign is told on the press, as a Blocked Scan (facility-0080).
+    /// says whose sign it is. For the caller's pending transfer, it can also say whether this sign accepts arrival.
     /// </summary>
-    private static async Task<IResult> CheckSignAsync(string token, ClaimsPrincipal principal, AppDbContext db)
+    private static async Task<IResult> CheckSignAsync(
+        string token, int? transferId, ClaimsPrincipal principal, AppDbContext db, ScheduleStore store,
+        TimeProvider clock, AttendanceSettings settings, CancellationToken ct)
     {
         var user = await CurrentUser.LoadAsync(principal, db);
         if (user is null)
@@ -241,9 +243,26 @@ public static class AttendanceEndpoints
             return ApiResults.Message(StatusCodes.Status403Forbidden, CleanersOnly);
         }
 
-        return await FindCheckInSignAsync(db, token) is null
-            ? ApiResults.Message(StatusCodes.Status404NotFound, SignNotFound)
-            : Results.NoContent();
+        if (await FindCheckInSignAsync(db, token) is not { } sign)
+        {
+            return ApiResults.Message(StatusCodes.Status404NotFound, SignNotFound);
+        }
+
+        if (transferId is null)
+        {
+            return Results.NoContent();
+        }
+
+        var now = clock.GetUtcNow();
+        var canConfirmTransfer = false;
+        if (user.Shift is { } shift && AttendanceCalendar.SlotFor(shift, now.UtcDateTime, settings) is { } slot)
+        {
+            var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, now, ct);
+            canConfirmTransfer = duty.Transfer is { IsPending: true } transfer
+                && transfer.Id == transferId && transfer.ToAreaId == sign.AreaId;
+        }
+
+        return Results.Ok(new { canConfirmTransfer });
     }
 
     /// <summary>An Area's check-in sign by its QR Token, with its Area, while the Area is active; otherwise null.</summary>

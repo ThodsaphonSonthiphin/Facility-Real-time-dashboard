@@ -70,6 +70,70 @@ describe('attendance corrections (D2, facility-0051)', () => {
     await waitFor(() => expect(boardCalls(server).length).toBeGreaterThan(before));
   });
 
+  it('shows a numbered slot on the board and lets Admin correct a second-break scan', async () => {
+    const row: BoardRow = {
+      ...workingRow,
+      events: [
+        ...workingRow.events,
+        boardEvent(5001, 'Break2Out', '2026-10-15T09:00:00Z', { source: 'SupervisorAdd' }),
+      ],
+      entry: 'entered',
+      entryEvidence: [{ kind: 'transfer-arrival', recordedAt: '2026-10-15T06:05:00Z', transferId: 5 }],
+      responsibility: { userId: 21, employeeId: '650001', displayName: 'แม่บ้านทดสอบ', state: 'confirmed' },
+    };
+    const server = serve(
+      { 'PUT /api/admin/attendance': () => savedEvent },
+      attendanceBoard([row], { lifecycleVersion: 'Numbered6' }),
+    );
+    const { user } = await renderApp('/admin/attendance');
+
+    expect(await screen.findByRole('columnheader', { name: 'ออกพัก 2' })).toBeVisible();
+    expect(screen.queryByRole('columnheader', { name: /^ออกพัก$/ })).not.toBeInTheDocument();
+    expect(screen.getByText('หัวหน้าเติมเวลา')).toBeVisible();
+    expect(screen.getByText('ยืนยันเข้าพื้นที่ใหม่ 13:05')).toBeVisible();
+    expect(screen.getByText(/ยืนยันถึงพื้นที่ใหม่แล้ว/)).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
+    const form = screen.getByRole('dialog', { name: 'แก้เวลา' });
+    expect(time(form, 'กลับจากพัก 2')).toHaveValue('');
+    expect(time(form, 'ออกพัก 2')).toHaveValue('16:00');
+    await user.clear(time(form, 'ออกพัก 2'));
+    await user.type(time(form, 'ออกพัก 2'), '16:05');
+    await user.click(within(form).getByRole('radio', { name: 'ลืมลงเวลา' }));
+    await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
+
+    expect(await screen.findByText('บันทึกเวลาออกพัก 2ของ แม่บ้านทดสอบ แล้ว')).toBeVisible();
+    expect(puts(server).map((call) => call.body)).toEqual([
+      expect.objectContaining({ eventType: 'Break2Out', time: '16:05', reason: 'ลืมลงเวลา' }),
+    ]);
+  });
+
+  it('corrects the transferred Cleaner independently of the resident of their destination', async () => {
+    const transferred = { id: 61, employeeId: '650061', displayName: 'แม่บ้านย้ายเข้า' };
+    const row = {
+      ...workingRow,
+      additionalCleaners: [{
+        cleaner: transferred,
+        events: [boardEvent(5002, 'ShiftIn', '2026-10-15T00:10:00Z')],
+      }],
+    };
+    const server = serve({ 'PUT /api/admin/attendance': () => savedEvent }, attendanceBoard([row]));
+    const { user } = await renderApp('/admin/attendance');
+
+    expect(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'แก้เวลา แม่บ้านย้ายเข้า' }));
+    const form = screen.getByRole('dialog', { name: 'แก้เวลา' });
+    expect(time(form, 'เข้างาน')).toHaveValue('07:10');
+    await user.type(time(form, 'ออกพัก'), '10:05');
+    await user.click(within(form).getByRole('radio', { name: 'ลืมลงเวลา' }));
+    await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
+
+    expect(await screen.findByText('บันทึกเวลาออกพักของ แม่บ้านย้ายเข้า แล้ว')).toBeVisible();
+    expect(puts(server).map((call) => call.body)).toEqual([
+      expect.objectContaining({ userId: transferred.id, eventType: 'BreakOut', time: '10:05' }),
+    ]);
+  });
+
   it('the saved notice floats over the page and ✕ closes it at once', async () => {
     serve({ 'PUT /api/admin/attendance': () => savedEvent });
     const { user } = await renderApp('/admin/attendance');

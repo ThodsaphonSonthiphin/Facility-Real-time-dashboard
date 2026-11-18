@@ -1,4 +1,5 @@
-import type { ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
+import type { ScheduleDay, SchedulePerson, ScheduleTransferSlot, ScheduleWeek } from '../../../shared/api/scheduleTypes';
+import type { TeamSlotArgs } from '../schedulesApi';
 import type { ScheduleRole, ScheduleSelection } from '../scheduleRules';
 
 /**
@@ -10,6 +11,7 @@ export interface SchedulePageView {
   role: ScheduleRole;
   week: ScheduleWeek | undefined;
   latest: ScheduleWeek | undefined;
+  standaloneTransfers: ScheduleTransferSlot[];
   /** The selection actually asked for, after a restored filter the server has nothing readable for was dropped. */
   selection: ScheduleSelection;
   /** True when a restored building was dropped this read, so the page can say the filter changed rather than pretend. */
@@ -40,6 +42,7 @@ export interface SchedulePageView {
   openWeekly: () => void;
   openBaseline: (person: SchedulePerson) => void;
   openDated: (person: SchedulePerson, day: ScheduleDay) => void;
+  openTeamSlot: (kind: 'missing-time' | 'transfer', slot: TeamSlotArgs, displayName: string) => void;
   closeEditor: () => void;
   dateAction: (day: ScheduleDay) => string;
 
@@ -57,4 +60,6 @@ export type OpenScheduleEditor =
   | { kind: 'relief-loan'; week: ScheduleWeek }
   | { kind: 'weekly'; week: ScheduleWeek }
   | { kind: 'baseline'; week: ScheduleWeek; person: SchedulePerson }
-  | { kind: 'dated'; person: SchedulePerson; day: ScheduleDay };
+  | { kind: 'dated'; person: SchedulePerson; day: ScheduleDay }
+  | { kind: 'missing-time'; slot: TeamSlotArgs; displayName: string }
+  | { kind: 'transfer'; slot: TeamSlotArgs; displayName: string };

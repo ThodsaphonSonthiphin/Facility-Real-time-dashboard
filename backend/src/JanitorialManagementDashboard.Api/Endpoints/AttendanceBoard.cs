@@ -39,10 +39,16 @@ internal static class AttendanceBoard
             .ToList();
         var areaIds = areas.Select(a => a.Id).ToList();
 
+        var transfers = await store.ReadSlotTransfersAsync(slot, ct);
+        var transferredIds = transfers.Where(pair => areaIds.Contains(pair.Value.Instruction.FromAreaId)
+                || areaIds.Contains(pair.Value.Instruction.ToAreaId)
+                || pair.Value.LastConfirmedAreaId is { } last && areaIds.Contains(last))
+            .Select(pair => pair.Key).ToList();
         var cleaners = await db.Users.AsNoTracking()
-            .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.Shift == slot.Shift
-                && u.AreaId != null && areaIds.Contains(u.AreaId.Value))
-            .ToListAsync();
+            .Where(u => u.Role == UserRole.Cleaner && u.IsActive
+                && ((u.Shift == slot.Shift && u.AreaId != null && areaIds.Contains(u.AreaId.Value))
+                    || transferredIds.Contains(u.Id)))
+            .ToListAsync(ct);
         var covers = await db.CoverAssignments.AsNoTracking()
             .Include(c => c.User!).ThenInclude(u => u.Area)
             .Where(c => c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null
@@ -66,31 +72,31 @@ internal static class AttendanceBoard
         // arrival), and current responsibility is a separate answer derived from the same transfer chain Task 10 stores.
         var evidence = await store.ReadEntryEvidenceAsync(slot, ct);
         var enteredAreas = ScheduleEntryEvidence.EnteredAreas(new ScheduleSlot(slot.ShiftDate, slot.Shift), evidence);
-        var transfers = await store.ReadSlotTransfersAsync(slot, ct);
         var positions = transfers.ToDictionary(
             pair => pair.Key,
             pair => PositionOf(cleaners.FirstOrDefault(u => u.Id == pair.Key)?.AreaId, pair.Value, nowUtc));
 
+        var factsByPerson = events.ToLookup(fact => fact.UserId);
         var rows = areas
             .Select(area =>
             {
                 // The person shown is whoever is currently responsible here. A pending instruction has no confirmed
                 // presence at its destination, so it is assigned there (covered) without papering over the missing arrival.
-                var responsible = cleaners.FirstOrDefault(u => AreaOf(u, positions) == area.Id
-                    && !(positions.TryGetValue(u.Id, out var position) && position.IsPending));
-                var transferred = cleaners.Where(u => positions.ContainsKey(u.Id)).ToList();
-                var assigned = covers.Any(c => c.AreaId == area.Id)
-                    || cleaners.Any(u => AreaOf(u, positions) == area.Id);
-                var responsibility = transferred
-                    .Where(u => positions[u.Id].AreaId == area.Id
-                        && positions[u.Id].State is TransferStates.Instructed or TransferStates.Confirmed)
-                    .Select(u => new BoardResponsibilityDto(
-                        u.Id, u.EmployeeId ?? string.Empty, u.DisplayName, positions[u.Id].State,
-                        positions[u.Id].LastConfirmedAreaId, positions[u.Id].ConfirmedAt?.UtcDateTime))
-                    .FirstOrDefault();
-
-                return Row(area, responsible, covers.Where(c => c.AreaId == area.Id).ToList(), events, version, evidence,
-                    enteredAreas, assigned, responsibility);
+                var assignedHere = cleaners.Where(user => AreaOf(user, positions) == area.Id).ToList();
+                var responsible = assignedHere
+                    .Where(user => !(positions.TryGetValue(user.Id, out var position) && position.IsPending))
+                    .OrderByDescending(user => user.AreaId == area.Id).ThenBy(user => user.Id)
+                    .ToList();
+                var responsibilities = assignedHere
+                    .Where(user => positions.TryGetValue(user.Id, out var position)
+                        && position.State is TransferStates.Instructed or TransferStates.Confirmed)
+                    .Select(user => new BoardResponsibilityDto(
+                        user.Id, user.EmployeeId ?? string.Empty, user.DisplayName, positions[user.Id].State,
+                        positions[user.Id].LastConfirmedAreaId, positions[user.Id].ConfirmedAt?.UtcDateTime))
+                    .ToList();
+                var areaCovers = covers.Where(cover => cover.AreaId == area.Id).ToList();
+                return Row(area, responsible, areaCovers, factsByPerson, version, evidence, enteredAreas,
+                    areaCovers.Count > 0 || assignedHere.Count > 0, responsibilities);
             })
             .OrderBy(r => r.State == AreaAttendanceState.Empty ? 0 : 1)
             .ThenBy(r => r.AreaCode)
@@ -105,7 +111,8 @@ internal static class AttendanceBoard
                 rows.Count(r => r.State is AreaAttendanceState.Working or AreaAttendanceState.OnBreak or AreaAttendanceState.Done),
                 rows.Count(r => r.State == AreaAttendanceState.Empty),
                 rows.Count(r => r.State == AreaAttendanceState.Covered)),
-            rows);
+            rows,
+            version);
     }
 
     public static BoardEventDto ToDto(ShiftAttendance a) =>
@@ -129,11 +136,22 @@ internal static class AttendanceBoard
     }
 
     private static BoardRowDto Row(
-        Area area, User? cleaner, List<CoverAssignment> covers, List<ShiftAttendance> events,
+        Area area, IReadOnlyList<User> cleaners, List<CoverAssignment> covers, ILookup<int, ShiftAttendance> facts,
         AttendanceLifecycleVersion version, IReadOnlyList<AreaEntryEvidence> evidence,
-        IReadOnlySet<int> enteredAreas, bool isAssigned, BoardResponsibilityDto? responsibility)
+        IReadOnlySet<int> enteredAreas, bool isAssigned, List<BoardResponsibilityDto> responsibilities)
     {
-        var own = cleaner is null ? new List<ShiftAttendance>() : events.Where(e => e.UserId == cleaner.Id).ToList();
+        var primary = cleaners.FirstOrDefault();
+        var own = primary is null ? [] : facts[primary.Id].Select(ToDto).ToList();
+        var additional = cleaners.Skip(1)
+            .Select(person => new BoardCleanerAttendanceDto(CleanerDto(person), facts[person.Id].Select(ToDto).ToList()))
+            .ToList();
+        var states = cleaners.Select(person =>
+            AreaAttendance.StateOf(facts[person.Id].Select(fact => fact.EventType).ToList(), false, version)).ToHashSet();
+        var state = states.Contains(AreaAttendanceState.Working) ? AreaAttendanceState.Working
+            : states.Contains(AreaAttendanceState.OnBreak) ? AreaAttendanceState.OnBreak
+            : states.Contains(AreaAttendanceState.Done) ? AreaAttendanceState.Done
+            : covers.Count > 0 ? AreaAttendanceState.Covered
+            : AreaAttendanceState.Empty;
         var entryEvidence = evidence
             .Where(row => row.AreaId == area.Id)
             .OrderBy(row => row.RecordedAt)
@@ -144,9 +162,9 @@ internal static class AttendanceBoard
             area.Code,
             area.Name,
             area.Building!.Code,
-            cleaner is null ? null : new AssignedCleanerDto(cleaner.Id, cleaner.EmployeeId ?? string.Empty, cleaner.DisplayName),
-            AreaAttendance.StateOf(own.Select(e => e.EventType).ToList(), covers.Count > 0, version),
-            own.Select(ToDto).ToList(),
+            primary is null ? null : CleanerDto(primary),
+            state,
+            own,
             covers.Select(c => new BoardCoverDto(
                     c.Id,
                     c.UserId,
@@ -154,14 +172,19 @@ internal static class AttendanceBoard
                     c.User.DisplayName,
                     c.User.Area?.Code,
                     Utc(c.AssignedAt),
-                    events.Where(e => e.UserId == c.UserId && e.EventType == AttendanceEvent.ShiftIn)
+                    facts[c.UserId].Where(e => e.EventType == AttendanceEvent.ShiftIn)
                         .Select(e => (DateTime?)Utc(e.OccurredAt))
                         .FirstOrDefault()))
                 .ToList(),
             AreaAttendance.EntryOf(enteredAreas.Contains(area.Id), isAssigned),
             entryEvidence,
-            responsibility);
+            responsibilities.FirstOrDefault(),
+            additional.Count > 0 ? additional : null,
+            responsibilities.Count > 1 ? responsibilities : null);
     }
+
+    private static AssignedCleanerDto CleanerDto(User cleaner) =>
+        new(cleaner.Id, cleaner.EmployeeId ?? string.Empty, cleaner.DisplayName);
 
     /// <summary>
     /// The Area a person is currently responsible for: the transfer chain's answer when the slot has one, else their account

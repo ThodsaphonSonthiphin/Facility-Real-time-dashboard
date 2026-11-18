@@ -66,10 +66,9 @@ internal static class AttendanceStateView
     }
 
     /// <summary>
-    /// Every action of the slot's lifecycle with what it is now. A recorded fact wins; a stored skip marker comes next; then
-    /// a Numbered6 slot classifies an action whose expected instant the plan knows — using the recorded final Shift-Out as
-    /// the departure and the live leave interval as the bounds — while an action with no known instant, and every unresolved
-    /// action of a Legacy4 slot, stays "pending", which is that contract's old meaning.
+    /// Every action of the slot's lifecycle with what it is now. An actual fact wins. A Numbered6 action covered by leave
+    /// after the recorded departure is not applicable. Any explicit skip remains in the gap history. Other skipped actions
+    /// take precedence over the expected-time state.
     /// </summary>
     private static List<AttendanceActionDto> Describe(
         AttendanceLifecycleVersion version,
@@ -97,15 +96,14 @@ internal static class AttendanceStateView
                 continue;
             }
 
-            if (skipped.Contains(action))
-            {
-                actions.Add(new AttendanceActionDto(action, Skipped, null, null, expectedAt));
-                continue;
-            }
-
-            var state = version == AttendanceLifecycleVersion.Numbered6 && expected.TryGetValue(action, out var due)
+            var state = version == AttendanceLifecycleVersion.Numbered6 && expectedAt is { } due
                 ? Word(AttendanceApplicability.Classify(UtcOffset(due), now, departure, duty.LeaveStart, duty.LeaveEnd))
                 : Pending;
+            if (state != NotApplicable && skipped.Contains(action))
+            {
+                state = Skipped;
+            }
+
             actions.Add(new AttendanceActionDto(action, state, null, null, expectedAt));
         }
 
@@ -152,8 +150,9 @@ internal sealed record AttendanceSlotState(
         duty.Source,
         duty.IsDayOff,
         duty.IsLeave,
-        duty.Transfer is { } transfer
-            ? new AttendanceTransferDto(transfer.Id, transfer.FromAreaId, transfer.ToAreaId,
-                transfer.EffectiveAt.UtcDateTime, transfer.State, transfer.ConfirmedAt?.UtcDateTime, transfer.Revision)
-            : null);
+        duty.Transfer is { } transfer ? TransferDto(transfer) : null);
+
+    internal static AttendanceTransferDto TransferDto(EffectiveTransfer transfer) => new(
+        transfer.Id, transfer.FromAreaId, transfer.ToAreaId, transfer.EffectiveAt.UtcDateTime,
+        transfer.State, transfer.ConfirmedAt?.UtcDateTime, transfer.Revision);
 }

@@ -90,6 +90,37 @@ public class ScheduleEntryProjectionTests
     }
 
     [Fact]
+    public async Task Filtering_to_an_occupied_destination_keeps_both_cleaners_and_their_separate_facts()
+    {
+        using var factory = TransferApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddBuildingAsync(factory, "B");
+        var destination = await TestData.AddAreaAsync(factory, "AR03", "B");
+        var resident = await TestData.AddCleanerAsync(factory, "3055001", Shift.Day, "AR03");
+        var building = await AdminSetupApi.BuildingIdAsync(factory, "B");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await TransferApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
+        var transferId = await TransferApi.InstructForIdAsync(
+            factory, admin, auth.User.Id, origin, destination, TransferApi.Thai(13, 0));
+        var confirm = await TransferApi.ConfirmAsync(factory, cleaner, transferId, "1", at: TransferApi.Thai(13, 5));
+        Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
+
+        var board = await AdminAttendanceApi.BoardAsync(admin, $"?shiftDate=2026-10-08&shift=Day&buildingId={building}");
+
+        var row = Assert.Single(board.Rows);
+        Assert.Equal(destination, row.AreaId);
+        Assert.Equal(resident, row.Cleaner!.Id);
+        Assert.Empty(row.Events);
+        Assert.Equal("Working", row.State);
+        Assert.Equal("confirmed", row.Responsibility!.State);
+        Assert.Equal("transfer-arrival", Assert.Single(row.EntryEvidence!).Kind);
+        var inbound = Assert.Single(row.AdditionalCleaners!);
+        Assert.Equal(auth.User.Id, inbound.Cleaner.Id);
+        Assert.Equal("ShiftIn", Assert.Single(inbound.Events).EventType);
+    }
+
+    [Fact]
     public async Task A_final_shift_out_keeps_both_areas_entered_and_ends_the_destination()
     {
         using var factory = TransferApi.NewFactory();

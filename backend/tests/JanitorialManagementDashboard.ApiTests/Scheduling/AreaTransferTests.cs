@@ -85,6 +85,39 @@ public class AreaTransferTests
     }
 
     [Fact]
+    public async Task Only_the_current_pending_transfer_at_its_destination_sign_can_be_confirmed()
+    {
+        using var factory = TransferApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var destination = await TestData.AddAreaAsync(factory, "AR03", "A");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await TransferApi.LocateAsync(factory);
+        await TransferApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
+        var transferId = await TransferApi.InstructForIdAsync(
+            factory, admin, auth.User.Id, origin, destination, TransferApi.Thai(13, 0));
+
+        var destinationPath = $"/api/attendance/signs/{TransferApi.Destination}";
+        var matchingPath = $"{destinationPath}?transferId={transferId}";
+        factory.Clock.SetUtcNow(TransferApi.Thai(12, 59));
+        Assert.False((await cleaner.GetFromJsonAsync<SignTransferCheck>(matchingPath))!.CanConfirmTransfer);
+
+        factory.Clock.SetUtcNow(TransferApi.Thai(13, 5));
+        Assert.Equal(HttpStatusCode.NoContent, (await cleaner.GetAsync(destinationPath)).StatusCode);
+        Assert.True((await cleaner.GetFromJsonAsync<SignTransferCheck>(matchingPath))!.CanConfirmTransfer);
+        Assert.False((await cleaner.GetFromJsonAsync<SignTransferCheck>(
+            $"/api/attendance/signs/{TransferApi.Origin}?transferId={transferId}"))!.CanConfirmTransfer);
+        Assert.False((await cleaner.GetFromJsonAsync<SignTransferCheck>(
+            $"{destinationPath}?transferId={transferId + 1}"))!.CanConfirmTransfer);
+
+        var confirmed = await TransferApi.ConfirmAsync(factory, cleaner, transferId, "1", at: TransferApi.Thai(13, 5));
+        Assert.Equal(HttpStatusCode.OK, confirmed.StatusCode);
+        Assert.False((await cleaner.GetFromJsonAsync<SignTransferCheck>(matchingPath))!.CanConfirmTransfer);
+    }
+
+    private sealed record SignTransferCheck(bool CanConfirmTransfer);
+
+    [Fact]
     public async Task The_final_shift_out_happens_at_the_destination_without_a_second_shift_in_or_out()
     {
         using var factory = TransferApi.NewFactory();
@@ -570,6 +603,18 @@ public class AreaTransferTests
         Assert.Equal(destination, instructions[1].FromAreaId);
         Assert.Equal(forward, instructions[1].ToAreaId);
         Assert.Single(await TransferApi.ConfirmationsAsync(factory));
+
+        factory.Clock.SetUtcNow(TransferApi.Thai(16, 1));
+        var manager = await TeamAttendanceApi.StateAsync(admin, auth.User.Id);
+        Assert.Equal(HttpStatusCode.OK, manager.StatusCode);
+        var view = (await manager.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
+        Assert.Equal(instructions[1].Id, view.Transfer!.Id);
+        Assert.Equal("instructed", view.Transfer.State);
+        Assert.Empty(view.FillableActions!);
+        var previous = Assert.Single(view.TransferHistory!);
+        Assert.Equal(first, previous.Id);
+        Assert.Equal("confirmed", previous.State);
+        Assert.Equal(TransferApi.Thai(13, 5).UtcDateTime, previous.ConfirmedAt);
     }
 
     // ---------------------------------------------------------------------------------------------------------------

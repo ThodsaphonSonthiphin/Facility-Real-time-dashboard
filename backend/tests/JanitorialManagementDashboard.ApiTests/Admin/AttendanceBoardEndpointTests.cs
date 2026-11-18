@@ -91,6 +91,7 @@ public class AttendanceBoardEndpointTests
         // Spec §8: a numbered break out without its return is the same "in the Area" answer the legacy Break-Out gives.
         var board = await AdminAttendanceApi.BoardAsync(admin, "?shiftDate=2026-10-08&shift=Day");
 
+        Assert.Equal("Numbered6", board.LifecycleVersion);
         Assert.Equal("OnBreak", board.Rows.Single(r => r.AreaCode == "AR01").State);
     }
 

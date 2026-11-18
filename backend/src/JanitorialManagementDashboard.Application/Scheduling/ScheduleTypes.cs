@@ -124,7 +124,12 @@ public sealed record SchedulePersonWeek(int UserId, string DisplayName, string C
 /// </para>
 /// </summary>
 public sealed record ScheduleProjection(DateOnly WeekStart, IReadOnlyList<SchedulePersonWeek> Rows,
-    string Revision, DateTimeOffset ReadAt, string Availability, IReadOnlyList<ReliefAssignmentFact> Relief, IReadOnlyList<ScheduleDestination>? Destinations = null, IReadOnlyList<ScheduleSourceBuilding>? SourceBuildings = null);
+    string Revision, DateTimeOffset ReadAt, string Availability, IReadOnlyList<ReliefAssignmentFact> Relief, IReadOnlyList<ScheduleDestination>? Destinations = null, IReadOnlyList<ScheduleSourceBuilding>? SourceBuildings = null,
+    IReadOnlyList<ScheduleTransferSlot>? TransferSlots = null);
+
+/// <summary>A related dated transfer and the identity needed to open its slot without reading the person's roster.</summary>
+public sealed record ScheduleTransferSlot(int Id, int UserId, string DisplayName, DateOnly ShiftDate, Shift Shift,
+    string FromAreaCode, string ToAreaCode, string Revision, DateTimeOffset? ConfirmedAt);
 
 public sealed record ScheduleSourceBuilding(int Id, string Code);
 

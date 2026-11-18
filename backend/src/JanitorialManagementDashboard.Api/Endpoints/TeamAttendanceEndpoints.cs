@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
@@ -32,6 +33,13 @@ public static class TeamAttendanceEndpoints
     /// <summary>Spec §11: the scoped missing-time route.</summary>
     public const string MissingPath = "/api/team-attendance/missing";
 
+    /// <summary>
+    /// Spec §4 and §8: the scoped attendance state of one person's slot for the date the manager selected, carrying the
+    /// state revision the missing-time fill must send back. It answers only inside the actor's dated scope, exactly as the
+    /// write does, so the form reads the same contract the write enforces.
+    /// </summary>
+    public const string StatePath = "/api/team-attendance/{userId:int}";
+
     private const string NotAuthorised = "ไม่มีสิทธิ์บันทึกเวลาของแม่บ้านคนนี้";
 
     /// <summary>One answer for every reason the actor may not touch this person: it never reveals their schedule.</summary>
@@ -40,8 +48,132 @@ public static class TeamAttendanceEndpoints
     public static IEndpointRouteBuilder MapTeamAttendanceEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost(MissingPath, AddMissingAsync).RequireAuthorization(AuthSetup.ScheduleManager);
+        app.MapGet(StatePath, ReadAsync).RequireAuthorization(AuthSetup.ScheduleManager);
         return app;
     }
+
+    private static async Task<IResult> ReadAsync(
+        int userId,
+        string? shiftDate,
+        string? shift,
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        ScheduleStore store,
+        ScheduleScopeReader scopes,
+        TimeProvider clock,
+        AttendanceSettings settings,
+        CancellationToken ct)
+    {
+        var actor = await CurrentUser.LoadAsync(principal, db);
+        if (actor is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        if (!DateOnly.TryParseExact(shiftDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+            || !Enum.TryParse<Shift>(shift, out var slotShift) || !Enum.IsDefined(slotShift))
+        {
+            return Bad("ต้องระบุวันที่และกะให้ถูกต้อง");
+        }
+
+        var person = await db.Users.Include(user => user.Area)
+            .FirstOrDefaultAsync(user => user.Id == userId && user.Role == UserRole.Cleaner && user.IsActive, ct);
+        if (person is null)
+        {
+            return UnavailablePerson(actor);
+        }
+
+        var slot = new ShiftSlot(date, slotShift);
+        var now = clock.GetUtcNow();
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, person, slot, now, ct);
+        var periods = actor.Role == UserRole.Admin ? [] : await scopes.ReadAsync(actor.Id, ct);
+        bool CanReadBuilding(int building) =>
+            InScope(actor, building, slot, now.UtcDateTime, periods);
+
+        var current = duty.Transfer;
+        var areaIds = new[] { duty.AreaId, current?.FromAreaId, current?.ToAreaId }
+            .OfType<int>().Distinct().ToList();
+        var buildings = await db.Areas.AsNoTracking().Where(area => areaIds.Contains(area.Id))
+            .ToDictionaryAsync(area => area.Id, area => area.BuildingId, ct);
+        bool CanReadArea(int? areaId) => areaId is { } id && buildings.TryGetValue(id, out var building)
+            && CanReadBuilding(building);
+
+        // A pending move has no writable duty Area. Its origin can still see and cancel the instruction, and a former
+        // team can read the transfer facts that concern it without gaining access to the person's later attendance.
+        var canReadAttendance = CanReadArea(duty.AreaId);
+        var canReadCurrent = current is not null &&
+            (CanReadArea(current.FromAreaId) || CanReadArea(current.ToAreaId));
+        var history = await ReadTransferHistoryAsync(db, person.Id, slot, CanReadBuilding, ct);
+        if (!canReadAttendance && !canReadCurrent && history.Count == 0)
+        {
+            return NoDutyAccess(actor);
+        }
+
+        var state = canReadAttendance
+            ? (await AttendanceStateView.LoadAsync(db, person.Id, slot, duty, now.UtcDateTime, ct)).ToDto(duty, null)
+            : new AttendanceStateDto(date, slotShift, [], [], null, Transfer: current is { } transfer && canReadCurrent
+                ? AttendanceSlotState.TransferDto(transfer)
+                : null);
+
+        return Results.Ok(state with
+        {
+            Transfer = canReadCurrent ? state.Transfer : null,
+            TransferHistory = history,
+            FillableActions = FillableActions(state, slot, now.UtcDateTime, settings),
+            CanCancelTransfer = current is { State: TransferStates.Instructed } && CanReadArea(current.FromAreaId),
+        });
+    }
+
+    private static IReadOnlyList<AttendanceEvent> FillableActions(
+        AttendanceStateDto state, ShiftSlot slot, DateTime nowUtc, AttendanceSettings settings)
+    {
+        var canFillLegacy = state.LifecycleVersion == nameof(AttendanceLifecycleVersion.Legacy4)
+            && nowUtc >= AttendanceCalendar.Window(slot, settings).Opens;
+        return state.Actions?
+            .Where(action => action.State is AttendanceStateView.Missing or AttendanceStateView.Skipped
+                || (canFillLegacy && action.State == AttendanceStateView.Pending))
+            .Select(action => action.EventType).ToList() ?? [];
+    }
+
+    private static async Task<List<AttendanceTransferDto>> ReadTransferHistoryAsync(
+        AppDbContext db, int personId, ShiftSlot slot, Func<int, bool> canReadBuilding, CancellationToken ct)
+    {
+        var confirmed = await (
+            from instruction in db.AreaTransfers.AsNoTracking()
+            where instruction.PersonId == personId && instruction.ShiftDate == slot.ShiftDate
+                && instruction.Shift == slot.Shift && !instruction.IsCancelled
+            join arrival in db.AreaTransferConfirmations.AsNoTracking() on instruction.Id equals arrival.TransferId
+            join origin in db.Areas.AsNoTracking() on instruction.FromAreaId equals origin.Id
+            join destination in db.Areas.AsNoTracking() on instruction.ToAreaId equals destination.Id
+            orderby instruction.Id
+            select new { instruction, arrival.OccurredAt, FromBuilding = origin.BuildingId, ToBuilding = destination.BuildingId })
+            .ToListAsync(ct);
+        return confirmed
+            .Where(row => canReadBuilding(row.FromBuilding) || canReadBuilding(row.ToBuilding))
+            .Select(row => new AttendanceTransferDto(
+                row.instruction.Id, row.instruction.FromAreaId, row.instruction.ToAreaId,
+                DateTime.SpecifyKind(row.instruction.EffectiveAt, DateTimeKind.Utc), TransferStates.Confirmed,
+                DateTime.SpecifyKind(row.OccurredAt, DateTimeKind.Utc),
+                row.instruction.Revision.ToString(CultureInfo.InvariantCulture)))
+            .ToList();
+    }
+
+    private static bool InScope(User actor, int buildingId, ShiftSlot slot, DateTime nowUtc,
+        IReadOnlyCollection<ScopePeriod> periods)
+    {
+        var today = ScheduleAuthority.BusinessDate(nowUtc);
+        return slot.ShiftDate < today
+            ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, buildingId, slot.Shift, slot.ShiftDate, today, periods)
+            : ScheduleAuthority.CanManage(actor.Role, actor.Id, buildingId, slot.Shift, slot.ShiftDate, periods);
+    }
+
+    private static IResult UnavailablePerson(User actor) => actor.Role == UserRole.Admin
+        ? Bad("ต้องเลือกแม่บ้านที่ใช้งานอยู่")
+        : ApiResults.Message(StatusCodes.Status403Forbidden, NotAuthorised);
+
+    private static IResult NoDutyAccess(User actor) => actor.Role == UserRole.Admin
+        ? Bad("แม่บ้านคนนี้ยังไม่มีพื้นที่")
+        : ApiResults.Message(StatusCodes.Status403Forbidden, NotAuthorised);
 
     private static async Task<IResult> AddMissingAsync(
         AddMissingAttendanceRequest request,
@@ -94,42 +226,36 @@ public static class TeamAttendanceEndpoints
             .FirstOrDefaultAsync(user => user.Id == request.UserId && user.Role == UserRole.Cleaner && user.IsActive, ct);
         if (person is null)
         {
-            return Bad("ต้องเลือกแม่บ้านที่ใช้งานอยู่");
+            return UnavailablePerson(actor);
         }
 
         var slot = new ShiftSlot(shiftDate, shift);
 
-        // Spec §7 and ruling A: the slot's effective duty Area is what an actual fact belongs to, and its building is what a
-        // Supervisor's dated scope is asked about. A person with no duty Area cannot be corrected into one.
-        var duty = await EffectiveDutyReader.ReadAsync(db, store, person, slot, clock.GetUtcNow(), ct);
+        // The actual fact belongs to the effective duty Area. A pending transfer permits no attendance write.
+        var nowOffset = clock.GetUtcNow();
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, person, slot, nowOffset, ct);
         if (duty.AreaId is not { } areaId)
         {
-            // Nothing to correct into. A Supervisor is not told even that much about somebody outside their scope: the answer
-            // is the same one an out-of-scope slot gets, so this route cannot be used to probe another team's people.
-            return actor.Role == UserRole.Admin
-                ? Bad("แม่บ้านคนนี้ยังไม่มีพื้นที่")
-                : ApiResults.Message(StatusCodes.Status403Forbidden, NotAuthorised);
+            return NoDutyAccess(actor);
         }
 
         if (actor.Role != UserRole.Admin)
         {
-            // A Supervisor only inside one of their dated periods, decided by the one authority predicate every
-            // management route uses. Anyone else is refused without being told anything about the person's schedule.
             var buildingId = await db.Areas.Where(area => area.Id == areaId)
                 .Select(area => (int?)area.BuildingId)
                 .FirstOrDefaultAsync(ct);
             var periods = await scopes.ReadAsync(actor.Id, ct);
-            if (buildingId is not { } building
-                || !ScheduleAuthority.CanManage(actor.Role, actor.Id, building, shift, shiftDate, periods))
+            if (buildingId is not { } building || !InScope(actor, building, slot, nowOffset.UtcDateTime, periods))
             {
-                return ApiResults.Message(StatusCodes.Status403Forbidden, NotAuthorised);
+                return NoDutyAccess(actor);
             }
         }
 
-        var facts = await AttendanceEndpoints.LoadEventsAsync(db, person.Id, slot);
+        var now = nowOffset.UtcDateTime;
+        var state = await AttendanceStateView.LoadAsync(db, person.Id, slot, duty, now, ct);
 
         // Spec §8: an existing actual scan is never overwritten here; the Admin edit route stays the only overwrite path.
-        if (facts.Any(fact => fact.EventType == eventType))
+        if (state.Events.Any(fact => fact.EventType == eventType))
         {
             return ApiResults.Message(StatusCodes.Status409Conflict, AlreadyRecorded);
         }
@@ -139,35 +265,28 @@ public static class TeamAttendanceEndpoints
             return Bad($"เวลานี้อยู่นอกช่วงลงเวลาของกะนี้ ({settings.OpensMinutesBeforeShift} นาทีก่อนกะถึง {settings.ClosesMinutesAfterShift} นาทีหลังกะ)");
         }
 
-        var now = clock.GetUtcNow().UtcDateTime;
         if (at > now)
         {
             return Bad("เวลาที่ใส่ยังมาไม่ถึง");
         }
 
-        var version = AttendanceLifecycle.VersionFor(await db.AttendanceSlotLifecycles.AsNoTracking()
-            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift)
-            .Select(row => (AttendanceLifecycleVersion?)row.Version)
-            .FirstOrDefaultAsync(ct));
-
-        var proposed = facts.ToDictionary(fact => fact.EventType, fact => fact.OccurredAt);
+        var proposed = state.Events.ToDictionary(fact => fact.EventType, fact => fact.OccurredAt);
         proposed[eventType] = at;
-        if (AttendanceRules.CheckTimes(version, proposed) is { } orderError)
+        if (AttendanceRules.CheckTimes(state.Version, proposed) is { } orderError)
         {
             return Bad(orderError);
         }
 
-        // Spec §11: the revision the actor read has to be the slot's current one, so a correction is never written against a
-        // state somebody else has already changed.
-        var revision = AttendanceStateRevision.Of(person.Id, slot, facts);
-        if (!string.Equals(expected, revision, StringComparison.Ordinal))
+        // Actual revisions survive plan changes. Recheck eligibility against the current plan before adding a fact.
+        var current = state.ToDto(duty, null);
+        var fillable = FillableActions(current, slot, now, settings);
+        if (!string.Equals(expected, state.Revision, StringComparison.Ordinal) || !fillable.Contains(eventType))
         {
-            var current = await AttendanceEndpoints.StateForSlotAsync(db, store, person, slot, now, ct);
             return Results.Json(
                 new AttendanceStateConflictDto(
-                    "ข้อมูลการลงเวลาเปลี่ยนไประหว่างที่คุณเปิดหน้า โหลดใหม่แล้วลองอีกครั้ง",
+                    "ข้อมูลการลงเวลาเปลี่ยนไปหรือรายการนี้เติมเวลาไม่ได้ กรุณาตรวจข้อมูลล่าสุด",
                     AttendanceEndpoints.RefreshRequired,
-                    current),
+                    current with { FillableActions = fillable }),
                 statusCode: StatusCodes.Status409Conflict);
         }
 

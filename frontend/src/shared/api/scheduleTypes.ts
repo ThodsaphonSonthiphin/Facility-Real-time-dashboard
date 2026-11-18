@@ -189,6 +189,19 @@ export interface ScheduleWeek {
   relief: ScheduleRelief[];
   destinations?: ScheduleDestination[];
   sourceBuildings?: { id: number; code: string }[];
+  transferSlots?: ScheduleTransferSlot[];
+}
+
+export interface ScheduleTransferSlot {
+  id: number;
+  userId: number;
+  displayName: string;
+  shiftDate: string;
+  shift: Shift;
+  fromAreaCode: string;
+  toAreaCode: string;
+  revision: string;
+  confirmedAt?: string | null;
 }
 
 export interface ScheduleDestination {

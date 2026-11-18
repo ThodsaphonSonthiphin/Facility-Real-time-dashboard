@@ -14,9 +14,10 @@ import { PhoneHeader, PhoneScreen } from '../../../shared/components/PhoneScreen
 import { Segmented } from '../../../shared/components/Segmented';
 import { focusRing } from '../../../shared/components/styles';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
-import { shiftShortLabel } from '../../../shared/utils/labels';
-import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
+import { shiftShortLabel, transferStateLabel } from '../../../shared/utils/labels';
+import { formatDayTime, formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { availabilityLabel, cellLabel, sourceLabel, weekIsUnavailable, weekRangeLabel, type ScheduleRole } from '../scheduleRules';
+import type { TeamSlotArgs } from '../schedulesApi';
 import { useSchedulePage } from './useSchedulePage';
 
 const WeeklyOffEditor = lazy(() => import('../WeeklyOffEditor/WeeklyOffEditor')
@@ -31,6 +32,10 @@ const ReliefAssignmentEditor = lazy(() => import('../ReliefAssignmentEditor/Reli
   .then((module) => ({ default: module.ReliefAssignmentEditor })));
 const ReliefLoanEditor = lazy(() => import('../ReliefLoanEditor/ReliefLoanEditor')
   .then((module) => ({ default: module.ReliefLoanEditor })));
+const TeamMissingTime = lazy(() => import('../TeamMissingTime/TeamMissingTime')
+  .then((module) => ({ default: module.TeamMissingTime })));
+const TransferInstruction = lazy(() => import('../TransferInstruction/TransferInstruction')
+  .then((module) => ({ default: module.TransferInstruction })));
 const ScheduleHistory = lazy(() => import('../ScheduleHistory/ScheduleHistory')
   .then((module) => ({ default: module.ScheduleHistory })));
 
@@ -126,7 +131,8 @@ function ManagementWeekPage({ role, back }: { role: ScheduleRole; back?: { to: s
         </div>
       )}
       <WeekBody view={view} />
-      {view.week && <ReliefDuties week={view.week} />}
+      {view.week && <ReliefDuties week={view.week} view={view} />}
+      {role === 'supervisor' && <RelatedTransfers view={view} />}
       <Suspense fallback={<PageLoading lines={1}>กำลังโหลดแบบแก้ไข...</PageLoading>}>
         <OpenEditor view={view} />
       </Suspense>
@@ -157,12 +163,18 @@ function OpenEditor({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   if (editor.kind === 'baseline') {
     return <RegularBaselineEditor {...shared} week={editor.week} latest={week} person={editor.person} selection={selection} />;
   }
+  if (editor.kind === 'missing-time' || editor.kind === 'transfer') {
+    const props = { phone, slot: editor.slot, displayName: editor.displayName, onClose: closeEditor };
+    return editor.kind === 'missing-time'
+      ? <TeamMissingTime {...props} />
+      : <TransferInstruction {...props} latest={week} reloadEditorWeek={reloadEditorWeek} />;
+  }
   const latest = week?.rows.find((person) => person.userId === editor.person.userId)
     ?.days.find((day) => day.date === editor.day.date);
   return <DatedScheduleEditor {...shared} person={editor.person} day={editor.day} latest={latest} />;
 }
 
-function ReliefDuties({ week }: { week: ScheduleWeek }) {
+function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typeof useSchedulePage> }) {
   if (!week.relief.length) return null;
   return (
     <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
@@ -175,6 +187,10 @@ function ReliefDuties({ week }: { week: ScheduleWeek }) {
             <p className="text-text-2">ตึกต้นทาง {duty.sourceBuildingCode}{duty.sourceSupervisorName && ` · ${duty.sourceSupervisorName}`}</p>
             {duty.replacedDisplayName && <p>แทน {duty.replacedDisplayName}</p>}
             {duty.agreementReported && <p>ผู้บันทึกยืนยันว่าตกลงกับตึกต้นทางนอกเว็บแล้ว</p>}
+            {!duty.isCancelled && (
+              <TeamSlotActions view={view} displayName={duty.displayName}
+                slot={{ userId: duty.userId, shiftDate: duty.shiftDate, shift: duty.shift }} />
+            )}
             {duty.isCancelled && <Badge kind="edited">ยกเลิกแล้ว</Badge>}
           </li>
         ))}
@@ -253,7 +269,7 @@ function WeekBody({ view }: { view: ReturnType<typeof useSchedulePage> }) {
         </Note>
       )}
       {week && week.availability !== 'empty' && !weekIsUnavailable(week) && (
-        view.role === 'cleaner' ? <OwnWeek week={week} /> : <ManagementWeek view={view} />
+        view.role === 'cleaner' ? <OwnWeek week={week} /> : week.rows.length > 0 && <ManagementWeek view={view} />
       )}
     </>
   );
@@ -332,6 +348,10 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                           {view.dateAction(day)}
                         </Button>
                       )}
+                      {day?.shift && day.area.value != null && (
+                        <TeamSlotActions view={view} displayName={person.displayName}
+                          slot={{ userId: person.userId, shiftDate: day.date, shift: day.shift }} />
+                      )}
                       {day?.edit?.corrections.length ? (
                         <details>
                           <summary className={`min-h-12 cursor-pointer text-accent sm:min-h-9 ${focusRing}`}>ประวัติการแก้ไขแผน</summary>
@@ -349,6 +369,53 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
         </table>
       </div>
     </section>
+  );
+}
+
+function RelatedTransfers({ view }: { view: ReturnType<typeof useSchedulePage> }) {
+  const slots = view.standaloneTransfers;
+  if (!slots.length) return null;
+  return (
+    <section aria-labelledby="related-transfers" className="space-y-3 rounded-lg border border-border bg-surface p-4">
+      <h2 id="related-transfers" className="text-lg font-semibold">การย้ายพื้นที่ที่เกี่ยวข้อง</h2>
+      <ul className="space-y-2">
+        {slots.map((slot) => (
+          <li key={slot.id} className="space-y-1 rounded-md border border-border p-3">
+            <p className="font-semibold">{slot.displayName} · {formatShiftDate(slot.shiftDate)} · {shiftShortLabel[slot.shift]}</p>
+            <p>{slot.fromAreaCode} → {slot.toAreaCode}</p>
+            <p className="text-text-2">
+              {slot.confirmedAt
+                ? `${transferStateLabel.confirmed} · ${formatDayTime(slot.confirmedAt)}`
+                : transferStateLabel.instructed}
+            </p>
+            <TeamSlotActions view={view} displayName={slot.displayName}
+              slot={{ userId: slot.userId, shiftDate: slot.shiftDate, shift: slot.shift }}
+              canOpenMissingTime={!!slot.confirmedAt} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function TeamSlotActions({ view, displayName, slot, canOpenMissingTime = true }: {
+  view: ReturnType<typeof useSchedulePage>;
+  displayName: string;
+  slot: TeamSlotArgs;
+  canOpenMissingTime?: boolean;
+}) {
+  if (view.role !== 'supervisor' || !view.latest) return null;
+  const size = view.phone ? 'phone' : 'desk';
+  const context = `${displayName} ${formatShiftDate(slot.shiftDate)}`;
+  return (
+    <div className="flex flex-col items-start">
+      {canOpenMissingTime && (
+        <Button variant="link" size={size} aria-label={`เพิ่มเวลาที่ขาด ${context}`}
+          onClick={() => view.openTeamSlot('missing-time', slot, displayName)}>เพิ่มเวลาที่ขาด</Button>
+      )}
+      <Button variant="link" size={size} aria-label={`ย้ายพื้นที่ระหว่างกะ ${context}`}
+        onClick={() => view.openTeamSlot('transfer', slot, displayName)}>ย้ายพื้นที่</Button>
+    </div>
   );
 }
 

@@ -3,7 +3,7 @@ import { getValidAccessToken } from '../auth/session';
 import type { AssignedCleaner } from './adminSetupApi';
 import { baseApi } from './baseApi';
 import { ADMIN_HUB_SERVER_TIMEOUT_MS, followScanHub } from './scanHub';
-import type { AttendanceEvent, Shift } from './types';
+import type { AttendanceEvent, AttendanceLifecycleVersion, Shift } from './types';
 
 /**
  * The attendance board (facility-0027, 0050), read by the attendance page (D2) and the alert page's "Areas with nobody"
@@ -18,7 +18,7 @@ export interface BoardEvent {
   id: number;
   eventType: AttendanceEvent;
   occurredAt: string;
-  source: 'Scan' | 'AdminAdd' | 'AdminEdit';
+  source: 'Scan' | 'AdminAdd' | 'AdminEdit' | 'SupervisorAdd';
   withinRadius?: boolean;
   distanceM?: number;
 }
@@ -34,7 +34,32 @@ export interface BoardCover {
   shiftInAt?: string;
 }
 
-/** BoardRowDto. cleaner is the Area's regular Cleaner for the shift (missing when none); events are theirs. */
+/** BoardEntryEvidenceDto (spec §13, ADR facility-0216): one legitimate actual entry fact and its provenance. */
+export interface BoardEntryEvidence {
+  kind: 'shift-in' | 'transfer-arrival';
+  recordedAt: string;
+  transferId?: number;
+}
+
+/** BoardResponsibilityDto: the transfer-derived current responsibility, kept apart from historical entry (spec §13). */
+export interface BoardResponsibility {
+  userId: number;
+  employeeId: string;
+  displayName: string;
+  state: 'instructed' | 'confirmed' | 'cancelled';
+  lastConfirmedAreaId?: number;
+  confirmedAt?: string;
+}
+
+/**
+ * BoardRowDto. cleaner is the Area's regular Cleaner for the shift (missing when none); events are theirs. entry is the
+ * spec §13 category with its evidence and responsibility is the separate current answer.
+ */
+export interface BoardCleanerAttendance {
+  cleaner: AssignedCleaner;
+  events: BoardEvent[];
+}
+
 export interface BoardRow {
   areaId: number;
   areaCode: string;
@@ -44,6 +69,11 @@ export interface BoardRow {
   state: AreaAttendanceState;
   events: BoardEvent[];
   covers: BoardCover[];
+  entry?: 'entered' | 'covered' | 'unassigned';
+  entryEvidence?: BoardEntryEvidence[];
+  responsibility?: BoardResponsibility;
+  additionalCleaners?: BoardCleanerAttendance[];
+  responsibilities?: BoardResponsibility[];
 }
 
 /** BoardSummaryDto: required = present + empty + covered. */
@@ -59,6 +89,7 @@ export interface AttendanceBoard {
   shiftDate: string;
   shift: Shift;
   shiftEnded: boolean;
+  lifecycleVersion?: AttendanceLifecycleVersion;
   summary: BoardSummary;
   rows: BoardRow[];
 }

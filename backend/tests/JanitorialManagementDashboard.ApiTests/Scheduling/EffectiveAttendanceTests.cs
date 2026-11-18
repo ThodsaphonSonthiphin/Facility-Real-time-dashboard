@@ -120,6 +120,36 @@ public class EffectiveAttendanceTests
     }
 
     [Fact]
+    public async Task A_real_early_checkout_marks_later_leave_actions_inapplicable_and_preserves_earlier_gaps()
+    {
+        using var factory = new JanitorialApiFactory();
+        var baselineStart = new DateOnly(2026, 10, 1);
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, baselineStart);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", baselineStart, "AR01", breakGroup: 1);
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+        var checkout = EffectiveAttendanceApi.Thai(8, 13, 0);
+        await EffectiveAttendanceApi.AddLeaveAsync(factory, "1000001", Day8, Shift.Day,
+            checkout, EffectiveAttendanceApi.Thai(8, 19, 0));
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 5));
+        var before = await EffectiveAttendanceApi.StateAsync(cleaner);
+        var entered = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 5),
+            "ShiftIn", lifecycleVersion: before.LifecycleVersion, stateRevision: before.StateRevision);
+        var gaps = entered.NextActions!.Single(choice => choice.Action == "ShiftOut").RequiredGaps;
+
+        var departed = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, checkout, "ShiftOut",
+            lifecycleVersion: entered.LifecycleVersion, stateRevision: entered.StateRevision, confirmGaps: gaps);
+
+        Assert.Equal("skipped", departed.Action("Break1Out").State);
+        Assert.Equal("not-applicable", departed.Action("Break2Out").State);
+        Assert.Equal("not-applicable", departed.Action("Break2In").State);
+        Assert.Null(departed.Action("Break2In").OccurredAt);
+        Assert.Equal(checkout.UtcDateTime, departed.Action("ShiftOut").OccurredAt);
+        Assert.Equal(2, (await EffectiveAttendanceApi.FactsAsync(factory)).Count);
+        Assert.Equal(4, (await EffectiveAttendanceApi.GapsAsync(factory)).Count);
+    }
+
+    [Fact]
     public async Task An_eligible_check_in_on_a_day_off_is_accepted_with_a_visible_conflict()
     {
         using var factory = new JanitorialApiFactory();
@@ -444,7 +474,9 @@ public record AttendanceStateAnswer(
     string? DutySource = null,
     bool IsDayOff = false,
     bool IsLeave = false,
-    AttendanceTransferAnswer? Transfer = null)
+    AttendanceTransferAnswer? Transfer = null,
+    List<AttendanceTransferAnswer>? TransferHistory = null,
+    List<string>? FillableActions = null)
 {
     public ActionAnswer Action(string eventType) =>
         Actions!.Single(action => action.EventType == eventType);

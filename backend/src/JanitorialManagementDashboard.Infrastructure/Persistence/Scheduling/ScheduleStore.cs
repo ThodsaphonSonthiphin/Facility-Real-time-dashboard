@@ -813,12 +813,59 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
         var readDates = roster.ToDictionary(person => person.Id, DatesThisReadCovers);
         var included = roster.Where(person => readDates[person.Id].Count > 0).ToList();
-        if (included.Count == 0)
+        var includedIds = included.Select(person => person.Id).ToList();
+        // A transfer makes its slot visible to the dated teams on either side without adding the cleaner to their roster.
+        // Read those standalone facts in the same snapshot as the roster and scope.
+        var scopedBuildings = authorised?.Select(period => period.BuildingId).ToHashSet() ?? [];
+        var candidateAreaIds = areas.Where(area => scopedBuildings.Contains(area.BuildingId)).Select(area => area.Id).ToList();
+        var transfers = await db.AreaTransfers.AsNoTracking()
+            .Where(row => row.ShiftDate >= monday && row.ShiftDate < weekEnd
+                && (includedIds.Contains(row.PersonId) || (personIds.Contains(row.PersonId)
+                    && (candidateAreaIds.Contains(row.FromAreaId) || candidateAreaIds.Contains(row.ToAreaId)))))
+            .ToListAsync(ct);
+        var transferIds = transfers.Select(row => row.Id).ToList();
+        var confirmations = transferIds.Count == 0
+            ? []
+            : await db.AreaTransferConfirmations.AsNoTracking()
+                .Where(row => transferIds.Contains(row.TransferId)).ToListAsync(ct);
+        var transferSlots = new List<ScheduleTransferSlot>();
+        if (authorised is not null)
         {
-            return Empty(monday, readAt, relief) with { Destinations = destinations, SourceBuildings = sourceBuildings };
+            var areaCodes = areas.ToDictionary(area => area.Id, area => area.Code);
+            var people = roster.ToDictionary(person => person.Id, person => person.DisplayName);
+            var arrivals = confirmations.ToDictionary(row => row.TransferId);
+            bool CanRead(int areaId, Shift shiftForDate, DateOnly date)
+            {
+                if (!areaBuildings.TryGetValue(areaId, out var building)
+                    || (buildingId is not null && building != buildingId)
+                    || (shift is not null && shiftForDate != shift))
+                {
+                    return false;
+                }
+
+                return date < businessDate
+                    ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, building, shiftForDate, date, businessDate,
+                        managementScope)
+                    : ScheduleAuthority.CanManage(actor.Role, actor.Id, building, shiftForDate, date, managementScope);
+            }
+
+            transferSlots = transfers
+                .Where(row => !row.IsCancelled && (CanRead(row.FromAreaId, row.Shift, row.ShiftDate)
+                    || CanRead(row.ToAreaId, row.Shift, row.ShiftDate)))
+                .GroupBy(row => (row.PersonId, row.ShiftDate, row.Shift))
+                .Select(group => group.MaxBy(row => row.Id)!)
+                .OrderBy(row => row.ShiftDate).ThenBy(row => row.Shift).ThenBy(row => people[row.PersonId]).ThenBy(row => row.Id)
+                .Select(row => new ScheduleTransferSlot(row.Id, row.PersonId, people[row.PersonId], row.ShiftDate, row.Shift,
+                    areaCodes[row.FromAreaId], areaCodes[row.ToAreaId], Revision(row.Revision),
+                    arrivals.TryGetValue(row.Id, out var arrival) ? Utc(arrival.OccurredAt) : null))
+                .ToList();
         }
 
-        var includedIds = included.Select(person => person.Id).ToList();
+        if (included.Count == 0)
+        {
+            return Empty(monday, readAt, relief, transferSlots) with { Destinations = destinations, SourceBuildings = sourceBuildings };
+        }
+
         var baselineAnchors = await db.ScheduleBaselineAnchors.AsNoTracking()
             .Where(anchor => includedIds.Contains(anchor.PersonId))
             .ToDictionaryAsync(anchor => anchor.PersonId, anchor => anchor.Revision, ct);
@@ -828,16 +875,6 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         var savedWeeks = await db.WeeklyDayOffs.AsNoTracking().Include(week => week.Choices)
             .Where(week => includedIds.Contains(week.UserId) && week.WeekStart == monday)
             .ToListAsync(ct);
-        var transfers = await db.AreaTransfers.AsNoTracking()
-            .Where(row => includedIds.Contains(row.PersonId) && row.ShiftDate >= monday && row.ShiftDate < weekEnd)
-            .ToListAsync(ct);
-        var transferIds = transfers.Select(row => row.Id).ToList();
-        var confirmations = transferIds.Count == 0
-            ? []
-            : await db.AreaTransferConfirmations.AsNoTracking()
-                .Where(row => transferIds.Contains(row.TransferId)).ToListAsync(ct);
-
-
         var correctionAudits = actor.Role == UserRole.Cleaner
             ? null
             : await ReadCorrectionAuditsAsync(monday, weekEnd, ct);
@@ -999,14 +1036,16 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 .Select(row => $"transfer#{row.Id}@{Revision(row.Revision)}"));
         }
 
-        var availability = rows.All(row =>
+        var availability = transferSlots.Count == 0 && rows.All(row =>
             row.Days.All(day => day.Availability == ScheduleResolver.AvailabilityUnavailable))
             ? ScheduleResolver.AvailabilityUnavailable
             : ScheduleResolver.AvailabilityAvailable;
 
         // A relief row is part of what the week was built from, so its revision moves the week digest too.
         revisions.AddRange(relief.Select(row => $"relief#{row.Id}@{row.Revision}"));
-        return new ScheduleProjection(monday, rows, WeekRevision(revisions), readAt, availability, relief, destinations, sourceBuildings);
+        revisions.AddRange(transferSlots.Select(TransferSlotRevision));
+        return new ScheduleProjection(monday, rows, WeekRevision(revisions), readAt, availability, relief, destinations,
+            sourceBuildings, transferSlots);
     }
 
     /// <summary>
@@ -1252,23 +1291,23 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
     /// <summary>
     /// A week the actor has no roster row for. It is not "an empty week of work": nothing is readable at all, so the
-    /// availability word says so — unless the reader may still see relief rows of the week, which are top-level facts of
-    /// their own and made the week readable.
+    /// availability word says so unless the reader can see standalone relief or transfer slots.
     /// </summary>
     private static ScheduleProjection Empty(
-        DateOnly monday, DateTimeOffset readAt, IReadOnlyList<ReliefAssignmentFact>? relief = null)
+        DateOnly monday, DateTimeOffset readAt, IReadOnlyList<ReliefAssignmentFact>? relief = null,
+        IReadOnlyList<ScheduleTransferSlot>? transferSlots = null)
     {
         IReadOnlyList<ReliefAssignmentFact> rows = relief ?? [];
+        var revisions = rows.Select(row => $"relief#{row.Id}@{row.Revision}")
+            .Concat((transferSlots ?? []).Select(TransferSlotRevision)).ToList();
         return new ScheduleProjection(
-            monday,
-            [],
-            rows.Count == 0
-                ? ScheduleResolver.NoRevision
-                : WeekRevision(rows.Select(row => $"relief#{row.Id}@{row.Revision}").ToList()),
-            readAt,
-            rows.Count == 0 ? AvailabilityEmpty : ScheduleResolver.AvailabilityAvailable,
-            rows);
+            monday, [], revisions.Count == 0 ? ScheduleResolver.NoRevision : WeekRevision(revisions), readAt,
+            revisions.Count == 0 ? AvailabilityEmpty : ScheduleResolver.AvailabilityAvailable, rows,
+            TransferSlots: transferSlots);
     }
+
+    private static string TransferSlotRevision(ScheduleTransferSlot slot) =>
+        $"transfer-slot#{slot.Id}@{slot.Revision}:{slot.ConfirmedAt?.UtcTicks}";
 
     /// <summary>The same rule the ck_*_effective_range CHECK constraints apply, so a caller hears about it first.</summary>
     private static void EnsureRangeIsForward(DateOnly effectiveFrom, DateOnly? effectiveUntil)

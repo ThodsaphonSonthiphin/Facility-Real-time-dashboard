@@ -107,7 +107,7 @@ public sealed record ScheduleWeekDto(
     string Availability,
     IReadOnlyList<SchedulePersonDto> Rows,
     IReadOnlyList<ScheduleReliefDto> Relief, IReadOnlyList<ScheduleDestination>? Destinations,
-    IReadOnlyList<ScheduleSourceBuilding>? SourceBuildings);
+    IReadOnlyList<ScheduleSourceBuilding>? SourceBuildings, IReadOnlyList<ScheduleTransferSlot>? TransferSlots);
 
 /// <summary>
 /// Spec §10: one person's week. <see cref="WeeklyRevision"/> is the week-header version (0 when nobody has chosen),
@@ -243,7 +243,7 @@ public static class ScheduleDtoMapper
             row.SourceSupervisorName,
             row.AgreementReported,
             row.IsCancelled,
-            row.Revision)).ToList(), projection.Destinations, projection.SourceBuildings);
+            row.Revision)).ToList(), projection.Destinations, projection.SourceBuildings, projection.TransferSlots);
 
     /// <summary>The lookup's answer on the wire: the same facts the store resolved, nothing re-derived.</summary>
     public static ReliefCandidateDto ToDto(this ReliefCandidateFacts candidate) => new(

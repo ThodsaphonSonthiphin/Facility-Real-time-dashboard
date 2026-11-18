@@ -53,7 +53,10 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   // time. Nothing is written to the slice: the person's own choice stays theirs, and the fallback read cannot drop
   // anything itself because it carries no building.
   const held = asked.currentData
-    ? selectionAfterRead(requested, { availability: asked.currentData.availability, rowCount: asked.currentData.rows.length })
+    ? selectionAfterRead(requested, {
+      availability: asked.currentData.availability,
+      rowCount: asked.currentData.rows.length + (asked.currentData.transferSlots?.length ?? 0),
+    })
     : undefined;
   const filterDropped = held?.dropped === true;
   const read = filterDropped ? fallbackManaged : asked;
@@ -66,12 +69,19 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
 
   const week = read.currentData;
   const latest = read.error ? undefined : week;
+  const standaloneTransfers = (week?.transferSlots ?? []).filter((slot) => {
+    const person = week?.rows.find(({ userId }) => userId === slot.userId);
+    return !person?.days.some((day) => day.date === slot.shiftDate && day.shift === slot.shift && day.area.value != null)
+      && !week?.relief.some((duty) => !duty.isCancelled && duty.userId === slot.userId
+        && duty.shiftDate === slot.shiftDate && duty.shift === slot.shift);
+  });
   const manage = role !== 'cleaner' && latest && !editor;
   const businessDate = clockSlot(new Date()).startDate;
   return {
     role,
     week,
     latest,
+    standaloneTransfers,
     phone,
     editor,
     openRelief: (kind) => {
@@ -89,6 +99,9 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     },
     openDated: (person, day) => {
       if (manage && day.edit?.canChange && day.shift) setEditor({ kind: 'dated', person, day });
+    },
+    openTeamSlot: (kind, slot, displayName) => {
+      if (role === 'supervisor' && manage) setEditor({ kind, slot, displayName });
     },
     closeEditor: () => setEditor(null),
     dateAction: (day) => day.date < businessDate ? 'แก้ไขแผนย้อนหลัง' : 'แก้เฉพาะวันที่',

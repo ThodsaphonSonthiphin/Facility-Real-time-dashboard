@@ -118,7 +118,10 @@ public record AttendanceStateDto(
     string? DutySource = null,
     bool IsDayOff = false,
     bool IsLeave = false,
-    AttendanceTransferDto? Transfer = null);
+    AttendanceTransferDto? Transfer = null,
+    IReadOnlyList<AttendanceTransferDto>? TransferHistory = null,
+    IReadOnlyList<AttendanceEvent>? FillableActions = null,
+    bool? CanCancelTransfer = null);
 
 /// <summary>
 /// A refused write (spec §8, §11). <see cref="Code"/> is the machine word a page branches on — "refresh-required",

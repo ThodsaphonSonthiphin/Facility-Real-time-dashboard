@@ -11,7 +11,7 @@ import type {
   ScheduleWeek,
   TransferResult,
 } from '../../shared/api/scheduleTypes';
-import type { Shift } from '../../shared/api/types';
+import type { AttendanceEvent, AttendanceState, Shift } from '../../shared/api/types';
 import { scheduleChanged } from './scheduleViewSlice';
 
 /**
@@ -57,8 +57,30 @@ export type ReliefCandidateArgs = {
   shift: Shift;
 } & ({ employeeId: string; ownUserId?: never } | { ownUserId: number; employeeId?: never });
 
+export interface TeamSlotArgs {
+  userId: number;
+  shiftDate: string;
+  shift: Shift;
+}
+
+interface MissingTimeRequest extends TeamSlotArgs {
+  eventType: AttendanceEvent;
+  time: string;
+  reason: string;
+  expectedRevision: string;
+}
+
 const schedulesApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
+    getTeamSlot: build.query<AttendanceState, TeamSlotArgs>({
+      query: ({ userId, ...params }) => ({ url: `/team-attendance/${userId}`, params, cache: 'no-store' }),
+      providesTags: ['AttendanceBoard', 'Schedules'],
+      keepUnusedDataFor: 0,
+    }),
+    addMissingTime: build.mutation<AttendanceState, MissingTimeRequest>({
+      query: (body) => ({ url: '/team-attendance/missing', method: 'POST', body, timeout: SEND_TIMEOUT_MS }),
+      invalidatesTags: (result) => result ? ['AttendanceBoard'] : [],
+    }),
     getReliefCandidate: build.query<ReliefCandidate, ReliefCandidateArgs>({
       query: (params) => ({ url: '/schedules/relief-candidates', params, cache: 'no-store' }),
       keepUnusedDataFor: 0,
@@ -167,6 +189,8 @@ const schedulesApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetTeamSlotQuery,
+  useAddMissingTimeMutation,
   useGetMyScheduleQuery,
   useGetReliefCandidateQuery,
   useGetManagedScheduleQuery,

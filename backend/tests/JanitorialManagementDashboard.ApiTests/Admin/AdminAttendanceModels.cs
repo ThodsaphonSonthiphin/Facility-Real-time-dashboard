@@ -11,15 +11,17 @@ public record BoardEntryEvidenceModel(string Kind, DateTime RecordedAt, int? Tra
 public record BoardResponsibilityModel(
     int UserId, string EmployeeId, string DisplayName, string State, int? LastConfirmedAreaId, DateTime? ConfirmedAt);
 
+public record BoardCleanerAttendanceModel(AssignedCleanerModel Cleaner, List<BoardEventModel> Events);
+
 public record BoardRowModel(
     int AreaId, string AreaCode, string AreaName, string BuildingCode, AssignedCleanerModel? Cleaner,
     string State, List<BoardEventModel> Events, List<BoardCoverModel> Covers,
     string? Entry = null, List<BoardEntryEvidenceModel>? EntryEvidence = null,
-    BoardResponsibilityModel? Responsibility = null);
+    BoardResponsibilityModel? Responsibility = null, List<BoardCleanerAttendanceModel>? AdditionalCleaners = null);
 
 public record BoardSummaryModel(int Required, int Present, int Empty, int Covered);
 
-public record AttendanceBoardModel(DateOnly ShiftDate, string Shift, bool ShiftEnded, BoardSummaryModel Summary, List<BoardRowModel> Rows);
+public record AttendanceBoardModel(DateOnly ShiftDate, string Shift, bool ShiftEnded, BoardSummaryModel Summary, List<BoardRowModel> Rows, string? LifecycleVersion = null);
 
 public record AlertPersonModel(int Id, string EmployeeId, string DisplayName, string Role, string? AreaCode);
 

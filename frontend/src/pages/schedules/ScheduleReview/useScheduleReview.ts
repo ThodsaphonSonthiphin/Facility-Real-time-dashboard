@@ -164,7 +164,7 @@ function commandRefusal(outcome: CommandResult['outcome']) {
   }
 }
 
-function useScheduleNavigation(dirty: boolean) {
+export function useScheduleNavigation(dirty: boolean) {
   const blocker = useBlocker(dirty);
   const [discard, setDiscard] = useState<{ leave: () => void } | null>(null);
   useBeforeUnload((event) => {
