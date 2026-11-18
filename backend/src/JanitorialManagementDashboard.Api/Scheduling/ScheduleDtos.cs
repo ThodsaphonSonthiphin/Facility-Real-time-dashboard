@@ -110,8 +110,7 @@ public sealed record ScheduleWeekDto(
 
 /// <summary>
 /// Spec §10: one person's week. <see cref="WeeklyRevision"/> is the week-header version (0 when nobody has chosen),
-/// <see cref="RegularBaselineRevision"/> and <see cref="ReliefBaselineRevision"/> are the head version of each repeating
-/// week — the same keys and values the command contract names as <c>week:</c> and <c>baseline:</c>.
+/// <see cref="RegularBaselineRevision"/> and <see cref="ReliefBaselineRevision"/> carry the shared per-person timeline revision for the two repeating week kinds — the same keys and values the command contract names as <c>week:</c> and <c>baseline:</c>.
 /// </summary>
 public sealed record SchedulePersonDto(
     int UserId,

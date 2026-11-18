@@ -720,40 +720,84 @@ public class ScheduleWriteTests
         });
     }
 
-    [Fact]
-    public async Task The_baseline_answer_names_the_head_revision_the_read_exposes()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Baseline_timeline_rejects_stale_clients_after_appending_and_inserting(bool relief)
     {
-        // A18 and spec §11: the answer is what the next edit sends back, so it names the version the read names — the head,
-        // not the version the new one merely precedes.
         using var factory = ScheduleWriteApi.NewFactory();
-        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
-        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
-        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var person = relief
+            ? await TestData.AddCleanerAsync(factory, "1000005", Shift.Day)
+            : await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        if (relief)
+        {
+            await ScheduleWriteApi.AddProfileAsync(
+                factory, "1000005", CleanerKind.Relief, Shift.Day, new DateOnly(2026, 10, 1), "A");
+        }
+
+        var area = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var (first, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (second, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         ScheduleWriteApi.Today(factory);
 
-        async Task<(HttpResponseMessage Response, ScheduleWriteApi.CommandAnswer? Answer)> Version(string from,
-            DayOfWeek weekday)
+        var kind = relief ? ScheduleWriteApi.SetReliefBaseline : ScheduleWriteApi.SetRegularBaseline;
+        var key = ScheduleWriteApi.BaselineKey(person, relief ? "relief" : "regular");
+        async Task<string> ReadRevision(HttpClient client)
         {
-            var answer = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
+            var week = await ScheduleWriteApi.WeekAsync(client, new DateOnly(2026, 12, 14));
+            var row = Assert.Single(week.Rows, entry => entry.UserId == person);
+            Assert.Equal(row.RegularBaselineRevision, row.ReliefBaselineRevision);
+            return relief ? row.ReliefBaselineRevision : row.RegularBaselineRevision;
+        }
+
+        Task<(HttpResponseMessage Response, ScheduleWriteApi.CommandAnswer? Answer)> Write(
+            HttpClient client, string expected, string from) =>
+            ScheduleWriteApi.ExecuteAsync(client, kind, new
             {
                 userId = person,
                 effectiveFrom = from,
-                days = new[] { new { weekday = weekday.ToString(), areaId = area1 } },
-            });
-            Assert.Equal(HttpStatusCode.OK, answer.Response.StatusCode);
-            return answer;
+                days = new[] { new { weekday = "Monday", areaId = area } },
+            }, new Dictionary<string, string> { [key] = expected });
+
+        async Task<string> Commit(HttpClient client, string expected, string from)
+        {
+            var written = await Write(client, expected, from);
+            Assert.Equal(HttpStatusCode.OK, written.Response.StatusCode);
+            Assert.Equal(await ReadRevision(client), written.Answer!.Revisions[key]);
+            return written.Answer.Revisions[key];
         }
 
-        await Version("2026-12-02", DayOfWeek.Tuesday);
-        await Version("2026-12-16", DayOfWeek.Wednesday);
-        await Version("2026-12-23", DayOfWeek.Thursday);
-        var inserted = await Version("2026-12-09", DayOfWeek.Monday);
+        async Task AssertStale(string expected, string current, string from)
+        {
+            var refused = await Write(second, expected, from);
+            Assert.Equal(HttpStatusCode.Conflict, refused.Response.StatusCode);
+            Assert.Equal(ScheduleCommandErrorCode.StaleRevision, Assert.Single(refused.Answer!.Problems).Code);
+            Assert.Equal(current, refused.Answer.Revisions[key]);
+        }
 
-        var week = await ScheduleWriteApi.WeekAsync(admin, new DateOnly(2026, 12, 14));
-        var row = week.Rows.Single(entry => entry.UserId == person);
-        Assert.Equal("1", row.RegularBaselineRevision); // the 23 December version is the head and was never revised
-        Assert.Equal(row.RegularBaselineRevision,
-            inserted.Answer!.Revisions[ScheduleWriteApi.BaselineKey(person, "regular")]);
+        var initial = await ReadRevision(second);
+        var firstVersion = await Commit(first, initial, "2026-12-02");
+        Assert.NotEqual(initial, firstVersion);
+        Assert.Equal(firstVersion, await ReadRevision(second));
+
+        var appended = await Commit(first, firstVersion, "2026-12-23");
+        Assert.NotEqual(firstVersion, appended);
+        await AssertStale(firstVersion, appended, "2026-12-30");
+        Assert.Equal(appended, await ReadRevision(second));
+
+        var inserted = await Commit(first, appended, "2026-12-09");
+        Assert.NotEqual(appended, inserted);
+        await AssertStale(appended, inserted, "2026-12-16");
+        Assert.Equal(inserted, await Commit(first, inserted, "2026-12-09")); // exact no-op
+
+        await factory.WithDbAsync(async db =>
+        {
+            var starts = await db.ScheduleBaselines.Where(version => version.UserId == person)
+                .OrderBy(version => version.EffectiveFrom).Select(version => version.EffectiveFrom).ToListAsync();
+            Assert.Contains(new DateOnly(2026, 12, 9), starts);
+            Assert.DoesNotContain(new DateOnly(2026, 12, 16), starts);
+            Assert.DoesNotContain(new DateOnly(2026, 12, 30), starts);
+        });
     }
 
     [Fact]

@@ -1,5 +1,6 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { hub } from '../../../test/fakeSignalR';
 import { commandId, editorApp, fixtureMonday, fixturePerson, fixtureWeek } from '../scheduleEditorTestFixture';
 import { copyOffChoices } from './useWeeklyOffEditor';
 
@@ -77,4 +78,48 @@ it('submits edited rows atomically and shows an invalid row without reporting pa
       { userId: 7, offDates: ['2026-11-19'] }, { userId: 8, offDates: ['2026-11-19'] },
     ] },
   });
+});
+
+it('names the submitted people when two rejected rows return the same nameless message', async () => {
+  const app = await editorApp({
+    week: () => fixtureWeek([fixturePerson(), fixturePerson(8, 'แม่บ้านคนที่สอง')]),
+    routes: { 'POST /api/schedules/commands': () => ({ status: 409, body: {
+      commandId, outcome: 'rejected', revisions: {}, problems: [7, 8].map((id) => ({
+        rowId: `week:${id}:${fixtureMonday}`, code: 'row-invalid', message: 'กรุณาตรวจช่วงวันที่',
+      })),
+    } }) },
+  });
+  await app.user.click(await screen.findByRole('button', { name: 'จัดวันหยุดรายสัปดาห์' }));
+  const drawer = within(await screen.findByRole('dialog'));
+  for (const name of ['แม่บ้านทดสอบ', 'แม่บ้านคนที่สอง']) {
+    await app.user.click(within(drawer.getByRole('group', { name })).getByRole('checkbox', { name: /19\/11/ }));
+  }
+  await app.user.click(drawer.getByRole('button', { name: 'ตรวจสอบ' }));
+  await app.user.click(drawer.getByRole('button', { name: 'บันทึก' }));
+  const rows = within(await drawer.findByRole('alert')).getAllByRole('listitem');
+  expect(rows[0]).toHaveTextContent('แม่บ้านทดสอบ · กรุณาตรวจช่วงวันที่');
+  expect(rows[1]).toHaveTextContent('แม่บ้านคนที่สอง · กรุณาตรวจช่วงวันที่');
+});
+
+it('disables previous-week copy if an authorised read is followed by a forbidden refresh', async () => {
+  const previousMonday = '2026-11-09';
+  const previousPerson = fixturePerson(7, 'แม่บ้านทดสอบ', previousMonday);
+  previousPerson.hasWeeklyChoice = true;
+  previousPerson.days[4].edit!.weeklyOff = true;
+  let forbidden = false;
+  const app = await editorApp({ routes: { 'GET /api/schedules': ({ search }) => {
+    const isPrevious = new URLSearchParams(search).get('weekStart') === previousMonday;
+    if (isPrevious && forbidden) return { status: 403 };
+    const body = isPrevious ? fixtureWeek([previousPerson], 'prior', previousMonday) : fixtureWeek();
+    return { status: 200, body };
+  } } });
+  await app.user.click(await screen.findByRole('button', { name: 'จัดวันหยุดรายสัปดาห์' }));
+  const drawer = within(await screen.findByRole('dialog'));
+  const copy = drawer.getByRole('button', { name: 'คัดลอกลงช่องที่ยังไม่กำหนด' });
+  await waitFor(() => expect(copy).toBeEnabled());
+  forbidden = true;
+  await act(() => { hub.latest().push('ScheduleChanged', { commandId }); });
+  await waitFor(() => expect(copy).toBeDisabled());
+  expect(await drawer.findByText('ไม่มีตัวเลือกวันหยุดให้อ้างอิง')).toBeVisible();
+  expect(drawer.getByRole('checkbox', { name: /20\/11/ })).not.toBeChecked();
 });

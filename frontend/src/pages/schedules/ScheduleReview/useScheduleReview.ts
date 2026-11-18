@@ -9,7 +9,7 @@ import {
 } from '../schedulesApi';
 
 export function useScheduleReview({
-  command, beforeAfter, problems: validation, dirty, phone, changing, onClose,
+  command, beforeAfter, problems: validation, dirty, phone, changing, onClose, verifyRetryScope,
 }: {
   command: CommandDraft;
   beforeAfter: import('./type').ScheduleChangeLine[];
@@ -18,10 +18,13 @@ export function useScheduleReview({
   phone: boolean;
   changing: boolean;
   onClose: () => void;
+  verifyRetryScope?: () => Promise<boolean>;
 }) {
   const [ui, setUi] = useState<CommandUi>('editing');
   const [problems, setProblems] = useState<RowProblem[]>([]);
-  const [canRetry, setCanRetry] = useState(false);
+  const [retryOffered, setCanRetry] = useState(false);
+  const [confirmingUnresolvedExit, setConfirmingUnresolvedExit] = useState(false);
+  const [identity, setIdentity] = useState<{ commandId: string; expiresAt: string }>();
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
   const pending = useRef<{ envelope: ScheduleCommandEnvelope; expiresAt: string } | null>(null);
@@ -30,6 +33,14 @@ export function useScheduleReview({
   const [getResult] = useLazyGetScheduleCommandResultQuery();
   const guard = useScheduleNavigation((dirty && ui !== 'committed') || busy);
   const canReview = dirty && validation.length === 0 && !changing;
+  const expiry = identity ? Date.parse(identity.expiresAt) : 0;
+  const canRetry = retryOffered && !changing;
+
+  useEffect(() => {
+    if (!retryOffered) return;
+    const timer = window.setTimeout(() => setCanRetry(false), Math.max(0, expiry - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [expiry, retryOffered]);
 
   function apply(result: CommandResult) {
     if (result.outcome === 'committed') {
@@ -65,10 +76,12 @@ export function useScheduleReview({
     setUi('sending');
     // Freeze the exact reviewed body before the first network step. The shared 401 refresh also retries this body.
     const reviewed = structuredClone(command);
+    setIdentity(undefined);
     try {
-      const identity = await issueToken().unwrap();
-      const envelope = { ...reviewed, token: identity.token, commandId: identity.commandId };
-      pending.current = { envelope, expiresAt: identity.expiresAt };
+      const issued = await issueToken().unwrap();
+      const envelope = { ...reviewed, token: issued.token, commandId: issued.commandId };
+      pending.current = { envelope, expiresAt: issued.expiresAt };
+      setIdentity({ commandId: issued.commandId, expiresAt: issued.expiresAt });
       await send(envelope);
     } catch {
       setProblems([{ rowId: 'command', code: 'row-invalid', message: 'ขอรหัสสำหรับบันทึกไม่สำเร็จ กรุณาลองอีกครั้ง' }]);
@@ -90,9 +103,12 @@ export function useScheduleReview({
       if (result.outcome === 'committed' && result.commandId === attempt.envelope.commandId) apply(result);
     } catch (error) {
       setUi(resolveCommandUi('uncertain', 'lookup-failed'));
-      // A missing receipt while this token is still valid permits only an explicit replay of the same command.
-      setCanRetry(typeof error === 'object' && error !== null && 'status' in error && error.status === 404
-        && Date.parse(attempt.expiresAt) > Date.now());
+      // The lookup uses 404 for both a missing receipt and one outside the caller's current scope.
+      const missing = typeof error === 'object' && error !== null && 'status' in error && error.status === 404;
+      if (missing && verifyRetryScope && Date.parse(attempt.expiresAt) > Date.now()) {
+        const authorised = await verifyRetryScope().catch(() => false);
+        setCanRetry(authorised && Date.parse(attempt.expiresAt) > Date.now());
+      }
     } finally {
       running.current = false;
       setBusy(false);
@@ -116,6 +132,12 @@ export function useScheduleReview({
 
   return {
     ui, beforeAfter, problems: [...validation, ...problems], canReview, dirty, phone, busy, canRetry, changing,
+    unresolvedCommandId: ui === 'uncertain' ? identity?.commandId : undefined,
+    confirmingUnresolvedExit,
+    confirmUnresolvedExit: () => {
+      if (ui === 'uncertain' && !running.current) onClose();
+    },
+    stayUnresolved: () => setConfirmingUnresolvedExit(false),
     guard,
     review: () => {
       if (!canReview) return;
@@ -124,7 +146,9 @@ export function useScheduleReview({
     },
     backToEdit: () => setUi('editing'),
     cancel: () => {
-      if (!running.current && ui !== 'uncertain') guard.leave(onClose, ui !== 'committed');
+      if (running.current) return;
+      if (ui === 'uncertain') setConfirmingUnresolvedExit(true);
+      else guard.leave(onClose, ui !== 'committed');
     },
     save, lookup, retry,
   };

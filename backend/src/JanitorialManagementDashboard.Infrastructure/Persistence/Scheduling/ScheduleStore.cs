@@ -269,12 +269,17 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     /// of an existing one both serialise here, so neither can be decided from a state the other is about to change.
     /// </summary>
     public async Task<ScheduleBaselineAnchor> LockBaselineHeadAsync(
-        int personId, DateTime nowUtc, CancellationToken ct = default)
+        int personId, DateTime nowUtc, CancellationToken ct = default, bool advanceRevision = true)
     {
-        var anchor = await db.ScheduleBaselineAnchors.FirstOrDefaultAsync(row => row.PersonId == personId, ct);
+        var anchor = await FindBaselineAnchorUnderLockAsync(personId, ct);
         if (anchor is null)
         {
-            var created = new ScheduleBaselineAnchor { PersonId = personId, Revision = 1, UpdatedAt = nowUtc };
+            var created = new ScheduleBaselineAnchor
+            {
+                PersonId = personId,
+                Revision = advanceRevision ? 1 : 0,
+                UpdatedAt = nowUtc,
+            };
             db.ScheduleBaselineAnchors.Add(created);
             try
             {
@@ -294,9 +299,12 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             }
         }
 
-        anchor.Revision += 1;
-        anchor.UpdatedAt = nowUtc;
-        await db.SaveChangesAsync(ct);
+        if (advanceRevision)
+        {
+            anchor.Revision += 1;
+            anchor.UpdatedAt = nowUtc;
+            await db.SaveChangesAsync(ct);
+        }
         return anchor;
     }
 
@@ -792,6 +800,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         }
 
         var includedIds = included.Select(person => person.Id).ToList();
+        var baselineAnchors = await db.ScheduleBaselineAnchors.AsNoTracking()
+            .Where(anchor => includedIds.Contains(anchor.PersonId))
+            .ToDictionaryAsync(anchor => anchor.PersonId, anchor => anchor.Revision, ct);
         var exceptions = await db.ScheduleExceptions.AsNoTracking()
             .Where(row => includedIds.Contains(row.UserId) && row.ShiftDate >= monday && row.ShiftDate < weekEnd)
             .ToListAsync(ct);
@@ -941,18 +952,19 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             bool? weeklyReplaceAllowed = actor.Role == UserRole.Cleaner ? null
                 : header?.Choices.All(choice => personDays.Any(day =>
                     day.Date == choice.OffDate && day.Edit?.CanChange == true)) ?? true;
+            var timelineRevision = Revision(baselineAnchors.GetValueOrDefault(person.Id));
             rows.Add(new SchedulePersonWeek(person.Id, person.DisplayName,
                 profile?.Kind.ToString() ?? UnknownCleanerKind,
                 HomeBuilding(memberships[person.Id], profiles.Exists(entry => entry.UserId == person.Id), person),
                 header is not null,
                 personDays,
-                // The write contract's anchors (Task 6): the week header and the head version of each repeating-week kind,
-                // as the very revisions the command handlers compare. A missing row is 0, never "unknown".
+                // Regular and relief share the per-person timeline anchor used by writes. A missing anchor starts at 0.
                 Revision(header?.Revision ?? 0),
-                Revision(personBaselines.LastOrDefault(entry => entry.Kind == BaselineKind.Regular)?.Revision ?? 0),
-                Revision(personBaselines.LastOrDefault(entry => entry.Kind == BaselineKind.Relief)?.Revision ?? 0),
+                timelineRevision,
+                timelineRevision,
                 weeklyReplaceAllowed));
 
+            revisions.Add($"baseline-anchor#{person.Id}@{timelineRevision}");
             revisions.AddRange(personProfiles.Select(entry => $"profile#{entry.Id}@{Revision(entry.Revision)}"));
             revisions.AddRange(personBaselines.Select(entry => $"baseline#{entry.Id}@{Revision(entry.Revision)}"));
             if (header is not null)

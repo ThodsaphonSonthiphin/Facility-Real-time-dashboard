@@ -4,7 +4,7 @@ import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { offsetDate, type CommandDraft } from '../commandRules';
 import { useScheduleReview } from '../ScheduleReview/useScheduleReview';
 import { clockSlot } from '../scheduleRules';
-import { useGetManagedScheduleQuery } from '../schedulesApi';
+import { schedulePoll, useGetManagedScheduleQuery } from '../schedulesApi';
 import type { WeeklyOffDraft, WeeklyOffEditorProps } from './type';
 
 function offDates(person: SchedulePerson) {
@@ -51,7 +51,9 @@ export function useWeeklyOffEditor(props: WeeklyOffEditorProps) {
   const [reason, setReason] = useState('');
   const [missing, setMissing] = useState<number[]>([]);
   const previousWeek = offsetDate(base.weekStart, -7);
-  const source = useGetManagedScheduleQuery({ ...props.selection, weekStart: previousWeek });
+  const source = useGetManagedScheduleQuery({ ...props.selection, weekStart: previousWeek }, schedulePoll);
+  const copySource = source.isSuccess && !source.isFetching && !source.isError
+    && source.currentData?.weekStart === previousWeek ? source.currentData : undefined;
   const saved = savedDraft(base).choices;
   const submitted = base.rows.flatMap((person) => {
     const choices = draft.choices[person.userId];
@@ -107,14 +109,25 @@ export function useWeeklyOffEditor(props: WeeklyOffEditorProps) {
       .map((person) => [keyOf(person.userId), person.weeklyRevision])),
     payload: { weekStart: base.weekStart, rows: submitted, reason: reason.trim() || undefined },
   };
+  function scopeUnchanged(week: ScheduleWeek | undefined) {
+    if (!week || week.weekStart !== base.weekStart || week.revision !== base.revision) return false;
+    return submitted.every(({ userId, offDates }) => {
+      const person = week.rows.find((row) => row.userId === userId);
+      if (!person || person.weeklyReplaceAllowed === false) return false;
+      const writable = person.days.filter((day) => day.edit?.canChange);
+      return (person.hasWeeklyChoice || !!offDates.length || writable.length === 7)
+        && offDates.every((date) => writable.some((day) => day.date === date));
+    });
+  }
   const editor = useScheduleReview({
     command, dirty: submitted.length > 0, problems, beforeAfter: lines(base),
-    phone: props.phone, onClose: props.onClose, changing: base.revision !== props.latest?.revision,
+    phone: props.phone, onClose: props.onClose, changing: !scopeUnchanged(props.latest),
+    verifyRetryScope: async () => scopeUnchanged(await props.reloadEditorWeek()),
   });
   return {
     ...editor, draft, reason, setReason, needsReason, viewedRows, previousWeek, targetWeek: base.weekStart,
     sourceLoading: source.isFetching,
-    copyAvailable: source.currentData?.weekStart === previousWeek && source.currentData.rows.length > 0,
+    copyAvailable: !!copySource?.rows.length,
     latest: props.latest && (editor.ui !== 'conflict' || props.latest.revision !== base.revision)
       ? lines(props.latest) : undefined,
     useLatest: () => {
@@ -129,10 +142,10 @@ export function useWeeklyOffEditor(props: WeeklyOffEditorProps) {
       editor.backToEdit();
     },
     copy: () => {
-      if (!source.currentData) return;
+      if (!copySource?.rows.length) return;
       const completeSource = {
-        ...source.currentData,
-        rows: source.currentData.rows.filter((person) => person.weeklyReplaceAllowed ?? person.days.length === 7),
+        ...copySource,
+        rows: copySource.rows.filter((person) => person.weeklyReplaceAllowed ?? person.days.length === 7),
       };
       const result = copyOffChoices(draft, savedDraft(completeSource), viewedRows.filter((row) => row.editable).map((row) => row.person));
       setDraft(result.draft);

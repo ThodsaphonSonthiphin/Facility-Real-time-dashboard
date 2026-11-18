@@ -121,9 +121,9 @@ function ManagementWeekPage({ role, back }: { role: ScheduleRole; back?: { to: s
 }
 
 function OpenEditor({ view }: { view: ReturnType<typeof useSchedulePage> }) {
-  const { editor, phone, latest: week, closeEditor, refetch, selection } = view;
+  const { editor, phone, latest: week, closeEditor, refetch, reloadEditorWeek, selection } = view;
   if (!editor) return null;
-  const shared = { phone, onClose: closeEditor, onCompare: refetch };
+  const shared = { phone, onClose: closeEditor, onCompare: refetch, reloadEditorWeek };
   if (editor.kind === 'weekly') {
     return <WeeklyOffEditor {...shared} week={editor.week} latest={week} selection={selection} />;
   }

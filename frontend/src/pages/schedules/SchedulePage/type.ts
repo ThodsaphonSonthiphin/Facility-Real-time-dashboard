@@ -27,6 +27,7 @@ export interface SchedulePageView {
   hubStatus: 'connecting' | 'live' | 'reconnecting';
   /** Ask again now: the "อัปเดต" control and a failed read's retry. */
   refetch: () => void;
+  reloadEditorWeek: () => Promise<ScheduleWeek>;
   /** The week the person chose: it is what returning to the page restores (facility-0181, 0185, 0218). */
   chooseWeek: (weekStart: string) => void;
   chooseBuilding: (buildingId: number | undefined) => void;

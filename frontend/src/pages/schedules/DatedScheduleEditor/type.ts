@@ -1,4 +1,4 @@
-import type { ScheduleDay, SchedulePerson } from '../../../shared/api/scheduleTypes';
+import type { ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
 
 export type DatedAction = 'area' | 'breakGroup' | 'leave' | 'cancelLeave';
 
@@ -17,4 +17,5 @@ export interface DatedScheduleEditorProps {
   phone: boolean;
   onClose: () => void;
   onCompare: () => void;
+  reloadEditorWeek: () => Promise<ScheduleWeek>;
 }

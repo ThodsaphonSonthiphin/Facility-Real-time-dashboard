@@ -24,7 +24,7 @@ export function ScheduleReview({
       <div className={`flex min-w-0 flex-1 flex-col gap-4 ${phone ? 'text-base' : 'text-sm'}`}>
         <header className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
           <h2 id="schedule-editor-heading" tabIndex={-1} className="text-xl font-bold">{title}</h2>
-          <Button variant="link" size={size} onClick={editor.cancel} disabled={busy || ui === 'uncertain'}>ปิด</Button>
+          <Button variant="link" size={size} onClick={editor.cancel} disabled={busy}>ปิด</Button>
         </header>
         {guard.confirming && (
           <Note tone="warn" title="มีข้อมูลที่ยังไม่ได้บันทึก">
@@ -50,7 +50,9 @@ export function ScheduleReview({
           <Note tone="error" title="รายการที่ต้องตรวจสอบ">
             <ul className="list-disc pl-5">
               {editor.problems.map((problem) => (
-                <li key={`${problem.rowId}:${problem.message}`}>{problem.message}</li>
+                <li key={`${problem.rowId}:${problem.message}`}>
+                  <ProblemLine problem={problem} lines={editor.beforeAfter} />
+                </li>
               ))}
             </ul>
           </Note>
@@ -66,6 +68,18 @@ export function ScheduleReview({
         {ui === 'uncertain' && (
           <Note tone="warn" title="ยังยืนยันผลการบันทึกไม่ได้" status>
             ตรวจผลคำสั่งเดิมก่อนส่งซ้ำ
+            {editor.confirmingUnresolvedExit && (
+              <div className="mt-2 space-y-2">
+                <p>หากออกตอนนี้ ระบบยังยืนยันไม่ได้ว่าคำสั่งสำเร็จหรือไม่ โปรดเก็บรหัสอ้างอิงและตรวจตารางก่อนทำรายการอีกครั้ง</p>
+                {editor.unresolvedCommandId && <p className="break-all">รหัสอ้างอิง · {editor.unresolvedCommandId}</p>}
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" size={size} onClick={editor.stayUnresolved}>อยู่หน้านี้</Button>
+                  <Button variant="danger" size={size} disabled={busy} onClick={editor.confirmUnresolvedExit}>
+                    ออกโดยยังไม่ทราบผล
+                  </Button>
+                </div>
+              </div>
+            )}
           </Note>
         )}
         {ui === 'committed' && (
@@ -111,4 +125,12 @@ export function ChangeList({ lines }: { lines: ScheduleChangeLine[] }) {
       ))}
     </ul>
   );
+}
+
+function ProblemLine({ problem, lines }: {
+  problem: ScheduleReviewProps['problems'][number];
+  lines: ScheduleChangeLine[];
+}) {
+  const label = lines.find((line) => line.id === problem.rowId)?.label;
+  return <>{label && <strong>{label} · </strong>}{problem.message}</>;
 }

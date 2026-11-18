@@ -97,6 +97,7 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     mayBeStale: readMayBeStale(changedAt, read),
     hubStatus: useAppSelector(selectHubStatus(scheduleHubKey(selection))),
     refetch: () => void read.refetch(),
+    reloadEditorWeek: () => read.refetch().unwrap(),
     chooseWeek: (weekStart) => remember({ ...requested, weekStart }),
     chooseBuilding: (buildingId) => remember({ ...requested, buildingId }),
     chooseShift: (shift) => remember({ ...requested, shift }),

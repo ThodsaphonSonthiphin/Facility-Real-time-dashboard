@@ -294,7 +294,7 @@ public sealed class ScheduleCommandService(
         {
             ordered.Add((
                 $"baseline|{personId.ToString("D10", CultureInfo.InvariantCulture)}",
-                async () => await store.LockBaselineHeadAsync(personId, now.UtcDateTime, ct)));
+                async () => await store.LockBaselineHeadAsync(personId, now.UtcDateTime, ct, advanceRevision: false)));
         }
 
         foreach (var scope in plan.Scopes.Distinct())

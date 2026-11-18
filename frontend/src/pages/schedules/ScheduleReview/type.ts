@@ -17,6 +17,10 @@ export interface ScheduleReviewProps {
   phone: boolean;
   busy: boolean;
   canRetry: boolean;
+  confirmingUnresolvedExit: boolean;
+  confirmUnresolvedExit: () => void;
+  stayUnresolved: () => void;
+  unresolvedCommandId?: string;
   changing: boolean;
   review: () => void;
   backToEdit: () => void;

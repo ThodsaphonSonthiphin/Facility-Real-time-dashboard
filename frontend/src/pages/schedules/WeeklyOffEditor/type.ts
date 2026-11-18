@@ -13,4 +13,5 @@ export interface WeeklyOffEditorProps {
   phone: boolean;
   onClose: () => void;
   onCompare: () => void;
+  reloadEditorWeek: () => Promise<ScheduleWeek>;
 }

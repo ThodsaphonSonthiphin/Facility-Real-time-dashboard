@@ -76,7 +76,7 @@ public static class ScheduleRevisionKeys
     public static string Week(int userId, DateOnly weekStart) =>
         $"week:{userId}:{Iso(weekStart)}";
 
-    /// <summary>The head version of one person's regular or relief repeating week: 0 when there is no version.</summary>
+    /// <summary>The per-person timeline revision, shared by the regular and relief keys: 0 before the first anchor.</summary>
     public static string Baseline(int userId, BaselineKind kind) =>
         $"baseline:{userId}:{kind.ToString().ToLowerInvariant()}";
 
@@ -997,8 +997,9 @@ internal static class ScheduleBaselineWrite
             .Where(baseline => baseline.UserId == payload.UserId && baseline.Kind == kind)
             .OrderBy(baseline => baseline.EffectiveFrom).ThenBy(baseline => baseline.Id)
             .ToListAsync(ct);
-        var head = versions.LastOrDefault();
-        var current = ScheduleCommandHandler.Revision(head?.Revision);
+        // The engine took this stable per-person lock before reading any baseline versions.
+        var timeline = db.ScheduleBaselineAnchors.Local.Single(anchor => anchor.PersonId == payload.UserId);
+        var current = ScheduleCommandHandler.Revision(timeline.Revision);
         revisions[key] = current;
         if (ScheduleCommandHandler.IsStale(request, key, current, out var expected))
         {
@@ -1080,10 +1081,9 @@ internal static class ScheduleBaselineWrite
                 previous.Id, "update", before, VersionRangeJson(previous)));
         }
 
-        // The answer names the head the read exposes (<c>SchedulePersonWeek.RegularBaselineRevision</c>), which is the
-        // version with the latest start — not a version the new one merely precedes. Naming an intermediate revision would
-        // make a client that echoes the answer look stale on its next edit.
-        revisions[key] = ScheduleCommandHandler.Revision(next is null ? created.Revision : head!.Revision);
+        timeline.Revision += 1;
+        timeline.UpdatedAt = request.Now.UtcDateTime;
+        revisions[key] = ScheduleCommandHandler.Revision(timeline.Revision);
         return new ScheduleCommandApplication(revisions, []);
     }
 

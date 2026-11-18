@@ -46,10 +46,14 @@ export function useDatedScheduleEditor(props: DatedScheduleEditorProps) {
   const availableActions: DatedAction[] = ['area', 'breakGroup', edit?.leave ? 'cancelLeave' : 'leave'];
   const key = leave ? `leave:${props.person.userId}:${date}:${shift}`
     : `exception:${props.person.userId}:${date}:${shift}:${area ? 'area' : 'breakgroup'}`;
-  const changes = !current?.canChange || props.latest?.shift !== shift
-    || current.areaRevision !== edit?.areaRevision || current.breakRevision !== edit?.breakRevision
-    || current.leave?.revision !== edit?.leave?.revision
-    || current.baselineAreaId !== edit?.baselineAreaId || current.baselineBreakGroup !== edit?.baselineBreakGroup;
+  const scopeUnchanged = (day: ScheduleDay | undefined) => {
+    const current = day?.edit;
+    return !!current?.canChange && day?.shift === shift
+      && current.areaRevision === edit?.areaRevision && current.breakRevision === edit?.breakRevision
+      && current.leave?.revision === edit?.leave?.revision
+      && current.baselineAreaId === edit?.baselineAreaId && current.baselineBreakGroup === edit?.baselineBreakGroup;
+  };
+  const changes = !scopeUnchanged(props.latest);
   const newValue = value ? Number(value) : null;
   const problem = (message: string): RowProblem => ({ rowId: key, code: 'row-invalid', message });
   const problems = !availableActions.includes(action) ? [problem('รายการลาของวันนี้เปลี่ยนแล้ว')] : [];
@@ -93,6 +97,11 @@ export function useDatedScheduleEditor(props: DatedScheduleEditorProps) {
   const latest = current && props.latest ? [line(props.latest)] : undefined;
   const editor = useScheduleReview({
     command, dirty, problems, beforeAfter, phone: props.phone, onClose: props.onClose, changing: changes,
+    verifyRetryScope: async () => {
+      const week = await props.reloadEditorWeek();
+      const person = week.rows.find((row) => row.userId === props.person.userId);
+      return scopeUnchanged(person?.days.find((day) => day.date === date));
+    },
   });
   return {
     ...editor, draft, correction, reasonRequired, setField,

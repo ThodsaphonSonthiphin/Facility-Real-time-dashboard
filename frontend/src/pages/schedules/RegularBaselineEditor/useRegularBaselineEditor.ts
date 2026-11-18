@@ -20,6 +20,7 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
   const [base, setBase] = useState(props.person);
   const [draft, setDraft] = useState(initial);
   const [edited, setEdited] = useState(false);
+  const [reviewed, setReviewed] = useState<SchedulePerson | undefined>();
   const { effectiveFrom, areaId, breakGroup } = draft;
   const targetMonday = effectiveFrom && offsetDate(effectiveFrom, -((weekdays.indexOf(weekdayOf(effectiveFrom)) + 6) % 7));
   const target = useGetManagedScheduleQuery(targetMonday && targetMonday !== props.week.weekStart
@@ -27,8 +28,9 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
   const following = useGetManagedScheduleQuery(targetMonday && weekdayOf(effectiveFrom) !== 'Monday'
     ? { ...props.selection, weekStart: offsetDate(targetMonday, 7) } : skipToken, schedulePoll);
   const live = props.latest?.rows.find((row) => row.userId === props.person.userId);
-  const effectiveRow = targetMonday === props.week.weekStart
-    ? live : target.currentData?.rows.find((row) => row.userId === props.person.userId);
+  const targetWeek = targetMonday === props.week.weekStart
+    ? props.latest : target.isSuccess && !target.isFetching ? target.currentData : undefined;
+  const effectiveRow = targetWeek?.rows.find((row) => row.userId === props.person.userId);
   const current = effectiveRow?.days.find((day) => day.date === effectiveFrom);
   const incoming = effectiveRow ?? live;
   const changes = incoming?.regularBaselineRevision !== version || !live || !!target.error;
@@ -38,7 +40,7 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
   const problems: RowProblem[] = [];
   const problem = (message: string) => problems.push({ rowId: key, code: 'row-invalid', message });
   if (effectiveFrom < tomorrow) problem('เลือกวันเริ่มใช้ตั้งแต่วันถัดไป');
-  if (effectiveFrom && !current?.edit?.canChange) problem('ไม่พบวันที่แก้ได้ในขอบเขตปัจจุบัน');
+  if (effectiveFrom && !target.isFetching && !current?.edit?.canChange) problem('ไม่พบวันที่แก้ได้ในขอบเขตปัจจุบัน');
   if (areaId && current?.edit?.canChange && !selectedArea) problem('เลือกพื้นที่ที่ยังใช้งานในตึกของแม่บ้าน');
   if (edited && (!areaId || !breakGroup)) problem('เลือกพื้นที่และกลุ่มพักก่อนตรวจสอบ');
 
@@ -62,10 +64,18 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
       after: `${selectedArea?.label ?? 'ยังไม่เลือกพื้นที่'} · กลุ่มพัก ${breakGroup || 'ยังไม่กำหนด'} ทุกวัน`,
     };
   };
-  const beforeAfter = [line(base)];
+  const beforeAfter = [line(reviewed
+    ?? (effectiveRow?.regularBaselineRevision === version && effectiveRow ? effectiveRow : base))];
   const liveLines = incoming && live ? [line(incoming)] : undefined;
   const editor = useScheduleReview({
-    command, dirty: edited, problems, beforeAfter, phone: props.phone, onClose: props.onClose, changing: changes,
+    command, dirty: edited, problems, beforeAfter, phone: props.phone, onClose: props.onClose, changing: changes || !current?.edit?.canChange,
+    verifyRetryScope: async () => {
+      const week = targetMonday === props.week.weekStart
+        ? await props.reloadEditorWeek() : await target.refetch().unwrap();
+      const person = week.rows.find((row) => row.userId === props.person.userId);
+      return person?.regularBaselineRevision === version
+        && !!person.days.find((day) => day.date === effectiveFrom)?.edit?.canChange;
+    },
   });
   const affected = [
     ...(effectiveRow?.days ?? []),
@@ -78,8 +88,14 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
     ...editor, draft, areas, tomorrow, affected,
     latest: editor.ui !== 'conflict' || changes ? liveLines : undefined,
     loading: target.isFetching,
+    review: () => {
+      if (!editor.canReview || !effectiveRow) return;
+      setReviewed(effectiveRow);
+      editor.review();
+    },
     setField: (field: keyof RegularBaselineDraft, value: string) => {
       setDraft({ ...draft, [field]: value });
+      if (field === 'effectiveFrom') setReviewed(undefined);
       setEdited(true);
     },
     compare: () => {
@@ -90,6 +106,7 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
       if (!incoming || !live) return;
       setBase(incoming);
       setVersion(incoming.regularBaselineRevision);
+      setReviewed(undefined);
       editor.backToEdit();
     },
   };

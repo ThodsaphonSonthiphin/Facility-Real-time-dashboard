@@ -15,4 +15,5 @@ export interface RegularBaselineEditorProps {
   phone: boolean;
   onClose: () => void;
   onCompare: () => void;
+  reloadEditorWeek: () => Promise<ScheduleWeek>;
 }
