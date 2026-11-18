@@ -689,7 +689,7 @@ Seed this test with recorded half-day leave/final out and an earlier missing eve
 
 **Interfaces:** Add synthetic roster manifest entries under existing run-owned manifest: Supervisor A+B/C, regular/relief identities, home/destination Areas/sign tokens, scenario slot/date and selected activation boundary. Expose no credential/token in public docs. Add support `openSchedule(page, route, weekStart)` and `recordTransferArrival(page, destinationSignUrl)` with real API waits; do not replace end-to-end database/API results with mocked success.
 
-- [ ] Add failing E2E for save week/off then Cleaner read, one stale competing editor, source-agreed loan, partial leave final out, and A→B transfer. This assertion proves an accepted arrival record, not merely a button click.
+- [x] Add failing E2E for save week/off then Cleaner read, one stale competing editor, source-agreed loan, partial leave final out, and A→B transfer. This assertion proves an accepted arrival record, not merely a button click.
 
 ```ts
 const saved = page.waitForResponse(r =>
@@ -701,9 +701,9 @@ await expect(page.getByText('ยืนยันถึงพื้นที่ใ
 
 Use run-owned fixture person already ShiftIn at A, an authorised effective instruction and destination sign route. Browser scenarios use the actual current server slot and relative instants inside its receiving window, not fixed 13:00 examples; deterministic exact 13:00/13:05 and rollout-boundary tests belong to factory/API tests with TestTimeProvider. Seed lifecycle metadata as synthetic history prepared before that slot opened; do not call an activation API late or claim E2E_SEED_NOW changes the API clock. For rapid functional browser scans only, run `Attendance__RepeatIgnoreMinutes=0 npm --prefix frontend run e2e -- --dataset large --grep scheduling`; keep the real five-minute guard covered in API tests. The override is inherited only by the owned run, never written into production configuration. Use no shared test-only clock endpoint in production. Then assert initial ShiftIn remains once, A old work still exists and B evidence count changes only after confirmation through an independent API/database read in the fixture test. A pending instruction is not a successful arrival.
 
-- [ ] Run the focused tests through owned runner before implementation completion; expect missing scenario fixtures/selectors until the preceding tasks are integrated. Use `npm --prefix frontend run e2e -- --dataset large` for the full run; for focus use `npm --prefix frontend run e2e -- --dataset large --grep scheduling` because scripts/e2e.py forwards remaining args to Playwright. Do not bypass ownership via naked Playwright against a real deployment.
-- [ ] Complete fixture/profile integration using existing owned lifecycle and deterministic slot clock. Update `shiftInIfOffered` to accept both legacy and numbered break labels without treating a failure as success. Keep isolated tests independent of mutation order. Use two real contexts and awaited requests for races; no sleeps or retry masking.
-- [ ] Run unit/API suites, frontend test/lint/build, and configured real-MySQL scheduling/migration/retention races; all required cases must execute. Then run Chromium/WebKit/Firefox owned E2E as supported. Inspect desktop1280/phone375/320 PNGs for schedule/review/conflict/attendance/transfer and browser errors; record actual pass/skip counts and owned evidence paths. Existing OS/camera/GPS/real-phone limitations remain stated, not counted as verified production behaviour.
+- [x] Run the focused tests through owned runner before implementation completion; expect missing scenario fixtures/selectors until the preceding tasks are integrated. Use `npm --prefix frontend run e2e -- --dataset large` for the full run; for focus use `npm --prefix frontend run e2e -- --dataset large --grep scheduling` because scripts/e2e.py forwards remaining args to Playwright. Do not bypass ownership via naked Playwright against a real deployment.
+- [x] Complete fixture/profile integration using existing owned lifecycle and deterministic slot clock. Update `shiftInIfOffered` to accept both legacy and numbered break labels without treating a failure as success. Keep isolated tests independent of mutation order. Use two real contexts and awaited requests for races; no sleeps or retry masking.
+- [x] Run unit/API suites, frontend test/lint/build, and configured real-MySQL scheduling/migration/retention races; all required cases must execute. Then run Chromium/WebKit/Firefox owned E2E as supported. Inspect desktop1280/phone375/320 PNGs for schedule/review/conflict/attendance/transfer and browser errors; record actual pass/skip counts and owned evidence paths. Existing OS/camera/GPS/real-phone limitations remain stated, not counted as verified production behaviour.
 
 ```bash
 dotnet test backend/tests/JanitorialManagementDashboard.UnitTests
@@ -714,8 +714,8 @@ npm --prefix frontend run build
 npm --prefix frontend run e2e -- --dataset large
 ```
 
-- [ ] Write operations handoff from actual shipped code: current build/branch, migrations and verified database target (redacted), initial incomplete-data setup, scope/profile entry, configured retention, cutover preconditions and stale-client behaviour. Rollback must not reinterpret a slot already using Numbered6 or delete transfer facts; disable future activation/routes safely while preserving reads, and use a forward corrective deployment for persisted new facts. Do not give a destructive Down-migration recipe as a routine rollback.
-- [ ] Match all A01–A29 below to retained evidence and update handoff. Commit only this task's files with `test: prove scheduling lifecycle and transfer acceptance (refs #1)`. Publication/merge/deployment still require the owner's instructions; plan completion alone does not send messages or open external writes.
+- [x] Write operations handoff from actual shipped code: current build/branch, migrations and verified database target (redacted), initial incomplete-data setup, scope/profile entry, configured retention, cutover preconditions and stale-client behaviour. Rollback must not reinterpret a slot already using Numbered6 or delete transfer facts; disable future activation/routes safely while preserving reads, and use a forward corrective deployment for persisted new facts. Do not give a destructive Down-migration recipe as a routine rollback.
+- [x] Match all A01–A29 below to retained evidence and update handoff. Commit only this task's files with `test: prove scheduling lifecycle and transfer acceptance (refs #1)`. Publication/merge/deployment still require the owner's instructions; plan completion alone does not send messages or open external writes.
 
 ## Spec coverage and self-review
 
@@ -747,3 +747,5 @@ Plan complete. Two execution options after the owner explicitly says to start:
 2. **Inline Execution:** use `sp-executing-plans`, execute tasks in this session with checkpoints.
 
 Choosing an execution style without an explicit start instruction does not revoke the implementation hold. First execution step reads the current spec/plan/handoff together and preserves the existing design working tree.
+
+**Checkbox policy at closeout (2026-11-18):** tasks 1–16 were executed with per-task commits, review rounds and verification counts recorded in [the handoff](../../handoff.md) and the SDD workspace ledger; their steps stay unticked because the closing session did not personally re-check each one. Task 17's six steps are ticked because its evidence was re-run and inspected on `86ec116`.

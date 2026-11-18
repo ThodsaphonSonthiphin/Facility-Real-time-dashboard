@@ -664,7 +664,7 @@ graph LR
 |---|---|---|
 | `ScanRecorded`, `InspectionRecorded` (whole PointCard) | Admins, the building's Supervisors, the Area's Cleaners, current scoped covers | Dashboard/My Building patch the point; My Work refetches; attendance follower ignores point messages |
 | `AttendanceRecorded` (Area/date/shift) | Admins | Attendance refetches the affected board; other followers ignore it |
-| `ScheduleChanged` (command ID) | Active affected Cleaners, authorised Supervisors for affected building/shift/date, active Admins | Schedule and affected attendance/work views invalidate and refetch scoped reads. Open schedule editors keep their drafts. |
+| `ScheduleChanged` (invalidation ID) | Active affected Cleaners, authorised Supervisors for affected building/shift/date, active Admins | Schedule and My Work refetch scoped reads after a schedule command, transfer arrival or attendance correction. Open schedule editors keep their drafts. |
 
 `PointNotifications.SendAsync` and `AttendanceBoard.NotifyAsync` send after the record is saved and catch/log push failures. `ScheduleNotifications` resolves recipients after commit, and a failed push leaves the command result intact. `ActiveAdmins.IdsAsync` reads Admin recipients; no group membership cache decides access.
 

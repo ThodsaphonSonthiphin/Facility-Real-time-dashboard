@@ -25,21 +25,22 @@ npm --prefix frontend run build
 
 ## Recorded verification
 
-2026-11-18, Asia/Bangkok, on `codex/cleaner-scheduling`. The isolated backend target was a disposable database on a separate loopback MySQL instance. All 531 unit cases and 970 API cases passed, with 0 skipped. The API result includes all 19 MySQL-gated cases, including fresh and legacy-upgrade migrations, command/attendance/transfer races and scheduling retention. Raw test logs and TRX results are under `.run/scheduling-task17/`.
+2026-11-18, Asia/Bangkok, on `codex/cleaner-scheduling` at `86ec116`, after the whole-branch review's single fix wave; the two commits after it change only tests and documentation. The isolated backend target was a disposable database on a separate loopback MySQL instance; it was not the owner's `facility_dashboard`, and no `dotnet ef database update` ran against it. All 531 unit cases and 978 API cases passed, with 0 skipped. The API result includes all 19 MySQL-gated cases: fresh and legacy-upgrade migrations, command/attendance/transfer races and scheduling retention. Raw logs and TRX results are under `.run/scheduling-task17/`.
 
-Frontend lint, TypeScript, production build and 644 frontend tests passed. The main JavaScript bundle was 131.60 kB gzip against the 200 kB budget.
+Frontend lint, TypeScript, production build and 645 frontend tests passed. The main JavaScript bundle was 131.60 kB gzip against the 200 kB budget and CSS was 8.63 kB gzip.
 
 | Owned browser run | Passed | Skipped | Failed | Evidence directory under `.run/e2e/` |
 |---|---:|---:|---:|---|
-| Chromium, full large profile | 41 | 0 | 0 | `20261118125747_63aa32f9` |
+| Chromium, full large profile | 41 | 0 | 0 | `20261118133252_ee000fa0` |
+| WebKit, full large profile | 39 | 2 | 0 | `20261118134731_b2d2956d` |
+| Firefox, full large profile | 38 | 3 | 0 | `20261118135026_1731d1cd` |
 | Chromium, focused scheduling and per-run seed | 5 | 0 | 0 | `20261118130116_c5e4cfe7` |
-| WebKit, full large profile | 39 | 2 | 0 | `20261118125941_a10250d3` |
-| Firefox, full large profile, initial browser verification | 37 | 3 | 1 | `20261118130132_d0eb6114` |
-| Firefox, focused scheduling after waiting for the reference week | 5 | 0 | 0 | `20261118131202_238dd04e` |
-| Firefox, full large profile after fixes | 38 | 3 | 0 | `20261118131243_21948e72` |
-| Chromium, focused scheduling after boundary and live-update fixes | 5 | 0 | 0 | `20261118131624_2c537b17` |
+| WebKit, focused scheduling | 5 | 0 | 0 | `20261118133429_ee5aec3f` |
+| Firefox, focused scheduling | 5 | 0 | 0 | `20261118133538_94d801c3` |
 
-The full runs use the real repeat guard. The two WebKit skips are Chromium-only layout measurements. Firefox also skips the engine-specific location-permission retry. The initial Firefox failure was a previous-week read moving the checkbox between its scroll and click. The focused Chromium report contains thirteen other responsive screenshots and both destination-confirmation screenshots where the actual arrival status is visible.
+The full runs use the real repeat guard. The two WebKit skips are Chromium-only layout measurements. Firefox skips the same two cases and its engine-specific location-permission retry. The focused Chromium report contains thirteen other responsive screenshots and both destination-confirmation screenshots where the actual arrival status is visible.
+
+The same suites ran on the pre-review tree earlier the same day with the same counts and skips: Chromium `20261118125747_63aa32f9`, WebKit `20261118125941_a10250d3` and Firefox `20261118131243_21948e72`. An earlier Firefox full run (`20261118130132_d0eb6114`) failed one case because a previous-week read moved the checkbox between its scroll and click; the fix awaits the real source-week read before editing. The whole-branch review's six findings — transfer receipt scope, two numbered scans racing one revision, a first arrival accepted after final out, retention dropping attendance gaps and slot anchors, no scoped invalidation for actual changes, and relief missing from the Admin board's current assignment — were fixed in `86ec116`, and every suite above ran afterwards.
 
 ## Acceptance evidence by criterion
 
@@ -58,22 +59,22 @@ Backend test classes below are in `backend/tests`. Frontend unit and component t
 | A09 | `ReliefLoanTests` checks the named source Supervisor, destination attestation and destination group. The owned loan case records the outside agreement through the destination Supervisor's browser. |
 | A10 | `ReliefLoanTests` and `ReliefAssignmentTests` check another shift, occupied or on-leave candidates, unchanged existing plans and one Supervisor covering both buildings. |
 | A11 | `AttendanceEndpointTests` checks both complete sequences and the stored legacy contract. `MySqlScheduleMigrationTests` upgrades an actual legacy database without adding guessed facts. |
-| A12 | `AttendanceEndpointTests` requires exact gap confirmations and checks persisted skip markers with no synthetic times. `CheckInPage.test.tsx` checks the confirmation UI. |
+| A12 | `AttendanceEndpointTests` requires exact gap confirmations and checks persisted skip markers with no synthetic times. `MySqlAttendanceRaceTests` races a real break scan and a final out against one revision through HTTP and verifies one winner. `CheckInPage.test.tsx` checks the confirmation UI. |
 | A13 | `AttendanceLifecycleTests`, `AttendanceEndpointTests` and `ScanRecordEndpointTests` cover ordered final departure, work during a break with no recorded return and refusal after leaving. |
 | A14 | `MissingTeamAttendanceTests` checks provenance, scope, reason, time order and refusal to overwrite. `MySqlAttendanceRaceTests` verifies a competing fill preserves the first fact. `AttendanceCorrectionEndpointTests` covers the Admin correction path. |
 | A15 | `EffectiveAttendanceTests.A_real_early_checkout_marks_later_leave_actions_inapplicable_and_preserves_earlier_gaps` records a final 13:00 departure with later leave-covered breaks. The owned browser uses a relative departure instead of changing the API clock. |
 | A16 | `EffectiveAttendanceTests` checks actual 13:00 departure with absent leave and leave beginning 13:15. It checks that the read flags the mismatch and leaves the stored departure and leave facts intact. Check-In and the scoped team attendance drawer show the warning. |
 | A17 | `EffectiveAttendanceTests` checks eligible check-in on leave and off days. Its correction case records actual 07:00, preserves the conflict after a refused edit and clears it only after the 07:10 plan cancellation commits. That cancellation leaves the actual record and its revision intact. `ScanRecordEndpointTests` checks that eligible work submission still succeeds. |
-| A18 | `ScheduleCommandTests` and the MySQL command races check identical replay, changed-payload refusal and the current revision on a stale write. `ScheduleConflict.test.tsx` compares preserved input with authorised current values. |
-| A19 | `ScheduleCommandTests`, `SchedulingRetentionTests` and `ScheduleReview.test.tsx` check lost responses, uncertain results, scoped lookup, original-envelope replay and refusal to restart a purged, expired identity. |
+| A18 | `ScheduleCommandTests` and the MySQL command races check identical replay, changed-payload refusal and the current revision on a stale write. `AreaTransferTests` checks that instruct and cancel receipts require continuing authority in the original building and shift for lookup and replay. `ScheduleConflict.test.tsx` compares preserved input with authorised current values. |
+| A19 | `ScheduleCommandTests`, `SchedulingRetentionTests` and `ScheduleReview.test.tsx` check lost responses, uncertain results, scoped lookup, original-envelope replay and refusal to restart a purged, expired identity. The tampered-token case alters a signature character that carries six whole bits, because the final base64url character's padding bits would decode to the same bytes. |
 | A20 | `AttendanceCalendarTests` and `AttendanceEndpointTests` cover the receiving boundaries and a Night action after midnight. `scheduleRules.test.ts` and `SchedulePage.test.tsx` cover the Sunday-start week and Admin's initial clock shift. |
 | A21 | `AttendanceLifecycleTests` checks exact pre-window eligibility and refusal for a slot with facts. `AttendanceEndpointTests` checks a stale client's response and absence of writes. This is contract and synthetic-slot evidence. Field cutover has its own prerequisites. |
-| A22 | `AreaTransferTests` checks independent initial entry and destination confirmation times. The owned arrival case waits for a successful confirmation POST and verifies persisted facts through an independent read. |
+| A22 | `AreaTransferTests` checks independent initial entry and destination confirmation times and refuses a first arrival after final checkout. The owned arrival case waits for a successful confirmation POST and verifies persisted facts through an independent read. |
 | A23 | `AreaTransferTests` checks that confirmation preserves recorded break progress and group and does not create a break event. |
 | A24 | `MySqlTransferRaceTests` checks cancel-versus-confirm and duplicate confirmation. `AreaTransferTests` checks same-fact replay, refusal after accepted arrival and a subsequent authorised forward move. |
-| A25 | `ScheduleEntryProjectionTests` checks pending, confirmed and cancelled board states, occupied destinations and continued historical entry. The owned arrival case checks pre- and post-confirmation evidence and the origin work record. This is the board projection used by the separate overview workstream. |
-| A26 | `ScheduleLiveTests` uses real hub connections to check an active same-building Supervisor on the other shift receives no event, and that a future baseline change reaches the affected Cleaner. It also covers deactivation, affected recipients and recovery by fresh read. `SchedulePage.test.tsx`, `ScheduleReview.test.tsx` and `ScheduleConflict.test.tsx` cover reconnect, read failure, uncertain results and keeping a draft. |
-| A27 | `ScheduleReadTests` covers unavailable history. `MySqlSchedulingRetentionTests` and `SchedulingRetentionTests` cover the retention boundary, arrival after GPS pruning, preserved current configuration and command expiry after purge. |
+| A25 | `ScheduleEntryProjectionTests` checks pending, confirmed and cancelled board states, occupied destinations and continued historical entry. `AttendanceBoardEndpointTests` checks a loan-only destination is assigned before entry and gains entry only after the scan. The owned arrival case checks both Areas' evidence and the origin work record. This is the board projection used by the separate overview workstream. |
+| A26 | `ScheduleLiveTests` uses real hub connections to check scoped recipients, a baseline change reaching the affected Cleaner and actual arrival or correction reaching other authorised open connections. The destination Supervisor of a non-arrival change is checked with a settled negative rather than an instantaneous probe. It also covers deactivation and recovery by fresh read. `SchedulePage.test.tsx`, `ScheduleReview.test.tsx` and `ScheduleConflict.test.tsx` cover reconnect, read failure, uncertain results and keeping a draft. |
+| A27 | `ScheduleReadTests` covers unavailable history. `MySqlSchedulingRetentionTests` and `SchedulingRetentionTests` cover GPS and expired detail pruning, preserved current configuration and command expiry after purge. The real-MySQL case checks that obsolete gaps and slot anchors are removed and supporting records for retained overnight facts survive. |
 | A28 | `ScheduleHistoryCorrectionTests` checks reasoned correction, original and corrected revisions, and unchanged actual events and work. Ordinary recurring edits are tested in `ScheduleWriteTests`. |
 | A29 | Browser reports and viewport captures cover schedule, review, conflict, attendance and transfer. Component tests check labelled controls, editing and error states. |
 
