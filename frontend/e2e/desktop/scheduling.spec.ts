@@ -2,7 +2,7 @@ import type { Locator, Page, TestInfo } from '@playwright/test';
 import { phone } from '../support/devices.ts';
 import { loginAsAdmin, loginAsEmployee } from '../support/login.ts';
 import {
-  apiAnswer, captureSchedule, openSchedule, saveReviewedSchedule, scheduleCommandPath, weekDayLabel, type CommandResult,
+  apiAnswer, captureSchedule, openSchedule, saveReviewedSchedule, scheduleCommandPath, weekDayLabel, type CommandResult, type ScheduleWeek,
 } from '../support/scheduling.ts';
 import { schedulingFixture } from '../support/seed.ts';
 import { expect, observeAdditionalContext, test } from '../support/test.ts';
@@ -20,10 +20,7 @@ test.describe('scheduling', () => {
     await expect(page.getByRole('rowheader', { name: new RegExp(fixture.weekly.name) })).toBeVisible();
     await captureManagement(page, info, 'schedule', page.getByRole('heading', { name: 'จัดตารางงาน' }));
 
-    const entry = page.getByRole('button', { name: 'จัดวันหยุดรายสัปดาห์', exact: true });
-    await entry.focus();
-    await page.keyboard.press('Enter');
-    const dialog = page.getByRole('dialog', { name: 'จัดวันหยุดรายสัปดาห์' });
+    const dialog = await openWeeklyEditor(page, fixture.planningWeek, true);
     const off = dialog.getByRole('group', { name: fixture.weekly.name })
       .getByRole('checkbox', { name: weekDayLabel(fixture.planningWeek), exact: true });
     await off.check();
@@ -64,15 +61,32 @@ test.describe('scheduling', () => {
     try {
       const other = await context.newPage();
       await loginAsAdmin(other);
-      const second = await openSchedule(other, '/admin/schedules', fixture.planningWeek);
+      await openSchedule(other, '/admin/schedules', fixture.planningWeek);
+      const shift = other.getByRole('group', { name: 'กะ', exact: true }).getByRole('button', {
+        name: fixture.shift === 'Day' ? 'กะเช้า' : 'กะดึก', exact: true,
+      });
+      const alreadySelected = await shift.getAttribute('aria-pressed') === 'true';
+      const selectedRead = other.waitForResponse((response) => {
+        const params = new URL(response.url()).searchParams;
+        return apiAnswer(response, '/api/schedules') && params.get('weekStart') === fixture.planningWeek
+          && params.get('shift') === fixture.shift;
+      });
+      await shift.click();
+      if (alreadySelected) {
+        await other.getByRole('button', { name: 'อัปเดต', exact: true }).click();
+      }
+      const selected = await selectedRead;
+      expect(selected.ok()).toBe(true);
+      await expect(shift).toHaveAttribute('aria-pressed', 'true');
+      const second = await selected.json() as ScheduleWeek;
       const revision = (week: typeof first) => week.rows.find(({ userId }) => userId === fixture.competing.id)?.weeklyRevision;
       expect(revision(first)).toBe('0');
       expect(revision(second)).toBe(revision(first));
 
       const winnerDate = fixture.planningWeek;
       const loserDate = new Date(Date.parse(winnerDate) + 86_400_000).toISOString().slice(0, 10);
-      await draftOff(page, fixture.competing.name, winnerDate);
-      await draftOff(other, fixture.competing.name, loserDate);
+      await draftOff(page, fixture.competing.name, fixture.planningWeek, winnerDate);
+      await draftOff(other, fixture.competing.name, fixture.planningWeek, loserDate);
 
       // Let the browser send its real stale payload only after the other transaction is committed.
       let release!: () => void;
@@ -153,13 +167,30 @@ test.describe('scheduling', () => {
   });
 });
 
-async function draftOff(page: Page, name: string, date: string): Promise<void> {
-  await page.getByRole('button', { name: 'จัดวันหยุดรายสัปดาห์', exact: true }).click();
+async function openWeeklyEditor(page: Page, weekStart: string, keyboard = false): Promise<Locator> {
+  const previousWeek = new Date(Date.parse(weekStart) - 7 * 86_400_000).toISOString().slice(0, 10);
+  const source = page.waitForResponse((response) => apiAnswer(response, '/api/schedules')
+    && new URL(response.url()).searchParams.get('weekStart') === previousWeek);
+  const entry = page.getByRole('button', { name: 'จัดวันหยุดรายสัปดาห์', exact: true });
+  if (keyboard) {
+    await entry.focus();
+    await page.keyboard.press('Enter');
+  } else {
+    await entry.click();
+  }
+  expect((await source).ok()).toBe(true);
   const dialog = page.getByRole('dialog', { name: 'จัดวันหยุดรายสัปดาห์' });
-  await dialog.getByRole('group', { name }).getByRole('checkbox', { name: weekDayLabel(date), exact: true }).check();
-  await dialog.getByRole('button', { name: 'ตรวจสอบ', exact: true }).click();
+  // The source loading text above the rows changes their position as it disappears.
+  await expect(dialog.getByRole('button', { name: 'คัดลอกลงช่องที่ยังไม่กำหนด' })).toBeEnabled();
+  return dialog;
 }
 
+async function draftOff(page: Page, name: string, weekStart: string, date: string): Promise<void> {
+  const dialog = await openWeeklyEditor(page, weekStart);
+  const choice = dialog.getByRole('group', { name }).getByRole('checkbox', { name: weekDayLabel(date), exact: true });
+  await choice.check();
+  await dialog.getByRole('button', { name: 'ตรวจสอบ', exact: true }).click();
+}
 
 async function captureManagement(page: Page, info: TestInfo, name: string, state: Locator) {
   const desktop = page.viewportSize()!;

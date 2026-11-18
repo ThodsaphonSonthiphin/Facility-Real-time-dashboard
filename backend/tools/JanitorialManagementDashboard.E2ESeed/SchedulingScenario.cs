@@ -24,7 +24,7 @@ internal sealed class SchedulingScenario(DateTime now, AttendanceSettings settin
         Math.Min(now.AddMinutes(-2).Ticks, End.AddMinutes(-30).Ticks)) / TimeSpan.TicksPerMinute * TimeSpan.TicksPerMinute,
         DateTimeKind.Utc);
     private DateTime LeaveEnds => now < End.AddMinutes(-10) ? End : Window.Closes;
-    private DateTime Effective => now.AddSeconds(-30);
+    private DateTime Effective => new(Math.Max(Start.Ticks, now.AddSeconds(-30).Ticks), DateTimeKind.Utc);
 
     public static SchedulingScenario? ForProfile(string profile)
     {
