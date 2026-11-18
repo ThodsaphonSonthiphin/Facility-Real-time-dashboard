@@ -40,6 +40,8 @@ Frontend lint, TypeScript, production build and 645 frontend tests passed. The m
 
 The full runs use the real repeat guard. The two WebKit skips are Chromium-only layout measurements. Firefox skips the same two cases and its engine-specific location-permission retry. The focused Chromium report contains thirteen other responsive screenshots and both destination-confirmation screenshots where the actual arrival status is visible.
 
+`.run/` is not tracked by git, so a portable copy of this evidence — every backend log and TRX result, each run's Playwright report and machine-readable results, and the focused-run screenshots — is archived at `~/Documents/facility-scheduling-task17-evidence-2026-11-18.tar.gz` with a manifest that lists the included and deliberately excluded files. The archive lives on this machine only; copies of the three full runs' trace and video files stay under `.run/e2e/` until that folder is cleaned.
+
 The same suites ran on the pre-review tree earlier the same day with the same counts and skips: Chromium `20261118125747_63aa32f9`, WebKit `20261118125941_a10250d3` and Firefox `20261118131243_21948e72`. An earlier Firefox full run (`20261118130132_d0eb6114`) failed one case because a previous-week read moved the checkbox between its scroll and click; the fix awaits the real source-week read before editing. The whole-branch review's six findings — transfer receipt scope, two numbered scans racing one revision, a first arrival accepted after final out, retention dropping attendance gaps and slot anchors, no scoped invalidation for actual changes, and relief missing from the Admin board's current assignment — were fixed in `86ec116`, and every suite above ran afterwards.
 
 ## Acceptance evidence by criterion
