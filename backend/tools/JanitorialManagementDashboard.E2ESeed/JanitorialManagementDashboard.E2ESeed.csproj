@@ -9,6 +9,7 @@
     <!-- Match the EF assembly used by Infrastructure's existing Design package. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
+    <ProjectReference Include="../../src/JanitorialManagementDashboard.Application/JanitorialManagementDashboard.Application.csproj" />
     <ProjectReference Include="../../src/JanitorialManagementDashboard.Infrastructure/JanitorialManagementDashboard.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

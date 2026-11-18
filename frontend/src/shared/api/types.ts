@@ -128,6 +128,8 @@ export interface AttendanceState {
   transferHistory?: AttendanceTransfer[];
   fillableActions?: AttendanceEvent[];
   canCancelTransfer?: boolean;
+  /** An early final departure without recorded leave covering its actual time. */
+  departureLeaveMismatch?: boolean;
 }
 
 /** facility-0047 rule 4 (PointStatusCalculator). */

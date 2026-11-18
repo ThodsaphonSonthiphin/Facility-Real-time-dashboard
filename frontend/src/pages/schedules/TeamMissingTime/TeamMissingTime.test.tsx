@@ -70,6 +70,18 @@ it('uses server eligibility and the selected slot revision, requires a reason an
   expect(await drawer.findByRole('option', { name: 'ออกพัก 1 · ลงเวลาแล้ว 10:00' })).toBeDisabled();
 });
 
+it('shows the stored departure and leave mismatch in the scoped slot', async () => {
+  const app = await editorApp({
+    routes: {
+      'GET /api/team-attendance/7': () => ({ status: 200, body: { ...initial, departureLeaveMismatch: true } }),
+    },
+  });
+
+  const drawer = await openMissingTime(app.user);
+  expect(drawer.getByText('เวลาเลิกงานก่อนจบกะไม่ตรงกับช่วงลาที่บันทึกไว้')).toBeVisible();
+  expect(drawer.getByRole('option', { name: 'เลิกงาน · ลงเวลาแล้ว 13:00' })).toBeDisabled();
+});
+
 it('refreshes on a competing scan and cannot resubmit that action', async () => {
   let current = initial;
   const app = await editorApp({

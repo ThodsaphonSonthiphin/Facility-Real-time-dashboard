@@ -2,7 +2,7 @@ import { Button } from '../../../shared/components/Button';
 import { Field, Select, TextArea, TextInput } from '../../../shared/components/Field';
 import { Drawer } from '../../../shared/components/Modal';
 import { Note } from '../../../shared/components/Note';
-import { shiftShortLabel } from '../../../shared/utils/labels';
+import { departureLeaveMismatchLabel, shiftShortLabel } from '../../../shared/utils/labels';
 import type { TeamMissingTimeProps } from './type';
 import { useTeamMissingTime } from './useTeamMissingTime';
 
@@ -18,6 +18,7 @@ export function TeamMissingTime(props: TeamMissingTimeProps) {
           <Button size={size} variant="link" disabled={form.busy} onClick={close}>ปิด</Button>
         </header>
         <p className="font-semibold">{props.displayName} · {form.dateLabel} · {shiftShortLabel[props.slot.shift]}</p>
+        {form.departureLeaveMismatch && <Note tone="warn">{departureLeaveMismatchLabel}</Note>}
         {form.loading && <p role="status">กำลังโหลดข้อมูลการลงเวลา...</p>}
         {form.readError && <Note tone="error" retrySize={size} onRetry={form.refetch}>{form.readError}</Note>}
         {guard.confirming && (

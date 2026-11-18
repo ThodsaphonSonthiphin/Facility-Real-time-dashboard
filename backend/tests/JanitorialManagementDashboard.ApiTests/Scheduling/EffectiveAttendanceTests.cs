@@ -120,6 +120,45 @@ public class EffectiveAttendanceTests
     }
 
     [Fact]
+    public async Task A_leave_conflict_clears_only_after_a_saved_correction_and_keeps_the_original_checkin()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        var baselineStart = new DateOnly(2026, 10, 1);
+        await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000001", baselineStart);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", baselineStart, "AR01");
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        var checkedInAt = EffectiveAttendanceApi.Thai(8, 7, 0);
+        await EffectiveAttendanceApi.AddLeaveAsync(factory, "1000001", Day8, Shift.Day,
+            checkedInAt, EffectiveAttendanceApi.Thai(8, 19, 0));
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        var checkedIn = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, checkedInAt, "ShiftIn");
+        Assert.True(checkedIn.IsLeave);
+        Assert.Equal(checkedInAt.UtcDateTime, Assert.Single(checkedIn.Events).OccurredAt);
+
+        var correctedAt = EffectiveAttendanceApi.Thai(8, 7, 10);
+        factory.Clock.SetUtcNow(correctedAt);
+        var leaveKey = ScheduleWriteApi.LeaveKey(person, Day8, "Day");
+        var cancellation = new { userId = person, date = Day8, shift = "Day", reason = "กลับมาทำงาน" };
+        var stale = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.CancelLeave, cancellation,
+            new Dictionary<string, string> { [leaveKey] = "0" });
+        Assert.Equal(HttpStatusCode.Conflict, stale.Response.StatusCode);
+        Assert.True((await EffectiveAttendanceApi.StateAsync(cleaner)).IsLeave);
+
+        var saved = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.CancelLeave, cancellation,
+            new Dictionary<string, string> { [leaveKey] = "1" });
+        Assert.Equal(HttpStatusCode.OK, saved.Response.StatusCode);
+        var corrected = await EffectiveAttendanceApi.StateAsync(cleaner);
+        Assert.False(corrected.IsLeave);
+        Assert.Equal(checkedIn.StateRevision, corrected.StateRevision);
+        Assert.Equal(Assert.Single(checkedIn.Events), Assert.Single(corrected.Events));
+        Assert.Equal(checkedInAt.UtcDateTime, Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory)).OccurredAt);
+        await factory.WithDbAsync(async db =>
+            Assert.Equal(correctedAt.UtcDateTime, (await db.ScheduleExceptions.SingleAsync()).CancelledAt));
+    }
+
+    [Fact]
     public async Task A_real_early_checkout_marks_later_leave_actions_inapplicable_and_preserves_earlier_gaps()
     {
         using var factory = new JanitorialApiFactory();
@@ -145,8 +184,45 @@ public class EffectiveAttendanceTests
         Assert.Equal("not-applicable", departed.Action("Break2In").State);
         Assert.Null(departed.Action("Break2In").OccurredAt);
         Assert.Equal(checkout.UtcDateTime, departed.Action("ShiftOut").OccurredAt);
+        Assert.False(departed.DepartureLeaveMismatch);
         Assert.Equal(2, (await EffectiveAttendanceApi.FactsAsync(factory)).Count);
         Assert.Equal(4, (await EffectiveAttendanceApi.GapsAsync(factory)).Count);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(15)]
+    public async Task Early_departure_without_applicable_leave_is_flagged_without_moving_actual_time(int? leaveStartsMinutesLater)
+    {
+        using var factory = new JanitorialApiFactory();
+        var baselineStart = new DateOnly(2026, 10, 1);
+        await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000001", baselineStart);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", baselineStart, "AR01", breakGroup: 1);
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+        var checkout = EffectiveAttendanceApi.Thai(8, 13, 0);
+        if (leaveStartsMinutesLater is { } minutes)
+        {
+            await EffectiveAttendanceApi.AddLeaveAsync(factory, "1000001", Day8, Shift.Day,
+                checkout.AddMinutes(minutes), EffectiveAttendanceApi.Thai(8, 19, 0));
+        }
+
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var checkIn = EffectiveAttendanceApi.Thai(8, 7, 0);
+        factory.Clock.SetUtcNow(checkIn);
+        var initial = await EffectiveAttendanceApi.StateAsync(cleaner);
+        var entered = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, checkIn, "ShiftIn",
+            lifecycleVersion: initial.LifecycleVersion, stateRevision: initial.StateRevision);
+        var gaps = entered.NextActions!.Single(choice => choice.Action == "ShiftOut").RequiredGaps;
+        var departed = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, checkout, "ShiftOut",
+            lifecycleVersion: entered.LifecycleVersion, stateRevision: entered.StateRevision, confirmGaps: gaps);
+
+        Assert.Equal(leaveStartsMinutesLater.HasValue, departed.IsLeave);
+        Assert.Equal(checkout.UtcDateTime, departed.Action("ShiftOut").OccurredAt);
+        Assert.Equal(2, (await EffectiveAttendanceApi.FactsAsync(factory)).Count);
+        await factory.WithDbAsync(async db =>
+            Assert.Equal(leaveStartsMinutesLater.HasValue ? 1 : 0, await db.ScheduleExceptions.CountAsync()));
+        Assert.True(departed.DepartureLeaveMismatch);
+        Assert.True((await EffectiveAttendanceApi.StateAsync(cleaner)).DepartureLeaveMismatch);
     }
 
     [Fact]
@@ -476,7 +552,8 @@ public record AttendanceStateAnswer(
     bool IsLeave = false,
     AttendanceTransferAnswer? Transfer = null,
     List<AttendanceTransferAnswer>? TransferHistory = null,
-    List<string>? FillableActions = null)
+    List<string>? FillableActions = null,
+    bool DepartureLeaveMismatch = false)
 {
     public ActionAnswer Action(string eventType) =>
         Actions!.Single(action => action.EventType == eventType);

@@ -203,7 +203,9 @@ function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typ
 function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   return (
     <section className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface px-4 py-3">
-      <BuildingSelect value={view.selection.buildingId} onChange={view.chooseBuilding} />
+      <div className="min-w-0 max-w-full">
+        <BuildingSelect value={view.selection.buildingId} onChange={view.chooseBuilding} />
+      </div>
       <Segmented<'' | Shift>
         label="กะ"
         value={view.selection.shift ?? ''}

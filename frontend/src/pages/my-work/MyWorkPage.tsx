@@ -67,10 +67,10 @@ export function MyWorkPage() {
         ) : undefined
       }
     >
+      {/* The schedule link needs no work data. Keep it above the loading state so it stays in place. */}
+      <ScheduleLink />
       {isLoading && <PageLoading lines={3}>กำลังโหลดงาน...</PageLoading>}
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
-      {/* facility-0176: the schedule sits before the work list, and this is the only way there from a phone */}
-      <ScheduleLink />
       {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
       {/* Not before the first answer: the list then pushed it down the screen (layout shift, measured 2026-10-28) */}
       {!isLoading && (

@@ -52,6 +52,12 @@ internal static class AttendanceStateView
             .Select(gap => gap.EventType)
             .ToHashSet();
         var choices = AttendanceLifecycle.NextActions(version, recorded, skipped);
+        var departure = facts.FirstOrDefault(fact => fact.EventType == AttendanceEvent.ShiftOut) is { } final
+            ? UtcOffset(final.OccurredAt)
+            : (DateTimeOffset?)null;
+        var departureLeaveMismatch = version == AttendanceLifecycleVersion.Numbered6
+            && departure is { } actual && actual.UtcDateTime < ShiftCalendar.EndUtc(slot)
+            && (duty.LeaveStart is not { } start || duty.LeaveEnd is not { } end || actual < start || actual >= end);
 
         return new AttendanceSlotState(
             slot,
@@ -59,10 +65,11 @@ internal static class AttendanceStateView
             AttendanceStateRevision.Of(userId, slot, facts),
             facts.Select(fact => new AttendanceEntryDto(fact.EventType, Utc(fact.OccurredAt), fact.Source,
                 fact.WithinRadius, Utc(fact.CreatedAt))).ToList(),
-            Describe(version, slot, duty, facts, skipped, nowUtc),
+            Describe(version, slot, duty, facts, skipped, nowUtc, departure),
             gaps.Select(gap => new AttendanceGapDto(gap.EventType, gap.Status.ToString(), gap.Reason,
                 gap.RecordedAt is { } at ? Utc(at) : null)).ToList(),
-            choices.Select(choice => new AttendanceChoiceDto(choice.Action, choice.RequiredGaps)).ToList());
+            choices.Select(choice => new AttendanceChoiceDto(choice.Action, choice.RequiredGaps)).ToList(),
+            departureLeaveMismatch);
     }
 
     /// <summary>
@@ -76,14 +83,12 @@ internal static class AttendanceStateView
         EffectiveDuty duty,
         IReadOnlyList<ShiftAttendance> facts,
         HashSet<AttendanceEvent> skipped,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        DateTimeOffset? departure)
     {
         var order = AttendanceLifecycle.Order(version);
         var byAction = facts.GroupBy(fact => fact.EventType).ToDictionary(group => group.Key, group => group.First());
         var expected = AttendanceExpectations.ForSlot(slot, duty.BreakGroup);
-        var departure = facts.FirstOrDefault(fact => fact.EventType == AttendanceEvent.ShiftOut) is { } final
-            ? UtcOffset(final.OccurredAt)
-            : (DateTimeOffset?)null;
         var now = UtcOffset(nowUtc);
 
         var actions = new List<AttendanceActionDto>(order.Count);
@@ -131,7 +136,8 @@ internal sealed record AttendanceSlotState(
     IReadOnlyList<AttendanceEntryDto> Events,
     IReadOnlyList<AttendanceActionDto> Actions,
     IReadOnlyList<AttendanceGapDto> Gaps,
-    IReadOnlyList<AttendanceChoiceDto> NextActions)
+    IReadOnlyList<AttendanceChoiceDto> NextActions,
+    bool DepartureLeaveMismatch)
 {
     /// <summary>The wire shape, with the effective duty the state was read against (spec §7) and its transfer (spec §9).</summary>
     public AttendanceStateDto ToDto(EffectiveDuty duty, AttendanceOutcome? outcome) => new(
@@ -150,7 +156,8 @@ internal sealed record AttendanceSlotState(
         duty.Source,
         duty.IsDayOff,
         duty.IsLeave,
-        duty.Transfer is { } transfer ? TransferDto(transfer) : null);
+        duty.Transfer is { } transfer ? TransferDto(transfer) : null,
+        DepartureLeaveMismatch: DepartureLeaveMismatch ? true : null);
 
     internal static AttendanceTransferDto TransferDto(EffectiveTransfer transfer) => new(
         transfer.Id, transfer.FromAreaId, transfer.ToAreaId, transfer.EffectiveAt.UtcDateTime,

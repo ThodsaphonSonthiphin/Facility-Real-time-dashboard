@@ -608,9 +608,22 @@ describe('the six-action lifecycle (spec §8)', () => {
     expect(rows[4]).toContain('ไม่ต้องลงเวลาเนื่องจากลา');
     expect(rows[4]).not.toContain('17:00');
     expect(rows[5]).toBe('เลิกงาน 13:00');
+    expect(screen.queryByText('เวลาเลิกงานก่อนจบกะไม่ตรงกับช่วงลาที่บันทึกไว้')).not.toBeInTheDocument();
     expect(screen.getByText('สิ้นสุดกะแล้ว')).toBeVisible();
     expect(rows[1]).toBe('ออกพัก 1 ไม่ได้สแกน');
     expect(rows.join(' ')).not.toContain('กลับจากพัก 2: 17:00');
+  });
+
+  it('shows the actual early departure and the leave mismatch together', async () => {
+    const actual = entry('ShiftOut', '2026-10-15T06:00:00Z');
+    serve({}, myWork(slot(
+      [...sixPending.slice(0, -1), act('ShiftOut', 'recorded', actual.occurredAt)],
+      { events: [shiftIn0652, actual], departureLeaveMismatch: true },
+    )));
+    await renderApp(SIGN);
+
+    expect(await screen.findByText('เวลาเลิกงานก่อนจบกะไม่ตรงกับช่วงลาที่บันทึกไว้')).toBeVisible();
+    expect(steps().at(-1)).toBe('เลิกงาน 13:00');
   });
 
   it('a recorded day off or leave never blocks an eligible Shift-In', async () => {

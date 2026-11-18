@@ -134,7 +134,7 @@ test('Area and point create, round validation and saved record display', async (
 
 test('large account and Area lists: search, role counts, filters, empty state and ordering @dataset', async ({ page }, testInfo) => {
   test.skip(!process.env.E2E_RUN_DIR || process.env.E2E_DATASET === 'baseline', 'Requires generated dataset');
-  const dataset = JSON.parse(readFileSync(`${process.env.E2E_RUN_DIR}/dataset.json`, 'utf8')) as { counts: { areas: number }; roleCounts: { cleaner: number } };
+  const dataset = JSON.parse(readFileSync(`${process.env.E2E_RUN_DIR}/dataset.json`, 'utf8')) as { counts: { generatedAreas: number }; roleCounts: { cleaner: number } };
   await loginAsAdmin(page);
   await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'บัญชีผู้ใช้' }).click();
   await expect(page.getByRole('row')).toHaveCount(dataset.roleCounts.cleaner + 1);
@@ -146,7 +146,7 @@ test('large account and Area lists: search, role counts, filters, empty state an
   await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'พื้นที่และป้าย' }).click();
   const list = page.getByRole('region', { name: /^พื้นที่ทั้งหมด/ });
   await list.getByLabel('ค้นหาพื้นที่').fill('E2EA');
-  await expect(list.getByRole('link')).toHaveCount(dataset.counts.areas - 2);
+  await expect(list.getByRole('link')).toHaveCount(dataset.counts.generatedAreas);
   await list.getByLabel('ค้นหาพื้นที่').fill('E2EA0001');
   await expect(list.getByRole('link')).toHaveCount(1);
   await list.getByRole('link').click();
@@ -155,7 +155,7 @@ test('large account and Area lists: search, role counts, filters, empty state an
   await expect(page.getByText('ไม่พบพื้นที่ที่ตรงกับตัวกรอง')).toBeVisible();
   await list.getByRole('button', { name: 'ล้างตัวกรอง' }).click();
   await list.getByLabel('ค้นหาพื้นที่').fill('E2EA');
-  await expect(list.getByRole('link')).toHaveCount(dataset.counts.areas - 2);
+  await expect(list.getByRole('link')).toHaveCount(dataset.counts.generatedAreas);
   const codes = await list.getByRole('link').allTextContents();
   const syntheticCodes = codes.filter((text) => text.startsWith('E2EA')).map((text) => text.slice(0, 8));
   expect(syntheticCodes).toEqual([...syntheticCodes].sort());

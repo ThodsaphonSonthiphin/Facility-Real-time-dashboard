@@ -94,7 +94,8 @@ public record AttendanceTransferDto(
 /// <para>
 /// <see cref="DutyAreaId"/>, <see cref="DutyBreakGroup"/> and <see cref="DutySource"/> are the slot's effective duty
 /// (spec §7): the Area the Cleaner is eligible in even on a recorded day off or leave, with <see cref="IsDayOff"/> and
-/// <see cref="IsLeave"/> as the conflict markers shown beside it.
+/// <see cref="IsLeave"/> as the conflict markers shown beside it. <see cref="DepartureLeaveMismatch"/> flags a numbered
+/// slot's early final departure without a recorded leave interval covering that actual time.
 /// </para>
 /// <para>
 /// <see cref="Transfer"/> is the slot's midshift instruction (spec §9), null when the slot has none. While it is pending the
@@ -121,7 +122,8 @@ public record AttendanceStateDto(
     AttendanceTransferDto? Transfer = null,
     IReadOnlyList<AttendanceTransferDto>? TransferHistory = null,
     IReadOnlyList<AttendanceEvent>? FillableActions = null,
-    bool? CanCancelTransfer = null);
+    bool? CanCancelTransfer = null,
+    bool? DepartureLeaveMismatch = null);
 
 /// <summary>
 /// A refused write (spec §8, §11). <see cref="Code"/> is the machine word a page branches on — "refresh-required",

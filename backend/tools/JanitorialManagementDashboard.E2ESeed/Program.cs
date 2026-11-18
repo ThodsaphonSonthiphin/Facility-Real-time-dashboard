@@ -52,6 +52,7 @@ var existing = (await marker.ExecuteScalarAsync())?.ToString();
 if (existing is not null && existing != identity)
     throw new InvalidOperationException("A different dataset already exists; start a fresh run");
 var timer = Stopwatch.StartNew();
+var scheduling = SchedulingScenario.ForProfile(profile);
 if (existing is null)
 {
     if (await db.Areas.AnyAsync(a => a.Code.StartsWith("E2E")))
@@ -62,6 +63,7 @@ if (existing is null)
     // Reuse one synthetic phone hash across fixtures for speed. No credential is published in the manifest.
     var seedEmployee = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
     var hash = seedEmployee.SecretHash;
+    if (scheduling is not null) await scheduling.SeedAsync(db, admin, hash);
     var buildings = Enumerable.Range(1, volume.Buildings).Select(i => new Building
     { Code = $"E2EB{i:D3}", Name = $"อาคารทดสอบ {i:D3}", CreatedAt = created }).ToList();
     db.Buildings.AddRange(buildings);
@@ -201,8 +203,12 @@ var invalidInspections = await db.InspectionRecords.CountAsync(i => i.ScanRecord
     || i.Supervisor!.Shift != i.ScanRecord.Shift || i.Supervisor.BuildingId != i.ScanRecord.ServicePoint!.Area!.BuildingId
     || i.InspectedAt < i.ScanRecord.SubmittedAt);
 if (invalidScans + invalidInspections != 0) throw new InvalidOperationException("Invalid dataset relationships");
-var futureEvents = await db.ShiftAttendances.CountAsync(a => a.OccurredAt > seedNow)
-    + await db.ScanRecords.CountAsync(s => s.SubmittedAt > seedNow)
+// Fixed historical probe dates never change the live scenario's cut-off for its own facts.
+var scenarioPeople = db.Users.Where(u => u.EmployeeId != null && u.EmployeeId.StartsWith(SchedulingScenario.EmployeePrefix))
+    .Select(u => u.Id);
+var scenarioNow = scheduling?.ObservedAt ?? seedNow;
+var futureEvents = await db.ShiftAttendances.CountAsync(a => a.OccurredAt > (scenarioPeople.Contains(a.UserId) ? scenarioNow : seedNow))
+    + await db.ScanRecords.CountAsync(s => s.SubmittedAt > (scenarioPeople.Contains(s.UserId) ? scenarioNow : seedNow))
     + await db.InspectionRecords.CountAsync(i => i.InspectedAt > seedNow);
 var reworks = await db.InspectionRecords.CountAsync(i => i.Result == InspectionResult.Rework);
 var passed = await db.InspectionRecords.CountAsync(i => i.Result == InspectionResult.Passed);
@@ -223,6 +229,7 @@ var report = new {
     identity, profile, anchorDate = anchor.ToString("yyyy-MM-dd"), reused = existing is not null,
     seedSeconds = Math.Round(timer.Elapsed.TotalSeconds, 2),
     counts = new { buildings = await db.Buildings.CountAsync(), areas = await db.Areas.CountAsync(),
+        generatedAreas = await db.Areas.CountAsync(a => a.Code.StartsWith("E2EA")),
         users = await db.Users.CountAsync(), points = await db.ServicePoints.CountAsync(), signs = await db.Signs.CountAsync(),
         windows = await db.PointRoundWindows.CountAsync(), attendance = await db.ShiftAttendances.CountAsync(),
         scans = await db.ScanRecords.CountAsync(), inspections = await db.InspectionRecords.CountAsync(),
@@ -232,9 +239,10 @@ var report = new {
     invalidScans, invalidInspections, futureEvents, reworks, passed, uninspected,
     seedNow = seedNow.ToString("O"), summaryFromDate = summaryFrom.ToString("yyyy-MM-dd"),
     summaryToDate = summaryTo.ToString("yyyy-MM-dd"), expectedSummary,
+    scheduling = scheduling is null ? null : await scheduling.ReadManifestAsync(db),
 };
 var output = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
-Console.WriteLine(output);
+Console.WriteLine($"Verified synthetic {profile} profile ({(existing is null ? "seeded" : "reused")})");
 var runDir = Environment.GetEnvironmentVariable("E2E_RUN_DIR");
 if (runDir is not null) await File.WriteAllTextAsync(Path.Combine(runDir, existing is null ? "dataset.json" : "dataset-repeat.json"), output);
 

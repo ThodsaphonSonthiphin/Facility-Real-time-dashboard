@@ -45,6 +45,8 @@ export const actionStateLabel: Record<AttendanceActionState, string> = {
   pending: '–',
 };
 
+export const departureLeaveMismatchLabel = 'เวลาเลิกงานก่อนจบกะไม่ตรงกับช่วงลาที่บันทึกไว้';
+
 /** Spec §13's three entry categories, as the board shows them beside the state. */
 export const entryLabel: Record<'entered' | 'covered' | 'unassigned', string> = {
   entered: 'มีหลักฐานเข้าแล้ว',

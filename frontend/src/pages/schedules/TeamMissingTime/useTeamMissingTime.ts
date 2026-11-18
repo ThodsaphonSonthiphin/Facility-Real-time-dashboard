@@ -84,6 +84,7 @@ export function useTeamMissingTime({ slot, onClose }: TeamMissingTimeProps) {
     dateLabel: formatShiftDate(slot.shiftDate), busy, canSave, choices, hasMissing: choices.some((choice) => choice.eligible),
     loading: read.isLoading, readError: read.isError ? getErrorMessage(read.error) : undefined,
     error, saved, selected, chooseAction, canSelect, revisionChanged, acknowledgeRevision,
+    departureLeaveMismatch: state?.departureLeaveMismatch,
     time, setTime, reason, setReason, save, refetch: read.refetch,
     guard, close: () => { if (!running.current) guard.leave(onClose, true); },
   };

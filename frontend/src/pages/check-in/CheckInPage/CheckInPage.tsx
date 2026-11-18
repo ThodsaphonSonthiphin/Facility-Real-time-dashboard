@@ -8,7 +8,7 @@ import { Note } from '../../../shared/components/Note';
 import { PageLoading } from '../../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../../shared/components/PhoneScreen';
 import { StatusScreen } from '../../../shared/components/StatusScreen';
-import { eventLabel, shiftLabel } from '../../../shared/utils/labels';
+import { departureLeaveMismatchLabel, eventLabel, shiftLabel } from '../../../shared/utils/labels';
 import { formatClock, formatTime } from '../../../shared/utils/thaiTime';
 import { AttendanceTimeline } from '../AttendanceTimeline';
 import { useCheckInPage } from './useCheckInPage';
@@ -89,6 +89,7 @@ export function CheckInPage() {
       {attendance?.shift && <AttendanceTimeline attendance={attendance} next={choices[0]?.eventType} />}
       {attendance?.isDayOff && <Note tone="warn">กะนี้ตรงกับวันหยุดตามแผน</Note>}
       {attendance?.isLeave && <Note tone="warn">มีการลาที่บันทึกไว้ในกะนี้</Note>}
+      {attendance?.departureLeaveMismatch && <Note tone="warn">{departureLeaveMismatchLabel}</Note>}
       {gapConfirmation && <Note tone="warn" status>{`ต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`}</Note>}
       {transferPending && (
         <Note tone="warn" title="มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน">
