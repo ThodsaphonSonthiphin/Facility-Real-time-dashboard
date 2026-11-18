@@ -182,7 +182,7 @@ public abstract class ScheduleCommandHandler(TimeProvider clock) : IScheduleComm
         if (profile is not null)
         {
             return new PersonTarget(person, profile.Shift,
-                profile.HomeBuildingId ?? await BaselineBuildingAsync(db, person.Id, date, ct));
+                profile.HomeBuildingId ?? await BaselineBuildingAsync(db, person.Id, date, ct), profile.Kind);
         }
 
         if (profiles.Count > 0 || person.Shift is not Shift shift)
@@ -288,7 +288,7 @@ public abstract class ScheduleCommandHandler(TimeProvider clock) : IScheduleComm
     }
 
     /// <summary>The target person and the shift/building their dated identity gives them on the edited date.</summary>
-    internal sealed record PersonTarget(User Person, Shift Shift, int? BuildingId);
+    internal sealed record PersonTarget(User Person, Shift Shift, int? BuildingId, CleanerKind? Kind = null);
 }
 
 /// <summary>
@@ -843,11 +843,23 @@ internal static class ScheduleBaselineWrite
     internal static async Task<ScheduleCommandLockSet> PlanLocksAsync(
         ScheduleCommandRequest request, AppDbContext db, BaselineKind kind, CancellationToken ct)
     {
-        if (!SchedulePayload.TryReadBaseline(request.Payload, out var payload))
+        if (!SchedulePayload.TryReadBaselineRows(request.Payload, kind, out var rows))
         {
             return ScheduleCommandLockSet.None;
         }
 
+        var scopes = new List<ScheduleScopeKey>();
+        foreach (var row in rows)
+        {
+            scopes.AddRange(await ReadScopesAsync(row, db, ct));
+        }
+
+        return new ScheduleCommandLockSet([], rows.Select(row => row.UserId).ToList(), scopes);
+    }
+
+    private static async Task<List<ScheduleScopeKey>> ReadScopesAsync(
+        SchedulePayload.BaselineRequest payload, AppDbContext db, CancellationToken ct)
+    {
         var scopes = new List<ScheduleScopeKey>();
         var person = await db.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Id == payload.UserId, ct);
         Shift? shift = null;
@@ -879,7 +891,7 @@ internal static class ScheduleBaselineWrite
             scopes.AddRange(areas.Select(area => new ScheduleScopeKey(area.BuildingId, personShift)));
         }
 
-        return new ScheduleCommandLockSet([], [payload.UserId], scopes);
+        return scopes;
     }
 
     private static async Task<int?> BuildingOfPersonAreaAsync(AppDbContext db, User person, CancellationToken ct) =>
@@ -892,7 +904,7 @@ internal static class ScheduleBaselineWrite
         ScheduleCommandHandler handler, ScheduleCommandRequest request, ScheduleCommandReceipt receipt, AppDbContext db,
         BaselineKind kind, CancellationToken ct)
     {
-        if (!SchedulePayload.TryReadBaseline(request.Payload, out var payload))
+        if (!SchedulePayload.TryReadBaselineRows(request.Payload, kind, out var rows))
         {
             return ScheduleCommandHandler.Refused(new Dictionary<string, string>(), "payload",
                 "ข้อมูลตารางประจำไม่ครบถ้วน");
@@ -905,6 +917,26 @@ internal static class ScheduleBaselineWrite
                 "บัญชีนี้ไม่มีสิทธิ์แก้ตารางประจำ");
         }
 
+        var revisions = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        var problems = new List<RowProblem>();
+        foreach (var row in rows)
+        {
+            var result = await ApplyRowAsync(handler, request, receipt, db, kind, actor, row, ct);
+            foreach (var revision in result.Revisions)
+            {
+                revisions.Add(revision.Key, revision.Value);
+            }
+
+            problems.AddRange(result.Problems);
+        }
+
+        return new ScheduleCommandApplication(rows.Count == 1 || problems.Count == 0 ? revisions : new Dictionary<string, string>(), problems);
+    }
+
+    private static async Task<ScheduleCommandApplication> ApplyRowAsync(
+        ScheduleCommandHandler handler, ScheduleCommandRequest request, ScheduleCommandReceipt receipt, AppDbContext db,
+        BaselineKind kind, ScheduleCommandHandler.Actor actor, SchedulePayload.BaselineRequest payload, CancellationToken ct)
+    {
         var key = ScheduleRevisionKeys.Baseline(payload.UserId, kind);
         var revisions = new SortedDictionary<string, string>(StringComparer.Ordinal);
 
@@ -919,6 +951,12 @@ internal static class ScheduleBaselineWrite
         if (target is null)
         {
             return ScheduleCommandHandler.Refused(revisions, key, targetProblem!);
+        }
+
+        if (kind == BaselineKind.Relief && (target.Kind != CleanerKind.Relief || target.BuildingId is not int sourceBuilding
+            || !actor.CanManage(sourceBuilding, target.Shift, payload.EffectiveFrom)))
+        {
+            return ScheduleCommandHandler.Refused(revisions, key, "ไม่มีสิทธิ์จัดตารางประจำของสแปร์คนนี้");
         }
 
         if (payload.Days.Count == 0)
@@ -1477,7 +1515,28 @@ internal static class SchedulePayload
         return true;
     }
 
-    internal static bool TryReadBaseline(JsonElement payload, out BaselineRequest baseline)
+    internal static bool TryReadBaselineRows(JsonElement payload, BaselineKind kind, out List<BaselineRequest> rows)
+    {
+        rows = [];
+        if (kind != BaselineKind.Relief || !TryProperty(payload, "rows", out var batch))
+        {
+            if (!TryReadBaseline(payload, out var single)) return false;
+            rows.Add(single);
+            return true;
+        }
+
+        if (batch.ValueKind != JsonValueKind.Array) return false;
+        var seen = new HashSet<int>();
+        foreach (var row in batch.EnumerateArray())
+        {
+            if (!TryReadBaseline(row, out var parsed) || !seen.Add(parsed.UserId)) return false;
+            rows.Add(parsed);
+        }
+
+        return rows.Count > 0;
+    }
+
+    private static bool TryReadBaseline(JsonElement payload, out BaselineRequest baseline)
     {
         baseline = null!;
         if (!TryInt(payload, "userId", out var userId)

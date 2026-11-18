@@ -658,17 +658,19 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     /// returned at all — and it describes eligibility, never the person's schedule or another team's rows.
     /// </summary>
     public async Task<ReliefCandidateFacts?> ReadReliefCandidateAsync(
-        string employeeId, int sourceBuildingId, DateOnly date, Shift shift, CancellationToken ct = default)
+        string? employeeId, int sourceBuildingId, DateOnly date, Shift shift, CancellationToken ct = default,
+        int? ownUserId = null, bool requireSameShift = false)
     {
         var person = await db.Users.AsNoTracking().FirstOrDefaultAsync(user =>
-            user.EmployeeId == employeeId && user.Role == UserRole.Cleaner && user.IsActive, ct);
+            (ownUserId != null ? user.Id == ownUserId : user.EmployeeId == employeeId) && user.Role == UserRole.Cleaner && user.IsActive, ct);
         if (person is null)
         {
             return null;
         }
 
         var profile = await ReadProfileAsync(person.Id, date, ct);
-        if (profile is not { Kind: CleanerKind.Relief } || profile.HomeBuildingId != sourceBuildingId)
+        if (profile is not { Kind: CleanerKind.Relief } || profile.HomeBuildingId != sourceBuildingId
+            || (requireSameShift && profile.Shift != shift))
         {
             return null;
         }
@@ -689,7 +691,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         }
 
         conflicts.AddRange(await ReliefConflictsAsync(person.Id, date, shift, ct));
-        return new ReliefCandidateFacts(person.Id, employeeId, person.DisplayName, sourceBuildingId, code,
+        return new ReliefCandidateFacts(person.Id, person.EmployeeId!, person.DisplayName, sourceBuildingId, code,
             profile.Shift, conflicts.Count == 0, conflicts.Count == 0 ? ReliefEligible : ReliefConflict, conflicts);
     }
 
@@ -741,22 +743,46 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         // week can carry relief work even when no roster row of the week survived the scope.
         var relief = await ReadReliefAsync(actor, monday, weekEnd, buildingId, shift, authorised, ct);
 
+        var areas = await db.Areas.AsNoTracking().OrderBy(area => area.Code)
+            .Select(area => new { area.Id, area.BuildingId, area.Code, area.Name, area.IsActive, area.ShiftPattern }).ToListAsync(ct);
+        var areaBuildings = areas.ToDictionary(area => area.Id, area => area.BuildingId);
+        var optionsByBuilding = areas.Where(area => area.IsActive).GroupBy(area => area.BuildingId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<ScheduleAreaOption>)group
+                .Select(area => new ScheduleAreaOption(area.Id, $"{area.Code} · {area.Name}")).ToList());
+
+        var businessDate = ScheduleAuthority.BusinessDate(readAt.UtcDateTime);
+        var buildingCodes = await db.Buildings.AsNoTracking().ToDictionaryAsync(row => row.Id, row => row.Code, ct);
+        var destinations = new List<ScheduleDestination>();
+        if (actor.Role is UserRole.Admin or UserRole.Supervisor)
+        {
+            foreach (var date in dates)
+            foreach (var slotShift in Enum.GetValues<Shift>().Where(value => shift is null || value == shift))
+            foreach (var building in buildingCodes.Where(row => buildingId is null || row.Key == buildingId))
+            {
+                var canChange = date < businessDate
+                    ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, building.Key, slotShift, date, businessDate,
+                        managementScope)
+                    : ScheduleAuthority.CanManage(actor.Role, actor.Id, building.Key, slotShift, date, managementScope);
+                if (!canChange) continue;
+                var options = areas.Where(area => area.IsActive && area.BuildingId == building.Key
+                    && (slotShift == Shift.Day || area.ShiftPattern != ShiftPattern.DayOnly))
+                    .Select(area => new ScheduleAreaOption(area.Id, $"{area.Code} · {area.Name}")).ToList();
+                if (options.Count > 0) destinations.Add(new ScheduleDestination(date, slotShift, building.Key, building.Value, options));
+            }
+        }
+
+        var sourceBuildings = destinations.Count == 0 ? null : buildingCodes.OrderBy(row => row.Value)
+            .Select(row => new ScheduleSourceBuilding(row.Key, row.Value)).ToList();
+
         if (personIds.Count == 0)
         {
-            return Empty(monday, readAt, relief);
+            return Empty(monday, readAt, relief) with { Destinations = destinations, SourceBuildings = sourceBuildings };
         }
 
         var profiles = await db.CleanerProfilePeriods.AsNoTracking()
             .Where(period => personIds.Contains(period.UserId)).ToListAsync(ct);
         var baselines = await db.ScheduleBaselines.AsNoTracking().Include(baseline => baseline.Days)
             .Where(baseline => personIds.Contains(baseline.UserId)).ToListAsync(ct);
-        var areas = await db.Areas.AsNoTracking().OrderBy(area => area.Code)
-            .Select(area => new { area.Id, area.BuildingId, area.Code, area.Name, area.IsActive }).ToListAsync(ct);
-        var areaBuildings = areas.ToDictionary(area => area.Id, area => area.BuildingId);
-        var optionsByBuilding = areas.Where(area => area.IsActive).GroupBy(area => area.BuildingId)
-            .ToDictionary(group => group.Key, group => (IReadOnlyList<ScheduleAreaOption>)group
-                .Select(area => new ScheduleAreaOption(area.Id, $"{area.Code} · {area.Name}")).ToList());
-
         // Membership only (spec §14): the compatibility projection may say which building a person belongs to, never what
         // their history was. Only the periods that overlap the read week are membership at all, so a person who left a
         // building stops counting as its member on the dates their period no longer covers; and the projection is the
@@ -796,7 +822,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         var included = roster.Where(person => readDates[person.Id].Count > 0).ToList();
         if (included.Count == 0)
         {
-            return Empty(monday, readAt, relief);
+            return Empty(monday, readAt, relief) with { Destinations = destinations, SourceBuildings = sourceBuildings };
         }
 
         var includedIds = included.Select(person => person.Id).ToList();
@@ -818,7 +844,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             : await db.AreaTransferConfirmations.AsNoTracking()
                 .Where(row => transferIds.Contains(row.TransferId)).ToListAsync(ct);
 
-        var businessDate = ScheduleAuthority.BusinessDate(readAt.UtcDateTime);
+
         var correctionAudits = actor.Role == UserRole.Cleaner
             ? null
             : await ReadCorrectionAuditsAsync(monday, weekEnd, ct);
@@ -953,16 +979,18 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 : header?.Choices.All(choice => personDays.Any(day =>
                     day.Date == choice.OffDate && day.Edit?.CanChange == true)) ?? true;
             var timelineRevision = Revision(baselineAnchors.GetValueOrDefault(person.Id));
+            var homeBuilding = HomeBuilding(memberships[person.Id], profiles.Exists(entry => entry.UserId == person.Id), person);
             rows.Add(new SchedulePersonWeek(person.Id, person.DisplayName,
                 profile?.Kind.ToString() ?? UnknownCleanerKind,
-                HomeBuilding(memberships[person.Id], profiles.Exists(entry => entry.UserId == person.Id), person),
+                homeBuilding,
                 header is not null,
                 personDays,
                 // Regular and relief share the per-person timeline anchor used by writes. A missing anchor starts at 0.
                 Revision(header?.Revision ?? 0),
                 timelineRevision,
                 timelineRevision,
-                weeklyReplaceAllowed));
+                weeklyReplaceAllowed,
+                homeBuilding is int homeId ? buildingCodes.GetValueOrDefault(homeId) : null));
 
             revisions.Add($"baseline-anchor#{person.Id}@{timelineRevision}");
             revisions.AddRange(personProfiles.Select(entry => $"profile#{entry.Id}@{Revision(entry.Revision)}"));
@@ -985,7 +1013,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
         // A relief row is part of what the week was built from, so its revision moves the week digest too.
         revisions.AddRange(relief.Select(row => $"relief#{row.Id}@{row.Revision}"));
-        return new ScheduleProjection(monday, rows, WeekRevision(revisions), readAt, availability, relief);
+        return new ScheduleProjection(monday, rows, WeekRevision(revisions), readAt, availability, relief, destinations, sourceBuildings);
     }
 
     /// <summary>

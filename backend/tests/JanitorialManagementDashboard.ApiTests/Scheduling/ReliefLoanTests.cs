@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Domain.Enums;
@@ -59,6 +60,46 @@ public class ReliefLoanTests
         var change = await ReliefApi.ReadSingleChangeAsync(factory);
         Assert.Contains("\"agreementReported\":true", change.AfterJson);
         Assert.Contains("\"attestationOf\"", change.AfterJson);
+    }
+
+    [Fact]
+    public async Task A_scoped_cross_building_replacement_inherits_the_destination_group_and_names_the_relief_home_source()
+    {
+        using var factory = ReliefApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddBuildingAsync(factory, "B");
+        await TestData.AddAreaAsync(factory, "AR03", "B");
+        var sourceSupervisor = await ReliefApi.AddSupervisorAsync(factory, admin, "2000002", "B", Shift.Day);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
+        await ReliefApi.AddReliefAsync(factory, admin, "E3002", "B", Shift.Night);
+        var source = await AdminSetupApi.BuildingIdAsync(factory, "B");
+        var otherDestination = await AdminSetupApi.AreaIdAsync(factory, "AR03");
+        var destination = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var replaced = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001", breakGroup: 1);
+        var (actor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var date = ReliefApi.Iso(ReliefApi.Wednesday);
+        var lookup = $"/api/schedules/relief-candidates?sourceBuildingId={source}&date={date}&shift=Day";
+        Assert.Equal(HttpStatusCode.Forbidden, (await actor.GetAsync($"{lookup}&employeeId=E3001&destinationAreaId={otherDestination}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await actor.GetAsync($"{lookup}&ownUserId={relief}&destinationAreaId={destination}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await actor.GetAsync($"{lookup}&employeeId=E3002&destinationAreaId={destination}")).StatusCode);
+
+        var candidate = await actor.GetAsync($"{lookup}&employeeId=E3001&destinationAreaId={destination}");
+        Assert.Equal(HttpStatusCode.OK, candidate.StatusCode);
+        using var body = JsonDocument.Parse(await candidate.Content.ReadAsStringAsync());
+        Assert.Equal(sourceSupervisor, body.RootElement.GetProperty("sourceSupervisorId").GetInt32());
+        Assert.True(body.RootElement.GetProperty("agreementRequired").GetBoolean());
+        Assert.Equal("0", body.RootElement.GetProperty("revision").GetString());
+
+        var assigned = await ReliefApi.AssignAsync(actor, ReliefApi.Assignment(
+            relief, destination, ReliefApi.Wednesday, source, replacedUserId: replaced,
+            sourceSupervisorId: sourceSupervisor, agreementReported: true));
+        Assert.Equal(HttpStatusCode.OK, assigned.Response.StatusCode);
+        var stored = await ReliefApi.ReadSingleReliefAsync(factory);
+        Assert.Equal(source, stored.SourceBuildingId);
+        Assert.Equal(sourceSupervisor, stored.SourceSupervisorId);
+        Assert.Equal(replaced, stored.ReplacedUserId);
+        Assert.Equal(1, stored.BreakGroup);
     }
 
     [Fact]

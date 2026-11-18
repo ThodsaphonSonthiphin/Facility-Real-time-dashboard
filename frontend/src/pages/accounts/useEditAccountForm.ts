@@ -29,6 +29,9 @@ export function useEditAccountForm({ account, accounts, areas, onDone }: EditAcc
       : supervisorShiftBlock(accounts, buildingId, shift, account.id);
   const titleId = `accounts-edit-${account.id}`;
 
+  const chooseCleanerKind = (kind: 'Regular' | 'Relief') => {
+    setDraft((current) => ({ ...current, cleanerKind: kind, areaId: '', homeBuildingId: '' }));
+  };
   const chooseArea = (areaId: string) => {
     const next = areaChoices.find((option) => String(option.id) === areaId);
     setDraft((current) => ({
@@ -62,5 +65,5 @@ export function useEditAccountForm({ account, accounts, areas, onDone }: EditAcc
     }
   };
 
-  return { names, draft, set, problem, isLoading, areaChoices, blockOf, titleId, chooseArea, chooseBuilding, submit };
+  return { names, draft, set, problem, isLoading, areaChoices, blockOf, titleId, chooseCleanerKind, chooseArea, chooseBuilding, submit };
 }

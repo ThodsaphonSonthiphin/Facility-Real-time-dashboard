@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.Scheduling;
@@ -5,6 +6,7 @@ using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
+using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
 
@@ -110,29 +112,64 @@ public static class ScheduleEndpoints
     /// that source building is not described at all.
     /// </summary>
     private static async Task<IResult> ReadReliefCandidateAsync(
-        string? employeeId, int? sourceBuildingId, string? date, string? shift, ClaimsPrincipal principal, AppDbContext db,
-        ScheduleStore store, CancellationToken ct)
+        string? employeeId, int? sourceBuildingId, string? date, string? shift, int? destinationAreaId,
+        int? ownUserId, ClaimsPrincipal principal, AppDbContext db, ScheduleStore store, TimeProvider clock, CancellationToken ct)
     {
-        if (await CurrentUser.LoadAsync(principal, db) is null)
+        var actor = await CurrentUser.LoadAsync(principal, db);
+        if (actor is null)
         {
             return Results.Unauthorized();
         }
 
-        if (string.IsNullOrWhiteSpace(employeeId) || sourceBuildingId is null
+        if ((ownUserId is null && string.IsNullOrWhiteSpace(employeeId)) || sourceBuildingId is null
             || !AdminQuery.TryReadDate(date, out var shiftDate)
-            || !AdminQuery.TryReadEnum<Shift>(shift, out var parsedShift))
+            || !AdminQuery.TryReadEnum<Shift>(shift, out var parsedShift)
+            || (ownUserId is not null && destinationAreaId is null))
         {
             return ApiResults.Message(StatusCodes.Status400BadRequest,
                 "ต้องระบุรหัสพนักงาน ตึกต้นทาง วันที่ และกะเช้าหรือกะดึกให้ครบ");
         }
 
-        var candidate = await store.ReadReliefCandidateAsync(
-            employeeId.Trim(), sourceBuildingId.Value, shiftDate, parsedShift, ct);
-        return candidate is null
-            // One answer for every reason the person is not a relief of that building: it never says which one it was.
-            ? ApiResults.Message(StatusCodes.Status404NotFound,
-                "ไม่พบพนักงานสแปร์ของตึกต้นทางนี้ในวันที่และกะที่เลือก")
-            : Results.Ok(candidate.ToDto());
+        if (destinationAreaId is int areaId)
+        {
+            var destination = await db.Areas.AsNoTracking().SingleOrDefaultAsync(area => area.Id == areaId && area.IsActive, ct);
+            var periods = await SupervisorScopes.ReadAsync(db, actor, clock, ct);
+            var today = ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
+            bool CanChange(int building) => shiftDate < today
+                ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, building, parsedShift, shiftDate, today, periods)
+                : ScheduleAuthority.CanManage(actor.Role, actor.Id, building, parsedShift, shiftDate, periods);
+            if (destination is null || !destination.HasShift(parsedShift) || !CanChange(destination.BuildingId)
+                || (ownUserId is not null && !CanChange(sourceBuildingId.Value)))
+            {
+                return Results.Forbid();
+            }
+        }
+
+        var candidate = await store.ReadReliefCandidateAsync(employeeId?.Trim(), sourceBuildingId.Value,
+            shiftDate, parsedShift, ct, ownUserId, requireSameShift: destinationAreaId is not null);
+        if (candidate is null)
+        {
+            return ApiResults.Message(StatusCodes.Status404NotFound,
+                "ไม่พบพนักงานสแปร์ของตึกต้นทางนี้ในวันที่และกะที่เลือก");
+        }
+
+        var result = candidate.ToDto();
+        if (destinationAreaId is not null)
+        {
+            var responsible = await store.ResponsibleSupervisorAsync(sourceBuildingId.Value, parsedShift, shiftDate, ct);
+            var supervisorName = await db.Users.AsNoTracking().Where(user => user.Id == responsible)
+                .Select(user => user.DisplayName).FirstOrDefaultAsync(ct);
+            var live = await store.LiveReliefAsync(candidate.UserId, shiftDate, parsedShift, ct);
+            result = result with
+            {
+                SourceSupervisorId = responsible,
+                SourceSupervisorName = supervisorName,
+                AgreementRequired = responsible != actor.Id,
+                Revision = (live?.Revision ?? 0).ToString(CultureInfo.InvariantCulture),
+            };
+        }
+
+        return Results.Ok(result);
     }
 
     /// <summary>

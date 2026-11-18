@@ -4,6 +4,7 @@ import { baseApi, SEND_TIMEOUT_MS } from '../../shared/api/baseApi';
 import { ADMIN_HUB_SERVER_TIMEOUT_MS, followScanHub } from '../../shared/api/scanHub';
 import type {
   CommandResult,
+  ReliefCandidate,
   ConfirmTransferRequest,
   ScheduleCommandEnvelope,
   ScheduleCommandToken,
@@ -49,8 +50,21 @@ export function scheduleHubKey(args: WeekArgs & { buildingId?: number; shift?: S
   return `schedule:${args.weekStart}:${args.buildingId ?? 'all'}:${args.shift ?? 'own'}`;
 }
 
+export type ReliefCandidateArgs = {
+  sourceBuildingId: number;
+  destinationAreaId: number;
+  date: string;
+  shift: Shift;
+} & ({ employeeId: string; ownUserId?: never } | { ownUserId: number; employeeId?: never });
+
 const schedulesApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
+    getReliefCandidate: build.query<ReliefCandidate, ReliefCandidateArgs>({
+      query: (params) => ({ url: '/schedules/relief-candidates', params, cache: 'no-store' }),
+      keepUnusedDataFor: 0,
+      providesTags: ['Schedules'],
+    }),
+
     /**
      * GET /api/schedules/me (spec §3): the caller's own authorised week, the Cleaner's only read. It has no filter to
      * widen, so the server answers exactly one row — a Cleaner's — or the actor's own scope.
@@ -154,6 +168,7 @@ const schedulesApi = baseApi.injectEndpoints({
 
 export const {
   useGetMyScheduleQuery,
+  useGetReliefCandidateQuery,
   useGetManagedScheduleQuery,
   useIssueScheduleCommandTokenMutation,
   useExecuteScheduleCommandMutation,

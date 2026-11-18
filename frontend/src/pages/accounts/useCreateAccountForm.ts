@@ -31,6 +31,9 @@ export function useCreateAccountForm({ accounts, areas }: CreateAccountFormProps
     draft.role === 'Cleaner' ? cleanerShiftBlock(area, shift) : supervisorShiftBlock(accounts, buildingId, shift);
 
   // A shift that the new Area or building does not allow is dropped
+  const chooseCleanerKind = (kind: 'Regular' | 'Relief') => {
+    setDraft((current) => ({ ...current, cleanerKind: kind, areaId: '', homeBuildingId: '' }));
+  };
   const chooseArea = (areaId: string) => {
     const next = activeAreas.find((option) => String(option.id) === areaId);
     setDraft((current) => ({
@@ -66,5 +69,5 @@ export function useCreateAccountForm({ accounts, areas }: CreateAccountFormProps
     }
   };
 
-  return { names, draft, chooseRole, set, problem, notice, isLoading, activeAreas, blockOf, chooseArea, chooseBuilding, submit };
+  return { names, draft, chooseRole, set, problem, notice, isLoading, activeAreas, blockOf, chooseCleanerKind, chooseArea, chooseBuilding, submit };
 }

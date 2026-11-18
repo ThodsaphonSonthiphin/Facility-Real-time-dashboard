@@ -6,12 +6,13 @@ import { ScheduleConflict } from '../ScheduleConflict/ScheduleConflict';
 import type { ScheduleChangeLine, ScheduleReviewProps } from './type';
 
 export function ScheduleReview({
-  title, editor, children, latest, onCompare, onUseLatest, remaining,
+  title, editor, children, latest, onCompare, onUseLatest, remaining, reviewLabel = 'ตรวจสอบ',
 }: {
   title: string;
   editor: ScheduleReviewProps & { guard: { confirming: boolean; stay: () => void; discard: () => void } };
   children: ReactNode;
   remaining?: ReactNode;
+  reviewLabel?: string;
   latest: ScheduleChangeLine[] | undefined;
   onCompare: () => void;
   onUseLatest: () => void;
@@ -89,7 +90,7 @@ export function ScheduleReview({
           </>
         )}
         <footer className="mt-auto flex flex-wrap gap-2 border-t border-border pt-3">
-          {ui === 'editing' && <Button variant="primary" size={main} disabled={!editor.canReview} onClick={editor.review}>ตรวจสอบ</Button>}
+          {ui === 'editing' && <Button variant="primary" size={main} disabled={!editor.canReview} onClick={editor.review}>{reviewLabel}</Button>}
           {ui === 'reviewing' && (
             <>
               <Button variant="secondary" size={size} onClick={editor.backToEdit}>กลับไปแก้ไข</Button>

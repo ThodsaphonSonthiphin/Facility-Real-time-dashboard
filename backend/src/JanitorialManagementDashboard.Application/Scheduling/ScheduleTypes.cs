@@ -110,7 +110,7 @@ public sealed record ScheduleCorrection(
 public sealed record SchedulePersonWeek(int UserId, string DisplayName, string CleanerKind,
     int? HomeBuildingId, bool HasWeeklyChoice, IReadOnlyList<ScheduleDay> Days,
     string WeeklyRevision = "0", string RegularBaselineRevision = "0", string ReliefBaselineRevision = "0",
-    bool? WeeklyReplaceAllowed = null);
+    bool? WeeklyReplaceAllowed = null, string? HomeBuildingCode = null);
 
 /// <summary>
 /// Spec §10 and §11: the authorised projection of one week. <see cref="Revision"/> is an opaque token derived from every
@@ -124,7 +124,12 @@ public sealed record SchedulePersonWeek(int UserId, string DisplayName, string C
 /// </para>
 /// </summary>
 public sealed record ScheduleProjection(DateOnly WeekStart, IReadOnlyList<SchedulePersonWeek> Rows,
-    string Revision, DateTimeOffset ReadAt, string Availability, IReadOnlyList<ReliefAssignmentFact> Relief);
+    string Revision, DateTimeOffset ReadAt, string Availability, IReadOnlyList<ReliefAssignmentFact> Relief, IReadOnlyList<ScheduleDestination>? Destinations = null, IReadOnlyList<ScheduleSourceBuilding>? SourceBuildings = null);
+
+public sealed record ScheduleSourceBuilding(int Id, string Code);
+
+public sealed record ScheduleDestination(DateOnly Date, Shift Shift, int BuildingId, string BuildingCode,
+    IReadOnlyList<ScheduleAreaOption> Areas);
 
 /// <summary>
 /// Spec §6 and §10 (ADRs facility-0137–0139, 0144, 0145, 0152, 0155, 0206, 0207 and 0211): one recorded relief assignment

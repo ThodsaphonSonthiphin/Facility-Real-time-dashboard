@@ -74,6 +74,9 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     latest,
     phone,
     editor,
+    openRelief: (kind) => {
+      if (manage && latest.destinations?.length) setEditor({ kind, week: latest });
+    },
     openWeekly: () => {
       if (manage && latest.rows.some((row) => row.days.some((day) => day.edit?.canChange))) {
         setEditor({ kind: 'weekly', week: latest });

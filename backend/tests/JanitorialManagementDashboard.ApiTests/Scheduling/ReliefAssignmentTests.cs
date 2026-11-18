@@ -225,12 +225,12 @@ public class ReliefAssignmentTests
         await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001", breakGroup: 1);
         await ScheduleWriteApi.AddDatedBreakAsync(factory, "1000001", ReliefApi.Wednesday, 2);
         var replaced = await AdminSetupApi.UserIdAsync(factory, "1000001");
-        // A replaced person's source is their own building, not the relief's home building.
-        var replacedBuilding = await AdminSetupApi.BuildingIdAsync(factory, "A");
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, new DateOnly(2026, 10, 1));
+        var sourceBuilding = await AdminSetupApi.BuildingIdAsync(factory, "B");
         var (client, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
 
         var answer = await ReliefApi.AssignAsync(client, ReliefApi.Assignment(
-            relief, destination, ReliefApi.Wednesday, replacedBuilding, replacedUserId: replaced));
+            relief, destination, ReliefApi.Wednesday, sourceBuilding, replacedUserId: replaced));
 
         Assert.Equal(HttpStatusCode.OK, answer.Response.StatusCode);
         Assert.Equal(ReliefApi.Committed, answer.Answer!.Outcome);
@@ -256,7 +256,7 @@ public class ReliefAssignmentTests
         await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000003", new DateOnly(2026, 10, 1));
         await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000003", new DateOnly(2026, 10, 1), "AR02");
         var replaced = await AdminSetupApi.UserIdAsync(factory, "1000003");
-        var sourceBuilding = await AdminSetupApi.BuildingIdAsync(factory, "A");
+        var sourceBuilding = await AdminSetupApi.BuildingIdAsync(factory, "B");
         var (client, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
 
         var answer = await ReliefApi.AssignAsync(client, ReliefApi.Assignment(
@@ -264,6 +264,7 @@ public class ReliefAssignmentTests
 
         Assert.Equal(HttpStatusCode.Conflict, answer.Response.StatusCode);
         Assert.Equal("row-invalid", Assert.Single(answer.Answer!.Problems).Code);
+        Assert.Contains("ไม่ใช่พื้นที่", Assert.Single(answer.Answer!.Problems).Message);
         await ReliefApi.AssertNoReliefAsync(factory);
     }
 

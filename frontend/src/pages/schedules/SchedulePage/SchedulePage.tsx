@@ -25,6 +25,12 @@ const RegularBaselineEditor = lazy(() => import('../RegularBaselineEditor/Regula
   .then((module) => ({ default: module.RegularBaselineEditor })));
 const DatedScheduleEditor = lazy(() => import('../DatedScheduleEditor/DatedScheduleEditor')
   .then((module) => ({ default: module.DatedScheduleEditor })));
+const ReliefRosterEditor = lazy(() => import('../ReliefRosterEditor/ReliefRosterEditor')
+  .then((module) => ({ default: module.ReliefRosterEditor })));
+const ReliefAssignmentEditor = lazy(() => import('../ReliefAssignmentEditor/ReliefAssignmentEditor')
+  .then((module) => ({ default: module.ReliefAssignmentEditor })));
+const ReliefLoanEditor = lazy(() => import('../ReliefLoanEditor/ReliefLoanEditor')
+  .then((module) => ({ default: module.ReliefLoanEditor })));
 const ScheduleHistory = lazy(() => import('../ScheduleHistory/ScheduleHistory')
   .then((module) => ({ default: module.ScheduleHistory })));
 
@@ -108,7 +114,19 @@ function ManagementWeekPage({ role, back }: { role: ScheduleRole; back?: { to: s
           <Button variant="primary" size={view.phone ? 'main' : 'desk'} onClick={view.openWeekly}>จัดวันหยุดรายสัปดาห์</Button>
         </div>
       )}
+      {!!view.latest?.destinations?.length && (
+        <div className="flex flex-wrap gap-2" aria-label="จัดงานสแปร์">
+          {view.latest.rows.some((row) => row.cleanerKind === 'Relief' && row.days.some((day) => day.edit?.canChange)) && (
+            <>
+              <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-roster')}>จัดตารางประจำสแปร์</Button>
+              <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-assignment')}>มอบหมายงานสแปร์</Button>
+            </>
+          )}
+          <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-loan')}>บันทึกการยืมสแปร์</Button>
+        </div>
+      )}
       <WeekBody view={view} />
+      {view.week && <ReliefDuties week={view.week} />}
       <Suspense fallback={<PageLoading lines={1}>กำลังโหลดแบบแก้ไข...</PageLoading>}>
         <OpenEditor view={view} />
       </Suspense>
@@ -124,6 +142,15 @@ function OpenEditor({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   const { editor, phone, latest: week, closeEditor, refetch, reloadEditorWeek, selection } = view;
   if (!editor) return null;
   const shared = { phone, onClose: closeEditor, onCompare: refetch, reloadEditorWeek };
+  if (editor.kind === 'relief-roster') {
+    return <ReliefRosterEditor {...shared} week={editor.week} latest={week} selection={selection} />;
+  }
+  if (editor.kind === 'relief-assignment') {
+    return <ReliefAssignmentEditor {...shared} week={editor.week} latest={week} />;
+  }
+  if (editor.kind === 'relief-loan') {
+    return <ReliefLoanEditor {...shared} week={editor.week} latest={week} />;
+  }
   if (editor.kind === 'weekly') {
     return <WeeklyOffEditor {...shared} week={editor.week} latest={week} selection={selection} />;
   }
@@ -133,6 +160,27 @@ function OpenEditor({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   const latest = week?.rows.find((person) => person.userId === editor.person.userId)
     ?.days.find((day) => day.date === editor.day.date);
   return <DatedScheduleEditor {...shared} person={editor.person} day={editor.day} latest={latest} />;
+}
+
+function ReliefDuties({ week }: { week: ScheduleWeek }) {
+  if (!week.relief.length) return null;
+  return (
+    <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
+      <h2 className="text-lg font-semibold">งานสแปร์ที่บันทึก</h2>
+      <ul className="space-y-2">
+        {week.relief.map((duty) => (
+          <li key={duty.id} className="space-y-1 rounded-md border border-border p-3">
+            <p className="font-semibold">{duty.displayName} · {formatShiftDate(duty.shiftDate)} · {shiftShortLabel[duty.shift]}</p>
+            <p>ตึก {duty.destinationBuildingCode} · {duty.areaCode} · กลุ่มพัก {duty.breakGroup ?? 'ยังไม่กำหนด'}</p>
+            <p className="text-text-2">ตึกต้นทาง {duty.sourceBuildingCode}{duty.sourceSupervisorName && ` · ${duty.sourceSupervisorName}`}</p>
+            {duty.replacedDisplayName && <p>แทน {duty.replacedDisplayName}</p>}
+            {duty.agreementReported && <p>ผู้บันทึกยืนยันว่าตกลงกับตึกต้นทางนอกเว็บแล้ว</p>}
+            {duty.isCancelled && <Badge kind="edited">ยกเลิกแล้ว</Badge>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 /** The Admin's filters (0184): every building in the shift on the clock, and any shift they choose. */
@@ -261,7 +309,10 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
               <tr key={person.userId} className="border-t border-border">
                 <th scope="row" className="px-3 py-2.5 text-left font-semibold">
                   <span className="block">{person.displayName}</span>
-                  <span className="block text-xs text-text-2">{kindLabel[person.cleanerKind]}</span>
+                  <span className="block text-text-2">{kindLabel[person.cleanerKind]}</span>
+                  {person.cleanerKind === 'Relief' && person.homeBuildingCode && (
+                    <span className="block text-text-2">ตึกประจำ: {person.homeBuildingCode}</span>
+                  )}
                   {person.cleanerKind === 'Regular' && !person.hasWeeklyChoice
                     && person.days.some((day) => day.edit) && <Badge kind="edited">ยังไม่กำหนดวันหยุด</Badge>}
                   {view.latest && person.cleanerKind === 'Regular' && person.days.some((day) => day.edit?.canChange) && (

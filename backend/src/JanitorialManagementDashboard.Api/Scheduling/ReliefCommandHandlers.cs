@@ -137,9 +137,12 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
             return Refused(revisions, key, "ยังไม่ทราบตึกต้นทางของสแปร์คนนี้ จึงยืนยันการยืมไม่ได้");
         }
 
-        // 4. Whose duty is covered, and where the person comes from. Replacing names a regular Cleaner whose own plan for the
-        // date is this very Area, and the source is that person's building; standalone work comes from the relief's own home
-        // building. Either way the source the client sent must be that building, not a third one.
+        // A replacement identifies the destination duty. The source is always the borrowed person's home.
+        if (relief.SourceBuildingId != homeBuildingId)
+        {
+            return Refused(revisions, key, "ตึกต้นทางที่ส่งมาต้องเป็นตึกต้นทางของสแปร์คนนี้");
+        }
+
         int? inheritedGroup = null;
         if (relief.ReplacedUserId is int replacedUserId)
         {
@@ -167,27 +170,7 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
                     $"แผนของคนที่ถูกแทนในวันที่ {Iso(relief.ShiftDate)} ไม่ใช่พื้นที่ {area.Code} จึงไม่มีงานให้แทน");
             }
 
-            var replacedBuilding = replacedProfile?.HomeBuildingId
-                ?? (day.Area.Value is int replacedArea
-                    ? await db.Areas.AsNoTracking().Where(entry => entry.Id == replacedArea)
-                        .Select(entry => (int?)entry.BuildingId).FirstOrDefaultAsync(ct)
-                    : null);
-            if (replacedBuilding is not int from)
-            {
-                return Refused(revisions, key, "ยังไม่ทราบตึกของคนที่ถูกแทน จึงยืนยันตึกต้นทางไม่ได้");
-            }
-
-            if (relief.SourceBuildingId != from)
-            {
-                return Refused(revisions, key, "ตึกต้นทางที่ส่งมาไม่ตรงกับตึกของคนที่ถูกแทน");
-            }
-
-            // ADR facility-0152: the replaced person's group is the default, and the recorder may adjust the day.
             inheritedGroup = day.BreakGroup.Value;
-        }
-        else if (relief.SourceBuildingId != homeBuildingId)
-        {
-            return Refused(revisions, key, "ตึกต้นทางที่ส่งมาต้องเป็นตึกต้นทางของสแปร์คนนี้");
         }
 
         // 5. Spec §5 and A08: a working row needs a group, and nothing may be guessed for standalone work.

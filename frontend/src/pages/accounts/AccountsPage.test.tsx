@@ -368,3 +368,28 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     expect(await screen.findByRole('rowheader', { name: 'แม่บ้านใหม่' })).toBeInTheDocument();
   });
 });
+
+it('creates a relief profile with a home building and clears the previously selected Area', async () => {
+  const server = serve({ 'POST /api/admin/accounts': () => ({
+    status: 201, body: account({ id: 42, displayName: 'สแปร์ใหม่', cleanerKind: 'Relief', homeBuildingId: 2 }),
+  }) });
+  const { user } = await renderApp('/admin/accounts');
+  const form = within(await openCreate(user));
+  await user.type(form.getByLabelText('ชื่อที่แสดง'), 'สแปร์ใหม่');
+  await user.type(form.getByLabelText('รหัสพนักงาน'), '650042');
+  await user.type(form.getByLabelText('เบอร์โทรศัพท์'), '0810000042');
+  await user.selectOptions(form.getByLabelText('พื้นที่ประจำ'), '2');
+  await user.selectOptions(form.getByLabelText('ประเภทแม่บ้าน'), 'Relief');
+  expect(form.queryByLabelText('พื้นที่ประจำ')).not.toBeInTheDocument();
+  await user.click(form.getByRole('radio', { name: /^กะดึก/ }));
+  await user.click(form.getByRole('button', { name: 'สร้างบัญชี' }));
+  expect(form.getByRole('alert')).toHaveTextContent('เลือกตึกประจำก่อน');
+  expect(created(server)).toBeUndefined();
+  await user.selectOptions(form.getByLabelText('ตึกประจำ'), '2');
+  await user.click(form.getByRole('button', { name: 'สร้างบัญชี' }));
+  expect(await form.findByText('สร้างบัญชี สแปร์ใหม่ แล้ว')).toBeVisible();
+  expect(created(server)).toEqual({
+    role: 'Cleaner', displayName: 'สแปร์ใหม่', employeeId: '650042', phone: '0810000042',
+    cleanerKind: 'Relief', homeBuildingId: 2, shift: 'Night',
+  });
+});

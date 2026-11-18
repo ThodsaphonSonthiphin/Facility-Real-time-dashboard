@@ -136,6 +136,7 @@ export interface SchedulePerson {
   displayName: string;
   cleanerKind: CleanerKind;
   homeBuildingId?: number | null;
+  homeBuildingCode?: string;
   /** The week-header fact: false is "nobody has been asked", not "nobody works" (ADR facility-0190). */
   hasWeeklyChoice: boolean;
   weeklyRevision: string;
@@ -186,6 +187,16 @@ export interface ScheduleWeek {
   availability: ScheduleWeekAvailability;
   rows: SchedulePerson[];
   relief: ScheduleRelief[];
+  destinations?: ScheduleDestination[];
+  sourceBuildings?: { id: number; code: string }[];
+}
+
+export interface ScheduleDestination {
+  date: string;
+  shift: Shift;
+  buildingId: number;
+  buildingCode: string;
+  areas: ScheduleEditFacts['areas'];
 }
 
 /** `ReliefCandidateDto` (spec §6, A09): the minimum a recorder needs to see before recording a loan. */
@@ -199,6 +210,10 @@ export interface ReliefCandidate {
   eligible: boolean;
   status: string;
   conflicts: string[];
+  sourceSupervisorId?: number;
+  sourceSupervisorName?: string;
+  agreementRequired?: boolean;
+  revision?: string;
 }
 
 /** `ScheduleCommandTokenDto`: the short-lived identity a mutation is submitted under (spec §11). */

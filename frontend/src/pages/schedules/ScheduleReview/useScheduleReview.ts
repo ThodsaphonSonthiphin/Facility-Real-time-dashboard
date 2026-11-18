@@ -9,12 +9,13 @@ import {
 } from '../schedulesApi';
 
 export function useScheduleReview({
-  command, beforeAfter, problems: validation, dirty, phone, changing, onClose, verifyRetryScope,
+  command, beforeAfter, problems: validation, dirty, ready = true, phone, changing, onClose, verifyRetryScope,
 }: {
   command: CommandDraft;
   beforeAfter: import('./type').ScheduleChangeLine[];
   problems: RowProblem[];
   dirty: boolean;
+  ready?: boolean;
   phone: boolean;
   changing: boolean;
   onClose: () => void;
@@ -32,7 +33,7 @@ export function useScheduleReview({
   const [execute] = useExecuteScheduleCommandMutation();
   const [getResult] = useLazyGetScheduleCommandResultQuery();
   const guard = useScheduleNavigation((dirty && ui !== 'committed') || busy);
-  const canReview = dirty && validation.length === 0 && !changing;
+  const canReview = ready && dirty && validation.length === 0 && !changing;
   const expiry = identity ? Date.parse(identity.expiresAt) : 0;
   const canRetry = retryOffered && !changing;
 

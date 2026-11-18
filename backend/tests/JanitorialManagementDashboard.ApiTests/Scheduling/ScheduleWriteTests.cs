@@ -720,6 +720,48 @@ public class ScheduleWriteTests
         });
     }
 
+    [Fact]
+    public async Task A_relief_baseline_batch_commits_both_rows_and_rolls_back_all_when_one_is_stale()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        var first = await TestData.AddCleanerAsync(factory, "1000005", Shift.Day);
+        var second = await TestData.AddCleanerAsync(factory, "1000006", Shift.Day);
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000005", CleanerKind.Relief, Shift.Day, new DateOnly(2026, 10, 1), "A");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000006", CleanerKind.Relief, Shift.Day, new DateOnly(2026, 10, 1), "A");
+        var area = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        ScheduleWriteApi.Today(factory);
+        var firstKey = ScheduleWriteApi.BaselineKey(first, "relief");
+        var secondKey = ScheduleWriteApi.BaselineKey(second, "relief");
+        Task<(HttpResponseMessage Response, ScheduleWriteApi.CommandAnswer? Answer)> Write(string date, string firstRevision, string secondRevision) =>
+            ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetReliefBaseline, new
+            {
+                rows = new[]
+                {
+                    new { userId = first, effectiveFrom = date, days = new[] { new { weekday = "Monday", areaId = area } } },
+                    new { userId = second, effectiveFrom = date, days = new[] { new { weekday = "Tuesday", areaId = area } } },
+                },
+            }, new Dictionary<string, string> { [firstKey] = firstRevision, [secondKey] = secondRevision });
+
+        var written = await Write("2026-12-01", "0", "0");
+        Assert.Equal(HttpStatusCode.OK, written.Response.StatusCode);
+        Assert.Equal("1", written.Answer!.Revisions[firstKey]);
+        Assert.Equal("1", written.Answer.Revisions[secondKey]);
+
+        var stale = await Write("2026-12-08", "1", "0");
+        Assert.Equal(HttpStatusCode.Conflict, stale.Response.StatusCode);
+        var problem = Assert.Single(stale.Answer!.Problems);
+        Assert.Equal(secondKey, problem.RowId);
+        Assert.Equal(ScheduleCommandErrorCode.StaleRevision, problem.Code);
+        await factory.WithDbAsync(async db =>
+        {
+            var patterns = await db.ScheduleBaselines.Where(entry => entry.UserId == first || entry.UserId == second).ToListAsync();
+            Assert.Equal(2, patterns.Count);
+            Assert.All(patterns, entry => Assert.Null(entry.EffectiveUntil));
+            Assert.Equal(2, await db.ScheduleChanges.CountAsync(entry => entry.EntityType == "ScheduleBaseline"));
+        });
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

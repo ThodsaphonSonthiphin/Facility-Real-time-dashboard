@@ -1,5 +1,5 @@
 import type { AreaSummary, Building } from '../../shared/api/adminSetupApi';
-import type { Account } from './accountsApi';
+import type { Account, AccountCleanerKind } from './accountsApi';
 
 export interface CreateAccountFormProps {
   accounts: Account[];
@@ -22,4 +22,9 @@ export interface SecretFormProps {
   account: Account;
   onDone: (text: string) => void;
   onCancel: () => void;
+}
+
+export interface CleanerKindFields {
+  cleanerKind?: AccountCleanerKind;
+  homeBuildingId?: string;
 }

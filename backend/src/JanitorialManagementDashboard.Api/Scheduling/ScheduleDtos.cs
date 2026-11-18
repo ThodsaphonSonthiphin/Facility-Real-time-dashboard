@@ -106,7 +106,8 @@ public sealed record ScheduleWeekDto(
     DateTimeOffset ReadAt,
     string Availability,
     IReadOnlyList<SchedulePersonDto> Rows,
-    IReadOnlyList<ScheduleReliefDto> Relief);
+    IReadOnlyList<ScheduleReliefDto> Relief, IReadOnlyList<ScheduleDestination>? Destinations,
+    IReadOnlyList<ScheduleSourceBuilding>? SourceBuildings);
 
 /// <summary>
 /// Spec §10: one person's week. <see cref="WeeklyRevision"/> is the week-header version (0 when nobody has chosen),
@@ -122,7 +123,7 @@ public sealed record SchedulePersonDto(
     string RegularBaselineRevision,
     string ReliefBaselineRevision,
     IReadOnlyList<ScheduleDayDto> Days,
-    bool? WeeklyReplaceAllowed = null);
+    bool? WeeklyReplaceAllowed = null, string? HomeBuildingCode = null);
 
 /// <summary>
 /// Spec §5, §10 and §11: one resolved day with its provenance per field — a dated choice, the applicable version or nothing
@@ -198,7 +199,8 @@ public sealed record ReliefCandidateDto(
     Shift Shift,
     bool Eligible,
     string Status,
-    IReadOnlyList<string> Conflicts);
+    IReadOnlyList<string> Conflicts, int? SourceSupervisorId = null, string? SourceSupervisorName = null,
+    bool? AgreementRequired = null, string? Revision = null);
 
 /// <summary>
 /// Spec §11: the projection the store resolved, mapped to the wire contract. Nothing is re-derived here — the endpoint hands
@@ -221,7 +223,7 @@ public static class ScheduleDtoMapper
             row.RegularBaselineRevision,
             row.ReliefBaselineRevision,
             row.Days.Select(ToDto).ToList(),
-            row.WeeklyReplaceAllowed)).ToList(),
+            row.WeeklyReplaceAllowed, row.HomeBuildingCode)).ToList(),
         projection.Relief.Select(row => new ScheduleReliefDto(
             row.Id,
             row.UserId,
@@ -241,7 +243,7 @@ public static class ScheduleDtoMapper
             row.SourceSupervisorName,
             row.AgreementReported,
             row.IsCancelled,
-            row.Revision)).ToList());
+            row.Revision)).ToList(), projection.Destinations, projection.SourceBuildings);
 
     /// <summary>The lookup's answer on the wire: the same facts the store resolved, nothing re-derived.</summary>
     public static ReliefCandidateDto ToDto(this ReliefCandidateFacts candidate) => new(

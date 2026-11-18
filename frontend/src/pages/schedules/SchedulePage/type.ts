@@ -36,6 +36,7 @@ export interface SchedulePageView {
   goWeek: (weeks: number) => void;
   phone: boolean;
   editor: OpenScheduleEditor | null;
+  openRelief: (kind: 'relief-roster' | 'relief-assignment' | 'relief-loan') => void;
   openWeekly: () => void;
   openBaseline: (person: SchedulePerson) => void;
   openDated: (person: SchedulePerson, day: ScheduleDay) => void;
@@ -51,6 +52,9 @@ export interface ScheduleRow {
 }
 
 export type OpenScheduleEditor =
+  | { kind: 'relief-roster'; week: ScheduleWeek }
+  | { kind: 'relief-assignment'; week: ScheduleWeek }
+  | { kind: 'relief-loan'; week: ScheduleWeek }
   | { kind: 'weekly'; week: ScheduleWeek }
   | { kind: 'baseline'; week: ScheduleWeek; person: SchedulePerson }
   | { kind: 'dated'; person: SchedulePerson; day: ScheduleDay };
