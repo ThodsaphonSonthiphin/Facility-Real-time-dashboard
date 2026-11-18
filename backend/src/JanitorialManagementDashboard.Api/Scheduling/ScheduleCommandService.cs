@@ -158,7 +158,7 @@ public sealed class ScheduleCommandService(
             await transaction.CommitAsync(ct);
 
             // After the commit, never before: the facts are stored whatever happens to the push (spec §11 and §12).
-            await NotifyAsync(result, new ScheduleChangeScope(plan.Slots, plan.Scopes), ct);
+            await NotifyAsync(result, new ScheduleChangeScope(plan.Slots, plan.Scopes, plan.BaselineHeads, plan.DatedScopes), ct);
             return result;
         }
         catch (DbUpdateException)

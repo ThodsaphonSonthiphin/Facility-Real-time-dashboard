@@ -547,7 +547,7 @@ graph LR
 
 ## Part 9 — API reference
 
-53 HTTP routes. `frontend/src/shared/api/baseApi.ts` adds the `/api` prefix, so the frontend `url` values below are relative to it.
+`frontend/src/shared/api/baseApi.ts` adds the `/api` prefix, so the frontend `url` values below are relative to it.
 
 **How to read the Why column:** it answers *"what business goal does this call serve, what breaks without it?"* — not "what does it fetch". If you are deciding whether an endpoint is essential while changing something, the Why is the row that matters.
 
@@ -568,7 +568,7 @@ graph LR
 | GET | `/api/my-work` | `MyWorkEndpoints.cs` | `shared/api/myWorkApi.ts` | The cleaner's own beat plus covered areas. Without it the phone page has nothing to render. |
 | GET | `/api/attendance/signs/{token}` | `AttendanceEndpoints.cs` | `pages/check-in/checkInApi.ts` | Fails fast on page open when a sign was deactivated, instead of the cleaner discovering it at the end of a shift. |
 | POST | `/api/attendance` | `AttendanceEndpoints.cs` → `RecordAsync` | `pages/check-in/checkInApi.ts` | Records presence in an assigned Area and gates work submission. This is not payroll/timekeeping and does not calculate late/early attendance (0050); GPS gives a flag for Admin review. |
-| GET | `/api/attendance/me` | `AttendanceEndpoints.cs` | **none found** | Current shift and next allowed event. |
+| GET | `/api/attendance/me` | `AttendanceEndpoints.cs` | API clients | Current slot, lifecycle and revision, actions, required gaps and transfer state. The Check-In page reads the same state through `/api/my-work`. |
 | GET | `/api/service-points/by-token/{token}` | `ServicePointEndpoints.cs` | `pages/scan/scanApi.ts` | Resolves a scanned sign to exactly one point, so a photo of a QR cannot leak the facility map. |
 | POST | `/api/scan-records` | `ScanRecordEndpoints.cs` → `CreateAsync` | `pages/scan/scanApi.ts` | **The core work product**: "this point was cleaned, at this time, by this person." Round placement, point status, inspections, exports and alerts are all derived from these rows. |
 
@@ -579,6 +579,18 @@ graph LR
 | POST | `/api/inspections/scan` | `InspectionEndpoints.cs` → `ScanAsync` | `pages/inspect/inspectApi.ts` | Stores nothing — it shows the supervisor the current submission (or a refusal reason). The two-step design exists so a supervisor can only judge what they were actually shown. |
 | POST | `/api/inspections` | `InspectionEndpoints.cs` → `CreateAsync` | `pages/inspect/inspectApi.ts` | Records a voluntary inspection or rework request; an uninspected round remains visible as not inspected. `Rework` sends the cleaner back with the defect text. |
 | GET | `/api/my-building` | `MyBuildingEndpoints.cs` | `pages/my-building/myBuildingApi.ts` | The supervisor's walking queue, pending-inspection first, then rework. |
+
+### Dated scheduling and actual attendance
+
+| Surface | Browser entry | Server entry |
+|---|---|---|
+| Own schedule | `/my-schedule` | `GET /api/schedules/me` in `ScheduleEndpoints.cs` |
+| Manager roster and relief lookup | `/schedule-management` and `/admin/schedules` | `GET /api/schedules` and `/api/schedules/relief-candidates` in `ScheduleEndpoints.cs` |
+| Review, save and recover a result | Schedule review and conflict panels | `POST /api/schedules/command-tokens`, `POST /api/schedules/commands`, `GET /api/schedules/commands/{id}` in `ScheduleEndpoints.cs` |
+| Team attendance and missing-time entry | A dated slot on the Supervisor roster | `GET /api/team-attendance/{userId}`, `POST /api/team-attendance/missing` in `TeamAttendanceEndpoints.cs` |
+| Arrival at the destination sign | Check-In | `POST /api/area-transfers/{id}/confirm` in `AreaTransferEndpoints.cs` |
+
+`ScheduleStore.cs` handles effective-dated reads and `ScheduleResolver.cs` sets field precedence. `ScheduleCommandService.cs` supplies the transaction and receipt flow for schedule commands. `AttendanceStateView.cs` builds the actions and gaps from the stored lifecycle, while `AttendanceBoard.cs` keeps entry evidence distinct from current responsibility. [Acceptance evidence](testing/scheduling.md)
 
 ### Admin setup
 
@@ -652,8 +664,9 @@ graph LR
 |---|---|---|
 | `ScanRecorded`, `InspectionRecorded` (whole PointCard) | Admins, the building's Supervisors, the Area's Cleaners, current scoped covers | Dashboard/My Building patch the point; My Work refetches; attendance follower ignores point messages |
 | `AttendanceRecorded` (Area/date/shift) | Admins | Attendance refetches the affected board; other followers ignore it |
+| `ScheduleChanged` (command ID) | Active affected Cleaners, authorised Supervisors for affected building/shift/date, active Admins | Schedule and affected attendance/work views invalidate and refetch scoped reads. Open schedule editors keep their drafts. |
 
-`PointNotifications.SendAsync` and `AttendanceBoard.NotifyAsync` send after the record is saved and catch/log push failures. `ActiveAdmins.IdsAsync` reads Admin recipients; no group membership cache decides access.
+`PointNotifications.SendAsync` and `AttendanceBoard.NotifyAsync` send after the record is saved and catch/log push failures. `ScheduleNotifications` resolves recipients after commit, and a failed push leaves the command result intact. `ActiveAdmins.IdsAsync` reads Admin recipients; no group membership cache decides access.
 
 ---
 

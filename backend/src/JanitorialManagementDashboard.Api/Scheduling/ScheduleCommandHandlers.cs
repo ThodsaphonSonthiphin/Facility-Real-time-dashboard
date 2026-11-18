@@ -315,7 +315,7 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
         var weekStart = ScheduleRules.WeekStart(batch.WeekStart);
         var weekDates = Enumerable.Range(0, 7).Select(offset => weekStart.AddDays(offset)).ToList();
         var slots = new List<ScheduleSlotKey>();
-        var scopes = new List<ScheduleScopeKey>();
+        var datedScopes = new List<ScheduleScopedDate>();
         foreach (var row in batch.Rows)
         {
             // Controller ruling: the week header has no anchor of its own, so the slot of every date whose choice this row
@@ -346,12 +346,12 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
                 slots.Add(new ScheduleSlotKey(row.UserId, date, target.Shift));
                 if (target.BuildingId is int buildingId)
                 {
-                    scopes.Add(new ScheduleScopeKey(buildingId, target.Shift));
+                    datedScopes.Add(new ScheduleScopedDate(new ScheduleScopeKey(buildingId, target.Shift), date));
                 }
             }
         }
 
-        return new ScheduleCommandLockSet(slots, [], scopes);
+        return new ScheduleCommandLockSet(slots, [], datedScopes.Select(item => item.Scope).Distinct().ToList(), datedScopes);
     }
 
     public override async Task<ScheduleCommandApplication> ValidateAndApplyAsync(
@@ -848,13 +848,15 @@ internal static class ScheduleBaselineWrite
             return ScheduleCommandLockSet.None;
         }
 
-        var scopes = new List<ScheduleScopeKey>();
+        var datedScopes = new List<ScheduleScopedDate>();
         foreach (var row in rows)
         {
-            scopes.AddRange(await ReadScopesAsync(row, db, ct));
+            var scopes = await ReadScopesAsync(row, db, ct);
+            datedScopes.AddRange(scopes.Select(scope => new ScheduleScopedDate(scope, row.EffectiveFrom)));
         }
 
-        return new ScheduleCommandLockSet([], rows.Select(row => row.UserId).ToList(), scopes);
+        return new ScheduleCommandLockSet([], rows.Select(row => row.UserId).ToList(),
+            datedScopes.Select(item => item.Scope).Distinct().ToList(), datedScopes);
     }
 
     private static async Task<List<ScheduleScopeKey>> ReadScopesAsync(

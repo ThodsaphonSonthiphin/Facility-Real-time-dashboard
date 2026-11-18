@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using JanitorialManagementDashboard.Api.Hubs;
 using JanitorialManagementDashboard.Api.Scheduling;
+using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
@@ -85,6 +86,81 @@ public class ScheduleLiveTests
         var field = Assert.Single(ownerPayload.EnumerateObject());
         Assert.Equal("commandid", field.Name.ToLowerInvariant());
         Assert.Equal(answer.CommandId, field.Value.GetGuid());
+    }
+
+    [Fact]
+    public async Task A_day_change_is_not_pushed_to_an_active_night_supervisor_of_the_same_building()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        await TestData.AddSupervisorAsync(factory, "2000003", "0820000003", "A", Shift.Night);
+        await TestData.AddSupervisorScopeAsync(factory, "2000003", "A", Shift.Night, new DateOnly(2026, 10, 1));
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (day, dayAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var (_, nightAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000003", "0820000003");
+        ScheduleWriteApi.Today(factory);
+
+        await using var dayHub = await HubClient.ConnectAsync(factory, dayAuth.AccessToken);
+        await using var nightHub = await HubClient.ConnectAsync(factory, nightAuth.AccessToken);
+        var dayGot = Listen(dayHub);
+        var nightGot = Listen(nightHub);
+        var (response, answer) = await ScheduleWriteApi.ExecuteAsync(day, ScheduleWriteApi.SetWeeklyDaysOff, Payload(person));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var delivered = await dayGot.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(answer!.CommandId, delivered.GetProperty("commandId").GetGuid());
+        await Assert.ThrowsAsync<TimeoutException>(() => nightGot.Task.WaitAsync(TimeSpan.FromMilliseconds(500)));
+    }
+
+    [Fact]
+    public async Task A_legacy_scope_only_supervisor_is_not_notified_of_a_historical_change()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (_, supervisorAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var (_, cleanerAuth, _) = await AuthApi.LoggedInAsync(factory);
+        ScheduleWriteApi.Today(factory);
+
+        await using var supervisorHub = await HubClient.ConnectAsync(factory, supervisorAuth.AccessToken);
+        await using var cleanerHub = await HubClient.ConnectAsync(factory, cleanerAuth.AccessToken);
+        var supervisorGot = Listen(supervisorHub);
+        var cleanerGot = Listen(cleanerHub);
+        var (response, answer) = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetWeeklyDaysOff, new
+        {
+            weekStart = "2026-11-09",
+            rows = new[] { new { userId = person, offDates = new[] { "2026-11-12" } } },
+            reason = "แก้รายการย้อนหลัง",
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var delivered = await cleanerGot.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(answer!.CommandId, delivered.GetProperty("commandId").GetGuid());
+        await Assert.ThrowsAsync<TimeoutException>(() => supervisorGot.Task.WaitAsync(TimeSpan.FromMilliseconds(500)));
+    }
+
+    [Fact]
+    public async Task A_future_baseline_change_invalidates_the_affected_cleaners_schedule()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001", breakGroup: 1);
+        var area = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (_, cleanerAuth, _) = await AuthApi.LoggedInAsync(factory);
+        ScheduleWriteApi.Today(factory);
+
+        await using var cleanerHub = await HubClient.ConnectAsync(factory, cleanerAuth.AccessToken);
+        var cleanerGot = Listen(cleanerHub);
+        var (response, answer) = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
+        {
+            userId = person,
+            effectiveFrom = "2026-12-02",
+            days = new[] { new { weekday = "Tuesday", areaId = area, breakGroup = 2 } },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var delivered = await cleanerGot.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(answer!.CommandId, delivered.GetProperty("commandId").GetGuid());
     }
 
     [Fact]

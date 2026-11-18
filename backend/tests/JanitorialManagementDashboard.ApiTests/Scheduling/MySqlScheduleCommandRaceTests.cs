@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Auth;
@@ -81,6 +82,84 @@ public class MySqlScheduleCommandRaceTests
         Assert.Equal(1, (await check.WeeklyDayOffs.SingleAsync()).Revision);
         Assert.Single(await check.ScheduleCommandReceipts.ToListAsync());
         Assert.Single(await check.ScheduleChanges.ToListAsync());
+    }
+
+    [MySqlFact]
+    public async Task Two_destination_supervisors_cannot_both_assign_the_same_relief_cleaner()
+    {
+        await FreshDatabaseAsync();
+        var date = Week.AddDays(1);
+        var now = new DateTimeOffset(2026, 11, 17, 6, 0, 0, TimeSpan.Zero);
+        var clock = new TestTimeProvider(now);
+        var tokenService = new ScheduleCommandTokenService(TestKey);
+        var gate = new TwoArrivals();
+        await using var setup = new AppDbContext(Options());
+        var first = await setup.Users.SingleAsync(user => user.EmployeeId == "2000001");
+        var buildingB = new Building { Code = "RACEB", Name = "Destination B", CreatedAt = now.UtcDateTime };
+        var source = new Building { Code = "RACEC", Name = "Source", CreatedAt = now.UtcDateTime };
+        var second = Staff("2600002", UserRole.Supervisor, buildingB);
+        var sourceSupervisor = Staff("2600003", UserRole.Supervisor, source);
+        var person = Staff("1600001", UserRole.Cleaner, null);
+        var destination = new Area
+        {
+            Building = buildingB, Code = "RACE02", Name = "Destination 2",
+            ShiftPattern = ShiftPattern.DayAndNight, CreatedAt = now.UtcDateTime,
+        };
+        setup.AddRange(second, sourceSupervisor, person, destination);
+        await setup.SaveChangesAsync();
+        setup.SupervisorScopePeriods.AddRange(Scope(first), Scope(second), Scope(sourceSupervisor));
+        setup.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+        {
+            UserId = person.Id, Kind = CleanerKind.Relief, HomeBuildingId = source.Id, Shift = Shift.Day,
+            EffectiveFrom = Week, CreatedAt = now.UtcDateTime, UpdatedAt = now.UtcDateTime,
+        });
+        await setup.SaveChangesAsync();
+        var firstArea = await setup.Areas.SingleAsync(area => area.Code == "AR01");
+
+        var results = await Task.WhenAll(AssignAsync(first.Id, firstArea.Id), AssignAsync(second.Id, destination.Id));
+        var winner = Assert.Single(results, result => result.Outcome == ScheduleCommandOutcome.Committed);
+        var loser = Assert.Single(results, result => result.Outcome == ScheduleCommandOutcome.Rejected);
+        Assert.Equal(2, gate.Arrivals);
+        Assert.Equal(ScheduleCommandErrorCode.StaleRevision, Assert.Single(loser.Problems).Code);
+
+        await using var check = new AppDbContext(Options());
+        var assignment = Assert.Single(await check.ReliefAssignments.ToListAsync());
+        var applied = Assert.Single(await check.ScheduleCommandReceipts.ToListAsync());
+        var change = Assert.Single(await check.ScheduleChanges.ToListAsync());
+        Assert.Equal(winner.CommandId, applied.CommandId);
+        Assert.Equal(person.Id, assignment.UserId);
+        Assert.Equal(applied.ActorId == first.Id ? firstArea.Id : destination.Id, assignment.AreaId);
+        Assert.Equal(applied.ActorId, assignment.CreatedById);
+        Assert.Equal(sourceSupervisor.Id, assignment.SourceSupervisorId);
+        Assert.Equal(applied.Id, change.ReceiptId);
+
+        User Staff(string employeeId, UserRole role, Building? building) => new()
+        {
+            EmployeeId = employeeId, DisplayName = employeeId, SecretHash = first.SecretHash,
+            Role = role, Building = building, Shift = Shift.Day, CreatedAt = now.UtcDateTime,
+        };
+
+        SupervisorScopePeriod Scope(User supervisor) => new()
+        {
+            SupervisorId = supervisor.Id, BuildingId = supervisor.BuildingId!.Value, Shift = Shift.Day,
+            EffectiveFrom = Week, CreatedAt = now.UtcDateTime, UpdatedAt = now.UtcDateTime,
+        };
+
+        async Task<CommandResult> AssignAsync(int actorId, int areaId)
+        {
+            await using var db = new AppDbContext(Options());
+            var store = new ScheduleStore(db, clock);
+            var handler = new GatedReliefHandler(new AssignReliefHandler(clock, store), gate);
+            var service = new ScheduleCommandService(db, store, tokenService, [handler], new SilentNotifier(), clock);
+            var token = tokenService.Issue(actorId, now);
+            return await service.ExecuteAsync(actorId, new ScheduleCommandEnvelope(
+                token.Value, token.Id, new Dictionary<string, string> { [ScheduleRevisionKeys.Relief(person.Id, date, Shift.Day)] = "0" },
+                handler.Kind, JsonSerializer.SerializeToElement(new
+                {
+                    userId = person.Id, areaId, shiftDate = date, shift = "Day", breakGroup = 1,
+                    sourceBuildingId = source.Id, sourceSupervisorId = sourceSupervisor.Id, agreementReported = true,
+                })));
+        }
     }
 
     [MySqlFact]
@@ -232,6 +311,22 @@ public class MySqlScheduleCommandRaceTests
             Task.FromResult(ScheduleCommandLockSet.None);
 
         protected override Task BeforeApplyAsync() => gate.WaitAsync();
+    }
+
+    private sealed class GatedReliefHandler(AssignReliefHandler handler, TwoArrivals gate) : IScheduleCommandHandler
+    {
+        public string Kind => handler.Kind;
+
+        public async Task<ScheduleCommandLockSet> PlanLocksAsync(
+            ScheduleCommandRequest request, AppDbContext db, CancellationToken ct = default)
+        {
+            await gate.WaitAsync().WaitAsync(TimeSpan.FromSeconds(15), ct);
+            return await handler.PlanLocksAsync(request, db, ct);
+        }
+
+        public Task<ScheduleCommandApplication> ValidateAndApplyAsync(
+            ScheduleCommandRequest request, ScheduleCommandReceipt receipt, AppDbContext db, CancellationToken ct = default) =>
+            handler.ValidateAndApplyAsync(request, receipt, db, ct);
     }
 
     private sealed class SilentNotifier : IScheduleCommandNotifier

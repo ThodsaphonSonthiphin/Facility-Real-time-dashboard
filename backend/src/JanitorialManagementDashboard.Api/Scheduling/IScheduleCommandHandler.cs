@@ -64,7 +64,8 @@ public sealed record ScheduleCommandRequest(
 public sealed record ScheduleCommandLockSet(
     IReadOnlyList<ScheduleSlotKey> Slots,
     IReadOnlyList<int> BaselineHeads,
-    IReadOnlyList<ScheduleScopeKey> Scopes)
+    IReadOnlyList<ScheduleScopeKey> Scopes,
+    IReadOnlyList<ScheduleScopedDate>? DatedScopes = null)
 {
     /// <summary>A command that needs no anchor at all; it still runs in the transaction, it just has nothing to exclude.</summary>
     public static ScheduleCommandLockSet None { get; } = new([], [], []);
@@ -75,6 +76,9 @@ public sealed record ScheduleSlotKey(int PersonId, DateOnly ShiftDate, Shift Shi
 
 /// <summary>One building and shift, the identity <see cref="ScheduleScopeAnchor"/> is unique on.</summary>
 public sealed record ScheduleScopeKey(int BuildingId, Shift Shift);
+
+/// <summary>Associates a command's building/shift with the date it affects, independently of the shared scope lock.</summary>
+public sealed record ScheduleScopedDate(ScheduleScopeKey Scope, DateOnly Date);
 
 /// <summary>
 /// Spec §11: what a handler reports after validating every row. Non-empty <see cref="Problems"/> means "refuse the whole

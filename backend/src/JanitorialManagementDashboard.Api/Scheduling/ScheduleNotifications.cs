@@ -15,10 +15,12 @@ namespace JanitorialManagementDashboard.Api.Scheduling;
 /// </summary>
 public sealed record ScheduleChangeScope(
     IReadOnlyList<ScheduleSlotKey> Slots,
-    IReadOnlyList<ScheduleScopeKey> Scopes)
+    IReadOnlyList<ScheduleScopeKey> Scopes,
+    IReadOnlyList<int> BaselinePeople,
+    IReadOnlyList<ScheduleScopedDate>? DatedScopes = null)
 {
-    /// <summary>A command that touched no slot and no scope still commits; it simply has nobody to refresh.</summary>
-    public static ScheduleChangeScope None { get; } = new([], []);
+    /// <summary>A command that touched no slot and no scope has no affected staff to refresh.</summary>
+    public static ScheduleChangeScope None { get; } = new([], [], []);
 }
 
 /// <summary>Spec §12: the whole pushed payload — the identity of the command, never a person or a schedule value.</summary>
@@ -64,21 +66,23 @@ public sealed class ScheduleNotifications(IHubContext<ScanHub> hub, AppDbContext
     {
         var businessDate = ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
 
-        // The affected dates decide which dated Supervisor period is responsible; a command that edited configuration
-        // rather than a slot is judged against today, which is the date its authority came from.
         var slots = scope.Slots.Distinct().ToList();
-        var dates = slots.Select(slot => slot.ShiftDate).Distinct().ToList();
-        if (dates.Count == 0)
-        {
-            dates.Add(businessDate);
-        }
-
         var ids = new HashSet<int>(slots.Select(slot => slot.PersonId));
-        foreach (var building in await BuildingsAsync(scope, slots, ct))
+        ids.UnionWith(scope.BaselinePeople);
+        foreach (var (target, date) in await TargetsAsync(scope, slots, businessDate, ct))
         {
-            foreach (var date in dates)
+            var affected = await ScheduleScopeReader.SupervisorsOfAsync(
+                db, target.BuildingId, date, target.Shift, includeCompatibility: date >= businessDate, ct);
+            if (date < businessDate)
             {
-                ids.UnionWith(await ScheduleScopeReader.SupervisorsOfAsync(db, building, date, ct));
+                // Historical schedule reads also require responsibility for the same building and shift today.
+                var current = await ScheduleScopeReader.SupervisorsOfAsync(
+                    db, target.BuildingId, businessDate, target.Shift, includeCompatibility: true, ct);
+                ids.UnionWith(affected.Intersect(current));
+            }
+            else
+            {
+                ids.UnionWith(affected);
             }
         }
 
@@ -102,13 +106,15 @@ public sealed class ScheduleNotifications(IHubContext<ScanHub> hub, AppDbContext
     /// lock only the person's slot (the Area rows are the instruction's own identity), so their building views would
     /// otherwise never learn that the person moved.
     /// </summary>
-    private async Task<IReadOnlyCollection<int>> BuildingsAsync(
-        ScheduleChangeScope scope, IReadOnlyList<ScheduleSlotKey> slots, CancellationToken ct)
+    private async Task<IReadOnlyCollection<ScheduleScopedDate>> TargetsAsync(
+        ScheduleChangeScope scope, IReadOnlyList<ScheduleSlotKey> slots, DateOnly businessDate, CancellationToken ct)
     {
-        var buildings = new HashSet<int>(scope.Scopes.Select(key => key.BuildingId));
+        var datesByShift = slots.ToLookup(slot => slot.Shift, slot => slot.ShiftDate);
+        var targets = (scope.DatedScopes ?? scope.Scopes.SelectMany(key => datesByShift[key.Shift].DefaultIfEmpty(businessDate)
+            .Select(date => new ScheduleScopedDate(key, date))).ToList()).ToHashSet();
         if (slots.Count == 0)
         {
-            return buildings;
+            return targets;
         }
 
         var personIds = slots.Select(slot => slot.PersonId).Distinct().ToList();
@@ -126,7 +132,7 @@ public sealed class ScheduleNotifications(IHubContext<ScanHub> hub, AppDbContext
                 .MaxBy(profile => profile.EffectiveFrom)?.HomeBuildingId;
             if (home is int building)
             {
-                buildings.Add(building);
+                targets.Add(new ScheduleScopedDate(new ScheduleScopeKey(building, slot.Shift), slot.ShiftDate));
             }
 
             var areas = await db.AreaTransfers.AsNoTracking()
@@ -141,10 +147,11 @@ public sealed class ScheduleNotifications(IHubContext<ScanHub> hub, AppDbContext
 
             var areaIds = areas.Select(area => area.FromAreaId)
                 .Concat(areas.Select(area => area.ToAreaId)).Distinct().ToList();
-            buildings.UnionWith(await db.Areas.AsNoTracking()
-                .Where(area => areaIds.Contains(area.Id)).Select(area => area.BuildingId).ToListAsync(ct));
+            var buildings = await db.Areas.AsNoTracking().Where(area => areaIds.Contains(area.Id))
+                .Select(area => area.BuildingId).Distinct().ToListAsync(ct);
+            targets.UnionWith(buildings.Select(id => new ScheduleScopedDate(new ScheduleScopeKey(id, slot.Shift), slot.ShiftDate)));
         }
 
-        return buildings;
+        return targets;
     }
 }
