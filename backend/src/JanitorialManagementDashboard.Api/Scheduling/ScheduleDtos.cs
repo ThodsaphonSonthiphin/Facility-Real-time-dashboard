@@ -33,6 +33,20 @@ public sealed record CommandResult(
 public sealed record RowProblem(string RowId, string Code, string Message);
 
 /// <summary>
+/// Spec §9 and ADR facility-0204: the phone location submitted with a transfer arrival confirmation. It is the same reading
+/// every scan sends, and it is validated by the existing <c>GpsInput</c> policy — a value that is missing is refused and a
+/// coarse one is stored and flagged, never silently accepted as precise.
+/// </summary>
+public sealed record GpsInputDto(double? Latitude, double? Longitude, double? AccuracyM);
+
+/// <summary>
+/// Spec §9 and A24: the answer of a destination arrival confirmation — the instruction it belongs to, its state word, the
+/// actual server time of the arrival (never the instruction's effective time) and the revision that identifies this exact
+/// state of the instruction.
+/// </summary>
+public sealed record TransferResult(int Id, string State, DateTimeOffset? ConfirmedAt, string Revision);
+
+/// <summary>
 /// Spec §11: the outcomes a schedule command can report. Only <see cref="Committed"/> means the stored facts changed;
 /// everything else leaves the database exactly as it was, so a client can never treat a refusal as a completed write.
 /// </summary>

@@ -47,6 +47,20 @@ public static class ScheduleCommandKinds
     /// kind in this task: a second live row for the same person and slot is a conflict, never an automatic move.
     /// </summary>
     public const string AssignRelief = "assign-relief";
+
+    /// <summary>
+    /// Spec §9 and ADRs facility-0203/0204 (Task 10): a Supervisor's instruction to move a person who has already entered
+    /// work from one Area to another, with the plan time it takes effect. It is not a departure scan and it records no
+    /// arrival: the person confirms that once at the destination sign.
+    /// </summary>
+    public const string InstructTransfer = "instruct-transfer";
+
+    /// <summary>
+    /// Spec §9 and ADR facility-0213 (Task 10): the cancellation of an instruction nobody has arrived under yet. It is an
+    /// ordinary command kind — the same envelope, the same receipt and the same audit shape — and it keeps the row as
+    /// history instead of deleting it. A confirmed arrival can never be cancelled this way.
+    /// </summary>
+    public const string CancelTransfer = "cancel-transfer";
 }
 
 /// <summary>
@@ -80,6 +94,15 @@ public static class ScheduleRevisionKeys
     /// </summary>
     public static string Relief(int userId, DateOnly date, Shift shift) =>
         $"relief:{userId}:{Iso(date)}:{shift}";
+
+    /// <summary>
+    /// The transfer instruction of one person's slot (Task 10, spec §9): 0 when the slot has none. It names the instruction
+    /// the slot currently carries — a cancelled row keeps its own revision as history but holds no responsibility, and a
+    /// confirmed one is still the instruction the next forward move starts from, so both kinds of change are refused against
+    /// the same value a client read.
+    /// </summary>
+    public static string Transfer(int userId, DateOnly date, Shift shift) =>
+        $"transfer:{userId}:{Iso(date)}:{shift}";
 
     private static string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }
@@ -231,14 +254,17 @@ public abstract class ScheduleCommandHandler(TimeProvider clock) : IScheduleComm
 
     /// <summary>
     /// A reason a person typed: trimmed, 1–500 characters when it is required, and never longer than the stored column when
-    /// it is optional. Returns the trimmed text, or null with a message when it is unusable.
+    /// it is optional. Returns the trimmed text, or null with a message when it is unusable. <paramref name="whenMissing"/>
+    /// is the wording of this kind's own requirement, so each kind names the change it needs a reason for.
     /// </summary>
-    internal static string? ReadReason(string? reason, bool required, out string? problem)
+    internal static string? ReadReason(
+        string? reason, bool required, out string? problem,
+        string whenMissing = "ต้องระบุเหตุผลประกอบการแก้ไขแผนย้อนหลัง")
     {
         var trimmed = reason?.Trim();
         problem = trimmed switch
         {
-            null or "" when required => "ต้องระบุเหตุผลประกอบการแก้ไขแผนย้อนหลัง",
+            null or "" when required => whenMissing,
             { Length: > 500 } => "เหตุผลยาวเกิน 500 ตัวอักษร",
             _ => null,
         };
@@ -1393,6 +1419,17 @@ internal static class SchedulePayload
         int? BreakGroup, int SourceBuildingId, int? SourceSupervisorId, bool AgreementReported, string? Reason);
 
     /// <summary>
+    /// Spec §9 (Task 10): one midshift move as the client submits it. The slot is named by the person, the shift date and the
+    /// shift — never by the transfer id, which the server assigns — and the origin Area is the one the client read, which the
+    /// server still checks against the slot's current duty instead of trusting it.
+    /// </summary>
+    internal sealed record TransferRequest(int UserId, DateOnly ShiftDate, Shift Shift, int FromAreaId, int ToAreaId,
+        DateTimeOffset EffectiveAt, string? Reason);
+
+    /// <summary>Spec §9 and ADR facility-0213: the instruction a cancellation names, with the reason it was cancelled.</summary>
+    internal sealed record TransferCancel(int TransferId, string? Reason);
+
+    /// <summary>
     /// One optional numeric field, read as the three things JSON can say (controller ruling): the key is absent
     /// (<see cref="Present"/> false, nothing was asked), an explicit <c>null</c> (<see cref="Present"/> true, no value — a
     /// removal), or a value. A key that is present with anything else is not a removal and not a value: the payload is
@@ -1540,6 +1577,41 @@ internal static class SchedulePayload
 
         relief = new ReliefRequest(userId, areaId, shiftDate, shift, replacedUserId.Value, breakGroup.Value,
             sourceBuildingId, sourceSupervisorId.Value, agreementReported ?? false, OptionalString(payload, "reason"));
+        return true;
+    }
+
+    /// <summary>
+    /// The transfer instruction of spec §9 (Task 10). Every field is required: a move whose origin, destination, effective
+    /// time or reason is missing is not a command a person could have meant, so it is refused instead of defaulted.
+    /// </summary>
+    internal static bool TryReadTransfer(JsonElement payload, out TransferRequest transfer)
+    {
+        transfer = null!;
+        if (!TryInt(payload, "userId", out var userId)
+            || !TryDate(payload, "shiftDate", out var shiftDate)
+            || !TryShift(payload, out var shift)
+            || !TryInt(payload, "fromAreaId", out var fromAreaId)
+            || !TryInt(payload, "toAreaId", out var toAreaId)
+            || !TryInstant(payload, "effectiveAt", out var effectiveAt))
+        {
+            return false;
+        }
+
+        transfer = new TransferRequest(userId, shiftDate, shift, fromAreaId, toAreaId, effectiveAt,
+            OptionalString(payload, "reason"));
+        return true;
+    }
+
+    /// <summary>The cancellation payload of spec §9: the instruction it names, and the reason kept on its row.</summary>
+    internal static bool TryReadTransferCancel(JsonElement payload, out TransferCancel cancel)
+    {
+        cancel = null!;
+        if (!TryInt(payload, "transferId", out var transferId))
+        {
+            return false;
+        }
+
+        cancel = new TransferCancel(transferId, OptionalString(payload, "reason"));
         return true;
     }
 

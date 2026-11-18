@@ -406,6 +406,49 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         db.ReliefAssignments.AsNoTracking().FirstOrDefaultAsync(row => row.UserId == userId
             && row.ShiftDate == date && row.Shift == shift && !row.IsCancelled, ct);
 
+    /// <summary>
+    /// Spec §9 and ADRs facility-0203/0204/0213: the one small read of a slot's midshift transfer — the latest instruction
+    /// (cancelled or not, because a cancellation is history the screen still shows), its confirmation when somebody arrived
+    /// under it, and the destination the last confirmed instruction actually moved responsibility to, or null when the slot
+    /// has no instruction at all.
+    /// <para>
+    /// The chain matters after a confirmed arrival: a later forward instruction is a new row (ADR facility-0213), so the
+    /// destination of the last confirmed row is where the person still is until the forward instruction takes effect or is
+    /// cancelled. Reading only the latest row would answer the plan's original Area in between, which is never where that
+    /// person is. It reads one slot rather than the week: the week projection already assembles
+    /// <see cref="Application.Scheduling.TransferFact"/> rows for the roster.
+    /// </para>
+    /// </summary>
+    public async Task<SlotTransfer?> ReadSlotTransferAsync(
+        int personId, DateOnly date, Shift shift, CancellationToken ct = default)
+    {
+        var instructions = await db.AreaTransfers.AsNoTracking()
+            .Where(row => row.PersonId == personId && row.ShiftDate == date && row.Shift == shift)
+            .OrderBy(row => row.Id)
+            .ToListAsync(ct);
+        if (instructions.Count == 0)
+        {
+            return null;
+        }
+
+        var ids = instructions.Select(row => row.Id).ToList();
+        var confirmations = await db.AreaTransferConfirmations.AsNoTracking()
+            .Where(row => ids.Contains(row.TransferId))
+            .ToListAsync(ct);
+
+        var latest = instructions[^1];
+        // A confirmed arrival is evidence that stays: the latest confirmed row is where responsibility has actually moved to,
+        // and a forward instruction or a cancelled one only builds on it.
+        var lastConfirmedAreaId = instructions
+            .Where(row => confirmations.Exists(confirmation => confirmation.TransferId == row.Id))
+            .Select(row => (int?)row.ToAreaId)
+            .LastOrDefault();
+        return new SlotTransfer(
+            latest,
+            confirmations.FirstOrDefault(confirmation => confirmation.TransferId == latest.Id),
+            lastConfirmedAreaId);
+    }
+
     /// <summary>The live leave row of one person's slot: an agreed absence that no plan may quietly work through.</summary>
     public Task<bool> HasLiveLeaveAsync(
         int userId, DateOnly date, Shift shift, CancellationToken ct = default) =>
@@ -1022,3 +1065,15 @@ public sealed class ScheduleConflictException(string code)
 {
     public string Code { get; } = code;
 }
+
+/// <summary>
+/// Spec §9: one slot's midshift transfer as it is stored — the latest instruction, the single confirmation recorded under
+/// that instruction if any, and the destination of the most recent confirmed instruction. Nothing here decides what the
+/// trio means: a cancelled instruction holds no responsibility, an unconfirmed one in force leaves no usable Area, a
+/// confirmed one makes its destination the duty, and a forward instruction builds on <see cref="LastConfirmedAreaId"/>
+/// until it takes effect.
+/// </summary>
+public sealed record SlotTransfer(
+    AreaTransfer Instruction,
+    AreaTransferConfirmation? Confirmation,
+    int? LastConfirmedAreaId = null);

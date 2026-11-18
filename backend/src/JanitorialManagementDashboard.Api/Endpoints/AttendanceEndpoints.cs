@@ -40,6 +40,15 @@ public static class AttendanceEndpoints
     /// <summary>The confirmed skip markers are not exactly the gaps reaching the requested action.</summary>
     public const string GapsNotConfirmed = "gaps-not-confirmed";
 
+    /// <summary>
+    /// Spec §9: an authorised transfer has taken effect and the destination arrival is not confirmed yet, so no actual action
+    /// belongs to either Area. The page shows "ยืนยันเข้าพื้นที่ใหม่" and the scan is retried after the confirmation.
+    /// </summary>
+    public const string TransferPending = "transfer-pending";
+
+    /// <summary>The message the pending-transfer conflict carries, so every consuming route says the same thing.</summary>
+    public const string TransferPendingMessage = "มีคำสั่งย้ายพื้นที่ที่มีผลแล้วแต่ยังไม่ได้ยืนยันเข้าพื้นที่ใหม่ กรุณายืนยันที่ป้ายของพื้นที่ปลายทางก่อนลงเวลา";
+
     private const string RefreshRequiredMessage = "หน้านี้ไม่ตรงกับการลงเวลาล่าสุด โหลดหน้าใหม่แล้วลองอีกครั้ง";
 
     public static IEndpointRouteBuilder MapAttendanceEndpoints(this IEndpointRouteBuilder app)
@@ -101,7 +110,16 @@ public static class AttendanceEndpoints
         // Spec §7 and ruling A: the sign's Area must be the slot's effective duty Area — a live relief assignment's Area, a
         // dated plan's Area, or the compatibility projection for a person with no dated identity. Home building alone grants
         // nothing, so a relief with no assignment is refused exactly as another Area's sign is refused today.
-        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, ct);
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, new DateTimeOffset(now, TimeSpan.Zero), ct);
+
+        // Spec §9: an instruction that has taken effect with no confirmed arrival leaves no Area to act in at all. Both the
+        // source's sign and the destination's are refused with the same conflict, and nothing is written — not an actual
+        // fact, not a Blocked Scan, not a gap marker: the destination becomes usable only through its own confirmation.
+        if (duty.IsTransferPending)
+        {
+            return TransferPendingRefusal();
+        }
+
         if (area.Id != duty.AreaId)
         {
             return await BlockedScans.BlockAsync(db, user, sign, area, BlockReason.OtherArea, gps, now);
@@ -244,7 +262,7 @@ public static class AttendanceEndpoints
             return new AttendanceStateDto(null, null, [], [], null);
         }
 
-        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, ct);
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, new DateTimeOffset(nowUtc, TimeSpan.Zero), ct);
         return (await AttendanceStateView.LoadAsync(db, user.Id, slot, duty, nowUtc, ct)).ToDto(duty, null);
     }
 
@@ -252,7 +270,7 @@ public static class AttendanceEndpoints
     internal static async Task<AttendanceStateDto> StateForSlotAsync(
         AppDbContext db, ScheduleStore store, User user, ShiftSlot slot, DateTime nowUtc, CancellationToken ct = default)
     {
-        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, ct);
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, new DateTimeOffset(nowUtc, TimeSpan.Zero), ct);
         return (await AttendanceStateView.LoadAsync(db, user.Id, slot, duty, nowUtc, ct)).ToDto(duty, null);
     }
 
@@ -271,5 +289,13 @@ public static class AttendanceEndpoints
         Results.Json(
             new AttendanceRefusedDto(message, state.NextActions.Select(choice => choice.Action).ToList(), code,
                 requiredGaps),
+            statusCode: StatusCodes.Status409Conflict);
+
+    /// <summary>
+    /// Spec §9: a pending transfer refuses every actual action, in either Area, with no allowed next actions — the only way
+    /// forward is the destination confirmation, which is its own route.
+    /// </summary>
+    private static IResult TransferPendingRefusal() =>
+        Results.Json(new AttendanceRefusedDto(TransferPendingMessage, [], TransferPending),
             statusCode: StatusCodes.Status409Conflict);
 }

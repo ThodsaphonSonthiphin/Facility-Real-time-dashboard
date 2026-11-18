@@ -110,6 +110,11 @@ try
     builder.Services.AddScoped<IScheduleCommandHandler, CancelLeaveHandler>();
     builder.Services.AddScoped<IScheduleCommandHandler, CorrectPlanHandler>();
     builder.Services.AddScoped<IScheduleCommandHandler, AssignReliefHandler>();
+    // Spec §9 (Task 10): the midshift Area transfer — one instruction kind and one cancellation kind, from the same base,
+    // plus the arrival confirmation that is the Cleaner's own actual fact rather than a management command.
+    builder.Services.AddScoped<IScheduleCommandHandler, InstructTransferHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, CancelTransferHandler>();
+    builder.Services.AddScoped<TransferCommandService>();
 
     if (!builder.Environment.IsEnvironment("Testing"))
         builder.Services.AddHostedService<RetentionWorker>();
@@ -233,6 +238,7 @@ try
     app.MapAuthEndpoints();
     app.MapMeEndpoints();
     app.MapAttendanceEndpoints();
+    app.MapAreaTransferEndpoints();
     app.MapServicePointEndpoints();
     app.MapScanRecordEndpoints();
     app.MapCoverAssignmentEndpoints();

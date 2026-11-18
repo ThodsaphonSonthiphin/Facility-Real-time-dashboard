@@ -67,6 +67,22 @@ public record AttendanceGapDto(AttendanceEvent EventType, string Status, string?
 public record AttendanceChoiceDto(AttendanceEvent Action, IReadOnlyList<AttendanceEvent> RequiredGaps);
 
 /// <summary>
+/// Spec §9: the slot's midshift transfer as the attendance read reports it, so a screen shows the instruction, the arrival
+/// evidence and the revision it must send back — and offers "ยืนยันเข้าพื้นที่ใหม่" only when the server says the transfer
+/// is the person's own and still pending. <see cref="State"/> is "instructed", "confirmed" or "cancelled";
+/// <see cref="ConfirmedAt"/> is the actual server time of the arrival and null until somebody arrived under it, because the
+/// plan's <see cref="EffectiveAt"/> is never an arrival time.
+/// </summary>
+public record AttendanceTransferDto(
+    int Id,
+    int FromAreaId,
+    int ToAreaId,
+    DateTime EffectiveAt,
+    string State,
+    DateTime? ConfirmedAt,
+    string Revision);
+
+/// <summary>
 /// ShiftDate and Shift are null, and the lists empty, outside every attendance window of the Cleaner's shift.
 /// <para>
 /// Task 9 extends the read additively (spec §8 and §11): <see cref="LifecycleVersion"/> is the slot's contract marker
@@ -79,6 +95,11 @@ public record AttendanceChoiceDto(AttendanceEvent Action, IReadOnlyList<Attendan
 /// <see cref="DutyAreaId"/>, <see cref="DutyBreakGroup"/> and <see cref="DutySource"/> are the slot's effective duty
 /// (spec §7): the Area the Cleaner is eligible in even on a recorded day off or leave, with <see cref="IsDayOff"/> and
 /// <see cref="IsLeave"/> as the conflict markers shown beside it.
+/// </para>
+/// <para>
+/// <see cref="Transfer"/> is the slot's midshift instruction (spec §9), null when the slot has none. While it is pending the
+/// duty Area is null and <see cref="DutySource"/> says "transfer-pending": neither Area accepts an actual action until the
+/// destination confirmation is recorded.
 /// </para>
 /// </summary>
 public record AttendanceStateDto(
@@ -96,7 +117,8 @@ public record AttendanceStateDto(
     int? DutyBreakGroup = null,
     string? DutySource = null,
     bool IsDayOff = false,
-    bool IsLeave = false);
+    bool IsLeave = false,
+    AttendanceTransferDto? Transfer = null);
 
 /// <summary>
 /// A refused write (spec §8, §11). <see cref="Code"/> is the machine word a page branches on — "refresh-required",

@@ -101,7 +101,7 @@ public static class TeamAttendanceEndpoints
 
         // Spec §7 and ruling A: the slot's effective duty Area is what an actual fact belongs to, and its building is what a
         // Supervisor's dated scope is asked about. A person with no duty Area cannot be corrected into one.
-        var duty = await EffectiveDutyReader.ReadAsync(db, store, person, slot, ct);
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, person, slot, clock.GetUtcNow(), ct);
         if (duty.AreaId is not { } areaId)
         {
             // Nothing to correct into. A Supervisor is not told even that much about somebody outside their scope: the answer

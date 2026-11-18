@@ -90,7 +90,15 @@ public static class ScanRecordEndpoints
         // identity. A day off or leave never removes that underlying eligible Area, so an eligible check-in can still
         // submit; nothing here adds a leave or day-off block of its own.
         // facility-0041: another Area still needs a Cover Assignment for this shift, exactly as before.
-        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, ct);
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, new DateTimeOffset(now, TimeSpan.Zero), ct);
+
+        // Spec §9: while an authorised transfer is in force and unconfirmed there is no Area the work belongs to, so a
+        // submission in either Area is refused and nothing is written. A submission is never evidence of arrival.
+        if (duty.IsTransferPending)
+        {
+            return ApiResults.Message(StatusCodes.Status409Conflict, AttendanceEndpoints.TransferPendingMessage);
+        }
+
         CoverAssignment? cover = null;
         if (point.AreaId != duty.AreaId)
         {

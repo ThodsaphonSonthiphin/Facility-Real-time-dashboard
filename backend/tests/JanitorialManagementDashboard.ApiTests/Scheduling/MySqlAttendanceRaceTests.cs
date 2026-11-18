@@ -153,7 +153,8 @@ public class MySqlAttendanceRaceTests
             await using var db = new AppDbContext(Options());
             var store = new ScheduleStore(db, TimeProvider.System);
             var person = await db.Users.SingleAsync(user => user.Id == personId);
-            return await EffectiveDutyReader.ReadAsync(db, store, person, Slot);
+            return await EffectiveDutyReader.ReadAsync(db, store, person, Slot,
+                new DateTimeOffset(2026, 11, 17, 3, 5, 0, TimeSpan.Zero));
         }
     }
 

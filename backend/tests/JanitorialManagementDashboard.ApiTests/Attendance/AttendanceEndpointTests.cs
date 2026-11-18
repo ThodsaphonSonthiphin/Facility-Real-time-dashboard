@@ -16,7 +16,14 @@ namespace JanitorialManagementDashboard.ApiTests.Attendance;
 
 public record AttendanceEntryModel(string EventType, DateTime OccurredAt, string Source, bool? WithinRadius);
 
-public record AttendanceStateModel(DateOnly? ShiftDate, string? Shift, List<AttendanceEntryModel> Events, List<string> NextEvents, string? Outcome);
+public record AttendanceStateModel(
+    DateOnly? ShiftDate,
+    string? Shift,
+    List<AttendanceEntryModel> Events,
+    List<string> NextEvents,
+    string? Outcome,
+    int? DutyAreaId = null,
+    string? DutySource = null);
 
 public record AttendanceRefusedModel(string Message, List<string> NextEvents);
 

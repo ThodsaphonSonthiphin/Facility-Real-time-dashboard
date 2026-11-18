@@ -135,7 +135,7 @@ internal sealed record AttendanceSlotState(
     IReadOnlyList<AttendanceGapDto> Gaps,
     IReadOnlyList<AttendanceChoiceDto> NextActions)
 {
-    /// <summary>The wire shape, with the effective duty the state was read against (spec §7).</summary>
+    /// <summary>The wire shape, with the effective duty the state was read against (spec §7) and its transfer (spec §9).</summary>
     public AttendanceStateDto ToDto(EffectiveDuty duty, AttendanceOutcome? outcome) => new(
         Slot.ShiftDate,
         Slot.Shift,
@@ -151,5 +151,9 @@ internal sealed record AttendanceSlotState(
         duty.BreakGroup,
         duty.Source,
         duty.IsDayOff,
-        duty.IsLeave);
+        duty.IsLeave,
+        duty.Transfer is { } transfer
+            ? new AttendanceTransferDto(transfer.Id, transfer.FromAreaId, transfer.ToAreaId,
+                transfer.EffectiveAt.UtcDateTime, transfer.State, transfer.ConfirmedAt?.UtcDateTime, transfer.Revision)
+            : null);
 }

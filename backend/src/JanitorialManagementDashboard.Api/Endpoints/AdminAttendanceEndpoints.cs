@@ -120,7 +120,8 @@ public static class AdminAttendanceEndpoints
         // Spec §7, §8 and ruling H: the added row's Area is the slot's effective duty Area for that date — a relief
         // assignment or the dated plan — and today's account Area only answers when no dated identity exists at all. It is
         // never the historical Area of a day the plan knows about.
-        var duty = await EffectiveDutyReader.ReadAsync(db, store, cleaner, slot, ct);
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, cleaner, slot,
+            new DateTimeOffset(now, TimeSpan.Zero), ct);
         if (existing is null && duty.AreaId is null)
         {
             return Bad("แม่บ้านคนนี้ยังไม่มีพื้นที่");

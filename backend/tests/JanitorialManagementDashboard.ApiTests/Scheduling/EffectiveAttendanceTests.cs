@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using JanitorialManagementDashboard.Api.Endpoints;
 using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Attendance;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
@@ -175,6 +176,146 @@ public class EffectiveAttendanceTests
         Assert.Equal("compatibility", state.DutySource);
         Assert.Null(state.DutyBreakGroup);
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // Spec §9: a confirmed transfer moves the duty, a pending one removes it.
+    // ---------------------------------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task The_duty_follows_the_confirmed_transfer_and_a_pending_one_refuses_every_area()
+    {
+        // The transfer tests' factory: the instruction is an ordinary schedule command, and /api/schedules — command token
+        // included — only exists when scheduling is activated, which this factory's SchedulingSettings does.
+        using var factory = TransferApi.NewFactory();
+        await TestData.AddAreaAsync(factory, "AR03", "A");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", new DateOnly(2026, 10, 1), "AR01");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var destination = await AdminSetupApi.AreaIdAsync(factory, "AR03");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, TransferApi.Thai(7, 5), "ShiftIn");
+
+        // Before the instruction the duty is the plan's Area, with its own source word.
+        var beforeInstruction = await EffectiveAttendanceApi.StateAsync(cleaner);
+        Assert.Equal(origin, beforeInstruction.DutyAreaId);
+        Assert.Equal("baseline", beforeInstruction.DutySource);
+        Assert.Null(beforeInstruction.Transfer);
+
+        var transferId = await TransferApi.InstructForIdAsync(
+            factory, admin, auth.User.Id, origin, destination, TransferApi.Thai(13, 0));
+
+        // The instruction has taken effect and nobody has arrived: there is no usable duty Area in either Area.
+        factory.Clock.SetUtcNow(TransferApi.Thai(13, 1));
+        var pending = await EffectiveAttendanceApi.StateAsync(cleaner);
+        Assert.Null(pending.DutyAreaId);
+        Assert.Equal("transfer-pending", pending.DutySource);
+        Assert.Equal("instructed", pending.Transfer!.State);
+        Assert.Null(pending.Transfer.ConfirmedAt);
+        Assert.Equal(origin, pending.Transfer.FromAreaId);
+        Assert.Equal(destination, pending.Transfer.ToAreaId);
+
+        // Both Areas refuse an actual action with the pending-transfer conflict itself — not a window or ordering refusal —
+        // and neither leaves a fact behind: an instruction alone is never entry evidence at B.
+        var atOriginWhilePending = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", "token-checkin-ar01");
+        var atDestinationWhilePending = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", "token-checkin-ar03");
+        Assert.Equal(HttpStatusCode.Conflict, atOriginWhilePending.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, atDestinationWhilePending.StatusCode);
+        Assert.Equal("transfer-pending",
+            (await atOriginWhilePending.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+        Assert.Equal("transfer-pending",
+            (await atDestinationWhilePending.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+        Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
+
+        // The confirmation is the only path to the destination, and afterwards A is refused while B is the duty.
+        var confirmedAt = TransferApi.Thai(13, 5);
+        await TransferApi.ConfirmAsync(factory, cleaner, transferId, "1", at: confirmedAt);
+        factory.Clock.SetUtcNow(TransferApi.Thai(13, 6));
+        var confirmed = await EffectiveAttendanceApi.StateAsync(cleaner);
+        Assert.Equal(destination, confirmed.DutyAreaId);
+        Assert.Equal("transfer", confirmed.DutySource);
+        Assert.Equal("confirmed", confirmed.Transfer!.State);
+        Assert.Equal(confirmedAt.UtcDateTime, confirmed.Transfer.ConfirmedAt);
+
+        var refusedAtOrigin = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", "token-checkin-ar01");
+        var acceptedAtDestination = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", "token-checkin-ar03");
+        Assert.Equal(HttpStatusCode.Forbidden, refusedAtOrigin.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, acceptedAtDestination.StatusCode);
+
+        // ADR facility-0203: the stored facts keep the origin Area and the original minute on the one Shift-In and never add a
+        // second one; only the new action is the destination's, and the arrival itself is its own row, not an attendance one.
+        var facts = await EffectiveAttendanceApi.FactsAsync(factory);
+        Assert.Equal(new[] { AttendanceEvent.ShiftIn, AttendanceEvent.BreakOut }, facts.Select(fact => fact.EventType));
+        Assert.Single(facts, fact => fact.EventType == AttendanceEvent.ShiftIn);
+        Assert.Equal(origin, facts[0].AreaId);
+        Assert.Equal(TransferApi.Thai(7, 5).UtcDateTime, facts[0].OccurredAt);
+        Assert.Equal(destination, facts[1].AreaId);
+        var arrival = Assert.Single(await TransferApi.ConfirmationsAsync(factory));
+        Assert.Equal(transferId, arrival.TransferId);
+        Assert.Equal(destination, arrival.AreaId);
+        Assert.Equal(confirmedAt.UtcDateTime, arrival.OccurredAt);
+    }
+
+    /// <summary>A pending transfer refuses a work submission too: a Service Point submission is never arrival evidence.</summary>
+    [Fact]
+    public async Task A_pending_transfer_refuses_a_work_submission_in_either_area()
+    {
+        using var factory = TransferApi.NewFactory();
+        await TestData.AddAreaAsync(factory, "AR03", "A");
+        // Both points are this test's own: the seeded fixture already owns AR01-01 and token-restroom-m1, and both the sign
+        // code and the QR token are unique across every sign.
+        var originPoint = await TestData.AddPointAsync(factory, "AR01", "AR01-91", "token-pending-origin-point");
+        var destinationPoint = await TestData.AddPointAsync(factory, "AR03", "AR03-91", "token-pending-destination-point");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", new DateOnly(2026, 10, 1), "AR01");
+        var destination = await AdminSetupApi.AreaIdAsync(factory, "AR03");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await TransferApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
+        var transferId = await TransferApi.InstructForIdAsync(
+            factory, admin, auth.User.Id, origin, destination, TransferApi.Thai(13, 0));
+
+        // Spec §9: with the instruction in force and unconfirmed, a submission is refused in the source Area and in the
+        // destination alike, and neither writes anything — a Service Point submission is work, never arrival evidence.
+        factory.Clock.SetUtcNow(TransferApi.Thai(13, 1));
+        var atOrigin = await SubmitAsync(cleaner, "token-pending-origin-point");
+        var atDestination = await SubmitAsync(cleaner, "token-pending-destination-point");
+
+        Assert.Equal(HttpStatusCode.Conflict, atOrigin.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, atDestination.StatusCode);
+        // Both refusals are the transfer's own message, and they wrote nothing at all — no work record and no Blocked Scan:
+        // the destination is refused as "not confirmed yet", never as another Area's sign.
+        Assert.Equal(AttendanceEndpoints.TransferPendingMessage,
+            (await atOrigin.Content.ReadFromJsonAsync<MessageModel>())!.Message);
+        Assert.Equal(AttendanceEndpoints.TransferPendingMessage,
+            (await atDestination.Content.ReadFromJsonAsync<MessageModel>())!.Message);
+        Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.ScanRecords.AsNoTracking().ToListAsync()));
+        Assert.Empty(await EffectiveAttendanceApi.BlockedAsync(factory));
+
+        // Only the authorised confirmation moves the work: afterwards the destination point accepts a submission, while the
+        // source point is refused as another Area's sign and contributes no Scan Record either.
+        await TransferApi.ConfirmAsync(factory, cleaner, transferId, "1", at: TransferApi.Thai(13, 5));
+        factory.Clock.SetUtcNow(TransferApi.Thai(13, 10));
+        var refusedAtOrigin = await SubmitAsync(cleaner, "token-pending-origin-point");
+        var acceptedAtDestination = await SubmitAsync(cleaner, "token-pending-destination-point");
+
+        Assert.Equal(HttpStatusCode.Forbidden, refusedAtOrigin.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, acceptedAtDestination.StatusCode);
+        var stored = Assert.Single(await AdminSetupApi.ReadAsync(factory, db => db.ScanRecords.AsNoTracking().ToListAsync()));
+        Assert.Equal(destinationPoint, stored.ServicePointId);
+        Assert.NotEqual(originPoint, stored.ServicePointId);
+
+        static Task<HttpResponseMessage> SubmitAsync(HttpClient client, string token) =>
+            client.PostAsJsonAsync("/api/scan-records", new
+            {
+                qrToken = token,
+                status = "Normal",
+                latitude = TestGps.NearLatitude,
+                longitude = TestGps.NearLongitude,
+                accuracyM = 10,
+            });
+    }
 }
 
 /// <summary>The attendance calls and fixtures the Task 9 test files share: a slot lifecycle, a leave interval, and the state answer.</summary>
@@ -286,7 +427,7 @@ public record GapAnswer(string EventType, string Status, string? Reason, DateTim
 
 public record ChoiceAnswer(string Action, List<string> RequiredGaps);
 
-/// <summary>The whole attendance answer, including the members Task 9 added (all absent from an older answer).</summary>
+/// <summary>The whole attendance answer, including the members Task 9 and Task 10 added (absent from an older answer).</summary>
 public record AttendanceStateAnswer(
     DateOnly? ShiftDate,
     string? Shift,
@@ -302,7 +443,8 @@ public record AttendanceStateAnswer(
     int? DutyBreakGroup = null,
     string? DutySource = null,
     bool IsDayOff = false,
-    bool IsLeave = false)
+    bool IsLeave = false,
+    AttendanceTransferAnswer? Transfer = null)
 {
     public ActionAnswer Action(string eventType) =>
         Actions!.Single(action => action.EventType == eventType);

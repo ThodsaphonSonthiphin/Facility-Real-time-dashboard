@@ -1,8 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
+using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Attendance;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Scheduling;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.ApiTests.Points;
 
@@ -139,5 +143,34 @@ public class MyWorkEndpointTests
 
         Assert.Equal("Day", work.Attendance.Shift);
         Assert.Equal(new OwnShiftModel("Day", new TimeOnly(6, 0), new TimeOnly(20, 0)), work.OwnShift);
+    }
+
+    [Fact]
+    public async Task A_transferred_person_sees_the_destination_points_and_not_the_origin_ones()
+    {
+        // Spec §9 with spec §7: the Areas someone works come from the slot's effective duty, so after a confirmed transfer the
+        // destination's points are the person's work and the source's are not.
+        using var factory = TransferApi.NewFactory();
+        await TestData.AddAreaAsync(factory, "AR03", "A");
+        await TestData.AddPointAsync(factory, "AR03", "AR03-01", "token-ar03-point");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", new DateOnly(2026, 10, 1), "AR01");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var destination = await AdminSetupApi.AreaIdAsync(factory, "AR03");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await AttendanceApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
+        var transferId = await TransferApi.InstructForIdAsync(
+            factory, admin, auth.User.Id, origin, destination, TransferApi.Thai(13, 0));
+        await TransferApi.ConfirmAsync(factory, cleaner, transferId, "1", at: TransferApi.Thai(13, 5));
+
+        factory.Clock.SetUtcNow(TransferApi.Thai(13, 15));
+        var work = (await cleaner.GetFromJsonAsync<MyWorkModel>("/api/my-work"))!;
+
+        var area = Assert.Single(work.Areas);
+        Assert.Equal("AR03", area.AreaCode);
+        Assert.False(area.IsCover);
+        Assert.Equal(destination, work.Attendance.DutyAreaId);
+        Assert.Equal("transfer", work.Attendance.DutySource);
     }
 }
