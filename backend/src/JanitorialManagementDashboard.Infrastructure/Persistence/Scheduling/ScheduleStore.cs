@@ -375,7 +375,6 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     }
 
     /// <summary>The machine codes a relief lookup answers with, one per stored fact that blocks the assignment.</summary>
-    public const string ReliefShiftMismatch = "shift-mismatch";
 
     /// <summary>Another live relief assignment already holds the person's slot (spec §6: a second row is a conflict).</summary>
     public const string ReliefExistingAssignment = "existing-assignment";
@@ -659,7 +658,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     /// </summary>
     public async Task<ReliefCandidateFacts?> ReadReliefCandidateAsync(
         string? employeeId, int sourceBuildingId, DateOnly date, Shift shift, CancellationToken ct = default,
-        int? ownUserId = null, bool requireSameShift = false)
+        int? ownUserId = null)
     {
         var person = await db.Users.AsNoTracking().FirstOrDefaultAsync(user =>
             (ownUserId != null ? user.Id == ownUserId : user.EmployeeId == employeeId) && user.Role == UserRole.Cleaner && user.IsActive, ct);
@@ -670,7 +669,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
         var profile = await ReadProfileAsync(person.Id, date, ct);
         if (profile is not { Kind: CleanerKind.Relief } || profile.HomeBuildingId != sourceBuildingId
-            || (requireSameShift && profile.Shift != shift))
+            || profile.Shift != shift)
         {
             return null;
         }
@@ -684,13 +683,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             return null;
         }
 
-        var conflicts = new List<string>();
-        if (profile.Shift != shift)
-        {
-            conflicts.Add(ReliefShiftMismatch);
-        }
-
-        conflicts.AddRange(await ReliefConflictsAsync(person.Id, date, shift, ct));
+        var conflicts = await ReliefConflictsAsync(person.Id, date, shift, ct);
         return new ReliefCandidateFacts(person.Id, person.EmployeeId!, person.DisplayName, sourceBuildingId, code,
             profile.Shift, conflicts.Count == 0, conflicts.Count == 0 ? ReliefEligible : ReliefConflict, conflicts);
     }

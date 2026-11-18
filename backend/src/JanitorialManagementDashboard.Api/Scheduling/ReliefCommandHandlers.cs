@@ -297,7 +297,6 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
             "มีงานสแปร์ของคนนี้ในกะนี้อยู่แล้ว ต้องจัดงานเดิมให้ถูกก่อนจึงจะบันทึกใหม่ได้",
         ScheduleStore.ReliefOnLeave => "คนนี้มีบันทึกการลาของกะนี้อยู่ จึงยังมอบหมายงานสแปร์ไม่ได้",
         ScheduleStore.ReliefExistingDuty => "คนนี้มีงานประจำในกะนี้อยู่แล้ว ต้องจัดงานเดิมให้ถูกก่อน",
-        ScheduleStore.ReliefShiftMismatch => "กะที่ส่งมาไม่ตรงกับกะของคนนี้ในวันนั้น",
         _ => "มีข้อมูลที่ขัดกับการมอบหมายงานสแปร์นี้ ต้องจัดงานเดิมให้ถูกก่อน",
     };
 }

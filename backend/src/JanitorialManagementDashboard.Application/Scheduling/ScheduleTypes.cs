@@ -147,7 +147,7 @@ public sealed record ReliefAssignmentFact(int Id, int UserId, string DisplayName
 /// Spec §6 and A09: what a lookup for a relief of a named source building answers. It is the minimum a destination recorder
 /// needs — the stable identity, the home building, the dated shift and whether the person can be planned into the shift —
 /// so a search never becomes a way to read another team's schedule. <see cref="Conflicts"/> carries machine codes
-/// (<c>shift-mismatch</c>, <c>existing-assignment</c>, <c>existing-duty</c>, <c>on-leave</c>) and
+/// (<c>existing-assignment</c>, <c>existing-duty</c>, <c>on-leave</c>) and
 /// <see cref="Eligible"/> is exactly "no conflict at all".
 /// </summary>
 public sealed record ReliefCandidateFacts(int UserId, string EmployeeId, string DisplayName, int HomeBuildingId,

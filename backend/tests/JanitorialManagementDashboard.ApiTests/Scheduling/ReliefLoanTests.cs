@@ -103,6 +103,26 @@ public class ReliefLoanTests
     }
 
     [Fact]
+    public async Task A_destination_less_lookup_requires_manageable_dated_shift_and_omits_wrong_shift_identity()
+    {
+        using var factory = ReliefApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddBuildingAsync(factory, "B");
+        await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
+        await ReliefApi.AddReliefAsync(factory, admin, "E3002", "B", Shift.Night);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, ReliefApi.Wednesday);
+        var (actor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var source = await AdminSetupApi.BuildingIdAsync(factory, "B");
+        string Lookup(string employee, DateOnly date, string shift) =>
+            $"/api/schedules/relief-candidates?employeeId={employee}&sourceBuildingId={source}&date={ReliefApi.Iso(date)}&shift={shift}";
+
+        Assert.Equal(HttpStatusCode.OK, (await actor.GetAsync(Lookup("E3001", ReliefApi.Wednesday, "Day"))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await actor.GetAsync(Lookup("E3002", ReliefApi.Wednesday, "Day"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await actor.GetAsync(Lookup("E3002", ReliefApi.Wednesday, "Night"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await actor.GetAsync(Lookup("E3001", ReliefApi.Wednesday.AddDays(-1), "Day"))).StatusCode);
+    }
+
+    [Fact]
     public async Task A_named_source_supervisor_who_does_not_hold_the_source_building_is_refused()
     {
         using var factory = ReliefApi.NewFactory();

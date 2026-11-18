@@ -108,7 +108,6 @@ public class ReliefAssignmentTests
     }
 
     [Theory]
-    [InlineData(ScheduleStore.ReliefShiftMismatch)]
     [InlineData(ScheduleStore.ReliefExistingAssignment)]
     [InlineData(ScheduleStore.ReliefExistingDuty)]
     [InlineData(ScheduleStore.ReliefOnLeave)]
@@ -120,10 +119,7 @@ public class ReliefAssignmentTests
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await TestData.AddBuildingAsync(factory, "B");
         var sourceBuilding = await AdminSetupApi.BuildingIdAsync(factory, "B");
-        var relief = conflict == ScheduleStore.ReliefShiftMismatch
-            // The person belongs to B but works nights, so the day slot asked for is somebody else's.
-            ? await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Night)
-            : await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
+        var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
         switch (conflict)
         {
             case ScheduleStore.ReliefExistingAssignment:

@@ -14,7 +14,7 @@ export function ReliefAssignmentEditor(props: ReliefAssignmentEditorProps & { mo
   const size = props.phone ? 'phone' : 'desk';
   return (
     <ScheduleReview title={mode === 'loan' ? 'บันทึกการยืมสแปร์' : 'มอบหมายงานสแปร์'} editor={form}
-      reviewLabel="ตรวจทาน" latest={undefined} onCompare={form.compare} onUseLatest={form.useLatest}>
+      reviewLabel="ตรวจทาน" latest={form.latest} onCompare={form.compare} onUseLatest={form.useLatest}>
       {mode === 'loan' && <Note tone="info">ตกลงกับซุปตึกต้นทางก่อน แล้วจึงบันทึกงานที่นี่</Note>}
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <Field label="วันที่ทำงาน">

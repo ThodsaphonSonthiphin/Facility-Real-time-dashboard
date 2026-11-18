@@ -130,23 +130,27 @@ public static class ScheduleEndpoints
                 "ต้องระบุรหัสพนักงาน ตึกต้นทาง วันที่ และกะเช้าหรือกะดึกให้ครบ");
         }
 
+        var periods = await SupervisorScopes.ReadAsync(db, actor, clock, ct);
+        var today = ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
+        bool CanChange(int building) => shiftDate < today
+            ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, building, parsedShift, shiftDate, today, periods)
+            : ScheduleAuthority.CanManage(actor.Role, actor.Id, building, parsedShift, shiftDate, periods);
+
+        var destinations = db.Areas.AsNoTracking().Where(area => area.IsActive
+            && (parsedShift == Shift.Day || area.ShiftPattern != ShiftPattern.DayOnly));
         if (destinationAreaId is int areaId)
         {
-            var destination = await db.Areas.AsNoTracking().SingleOrDefaultAsync(area => area.Id == areaId && area.IsActive, ct);
-            var periods = await SupervisorScopes.ReadAsync(db, actor, clock, ct);
-            var today = ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
-            bool CanChange(int building) => shiftDate < today
-                ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, building, parsedShift, shiftDate, today, periods)
-                : ScheduleAuthority.CanManage(actor.Role, actor.Id, building, parsedShift, shiftDate, periods);
-            if (destination is null || !destination.HasShift(parsedShift) || !CanChange(destination.BuildingId)
-                || (ownUserId is not null && !CanChange(sourceBuildingId.Value)))
-            {
-                return Results.Forbid();
-            }
+            destinations = destinations.Where(area => area.Id == areaId);
+        }
+
+        var destinationBuildings = await destinations.Select(area => area.BuildingId).Distinct().ToListAsync(ct);
+        if (!destinationBuildings.Exists(CanChange) || (ownUserId is not null && !CanChange(sourceBuildingId.Value)))
+        {
+            return Results.Forbid();
         }
 
         var candidate = await store.ReadReliefCandidateAsync(employeeId?.Trim(), sourceBuildingId.Value,
-            shiftDate, parsedShift, ct, ownUserId, requireSameShift: destinationAreaId is not null);
+            shiftDate, parsedShift, ct, ownUserId);
         if (candidate is null)
         {
             return ApiResults.Message(StatusCodes.Status404NotFound,

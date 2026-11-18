@@ -4,12 +4,14 @@ import type { ReliefCandidate, RowProblem, ScheduleWeek } from '../../../shared/
 import { formatShiftDate } from '../../../shared/utils/thaiTime';
 import type { CommandDraft } from '../commandRules';
 import { useReliefLoanEditor } from '../ReliefLoanEditor/useReliefLoanEditor';
+import type { ScheduleChangeLine } from '../ScheduleReview/type';
 import { useScheduleReview } from '../ScheduleReview/useScheduleReview';
 import { clockSlot } from '../scheduleRules';
 import { useGetReliefCandidateQuery } from '../schedulesApi';
 import type { ReliefAssignmentEditorProps, ReliefAssignmentRequest } from './type';
 
 export function useReliefAssignmentEditor(props: ReliefAssignmentEditorProps, mode: 'own' | 'loan') {
+  const [baseWeek, setBaseWeek] = useState(props.week);
   const today = clockSlot(new Date()).startDate;
   const dates = [...new Set(props.week.destinations?.map((slot) => slot.date))].sort();
   const [date, setDate] = useState(dates.includes(today) ? today : dates[0] ?? '');
@@ -22,8 +24,9 @@ export function useReliefAssignmentEditor(props: ReliefAssignmentEditorProps, mo
   const [replacementId, setReplacement] = useState('');
   const [group, setGroup] = useState('');
   const [reason, setReason] = useState('');
-  const [attested, setAttested] = useState(false);
-  const [reviewed, setReviewed] = useState<ReliefCandidate>();
+  const [attestation, setAttestation] = useState<string>();
+  const [reviewed, setReviewed] = useState<{ candidate: ReliefCandidate; lines: ScheduleChangeLine[] }>();
+  const [compared, setCompared] = useState<{ week: ScheduleWeek; candidate: ReliefCandidate }>();
   const loan = useReliefLoanEditor();
 
   const destination = choices.find((slot) => slot.areas.some((option) => String(option.id) === area));
@@ -37,9 +40,9 @@ export function useReliefAssignmentEditor(props: ReliefAssignmentEditorProps, mo
       && row.days.some((day) => day.date === date && day.shift === shift && day.edit?.canChange
         && day.area.value === areaOption?.id && areaOption)) ?? [];
   }
-  const ownPeople = people(props.week);
+  const ownPeople = people(baseWeek);
   const person = ownPeople.find((row) => String(row.userId) === personId);
-  const replaced = replacements(props.week);
+  const replaced = replacements(baseWeek);
   const replacement = replaced.find((row) => String(row.userId) === replacementId);
   const inherited = replacement?.days.find((day) => day.date === date)?.breakGroup.value;
   const source = mode === 'own' ? person?.homeBuildingId : Number(loan.submitted?.sourceBuildingId);
@@ -52,6 +55,9 @@ export function useReliefAssignmentEditor(props: ReliefAssignmentEditorProps, mo
   const userId = candidate?.userId ?? person?.userId;
   const key = `relief:${userId ?? 'draft'}:${date}:${shift}`;
   const requiresAgreement = candidate?.agreementRequired === true;
+  const attestationKey = candidate && requiresAgreement
+    ? `${key}:${candidate.homeBuildingId}:${candidate.sourceSupervisorId ?? 'vacant'}` : undefined;
+  const attested = attestationKey !== undefined && attestation === attestationKey;
   const payload: ReliefAssignmentRequest = {
     userId: userId ?? 0, areaId: areaOption?.id ?? 0, shiftDate: date, shift, replacedUserId: replacement?.userId,
     breakGroup: group ? Number(group) : undefined, sourceBuildingId: source ?? 0,
@@ -71,21 +77,35 @@ export function useReliefAssignmentEditor(props: ReliefAssignmentEditorProps, mo
   }
   if (areaOption && date < today && !reason.trim()) problem('ระบุเหตุผลการแก้แผนย้อนหลัง');
 
-  function holdsScope(week: ScheduleWeek | undefined) {
+  function replacementDay(week: ScheduleWeek | undefined) {
+    return replacements(week).find((row) => String(row.userId) === replacementId)?.days.find((day) => day.date === date);
+  }
+
+  function hasScope(week: ScheduleWeek | undefined) {
     return !!week?.destinations?.some((slot) => slot.date === date && slot.shift === shift
       && slot.areas.some((option) => option.id === areaOption?.id))
-      && (!person || people(week).some((row) => row.userId === person.userId && row.homeBuildingId === source))
-      && (!replacement || replacements(week).some((row) => row.userId === replacement.userId
-        && row.days.find((day) => day.date === date)?.breakGroup.value === inherited));
+      && (!personId || people(week).some((row) => String(row.userId) === personId && row.homeBuildingId === source))
+      && (!replacementId || !!replacementDay(week));
   }
-  function matchesReviewed(next: ReliefCandidate | undefined) {
-    return !reviewed || !!next?.eligible && next.userId === reviewed.userId && next.revision === reviewed.revision
-      && next.sourceSupervisorId === reviewed.sourceSupervisorId && next.agreementRequired === reviewed.agreementRequired;
+
+  function matchesCandidate(expected: ReliefCandidate, next: ReliefCandidate | undefined) {
+    return !!next && next.eligible === expected.eligible && next.userId === expected.userId && next.revision === expected.revision
+      && next.sourceSupervisorId === expected.sourceSupervisorId && next.agreementRequired === expected.agreementRequired;
+  }
+
+  function facts(entry: ReliefCandidate | undefined, group: number | null | undefined) {
+    if (!entry) return 'ยังไม่ได้ตรวจสอบกะนี้';
+    return [
+      entry.eligible ? 'ยังไม่มีงานสแปร์ในกะนี้' : 'มีรายการที่ต้องตรวจสอบในกะนี้',
+      `รุ่น ${entry.revision ?? '—'}`,
+      group && `กลุ่มพักของคนที่แทน ${group}`,
+      entry.sourceSupervisorName && `ซุปตึกต้นทาง ${entry.sourceSupervisorName}`,
+    ].filter(Boolean).join(' · ');
   }
   const beforeAfter = areaOption ? [{
     id: key,
     label: `${candidate?.displayName ?? person?.displayName ?? 'แม่บ้านสแปร์'} · ${formatShiftDate(date)} · ${shift === 'Day' ? 'กะเช้า' : 'กะดึก'}`,
-    before: candidate?.eligible ? 'ยังไม่มีงานสแปร์ในกะนี้' : 'ตรวจสอบรายการของกะนี้',
+    before: facts(candidate, inherited),
     after: [
       `ตึก ${destination?.buildingCode} · ${areaOption.label}`,
       replacement ? `แทน ${replacement.displayName}` : 'งานสแปร์ไม่ได้แทนใคร',
@@ -96,47 +116,71 @@ export function useReliefAssignmentEditor(props: ReliefAssignmentEditorProps, mo
       payload.reason && `เหตุผล ${payload.reason}`,
     ].filter(Boolean).join(' · '),
   }] : [];
+  const latest = compared && !lookup.isFetching && hasScope(props.latest) && matchesCandidate(compared.candidate, candidate)
+    && replacementDay(props.latest)?.breakGroup.value === replacementDay(compared.week)?.breakGroup.value
+    ? (reviewed?.lines ?? beforeAfter).map((line) => ({
+      ...line, before: facts(compared.candidate, replacementDay(compared.week)?.breakGroup.value),
+    }))
+    : undefined;
   const editor = useScheduleReview({
-    command, beforeAfter, problems, dirty: !!area || !!loan.fields.employeeId || !!loan.fields.sourceBuildingId,
+    command, beforeAfter: reviewed?.lines ?? beforeAfter, problems, dirty: !!area || !!loan.fields.employeeId || !!loan.fields.sourceBuildingId,
     ready: !!areaOption && !!candidate?.eligible && candidate.revision != null && !lookup.isFetching,
-    changing: !!areaOption && (!holdsScope(props.latest) || !matchesReviewed(candidate)),
+    changing: !!areaOption && (!hasScope(props.latest)
+      || replacementDay(props.latest)?.breakGroup.value !== inherited
+      || (!!reviewed && !matchesCandidate(reviewed.candidate, candidate))),
     phone: props.phone, onClose: props.onClose,
     verifyRetryScope: async () => {
       const week = await props.reloadEditorWeek();
-      if (!holdsScope(week)) return false;
-      return matchesReviewed(await lookup.refetch().unwrap());
+      if (!hasScope(week) || replacementDay(week)?.breakGroup.value !== inherited || !reviewed) return false;
+      return matchesCandidate(reviewed.candidate, await lookup.refetch().unwrap());
     },
   });
   function resetSelection() {
     setPerson('');
     setReplacement('');
-    setAttested(false);
+    setAttestation(undefined);
     setReviewed(undefined);
+    setCompared(undefined);
     loan.clear();
   }
   return {
-    ...editor, dates, date, shift, choices, slots, area, personId, ownPeople, replaced, replacementId, inherited,
+    ...editor, latest, dates, date, shift, choices, slots, area, personId, ownPeople, replaced, replacementId, inherited,
     group, reason, attested, requiresAgreement, candidate, candidateQuery: lookup, loan, today,
     chooseDate: (value: string) => { setDate(value); setArea(''); resetSelection(); },
     chooseShift: (value: string) => { setShiftChoice(value); setArea(''); resetSelection(); },
     chooseArea: (value: string) => { setArea(value); resetSelection(); },
-    choosePerson: (value: string) => { setPerson(value); setAttested(false); setReviewed(undefined); },
-    setReplacement, setGroup, setReason, setAttested,
+    choosePerson: (value: string) => { setPerson(value); setAttestation(undefined); setReviewed(undefined); },
+    setReplacement, setGroup, setReason,
+    setAttested: (checked: boolean) => setAttestation(checked ? attestationKey : undefined),
     changeLoan: (patch: Parameters<typeof loan.change>[0]) => {
-      loan.change(patch); setAttested(false); setReviewed(undefined);
+      loan.change(patch); setAttestation(undefined); setReviewed(undefined);
     },
     review: () => {
       if (!editor.canReview || !candidate) return;
-      setReviewed(candidate);
+      setReviewed({ candidate, lines: beforeAfter });
+      setCompared(undefined);
       editor.review();
     },
-    compare: () => {
-      props.onCompare();
-      if (!lookup.isUninitialized) void lookup.refetch();
+    backToEdit: () => {
+      setReviewed(undefined);
+      editor.backToEdit();
+    },
+    compare: async () => {
+      setCompared(undefined);
+      if (lookup.isUninitialized) {
+        props.onCompare();
+        return;
+      }
+      const refreshed = await Promise.all([props.reloadEditorWeek(), lookup.refetch().unwrap()]).catch(() => undefined);
+      if (refreshed && hasScope(refreshed[0]) && refreshed[1].userId === userId) {
+        setCompared({ week: refreshed[0], candidate: refreshed[1] });
+      }
     },
     useLatest: () => {
+      if (!latest || !compared) return;
+      setBaseWeek(compared.week);
       setReviewed(undefined);
-      setAttested(false);
+      setCompared(undefined);
       editor.backToEdit();
     },
   };
