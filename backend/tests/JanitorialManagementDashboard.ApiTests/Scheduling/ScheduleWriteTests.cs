@@ -1097,6 +1097,11 @@ public class ScheduleWriteTests
         var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
         ScheduleWriteApi.Today(factory);
 
+        var scopedRead = await ScheduleWriteApi.WeekAsync(supervisor, Week);
+        var scopedPerson = Assert.Single(scopedRead.Rows, row => row.UserId == person);
+        Assert.False(scopedPerson.WeeklyReplaceAllowed);
+        Assert.DoesNotContain(scopedPerson.Days, day => day.Date == Week.AddDays(2));
+
         // The submitted Monday is a past date, so a reason travels with the command: the refusal below has to be the
         // Wednesday's missing authority, never a missing reason.
         var answer = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetWeeklyDaysOff, new
@@ -1398,11 +1403,11 @@ internal static class ScheduleWriteApi
 
     public sealed record PersonAnswer(
         int UserId, string DisplayName, string CleanerKind, int? HomeBuildingId, bool HasWeeklyChoice,
-        string WeeklyRevision, string RegularBaselineRevision, string ReliefBaselineRevision, List<DayAnswer> Days);
+        string WeeklyRevision, string RegularBaselineRevision, string ReliefBaselineRevision, List<DayAnswer> Days, bool? WeeklyReplaceAllowed = null);
 
     public sealed record DayAnswer(
         DateOnly Date, ValueAnswer Area, ValueAnswer BreakGroup, bool IsDayOff, bool IsLeave, bool IsUnset,
-        string Availability, List<ProblemAnswer> Problems, string? Shift = null);
+        string Availability, List<ProblemAnswer> Problems, string? Shift = null, ScheduleEditFacts? Edit = null);
 
     public sealed record ValueAnswer(int? Value, int? SourceId, string SourceKind, string Revision);
 }

@@ -2,6 +2,7 @@ using System.Data;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
@@ -711,10 +712,11 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         // period may be read on is decided below, per date, by ScheduleAuthority.Covers — not by a week-overlap test, which
         // would hand a Supervisor the dates before their period starts and the dates after it ends.
         List<ScopePeriod>? authorised = null;
+        IReadOnlyCollection<ScopePeriod> managementScope = [];
         if (actor.Role == UserRole.Supervisor)
         {
-            authorised = (await SupervisorScopes.ReadAsync(db, actor, clock ?? TimeProvider.System, ct))
-                .Where(period => buildingId is null || period.BuildingId == buildingId)
+            managementScope = await SupervisorScopes.ReadAsync(db, actor, clock ?? TimeProvider.System, ct);
+            authorised = managementScope.Where(period => buildingId is null || period.BuildingId == buildingId)
                 .Where(period => shift is null || period.Shift == shift)
                 .Where(period => dates.Exists(date => ScheduleAuthority.Covers(period, date)))
                 .ToList();
@@ -740,8 +742,12 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             .Where(period => personIds.Contains(period.UserId)).ToListAsync(ct);
         var baselines = await db.ScheduleBaselines.AsNoTracking().Include(baseline => baseline.Days)
             .Where(baseline => personIds.Contains(baseline.UserId)).ToListAsync(ct);
-        var areaBuildings = await db.Areas.AsNoTracking().Select(area => new { area.Id, area.BuildingId })
-            .ToDictionaryAsync(area => area.Id, area => area.BuildingId, ct);
+        var areas = await db.Areas.AsNoTracking().OrderBy(area => area.Code)
+            .Select(area => new { area.Id, area.BuildingId, area.Code, area.Name, area.IsActive }).ToListAsync(ct);
+        var areaBuildings = areas.ToDictionary(area => area.Id, area => area.BuildingId);
+        var optionsByBuilding = areas.Where(area => area.IsActive).GroupBy(area => area.BuildingId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<ScheduleAreaOption>)group
+                .Select(area => new ScheduleAreaOption(area.Id, $"{area.Code} · {area.Name}")).ToList());
 
         // Membership only (spec §14): the compatibility projection may say which building a person belongs to, never what
         // their history was. Only the periods that overlap the read week are membership at all, so a person who left a
@@ -800,6 +806,11 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             ? []
             : await db.AreaTransferConfirmations.AsNoTracking()
                 .Where(row => transferIds.Contains(row.TransferId)).ToListAsync(ct);
+
+        var businessDate = ScheduleAuthority.BusinessDate(readAt.UtcDateTime);
+        var correctionAudits = actor.Role == UserRole.Cleaner
+            ? null
+            : await ReadCorrectionAuditsAsync(monday, weekEnd, ct);
 
         var rows = new List<SchedulePersonWeek>(included.Count);
         var revisions = new List<string>();
@@ -872,17 +883,75 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                         row.IsCancelled, Revision(row.Revision)))
                     .ToList());
 
+            ScheduleDay ReadDay(DateOnly date)
+            {
+                var day = ScheduleResolver.Resolve(input, date) with { Shift = writtenShiftOn[date] };
+                if (actor.Role == UserRole.Cleaner || day.Shift is not Shift slotShift
+                    || date < historyStartsAt)
+                {
+                    return day;
+                }
+
+                var activeProfile = personProfiles.LastOrDefault(entry =>
+                    ScheduleResolver.Applies(entry.EffectiveFrom, entry.EffectiveUntil, date));
+                var applicable = personBaselines.Where(entry =>
+                    ScheduleResolver.Applies(entry.EffectiveFrom, entry.EffectiveUntil, date)).ToList();
+                var building = activeProfile?.HomeBuildingId;
+                if (activeProfile is not null && building is null)
+                {
+                    var targetArea = applicable.SelectMany(entry => entry.Days).OrderBy(cell => cell.Weekday)
+                        .FirstOrDefault(cell => cell.AreaId is not null)?.AreaId;
+                    building = targetArea is int id ? areaBuildings.GetValueOrDefault(id) : null;
+                }
+                else if (activeProfile is null && personProfiles.Count == 0)
+                {
+                    building = person.AreaId is int id ? areaBuildings.GetValueOrDefault(id) : person.BuildingId;
+                }
+
+                var canChange = building is int targetBuilding && (date < businessDate
+                    ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, targetBuilding, slotShift, date, businessDate,
+                        managementScope)
+                    : ScheduleAuthority.CanManage(actor.Role, actor.Id, targetBuilding, slotShift, date, managementScope));
+                var baseline = applicable.LastOrDefault(entry => activeProfile?.Kind switch
+                {
+                    CleanerKind.Regular => entry.Kind == BaselineKind.Regular,
+                    CleanerKind.Relief => entry.Kind == BaselineKind.Relief,
+                    _ => true,
+                })?.Days.FirstOrDefault(cell => cell.Weekday == date.DayOfWeek);
+                var live = exceptions.Where(row => row.UserId == person.Id && row.Shift == slotShift
+                    && row.ShiftDate == date && !row.IsCancelled).ToList();
+                var leave = live.Find(row => row.Kind == ScheduleExceptionKind.Leave);
+                var prefix = FormattableString.Invariant($"exception:{person.Id}:{date:yyyy-MM-dd}:{slotShift}:");
+                var corrections = correctionAudits?[prefix + "area"]
+                    .Concat(correctionAudits[prefix + "breakgroup"]).OrderBy(change => change.At).ToList() ?? [];
+                return day with
+                {
+                    Edit = new ScheduleEditFacts(canChange, header?.Choices.Any(choice => choice.OffDate == date) == true,
+                        baseline?.AreaId, baseline?.BreakGroup, baseline?.IsDayOff == true,
+                        Revision(live.Find(row => row.Kind == ScheduleExceptionKind.Area)?.Revision ?? 0),
+                        Revision(live.Find(row => row.Kind == ScheduleExceptionKind.BreakGroup)?.Revision ?? 0),
+                        leave is null ? null : new ScheduleLeaveEdit(Revision(leave.Revision),
+                            Utc(leave.StartsAt!.Value), Utc(leave.EndsAt!.Value)),
+                        canChange && building is int knownBuilding ? optionsByBuilding.GetValueOrDefault(knownBuilding) ?? [] : [],
+                        corrections),
+                };
+            }
+
+            var personDays = readDates[person.Id].Select(ReadDay).ToList();
+            bool? weeklyReplaceAllowed = actor.Role == UserRole.Cleaner ? null
+                : header?.Choices.All(choice => personDays.Any(day =>
+                    day.Date == choice.OffDate && day.Edit?.CanChange == true)) ?? true;
             rows.Add(new SchedulePersonWeek(person.Id, person.DisplayName,
                 profile?.Kind.ToString() ?? UnknownCleanerKind,
                 HomeBuilding(memberships[person.Id], profiles.Exists(entry => entry.UserId == person.Id), person),
                 header is not null,
-                readDates[person.Id].Select(date =>
-                    ScheduleResolver.Resolve(input, date) with { Shift = writtenShiftOn[date] }).ToList(),
+                personDays,
                 // The write contract's anchors (Task 6): the week header and the head version of each repeating-week kind,
                 // as the very revisions the command handlers compare. A missing row is 0, never "unknown".
                 Revision(header?.Revision ?? 0),
                 Revision(personBaselines.LastOrDefault(entry => entry.Kind == BaselineKind.Regular)?.Revision ?? 0),
-                Revision(personBaselines.LastOrDefault(entry => entry.Kind == BaselineKind.Relief)?.Revision ?? 0)));
+                Revision(personBaselines.LastOrDefault(entry => entry.Kind == BaselineKind.Relief)?.Revision ?? 0),
+                weeklyReplaceAllowed));
 
             revisions.AddRange(personProfiles.Select(entry => $"profile#{entry.Id}@{Revision(entry.Revision)}"));
             revisions.AddRange(personBaselines.Select(entry => $"baseline#{entry.Id}@{Revision(entry.Revision)}"));
@@ -1001,6 +1070,56 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
         return visible;
     }
+
+    private sealed record CorrectionAudit(
+        string Result, string Actor, DateTime At, string? Before, string After, string Reason);
+
+    private async Task<ILookup<string, ScheduleCorrection>> ReadCorrectionAuditsAsync(
+        DateOnly monday, DateOnly weekEnd, CancellationToken ct)
+    {
+        // The retained receipt identifies the slot even for creates, whose audit has no database entity id yet.
+        // Narrow the read by month in SQL, then match only exact keys of the caller's covered dates.
+        var firstMonth = monday.ToString("yyyy-MM-", CultureInfo.InvariantCulture);
+        var lastMonth = weekEnd.AddDays(-1).ToString("yyyy-MM-", CultureInfo.InvariantCulture);
+        var audits = await (from change in db.ScheduleChanges.AsNoTracking()
+                            join receipt in db.ScheduleCommandReceipts on change.ReceiptId equals receipt.Id
+                            join author in db.Users on receipt.ActorId equals author.Id
+                            where receipt.Kind == "correct-plan" && change.EntityType == "ScheduleException"
+                                && change.AfterJson != null && change.Reason != null
+                                && (receipt.ResultJson.Contains(firstMonth) || receipt.ResultJson.Contains(lastMonth))
+                            orderby change.Id
+                            select new CorrectionAudit(receipt.ResultJson, author.DisplayName, change.CreatedAt,
+                                change.BeforeJson, change.AfterJson!, change.Reason!)).ToListAsync(ct);
+        return audits.SelectMany(ProjectCorrection).ToLookup(entry => entry.Key, entry => entry.Correction);
+    }
+
+    private static IEnumerable<(string Key, ScheduleCorrection Correction)> ProjectCorrection(CorrectionAudit audit)
+    {
+        using var result = JsonDocument.Parse(audit.Result);
+        if (!result.RootElement.TryGetProperty("Revisions", out var revisions))
+        {
+            yield break;
+        }
+
+        using var after = JsonDocument.Parse(audit.After);
+        using var before = audit.Before is null ? null : JsonDocument.Parse(audit.Before);
+        var isArea = AuditNumber(after, "areaId") is not null || AuditNumber(before, "areaId") is not null;
+        var field = isArea ? "areaId" : "breakGroup";
+        var suffix = isArea ? ":area" : ":breakgroup";
+        foreach (var revision in revisions.EnumerateObject())
+        {
+            if (revision.Name.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                yield return (revision.Name, new ScheduleCorrection(field, Utc(audit.At), audit.Actor, audit.Reason,
+                    AuditNumber(before, field),
+                    after.RootElement.GetProperty("cancelled").GetBoolean() ? null : AuditNumber(after, field)));
+            }
+        }
+    }
+
+    private static int? AuditNumber(JsonDocument? audit, string field) =>
+        audit is not null && audit.RootElement.TryGetProperty(field, out var value)
+            && value.ValueKind == JsonValueKind.Number ? value.GetInt32() : null;
 
     /// <summary>
     /// Which dated (building, shift) memberships the person's profile periods give them, used for scope and roster

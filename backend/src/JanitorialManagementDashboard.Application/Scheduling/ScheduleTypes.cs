@@ -80,7 +80,18 @@ public sealed record ScheduleProblem(string Code, string Message, DateOnly Date)
 /// </summary>
 public sealed record ScheduleDay(DateOnly Date, ResolvedValue<int?> Area,
     ResolvedValue<int?> BreakGroup, bool IsDayOff, bool IsLeave, bool IsUnset,
-    string Availability, IReadOnlyList<ScheduleProblem> Problems, Shift? Shift = null);
+    string Availability, IReadOnlyList<ScheduleProblem> Problems, Shift? Shift = null, ScheduleEditFacts? Edit = null);
+
+/// <summary>Raw facts for a management editor, independent of the winning values of the resolver.</summary>
+public sealed record ScheduleEditFacts(
+    bool CanChange, bool WeeklyOff, int? BaselineAreaId, int? BaselineBreakGroup, bool BaselineDayOff,
+    string AreaRevision, string BreakRevision, ScheduleLeaveEdit? Leave,
+    IReadOnlyList<ScheduleAreaOption> Areas, IReadOnlyList<ScheduleCorrection> Corrections);
+
+public sealed record ScheduleLeaveEdit(string Revision, DateTimeOffset StartsAt, DateTimeOffset EndsAt);
+public sealed record ScheduleAreaOption(int Id, string Label);
+public sealed record ScheduleCorrection(
+    string Field, DateTimeOffset At, string Actor, string Reason, int? Before, int? After);
 
 /// <summary>
 /// Spec §10 and ADR facility-0190: one person's resolved week, with the roster facts the management screen shows beside
@@ -98,7 +109,8 @@ public sealed record ScheduleDay(DateOnly Date, ResolvedValue<int?> Area,
 /// </summary>
 public sealed record SchedulePersonWeek(int UserId, string DisplayName, string CleanerKind,
     int? HomeBuildingId, bool HasWeeklyChoice, IReadOnlyList<ScheduleDay> Days,
-    string WeeklyRevision = "0", string RegularBaselineRevision = "0", string ReliefBaselineRevision = "0");
+    string WeeklyRevision = "0", string RegularBaselineRevision = "0", string ReliefBaselineRevision = "0",
+    bool? WeeklyReplaceAllowed = null);
 
 /// <summary>
 /// Spec §10 and §11: the authorised projection of one week. <see cref="Revision"/> is an opaque token derived from every

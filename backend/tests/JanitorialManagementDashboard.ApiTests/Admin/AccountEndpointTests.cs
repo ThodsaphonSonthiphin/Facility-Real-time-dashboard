@@ -259,7 +259,7 @@ public class AccountEndpointTests
             .Where(period => period.UserId == created.Id).ToListAsync());
         var profile = Assert.Single(profiles);
         // facility-0137/0194: the home building lives in the dated profile, and today is the first date it applies to.
-        Assert.Equal(("Relief", (int?)buildingB, "Day", DateOnly.Parse("2026-11-17")), (
+        Assert.Equal(("Relief", (int?)buildingB, "Day", new DateOnly(2026, 11, 17)), (
             profile.Kind.ToString(), profile.HomeBuildingId, profile.Shift.ToString(), profile.EffectiveFrom));
         Assert.Null(profile.EffectiveUntil);
         Assert.Equal(1L, profile.Revision);
@@ -286,7 +286,7 @@ public class AccountEndpointTests
             created.AreaCode, created.Role, created.CleanerKind, created.HomeBuildingCode));
         var profile = Assert.Single(await AdminSetupApi.ReadAsync(factory, db => db.CleanerProfilePeriods
             .Where(period => period.UserId == created.Id).ToListAsync()));
-        Assert.Equal(("Regular", (int?)buildingA, "Day", DateOnly.Parse("2026-11-17")), (
+        Assert.Equal(("Regular", (int?)buildingA, "Day", new DateOnly(2026, 11, 17)), (
             profile.Kind.ToString(), profile.HomeBuildingId, profile.Shift.ToString(), profile.EffectiveFrom));
     }
 

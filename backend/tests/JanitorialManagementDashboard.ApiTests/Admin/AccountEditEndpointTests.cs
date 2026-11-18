@@ -314,9 +314,9 @@ public class AccountEditEndpointTests
             .Where(period => period.UserId == e1001).OrderBy(period => period.EffectiveFrom).ToListAsync());
         Assert.Equal(2, profiles.Count);
         // No fabricated past: the previous identity keeps its own dates and merely stops where the new one starts.
-        Assert.Equal((DateOnly.Parse("2026-10-01"), (DateOnly?)DateOnly.Parse("2026-11-17")), (
+        Assert.Equal((new DateOnly(2026, 10, 1), (DateOnly?)new DateOnly(2026, 11, 17)), (
             profiles[0].EffectiveFrom, profiles[0].EffectiveUntil));
-        Assert.Equal(("Relief", (int?)buildingB, DateOnly.Parse("2026-11-17")), (
+        Assert.Equal(("Relief", (int?)buildingB, new DateOnly(2026, 11, 17)), (
             profiles[1].Kind.ToString(), profiles[1].HomeBuildingId, profiles[1].EffectiveFrom));
         Assert.Null(profiles[1].EffectiveUntil);
         // The closed identity keeps its history and moves its revision; the new one starts at its own first version.

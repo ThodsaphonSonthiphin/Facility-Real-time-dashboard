@@ -27,6 +27,7 @@ public class ScheduleHistoryCorrectionTests
         var person = await ScheduleWriteApi.SetUpWeekAsync(factory, "1000001");
         var area2 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         ScheduleWriteApi.Today(factory);
 
         var abandoned = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetRegularBaseline, new
@@ -43,6 +44,17 @@ public class ScheduleHistoryCorrectionTests
         Assert.Equal(HttpStatusCode.OK, corrected.Response.StatusCode);
         Assert.Equal(ScheduleCommandOutcome.Committed, corrected.Answer!.Outcome);
         Assert.Equal("1", corrected.Answer.Revisions[ScheduleWriteApi.DatedKey(person, Past, "Day", "area")]);
+        var managed = await ScheduleWriteApi.WeekAsync(admin, Past);
+        var managedDay = Assert.Single(Assert.Single(managed.Rows, row => row.UserId == person).Days, day => day.Date == Past);
+        Assert.Equal("1", managedDay.Edit!.AreaRevision);
+        Assert.NotEqual(area2, managedDay.Edit.BaselineAreaId);
+        var audit = Assert.Single(managedDay.Edit.Corrections);
+        Assert.Equal(("areaId", (int?)null, (int?)area2, "แก้ Area ผิดคน"), (audit.Field, audit.Before, audit.After, audit.Reason));
+
+        var own = await cleaner.GetAsync($"/api/schedules/me?weekStart={ScheduleWriteApi.Iso(Past)}");
+        Assert.Equal(HttpStatusCode.OK, own.StatusCode);
+        Assert.All(Assert.Single((await ScheduleWriteApi.ReadWeekAsync(own)).Rows).Days, day => Assert.Null(day.Edit));
+
         await factory.WithDbAsync(async db =>
         {
             Assert.Single(await db.ScheduleBaselines.ToListAsync()); // no retroactive baseline version

@@ -122,7 +122,8 @@ public sealed record SchedulePersonDto(
     string WeeklyRevision,
     string RegularBaselineRevision,
     string ReliefBaselineRevision,
-    IReadOnlyList<ScheduleDayDto> Days);
+    IReadOnlyList<ScheduleDayDto> Days,
+    bool? WeeklyReplaceAllowed = null);
 
 /// <summary>
 /// Spec §5, §10 and §11: one resolved day with its provenance per field — a dated choice, the applicable version or nothing
@@ -143,7 +144,8 @@ public sealed record ScheduleDayDto(
     bool IsLeave,
     bool IsUnset,
     string Availability,
-    IReadOnlyList<ScheduleProblemDto> Problems);
+    IReadOnlyList<ScheduleProblemDto> Problems,
+    ScheduleEditFacts? Edit = null);
 
 /// <summary>One resolved value: what it is, which row supplied it, and that row's revision (0 when nothing supplied it).</summary>
 public sealed record ScheduleValueDto(int? Value, int? SourceId, string SourceKind, string Revision);
@@ -219,7 +221,8 @@ public static class ScheduleDtoMapper
             row.WeeklyRevision,
             row.RegularBaselineRevision,
             row.ReliefBaselineRevision,
-            row.Days.Select(ToDto).ToList())).ToList(),
+            row.Days.Select(ToDto).ToList(),
+            row.WeeklyReplaceAllowed)).ToList(),
         projection.Relief.Select(row => new ScheduleReliefDto(
             row.Id,
             row.UserId,
@@ -262,7 +265,8 @@ public static class ScheduleDtoMapper
         day.IsLeave,
         day.IsUnset,
         day.Availability,
-        day.Problems.Select(problem => new ScheduleProblemDto(problem.Code, problem.Message, problem.Date)).ToList());
+        day.Problems.Select(problem => new ScheduleProblemDto(problem.Code, problem.Message, problem.Date)).ToList(),
+        day.Edit);
 
     private static ScheduleValueDto ToDto<T>(ResolvedValue<T> value) =>
         new(Value: value.Value is int number ? number : null,
