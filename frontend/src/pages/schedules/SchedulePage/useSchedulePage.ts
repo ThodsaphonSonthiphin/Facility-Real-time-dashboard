@@ -1,5 +1,5 @@
 import { skipToken } from '@reduxjs/toolkit/query/react';
-import { useCallback } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 import type { RootState } from '../../../store';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectHubStatus } from '../../../store/slices/hubSlice';
@@ -13,7 +13,7 @@ import {
   type ScheduleSelection,
 } from '../scheduleRules';
 import { selectionChosen } from '../scheduleViewSlice';
-import type { SchedulePageView } from './type';
+import type { OpenScheduleEditor, SchedulePageView } from './type';
 
 /**
  * One schedule page's state, for the three roles that read a week (ADR facility-0180–0186, 0218; spec §4, §12).
@@ -28,6 +28,8 @@ import type { SchedulePageView } from './type';
  */
 export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   const dispatch = useAppDispatch();
+  const [editor, setEditor] = useState<OpenScheduleEditor | null>(null);
+  const phone = useSyncExternalStore(subscribeToPhoneWidth, isPhoneWidth);
   const restored = useAppSelector((state: RootState) => state.scheduleView.views[role]);
   const changedAt = useAppSelector((state: RootState) => state.scheduleView.changedAt);
   // A Supervisor's and an Admin's initial filters follow the shift on the clock; a Cleaner has none
@@ -50,8 +52,8 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   // facility-0185: a restored filter the actor no longer holds answers with nothing readable, so it is dropped at read
   // time. Nothing is written to the slice: the person's own choice stays theirs, and the fallback read cannot drop
   // anything itself because it carries no building.
-  const held = asked.data
-    ? selectionAfterRead(requested, { availability: asked.data.availability, rowCount: asked.data.rows.length })
+  const held = asked.currentData
+    ? selectionAfterRead(requested, { availability: asked.currentData.availability, rowCount: asked.currentData.rows.length })
     : undefined;
   const filterDropped = held?.dropped === true;
   const read = filterDropped ? fallbackManaged : asked;
@@ -62,9 +64,31 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     [dispatch, role],
   );
 
+  const week = read.currentData;
+  const latest = read.error ? undefined : week;
+  const manage = role !== 'cleaner' && latest && !editor;
+  const businessDate = clockSlot(new Date()).startDate;
   return {
     role,
-    week: read.data,
+    week,
+    latest,
+    phone,
+    editor,
+    openWeekly: () => {
+      if (manage && latest.rows.some((row) => row.days.some((day) => day.edit?.canChange))) {
+        setEditor({ kind: 'weekly', week: latest });
+      }
+    },
+    openBaseline: (person) => {
+      if (manage && person.cleanerKind === 'Regular' && person.days.some((day) => day.edit?.canChange)) {
+        setEditor({ kind: 'baseline', week: latest, person });
+      }
+    },
+    openDated: (person, day) => {
+      if (manage && day.edit?.canChange && day.shift) setEditor({ kind: 'dated', person, day });
+    },
+    closeEditor: () => setEditor(null),
+    dateAction: (day) => day.date < businessDate ? 'แก้ไขแผนย้อนหลัง' : 'แก้เฉพาะวันที่',
     selection,
     filterDropped,
     isLoading: read.isLoading,
@@ -90,4 +114,14 @@ function withoutBuilding(selection: ScheduleSelection): ScheduleSelection {
 function moveWeek(weekStart: string, weeks: number): string {
   const at = Date.parse(`${weekStart}T00:00:00Z`) + weeks * 7 * 86_400_000;
   return new Date(at).toISOString().slice(0, 10);
+}
+
+const phoneWidth = '(max-width: 639px)';
+function isPhoneWidth(): boolean {
+  return window.matchMedia?.(phoneWidth).matches ?? false;
+}
+function subscribeToPhoneWidth(listener: () => void) {
+  const query = window.matchMedia?.(phoneWidth);
+  query?.addEventListener('change', listener);
+  return () => query?.removeEventListener('change', listener);
 }

@@ -1,7 +1,9 @@
 import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router';
+import { lazy, Suspense } from 'react';
 import type { ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
 import type { Shift } from '../../../shared/api/types';
+import { Badge } from '../../../shared/components/Badge';
 import { BuildingSelect } from '../../../shared/components/BuildingSelect';
 import { Button } from '../../../shared/components/Button';
 import { LogoutButton } from '../../../shared/components/LogoutButton';
@@ -17,10 +19,19 @@ import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { availabilityLabel, cellLabel, sourceLabel, weekIsUnavailable, weekRangeLabel, type ScheduleRole } from '../scheduleRules';
 import { useSchedulePage } from './useSchedulePage';
 
+const WeeklyOffEditor = lazy(() => import('../WeeklyOffEditor/WeeklyOffEditor')
+  .then((module) => ({ default: module.WeeklyOffEditor })));
+const RegularBaselineEditor = lazy(() => import('../RegularBaselineEditor/RegularBaselineEditor')
+  .then((module) => ({ default: module.RegularBaselineEditor })));
+const DatedScheduleEditor = lazy(() => import('../DatedScheduleEditor/DatedScheduleEditor')
+  .then((module) => ({ default: module.DatedScheduleEditor })));
+const ScheduleHistory = lazy(() => import('../ScheduleHistory/ScheduleHistory')
+  .then((module) => ({ default: module.ScheduleHistory })));
+
 /**
- * ADR facility-0176–0179; spec §4: one read-only week per role. A Cleaner opens their own week from My Work, a Supervisor
+ * ADR facility-0176–0179; spec §4: one week per role. A Cleaner opens their own week from My Work, a Supervisor
  * the roster of the buildings they hold from My Building, an Admin every building in a shift from the menu. Reading needs
- * no QR and no location (0179). The editors are Tasks 14–15 and live in their own files, so a phone never downloads them.
+ * no QR and no location (0179). Management editors load only when opened.
  *
  * The three week states are drawn differently on purpose (spec §3, §10): a week outside retained coverage says so rather
  * than showing an empty roster, a week with nothing to read says the filter has nothing, and a real plan shows its days —
@@ -69,7 +80,7 @@ export function AdminSchedulesPage() {
 function ManagementWeekPage({ role, back }: { role: ScheduleRole; back?: { to: string; label: string } }) {
   const view = useSchedulePage(role);
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
+    <main className="flex min-w-0 flex-col gap-6 text-base text-text sm:text-sm">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           {back && (
@@ -92,13 +103,36 @@ function ManagementWeekPage({ role, back }: { role: ScheduleRole; back?: { to: s
       </header>
       <WeekControls view={view} />
       {role === 'admin' && <AdminFilters view={view} />}
+      {view.latest?.rows.some((row) => row.days.some((day) => day.edit?.canChange)) && (
+        <div>
+          <Button variant="primary" size={view.phone ? 'main' : 'desk'} onClick={view.openWeekly}>จัดวันหยุดรายสัปดาห์</Button>
+        </div>
+      )}
       <WeekBody view={view} />
+      <Suspense fallback={<PageLoading lines={1}>กำลังโหลดแบบแก้ไข...</PageLoading>}>
+        <OpenEditor view={view} />
+      </Suspense>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
         <LiveLine view={view} />
       </div>
       <Notes role={role} />
     </main>
   );
+}
+
+function OpenEditor({ view }: { view: ReturnType<typeof useSchedulePage> }) {
+  const { editor, phone, latest: week, closeEditor, refetch, selection } = view;
+  if (!editor) return null;
+  const shared = { phone, onClose: closeEditor, onCompare: refetch };
+  if (editor.kind === 'weekly') {
+    return <WeeklyOffEditor {...shared} week={editor.week} latest={week} selection={selection} />;
+  }
+  if (editor.kind === 'baseline') {
+    return <RegularBaselineEditor {...shared} week={editor.week} latest={week} person={editor.person} selection={selection} />;
+  }
+  const latest = week?.rows.find((person) => person.userId === editor.person.userId)
+    ?.days.find((day) => day.date === editor.day.date);
+  return <DatedScheduleEditor {...shared} person={editor.person} day={editor.day} latest={latest} />;
 }
 
 /** The Admin's filters (0184): every building in the shift on the clock, and any shift they choose. */
@@ -228,12 +262,36 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                 <th scope="row" className="px-3 py-2.5 text-left font-semibold">
                   <span className="block">{person.displayName}</span>
                   <span className="block text-xs text-text-2">{kindLabel[person.cleanerKind]}</span>
+                  {person.cleanerKind === 'Regular' && !person.hasWeeklyChoice
+                    && person.days.some((day) => day.edit) && <Badge kind="edited">ยังไม่กำหนดวันหยุด</Badge>}
+                  {view.latest && person.cleanerKind === 'Regular' && person.days.some((day) => day.edit?.canChange) && (
+                    <Button variant="link" size={view.phone ? 'phone' : 'desk'} onClick={() => view.openBaseline(person)}>
+                      แก้ตารางประจำ
+                    </Button>
+                  )}
                 </th>
-                {dates.map((date) => (
-                  <td key={date} className="px-3 py-2.5 align-top">
-                    <Cell day={person.days.find((one) => one.date === date)} />
-                  </td>
-                ))}
+                {dates.map((date) => {
+                  const day = person.days.find((one) => one.date === date);
+                  return (
+                    <td key={date} className="px-3 py-2.5 align-top">
+                      <Cell day={day} />
+                      {view.latest && day?.edit?.canChange && (
+                        <Button variant="link" size={view.phone ? 'phone' : 'desk'} onClick={() => view.openDated(person, day)}
+                          aria-label={`${view.dateAction(day)} ${person.displayName} ${formatShiftDate(day.date)}`}>
+                          {view.dateAction(day)}
+                        </Button>
+                      )}
+                      {day?.edit?.corrections.length ? (
+                        <details>
+                          <summary className={`min-h-12 cursor-pointer text-accent sm:min-h-9 ${focusRing}`}>ประวัติการแก้ไขแผน</summary>
+                          <Suspense fallback={<p role="status">กำลังโหลดประวัติ...</p>}>
+                            <ScheduleHistory corrections={day.edit.corrections} />
+                          </Suspense>
+                        </details>
+                      ) : null}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

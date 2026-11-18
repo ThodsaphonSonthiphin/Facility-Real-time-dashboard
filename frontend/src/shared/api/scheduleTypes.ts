@@ -101,6 +101,29 @@ export interface ScheduleDay {
   isUnset: boolean;
   availability: ScheduleAvailability;
   problems: ScheduleDayProblem[];
+  edit?: ScheduleEditFacts;
+}
+
+export interface ScheduleEditFacts {
+  canChange: boolean;
+  weeklyOff: boolean;
+  baselineAreaId?: number;
+  baselineBreakGroup?: number;
+  baselineDayOff: boolean;
+  areaRevision: string;
+  breakRevision: string;
+  leave?: { revision: string; startsAt: string; endsAt: string };
+  areas: { id: number; label: string }[];
+  corrections: ScheduleCorrection[];
+}
+
+export interface ScheduleCorrection {
+  field: 'areaId' | 'breakGroup';
+  at: string;
+  actor: string;
+  reason: string;
+  before?: number;
+  after?: number;
 }
 
 /**
@@ -116,6 +139,7 @@ export interface SchedulePerson {
   /** The week-header fact: false is "nobody has been asked", not "nobody works" (ADR facility-0190). */
   hasWeeklyChoice: boolean;
   weeklyRevision: string;
+  weeklyReplaceAllowed?: boolean;
   regularBaselineRevision: string;
   reliefBaselineRevision: string;
   days: ScheduleDay[];

@@ -9,6 +9,7 @@ export interface SchedulePageView {
   /** The role whose week this is, so the body can show the words for it without a second parameter. */
   role: ScheduleRole;
   week: ScheduleWeek | undefined;
+  latest: ScheduleWeek | undefined;
   /** The selection actually asked for, after a restored filter the server has nothing readable for was dropped. */
   selection: ScheduleSelection;
   /** True when a restored building was dropped this read, so the page can say the filter changed rather than pretend. */
@@ -32,6 +33,14 @@ export interface SchedulePageView {
   chooseShift: (shift: ScheduleSelection['shift']) => void;
   /** The previous or next week, always a Monday (a week is read one at a time). */
   goWeek: (weeks: number) => void;
+  phone: boolean;
+  editor: OpenScheduleEditor | null;
+  openWeekly: () => void;
+  openBaseline: (person: SchedulePerson) => void;
+  openDated: (person: SchedulePerson, day: ScheduleDay) => void;
+  closeEditor: () => void;
+  dateAction: (day: ScheduleDay) => string;
+
 }
 
 /** One table row of the management view: a person and the days the reader may see (seven, or fewer mid-week). */
@@ -39,3 +48,8 @@ export interface ScheduleRow {
   person: SchedulePerson;
   days: ScheduleDay[];
 }
+
+export type OpenScheduleEditor =
+  | { kind: 'weekly'; week: ScheduleWeek }
+  | { kind: 'baseline'; week: ScheduleWeek; person: SchedulePerson }
+  | { kind: 'dated'; person: SchedulePerson; day: ScheduleDay };

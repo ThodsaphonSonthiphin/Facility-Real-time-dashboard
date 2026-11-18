@@ -1,6 +1,6 @@
 import type { RootState } from '../../store';
 import { getValidAccessToken } from '../../shared/auth/session';
-import { baseApi } from '../../shared/api/baseApi';
+import { baseApi, SEND_TIMEOUT_MS } from '../../shared/api/baseApi';
 import { ADMIN_HUB_SERVER_TIMEOUT_MS, followScanHub } from '../../shared/api/scanHub';
 import type {
   CommandResult,
@@ -111,7 +111,7 @@ const schedulesApi = baseApi.injectEndpoints({
      * once per proposed command and reused for a retry, never replaced to get past an expiry (A19).
      */
     issueScheduleCommandToken: build.mutation<ScheduleCommandToken, void>({
-      query: () => ({ url: '/schedules/command-tokens', method: 'POST' }),
+      query: () => ({ url: '/schedules/command-tokens', method: 'POST', timeout: SEND_TIMEOUT_MS }),
     }),
 
     /**
@@ -123,8 +123,8 @@ const schedulesApi = baseApi.injectEndpoints({
      * recipient of it holds a right to refetch its own read (spec §12).
      */
     executeScheduleCommand: build.mutation<CommandResult, ScheduleCommandEnvelope>({
-      query: (envelope) => ({ url: '/schedules/commands', method: 'POST', body: envelope }),
-      invalidatesTags: ['Schedules'],
+      query: (envelope) => ({ url: '/schedules/commands', method: 'POST', body: envelope, timeout: SEND_TIMEOUT_MS }),
+      invalidatesTags: (result) => result?.outcome === 'committed' ? ['Schedules'] : [],
     }),
 
     /**
@@ -132,7 +132,12 @@ const schedulesApi = baseApi.injectEndpoints({
      * only for the actor and the scope that made the command, so a lookup can never enumerate another person's commands.
      */
     getScheduleCommandResult: build.query<CommandResult, string>({
-      query: (commandId) => `/schedules/commands/${commandId}`,
+      query: (commandId) => ({ url: `/schedules/commands/${commandId}`, timeout: SEND_TIMEOUT_MS, cache: 'no-store' }),
+      keepUnusedDataFor: 0,
+      async onQueryStarted(_commandId, { dispatch, queryFulfilled }) {
+        const answer = await queryFulfilled.catch(() => undefined);
+        if (answer?.data.outcome === 'committed') dispatch(baseApi.util.invalidateTags(['Schedules']));
+      },
     }),
 
     /**
@@ -153,6 +158,7 @@ export const {
   useIssueScheduleCommandTokenMutation,
   useExecuteScheduleCommandMutation,
   useGetScheduleCommandResultQuery,
+  useLazyGetScheduleCommandResultQuery,
   useConfirmAreaTransferMutation,
 } = schedulesApi;
 
