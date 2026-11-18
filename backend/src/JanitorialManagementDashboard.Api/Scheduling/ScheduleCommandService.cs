@@ -103,12 +103,16 @@ public sealed class ScheduleCommandService(
         var request = new ScheduleCommandRequest(
             actorId, command.CommandId, command.Kind, command.ExpectedRevisions, command.Payload, now);
 
+        // The identities the handlers' anchors named are what the post-commit invalidation is scoped to; they are read
+        // outside the transaction because a failed command must notify nobody at all.
+        var plan = ScheduleCommandLockSet.None;
+
         await using var transaction = await store.BeginCommandTransactionAsync(ct);
         try
         {
             // The stable anchors are locked, in one global sorted order, before any row is validated: a command that has
             // to create a row for a slot nobody has written yet still excludes the command doing the same thing.
-            var plan = await handler.PlanLocksAsync(request, db, ct);
+            plan = await handler.PlanLocksAsync(request, db, ct);
             await LockAsync(plan, now, ct);
 
             // The lock may have been granted to this transaction only after another one committed the same identity.
@@ -154,7 +158,7 @@ public sealed class ScheduleCommandService(
             await transaction.CommitAsync(ct);
 
             // After the commit, never before: the facts are stored whatever happens to the push (spec §11 and §12).
-            await NotifyAsync(result, ct);
+            await NotifyAsync(result, new ScheduleChangeScope(plan.Slots, plan.Scopes), ct);
             return result;
         }
         catch (DbUpdateException)
@@ -468,11 +472,11 @@ public sealed class ScheduleCommandService(
     }
 
     /// <summary>A failed push is logged and swallowed: the facts are already committed, so the command did not fail.</summary>
-    private async Task NotifyAsync(CommandResult result, CancellationToken ct)
+    private async Task NotifyAsync(CommandResult result, ScheduleChangeScope scope, CancellationToken ct)
     {
         try
         {
-            await notifier.NotifyCommittedAsync(result, ct);
+            await notifier.NotifyCommittedAsync(result, scope, ct);
         }
         catch (Exception exception)
         {

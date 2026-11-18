@@ -258,6 +258,7 @@ public class MySqlTransferRaceTests
 
     private sealed class SilentNotifier : IScheduleCommandNotifier
     {
-        public Task NotifyCommittedAsync(CommandResult result, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyCommittedAsync(CommandResult result, ScheduleChangeScope scope, CancellationToken ct = default) =>
+            Task.CompletedTask;
     }
 }

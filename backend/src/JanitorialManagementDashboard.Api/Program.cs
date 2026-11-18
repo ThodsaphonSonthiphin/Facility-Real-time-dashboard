@@ -82,7 +82,7 @@ try
     // Spec §11: the command engine and its seams. The settings are built without demanding a signing key, and the token
     // service resolves the key only when a command is actually issued or verified, so a server that leaves scheduling off
     // still starts, logs in and serves the legacy endpoints with no key configured at all (Task 6 adds the routes and the
-    // real command kinds; Task 12 replaces the no-op notification).
+    // real command kinds; Task 12 supplies the scoped live invalidation).
     var scheduling = builder.Configuration.GetSection(SchedulingSettings.SectionName);
     var schedulingSettings = new SchedulingSettings(scheduling[SchedulingSettings.CommandSigningKeyName])
     {
@@ -96,7 +96,7 @@ try
     builder.Services.AddSingleton(schedulingSettings);
     builder.Services.AddScoped(provider =>
         new ScheduleCommandTokenService(provider.GetRequiredService<SchedulingSettings>().CommandSigningKey));
-    builder.Services.AddScoped<IScheduleCommandNotifier, NoOpScheduleCommandNotifier>();
+    builder.Services.AddScoped<IScheduleCommandNotifier, ScheduleNotifications>();
     builder.Services.AddScoped<ScheduleCommandService>();
 
     // Spec §11 and §5: one handler per command kind, resolved by kind through the seam the engine already calls. Each kind

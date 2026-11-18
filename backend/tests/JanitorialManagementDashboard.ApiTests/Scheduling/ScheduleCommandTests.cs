@@ -797,16 +797,21 @@ public class ScheduleCommandTests
     {
         private readonly CommandLog _log;
         private readonly List<CommandResult> _calls = [];
+        private readonly List<ScheduleChangeScope> _scopes = [];
 
         public RecordingNotifier(CommandLog log) => _log = log;
 
         public IReadOnlyList<CommandResult> Calls => _calls;
 
+        /// <summary>The identities each committed command told the fan-out about — slots and building/shift scopes only.</summary>
+        public IReadOnlyList<ScheduleChangeScope> Scopes => _scopes;
+
         public Exception? Failure { get; set; }
 
-        public Task NotifyCommittedAsync(CommandResult result, CancellationToken ct = default)
+        public Task NotifyCommittedAsync(CommandResult result, ScheduleChangeScope scope, CancellationToken ct = default)
         {
             _calls.Add(result);
+            _scopes.Add(scope);
             _log.Add("NOTIFY");
             return Failure is null ? Task.CompletedTask : Task.FromException(Failure);
         }
