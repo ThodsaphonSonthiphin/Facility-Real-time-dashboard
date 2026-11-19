@@ -16,13 +16,22 @@ test('Admin navigation keeps its geometry while alert counts load at phone, narr
     try {
       await page.goto('/dashboard');
       await expectAreaShown(page);
+      const menu = page.getByRole('button', { name: 'เมนูแอดมิน' });
+      if (await menu.isVisible()) {
+        await menu.click();
+        await expect(menu).toHaveAttribute('aria-expanded', 'true');
+      }
       const nav = page.getByRole('navigation', { name: 'เมนูแอดมิน' });
       const alertLink = nav.getByRole('link', { name: 'รายการที่ขึ้นเตือน', exact: true });
       await expect(alertLink).toBeVisible();
       const before = { nav: await nav.boundingBox(), link: await alertLink.boundingBox() };
-      const response = page.waitForResponse('**/api/admin/alerts');
+      const response = page.waitForResponse((result) =>
+        new URL(result.url()).pathname === '/api/admin/alerts' && result.request().method() === 'GET',
+      );
       release();
-      const alerts = await (await response).json() as { reviewed: boolean }[];
+      const loadedResponse = await response;
+      expect(loadedResponse.ok()).toBe(true);
+      const alerts = await loadedResponse.json() as { reviewed: boolean }[];
       const count = alerts.filter((alert) => !alert.reviewed).length;
       const loaded = nav.getByRole('link', { name: count ? `รายการที่ขึ้นเตือน (${count})` : 'รายการที่ขึ้นเตือน', exact: true });
       await expect(loaded).toBeVisible();
@@ -52,13 +61,30 @@ test.describe('on a narrow window (half a laptop screen)', () => {
   test('D1 does not move when the building names arrive', async ({ page }, testInfo) => {
     test.skip(!measuresLayoutShift, 'Layout shifts are measured with an API only Chromium has');
     await loginAsAdmin(page);
+    await expectAreaShown(page);
 
     await recordLayoutShifts(page);
-    await holdBack(page, '**/api/admin/buildings', 800);
-    await page.goto('/dashboard');
+    let releaseNames!: () => void;
+    const gate = new Promise<void>((resolve) => { releaseNames = resolve; });
+    await page.route('**/api/admin/buildings/all', async (route) => { await gate; await route.fallback(); });
+    const initialResponses = Promise.all([
+      page.waitForResponse('**/api/admin/buildings'),
+      page.waitForResponse('**/api/service-points'),
+    ]);
+    const nameRequest = page.waitForRequest('**/api/admin/buildings/all');
+    const summary = page.getByRole('table', { name: 'สถานะพื้นที่ (ตามตึก)' });
+    try {
+      await page.goto('/dashboard');
+      for (const response of await initialResponses) expect(response.ok()).toBe(true);
+      await nameRequest;
+      await expect(page.getByText('กำลังโหลดจุด...')).toBeVisible();
+      await expect(summary).toBeHidden();
+    } finally {
+      releaseNames();
+    }
     await expectAreaShown(page);
-    // The shift happens when the names land, so wait for a building beyond "ทุกตึก" before measuring
     await expect(page.getByLabel('ตึก').getByRole('option')).not.toHaveCount(1);
+    await expect(summary.getByRole('button', { name: /^A · / })).toBeVisible();
 
     const total = await layoutShiftTotal(page);
     await testInfo.attach('layout-shifts', { body: JSON.stringify({ total, entries: await page.evaluate(() => window.e2eLayoutEntries) }, null, 2), contentType: 'application/json' });

@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
-import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
+import { useGetAllBuildingsQuery, useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { livePoll } from '../../shared/api/baseApi';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { MoreInfo } from '../../shared/components/MoreInfo';
@@ -29,10 +29,10 @@ const RULES_NOTE =
  */
 export function DashboardPage() {
   const { data: points, error, isLoading: pointsLoading, refetch } = useGetServicePointsQuery(undefined, livePoll);
-  // The building picker widens when the names arrive; asked here too (one shared request) so the filters, the help
-  // and the cards appear together and nothing already on screen moves (layout shift, measured 2026-10-28)
+  // Start both shared queries before the filters, building table and Area cards mount, so names cannot move their layout.
   const { isLoading: buildingsLoading } = useGetBuildingsQuery();
-  const isLoading = pointsLoading || buildingsLoading;
+  const { isLoading: buildingNamesLoading } = useGetAllBuildingsQuery();
+  const isLoading = pointsLoading || buildingsLoading || buildingNamesLoading;
   const data = isLoading ? undefined : points;
   const filters = useAppSelector((state) => state.dashboard);
   const shown = data ? filterPoints(data, filters) : [];
