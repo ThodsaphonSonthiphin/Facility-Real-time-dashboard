@@ -8,7 +8,7 @@ namespace JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
 
 public sealed class OverviewMutation(AppDbContext db, OverviewTargetRecorder recorder)
 {
-    private static bool IsSqlite(AppDbContext db) =>
+    internal static bool IsSqlite(AppDbContext db) =>
         db.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite";
 
     public static async Task<OverviewTargetState> LockStateAsync(AppDbContext db, CancellationToken ct)

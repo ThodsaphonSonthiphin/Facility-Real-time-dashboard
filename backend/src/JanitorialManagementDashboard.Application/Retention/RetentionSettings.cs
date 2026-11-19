@@ -1,3 +1,5 @@
+using JanitorialManagementDashboard.Application.Common;
+
 namespace JanitorialManagementDashboard.Application.Retention;
 
 public sealed class RetentionSettings
@@ -10,6 +12,14 @@ public sealed class RetentionSettings
     public int BatchSize { get; set; } = 1000;
     public int RetryMinutes { get; set; } = 15;
     public int RefreshTokenGraceDays { get; set; } = 30;
+    public DateTime RecordCutoffUtc(DateTime nowUtc) => nowUtc.AddYears(-RecordYears);
+
+    public DateOnly WorkFromShiftDate(DateTime nowUtc)
+    {
+        var thai = ThaiTime.FromUtc(nowUtc);
+        return new DateOnly(thai.Year, thai.Month, 1).AddYears(-RecordYears);
+    }
+
     public void Validate()
     {
         if (GpsDays is < 1 or > 36500 || RecordYears is < 1 or > 100 || RunAtHour is < 0 or > 23

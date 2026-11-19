@@ -22,7 +22,7 @@ public sealed partial class RetentionRunner(AppDbContext db, TimeProvider clock,
             + await ClearGpsAsync<BlockedScan, long>(db.BlockedScans.Where(x => x.ScannedAt <= cutoff), cancellationToken)
             + await ClearGpsAsync<AreaTransferConfirmation, int>(
                 db.AreaTransferConfirmations.Where(x => x.OccurredAt <= cutoff), cancellationToken);
-        var annual = now.AddYears(-settings.RecordYears);
+        var annual = settings.RecordCutoffUtc(now);
         var (summaries, archived) = await ArchiveAsync(now, annual, cancellationToken);
         var deleted = archived
             + await DeleteAttendanceAsync(annual, cancellationToken)
@@ -34,6 +34,7 @@ public sealed partial class RetentionRunner(AppDbContext db, TimeProvider clock,
             + await new SchedulingRetention(db).PruneAsync(now, settings, cancellationToken);
         // Dependent history is excluded from RecordsDeleted, as in source-associated cleanup.
         await SweepOrphanHistoryAsync(cancellationToken);
+        await OverviewTargetRetention.PruneAsync(db, now, settings, cancellationToken);
         return new(cleared, summaries, deleted);
     }
 

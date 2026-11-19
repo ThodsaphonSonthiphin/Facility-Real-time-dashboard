@@ -66,7 +66,9 @@ try
         builder.Configuration.GetSection(LoginThrottleSettings.SectionName).Get<LoginThrottleSettings>() ?? new LoginThrottleSettings());
     builder.Services.AddSingleton<LoginThrottle>();
     var attendance = builder.Configuration.GetSection(AttendanceSettings.SectionName).Get<AttendanceSettings>() ?? new AttendanceSettings();
-    if (attendance.OpensMinutesBeforeShift is < 0 or > 360 || attendance.ClosesMinutesAfterShift is < 0 or > 360 || attendance.RepeatIgnoreMinutes < 0)
+    if (attendance.OpensMinutesBeforeShift is < 0 or > AttendanceSettings.MaxReceivingOffsetMinutes
+        || attendance.ClosesMinutesAfterShift is < 0 or > AttendanceSettings.MaxReceivingOffsetMinutes
+        || attendance.RepeatIgnoreMinutes < 0)
     {
         throw new InvalidOperationException("Attendance: window minutes must be 0-360 and RepeatIgnoreMinutes 0 or more.");
     }

@@ -6,10 +6,19 @@ public static class OverviewTime
 {
     public static OverviewMoment Evaluate(ShiftSlot slot, DateTime now, IReadOnlyList<TargetRevision> revisions)
     {
+        var ordered = OrderRevisions(revisions, now);
+        return EvaluateOrdered(slot, now, ordered);
+    }
+
+    internal static TargetRevision[] OrderRevisions(IReadOnlyList<TargetRevision> revisions, DateTime at) =>
+        revisions.Where(r => r.EffectiveAt <= at)
+            .GroupBy(r => r.EffectiveAt).Select(group => group.MaxBy(r => r.Id)!)
+            .OrderBy(r => r.EffectiveAt).ToArray();
+
+    internal static OverviewMoment EvaluateOrdered(ShiftSlot slot, DateTime now, TargetRevision[] ordered)
+    {
         var start = ShiftCalendar.StartUtc(slot);
         var end = ShiftCalendar.EndUtc(slot);
-        var ordered = revisions.Where(r => r.EffectiveAt <= now)
-            .OrderBy(r => r.EffectiveAt).ThenBy(r => r.Id).ToArray();
         var close = ReceivingClose(end, ordered);
         if (now < start) return new("notStarted", now, close, close.HasValue);
         if (now < end) return new("running", now, close, close.HasValue);

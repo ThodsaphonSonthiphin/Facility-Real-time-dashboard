@@ -10,10 +10,7 @@ public static class OverviewTimeline
     {
         var start = ShiftCalendar.StartUtc(slot);
         var evaluation = moment.EvaluationUtc;
-        var ordered = revisions.Where(r => r.EffectiveAt <= evaluation)
-            .GroupBy(r => r.EffectiveAt).Select(group => group.MaxBy(r => r.Id)!)
-            .OrderBy(r => r.EffectiveAt).ToArray();
-        var current = ordered.LastOrDefault();
+        var ordered = OverviewTime.OrderRevisions(revisions, evaluation);
         var rounds = new List<RoundObligation>();
         var active = new Dictionary<int, RoundObligation>();
         var baseline = Array.FindLastIndex(ordered, r => r.EffectiveAt <= start);
@@ -32,11 +29,32 @@ public static class OverviewTimeline
                 : round);
         }
 
+        return DescribeCoverage(slot, moment, ordered) with
+        {
+            Rounds = rounds,
+            StructuralGaps = StructuralGaps(revisions).ToArray(),
+        };
+    }
+
+    internal static TargetTimeline DescribeCoverage(ShiftSlot slot, OverviewMoment moment, TargetRevision[] ordered)
+    {
+        var current = ordered.LastOrDefault(r => r.EffectiveAt <= moment.EvaluationUtc);
+        var hasBaseline = ordered.Length > 0 && ordered[0].EffectiveAt <= ShiftCalendar.StartUtc(slot);
         var currentComplete = current is not null && moment.PolicyComplete;
-        return new(current?.Image, current?.Id, rounds, currentComplete, currentComplete && baseline >= 0)
+        return new(current?.Image, current?.Id, [], currentComplete, currentComplete && hasBaseline)
         {
             Slot = slot,
+            ReceivingHistory = ordered,
         };
+    }
+
+    internal static IEnumerable<(DateTime From, DateTime To)> StructuralGaps(IEnumerable<TargetRevision> revisions)
+    {
+        foreach (var revision in revisions)
+        {
+            if (revision.Image.CoverageGapFromUtc is { } from && from < revision.EffectiveAt)
+                yield return (from, revision.EffectiveAt);
+        }
     }
 
     private sealed record Candidate(TargetBuilding Building, TargetArea Area, TargetWindow Window,

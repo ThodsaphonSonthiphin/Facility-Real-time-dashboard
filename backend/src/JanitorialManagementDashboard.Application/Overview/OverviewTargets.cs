@@ -27,4 +27,6 @@ public sealed record TargetTimeline(TargetImage? Current, long? CurrentRevisionI
 {
     // The slot is part of every opaque key, including rounds activated after scheduled end.
     internal ShiftSlot? Slot { get; init; }
+    internal IReadOnlyList<TargetRevision> ReceivingHistory { get; init; } = [];
+    internal IReadOnlyList<(DateTime From, DateTime To)> StructuralGaps { get; init; } = [];
 }

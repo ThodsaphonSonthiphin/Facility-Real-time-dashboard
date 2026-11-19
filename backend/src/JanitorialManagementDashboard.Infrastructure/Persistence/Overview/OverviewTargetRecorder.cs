@@ -5,11 +5,15 @@ using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Overview;
 using JanitorialManagementDashboard.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
 
 public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings settings, TimeProvider clock)
 {
+    private const int CurrentSchemaVersion = 1;
+    private static readonly JsonSerializerOptions ReadOptions = new() { RespectRequiredConstructorParameters = true };
+
     public async Task<TargetImage> ReadImageAsync(CancellationToken ct)
     {
         var buildings = await db.Buildings.AsNoTracking().OrderBy(b => b.Id)
@@ -27,7 +31,7 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
         var windows = await db.PointRoundWindows.AsNoTracking().OrderBy(w => w.Id)
             .Select(w => new TargetWindow(w.Id, w.ServicePointId, w.Shift, w.StartTime, w.EndTime,
                 UtcMicroseconds(w.CreatedAt))).ToListAsync(ct);
-        return new TargetImage(1, new(settings.OpensMinutesBeforeShift, settings.ClosesMinutesAfterShift),
+        return new TargetImage(CurrentSchemaVersion, new(settings.OpensMinutesBeforeShift, settings.ClosesMinutesAfterShift),
             buildings, areas, points, windows);
     }
 
@@ -56,7 +60,8 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
 
         image = image with
         {
-            CaptureStartedAtUtc = previous?.CaptureStartedAtUtc ?? (head == null ? instant : UtcMicroseconds(head.EffectiveAt)),
+            // A legacy head may be a retained predecessor, so its timestamp cannot establish the original start.
+            CaptureStartedAtUtc = head == null ? instant : previous?.CaptureStartedAtUtc,
             CoverageGapFromUtc = coverageGapFromUtc is { } gap ? UtcMicroseconds(gap) : null,
         };
         var json = JsonSerializer.Serialize(image);
@@ -65,7 +70,7 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
             EffectiveAt = instant,
             SchemaVersion = image.SchemaVersion,
             Payload = json,
-            PayloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json))),
+            PayloadHash = Hash(json),
         };
         db.OverviewTargetRevisions.Add(revision);
         await db.SaveChangesAsync(ct);
@@ -73,6 +78,73 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
         await db.SaveChangesAsync(ct);
         return revision.Id;
     }
+
+    /// <summary>Decodes the revision stream for replay and preserves the intervals with unknown targets and policies.</summary>
+    public static (TargetRevision[] Revisions, (DateTime From, DateTime To)[] UnreadableIntervals) DecodeForRead(
+        IEnumerable<OverviewTargetRevision> rows, ILogger logger)
+    {
+        var groups = rows.OrderBy(row => row.EffectiveAt).ThenBy(row => row.Id)
+            .GroupBy(row => DateTime.SpecifyKind(row.EffectiveAt, DateTimeKind.Utc)).ToArray();
+        var revisions = new List<TargetRevision>();
+        var unreadable = new List<(DateTime From, DateTime To)>();
+        for (var i = 0; i < groups.Length; i++)
+        {
+            var effectiveAt = groups[i].Key;
+            var groupStart = revisions.Count;
+            var winnerReadable = false;
+            foreach (var row in groups[i])
+            {
+                var image = ReadChecked(row);
+                winnerReadable = image != null;
+                if (image != null)
+                    revisions.Add(new(row.Id, effectiveAt, image));
+                else
+                    logger.LogWarning("Could not read overview target revision {RevisionId}", row.Id);
+            }
+
+            if (!winnerReadable)
+            {
+                // A same-time predecessor must not replace an unreadable winning image.
+                revisions.RemoveRange(groupStart, revisions.Count - groupStart);
+                unreadable.Add((effectiveAt, i + 1 < groups.Length ? groups[i + 1].Key : DateTime.MaxValue));
+            }
+        }
+        return (revisions.ToArray(), unreadable.ToArray());
+    }
+
+    private static TargetImage? ReadChecked(OverviewTargetRevision row)
+    {
+        if (row.SchemaVersion != CurrentSchemaVersion)
+            return null;
+
+        try
+        {
+            var image = JsonSerializer.Deserialize<TargetImage>(row.Payload, ReadOptions);
+            return image != null && image.SchemaVersion == row.SchemaVersion
+                && image.Policy is
+                {
+                    OpensMinutesBeforeShift: >= 0 and <= AttendanceSettings.MaxReceivingOffsetMinutes,
+                    ClosesMinutesAfterShift: >= 0 and <= AttendanceSettings.MaxReceivingOffsetMinutes,
+                }
+                && image.Buildings?.All(building => building?.Code != null && building.Name != null) == true
+                && image.Areas?.All(area => area?.Code != null && area.Name != null) == true
+                && image.Points?.All(point => point?.Name != null) == true
+                && image.Windows?.All(window => window != null) == true
+                && !(image.CaptureStartedAtUtc > row.EffectiveAt || image.CoverageGapFromUtc > row.EffectiveAt)
+                // MySQL's JSON column may reorder properties and whitespace on storage.
+                && (HashMatches(row, JsonSerializer.Serialize(image)) || HashMatches(row, row.Payload))
+                ? image : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool HashMatches(OverviewTargetRevision row, string json) =>
+        string.Equals(row.PayloadHash, Hash(json), StringComparison.OrdinalIgnoreCase);
+
+    private static string Hash(string json) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
 
     internal static TargetImage Deserialize(OverviewTargetRevision revision) =>
         JsonSerializer.Deserialize<TargetImage>(revision.Payload) ?? throw new JsonException("Missing target image");
