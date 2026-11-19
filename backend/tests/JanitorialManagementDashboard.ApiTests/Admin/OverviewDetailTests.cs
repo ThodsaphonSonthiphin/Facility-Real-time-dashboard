@@ -6,6 +6,7 @@ using JanitorialManagementDashboard.ApiTests.Scheduling;
 using JanitorialManagementDashboard.Application.Overview;
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -433,6 +434,189 @@ public class OverviewDetailTests
         // When building ownership cannot be proved before baseline, building-filtered Area detail returns 404.
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync(
             $"/api/admin/overview/areas/{ar01}?shiftDate=2026-10-06&shift=Day&buildingId={buildingA}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Transfer_temporal_filter_preserves_prior_confirmed_and_uses_persons_own_confirmation_time()
+    {
+        using var factory = TransferApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (cleanerA, cleanerAAuth, _) = await AuthApi.LoggedInAsync(factory);
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var destB = await TestData.AddAreaAsync(factory, "AR03", "A");
+        var destC = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        await TransferApi.LocateAsync(factory, TransferApi.Destination);
+        await TransferApi.LocateAsync(factory, "token-checkin-ar02");
+        await OverviewTestData.StartHistoryAsync(factory, TransferApi.Thai(1, 0));
+
+        await TransferApi.CheckInAsync(factory, cleanerA, TransferApi.Thai(7, 5));
+
+        // 08:00 T1 instructed AR01 -> AR03, confirmed at 08:10.
+        var (t1Resp, t1Ans) = await TransferApi.InstructAsync(
+            factory, admin, cleanerAAuth.User.Id, origin, destB, TransferApi.Thai(8, 0), at: TransferApi.Thai(8, 0));
+        Assert.Equal(HttpStatusCode.OK, t1Resp.StatusCode);
+        Assert.Equal(ReliefApi.Committed, t1Ans!.Outcome);
+        var t1 = (await TransferApi.InstructionsAsync(factory))[^1];
+        Assert.Equal(HttpStatusCode.OK,
+            (await TransferApi.ConfirmAsync(factory, cleanerA, t1.Id, t1.Revision.ToString(), at: TransferApi.Thai(8, 10))).StatusCode);
+
+        // Cleaner B transfers from AR01 to AR03 (confirmed 09:30), then moves to AR02 (confirmed 09:45),
+        // leaving a later TransferArrival in AR03 that belongs to Cleaner B, not Cleaner A.
+        var cleanerBId = await TestData.AddCleanerAsync(factory, "E2099", Shift.Day);
+        await factory.WithDbAsync(async db =>
+        {
+            var destBSignId = await db.Signs.Where(s => s.AreaId == destB && s.ServicePointId == null).Select(s => s.Id).FirstOrDefaultAsync();
+            var destCSignId = await db.Signs.Where(s => s.AreaId == destC && s.ServicePointId == null).Select(s => s.Id).FirstOrDefaultAsync();
+            var anySignId = await db.Signs.Select(s => s.Id).FirstAsync();
+
+            var b1 = new AreaTransfer
+            {
+                PersonId = cleanerBId,
+                ShiftDate = new DateOnly(2026, 10, 8),
+                Shift = Shift.Day,
+                FromAreaId = origin,
+                ToAreaId = destB,
+                EffectiveAt = TransferApi.Thai(9, 20).UtcDateTime,
+                CreatedAt = TransferApi.Thai(9, 20).UtcDateTime,
+                UpdatedAt = TransferApi.Thai(9, 20).UtcDateTime,
+                CreatedById = cleanerAAuth.User.Id,
+            };
+            var b2 = new AreaTransfer
+            {
+                PersonId = cleanerBId,
+                ShiftDate = new DateOnly(2026, 10, 8),
+                Shift = Shift.Day,
+                FromAreaId = destB,
+                ToAreaId = destC,
+                EffectiveAt = TransferApi.Thai(9, 40).UtcDateTime,
+                CreatedAt = TransferApi.Thai(9, 40).UtcDateTime,
+                UpdatedAt = TransferApi.Thai(9, 40).UtcDateTime,
+                CreatedById = cleanerAAuth.User.Id,
+            };
+            db.AreaTransfers.AddRange(b1, b2);
+            await db.SaveChangesAsync();
+
+            db.AreaTransferConfirmations.AddRange(
+                new AreaTransferConfirmation
+                {
+                    TransferId = b1.Id,
+                    AreaId = destB,
+                    SignId = destBSignId == 0 ? anySignId : destBSignId,
+                    ConfirmedById = cleanerBId,
+                    OccurredAt = TransferApi.Thai(9, 30).UtcDateTime,
+                    Source = AttendanceSource.Scan,
+                    DistanceM = 5,
+                    WithinRadius = true,
+                    CreatedAt = TransferApi.Thai(9, 30).UtcDateTime,
+                },
+                new AreaTransferConfirmation
+                {
+                    TransferId = b2.Id,
+                    AreaId = destC,
+                    SignId = destCSignId == 0 ? anySignId : destCSignId,
+                    ConfirmedById = cleanerBId,
+                    OccurredAt = TransferApi.Thai(9, 45).UtcDateTime,
+                    Source = AttendanceSource.Scan,
+                    DistanceM = 5,
+                    WithinRadius = true,
+                    CreatedAt = TransferApi.Thai(9, 45).UtcDateTime,
+                });
+            await db.SaveChangesAsync();
+        });
+
+        // 09:50 T2 forward AR03 -> AR02 (effective 10:00), cancelled at 09:55;
+        // 10:05 T3 forward AR03 -> AR02, confirmed at 10:20.
+        var (t2Resp, t2Ans) = await TransferApi.InstructAsync(
+            factory, admin, cleanerAAuth.User.Id, destB, destC, TransferApi.Thai(10, 0), at: TransferApi.Thai(9, 50));
+        Assert.Equal(HttpStatusCode.OK, t2Resp.StatusCode);
+        Assert.Equal(ReliefApi.Committed, t2Ans!.Outcome);
+        var t2 = (await TransferApi.InstructionsAsync(factory))[^1];
+        factory.Clock.SetUtcNow(TransferApi.Thai(9, 55));
+        var (cancelResp, cancelAns) = await TransferApi.CancelAsync(
+            admin, t2.Id, "cancel_forward",
+            expected: new() { [TransferApi.Key(cleanerAAuth.User.Id)] = t2.Revision.ToString() });
+        Assert.Equal(HttpStatusCode.OK, cancelResp.StatusCode);
+        Assert.Equal(ReliefApi.Committed, cancelAns!.Outcome);
+
+        var (t3Resp, t3Ans) = await TransferApi.InstructAsync(
+            factory, admin, cleanerAAuth.User.Id, destB, destC, TransferApi.Thai(10, 5), at: TransferApi.Thai(10, 5));
+        Assert.Equal(HttpStatusCode.OK, t3Resp.StatusCode);
+        Assert.Equal(ReliefApi.Committed, t3Ans!.Outcome);
+        var t3 = (await TransferApi.InstructionsAsync(factory))[^1];
+        Assert.Equal(HttpStatusCode.OK,
+            (await TransferApi.ConfirmAsync(
+                factory, cleanerA, t3.Id, t3.Revision.ToString(), token: "token-checkin-ar02", at: TransferApi.Thai(10, 20))).StatusCode);
+
+        // At 08:05 (before T1 confirmed at 08:10): instructed only, no leaked LastConfirmedAreaId.
+        factory.Clock.SetUtcNow(TransferApi.Thai(8, 5));
+        var at0805 = await GetDetailAsync(admin, destB, "2026-10-08", "Day", "covered");
+        var resp0805 = at0805.GetProperty("currentResponsibility");
+        Assert.Equal("instructed", resp0805.GetProperty("state").GetString());
+        Assert.False(resp0805.TryGetProperty("lastConfirmedAreaId", out _));
+        Assert.False(resp0805.TryGetProperty("confirmedAt", out _));
+
+        // At 09:00 (after T1 confirmed, before T2/T3 CreatedAt): T1 must NOT be dropped.
+        factory.Clock.SetUtcNow(TransferApi.Thai(9, 0));
+        var at0900 = await GetDetailAsync(admin, destB, "2026-10-08", "Day", "entered");
+        var resp0900 = at0900.GetProperty("currentResponsibility");
+        Assert.Equal(cleanerAAuth.User.Id, resp0900.GetProperty("userId").GetInt32());
+        Assert.Equal("confirmed", resp0900.GetProperty("state").GetString());
+        Assert.Equal(destB, resp0900.GetProperty("lastConfirmedAreaId").GetInt32());
+        Assert.Equal(TransferApi.Thai(8, 10).UtcDateTime, resp0900.GetProperty("confirmedAt").GetDateTimeOffset().UtcDateTime);
+
+        // At 10:00 (after T2 cancelled at 09:55, before T3 created at 10:05):
+        // AR03 still reports Cleaner A's exact 08:10 confirmation time, NOT Cleaner B's 09:30 arrival!
+        factory.Clock.SetUtcNow(TransferApi.Thai(10, 0));
+        var at1000 = await GetDetailAsync(admin, destB, "2026-10-08", "Day", "entered");
+        var resp1000 = at1000.GetProperty("currentResponsibility");
+        Assert.Equal(cleanerAAuth.User.Id, resp1000.GetProperty("userId").GetInt32());
+        Assert.Equal("confirmed", resp1000.GetProperty("state").GetString());
+        Assert.Equal(destB, resp1000.GetProperty("lastConfirmedAreaId").GetInt32());
+        Assert.Equal(TransferApi.Thai(8, 10).UtcDateTime, resp1000.GetProperty("confirmedAt").GetDateTimeOffset().UtcDateTime);
+    }
+
+    [Fact]
+    public async Task Deactivated_zero_round_area_with_target_history_stays_inspectable_without_joining_work_groups()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var ar03 = await TestData.AddAreaAsync(factory, "AR03", "A");
+        await AddPointAsync(factory, ar03, "AR03-01", "tok-ar03-a", 8, 9);
+        await AddPointAsync(factory, ar03, "AR03-02", "tok-ar03-b", 8, 9);
+
+        // Start history at 01:00, then deactivate AR03 at 02:00 before its 08:00-09:00 windows open,
+        // so AR03 has 0 target rounds in a target-tracked slot.
+        await OverviewTestData.StartHistoryAsync(factory, ThaiClock.At(8, 1, 0));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 2, 0));
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/admin/areas/{ar03}/deactivate", null)).StatusCode);
+
+        var issueScan = await TestData.AddScanAsync(factory, "tok-ar03-a", ThaiClock.At(8, 8, 5), CleaningStatus.Issue, "broken_lock");
+        await TestData.AddInspectionAsync(factory, issueScan, InspectionResult.Rework, ThaiClock.At(8, 8, 15));
+        await TestData.AddScanAsync(factory, "tok-ar03-b", ThaiClock.At(8, 8, 10), CleaningStatus.Normal);
+
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+        var summary = await admin.GetFromJsonAsync<JsonElement>("/api/admin/overview?shiftDate=2026-10-08&shift=Day");
+        var groups = summary.GetProperty("groups");
+        Assert.Equal(0, groups.GetProperty("issue").GetProperty("value").GetInt32());
+        Assert.Equal(0, groups.GetProperty("rework").GetProperty("value").GetInt32());
+        Assert.Equal(0, groups.GetProperty("pendingInspection").GetProperty("value").GetInt32());
+
+        foreach (var g in new[] { "issue", "rework", "pendingInspection" })
+        {
+            var list = await admin.GetFromJsonAsync<JsonElement>(
+                $"/api/admin/overview/areas?shiftDate=2026-10-08&shift=Day&group={g}");
+            Assert.Equal(0, list.GetProperty("total").GetProperty("value").GetInt32());
+            Assert.Empty(list.GetProperty("rows").EnumerateArray());
+
+            var detail = await GetDetailAsync(admin, ar03, "2026-10-08", "Day", g);
+            Assert.False(detail.GetProperty("matchesGroup").GetBoolean());
+            Assert.Empty(detail.GetProperty("area").GetProperty("reasons").EnumerateArray());
+            Assert.True(detail.GetProperty("area").GetProperty("work").GetProperty("issue").GetBoolean());
+            Assert.True(detail.GetProperty("area").GetProperty("work").GetProperty("rework").GetBoolean());
+            Assert.True(detail.GetProperty("area").GetProperty("work").GetProperty("pendingInspection").GetBoolean());
+            Assert.Equal(2, detail.GetProperty("points").EnumerateArray().Count());
+            Assert.Equal(2, detail.GetProperty("facts").GetProperty("submissions").EnumerateArray().Count());
+        }
     }
 
     private static async Task<JsonElement> GetDetailAsync(

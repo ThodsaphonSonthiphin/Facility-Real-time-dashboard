@@ -277,9 +277,13 @@ public sealed class OverviewReadQuery(
 
             var relevant = revisions[firstRevision..afterLastRevision];
             var moment = OverviewTime.Evaluate(slot, readAt, relevant);
-            var current = relevant.LastOrDefault(r => r.EffectiveAt <= moment.EvaluationUtc);
-            var timeline = new TargetTimeline(current?.Image, current?.Id, [],
-                current is not null && moment.PolicyComplete, false);
+            if (moment.Phase == "notStarted")
+            {
+                known.Add(slot);
+                continue;
+            }
+
+            var timeline = OverviewTimeline.Build(slot, moment, relevant);
             if (OverviewFactLoader.ComputeIssueStateKnown(slot, moment, timeline, firstScanAtByPoint, annualCutoffUtc, null))
             {
                 known.Add(slot);
@@ -535,19 +539,22 @@ public sealed class OverviewReadQuery(
                         latestInspection?.Id));
                 }
 
-                if (points.Any(p => p.IsIssue) && availability.Issue.State != "unavailable")
+                if (!hasTargetHistory)
                 {
-                    groups.Add(OverviewGroupKeys.Issue);
-                }
+                    if (points.Any(p => p.IsIssue) && availability.Issue.State != "unavailable")
+                    {
+                        groups.Add(OverviewGroupKeys.Issue);
+                    }
 
-                if (points.Any(p => p.NeedsRework))
-                {
-                    groups.Add(OverviewGroupKeys.Rework);
-                }
+                    if (points.Any(p => p.NeedsRework))
+                    {
+                        groups.Add(OverviewGroupKeys.Rework);
+                    }
 
-                if (points.Any(p => p.IsSubmitted && !p.IsInspected))
-                {
-                    groups.Add(OverviewGroupKeys.PendingInspection);
+                    if (points.Any(p => p.IsSubmitted && !p.IsInspected))
+                    {
+                        groups.Add(OverviewGroupKeys.PendingInspection);
+                    }
                 }
             }
 

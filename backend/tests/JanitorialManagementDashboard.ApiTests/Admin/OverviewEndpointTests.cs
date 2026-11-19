@@ -508,6 +508,119 @@ public class OverviewEndpointTests
         Assert.Equal(0, empty.GetProperty("total").GetProperty("observed").GetInt32());
     }
 
+    [Fact]
+    public async Task Entry_unavailable_while_work_retained_gates_entry_consistently_on_list_and_detail()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        await OverviewTestData.StartHistoryAsync(factory, ThaiClock.At(8, 1, 0));
+        await TestData.AddAttendanceAsync(factory, "1000001", new DateOnly(2026, 10, 8), Shift.Day,
+            AttendanceEvent.ShiftIn, ThaiClock.At(8, 7, 5));
+
+        // 2027-10-20 UTC puts 2026-10-08 past 365-day entry retention (attendanceExpired)
+        // while staying inside the 12-month calendar-month work retention window (2026-10-01+).
+        factory.Clock.SetUtcNow(new DateTimeOffset(2027, 10, 20, 3, 0, 0, TimeSpan.Zero));
+
+        var list = await admin.GetFromJsonAsync<JsonElement>(
+            "/api/admin/overview/areas?shiftDate=2026-10-08&shift=Day&group=incomplete");
+        var listAvailability = list.GetProperty("summary").GetProperty("availability");
+        Assert.Equal("unavailable", listAvailability.GetProperty("entry").GetProperty("state").GetString());
+        Assert.Equal("complete", listAvailability.GetProperty("work").GetProperty("state").GetString());
+        var listRow = Assert.Single(list.GetProperty("rows").EnumerateArray(),
+            r => r.GetProperty("areaId").GetInt32() == ar01);
+        Assert.Equal("unassigned", listRow.GetProperty("entry").GetString());
+        Assert.True(listRow.GetProperty("work").GetProperty("incomplete").GetBoolean());
+
+        var detail = await admin.GetFromJsonAsync<JsonElement>(
+            $"/api/admin/overview/areas/{ar01}?shiftDate=2026-10-08&shift=Day&group=incomplete");
+        var detailArea = detail.GetProperty("area");
+        Assert.Equal("unassigned", detailArea.GetProperty("entry").GetString());
+        Assert.Equal(listRow.GetProperty("entry").GetString(), detailArea.GetProperty("entry").GetString());
+        Assert.Equal(
+            listRow.GetProperty("reasons").EnumerateArray().Select(x => x.GetString()).ToArray(),
+            detailArea.GetProperty("reasons").EnumerateArray().Select(x => x.GetString()).ToArray());
+    }
+
+    [Fact]
+    public async Task Range_excludes_slot_when_deactivated_point_round_has_unknown_issue_state()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var created = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+        int tempPointId = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var ar01 = await db.Areas.SingleAsync(a => a.Code == "AR01");
+            var point = new Domain.Entities.ServicePoint
+            {
+                AreaId = ar01.Id,
+                Name = "จุด Temp Range",
+                SortOrder = 9,
+                CreatedAt = created,
+            };
+            db.Signs.Add(new Sign
+            {
+                AreaId = ar01.Id,
+                ServicePoint = point,
+                Code = "AR01-TMP",
+                QrToken = "tok-ar01-tmp",
+                QrIssuedAt = created,
+                Latitude = 13.756300m,
+                Longitude = 100.501800m,
+                LocationAccuracyM = 10,
+                LocationSource = LocationSource.Site,
+                LocatedAt = created,
+            });
+            db.PointRoundWindows.AddRange(
+                new PointRoundWindow
+                {
+                    ServicePoint = point,
+                    Shift = Shift.Day,
+                    StartTime = new TimeOnly(7, 0),
+                    EndTime = new TimeOnly(9, 0),
+                    CreatedAt = created,
+                },
+                new PointRoundWindow
+                {
+                    ServicePoint = point,
+                    Shift = Shift.Night,
+                    StartTime = new TimeOnly(20, 0),
+                    EndTime = new TimeOnly(22, 0),
+                    CreatedAt = created,
+                });
+            await db.SaveChangesAsync();
+            tempPointId = point.Id;
+        });
+
+        await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(9, 8, 5), CleaningStatus.Normal);
+        await TestData.AddScanAsync(factory, "token-restroom-f1", ThaiClock.At(9, 8, 5), CleaningStatus.Normal);
+        await TestData.AddScanAsync(factory, "token-meeting-room", ThaiClock.At(9, 8, 5), CleaningStatus.Normal);
+        await OverviewTestData.StartHistoryAsync(factory, ThaiClock.At(9, 1, 0));
+
+        // Deactivate the temp point mid-Night on 2026-10-09 so it is inactive at Night close
+        // yet leaves a finalized 20:00-22:00 round in timeline.Rounds with no retained scan.
+        factory.Clock.SetUtcNow(ThaiClock.At(9, 21, 0));
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/admin/points/{tempPointId}/deactivate", null)).StatusCode);
+
+        // Read at 2027-10-05: 2026-10-09 entry/work/history are still retained, while tempPoint (created 2026-10-01) precedes annualCutoffUtc.
+        factory.Clock.SetUtcNow(new DateTimeOffset(2027, 10, 5, 3, 0, 0, TimeSpan.Zero));
+        var overview = await admin.GetFromJsonAsync<JsonElement>(
+            "/api/admin/overview?shiftDate=2026-10-09&shift=Night");
+        var avail = overview.GetProperty("availability");
+        Assert.Equal("complete", avail.GetProperty("entry").GetProperty("state").GetString());
+        Assert.Equal("complete", avail.GetProperty("work").GetProperty("state").GetString());
+        Assert.Equal("complete", avail.GetProperty("history").GetProperty("state").GetString());
+        Assert.Equal("partial", avail.GetProperty("issue").GetProperty("state").GetString());
+        Assert.Contains("issueStateUnknown",
+            avail.GetProperty("issue").GetProperty("reasons").EnumerateArray().Select(x => x.GetString()));
+
+        // OverviewRange must exclude 2026-10-09 (first complete date is 2026-10-10) consistently with Night availability.
+        var range = overview.GetProperty("context").GetProperty("range");
+        Assert.Equal("2026-10-10", range.GetProperty("completeFrom").GetString());
+        Assert.Equal("2027-10-05", range.GetProperty("completeThrough").GetString());
+    }
+
     private static async Task<int> AddPointAsync(
         JanitorialApiFactory factory, string areaCode, string signCode, string qrToken, int startHour, int endHour)
     {

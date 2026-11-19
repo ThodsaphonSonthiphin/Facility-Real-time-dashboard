@@ -243,8 +243,7 @@ public static class OverviewFactLoader
             }
         }
 
-        var slotTransfers = await store.ReadSlotTransfersAsync(slot, ct);
-        var responsibilities = BuildResponsibilities(slotTransfers, entryEvidence, evaluationUtc, assignedAreas);
+        var responsibilities = await LoadResponsibilitiesAsync(db, slot, evaluationUtc, assignedAreas, ct);
 
         var personIds = submissions.Select(s => s.UserId)
             .Concat(inspections.Select(i => i.SupervisorId))
@@ -469,71 +468,121 @@ public static class OverviewFactLoader
     private const string TransferConfirmed = "confirmed";
     private const string TransferInstructed = "instructed";
 
+    private sealed record TemporalTransferRow(
+        int Id,
+        int PersonId,
+        int ToAreaId,
+        DateTime CreatedAt,
+        DateTime EffectiveAt,
+        bool IsCancelled,
+        DateTime? CancelledAt);
+
+    private static async Task<Dictionary<int, OverviewAreaResponsibility>> LoadResponsibilitiesAsync(
+        AppDbContext db,
+        ShiftSlot slot,
+        DateTime evaluationUtc,
+        HashSet<int> assignedAreas,
+        CancellationToken ct)
+    {
+        var instructions = await db.AreaTransfers.AsNoTracking()
+            .Where(row => row.ShiftDate == slot.ShiftDate
+                && row.Shift == slot.Shift
+                && row.CreatedAt <= evaluationUtc)
+            .OrderBy(row => row.Id)
+            .Select(row => new TemporalTransferRow(
+                row.Id,
+                row.PersonId,
+                row.ToAreaId,
+                row.CreatedAt,
+                row.EffectiveAt,
+                row.IsCancelled,
+                row.CancelledAt))
+            .ToListAsync(ct);
+
+        if (instructions.Count == 0)
+        {
+            return new Dictionary<int, OverviewAreaResponsibility>();
+        }
+
+        var ids = instructions.Select(row => row.Id).ToList();
+        var confirmations = (await db.AreaTransferConfirmations.AsNoTracking()
+            .Where(row => ids.Contains(row.TransferId) && row.OccurredAt <= evaluationUtc)
+            .OrderByDescending(row => row.Id)
+            .Select(row => new { row.TransferId, row.OccurredAt })
+            .ToListAsync(ct))
+            .GroupBy(row => row.TransferId)
+            .ToDictionary(group => group.Key, group => Utc(group.First().OccurredAt));
+
+        return BuildResponsibilities(instructions, confirmations, evaluationUtc, assignedAreas);
+    }
+
     private static Dictionary<int, OverviewAreaResponsibility> BuildResponsibilities(
-        IReadOnlyDictionary<int, SlotTransfer> transfers,
-        IReadOnlyList<AreaEntryEvidence> entryEvidence,
+        IReadOnlyList<TemporalTransferRow> instructions,
+        IReadOnlyDictionary<int, DateTime> confirmations,
         DateTime evaluationUtc,
         HashSet<int> assignedAreas)
     {
+        static bool IsCancelledAt(TemporalTransferRow row, DateTime at) =>
+            row.IsCancelled && (row.CancelledAt is null || Utc(row.CancelledAt.Value) <= at);
+
         var candidates = new List<(OverviewAreaResponsibility Responsibility, int Priority, DateTime SortAt, int TransferId)>();
 
-        foreach (var transfer in transfers.Values)
+        foreach (var group in instructions.GroupBy(row => row.PersonId))
         {
-            var inst = transfer.Instruction;
-            if (Utc(inst.CreatedAt) > evaluationUtc)
+            var chain = group.OrderBy(row => row.Id).ToList();
+            var latest = chain[^1];
+
+            (int TransferId, int AreaId, DateTime ConfirmedAt)? lastConfirmed = null;
+            foreach (var row in chain)
             {
-                continue;
+                if (!IsCancelledAt(row, evaluationUtc) && confirmations.TryGetValue(row.Id, out var confirmedAt))
+                {
+                    lastConfirmed = (row.Id, row.ToAreaId, confirmedAt);
+                }
             }
 
-            var cancelled = inst.IsCancelled && (inst.CancelledAt is null || Utc(inst.CancelledAt.Value) <= evaluationUtc);
-            var confirmed = transfer.Confirmation is { } conf && Utc(conf.OccurredAt) <= evaluationUtc;
-            var effectiveAt = Utc(inst.EffectiveAt);
+            var latestCancelled = IsCancelledAt(latest, evaluationUtc);
+            var effectiveAt = Utc(latest.EffectiveAt);
 
-            if (!cancelled && confirmed)
+            if (!latestCancelled && confirmations.TryGetValue(latest.Id, out var latestConfirmedAt))
             {
-                var confirmedAt = Utc(transfer.Confirmation!.OccurredAt);
                 candidates.Add((
                     new OverviewAreaResponsibility(
-                        inst.PersonId,
-                        inst.ToAreaId,
+                        latest.PersonId,
+                        latest.ToAreaId,
                         TransferConfirmed,
-                        transfer.LastConfirmedAreaId,
-                        confirmedAt),
+                        lastConfirmed!.Value.AreaId,
+                        latestConfirmedAt),
                     2,
-                    confirmedAt,
-                    inst.Id));
+                    latestConfirmedAt,
+                    latest.Id));
             }
-            else if (!cancelled && !confirmed && effectiveAt <= evaluationUtc)
+            else if (!latestCancelled && effectiveAt <= evaluationUtc)
             {
-                assignedAreas.Add(inst.ToAreaId);
+                assignedAreas.Add(latest.ToAreaId);
                 candidates.Add((
                     new OverviewAreaResponsibility(
-                        inst.PersonId,
-                        inst.ToAreaId,
+                        latest.PersonId,
+                        latest.ToAreaId,
                         TransferInstructed,
-                        transfer.LastConfirmedAreaId,
+                        lastConfirmed?.AreaId,
                         null),
                     1,
                     effectiveAt,
-                    inst.Id));
+                    latest.Id));
             }
-            else if (transfer.LastConfirmedAreaId is int lastArea)
+            else if (lastConfirmed is { } prior)
             {
-                var lastConfirmedAt = entryEvidence
-                    .Where(e => e.AreaId == lastArea && e.Kind == EntryEvidenceKinds.TransferArrival)
-                    .OrderByDescending(e => e.RecordedAt)
-                    .Select(e => (DateTime?)e.RecordedAt.UtcDateTime)
-                    .FirstOrDefault();
                 candidates.Add((
                     new OverviewAreaResponsibility(
-                        inst.PersonId,
-                        lastArea,
+                        latest.PersonId,
+                        prior.AreaId,
                         TransferConfirmed,
-                        lastArea,
-                        lastConfirmedAt),
+                        prior.AreaId,
+                        prior.ConfirmedAt),
                     2,
-                    lastConfirmedAt ?? effectiveAt,
-                    inst.Id));
+                    prior.ConfirmedAt,
+                    prior.TransferId));
             }
         }
 

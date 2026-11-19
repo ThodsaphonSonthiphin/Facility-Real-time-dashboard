@@ -171,7 +171,7 @@ public static class AdminOverviewEndpoints
         var filteredFacts = FilterFactsForArea(read, area, points, rounds, availability, out var areaResponsibility, out var areaEvidence);
 
         var context = BuildContextDto(read, buildingId);
-        var areaRow = ToDetailAreaRowDto(area, availability, group);
+        var areaRow = ToAreaRowDto(area, availability, group);
 
         return Results.Ok(new OverviewAreaDetailDto(
             context,
@@ -413,6 +413,19 @@ public static class AdminOverviewEndpoints
                 _ => [],
             };
 
+        var entry = availability.Entry.State is "notStarted" or "unavailable"
+            ? ScheduleEntryEvidence.Unassigned
+            : area.Entry;
+        var issueAllowed = availability.Issue.State is not ("notStarted" or "unavailable");
+        var work = availability.Work.State is "notStarted" or "unavailable"
+            ? new AreaWork(0, 0, 0, false, false, false, false, false, false,
+                issueAllowed && area.Work.Issue, false)
+            : issueAllowed
+                ? area.Work
+                : area.Work with { Issue = false };
+        var originsIncomplete = availability.Work.State is not ("notStarted" or "unavailable")
+            && area.OriginsIncomplete;
+
         return new OverviewAreaRowDto(
             area.Id,
             area.BuildingId,
@@ -420,25 +433,11 @@ public static class AdminOverviewEndpoints
             area.Name,
             area.BuildingCode,
             area.BuildingName,
-            area.Entry,
-            area.Work,
+            entry,
+            work,
             reasons,
             roundKeys,
-            area.OriginsIncomplete);
-    }
-
-    private static OverviewAreaRowDto ToDetailAreaRowDto(OverviewArea area, SectionAvailability availability, string? group)
-    {
-        var row = ToAreaRowDto(area, availability, group);
-        var entry = availability.Entry.State is "notStarted" or "unavailable"
-            ? ScheduleEntryEvidence.Unassigned
-            : row.Entry;
-        var work = availability.Work.State is "notStarted" or "unavailable"
-            ? new AreaWork(0, 0, 0, false, false, false, false, false, false,
-                availability.Issue.State is not ("notStarted" or "unavailable") && row.Work.Issue, false)
-            : row.Work;
-        var originsIncomplete = availability.Work.State is not ("notStarted" or "unavailable") && row.OriginsIncomplete;
-        return row with { Entry = entry, Work = work, OriginsIncomplete = originsIncomplete };
+            originsIncomplete);
     }
 
     private static IReadOnlyList<OverviewPointDetailDto> BuildPointDetails(OverviewRead read, OverviewArea area)
