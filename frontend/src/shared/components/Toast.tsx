@@ -60,7 +60,7 @@ export function Toast({ notice, onClose }: ToastProps) {
 
   return (
     <div
-      className={`fixed top-4 right-4 left-4 z-10 mx-auto flex max-w-96 items-center gap-2.5 rounded-lg border py-1 pr-1 pl-3.5 shadow-sm transition-opacity starting:opacity-0 motion-reduce:transition-none ${noteTones[tone]} ${fading ? 'opacity-0' : 'opacity-100'}`}
+      className={`motion-toast fixed top-4 right-4 left-4 z-10 mx-auto flex max-w-96 items-center gap-2.5 rounded-lg border py-1 pr-1 pl-3.5 shadow-sm transition-opacity starting:opacity-0 motion-reduce:transition-none ${noteTones[tone]} ${fading ? 'opacity-0' : 'opacity-100'}`}
       onMouseEnter={() => {
         setPointerOn(true);
         setFading(false);
