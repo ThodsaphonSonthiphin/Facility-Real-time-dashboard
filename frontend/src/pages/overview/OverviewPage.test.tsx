@@ -100,14 +100,17 @@ describe('OverviewPage', () => {
     expect(screen.getByRole('button', { name: 'ลงเวลาแล้ว 90 พื้นที่' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'ยังไม่ลงเวลา 10 พื้นที่' })).toHaveAttribute('aria-pressed', 'false');
     expect(new URLSearchParams(router.state.location.search).get('group')).toBe('entered');
-    expect(screen.getByRole('status')).toHaveTextContent(/พื้นที่ที่ลงเวลาแล้ว/);
+    expect(screen.getByRole('status', { name: 'สถานะภาพรวม' })).toHaveTextContent(/พื้นที่ที่ลงเวลาแล้ว/);
 
     await user.click(screen.getByRole('button', { name: 'ยังไม่ลงเวลา 10 พื้นที่' }));
     expect(await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' })).toBeVisible();
     const overviewGroups = calls
       .filter((c) => c.path === '/api/admin/overview/areas')
       .map((c) => new URLSearchParams(c.search).get('group'));
-    expect(overviewGroups).toEqual(['notEntered', 'entered', 'notEntered']);
+    // Each new connection can catch up once with the same selection.
+    expect(overviewGroups.filter((group, index) => group !== overviewGroups[index - 1]))
+      .toEqual(['notEntered', 'entered', 'notEntered']);
+    expect(overviewGroups.length).toBeLessThanOrEqual(6);
   });
 
   it('keeps the category count on page 2 and resets page to 1 when a filter changes', async () => {
@@ -164,8 +167,9 @@ describe('OverviewPage', () => {
       expect(p.get('group')).toBe('overdue');
       expect(p.get('page')).toBe('2');
     });
-    const settledCalls = server.calls.filter((c) => c.path === '/api/admin/overview/areas').length;
-    expect(settledCalls).toBeLessThanOrEqual(2);
+    const overviewCalls = server.calls.filter((call) => call.path === '/api/admin/overview/areas');
+    expect(overviewCalls.filter((call) => !new URLSearchParams(call.search).has('shiftDate'))).toHaveLength(1);
+    expect(overviewCalls.length).toBeLessThanOrEqual(3);
   });
 
   it('replaces stale clamped page from server in URL without a request loop', async () => {
@@ -186,7 +190,7 @@ describe('OverviewPage', () => {
       expect(new URLSearchParams(router.state.location.search).get('page')).toBe('2');
       expect(screen.getByRole('region', { name: 'พื้นที่ที่มีงานเลยเวลา' })).toBeVisible();
     });
-    expect(server.calls.filter((c) => c.path === '/api/admin/overview/areas').length).toBeLessThanOrEqual(2);
+    expect(server.calls.filter((c) => c.path === '/api/admin/overview/areas').length).toBeLessThanOrEqual(4);
   });
 
   it('does not allow a delayed older response to replace a newly selected context', async () => {
@@ -630,7 +634,7 @@ describe('OverviewPage', () => {
       await act(async () => {
         window.dispatchEvent(new Event('focus'));
       });
-      await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/10:05/));
+      await waitFor(() => expect(screen.getByRole('status', { name: 'สถานะภาพรวม' })).toHaveTextContent(/10:05/));
       expect(buildingSelect).toHaveFocus();
 
       // Background refresh failure keeps previous response + readAtUtc + retry

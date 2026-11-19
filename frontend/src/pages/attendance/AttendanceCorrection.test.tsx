@@ -677,6 +677,9 @@ describe('Overview Attendance actions', () => {
   it('writes using the exact current board row and refreshes both that board and the Overview detail', async () => {
     const server = serveScoped({ 'PUT /api/admin/attendance': () => savedEvent });
     const { router, user } = await renderApp(scopedUrl);
+    const detailCalls = () => server.calls.filter((call) => call.path === '/api/admin/overview/areas/91');
+    // Wait for the initial read and the connection's catch-up before checking the save's invalidation.
+    await waitFor(() => expect(detailCalls()).toHaveLength(2));
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = await screen.findByRole('dialog', { name: 'แก้เวลา' });
     await user.type(time(form, 'ออกพัก'), '09:30');
@@ -689,7 +692,7 @@ describe('Overview Attendance actions', () => {
       expect.objectContaining({ userId: scopedRow.cleaner?.id, shiftDate: '2026-11-04', shift: 'Day', eventType: 'BreakOut' }),
     ]);
     expect(boardCalls(server).length).toBeGreaterThan(boardBefore);
-    await waitFor(() => expect(server.calls.filter((call) => call.path === '/api/admin/overview/areas/91')).toHaveLength(2));
+    await waitFor(() => expect(detailCalls()).toHaveLength(3));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(scopedUrl);
   });
@@ -709,6 +712,9 @@ describe('Overview Attendance actions', () => {
       }),
     });
     const { router, user } = await renderApp(scopedUrl);
+    const detailCalls = () => server.calls.filter((call) => call.path === '/api/admin/overview/areas/91');
+    // Wait for the initial read and the connection's catch-up before checking the save's invalidation.
+    await waitFor(() => expect(detailCalls()).toHaveLength(2));
     await user.click(await screen.findByRole('button', { name: 'มอบหมายทำแทน' }));
     const drawer = await screen.findByRole('dialog', { name: 'มอบหมายทำแทน' });
     expect(within(drawer).getByText('กะเช้า พ. 04/11/2026 · AR91 พื้นที่ทดลอง 91')).toBeVisible();
@@ -720,7 +726,7 @@ describe('Overview Attendance actions', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     const assigned = server.calls.filter((call) => call.method === 'POST' && call.path === '/api/admin/cover-assignments');
     expect(assigned.map(({ body }) => body)).toEqual([{ userId: 25, areaId: 91, shiftDate: '2026-11-04', shift: 'Day' }]);
-    await waitFor(() => expect(server.calls.filter((call) => call.path === '/api/admin/overview/areas/91')).toHaveLength(2));
+    await waitFor(() => expect(detailCalls()).toHaveLength(3));
     expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(scopedUrl);
   });
 

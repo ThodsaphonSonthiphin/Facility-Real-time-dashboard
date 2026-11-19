@@ -67,6 +67,9 @@ public sealed class OverviewMutationLease : IAsyncDisposable
         this.transaction = transaction;
     }
 
+    /// <summary>The new revision made by this committed setup change, if the target image changed.</summary>
+    public long? CommittedTargetChangeId { get; private set; }
+
     public Task<long> CommitAsync(CancellationToken ct, DateTime? coverageGapFromUtc = null) =>
         CommitAsync(ct, coverageGapFromUtc, observedImage: null);
 
@@ -74,9 +77,11 @@ public sealed class OverviewMutationLease : IAsyncDisposable
     {
         if (committed || disposed)
             throw new InvalidOperationException("The overview mutation has already ended.");
+        var before = db.OverviewTargetStates.Local.Single(state => state.Id == 1).LatestRevisionId;
         var id = await CaptureAsync(ct, coverageGapFromUtc, observedImage);
         await transaction.CommitAsync(ct);
         committed = true;
+        CommittedTargetChangeId = before == id ? null : id;
         return id;
     }
 

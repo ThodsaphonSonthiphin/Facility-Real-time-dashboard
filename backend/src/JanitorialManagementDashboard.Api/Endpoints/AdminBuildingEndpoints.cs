@@ -27,11 +27,11 @@ public static class AdminBuildingEndpoints
         admin.MapPost("/buildings", CreateAsync);
         admin.MapPut("/buildings/{id:int}", RenameAsync);
         admin.MapPost("/buildings/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-            OverviewMutation mutation, CancellationToken ct) =>
-            SetActiveAsync(id, false, principal, db, clock, mutation, ct));
+            OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct) =>
+            SetActiveAsync(id, false, principal, db, clock, mutation, overview, ct));
         admin.MapPost("/buildings/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-            OverviewMutation mutation, CancellationToken ct) =>
-            SetActiveAsync(id, true, principal, db, clock, mutation, ct));
+            OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct) =>
+            SetActiveAsync(id, true, principal, db, clock, mutation, overview, ct));
         return app;
     }
 
@@ -39,7 +39,7 @@ public static class AdminBuildingEndpoints
     private sealed record BuildingSnapshot(string Code, string Name);
 
     private static async Task<IResult> CreateAsync(CreateBuildingRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        OverviewMutation mutation, CancellationToken ct)
+        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -74,7 +74,7 @@ public static class AdminBuildingEndpoints
                 db, admin.Id, now, "BUILDING_CREATE", "buildings", building.Id, $"เพิ่มตึก {code} {name}",
                 before: null, after: new BuildingSnapshot(code, name));
             await db.SaveChangesAsync(ct);
-            await change.CommitAsync(ct);
+            await overview.CommitAsync(change, ct);
         }
         catch (DbUpdateException)
         {
@@ -93,7 +93,7 @@ public static class AdminBuildingEndpoints
     }
 
     private static async Task<IResult> RenameAsync(int id, UpdateBuildingRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        OverviewMutation mutation, CancellationToken ct)
+        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -123,13 +123,13 @@ public static class AdminBuildingEndpoints
             await db.SaveChangesAsync(ct);
         }
 
-        await change.CommitAsync(ct);
+        await overview.CommitAsync(change, ct);
         return Results.Ok(await LoadOneAsync(db, building.Id));
     }
 
     /// <summary>Decision 4: off only with no active Area and no active Supervisor in it; on with no condition.</summary>
     private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        OverviewMutation mutation, CancellationToken ct)
+        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -146,7 +146,7 @@ public static class AdminBuildingEndpoints
 
         if (building.IsActive == active)
         {
-            await change.CommitAsync(ct);
+            await overview.CommitAsync(change, ct);
             return Results.Ok(await LoadOneAsync(db, building.Id));
         }
 
@@ -168,7 +168,7 @@ public static class AdminBuildingEndpoints
             before: new { IsActive = !active }, after: new { IsActive = active });
         await db.SaveChangesAsync(ct);
 
-        await change.CommitAsync(ct);
+        await overview.CommitAsync(change, ct);
         return Results.Ok(await LoadOneAsync(db, building.Id));
     }
 

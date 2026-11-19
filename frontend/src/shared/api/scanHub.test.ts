@@ -13,6 +13,8 @@ interface FollowOptions {
   points?: boolean;
   /** Whether the page takes AttendanceRecorded. */
   attendance?: boolean;
+  /** Whether the page takes OverviewChanged. */
+  overview?: boolean;
   /** How long the connection waits to hear from the server; left out, the client's own 30 s. */
   serverTimeoutMs?: number;
   /** The token a start asks for; a test holds it to keep a start in flight. */
@@ -21,7 +23,7 @@ interface FollowOptions {
 
 /** One cache entry's life, driven by hand: `loaded` is its first answer, `remove` its end. */
 function follow(
-  { key = 'test', points: withPoints = true, attendance: withAttendance = false, serverTimeoutMs, token }: FollowOptions = {},
+  { key = 'test', points: withPoints = true, attendance: withAttendance = false, overview: withOverview = false, serverTimeoutMs, token }: FollowOptions = {},
   store = makeStore(),
 ) {
   let loaded: (value?: unknown) => void = () => {};
@@ -36,6 +38,7 @@ function follow(
   });
   const points: PointCard[] = [];
   const changes: AttendanceChanged[] = [];
+  const revisions: number[] = [];
   const counts = { missed: 0 };
   const done = followScanHub({
     key,
@@ -45,6 +48,7 @@ function follow(
     accessToken: token ?? (async () => 'token-supervisor'),
     onPoint: withPoints ? (card) => points.push(card) : undefined,
     onAttendance: withAttendance ? (change) => changes.push(change) : undefined,
+    onOverview: withOverview ? ({ revisionId }) => revisions.push(revisionId) : undefined,
     onMissed: () => {
       counts.missed += 1;
     },
@@ -56,6 +60,7 @@ function follow(
     remove,
     points,
     changes,
+    revisions,
     counts,
     done,
     status: () => selectHubStatus(key)(store.getState()),
@@ -101,6 +106,24 @@ describe('followScanHub (#26 hub-cache-bridge, facility-0064)', () => {
 
     expect(f.points).toEqual([]);
     expect(f.changes).toEqual([{ areaId: 1, shiftDate: '2026-10-15', shift: 'Day' }]);
+  });
+
+  it('handles OverviewChanged with or without an interested follower, without replying', async () => {
+    const overview = follow({ key: 'overview', overview: true });
+    overview.loaded();
+    await vi.waitFor(() => expect(overview.status()).toBe('live'));
+    const listening = hub.latest();
+    const registerHandler = vi.spyOn(Object.getPrototypeOf(listening), 'on');
+
+    const pointBoard = follow({ key: 'point-board' });
+    pointBoard.loaded();
+    await vi.waitFor(() => expect(pointBoard.status()).toBe('live'));
+
+    listening.push('OverviewChanged', { revisionId: 7 });
+    hub.latest().push('OverviewChanged', { revisionId: 7 });
+    expect(registerHandler).toHaveBeenCalledWith('OverviewChanged', expect.any(Function));
+    expect(overview.revisions).toEqual([7]);
+    expect(pointBoard.revisions).toEqual([]);
   });
 
   it('gives the server no answer even when the page handler returns one (plan 11 real run: D2 logged an Error per push)', async () => {

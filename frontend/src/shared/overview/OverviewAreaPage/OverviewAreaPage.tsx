@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Button } from '../../components/Button';
+import { LiveBadge } from '../../components/LiveBadge';
 import { Note } from '../../components/Note';
 import { PageLoading } from '../../components/PageState';
 import { linkClass } from '../../components/styles';
@@ -24,9 +25,16 @@ export function OverviewAreaPage({ view, actions }: OverviewAreaPageProps) {
           </p>
         )}
         {model.phaseText && <p className="text-text-2">{model.phaseText}</p>}
+        {model.hubKey && <LiveBadge hubKey={model.hubKey} />}
       </header>
       {model.loading && <PageLoading lines={3}>กำลังโหลดพื้นที่...</PageLoading>}
-      {model.error && <Note tone="error" onRetry={model.canRetry ? model.retry : undefined}>{model.error}</Note>}
+      {model.error && (
+        <Note tone={model.detail ? 'warn' : 'error'} onRetry={model.canRetry ? model.retry : undefined}>
+          {model.detail
+            ? `ไม่สามารถอัปเดตข้อมูลล่าสุดได้ (${model.error}) · กำลังแสดงข้อมูลที่อ่านเมื่อ ${model.readAtText} น. (ข้อมูลอาจยังไม่ล่าสุด)`
+            : model.error}
+        </Note>
+      )}
       {model.detail && model.selection && (
         <>
           {model.stateChanged && <Note tone="info" status>สถานะพื้นที่เปลี่ยนจากรายการที่เลือกแล้ว</Note>}

@@ -125,6 +125,7 @@ try
 
     builder.Services.AddScoped<OverviewTargetRecorder>();
     builder.Services.AddScoped<OverviewMutation>();
+    builder.Services.AddScoped<OverviewNotifications>();
     builder.Services.AddScoped<OverviewReadQuery>();
     builder.Services.AddSingleton(attendance);
     builder.Services.AddFacilityAuth(builder.Configuration);

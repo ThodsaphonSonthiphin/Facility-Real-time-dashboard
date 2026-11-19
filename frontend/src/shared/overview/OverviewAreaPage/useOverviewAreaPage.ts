@@ -1,12 +1,13 @@
 import { skipToken } from '@reduxjs/toolkit/query';
 import { useSearchParams } from 'react-router';
-import { livePoll } from '../../api/baseApi';
+import { freshOnOpen } from '../../api/baseApi';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import { shiftShortLabel } from '../../utils/labels';
 import { formatDate, formatShiftDate, formatTime } from '../../utils/thaiTime';
-import { useGetOverviewAreaQuery } from '../overviewApi';
+import { overviewApi, overviewHubKey, useGetOverviewAreaQuery } from '../overviewApi';
 import { overviewHref, readOverviewContext } from '../overviewContext';
 import type { OverviewContext, OverviewView } from '../types';
+import { useOverviewRefresh } from '../useOverviewRefresh';
 import type { OverviewAreaPageModel } from './type';
 
 function phaseWords({ phase, closeUtc }: OverviewContext): string | undefined {
@@ -35,7 +36,9 @@ export function useOverviewAreaPage(routeView: OverviewView): OverviewAreaPageMo
         roundKey: selection.roundKey,
       }
     : skipToken;
-  const result = useGetOverviewAreaQuery(args, livePoll);
+  const { currentData: cached } = overviewApi.endpoints.getOverviewArea.useQueryState(args);
+  const refresh = useOverviewRefresh(cached?.context);
+  const result = useGetOverviewAreaQuery(args, { ...freshOnOpen, ...refresh });
   // currentData never carries the previous Area or round under a newly navigated URL.
   const detail = result.currentData;
   const selectedOldRound = !!detail?.selectedRoundKey
@@ -58,6 +61,8 @@ export function useOverviewAreaPage(routeView: OverviewView): OverviewAreaPageMo
     detail,
     loading: args !== skipToken && result.isFetching && !detail,
     error,
+    hubKey: args !== skipToken && detail && detail.context.phase !== 'closed' ? overviewHubKey(args) : undefined,
+    readAtText: detail && formatTime(detail.context.readAtUtc),
     backHref: back.ok ? overviewHref(back.context) : '/admin/overview',
     readOnly,
     stateChanged: detail?.matchesGroup === false,

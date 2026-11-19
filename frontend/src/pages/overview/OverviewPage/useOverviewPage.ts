@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { freshOnOpen } from '../../../shared/api/baseApi';
 import type { Shift } from '../../../shared/api/types';
-import { useGetOverviewAreasQuery } from '../../../shared/overview/overviewApi';
+import { overviewApi, overviewHubKey, useGetOverviewAreasQuery } from '../../../shared/overview/overviewApi';
 import { areaHref, overviewParams, readOverviewContext } from '../../../shared/overview/overviewContext';
 import type {
   Availability,
@@ -17,6 +17,7 @@ import type {
   OverviewSummary,
   OverviewView,
 } from '../../../shared/overview/types';
+import { useOverviewRefresh } from '../../../shared/overview/useOverviewRefresh';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { shiftLabel, shiftShortLabel } from '../../../shared/utils/labels';
 import { formatDate, formatShiftDate, formatTime, thaiToday } from '../../../shared/utils/thaiTime';
@@ -620,7 +621,9 @@ export function useOverviewPage(): OverviewPageModel {
       }
     : skipToken;
 
-  const query = useGetOverviewAreasQuery(queryArgs, { ...freshOnOpen, refetchOnFocus: true });
+  const { currentData: cached } = overviewApi.endpoints.getOverviewAreas.useQueryState(queryArgs);
+  const refresh = useOverviewRefresh(cached?.summary.context);
+  const query = useGetOverviewAreasQuery(queryArgs, { ...freshOnOpen, ...refresh });
   const rawResponse = contextResult.ok ? query.currentData : undefined;
   const argsKey = contextResult.ok ? overviewParams(selection).toString() : '';
 
@@ -829,6 +832,9 @@ export function useOverviewPage(): OverviewPageModel {
     response,
     loading,
     refreshing,
+    hubKey: queryArgs !== skipToken && response && response.summary.context.phase !== 'closed'
+      ? overviewHubKey(queryArgs)
+      : undefined,
     error,
     changed,
     onDate,

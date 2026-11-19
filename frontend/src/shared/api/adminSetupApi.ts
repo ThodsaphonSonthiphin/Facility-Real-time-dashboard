@@ -106,6 +106,11 @@ export interface SignLocationRequest {
   source: LocationSource;
 }
 
+/** Target setup also changes the Overview projection after a successful save. */
+export function targetSetupTags(_result: unknown, error: unknown): Array<'AdminSetup' | 'Overview'> {
+  return error ? ['AdminSetup'] : ['AdminSetup', 'Overview'];
+}
+
 export const adminSetupApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getAreas: build.query<AreaSummary[], void>({

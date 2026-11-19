@@ -34,11 +34,11 @@ public static class AdminAreaEndpoints
         admin.MapPost("/areas", CreateAsync);
         admin.MapPut("/areas/{id:int}", UpdateAsync);
         admin.MapPost("/areas/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-            OverviewMutation mutation, CancellationToken ct) =>
-            SetActiveAsync(id, false, principal, db, clock, mutation, ct));
+            OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct) =>
+            SetActiveAsync(id, false, principal, db, clock, mutation, overview, ct));
         admin.MapPost("/areas/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-            OverviewMutation mutation, CancellationToken ct) =>
-            SetActiveAsync(id, true, principal, db, clock, mutation, ct));
+            OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct) =>
+            SetActiveAsync(id, true, principal, db, clock, mutation, overview, ct));
         return app;
     }
 
@@ -69,7 +69,7 @@ public static class AdminAreaEndpoints
         string Code, string Name, int BuildingId, string ShiftPattern, int? DayCleanerId, int? NightCleanerId, int? RemovedNightWindows = null);
 
     private static async Task<IResult> CreateAsync(CreateAreaRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        OverviewMutation mutation, CancellationToken ct)
+        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -108,7 +108,7 @@ public static class AdminAreaEndpoints
                 db, admin.Id, now, "AREA_CREATE", "areas", area.Id, $"เพิ่มพื้นที่ {code} {form.Name}",
                 before: null, after: Snapshot(area, form.DayCleaner, form.NightCleaner));
             await db.SaveChangesAsync(ct);
-            await change.CommitAsync(ct);
+            await overview.CommitAsync(change, ct);
         }
         catch (DbUpdateException)
         {
@@ -119,7 +119,7 @@ public static class AdminAreaEndpoints
     }
 
     private static async Task<IResult> UpdateAsync(int id, UpdateAreaRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        OverviewMutation mutation, CancellationToken ct)
+        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -172,7 +172,7 @@ public static class AdminAreaEndpoints
                 await db.SaveChangesAsync(ct);
             }
 
-            await change.CommitAsync(ct);
+            await overview.CommitAsync(change, ct);
         }
         catch (DbUpdateException)
         {
@@ -184,7 +184,7 @@ public static class AdminAreaEndpoints
 
     /// <summary>Wireframe D10: a deactivated Area and its signs leave the Dashboard and cannot be scanned; history stays.</summary>
     private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        OverviewMutation mutation, CancellationToken ct)
+        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -230,7 +230,7 @@ public static class AdminAreaEndpoints
             await db.SaveChangesAsync(ct);
         }
 
-        await change.CommitAsync(ct);
+        await overview.CommitAsync(change, ct);
         return Results.Ok(await AdminSetupView.LoadAreaAsync(db, area.Id));
     }
 

@@ -25,6 +25,7 @@ const POINT_EVENTS = ['ScanRecorded', 'InspectionRecorded'] as const;
  * recipient learns "refetch", never a person or a schedule value it is not entitled to.
  */
 const SCHEDULE_EVENT = 'ScheduleChanged';
+const OVERVIEW_EVENT = 'OverviewChanged';
 
 export interface ScanHubFollow {
   /** This connection's name in hubSlice (plan 11 decision 4); the page's badge or footer reads the same key. */
@@ -41,6 +42,8 @@ export interface ScanHubFollow {
   onAttendance?: (change: AttendanceChanged) => void;
   /** ScheduleChanged (spec §12): a committed schedule command touched a slot or building this follower may read. */
   onSchedule?: (change: ScheduleInvalidation) => void;
+  /** OverviewChanged: a target image was committed, so the Admin may reread their projection. */
+  onOverview?: (change: { revisionId: number }) => void;
   /** Pushes may have been missed while the connection was down: ask the server again (facility-0064 item 2). */
   onMissed: () => void;
   /** How long to wait to hear from the server before the link counts as lost; left out, the client's own 30 s. */
@@ -48,8 +51,8 @@ export interface ScanHubFollow {
 }
 
 /**
- * #26 hub-cache-bridge: one connection per cache entry, opened in onCacheEntryAdded, so StrictMode and remounts never
- * open a second one. The hub sends a point's whole card, so the page patches its cache instead of asking again.
+ * #26 hub-cache-bridge: one connection per cache entry, opened in onCacheEntryAdded, so StrictMode and remounts
+ * reuse it. Each follower handles pushes according to the data it reads.
  */
 export async function followScanHub({
   key,
@@ -60,6 +63,7 @@ export async function followScanHub({
   onPoint,
   onAttendance,
   onSchedule,
+  onOverview,
   onMissed,
   serverTimeoutMs,
 }: ScanHubFollow): Promise<void> {
@@ -150,7 +154,10 @@ export async function followScanHub({
       onSchedule(change);
     });
   }
-  // A handler for each event this follower does not take: an Admin gets all three, and the client logs a
+  connection.on(OVERVIEW_EVENT, (change: { revisionId: number }) => {
+    onOverview?.(change);
+  });
+  // A handler for each event this follower does not take: an Admin may get each event, and the client logs a
   // warning for every message with no handler
   if (!onPoint) {
     for (const event of POINT_EVENTS) {

@@ -21,6 +21,7 @@ export interface OverviewPageModel {
   response?: OverviewAreaList;
   loading: boolean;
   refreshing: boolean;
+  hubKey?: string;
   error?: string;
   changed: boolean;
   onDate: (date: string) => void;

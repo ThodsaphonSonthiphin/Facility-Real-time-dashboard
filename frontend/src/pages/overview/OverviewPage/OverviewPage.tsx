@@ -2,6 +2,7 @@ import { RotateCcw } from 'lucide-react';
 import { Link } from 'react-router';
 import { Button } from '../../../shared/components/Button';
 import { Field, Select, TextInput } from '../../../shared/components/Field';
+import { LiveBadge } from '../../../shared/components/LiveBadge';
 import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { Note } from '../../../shared/components/Note';
 import { PageLoading } from '../../../shared/components/PageState';
@@ -25,6 +26,7 @@ export function OverviewPage() {
           <h1 className="text-2xl font-bold">ภาพรวมการดูแลพื้นที่</h1>
           <p className="text-text-2">{model.periodText}</p>
         </div>
+        {model.hubKey && <LiveBadge hubKey={model.hubKey} />}
         {model.canResetToCurrent && (
           <Button size="desk" variant="secondary" onClick={model.onResetToCurrent}>
             <RotateCcw aria-hidden="true" className="size-4" />
@@ -33,7 +35,7 @@ export function OverviewPage() {
         )}
       </header>
 
-      <p role="status" aria-live="polite" className="sr-only">
+      <p role="status" aria-label="สถานะภาพรวม" aria-live="polite" className="sr-only">
         {model.statusAnnouncement}
       </p>
 

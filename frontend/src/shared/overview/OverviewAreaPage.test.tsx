@@ -127,8 +127,9 @@ describe('Overview Area destinations', () => {
     expect(screen.getByRole('button', { name: 'ลองโหลดข้อมูลอีกครั้ง' })).toBeEnabled();
     expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(cleaningUrl);
     const detailCalls = calls.filter((call) => call.path.startsWith('/api/admin/overview/areas/'));
-    expect(detailCalls).toHaveLength(2);
-    expect(detailCalls[0].search).toBe(detailCalls[1].search);
+    expect(detailCalls.length).toBeGreaterThanOrEqual(2);
+    expect(detailCalls.length).toBeLessThanOrEqual(3);
+    expect(new Set(detailCalls.map((call) => call.search)).size).toBe(1);
     expect(detailCalls.every((call) => call.path.endsWith('/91'))).toBe(true);
   });
 
