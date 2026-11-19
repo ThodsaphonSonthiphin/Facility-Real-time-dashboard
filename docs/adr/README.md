@@ -4,6 +4,10 @@
 
 อ่าน amendment ที่ใหม่กว่าด้วยเสมอ ADR เก่าเก็บทางเลือกและเหตุผลในวันนั้นไว้ ข้อความเดิมที่ถูกแทนที่ไม่ใช่ backlog ปัจจุบัน หากขัดกับ wireframe/แผนเก่า ให้ยึด ADR และ amendment ที่ยังมีผล
 
+## UX/UI — 19 พ.ย. 2026
+
+ปรับหน้าตาของฟังก์ชันเดิมตาม Mockup ตาม [facility-0223](facility-0223-match-the-mockup-for-existing-features.md)
+
 ## ตารางงานแม่บ้านตาม Requirement ใหม่ — 16–17 พ.ย. 2026
 
 เลขล่าสุดคือ **facility-0222** ข้อตกลงในส่วนนี้เป็นแบบที่ยืนยันระหว่าง `grill-then-plan` **ยังไม่ได้พัฒนา** ดู [ข้อมูลจาก Supervisor และคำถามที่ยังเปิด](../requirements-gathering/2026-11-16-supervisor-scheduling-requirements.md) ผลกระทบต่อแผนหน้าภาพรวมทบทวนแล้วใน [delta review](../superpowers/reviews/2026-11-17-overview-plan-assumption-delta.md)

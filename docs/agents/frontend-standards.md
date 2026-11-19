@@ -30,8 +30,13 @@ The rules `code-review` checks on any frontend change (its Standards axis). The 
 
 ## Icons (facility-0088)
 
-- `lucide-react`, one named import per icon.
-- An icon sits beside text and has `aria-hidden="true"`. No icon-only buttons (one exception, the owner's: the Toast's ✕, with `aria-label`), no emoji as icons.
+- Use `lucide-react` exclusively, one named import per icon. Do not introduce additional icon libraries.
+- NEVER use emojis, Unicode pictograms, or decorative symbols as substitutes for SVG icons in application UI (including components, pages, dialogs, navigation elements, and HTML/CSS mockups).
+- Maintain consistent icon sizes, alignment, and stroke width (`2`), following existing conventions (`size-4` / 16 px beside Admin text, `size-5` / 20 px beside phone text, `size-7` / 28 px in `ChoiceTile`).
+- Use semantic color tokens from `frontend/src/index.css` `@theme` tokens (never raw hex or Tailwind palette classes).
+- Use icons only when they improve usability and recognition; do not introduce unnecessary decorative icons.
+- An icon always sits beside a clear, meaningful Thai text label and has `aria-hidden="true"`. No icon-only buttons (exceptions: the owner-approved `Toast` close button with `aria-label`, and the D4 window pill close control).
+- Preserve legitimate user-generated content that may contain emojis.
 
 ## Tests and size
 
