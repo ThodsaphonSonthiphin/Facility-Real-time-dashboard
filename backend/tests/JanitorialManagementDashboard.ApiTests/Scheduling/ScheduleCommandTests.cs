@@ -529,7 +529,7 @@ public class ScheduleCommandTests
         using var scope = factory.Services.CreateScope();
 
         var settings = scope.ServiceProvider.GetRequiredService<SchedulingSettings>();
-        Assert.False(settings.Enabled);
+        Assert.True(settings.Enabled);
         Assert.False(settings.HasCommandSigningKey);
 
         var refused = Assert.Throws<InvalidOperationException>(

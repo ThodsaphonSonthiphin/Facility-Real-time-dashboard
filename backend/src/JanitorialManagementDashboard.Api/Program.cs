@@ -89,7 +89,7 @@ try
     var scheduling = builder.Configuration.GetSection(SchedulingSettings.SectionName);
     var schedulingSettings = new SchedulingSettings(scheduling[SchedulingSettings.CommandSigningKeyName])
     {
-        Enabled = scheduling.GetValue("Enabled", false),
+        Enabled = scheduling.GetValue("Enabled", true),
         // A stored date format, read with the invariant culture so a machine's calendar never reinterprets it.
         HistoryStartsAt = DateOnly.TryParse(
             scheduling["HistoryStartsAt"], CultureInfo.InvariantCulture, out var historyStartsAt)

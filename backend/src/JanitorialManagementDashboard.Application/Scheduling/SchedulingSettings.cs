@@ -23,8 +23,8 @@ public sealed class SchedulingSettings
     public SchedulingSettings(string? commandSigningKey = null) =>
         _commandSigningKey = string.IsNullOrWhiteSpace(commandSigningKey) ? null : commandSigningKey.Trim();
 
-    /// <summary>False until an owner enables the dated scheduling feature; Task 6's routes are served only when it is true.</summary>
-    public bool Enabled { get; set; }
+    /// <summary>Enabled by default so Supervisors and Admins can manage schedules; can be set false in configuration to gate routes.</summary>
+    public bool Enabled { get; set; } = true;
 
     /// <summary>
     /// The first date the stored schedule is history. Before it a projection reports "unavailable" rather than inventing
