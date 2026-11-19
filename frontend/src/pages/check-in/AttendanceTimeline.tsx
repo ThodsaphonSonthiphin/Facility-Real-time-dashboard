@@ -64,7 +64,7 @@ export function AttendanceTimeline({ attendance, next }: { attendance: Attendanc
               aria-hidden="true"
               // The number is drawn from data-n, so it is not part of the row's text
               data-n={index + 1}
-              className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[15px] font-bold ${recorded ? '' : 'before:content-[attr(data-n)]'} ${dot}`}
+              className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${recorded ? '' : 'before:content-[attr(data-n)]'} ${dot}`}
             >
               {recorded && <Check className="size-4" />}
             </span>

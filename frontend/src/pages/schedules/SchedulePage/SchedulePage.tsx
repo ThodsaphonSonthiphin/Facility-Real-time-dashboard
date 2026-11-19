@@ -297,34 +297,48 @@ function WeekBody({ view }: { view: ReturnType<typeof useSchedulePage> }) {
         </Note>
       )}
       {week && week.availability !== 'empty' && !weekIsUnavailable(week) && (
-        view.role === 'cleaner' ? <OwnWeek week={week} /> : week.rows.length > 0 && <ManagementWeek view={view} />
+        view.role === 'cleaner' ? <OwnWeek week={week} businessDate={view.businessDate} /> : week.rows.length > 0 && <ManagementWeek view={view} />
       )}
     </>
   );
 }
 
 /** One person's week as cards, one per day, each saying its state in words (spec §5). */
-function OwnWeek({ week }: { week: ScheduleWeek }) {
+function OwnWeek({ week, businessDate }: { week: ScheduleWeek; businessDate: string }) {
   const person = week.rows[0];
   if (!person) {
     return <Note tone="info">ยังไม่มีตารางของคุณในสัปดาห์นี้</Note>;
   }
   return (
     <>
-      {person.days.map((day) => (
-        <article key={day.date} className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface px-4 py-3">
-          <header className="flex items-baseline justify-between gap-2">
-            <strong className="text-base">{`${formatWeekday(day.date)} ${formatShiftDate(day.date)}`}</strong>
-            <span className="text-sm font-semibold">{availabilityLabel[day.availability]}</span>
-          </header>
-          <DayFacts day={day} />
-          {day.problems.map((problem) => (
-            <Note key={`${problem.code}:${problem.date}`} tone="warn" alert={false}>
-              {problem.message}
-            </Note>
-          ))}
-        </article>
-      ))}
+      {person.days.map((day) => {
+        const isToday = day.date === businessDate;
+        return (
+          <article
+            key={day.date}
+            className={`flex flex-col gap-2 rounded-lg border px-4 py-3 ${
+              isToday ? 'border-accent bg-accent-subtle' : 'border-border bg-surface'
+            }`}
+          >
+            <header className="flex items-center justify-between gap-2">
+              <strong className={`text-base ${isToday ? 'text-accent' : 'text-text'}`}>
+                {`${formatWeekday(day.date)} ${formatShiftDate(day.date)}${isToday ? ' (วันนี้)' : ''}`}
+              </strong>
+              <span
+                className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${cellPillClass[day.availability]}`}
+              >
+                {availabilityLabel[day.availability]}
+              </span>
+            </header>
+            <DayFacts day={day} />
+            {day.problems.map((problem) => (
+              <Note key={`${problem.code}:${problem.date}`} tone="warn" alert={false}>
+                {problem.message}
+              </Note>
+            ))}
+          </article>
+        );
+      })}
     </>
   );
 }

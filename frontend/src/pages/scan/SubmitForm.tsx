@@ -72,7 +72,9 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
               checked={draft.status === 'Normal'}
               onChange={() => onChange({ ...draft, status: 'Normal' })}
             >
-              <CircleCheck aria-hidden="true" className="size-9" />
+              <span className="flex size-12 items-center justify-center rounded-full bg-accent-subtle text-accent">
+                <CircleCheck aria-hidden="true" className="size-7" />
+              </span>
               เรียบร้อย
             </ChoiceTile>
             <ChoiceTile
@@ -81,7 +83,9 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
               checked={draft.status === 'Issue'}
               onChange={() => onChange({ ...draft, status: 'Issue' })}
             >
-              <Wrench aria-hidden="true" className="size-9" />
+              <span className="flex size-12 items-center justify-center rounded-full bg-overdue-bg text-overdue">
+                <Wrench aria-hidden="true" className="size-7" />
+              </span>
               พบปัญหา
             </ChoiceTile>
           </div>

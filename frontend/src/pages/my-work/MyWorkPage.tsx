@@ -1,4 +1,4 @@
-import { ArrowRightLeft, CalendarDays, Check, ChevronRight, Moon, RefreshCw } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, Check, ChevronRight, CircleCheck, ClipboardList, Clock, Hourglass, Moon, RefreshCw, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router';
 import { freshOnOpen } from '../../shared/api/baseApi';
@@ -167,9 +167,16 @@ function WorkList({ work }: { work: MyWork }) {
   const ordered = byUrgency(work.areas);
   const next = ordered.find((item) => toDo.includes(item.point.status));
   const rest = ordered.filter((item) => item !== next);
+  const passedCount = ordered.filter((item) => item.point.status === 'Passed').length;
+  const pendingCount = ordered.filter((item) => item.point.status === 'PendingInspection').length;
+  const sentCount = passedCount + pendingCount;
+  const todoCount = ordered.filter((item) => toDo.includes(item.point.status)).length;
+  const issueCount = ordered.filter((item) => item.point.status === 'Rework' || Boolean(item.point.issue)).length;
 
   return (
     <>
+      <ShiftBanner attendance={work.attendance} />
+      <MiniKpis total={ordered.length} sent={sentCount} remaining={todoCount} issues={issueCount} />
       {covered.length > 0 && (
         // The design file's cover line: purple, the colour of ทำแทน
         <p className="flex items-start gap-2 rounded-md border border-break-border bg-break-bg px-3 py-2 text-sm text-break">
@@ -187,8 +194,8 @@ function WorkList({ work }: { work: MyWork }) {
         />
       )}
       <Progress
-        passed={ordered.filter((item) => item.point.status === 'Passed').length}
-        pending={ordered.filter((item) => item.point.status === 'PendingInspection').length}
+        passed={passedCount}
+        pending={pendingCount}
         total={ordered.length}
       />
       <WorkGroup title="ต้องทำต่อ" items={rest.filter((item) => toDo.includes(item.point.status))} />
@@ -220,5 +227,74 @@ function Progress({ passed, pending, total }: { passed: number; pending: number;
         <div className="h-full rounded-sm bg-text" style={{ width: `${(100 * sent) / total}%` }} />
       </div>
     </div>
+  );
+}
+
+function ShiftBanner({ attendance }: { attendance: AttendanceState }) {
+  if (!attendance.shift) return null;
+  const shiftIn = attendance.events.find((e) => e.eventType === 'ShiftIn');
+  const shiftOut = attendance.events.find((e) => e.eventType === 'ShiftOut');
+  const statusLook = shiftOut
+    ? { label: 'เลิกงานแล้ว', pill: 'border-idle-border bg-idle-bg text-idle', Icon: Check }
+    : shiftIn
+      ? { label: 'กำลังปฏิบัติงาน', pill: 'border-passed-border bg-passed-bg text-passed', Icon: CircleCheck }
+      : { label: 'ยังไม่เข้างาน', pill: 'border-overdue-border bg-overdue-bg text-overdue', Icon: Clock };
+
+  return (
+    <section
+      aria-label="สถานะกะวันนี้"
+      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3"
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-subtle text-accent">
+          <CalendarDays aria-hidden="true" className="size-5" />
+        </span>
+        <div className="flex min-w-0 flex-col">
+          <span className="font-bold text-text">{shiftLabel[attendance.shift]}</span>
+          <span className="text-sm text-text-2 tabular-nums">
+            {shiftIn ? `เข้างาน ${formatTime(shiftIn.occurredAt)}` : 'ยังไม่ได้ลงเวลาเข้างาน'}
+            {shiftOut ? ` · เลิกงาน ${formatTime(shiftOut.occurredAt)}` : ''}
+          </span>
+        </div>
+      </div>
+      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusLook.pill}`}>
+        <statusLook.Icon aria-hidden="true" className="size-4 shrink-0" />
+        <span>{statusLook.label}</span>
+      </span>
+    </section>
+  );
+}
+
+function MiniKpis({
+  total,
+  sent,
+  remaining,
+  issues,
+}: {
+  total: number;
+  sent: number;
+  remaining: number;
+  issues: number;
+}) {
+  const tiles = [
+    { label: 'งานวันนี้', value: `${total} จุด`, Icon: ClipboardList, tone: 'text-accent' },
+    { label: 'ส่งแล้ว', value: `${sent} จุด`, Icon: CircleCheck, tone: 'text-passed' },
+    { label: 'คงเหลือ', value: `${remaining} จุด`, Icon: Hourglass, tone: 'text-pending' },
+    { label: 'พบปัญหา', value: `${issues} จุด`, Icon: TriangleAlert, tone: 'text-overdue' },
+  ] as const;
+
+  return (
+    <section aria-label="สรุปงานวันนี้" className="grid grid-cols-4 gap-1.5 sm:gap-2">
+      {tiles.map(({ label, value, Icon, tone }) => (
+        <div
+          key={label}
+          className="flex flex-col items-center justify-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-2.5 text-center"
+        >
+          <Icon aria-hidden="true" className={`size-5 shrink-0 ${tone}`} />
+          <span className="text-xs text-text-2">{label}</span>
+          <span className="text-sm font-bold text-text tabular-nums">{value}</span>
+        </div>
+      ))}
+    </section>
   );
 }

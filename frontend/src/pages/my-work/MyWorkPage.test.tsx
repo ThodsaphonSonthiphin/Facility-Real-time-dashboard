@@ -326,4 +326,26 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3));
     expect(screen.getByText('หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน')).toBeInTheDocument();
   });
+
+  it('shows the shift banner and 4 real-data mini KPI tiles without adding h2/h3 headings', async () => {
+    serveMyWork(myWork(undefined, [area(fourPoints)]));
+    await renderApp('/my-work');
+
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
+    const kpis = screen.getByRole('region', { name: 'สรุปงานวันนี้' });
+    expect(within(kpis).getByText('งานวันนี้')).toBeInTheDocument();
+    expect(within(kpis).getByText('4 จุด')).toBeInTheDocument();
+    expect(within(kpis).getByText('ส่งแล้ว')).toBeInTheDocument();
+    expect(within(kpis).getByText('คงเหลือ')).toBeInTheDocument();
+    expect(within(kpis).getByText('พบปัญหา')).toBeInTheDocument();
+    expect(within(kpis).getAllByText('2 จุด')).toHaveLength(3);
+    expect(within(kpis.parentElement!).getByText('กำลังปฏิบัติงาน')).toBeInTheDocument();
+
+    // Preserved exact h2/h3 contract (fourPoints has no later-round points, so ยังไม่ต้องทำ is omitted)
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+      'ทำอันนี้ก่อน',
+      'ต้องทำต่อ',
+      'ส่งแล้ว',
+    ]);
+  });
 });

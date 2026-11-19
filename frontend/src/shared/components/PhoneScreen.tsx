@@ -1,7 +1,9 @@
 import { ChevronLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { useAppSelector } from '../../store/hooks';
 import { BottomBar } from './BottomBar';
+import { CleanerBottomNav } from './CleanerBottomNav/CleanerBottomNav';
 import { focusRing } from './styles';
 
 /**
@@ -41,11 +43,19 @@ export function PhoneScreen({
   bottom?: ReactNode;
   children: ReactNode;
 }) {
+  const isCleaner = useAppSelector((state) => state.auth.currentUser?.role === 'cleaner');
   return (
     <div className="flex flex-1 flex-col gap-4 text-base text-text">
       {header}
       <main className="flex flex-col gap-4">{children}</main>
-      {bottom && <BottomBar>{bottom}</BottomBar>}
+      {isCleaner ? (
+        <div className="sticky bottom-0 -mx-4 mt-auto -mb-[max(24px,env(safe-area-inset-bottom))] flex flex-col bg-surface print:hidden">
+          {bottom && <BottomBar stacked>{bottom}</BottomBar>}
+          <CleanerBottomNav />
+        </div>
+      ) : (
+        bottom && <BottomBar>{bottom}</BottomBar>
+      )}
     </div>
   );
 }

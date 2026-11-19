@@ -1,4 +1,4 @@
-import { QrCode } from 'lucide-react';
+import { MapPin, QrCode } from 'lucide-react';
 import { useId } from 'react';
 import type { PointStatus } from '../../shared/api/types';
 import { StatusChip } from '../../shared/components/StatusChip';
@@ -32,9 +32,14 @@ export function NextJob({ item }: { item: WorkItem }) {
         <StatusChip status={point.status} size="lg" solid />
       </div>
       <div className="flex flex-col gap-3 p-4">
-        <div className="flex flex-col">
-          <h3 className="text-2xl font-bold">{point.name}</h3>
-          <span className="text-text-2 tabular-nums">{whereText(item)}</span>
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-subtle text-accent">
+            <MapPin aria-hidden="true" className="size-5" />
+          </span>
+          <div className="flex min-w-0 flex-col">
+            <h3 className="text-2xl font-bold">{point.name}</h3>
+            <span className="text-text-2 tabular-nums">{whereText(item)}</span>
+          </div>
         </div>
         <span className="flex gap-3 rounded-md bg-bg p-3 text-text">{detailOf(point)}</span>
         {issue && <span className="text-sm font-semibold text-rework">{issue}</span>}

@@ -6,9 +6,15 @@ import type { ReactNode } from 'react';
  * page: the negative margins reach the edges of the shell's padding, and the bottom inset keeps the button above a
  * phone's home bar; no token describes either. The phone pages move their main button into it in #123.
  */
-export function BottomBar({ children }: { children: ReactNode }) {
+export function BottomBar({ children, stacked = false }: { children: ReactNode; stacked?: boolean }) {
   return (
-    <div className="sticky bottom-0 -mx-4 mt-auto -mb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-2 border-t border-border bg-surface px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] print:hidden">
+    <div
+      className={
+        stacked
+          ? 'flex flex-col gap-2 border-t border-border bg-surface px-4 py-3 print:hidden'
+          : 'sticky bottom-0 -mx-4 mt-auto -mb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-2 border-t border-border bg-surface px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] print:hidden'
+      }
+    >
       {children}
     </div>
   );
