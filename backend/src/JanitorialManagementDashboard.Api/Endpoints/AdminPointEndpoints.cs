@@ -6,6 +6,7 @@ using JanitorialManagementDashboard.Application.Signs;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -18,14 +19,17 @@ public static class AdminPointEndpoints
         var admin = app.MapGroup("/api/admin").RequireAuthorization(AuthSetup.AdminOnly);
         admin.MapPost("/areas/{areaId:int}/points", CreateAsync);
         admin.MapPut("/points/{id:int}", UpdateAsync);
-        admin.MapPost("/points/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
-            SetActiveAsync(id, false, principal, db, clock));
-        admin.MapPost("/points/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
-            SetActiveAsync(id, true, principal, db, clock));
+        admin.MapPost("/points/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+            OverviewMutation mutation, CancellationToken ct) =>
+            SetActiveAsync(id, false, principal, db, clock, mutation, ct));
+        admin.MapPost("/points/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+            OverviewMutation mutation, CancellationToken ct) =>
+            SetActiveAsync(id, true, principal, db, clock, mutation, ct));
         return app;
     }
 
-    private static async Task<IResult> CreateAsync(int areaId, SavePointRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> CreateAsync(int areaId, SavePointRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        OverviewMutation mutation, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -33,6 +37,7 @@ public static class AdminPointEndpoints
             return Results.Unauthorized();
         }
 
+        await using var change = await mutation.BeginAsync(ct);
         var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId);
         if (area is null)
         {
@@ -59,15 +64,14 @@ public static class AdminPointEndpoints
         db.Signs.Add(sign);
         db.PointRoundWindows.AddRange(windows.Select(w => NewWindow(point, w, now)));
 
-        await using var transaction = await db.Database.BeginTransactionAsync();
         try
         {
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(ct);
             AuditTrail.Add(
                 db, admin.Id, now, "POINT_CREATE", "service_points", point.Id, $"เพิ่มจุด {sign.Code} {name}",
                 before: null, after: Snapshot(name, windows));
-            await db.SaveChangesAsync();
-            await transaction.CommitAsync();
+            await db.SaveChangesAsync(ct);
+            await change.CommitAsync(ct);
         }
         catch (DbUpdateException)
         {
@@ -77,7 +81,8 @@ public static class AdminPointEndpoints
         return Results.Created($"/api/admin/points/{point.Id}", await AdminSetupView.LoadPointAsync(db, point.Id));
     }
 
-    private static async Task<IResult> UpdateAsync(int id, SavePointRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> UpdateAsync(int id, SavePointRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        OverviewMutation mutation, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -85,6 +90,7 @@ public static class AdminPointEndpoints
             return Results.Unauthorized();
         }
 
+        await using var change = await mutation.BeginAsync(ct);
         var point = await db.ServicePoints.Include(p => p.Area).FirstOrDefaultAsync(p => p.Id == id);
         if (point is null)
         {
@@ -126,14 +132,16 @@ public static class AdminPointEndpoints
             AuditTrail.Add(
                 db, admin.Id, now, "POINT_UPDATE", "service_points", point.Id, $"แก้จุด {code} {name}",
                 before, after: Snapshot(name, wanted));
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(ct);
         }
 
+        await change.CommitAsync(ct);
         return Results.Ok(await AdminSetupView.LoadPointAsync(db, point.Id));
     }
 
     /// <summary>facility-0021 rule 4: a deactivated point leaves the Dashboard and cannot be scanned; history stays.</summary>
-    private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        OverviewMutation mutation, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -141,6 +149,7 @@ public static class AdminPointEndpoints
             return Results.Unauthorized();
         }
 
+        await using var change = await mutation.BeginAsync(ct);
         var point = await db.ServicePoints.FirstOrDefaultAsync(p => p.Id == id);
         if (point is null)
         {
@@ -155,9 +164,10 @@ public static class AdminPointEndpoints
                 db, admin.Id, clock.GetUtcNow().UtcDateTime, active ? "POINT_ACTIVATE" : "POINT_DEACTIVATE", "service_points", point.Id,
                 $"{(active ? "เปิด" : "ปิด")}ใช้งานจุด {code} {point.Name}",
                 before: new { IsActive = !active }, after: new { IsActive = active });
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(ct);
         }
 
+        await change.CommitAsync(ct);
         return Results.Ok(await AdminSetupView.LoadPointAsync(db, point.Id));
     }
 

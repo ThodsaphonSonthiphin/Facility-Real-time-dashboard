@@ -16,6 +16,7 @@ using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Auth;
 using JanitorialManagementDashboard.Infrastructure.Auth;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
@@ -120,6 +121,8 @@ try
     if (!builder.Environment.IsEnvironment("Testing"))
         builder.Services.AddHostedService<RetentionWorker>();
 
+    builder.Services.AddScoped<OverviewTargetRecorder>();
+    builder.Services.AddScoped<OverviewMutation>();
     builder.Services.AddSingleton(attendance);
     builder.Services.AddFacilityAuth(builder.Configuration);
 
@@ -205,6 +208,18 @@ try
     app.UseScheduleFeatureGate();
     app.UseAuthentication();
     app.UseAuthorization();
+    app.Use(async (context, next) =>
+    {
+        try
+        {
+            await next(context);
+        }
+        catch (OverviewCaptureException ex)
+        {
+            app.Logger.LogError(ex, "Setup save rolled back because overview history could not be captured");
+            await ApiResults.Message(StatusCodes.Status503ServiceUnavailable, "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง").ExecuteAsync(context);
+        }
+    });
 
     // Swagger UI for trying the API by hand: Development only, never on a server reachable from the internet (facility-0049)
     if (app.Environment.IsDevelopment())
@@ -229,6 +244,8 @@ try
         var firstAdmin = app.Configuration.GetSection(FirstAdminSettings.SectionName).Get<FirstAdminSettings>() ?? new FirstAdminSettings();
         await FirstAdmin.EnsureAsync(
             db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>(), scope.ServiceProvider.GetRequiredService<TimeProvider>(), firstAdmin, app.Logger);
+        await OverviewHistoryBootstrap.EnsureAsync(db, attendance, scope.ServiceProvider.GetRequiredService<TimeProvider>(),
+            app.Lifetime.ApplicationStopping);
     }
 
     // 7. SignalR Hub Mapping

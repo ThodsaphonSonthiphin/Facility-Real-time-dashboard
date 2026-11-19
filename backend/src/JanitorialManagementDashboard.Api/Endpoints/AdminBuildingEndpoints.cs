@@ -5,6 +5,7 @@ using JanitorialManagementDashboard.Application.Buildings;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -25,17 +26,20 @@ public static class AdminBuildingEndpoints
                 : Results.Ok(await Rows(db, db.Buildings.AsNoTracking().OrderBy(b => b.Code)).ToListAsync()));
         admin.MapPost("/buildings", CreateAsync);
         admin.MapPut("/buildings/{id:int}", RenameAsync);
-        admin.MapPost("/buildings/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
-            SetActiveAsync(id, false, principal, db, clock));
-        admin.MapPost("/buildings/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
-            SetActiveAsync(id, true, principal, db, clock));
+        admin.MapPost("/buildings/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+            OverviewMutation mutation, CancellationToken ct) =>
+            SetActiveAsync(id, false, principal, db, clock, mutation, ct));
+        admin.MapPost("/buildings/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+            OverviewMutation mutation, CancellationToken ct) =>
+            SetActiveAsync(id, true, principal, db, clock, mutation, ct));
         return app;
     }
 
     /// <summary>What the audit log keeps of a building on add and rename.</summary>
     private sealed record BuildingSnapshot(string Code, string Name);
 
-    private static async Task<IResult> CreateAsync(CreateBuildingRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> CreateAsync(CreateBuildingRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        OverviewMutation mutation, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -53,6 +57,7 @@ public static class AdminBuildingEndpoints
             return Bad(BuildingRules.NameProblem);
         }
 
+        await using var change = await mutation.BeginAsync(ct);
         // Decision 2: a code is never used twice, an off building's included
         if (await db.Buildings.AnyAsync(b => b.Code == code))
         {
@@ -62,21 +67,20 @@ public static class AdminBuildingEndpoints
         var now = clock.GetUtcNow().UtcDateTime;
         var building = new Building { Code = code, Name = name, CreatedAt = now };
         db.Buildings.Add(building);
-        await using var transaction = await db.Database.BeginTransactionAsync();
         try
         {
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(ct);
             AuditTrail.Add(
                 db, admin.Id, now, "BUILDING_CREATE", "buildings", building.Id, $"เพิ่มตึก {code} {name}",
                 before: null, after: new BuildingSnapshot(code, name));
-            await db.SaveChangesAsync();
-            await transaction.CommitAsync();
+            await db.SaveChangesAsync(ct);
+            await change.CommitAsync(ct);
         }
         catch (DbUpdateException)
         {
             // The unique index on the code: another Admin added the same code at the same moment. Any other failed
             // save (a deadlock, a lock timeout, a dropped connection) is not "code taken", so it is rethrown.
-            db.ChangeTracker.Clear();
+            await change.DisposeAsync();
             if (await db.Buildings.AnyAsync(b => b.Code == code))
             {
                 return Conflict(BuildingRules.CodeTaken);
@@ -88,7 +92,8 @@ public static class AdminBuildingEndpoints
         return Results.Created("/api/admin/buildings/all", await LoadOneAsync(db, building.Id));
     }
 
-    private static async Task<IResult> RenameAsync(int id, UpdateBuildingRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> RenameAsync(int id, UpdateBuildingRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        OverviewMutation mutation, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -96,6 +101,7 @@ public static class AdminBuildingEndpoints
             return Results.Unauthorized();
         }
 
+        await using var change = await mutation.BeginAsync(ct);
         var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == id);
         if (building is null)
         {
@@ -114,14 +120,16 @@ public static class AdminBuildingEndpoints
             AuditTrail.Add(
                 db, admin.Id, clock.GetUtcNow().UtcDateTime, "BUILDING_UPDATE", "buildings", building.Id,
                 $"แก้ตึก {building.Code} {name}", before, after: new BuildingSnapshot(building.Code, name));
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(ct);
         }
 
+        await change.CommitAsync(ct);
         return Results.Ok(await LoadOneAsync(db, building.Id));
     }
 
     /// <summary>Decision 4: off only with no active Area and no active Supervisor in it; on with no condition.</summary>
-    private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        OverviewMutation mutation, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -129,6 +137,7 @@ public static class AdminBuildingEndpoints
             return Results.Unauthorized();
         }
 
+        await using var change = await mutation.BeginAsync(ct);
         var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == id);
         if (building is null)
         {
@@ -137,6 +146,7 @@ public static class AdminBuildingEndpoints
 
         if (building.IsActive == active)
         {
+            await change.CommitAsync(ct);
             return Results.Ok(await LoadOneAsync(db, building.Id));
         }
 
@@ -156,8 +166,9 @@ public static class AdminBuildingEndpoints
             db, admin.Id, clock.GetUtcNow().UtcDateTime, active ? "BUILDING_ACTIVATE" : "BUILDING_DEACTIVATE", "buildings",
             building.Id, $"{(active ? "เปิด" : "ปิด")}ใช้งานตึก {building.Code}",
             before: new { IsActive = !active }, after: new { IsActive = active });
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(ct);
 
+        await change.CommitAsync(ct);
         return Results.Ok(await LoadOneAsync(db, building.Id));
     }
 
