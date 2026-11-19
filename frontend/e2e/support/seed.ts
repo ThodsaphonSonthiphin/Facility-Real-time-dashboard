@@ -132,3 +132,30 @@ type SchedulingEmployeeKey = 'supervisorAB' | 'supervisorC' | 'weekly' | 'compet
 type FixtureWithoutCredentials = Omit<SchedulingFixture, SchedulingEmployeeKey> & {
   [key in SchedulingEmployeeKey]: Omit<SchedulingPerson, 'phone'>;
 };
+
+interface OverviewFixture {
+  revisionId: number;
+  imageHash: string;
+  captureStartedAtUtc: string;
+  firstDate: string;
+  lastDate: string;
+  emptyDate: string;
+  preBaselineDate: string;
+  date: string;
+  shift: 'Night';
+  buildingId: number;
+  entered: number;
+  submitted: number;
+  inspected: number;
+  enteredAreas: { id: number; code: string }[];
+}
+
+export function overviewFixture(): OverviewFixture {
+  const { overview } = JSON.parse(readFileSync(`${process.env.E2E_RUN_DIR}/dataset.json`, 'utf8')) as {
+    overview: OverviewFixture;
+  };
+  const repeat = JSON.parse(readFileSync(`${process.env.E2E_RUN_DIR}/dataset-repeat.json`, 'utf8'));
+  if (!overview || JSON.stringify(overview) !== JSON.stringify(repeat.overview))
+    throw new Error('Missing or changed overview fixture on repeated seed');
+  return overview;
+}
