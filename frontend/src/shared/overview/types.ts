@@ -1,4 +1,4 @@
-import type { AttendanceEvent, CleaningStatus, Placement, Shift } from '../api/types';
+import type { AttendanceEvent, AttendanceSource, CleaningStatus, Placement, Shift } from '../api/types';
 
 /** Fixed group keys accepted by GET /api/admin/overview/areas and summary group counts. */
 export type OverviewGroup =
@@ -155,6 +155,9 @@ export interface OverviewPointDetail {
 }
 
 export interface OverviewEntryEvidence {
+  areaId: number;
+  shiftDate: string;
+  shift: Shift;
   kind: 'shift-in' | 'transfer-arrival';
   recordedAt: string;
   transferId?: number | null;
@@ -224,6 +227,25 @@ export interface OverviewAttendance {
   event: AttendanceEvent;
   occurredAt: string;
   edited: boolean;
+  source?: AttendanceSource | null;
+  reason?: string | null;
+  correctedAt?: string | null;
+}
+
+export interface OverviewAttendanceGap {
+  id: number;
+  areaId: number;
+  userId: number;
+  event: AttendanceEvent;
+  reason?: string | null;
+  recordedAt?: string | null;
+}
+
+export interface OverviewAttendanceLeave {
+  id: number;
+  userId: number;
+  startsAt: string;
+  endsAt: string;
 }
 
 export interface OverviewCover {
@@ -238,6 +260,8 @@ export interface OverviewFacts {
   submissions: OverviewSubmission[];
   inspections: OverviewInspection[];
   attendance: OverviewAttendance[];
+  attendanceGaps?: OverviewAttendanceGap[];
+  attendanceLeaves?: OverviewAttendanceLeave[];
   covers: OverviewCover[];
   people: { id: number; displayName: string }[];
   entryEvidence: OverviewEntryEvidence[];

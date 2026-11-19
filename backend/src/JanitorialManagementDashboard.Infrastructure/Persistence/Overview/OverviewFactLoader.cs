@@ -196,7 +196,8 @@ public static class OverviewFactLoader
                 a.UserId,
                 a.EventType,
                 Utc(a.OccurredAt),
-                a.Source != AttendanceSource.Scan))
+                a.Source != AttendanceSource.Scan,
+                a.Source))
             .ToList();
 
         var coverRows = await db.CoverAssignments.AsNoTracking()

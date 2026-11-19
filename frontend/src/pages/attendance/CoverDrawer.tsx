@@ -1,7 +1,7 @@
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { ArrowRightLeft } from 'lucide-react';
 import { useState } from 'react';
-import { useGetAttendanceBoardQuery, type BoardRow } from '../../shared/api/attendanceBoardApi';
+import { useGetAttendanceBoardQuery, type AttendanceBoard, type BoardRow } from '../../shared/api/attendanceBoardApi';
 import { freshOnOpen, livePoll } from '../../shared/api/baseApi';
 import { useBuildingNames } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
@@ -42,6 +42,8 @@ interface CoverDrawerProps {
   current: CoverSlot;
   /** The shift the drawer opens on, and the Area when it was opened from a row. */
   start: CoverSlot & { areaId?: number };
+  /** Overview locks the selected slot and Area and re-verifies the current row before a write. */
+  scoped?: { areaId: number; board: AttendanceBoard; beforeWrite: () => Promise<boolean> };
   onDone: (text: string) => void;
   onCancel: () => void;
 }
@@ -53,7 +55,7 @@ interface CoverDrawerProps {
  * one, never a replacement (owner, 2026-10-29): to change who, cancel the old one in the list first. The choices live
  * here only (facility-0024); one send at a time.
  */
-export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerProps) {
+export function CoverDrawer({ current, start, scoped, onDone, onCancel }: CoverDrawerProps) {
   const names = useBuildingNames();
   const slots = coverSlots(current);
   const dates = [...new Set(slots.map((slot) => slot.shiftDate))];
@@ -63,18 +65,22 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
   const [areaId, setAreaId] = useState<number | null>(start.areaId ?? null);
   const [chosen, setChosen] = useState<number | null>(null);
   const [areaSearch, setAreaSearch] = useState('');
+  const [verifying, setVerifying] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [assign, { isLoading }] = useAssignCoverMutation();
-  const cancellation = useCoverCancellation();
+  const cancellation = useCoverCancellation(undefined, scoped?.beforeWrite);
+  const busy = isLoading || verifying;
   const ahead = !sameSlot(slot, current);
-  const board = useGetAttendanceBoardQuery(slot, livePoll);
-  const rows = board.currentData?.rows ?? [];
-  const area = areaId == null ? undefined : rows.find((row) => row.areaId === areaId);
+  const board = useGetAttendanceBoardQuery(scoped ? skipToken : slot, livePoll);
+  const rows = (scoped?.board ?? board.currentData)?.rows ?? [];
+  const selectedArea = scoped?.areaId ?? areaId;
+  const area = selectedArea == null ? undefined : rows.find((row) => row.areaId === selectedArea);
   const candidates = useGetCoverCandidatesQuery(area ? { areaId: area.areaId, ...slot } : skipToken, freshOnOpen);
   const list = candidates.currentData ?? [];
   const userId = chosen ?? list[0]?.id; // the server lists the best first
   const person = list.find((candidate) => candidate.id === userId);
-  const covers = rows.flatMap((row) => row.covers.map((cover) => ({ row, cover })));
+  const coverRows = scoped ? rows.filter((row) => row.areaId === scoped.areaId) : rows;
+  const covers = coverRows.flatMap((row) => row.covers.map((cover) => ({ row, cover })));
   const slotWords = `${shiftShortLabel[slot.shift]} ${formatWeekday(slot.shiftDate)} ${formatShiftDate(slot.shiftDate)}`;
   const headingId = 'attendance-cover';
 
@@ -92,104 +98,118 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
     }
     setProblem(null);
     try {
+      if (scoped) {
+        setVerifying(true);
+        if (!(await scoped.beforeWrite())) return;
+      }
       const made = await assign({ userId, areaId: area.areaId, shiftDate: slot.shiftDate, shift: slot.shift }).unwrap();
       onDone(coverNotice(made, names));
     } catch (error) {
       setProblem(getErrorMessage(error));
+    } finally {
+      if (scoped) setVerifying(false);
     }
   };
 
   return (
-    <Drawer labelledBy={headingId} width="lg" onClose={() => !isLoading && onCancel()}>
+    <Drawer labelledBy={headingId} width="lg" onClose={() => !busy && onCancel()}>
       <DialogHeader
         id={headingId}
         title="มอบหมายทำแทน"
         detail="ให้แม่บ้านดูแลพื้นที่อื่นเพิ่ม เฉพาะกะที่เลือก"
-        closeDisabled={isLoading}
+        closeDisabled={busy}
         onClose={onCancel}
       />
       <div className="relative -mx-6 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-5">
-        <section className="flex flex-col gap-3" aria-labelledby="cover-step-1">
-          <h3 id="cover-step-1" className="text-base font-bold">
-            1. วันและกะ
-          </h3>
-          <div className="flex flex-wrap items-start gap-4">
-            <label className="flex flex-col gap-1">
-              <span className="font-semibold">วันที่</span>
-              <Select
-                size="desk"
-                value={slot.shiftDate}
-                disabled={isLoading}
-                onChange={(event) => pickSlot({ shiftDate: event.target.value, shift: slot.shift })}
+        {scoped ? (
+          <p>{slotWords}{area && ` · ${area.areaCode} ${area.areaName}`}</p>
+        ) : (
+          <>
+            <section className="flex flex-col gap-3" aria-labelledby="cover-step-1">
+              <h3 id="cover-step-1" className="text-base font-bold">
+                1. วันและกะ
+              </h3>
+              <div className="flex flex-wrap items-start gap-4">
+                <label className="flex flex-col gap-1">
+                  <span className="font-semibold">วันที่</span>
+                  <Select
+                    size="desk"
+                    value={slot.shiftDate}
+                    disabled={busy}
+                    onChange={(event) => pickSlot({ shiftDate: event.target.value, shift: slot.shift })}
+                  >
+                    {dates.map((date) => (
+                      <option key={date} value={date}>
+                        {`${formatWeekday(date)} ${formatShiftDate(date)}${date === current.shiftDate ? ' (วันนี้)' : ''}`}
+                      </option>
+                    ))}
+                  </Select>
+                  <span className="text-xs text-text-2">{`ล่วงหน้าได้ถึง ${formatShiftDate(dates[dates.length - 1])}`}</span>
+                </label>
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold">กะ</span>
+                  <Segmented
+                    label="กะ"
+                    value={slot.shift}
+                    disabled={busy}
+                    onChange={(shift) => pickSlot({ shiftDate: slot.shiftDate, shift })}
+                    options={shiftOptions}
+                  />
+                </div>
+              </div>
+            </section>
+            <section className="flex flex-col gap-2" aria-labelledby="cover-step-2">
+              <h3 id="cover-step-2" className="text-base font-bold">
+                2. พื้นที่ที่ต้องมีคนทำแทน
+              </h3>
+              <SearchBox label="ค้นหาพื้นที่หรือแม่บ้านประจำ" value={areaSearch} onChange={setAreaSearch} />
+              {board.isFetching && !board.currentData && <PageLoading>กำลังโหลดพื้นที่...</PageLoading>}
+              {board.error && <Note tone="error">{getErrorMessage(board.error)}</Note>}
+              <div
+                role="radiogroup"
+                aria-labelledby="cover-step-2"
+                className="flex max-h-72 flex-col gap-1.5 overflow-y-auto rounded-md border border-border p-1"
               >
-                {dates.map((date) => (
-                  <option key={date} value={date}>
-                    {`${formatWeekday(date)} ${formatShiftDate(date)}${date === current.shiftDate ? ' (วันนี้)' : ''}`}
-                  </option>
+                {searchRows(rows, areaSearch).map((row) => (
+                  <label key={row.areaId} className={`${choiceCardClass} flex-row! items-center! justify-between gap-2`}>
+                    <input
+                      type="radio"
+                      className="sr-only"
+                      name="cover-area"
+                      checked={areaId === row.areaId}
+                      disabled={busy}
+                      onChange={() => {
+                        setAreaId(row.areaId);
+                        setChosen(null);
+                        setProblem(null);
+                      }}
+                    />
+                    <span className="flex min-w-0 flex-col">
+                      <span>
+                        <strong>{row.areaCode}</strong> {row.areaName}
+                      </span>
+                      <span className="text-xs text-text-2">{areaLine(row)}</span>
+                    </span>
+                    <AreaTag row={row} ahead={ahead} />
+                  </label>
                 ))}
-              </Select>
-              <span className="text-xs text-text-2">{`ล่วงหน้าได้ถึง ${formatShiftDate(dates[dates.length - 1])}`}</span>
-            </label>
-            <div className="flex flex-col gap-1">
-              <span className="font-semibold">กะ</span>
-              <Segmented
-                label="กะ"
-                value={slot.shift}
-                disabled={isLoading}
-                onChange={(shift) => pickSlot({ shiftDate: slot.shiftDate, shift })}
-                options={shiftOptions}
-              />
-            </div>
-          </div>
-        </section>
-        <section className="flex flex-col gap-2" aria-labelledby="cover-step-2">
-          <h3 id="cover-step-2" className="text-base font-bold">
-            2. พื้นที่ที่ต้องมีคนทำแทน
-          </h3>
-          <SearchBox label="ค้นหาพื้นที่หรือแม่บ้านประจำ" value={areaSearch} onChange={setAreaSearch} />
-          {board.isFetching && !board.currentData && <PageLoading>กำลังโหลดพื้นที่...</PageLoading>}
-          {board.error && <Note tone="error">{getErrorMessage(board.error)}</Note>}
-          <div
-            role="radiogroup"
-            aria-labelledby="cover-step-2"
-            className="flex max-h-72 flex-col gap-1.5 overflow-y-auto rounded-md border border-border p-1"
-          >
-            {searchRows(rows, areaSearch).map((row) => (
-              <label key={row.areaId} className={`${choiceCardClass} flex-row! items-center! justify-between gap-2`}>
-                <input
-                  type="radio"
-                  className="sr-only"
-                  name="cover-area"
-                  checked={areaId === row.areaId}
-                  disabled={isLoading}
-                  onChange={() => {
-                    setAreaId(row.areaId);
-                    setChosen(null);
-                    setProblem(null);
-                  }}
-                />
-                <span className="flex min-w-0 flex-col">
-                  <span>
-                    <strong>{row.areaCode}</strong> {row.areaName}
-                  </span>
-                  <span className="text-xs text-text-2">{areaLine(row)}</span>
-                </span>
-                <AreaTag row={row} ahead={ahead} />
-              </label>
-            ))}
-            {board.currentData && searchRows(rows, areaSearch).length === 0 && (
-              <span className="px-2 py-1.5 text-text-2">ไม่พบพื้นที่ที่ค้นหา</span>
-            )}
-          </div>
-          <span className="text-xs text-text-2">
-            {ahead ? 'กะนี้ยังไม่เริ่ม จึงแสดงทุกพื้นที่ที่ทำกะนี้' : 'พื้นที่ที่ยังไม่มีคนเข้างานขึ้นก่อน'}
-          </span>
-        </section>
+                {board.currentData && searchRows(rows, areaSearch).length === 0 && (
+                  <span className="px-2 py-1.5 text-text-2">ไม่พบพื้นที่ที่ค้นหา</span>
+                )}
+              </div>
+              <span className="text-xs text-text-2">
+                {ahead ? 'กะนี้ยังไม่เริ่ม จึงแสดงทุกพื้นที่ที่ทำกะนี้' : 'พื้นที่ที่ยังไม่มีคนเข้างานขึ้นก่อน'}
+              </span>
+            </section>
+          </>
+        )}
         <section className="flex flex-col gap-2" aria-labelledby="cover-step-3">
           <h3 id="cover-step-3" className="text-base font-bold">
-            3. แม่บ้านที่จะทำแทน
+            {scoped ? 'แม่บ้านที่จะทำแทน' : '3. แม่บ้านที่จะทำแทน'}
           </h3>
-          {!area && <span className="text-text-2">เลือกพื้นที่ก่อน แล้วรายชื่อแม่บ้านที่ทำแทนได้จะขึ้นที่นี่</span>}
+          {!area && (scoped
+            ? <Note tone="warn">ยังไม่พบพื้นที่นี้ในกะที่เลือก</Note>
+            : <span className="text-text-2">เลือกพื้นที่ก่อน แล้วรายชื่อแม่บ้านที่ทำแทนได้จะขึ้นที่นี่</span>)}
           {area && candidates.isFetching && !candidates.currentData && <PageLoading>กำลังโหลดรายชื่อ...</PageLoading>}
           {area && candidates.error && <Note tone="error">{getErrorMessage(candidates.error)}</Note>}
           {area && candidates.currentData && list.length === 0 && <Note tone="info">ไม่มีแม่บ้านกะนี้ที่ทำแทนได้</Note>}
@@ -199,7 +219,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
               candidates={list}
               value={userId}
               onChange={setChosen}
-              disabled={isLoading}
+              disabled={busy}
               describe={(candidate) => {
                 const facts = candidateFacts(candidate, rows, area, ahead);
                 return {
@@ -265,7 +285,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
                     variant="link"
                     size="desk"
                     aria-label={`ยกเลิกการทำแทนของ ${cover.displayName} ที่ ${row.areaCode}`}
-                    disabled={isLoading || cancellation.isLoading}
+                    disabled={busy || cancellation.isLoading}
                     onClick={() => cancellation.ask({ id: cover.id, areaCode: row.areaCode, name: cover.displayName })}
                   >
                     ยกเลิก
@@ -277,13 +297,13 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
         </section>
       </div>
       <DialogFooter>
-        <Button size="desk" disabled={isLoading} onClick={onCancel}>
+        <Button size="desk" disabled={busy} onClick={onCancel}>
           ยกเลิก
         </Button>
         <Button
           variant="primary"
           size="desk"
-          disabled={!area || userId == null || isLoading}
+          disabled={!area || userId == null || busy}
           onClick={() => void save()}
         >
           มอบหมาย

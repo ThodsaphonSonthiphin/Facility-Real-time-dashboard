@@ -4,6 +4,7 @@ using JanitorialManagementDashboard.Application.Common;
 using JanitorialManagementDashboard.Application.Overview;
 using JanitorialManagementDashboard.Application.Retention;
 using JanitorialManagementDashboard.Application.Shifts;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
@@ -64,7 +65,7 @@ public sealed class OverviewReadQuery(
     TimeProvider clock,
     ILogger<OverviewReadQuery> logger)
 {
-    public async Task<OverviewRead> ReadAsync(ShiftSlot slot, int? buildingId, CancellationToken ct)
+    public async Task<OverviewRead> ReadAsync(ShiftSlot slot, int? buildingId, CancellationToken ct, int? detailAreaId = null)
     {
         ArgumentNullException.ThrowIfNull(slot);
 
@@ -204,9 +205,17 @@ public sealed class OverviewReadQuery(
 
         var pointMetadata = BuildPointMetadata(timeline, loaded.UnverifiedPointMetadata);
 
+        var facts = loaded.Facts;
+        if (detailAreaId is int areaId && buildingKnown
+            && effectiveAvailability.Entry.State is not ("notStarted" or "unavailable")
+            && (snapshot.Areas.Any(a => a.Id == areaId) || observedAreas.Any(a => a.Id == areaId)))
+        {
+            facts = await LoadAttendanceDetailsAsync(facts, slot, areaId, moment.EvaluationUtc, readAt, ct);
+        }
+
         await tx.CommitAsync(ct);
 
-        return new OverviewRead(snapshot, loaded.Facts, readAt, range)
+        return new OverviewRead(snapshot, facts, readAt, range)
         {
             BuildingKnown = buildingKnown,
             BuildingOwnershipProven = buildingOwnershipProven,
@@ -220,6 +229,69 @@ public sealed class OverviewReadQuery(
             PointAreaMap = loaded.PointAreaMap,
         };
     }
+
+    private async Task<OverviewFacts> LoadAttendanceDetailsAsync(
+        OverviewFacts facts, ShiftSlot slot, int areaId, DateTime evaluationUtc, DateTime readAtUtc, CancellationToken ct)
+    {
+        var attendance = facts.Attendance.Where(a => a.AreaId == areaId).ToArray();
+        var editedIds = attendance.Where(a => a.Edited).Select(a => a.Id).ToArray();
+        if (editedIds.Length > 0)
+        {
+            // Corrections update the actual row in place. Use the audit entry for that same latest persisted value.
+            var audits = await db.AuditLog.AsNoTracking()
+                .Where(a => a.EntityType == "shift_attendances" && a.EntityId != null
+                    && editedIds.Contains(a.EntityId.Value) && a.OccurredAt <= readAtUtc
+                    && (a.Action == "ATTENDANCE_ADD" || a.Action == "ATTENDANCE_EDIT"))
+                .OrderByDescending(a => a.OccurredAt).ThenByDescending(a => a.Id)
+                .Select(a => new { Id = a.EntityId!.Value, a.Reason, a.OccurredAt })
+                .ToListAsync(ct);
+            var latest = audits.GroupBy(a => a.Id).ToDictionary(group => group.Key, group => group.First());
+            attendance = attendance.Select(fact => latest.TryGetValue(fact.Id, out var audit)
+                ? fact with { Reason = audit.Reason, CorrectedAt = Utc(audit.OccurredAt) }
+                : fact).ToArray();
+        }
+
+        var storedGaps = await db.AttendanceGaps.AsNoTracking()
+            .Where(g => g.ShiftDate == slot.ShiftDate && g.Shift == slot.Shift && g.AreaId == areaId
+                && g.Status == AttendanceGapStatus.Skipped && (g.RecordedAt ?? g.CreatedAt) <= evaluationUtc)
+            .OrderBy(g => g.Id)
+            .Select(g => new { g.Id, g.UserId, g.EventType, g.Reason, g.RecordedAt })
+            .ToListAsync(ct);
+        var gaps = storedGaps
+            .Where(g => !attendance.Any(a => a.UserId == g.UserId && a.Event == g.EventType))
+            .Select(g => new OverviewAttendanceGap(g.Id, areaId, g.UserId, g.EventType, g.Reason,
+                g.RecordedAt is { } recordedAt ? Utc(recordedAt) : null))
+            .ToArray();
+
+        // Leave is a person-slot plan fact without an Area ID. Show it only alongside an actual or gap in this Area.
+        var peopleWithActions = attendance.Select(a => a.UserId).Concat(gaps.Select(g => g.UserId)).Distinct().ToArray();
+        var storedLeaves = peopleWithActions.Length == 0
+            ? []
+            : await db.ScheduleExceptions.AsNoTracking()
+                .Where(l => l.ShiftDate == slot.ShiftDate && l.Shift == slot.Shift
+                    && l.Kind == ScheduleExceptionKind.Leave && peopleWithActions.Contains(l.UserId)
+                    && l.CreatedAt <= evaluationUtc
+                    && (!l.IsCancelled || l.CancelledAt > evaluationUtc) && l.StartsAt != null && l.EndsAt != null)
+                .OrderBy(l => l.StartsAt).ThenBy(l => l.Id)
+                .Select(l => new { l.Id, l.UserId, StartsAt = l.StartsAt!.Value, EndsAt = l.EndsAt!.Value })
+                .ToListAsync(ct);
+        var leaves = storedLeaves.Select(l => new OverviewAttendanceLeave(l.Id, l.UserId, Utc(l.StartsAt), Utc(l.EndsAt))).ToArray();
+
+        var gapPeople = gaps.Select(g => g.UserId).Except(facts.People.Select(p => p.Id)).ToArray();
+        var additionalPeople = gapPeople.Length == 0
+            ? []
+            : await db.Users.AsNoTracking().Where(u => gapPeople.Contains(u.Id))
+                .Select(u => new OverviewPerson(u.Id, u.DisplayName)).ToListAsync(ct);
+        return facts with
+        {
+            Attendance = attendance,
+            AttendanceGaps = gaps,
+            AttendanceLeaves = leaves,
+            People = facts.People.Concat(additionalPeople).ToArray(),
+        };
+    }
+
+    private static DateTime Utc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
     private static bool IsBuildingKnownInContext(
         int buildingId,

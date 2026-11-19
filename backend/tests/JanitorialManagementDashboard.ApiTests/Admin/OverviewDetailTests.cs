@@ -619,6 +619,106 @@ public class OverviewDetailTests
         }
     }
 
+    [Fact]
+    public async Task Scoped_attendance_keeps_latest_correction_source_and_only_unresolved_stored_skips()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (_, cleaner, _) = await AuthApi.LoggedInAsync(factory);
+        var userId = cleaner.User.Id;
+        var area = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var otherArea = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        var date = new DateOnly(2026, 10, 8);
+        DateTime At(int hour, int minute = 0) => ThaiClock.At(8, hour, minute).UtcDateTime;
+        await OverviewTestData.StartHistoryAsync(factory, ThaiClock.At(8, 1, 0));
+
+        await factory.WithDbAsync(async db =>
+        {
+            var entered = new ShiftAttendance
+            {
+                UserId = userId, AreaId = area, ShiftDate = date, Shift = Shift.Day,
+                EventType = AttendanceEvent.Break1In, OccurredAt = At(10),
+                CreatedAt = At(10, 5), Source = AttendanceSource.SupervisorAdd,
+            };
+            var edited = new ShiftAttendance
+            {
+                UserId = userId, AreaId = area, ShiftDate = date, Shift = Shift.Day,
+                EventType = AttendanceEvent.Break2In, OccurredAt = At(11),
+                CreatedAt = At(11, 5), Source = AttendanceSource.AdminEdit,
+            };
+            db.ShiftAttendances.AddRange(entered, edited);
+            db.ShiftAttendances.Add(new ShiftAttendance
+            {
+                UserId = userId, AreaId = otherArea, ShiftDate = date, Shift = Shift.Day,
+                EventType = AttendanceEvent.ShiftIn, OccurredAt = At(7),
+                CreatedAt = At(7), Source = AttendanceSource.Scan,
+            });
+            await db.SaveChangesAsync();
+
+            db.AuditLog.AddRange(
+                new AuditEntry
+                {
+                    EntityType = "shift_attendances", EntityId = entered.Id, Action = "ATTENDANCE_ADD",
+                    OccurredAt = At(10, 5), Reason = "เหตุผลการเติมเวลา",
+                },
+                new AuditEntry
+                {
+                    EntityType = "shift_attendances", EntityId = edited.Id, Action = "ATTENDANCE_ADD",
+                    OccurredAt = At(11, 5), Reason = "เหตุผลเดิม",
+                },
+                new AuditEntry
+                {
+                    EntityType = "shift_attendances", EntityId = edited.Id, Action = "ATTENDANCE_EDIT",
+                    OccurredAt = At(11, 10), Reason = "เหตุผลล่าสุด",
+                });
+            AttendanceGap Gap(int areaId, DateOnly shiftDate, AttendanceEvent action, AttendanceGapStatus status) => new()
+            {
+                UserId = userId, AreaId = areaId, ShiftDate = shiftDate, Shift = Shift.Day,
+                EventType = action, Status = status, Reason = "ข้ามรายการ", RecordedAt = At(9, 30), CreatedAt = At(9, 30),
+            };
+            db.AttendanceGaps.AddRange(
+                Gap(area, date, AttendanceEvent.Break1Out, AttendanceGapStatus.Skipped),
+                Gap(area, date, AttendanceEvent.Break1In, AttendanceGapStatus.Resolved),
+                Gap(otherArea, date, AttendanceEvent.Break2Out, AttendanceGapStatus.Skipped),
+                Gap(area, date.AddDays(-1), AttendanceEvent.ShiftOut, AttendanceGapStatus.Skipped));
+            db.ScheduleExceptions.Add(new ScheduleException
+            {
+                UserId = userId, Kind = ScheduleExceptionKind.Leave,
+                ShiftDate = date, Shift = Shift.Day, StartsAt = At(15), EndsAt = At(19),
+                CreatedById = adminAuth.User.Id, CreatedAt = At(9), UpdatedAt = At(9),
+            });
+            await db.SaveChangesAsync();
+        });
+
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 12, 0));
+        var detail = await GetDetailAsync(admin, area, "2026-10-08", "Day", "notEntered");
+        var facts = detail.GetProperty("facts");
+        Assert.Collection(facts.GetProperty("attendance").EnumerateArray(), actual =>
+        {
+            Assert.True(actual.GetProperty("edited").GetBoolean());
+            Assert.Equal(area, actual.GetProperty("areaId").GetInt32());
+            Assert.Equal("SupervisorAdd", actual.GetProperty("source").GetString());
+            Assert.Equal("เหตุผลการเติมเวลา", actual.GetProperty("reason").GetString());
+            Assert.Equal(At(10, 5), actual.GetProperty("correctedAt").GetDateTime());
+        }, actual =>
+        {
+            Assert.Equal(area, actual.GetProperty("areaId").GetInt32());
+            Assert.Equal("AdminEdit", actual.GetProperty("source").GetString());
+            Assert.Equal("เหตุผลล่าสุด", actual.GetProperty("reason").GetString());
+            Assert.Equal(At(11, 10), actual.GetProperty("correctedAt").GetDateTime());
+        });
+        var gap = Assert.Single(facts.GetProperty("attendanceGaps").EnumerateArray());
+        Assert.Equal(area, gap.GetProperty("areaId").GetInt32());
+        Assert.Equal("Break1Out", gap.GetProperty("event").GetString());
+        Assert.Equal("ข้ามรายการ", gap.GetProperty("reason").GetString());
+        Assert.Equal(At(9, 30), gap.GetProperty("recordedAt").GetDateTime());
+        Assert.False(gap.TryGetProperty("occurredAt", out _));
+        var leave = Assert.Single(facts.GetProperty("attendanceLeaves").EnumerateArray());
+        Assert.Equal(userId, leave.GetProperty("userId").GetInt32());
+        Assert.Equal(At(15), leave.GetProperty("startsAt").GetDateTime());
+        Assert.Empty(detail.GetProperty("entryEvidence").EnumerateArray());
+    }
+
     private static async Task<JsonElement> GetDetailAsync(
         HttpClient admin, int areaId, string shiftDate, string shift, string group)
     {

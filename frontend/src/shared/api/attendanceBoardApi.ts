@@ -111,7 +111,7 @@ export function attendanceHubKey({ shiftDate, shift, buildingId }: BoardArgs): s
   return `attendance-board:${shiftDate ?? 'now'}:${shift ?? ''}:${buildingId ?? 'all'}`;
 }
 
-const attendanceBoardApi = baseApi.injectEndpoints({
+export const attendanceBoardApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getAttendanceBoard: build.query<AttendanceBoard, BoardArgs>({
       query: ({ shiftDate, shift, buildingId }) => ({ url: '/admin/attendance', params: { shiftDate, shift, buildingId } }),

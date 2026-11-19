@@ -34,6 +34,7 @@ interface CorrectionFormProps {
   cleaner: AssignedCleaner;
   /** The time an alert's "เติมเวลา…" link asks for: its row is tinted, so the Admin sees where to type. */
   initialEvent?: AttendanceEvent;
+  beforeWrite?: () => Promise<boolean>;
   onDone: (text: string) => void;
   onCancel: () => void;
 }
@@ -50,7 +51,7 @@ const labels = (types: readonly AttendanceEvent[]) => types.map((type) => eventL
  * first. Each corrected time then carries "แก้โดย Admin" and the old one stays in the history. The draft lives here
  * only (facility-0024); one save at a time.
  */
-export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCancel }: CorrectionFormProps) {
+export function CorrectionForm({ board, row, cleaner, initialEvent, beforeWrite, onDone, onCancel }: CorrectionFormProps) {
   const order = lifecycleEvents(board.lifecycleVersion);
   const recorded = (type: AttendanceEvent) => {
     const event = eventOf(row, type);
@@ -106,6 +107,11 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
           continue;
         }
         try {
+          // A scoped form may have closed or changed Cleaner while the previous request was in flight.
+          if (beforeWrite && !(await beforeWrite())) {
+            setBusy(false);
+            return;
+          }
           await correct({
             userId: cleaner.id,
             shiftDate: board.shiftDate,

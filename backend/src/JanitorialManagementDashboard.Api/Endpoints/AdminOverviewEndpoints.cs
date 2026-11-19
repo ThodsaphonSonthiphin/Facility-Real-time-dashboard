@@ -126,7 +126,7 @@ public static class AdminOverviewEndpoints
             return Bad(error!);
         }
 
-        var read = await query.ReadAsync(slot, buildingId, ct);
+        var read = await query.ReadAsync(slot, buildingId, ct, areaId);
         if (!read.BuildingKnown)
         {
             return ApiResults.Message(StatusCodes.Status404NotFound, "ไม่พบตึกนี้ในบริบทที่เลือก");
@@ -610,6 +610,8 @@ public static class AdminOverviewEndpoints
         var covers = allowEntryFacts
             ? read.Facts.Covers.Where(c => c.AreaId == area.Id).ToArray()
             : [];
+        var gaps = allowEntryFacts ? read.Facts.AttendanceGaps ?? [] : [];
+        var leaves = allowEntryFacts ? read.Facts.AttendanceLeaves ?? [] : [];
         var assignedAreas = allowEntryFacts && read.Facts.AssignedAreas.Contains(area.Id)
             ? new HashSet<int> { area.Id }
             : new HashSet<int>();
@@ -618,6 +620,8 @@ public static class AdminOverviewEndpoints
             .Concat(inspections.Select(i => i.SupervisorId))
             .Concat(attendance.Select(a => a.UserId))
             .Concat(covers.Select(c => c.UserId))
+            .Concat(gaps.Select(g => g.UserId))
+            .Concat(leaves.Select(l => l.UserId))
             .Concat(responsibility is not null ? [responsibility.UserId] : Array.Empty<int>())
             .ToHashSet();
         var people = read.Facts.People
@@ -636,7 +640,9 @@ public static class AdminOverviewEndpoints
             entryEvidence,
             assignedAreas,
             areaOriginsComplete,
-            areaIssueKnown);
+            areaIssueKnown,
+            gaps,
+            leaves);
     }
 
     private static bool TryParseCommonQuery(
