@@ -1,5 +1,5 @@
 import { setupListeners } from '@reduxjs/toolkit/query';
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { adminSession } from '../../test/adminFixtures';
 import { fakeServer, type FakeResponse } from '../../test/fakeServer';
@@ -686,6 +686,195 @@ describe('OverviewPage', () => {
     await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
     expect(await screen.findByRole('region', { name: 'พื้นที่ที่ลงเวลาแล้ว' })).toBeVisible();
     expect(screen.getByText(/AR202/)).toBeVisible();
+  });
+
+  it('waits for fresh default slot on กลับกะปัจจุบัน instead of canonicalizing cached older shift in URL', async () => {
+    const base = overviewFixture();
+    let rolledOver = false;
+    let resolveRollover!: (res: FakeResponse) => void;
+    const rolloverPromise = new Promise<FakeResponse>((resolve) => {
+      resolveRollover = resolve;
+    });
+
+    const { calls } = fakeServer({
+      ...adminSession,
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': (req) => {
+        const params = new URLSearchParams(req.search);
+        const shiftDate = params.get('shiftDate');
+        const shift = params.get('shift');
+        if (!shiftDate && !shift) {
+          if (rolledOver) {
+            return rolloverPromise;
+          }
+          return {
+            status: 200,
+            body: {
+              ...base,
+              summary: {
+                ...base.summary,
+                context: { ...base.summary.context, shiftDate: '2026-11-04', shift: 'Day', isClockCurrent: true },
+              },
+              rows: [makeAreaRow(1, { code: 'AR1', name: 'พื้นที่กะเช้า' })],
+            },
+          };
+        }
+        if (shiftDate === '2026-11-03') {
+          return {
+            status: 200,
+            body: {
+              ...base,
+              summary: {
+                ...base.summary,
+                context: { ...base.summary.context, shiftDate: '2026-11-03', shift: 'Day', isClockCurrent: false },
+              },
+              rows: [makeAreaRow(3, { code: 'AR3', name: 'พื้นที่เมื่อวาน' })],
+            },
+          };
+        }
+        return {
+          status: 200,
+          body: {
+            ...base,
+            summary: {
+              ...base.summary,
+              context: {
+                ...base.summary.context,
+                shiftDate: shiftDate ?? '2026-11-04',
+                shift: (shift as 'Day' | 'Night') ?? 'Day',
+                isClockCurrent: true,
+              },
+            },
+          },
+        };
+      },
+    });
+
+    const { user, router } = await renderApp('/admin/overview');
+    await waitFor(() => {
+      const p = new URLSearchParams(router.state.location.search);
+      expect(p.get('date')).toBe('2026-11-04');
+      expect(p.get('shift')).toBe('Day');
+    });
+
+    fireEvent.change(screen.getByLabelText('วันที่ของกะ'), { target: { value: '2026-11-03' } });
+    expect(await screen.findByText(/AR3/)).toBeVisible();
+    const resetButton = await screen.findByRole('button', { name: 'กลับกะปัจจุบัน' });
+
+    // Server rolls over to Night before กลับกะปัจจุบัน is clicked while Day default-slot entry is still cached
+    rolledOver = true;
+    await user.click(resetButton);
+    await waitFor(() => {
+      const defaultCalls = calls.filter((c) => {
+        if (c.path !== '/api/admin/overview/areas') return false;
+        const sp = new URLSearchParams(c.search);
+        return !sp.has('shiftDate') && !sp.has('shift');
+      });
+      expect(defaultCalls).toHaveLength(2);
+    });
+
+    // While rollover refetch is in flight, stale cached Day must NOT overwrite the URL
+    expect(new URLSearchParams(router.state.location.search).get('date')).toBeNull();
+    expect(new URLSearchParams(router.state.location.search).get('shift')).toBeNull();
+
+    await act(async () => {
+      resolveRollover({
+        status: 200,
+        body: {
+          ...base,
+          summary: {
+            ...base.summary,
+            context: { ...base.summary.context, shiftDate: '2026-11-04', shift: 'Night', isClockCurrent: true },
+          },
+          rows: [makeAreaRow(2, { code: 'AR2', name: 'พื้นที่กะดึก' })],
+        },
+      });
+    });
+
+    await waitFor(() => {
+      const p = new URLSearchParams(router.state.location.search);
+      expect(p.get('date')).toBe('2026-11-04');
+      expect(p.get('shift')).toBe('Night');
+    });
+    expect(await screen.findByText(/AR2/)).toBeVisible();
+  });
+
+  it('renders — instead of ยังไม่มีรอบในกะนี้ when a partial row has duePoints 0 without upcoming or noRounds', async () => {
+    const base = overviewFixture();
+    const partialFixture: OverviewAreaList = {
+      ...base,
+      summary: {
+        ...base.summary,
+        availability: {
+          ...base.summary.availability,
+          work: { state: 'partial', reasons: ['targetCoverageMissing'] },
+          inspection: { state: 'partial', reasons: ['targetCoverageMissing'] },
+        },
+        submission: {
+          numerator: unknownCount(1, 'partial', ['targetCoverageMissing']),
+          denominator: unknownCount(1, 'partial', ['targetCoverageMissing']),
+        },
+        inspection: {
+          numerator: unknownCount(0, 'partial', ['targetCoverageMissing']),
+          denominator: unknownCount(1, 'partial', ['targetCoverageMissing']),
+        },
+      },
+      group: 'entered',
+      total: { value: 2, observed: 2, availability: { state: 'complete', reasons: [] } },
+      rows: [
+        makeAreaRow(92, {
+          code: 'AR92',
+          name: 'พื้นที่เป้าไม่ครบ',
+          work: {
+            duePoints: 0,
+            submittedPoints: 1,
+            inspectedPoints: 0,
+            submitted: false,
+            inspected: false,
+            incomplete: false,
+            pendingInspection: false,
+            noSubmission: false,
+            rework: false,
+            issue: false,
+            overdue: false,
+          },
+          reasons: ['entered'],
+        }),
+        makeAreaRow(93, {
+          code: 'AR93',
+          name: 'พื้นที่ไม่มีรอบจริง',
+          work: {
+            duePoints: 0,
+            submittedPoints: 0,
+            inspectedPoints: 0,
+            submitted: false,
+            inspected: false,
+            incomplete: false,
+            pendingInspection: false,
+            noSubmission: false,
+            rework: false,
+            issue: false,
+            overdue: false,
+          },
+          reasons: ['entered', 'noRounds'],
+        }),
+      ],
+    };
+
+    fakeServer({
+      ...adminSession,
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': () => ({ status: 200, body: partialFixture }),
+    });
+
+    await renderApp('/admin/overview?date=2026-10-06&shift=Day&group=entered&page=1');
+    const results = await screen.findByRole('region', { name: 'พื้นที่ที่ลงเวลาแล้ว' });
+    const row92 = within(results).getByRole('row', { name: /AR92/ });
+    const row93 = within(results).getByRole('row', { name: /AR93/ });
+
+    expect(within(row92).getByText('—')).toBeVisible();
+    expect(within(row92).queryByText('ยังไม่มีรอบในกะนี้')).not.toBeInTheDocument();
+    expect(within(row93).getByText('ยังไม่มีรอบในกะนี้')).toBeVisible();
   });
 
   it('shows visible date/shift/building labels and server range help instead of mockup dates', async () => {

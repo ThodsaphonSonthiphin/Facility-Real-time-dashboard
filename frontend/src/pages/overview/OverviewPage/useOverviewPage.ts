@@ -523,7 +523,11 @@ function buildResults(
       if (workHidden) {
         pointsText = '—';
       } else if (row.work.duePoints === 0) {
-        pointsText = row.reasons.includes('upcoming') ? 'ยังไม่ถึงรอบ' : 'ยังไม่มีรอบในกะนี้';
+        pointsText = row.reasons.includes('upcoming')
+          ? 'ยังไม่ถึงรอบ'
+          : row.reasons.includes('noRounds')
+            ? 'ยังไม่มีรอบในกะนี้'
+            : '—';
       } else {
         pointsText = `ส่ง ${row.work.submittedPoints}/${row.work.duePoints} · ตรวจ ${row.work.inspectedPoints}/${row.work.duePoints} จุด`;
       }
@@ -620,35 +624,59 @@ export function useOverviewPage(): OverviewPageModel {
   const rawResponse = contextResult.ok ? query.currentData : undefined;
   const argsKey = contextResult.ok ? overviewParams(selection).toString() : '';
 
+  // Wait for a fresh settlement before canonicalizing when RTK Query surfaces a cached hit with isFetching=false on Render 1.
+  const [seenRequest, setSeenRequest] = useState<{ argsKey: string; staleRequestId?: string }>({
+    argsKey,
+    staleRequestId: undefined,
+  });
+  if (seenRequest.argsKey !== argsKey) {
+    setSeenRequest({
+      argsKey,
+      staleRequestId: rawResponse ? query.requestId : undefined,
+    });
+  } else if (
+    seenRequest.staleRequestId !== undefined &&
+    !query.isFetching &&
+    !query.error &&
+    rawResponse &&
+    query.requestId !== seenRequest.staleRequestId
+  ) {
+    setSeenRequest({ argsKey, staleRequestId: undefined });
+  }
+
+  const awaitingFreshCache = seenRequest.argsKey === argsKey && seenRequest.staleRequestId !== undefined;
+  const isUncanonicalSlot = contextResult.ok && (!selection.date || !selection.shift);
+  const freshRawResponse = isUncanonicalSlot && awaitingFreshCache ? undefined : rawResponse;
+
   const canonicalSelection: OverviewSelection | null = useMemo(() => {
-    if (!contextResult.ok || !rawResponse) {
+    if (!contextResult.ok || !freshRawResponse || awaitingFreshCache || query.isFetching || query.error) {
       return null;
     }
     const current = contextResult.context;
-    const effectivePage = Number.isInteger(rawResponse.page) && rawResponse.page >= 1 ? rawResponse.page : current.page;
+    const effectivePage = Number.isInteger(freshRawResponse.page) && freshRawResponse.page >= 1 ? freshRawResponse.page : current.page;
     if (current.date && current.shift && effectivePage === current.page) {
       return null;
     }
     return {
       ...current,
-      date: current.date ?? rawResponse.summary.context.shiftDate,
-      shift: current.shift ?? rawResponse.summary.context.shift,
+      date: current.date ?? freshRawResponse.summary.context.shiftDate,
+      shift: current.shift ?? freshRawResponse.summary.context.shift,
       page: effectivePage,
     };
-  }, [contextResult, rawResponse]);
+  }, [awaitingFreshCache, contextResult, freshRawResponse, query.error, query.isFetching]);
 
   const canonicalKey = canonicalSelection ? overviewParams(canonicalSelection).toString() : '';
   const [canonicalSeed, setCanonicalSeed] = useState<{ key: string; data: OverviewAreaList } | null>(null);
-  if (rawResponse && canonicalSelection && canonicalKey !== argsKey) {
-    if (!canonicalSeed || canonicalSeed.key !== canonicalKey || canonicalSeed.data !== rawResponse) {
-      setCanonicalSeed({ key: canonicalKey, data: rawResponse });
+  if (freshRawResponse && canonicalSelection && canonicalKey !== argsKey) {
+    if (!canonicalSeed || canonicalSeed.key !== canonicalKey || canonicalSeed.data !== freshRawResponse) {
+      setCanonicalSeed({ key: canonicalKey, data: freshRawResponse });
     }
-  } else if (canonicalSeed && (canonicalSeed.key !== argsKey || rawResponse !== undefined)) {
+  } else if (canonicalSeed && (canonicalSeed.key !== argsKey || freshRawResponse !== undefined)) {
     setCanonicalSeed(null);
   }
 
-  const isCanonicalizing = rawResponse === undefined && canonicalSeed !== null && canonicalSeed.key === argsKey;
-  const response = rawResponse ?? (canonicalSeed && canonicalSeed.key === argsKey ? canonicalSeed.data : undefined);
+  const isCanonicalizing = freshRawResponse === undefined && canonicalSeed !== null && canonicalSeed.key === argsKey;
+  const response = freshRawResponse ?? (canonicalSeed && canonicalSeed.key === argsKey ? canonicalSeed.data : undefined);
 
   // Replace server-default slot once and replace stale server-clamped page without a request loop or loading flash.
   useEffect(() => {
