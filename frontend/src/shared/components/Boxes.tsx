@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Spinner } from './PageState';
 import { boxClass } from './styles';
 
@@ -50,7 +50,7 @@ export function Table({
   children: ReactNode;
 }) {
   const table = (
-    <div className="max-w-full overflow-x-auto">
+    <HorizontalScrollArea label={label ?? 'ตารางข้อมูล'}>
       <table
         aria-label={label}
         className={
@@ -63,7 +63,7 @@ export function Table({
       >
         {children}
       </table>
-    </div>
+    </HorizontalScrollArea>
   );
   if (!framed && !footer) {
     return table;
@@ -72,6 +72,120 @@ export function Table({
     <div className={framed ? 'overflow-hidden rounded-lg border border-border bg-surface' : undefined}>
       {table}
       {footer && <div className="border-t border-border">{footer}</div>}
+    </div>
+  );
+}
+
+/** A scroll region gains a name and keyboard stop only when its contents extend beyond the available width. */
+export function HorizontalScrollArea({
+  label,
+  children,
+  leadingOverlayWidth = 0,
+}: {
+  label: string;
+  children: ReactNode;
+  /** Width of a sticky leading column that covers part of the scrollport. */
+  leadingOverlayWidth?: number;
+}) {
+  const scrollArea = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  const [measuredLeadingOverlayWidth, setMeasuredLeadingOverlayWidth] = useState(leadingOverlayWidth);
+  const hintId = useId();
+
+  useLayoutEffect(() => {
+    const element = scrollArea.current;
+    if (!element) return;
+
+    const measureOverflow = () => {
+      const next = element.scrollWidth > element.clientWidth + 1;
+      setOverflows((current) => (current === next ? current : next));
+      if (leadingOverlayWidth) {
+        const leadingCell = element.querySelector('thead th:first-child');
+        const measuredWidth = leadingCell?.getBoundingClientRect().width;
+        const nextLeadingWidth = measuredWidth && measuredWidth > 0 ? measuredWidth : leadingOverlayWidth;
+        setMeasuredLeadingOverlayWidth((current) =>
+          Math.abs(current - nextLeadingWidth) < 0.5 ? current : nextLeadingWidth,
+        );
+      }
+    };
+
+    measureOverflow();
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measureOverflow);
+    observer?.observe(element);
+    if (element.firstElementChild) observer?.observe(element.firstElementChild);
+    const leadingCell = element.querySelector('thead th:first-child');
+    if (leadingCell) observer?.observe(leadingCell);
+    window.addEventListener('resize', measureOverflow);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measureOverflow);
+    };
+  }, [leadingOverlayWidth]);
+
+  const scrollWithKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
+    const element = scrollArea.current;
+    if (!overflows || !element || event.target !== element) return;
+    const visibleWidth = Math.max(1, element.clientWidth - measuredLeadingOverlayWidth);
+    const step = Math.max(40, Math.floor(visibleWidth * 0.8));
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      element.scrollLeft += step;
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      element.scrollLeft -= step;
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      element.scrollLeft = 0;
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      element.scrollLeft = element.scrollWidth;
+    }
+  };
+
+  const revealFocusedItem = (event: FocusEvent<HTMLDivElement>) => {
+    const element = scrollArea.current;
+    const target = event.target;
+    if (!element || !measuredLeadingOverlayWidth || target === element || !(target instanceof HTMLElement)) return;
+
+    window.requestAnimationFrame(() => {
+      if (!element.isConnected || !target.isConnected) return;
+      const areaBounds = element.getBoundingClientRect();
+      const targetBounds = target.getBoundingClientRect();
+      const unobscuredLeft = areaBounds.left + measuredLeadingOverlayWidth;
+      const delta = targetBounds.left < unobscuredLeft
+        ? unobscuredLeft - targetBounds.left
+        : targetBounds.right > areaBounds.right
+          ? areaBounds.right - targetBounds.right
+          : 0;
+      if (delta) element.scrollLeft -= delta;
+    });
+  };
+
+  // The scroll padding follows the measured sticky width because long names can exceed the column's Tailwind minimum.
+  const scrollPaddingStyle = measuredLeadingOverlayWidth
+    ? { scrollPaddingInlineStart: measuredLeadingOverlayWidth }
+    : undefined;
+
+  return (
+    <div>
+      <div
+        ref={scrollArea}
+        role={overflows ? 'region' : undefined}
+        aria-label={overflows ? label : undefined}
+        aria-describedby={overflows ? hintId : undefined}
+        tabIndex={overflows ? 0 : undefined}
+        onKeyDown={scrollWithKeyboard}
+        onFocusCapture={revealFocusedItem}
+        style={scrollPaddingStyle}
+        className="max-w-full overflow-x-auto focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+      >
+        {children}
+      </div>
+      {overflows && (
+        <p id={hintId} className="px-3 py-2 text-xs text-text-2 sm:sr-only">
+          เลื่อนตารางไปด้านข้าง หรือโฟกัสตารางแล้วกดปุ่มลูกศรเพื่อดูข้อมูลเพิ่มเติม
+        </p>
+      )}
     </div>
   );
 }

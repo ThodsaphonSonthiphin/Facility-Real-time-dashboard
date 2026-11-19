@@ -23,8 +23,10 @@ export function useCheckInPage(): CheckInPageView {
   const [confirmArrival] = useConfirmTransferArrivalMutation();
   const [busy, setBusy] = useState<CheckInPageView['busy']>(null);
   const sending = useRef(false);
+  const retryingRead = useRef(false);
   const [outcome, setOutcome] = useState<CheckInOutcome | null>(null);
   const [proposed, setProposed] = useState<Extract<CheckInRetry, { kind: 'action' }> | null>(null);
+  const [retryReadStatus, setRetryReadStatus] = useState<CheckInPageView['retryReadStatus']>('idle');
 
   const signGone = statusOf(signQuery.error) === 404;
   const loadError = workQuery.error ?? (signGone ? undefined : signQuery.error);
@@ -44,6 +46,18 @@ export function useCheckInPage(): CheckInPageView {
   const refresh = () => {
     void workQuery.refetch();
     void signQuery.refetch();
+  };
+
+  const retryRead = async () => {
+    if (retryingRead.current) return;
+    retryingRead.current = true;
+    setRetryReadStatus('pending');
+    try {
+      await Promise.all([workQuery.refetch(), signQuery.refetch()]);
+    } finally {
+      retryingRead.current = false;
+      setRetryReadStatus('complete');
+    }
   };
 
   const submit = async (request: CheckInRetry) => {
@@ -171,6 +185,9 @@ export function useCheckInPage(): CheckInPageView {
     cancelGaps: () => setProposed(null),
     confirmDestination,
     retryLocation,
+    retryRead,
+    retryingRead: workQuery.isFetching || signQuery.isFetching,
+    retryReadStatus,
   };
 }
 

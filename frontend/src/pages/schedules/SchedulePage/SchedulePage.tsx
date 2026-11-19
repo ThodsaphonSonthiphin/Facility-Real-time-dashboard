@@ -1,11 +1,11 @@
 import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
-import { Link } from 'react-router';
 import { lazy, Suspense } from 'react';
 import type { ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
 import type { Shift } from '../../../shared/api/types';
 import { Badge } from '../../../shared/components/Badge';
 import { BuildingSelect } from '../../../shared/components/BuildingSelect';
 import { Button } from '../../../shared/components/Button';
+import { HorizontalScrollArea } from '../../../shared/components/Boxes';
 import { LogoutButton } from '../../../shared/components/LogoutButton';
 import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { Note } from '../../../shared/components/Note';
@@ -80,7 +80,7 @@ export function OwnSchedulePage() {
 
 /** The Supervisor's team timetable (0177): every building assigned to them in their own shift, with a return control. */
 export function ScheduleManagementPage() {
-  return <ManagementWeekPage role="supervisor" back={{ to: '/my-building', label: 'ตึกของฉัน' }} />;
+  return <ManagementWeekPage role="supervisor" />;
 }
 
 /** The Admin's timetable (0178): every building and any shift; the menu above is the way back. */
@@ -88,18 +88,12 @@ export function AdminSchedulesPage() {
   return <ManagementWeekPage role="admin" />;
 }
 
-function ManagementWeekPage({ role, back }: { role: ScheduleRole; back?: { to: string; label: string } }) {
+function ManagementWeekPage({ role }: { role: ScheduleRole }) {
   const view = useSchedulePage(role);
   return (
     <main className="flex min-w-0 flex-col gap-6 text-base text-text sm:text-sm">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          {back && (
-            <Link to={back.to} className={`inline-flex min-h-9 items-center gap-1 self-start font-semibold text-accent hover:text-accent-hover ${focusRing}`}>
-              <ChevronLeft aria-hidden="true" className="size-4" />
-              {back.label}
-            </Link>
-          )}
           <h1 className="text-2xl font-bold">{role === 'admin' ? 'ตารางงาน' : 'จัดตารางงาน'}</h1>
           <span className="text-text-2">
             {role === 'admin'
@@ -309,11 +303,13 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
   const dates = datesOf(week);
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-surface">
-      <div className="max-w-full overflow-x-auto">
-        <table aria-label="ตารางงานรายสัปดาห์" className="w-full min-w-180 border-collapse">
+      <HorizontalScrollArea label="ตารางงานรายสัปดาห์" leadingOverlayWidth={140}>
+        <table aria-label="ตารางงานรายสัปดาห์" className="w-full min-w-180 border-separate border-spacing-0">
           <thead className="bg-surface-2 text-xs font-semibold text-text-2">
             <tr>
-              <th className="px-3 py-2.5 text-left">{view.role === 'admin' ? 'พนักงาน' : 'แม่บ้าน'}</th>
+              <th scope="col" className="sticky left-0 z-20 w-35 min-w-35 border-r border-border bg-surface-2 px-3 py-2.5 text-left">
+                {view.role === 'admin' ? 'พนักงาน' : 'แม่บ้าน'}
+              </th>
               {dates.map((date) => (
                 <th key={date} className="px-3 py-2.5 text-left">
                   <span className="block">{formatWeekday(date)}</span>
@@ -324,8 +320,8 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
           </thead>
           <tbody>
             {week.rows.map((person) => (
-              <tr key={person.userId} className="border-t border-border">
-                <th scope="row" className="px-3 py-2.5 text-left font-semibold">
+              <tr key={person.userId}>
+                <th scope="row" className="sticky left-0 z-10 w-35 min-w-35 border-t border-r border-border bg-surface px-3 py-2.5 text-left font-semibold">
                   <span className="block">{person.displayName}</span>
                   <span className="block text-text-2">{kindLabel[person.cleanerKind]}</span>
                   {person.cleanerKind === 'Relief' && person.homeBuildingCode && (
@@ -342,7 +338,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                 {dates.map((date) => {
                   const day = person.days.find((one) => one.date === date);
                   return (
-                    <td key={date} className="px-3 py-2.5 align-top">
+                    <td key={date} className="border-t border-border px-3 py-2.5 align-top">
                       <Cell day={day} />
                       {view.latest && day?.edit?.canChange && (
                         <Button variant="link" size={view.phone ? 'phone' : 'desk'} onClick={() => view.openDated(person, day)}
@@ -369,7 +365,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
             ))}
           </tbody>
         </table>
-      </div>
+      </HorizontalScrollArea>
     </section>
   );
 }

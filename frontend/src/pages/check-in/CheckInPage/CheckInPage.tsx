@@ -1,4 +1,5 @@
 import { Clock } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import type { OwnShift } from '../../../shared/api/types';
 import { BlockedScanScreen } from '../../../shared/components/BlockedScanScreen';
 import { Button } from '../../../shared/components/Button';
@@ -17,8 +18,13 @@ export function CheckInPage() {
   const {
     attendance, ownArea, ownShift, signGone, loadError, loading, choices, gapConfirmation, gapLabel,
     completionMessage, busy, outcome, transfer, confirmable, transferPending, press, confirmGaps, cancelGaps,
-    confirmDestination, retryLocation,
+    confirmDestination, retryLocation, retryRead, retryingRead, retryReadStatus,
   } = useCheckInPage();
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (retryReadStatus === 'complete' && !loadError && !signGone) heading.current?.focus();
+  }, [retryReadStatus, loadError, signGone]);
 
   if (signGone) {
     return (
@@ -49,7 +55,7 @@ export function CheckInPage() {
       header={
         <PhoneHeader back={{ to: '/my-work', label: 'งานของฉัน' }}>
           <span className="px-0 text-sm text-text-2">ป้ายลงเวลา</span>
-          <h1 className="text-2xl font-bold">ลงเวลา</h1>
+          <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold focus:outline-2 focus:outline-offset-2 focus:outline-accent">ลงเวลา</h1>
           {attendance?.shift && <p className="text-lg font-semibold">{shiftLabel[attendance.shift]}</p>}
           {ownArea && (
             <p className="text-sm text-text-2">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>
@@ -57,7 +63,11 @@ export function CheckInPage() {
         </PhoneHeader>
       }
       bottom={
-        confirmable || busy === 'transfer' ? (
+        loadError ? (
+          <Button variant="primary" size="main" disabled={retryingRead} onClick={retryRead}>
+            {retryingRead ? 'กำลังโหลด...' : 'ลองอีกครั้ง'}
+          </Button>
+        ) : confirmable || busy === 'transfer' ? (
           <Button variant="primary" size="main" disabled={busy !== null} onClick={confirmDestination}>
             {busy === 'transfer' ? 'กำลังยืนยัน...' : 'ยืนยันเข้าพื้นที่ใหม่'}
           </Button>
@@ -83,6 +93,13 @@ export function CheckInPage() {
         )
       }
     >
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {retryReadStatus === 'pending'
+          ? 'กำลังลองเชื่อมต่ออีกครั้ง'
+          : retryReadStatus === 'complete'
+            ? loadError ? 'ยังเชื่อมต่อไม่ได้ ลองอีกครั้ง' : 'เชื่อมต่อสำเร็จแล้ว'
+            : ''}
+      </p>
       {loading && <PageLoading lines={4}>กำลังโหลด...</PageLoading>}
       {loadError && <Note tone="error">{loadError}</Note>}
       {attendance && !attendance.shift && <OffShiftNote ownShift={ownShift} />}

@@ -45,6 +45,89 @@ async function hubCatchUp(server: { calls: { path: string }[] }) {
 }
 
 describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
+  it('retries a failed check-in read in place, then enables attendance actions', async () => {
+    let signReads = 0;
+    const server = serve({
+      'GET /api/attendance/signs/token-checkin-ar01': () => {
+        signReads += 1;
+        return signReads === 1 ? { status: 503 } : { status: 204 };
+      },
+    });
+    const { user } = await renderApp(SIGN);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่');
+    expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
+    const retry = screen.getByRole('button', { name: 'ลองอีกครั้ง' });
+    expect(retry).toBeInTheDocument();
+
+    await user.click(retry);
+
+    expect(await screen.findByRole('button', { name: 'เข้างาน' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(await screen.findByText('เชื่อมต่อสำเร็จแล้ว')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ลงเวลา' })).toHaveFocus();
+    expect(server.calls.filter((call) => call.path === '/api/attendance/signs/token-checkin-ar01')).toHaveLength(2);
+  });
+
+  it('retries a failed work read without leaving the scanned sign', async () => {
+    let recovered = false;
+    const server = serve({
+      'GET /api/my-work': () => recovered
+        ? { status: 200, body: myWork(notCheckedIn) }
+        : { status: 503 },
+    });
+    const { user } = await renderApp(SIGN);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่');
+    expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
+
+    recovered = true;
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('button', { name: 'เข้างาน' })).toBeInTheDocument();
+    expect(server.calls.filter((call) => call.path === '/api/my-work').length).toBeGreaterThan(1);
+  });
+
+  it('disables read retry while its requests are still pending', async () => {
+    let releaseRetry!: () => void;
+    let signReads = 0;
+    const retryPending = new Promise<void>((resolve) => { releaseRetry = resolve; });
+    const server = serve({
+      'GET /api/attendance/signs/token-checkin-ar01': async () => {
+        signReads += 1;
+        if (signReads === 1) return { status: 503 };
+        await retryPending;
+        return { status: 204 };
+      },
+    });
+    const { user } = await renderApp(SIGN);
+
+    await screen.findByRole('alert');
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    await waitFor(() => expect(server.calls.filter((call) => call.path === '/api/attendance/signs/token-checkin-ar01')).toHaveLength(2));
+    const pending = await screen.findByRole('button', { name: 'กำลังโหลด...' });
+    expect(pending).toBeDisabled();
+    expect(await screen.findByText('กำลังลองเชื่อมต่ออีกครั้ง')).toBeInTheDocument();
+    expect(server.calls.filter((call) => call.path === '/api/attendance/signs/token-checkin-ar01')).toHaveLength(2);
+    releaseRetry();
+    expect(await screen.findByRole('button', { name: 'เข้างาน' })).toBeInTheDocument();
+    expect(await screen.findByText('เชื่อมต่อสำเร็จแล้ว')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ลงเวลา' })).toHaveFocus();
+  });
+
+  it('announces when a retry finishes with the read still unavailable', async () => {
+    serve({
+      'GET /api/attendance/signs/token-checkin-ar01': () => ({ status: 503 }),
+    });
+    const { user } = await renderApp(SIGN);
+    await screen.findByRole('alert');
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByText('ยังเชื่อมต่อไม่ได้ ลองอีกครั้ง')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ลองอีกครั้ง' })).toBeInTheDocument();
+  });
+
   it('shows the shift, the own Area and the Shift-In button (M1)', async () => {
     serve({});
     await renderApp(SIGN);
@@ -67,7 +150,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
 
     await user.click(screen.getByRole('button', { name: 'เข้างาน' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('บันทึกเวลาเข้างานแล้ว 06:52');
+    expect(await screen.findByText('บันทึกเวลาเข้างานแล้ว 06:52')).toBeInTheDocument();
     expect(server.calls.find((c) => c.path === '/api/attendance')?.body).toEqual({
       qrToken: 'token-checkin-ar01',
       eventType: 'ShiftIn',
@@ -737,8 +820,8 @@ describe('the transfer arrival (spec §9)', () => {
 
     await user.click(screen.getByRole('button', { name: 'ยืนยันเข้าพื้นที่ใหม่' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('ยืนยันถึงพื้นที่ใหม่แล้ว');
-    expect(screen.getByRole('status')).toHaveTextContent('12:30');
+    expect(await screen.findByText('ยืนยันถึงพื้นที่ใหม่แล้ว')).toBeInTheDocument();
+    expect(screen.getByText('ยืนยันถึงพื้นที่ใหม่แล้ว').closest('[role="status"]')).toHaveTextContent('12:30');
     expect(server.calls.find((call) => call.path === '/api/area-transfers/9/confirm')?.body).toEqual({
       expectedRevision: '7',
       qrToken: 'token-checkin-ar01',

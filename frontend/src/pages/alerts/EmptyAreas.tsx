@@ -89,7 +89,7 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, onChoose,
         <p className="px-4 py-8 text-center text-text-2">ไม่พบพื้นที่ที่ตรงกับที่ค้นหา</p>
       )}
       {shown.length > 0 && (
-        <Table framed={false} minWidth="min-w-140">
+        <Table label="พื้นที่ที่ยังไม่มีคนลงเวลา" framed={false} minWidth="min-w-140">
           <thead>
             <tr>
               <th scope="col">พื้นที่</th>

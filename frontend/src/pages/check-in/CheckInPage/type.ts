@@ -34,4 +34,7 @@ export interface CheckInPageView {
   cancelGaps: () => void;
   confirmDestination: () => void;
   retryLocation: () => void;
+  retryRead: () => void;
+  retryingRead: boolean;
+  retryReadStatus: 'idle' | 'pending' | 'complete';
 }

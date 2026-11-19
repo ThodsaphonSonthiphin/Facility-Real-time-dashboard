@@ -111,6 +111,9 @@ describe('opening a schedule for the first time (facility-0180, 0182, 0183)', ()
     await renderApp('/schedule-management');
 
     await screen.findByRole('heading', { level: 1, name: 'จัดตารางงาน' });
+    expect(screen.getByRole('link', { name: 'ตึกของฉัน' })).toHaveAttribute('href', '/my-building');
+    expect(screen.getByText('หัวหน้าทดสอบ')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /ตึกของฉัน/ })).toHaveAttribute('href', '/my-building');
     // It is the week of the 16th, the one the shift's start date belongs to — not the calendar week that just began
     await waitFor(() => expect(reads()[0].search).toContain('weekStart=2026-11-16'));
   });
@@ -162,6 +165,20 @@ describe('returning to a schedule during the same ongoing use (facility-0181, 01
 });
 
 describe('the three week states, which are never the same screen (spec §3, §10)', () => {
+  it('keeps each Cleaner row in the weekly roster when several people are scheduled', async () => {
+    pinClock();
+    serveWeeks('admin', () => week({
+      rows: [person(), person({ userId: 8, displayName: 'แม่บ้านคนที่สอง' })],
+    }));
+    await renderApp('/admin/schedules');
+
+    const table = await screen.findByRole('table', { name: 'ตารางงานรายสัปดาห์' });
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(3);
+    expect(within(rows[1]).getByRole('rowheader')).toHaveTextContent('แม่บ้านทดสอบ');
+    expect(within(rows[2]).getByRole('rowheader')).toHaveTextContent('แม่บ้านคนที่สอง');
+  });
+
   it('says so when the dates are outside retained coverage, instead of drawing an empty roster', async () => {
     pinClock();
     serveWeeks('cleaner', () =>

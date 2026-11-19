@@ -36,6 +36,31 @@ const tileNames = (region: HTMLElement) =>
     .map((h) => h.textContent);
 
 describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
+  it('keeps the Admin menu behind a keyboard-accessible disclosure on narrow layouts', async () => {
+    serve();
+    const { user } = await renderApp('/dashboard');
+
+    const menuSummary = screen.getByRole('button', { name: 'เมนูแอดมิน' });
+    expect(screen.getByRole('link', { name: 'ข้ามไปเนื้อหาหลัก' })).toHaveAttribute('href', '#main-content');
+    expect(menuSummary).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(menuSummary);
+
+    expect(menuSummary).toHaveAttribute('aria-expanded', 'true');
+    const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
+    expect(within(menu).getAllByRole('link')).toHaveLength(11);
+    expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'ออกจากระบบ' })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(menuSummary).toHaveAttribute('aria-expanded', 'false');
+    expect(menuSummary).toHaveFocus();
+
+    await user.click(menuSummary);
+    await user.click(within(menu).getByRole('link', { name: 'สถานะจุด' }));
+    expect(menuSummary).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('waits for the building names too, then shows the filters, the help and the cards together (layout shift)', async () => {
     let answerBuildings: () => void = () => {};
     const server = serve(boardPoints, {
