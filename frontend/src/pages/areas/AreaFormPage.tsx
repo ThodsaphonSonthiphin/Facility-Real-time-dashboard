@@ -2,6 +2,7 @@ import { ChevronLeft, MapPin } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { useGetAreaQuery, useGetBuildingsQuery, useGetCleanersQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
+import { isNotFound } from '../../shared/api/scanAnswers';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
@@ -9,9 +10,6 @@ import { linkClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { AreaActiveSection } from './AreaActiveSection';
 import { AreaForm } from './AreaForm';
-
-const isNotFound = (err: unknown): boolean =>
-  typeof err === 'object' && err !== null && 'status' in err && (err as { status: unknown }).status === 404;
 
 /**
  * facility-0045, wireframe D10: "+ เพิ่ม Area" opens the form empty, "แก้ไข Area" opens it filled. The form keeps its

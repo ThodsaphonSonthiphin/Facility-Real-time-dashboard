@@ -272,4 +272,14 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     expect(server.calls.filter((call) => call.path === '/api/admin/buildings')).toHaveLength(1);
   });
 
+  it('renders 404 area error on edit route without a retry button (UX-05)', async () => {
+    serve({
+      'GET /api/admin/areas/999': () => ({ status: 404, body: { message: 'ไม่พบพื้นที่นี้' } }),
+    });
+    await renderApp('/admin/areas/999/edit');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('ไม่พบพื้นที่นี้');
+    expect(screen.queryByRole('button', { name: 'ลองอีกครั้ง' })).not.toBeInTheDocument();
+  });
+
 });

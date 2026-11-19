@@ -8,6 +8,7 @@ import {
   type AreaDetail,
 } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
+import { isNotFound } from '../../shared/api/scanAnswers';
 import { Button } from '../../shared/components/Button';
 import { LogoutButton } from '../../shared/components/LogoutButton';
 import { MoreInfo } from '../../shared/components/MoreInfo';
@@ -75,7 +76,11 @@ export function CapturePage() {
         </PhoneHeader>
       }
     >
-      {area.error && <Note tone="error" retrySize="phone" onRetry={() => void area.refetch()}>{getErrorMessage(area.error)}</Note>}
+      {area.error && (
+        <Note tone="error" retrySize="phone" onRetry={isNotFound(area.error) ? undefined : () => void area.refetch()}>
+          {getErrorMessage(area.error)}
+        </Note>
+      )}
       {!detail && !area.error && <PageLoading>กำลังโหลด...</PageLoading>}
       {detail && (
         <CaptureWorkspace

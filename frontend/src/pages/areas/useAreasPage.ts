@@ -3,6 +3,7 @@ import { useParams } from 'react-router';
 import { useGetAreaQuery, useGetAreasQuery } from '../../shared/api/adminSetupApi';
 import { useBuildingNames } from '../../shared/api/buildingNames';
 import { freshOnOpen } from '../../shared/api/baseApi';
+import { isNotFound } from '../../shared/api/scanAnswers';
 
 /** Filtering changes only the rail: the route (or original first Area) owns the selected detail. */
 export function useAreasPage() {
@@ -26,12 +27,15 @@ export function useAreasPage() {
       `${area.code} ${area.name} ${area.buildingCode} ${names.get(area.buildingCode) ?? ''}`.toLocaleLowerCase().includes(query));
   }, [areas.data, buildingId, names, search]);
   const clearFilters = () => { setSearch(''); setBuildingId(''); };
-  const retryError = () => {
-    if (areas.error) void areas.refetch();
-    if (detail.error) void detail.refetch();
-  };
+  const error = areas.error ?? detail.error;
+  const retryError = error && !isNotFound(error)
+    ? () => {
+        if (areas.error) void areas.refetch();
+        if (detail.error && !isNotFound(detail.error)) void detail.refetch();
+      }
+    : undefined;
   return {
     areaId, areas, detail, selectedId, names, buildings, filteredAreas, search, setSearch, buildingId, setBuildingId,
-    clearFilters, hasFilters: search !== '' || buildingId !== '', error: areas.error ?? detail.error, retryError,
+    clearFilters, hasFilters: search !== '' || buildingId !== '', error, retryError,
   };
 }

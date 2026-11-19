@@ -5,6 +5,11 @@ export function statusOf(error: unknown): unknown {
   return typeof error === 'object' && error !== null && 'status' in error ? error.status : undefined;
 }
 
+/** True when an RTK Query error is HTTP 404 Not Found (non-retryable read error). */
+export function isNotFound(error: unknown): boolean {
+  return statusOf(error) === 404;
+}
+
 /** facility-0041, 0048: a 403 that names the scanned sign's Area is a Blocked Scan, not a missing permission. */
 export function blockedScanOf(error: unknown): BlockedScan | null {
   if (statusOf(error) !== 403) {
