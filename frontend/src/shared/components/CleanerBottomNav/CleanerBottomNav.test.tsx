@@ -1,8 +1,10 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { cleanerSession, myWork, point } from '../../../test/cleanerFixtures';
+import { fakeGps, nearSign } from '../../../test/fakeGps';
 import { authAnswer, fakeServer } from '../../../test/fakeServer';
 import { renderApp } from '../../../test/renderApp';
+import { inspectionScan } from '../../../test/supervisorFixtures';
 
 function serveCleaner(routes: Record<string, () => { status: number; body?: unknown }> = {}) {
   return fakeServer({
@@ -123,6 +125,32 @@ describe('CleanerBottomNav (R-01 Option A)', () => {
     });
     await renderApp('/admin/areas/1/capture');
     await screen.findByText(/AR01/);
+    expect(screen.queryByRole('navigation', { name: 'เมนูหลักแม่บ้าน' })).not.toBeInTheDocument();
+  });
+
+  it('does not open QR guidance when tapping the active ลงเวลา or สแกน QR tab on its tokenized route', async () => {
+    serveCleaner();
+    const checkInSession = await renderApp('/check-in/token-checkin');
+    const checkInNav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
+    await checkInSession.user.click(within(checkInNav).getByRole('button', { name: 'ลงเวลา' }));
+    expect(screen.queryByText(/สแกนป้ายลงเวลาด้วยกล้องมือถือ/)).not.toBeInTheDocument();
+
+    serveCleaner();
+    const scanSession = await renderApp('/scan/token-point');
+    const scanNavs = await screen.findAllByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
+    const latestNav = scanNavs[scanNavs.length - 1];
+    await scanSession.user.click(within(latestNav).getByRole('button', { name: 'สแกน QR' }));
+    expect(screen.queryByText(/สแกนป้าย QR ที่จุดทำความสะอาด/)).not.toBeInTheDocument();
+  });
+
+  it('never renders for a supervisor on /scan/:token', async () => {
+    fakeGps(nearSign);
+    fakeServer({
+      'POST /api/auth/refresh': () => authAnswer('supervisor'),
+      'POST /api/inspections/scan': () => ({ status: 200, body: inspectionScan() }),
+    });
+    await renderApp('/scan/token-point');
+    await screen.findByRole('heading', { name: 'ห้องน้ำชาย' });
     expect(screen.queryByRole('navigation', { name: 'เมนูหลักแม่บ้าน' })).not.toBeInTheDocument();
   });
 });

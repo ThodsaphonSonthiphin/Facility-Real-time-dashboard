@@ -36,6 +36,10 @@ export function useCleanerBottomNav() {
   const openGuide = guideState?.pathname === pathname ? guideState.key : null;
 
   const toggleGuide = (key: CleanerGuideKey) => {
+    if (activeTab === key) {
+      setGuideState(null);
+      return;
+    }
     setGuideState((prev) =>
       prev?.pathname === pathname && prev.key === key ? null : { pathname, key },
     );

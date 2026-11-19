@@ -107,7 +107,11 @@ export function CheckInPage() {
       {attendance?.isDayOff && <Note tone="warn">กะนี้ตรงกับวันหยุดตามแผน</Note>}
       {attendance?.isLeave && <Note tone="warn">มีการลาที่บันทึกไว้ในกะนี้</Note>}
       {attendance?.departureLeaveMismatch && <Note tone="warn">{departureLeaveMismatchLabel}</Note>}
-      {gapConfirmation && <Note tone="warn" status>{`ต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`}</Note>}
+      {gapConfirmation && (
+        <Note tone="warn" status title="ยืนยันขั้นตอนที่ข้าม">
+          {`ต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`}
+        </Note>
+      )}
       {transferPending && (
         <Note tone="warn" title="มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน">
           ยืนยันที่ป้ายของพื้นที่ปลายทางก่อนลงเวลา

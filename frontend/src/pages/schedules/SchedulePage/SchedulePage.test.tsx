@@ -458,4 +458,18 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     await user.click(historySummary);
     expect(await within(contextBar).findByText('เหตุผล · ปรับกลุ่มพักตามหน้างาน')).toBeVisible();
   });
+
+  it('highlights today with (วันนี้) and renders semantic status pills in OwnWeek (/my-schedule)', async () => {
+    pinClock('2026-11-17T02:00:00Z');
+    serveWeeks('cleaner', () => week());
+    await renderApp('/my-schedule');
+
+    await screen.findByRole('heading', { level: 1, name: 'ตารางของฉัน' });
+    const todayCard = (await screen.findByText(/17\/11\/2026 \(วันนี้\)/)).closest('article');
+    expect(todayCard).not.toBeNull();
+    expect(within(todayCard!).getByText('มีแผนทำงาน')).toBeInTheDocument();
+    expect(screen.getByText('วันหยุด')).toBeInTheDocument();
+    expect(screen.getByText('ลา')).toBeInTheDocument();
+    expect(screen.getByText('ยังไม่กำหนด')).toBeInTheDocument();
+  });
 });

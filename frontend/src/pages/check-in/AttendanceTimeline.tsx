@@ -42,7 +42,7 @@ function timelineRows(attendance: AttendanceState): TimelineRow[] {
 export function AttendanceTimeline({ attendance, next }: { attendance: AttendanceState; next?: AttendanceEvent }) {
   return (
     <ol
-      className="m-0 flex list-none flex-col gap-px overflow-hidden rounded-lg border border-border bg-border p-0"
+      className="m-0 flex list-none flex-col gap-2 p-0"
       aria-label="วันนี้"
     >
       {timelineRows(attendance).map((row, index) => {
@@ -58,7 +58,9 @@ export function AttendanceTimeline({ attendance, next }: { attendance: Attendanc
         return (
           <li
             key={row.eventType}
-            className={`flex min-h-18 items-center gap-3 px-4 py-3 ${isNext ? 'bg-accent-subtle' : 'bg-surface'}`}
+            className={`flex min-h-18 items-center gap-3 rounded-lg border px-4 py-3 ${
+              isNext ? 'border-accent bg-accent-subtle' : 'border-border bg-surface'
+            }`}
           >
             <span
               aria-hidden="true"
