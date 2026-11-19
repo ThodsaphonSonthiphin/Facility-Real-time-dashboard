@@ -34,7 +34,8 @@ interface CorrectionFormProps {
   cleaner: AssignedCleaner;
   /** The time an alert's "เติมเวลา…" link asks for: its row is tinted, so the Admin sees where to type. */
   initialEvent?: AttendanceEvent;
-  beforeWrite?: () => Promise<boolean>;
+  unavailableEvents?: ReadonlySet<AttendanceEvent>;
+  beforeWrite?: (event: AttendanceEvent) => Promise<boolean>;
   onDone: (text: string) => void;
   onCancel: () => void;
 }
@@ -51,8 +52,9 @@ const labels = (types: readonly AttendanceEvent[]) => types.map((type) => eventL
  * first. Each corrected time then carries "แก้โดย Admin" and the old one stays in the history. The draft lives here
  * only (facility-0024); one save at a time.
  */
-export function CorrectionForm({ board, row, cleaner, initialEvent, beforeWrite, onDone, onCancel }: CorrectionFormProps) {
+export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableEvents, beforeWrite, onDone, onCancel }: CorrectionFormProps) {
   const order = lifecycleEvents(board.lifecycleVersion);
+  const editable = order.filter((event) => !unavailableEvents?.has(event));
   const recorded = (type: AttendanceEvent) => {
     const event = eventOf(row, type);
     return event ? formatTime(event.occurredAt) : '';
@@ -71,14 +73,14 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, beforeWrite,
   const [busy, setBusy] = useState(false);
   const [correct] = useCorrectAttendanceMutation();
   const headingId = `attendance-correction-${row.areaId}`;
-  const asked = firstEvent(row, initialEvent, order);
+  const asked = firstEvent(row, initialEvent, editable);
 
   const oldTime = (type: AttendanceEvent) => saved[type] ?? recorded(type);
   const draftTime = (type: AttendanceEvent) => values[type] ?? oldTime(type);
   const times: DraftTimes = {};
   order.forEach((type) => (times[type] = { old: oldTime(type), value: draftTime(type) }));
-  const changed = changedEvents(times, order);
-  const problems = draftProblems(times, board.shift, order);
+  const changed = changedEvents(times, editable);
+  const problems = draftProblems(times, board.shift, editable);
   const reasonError = reasonProblem(reason, detail);
   const nothing = changed.length === 0 ? 'ยังไม่ได้แก้เวลาช่องไหน' : null;
   const messages = [nothing, ...order.map((type) => problems[type]), reasonError].filter(
@@ -108,7 +110,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, beforeWrite,
         }
         try {
           // A scoped form may have closed or changed Cleaner while the previous request was in flight.
-          if (beforeWrite && !(await beforeWrite())) {
+          if (beforeWrite && !(await beforeWrite(type))) {
             setBusy(false);
             return;
           }
@@ -198,6 +200,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, beforeWrite,
               <tbody>
                 {order.map((type) => {
                   const event = eventOf(row, type);
+                  const unavailable = unavailableEvents?.has(type);
                   const old = oldTime(type);
                   const isChanged = changed.includes(type);
                   const problem = tried ? problems[type] : undefined;
@@ -209,7 +212,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, beforeWrite,
                           {event?.source === 'SupervisorAdd' && <span className="text-xs text-text-2">หัวหน้าเติมเวลา</span>}
                           {(event?.source === 'AdminAdd' || event?.source === 'AdminEdit') && <EditedMark />}
                           <span className={isChanged ? 'text-text-2 line-through' : old ? undefined : 'text-text-2'}>
-                            {old || 'ไม่ได้ลง'}
+                            {unavailable ? 'ลงไว้ที่พื้นที่อื่น' : old || 'ไม่ได้ลง'}
                           </span>
                         </span>
                       </td>
@@ -225,7 +228,8 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, beforeWrite,
                             data-changed={isChanged && !problem ? '' : undefined}
                             aria-invalid={problem ? true : undefined}
                             aria-describedby={problem ? `${headingId}-${type}-error` : undefined}
-                            value={draftTime(type)}
+                            disabled={unavailable}
+                            value={unavailable ? '' : draftTime(type)}
                             placeholder="--:--"
                             inputMode="numeric"
                             maxLength={5}

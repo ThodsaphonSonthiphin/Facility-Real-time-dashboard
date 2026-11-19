@@ -94,12 +94,13 @@ export function AreaWork({ detail, selection, view }: AreaWorkProps) {
             </div>
           )}
         </dl>
-        {availability.work.state === 'complete' && points.length === 0 && <p>ไม่มีจุดทำความสะอาดในบริบทนี้</p>}
+        {availability.work.state === 'complete' && points.length === 0 && <p>ไม่มีรอบทำความสะอาดในกะที่เลือก</p>}
         <ul className="divide-y divide-border">
           {points.map((point) => {
-            const { work, name, code, start, end } = point;
+            const { work, name, code, start, end, roundKey, windowId } = point;
+            const key = windowId != null ? `window:${windowId}` : roundKey ?? `${work.pointId}:${start ?? ''}:${end ?? ''}`;
             return (
-              <li key={work.pointId} className="flex flex-col gap-1 py-3">
+              <li key={key} className="flex flex-col gap-1 py-3">
                 <h3 className="font-semibold">{code ? `${code} · ${name}` : name}</h3>
                 {start && end && <p>{work.isUpcoming ? 'รอบถัดไป' : 'รอบ'} {formatRound({ start, end })}</p>}
                 {work.isOverdue && <p className="text-overdue">เลยเวลา</p>}

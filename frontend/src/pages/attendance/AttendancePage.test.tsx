@@ -56,13 +56,25 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
             ...base.facts,
             attendance: [
               { id: 1, areaId: 92, userId: 201, event: 'ShiftIn', occurredAt: '2026-11-04T00:00:00Z', edited: false },
-              { id: 2, areaId: 91, userId: 201, event: 'Break1In', occurredAt: '2026-11-04T06:30:00Z', edited: true, source: 'SupervisorAdd', reason: 'สแกนไม่ติด' },
+              { id: 2, areaId: 91, userId: 201, event: 'Break1In', occurredAt: '2026-11-04T06:30:00Z', edited: true, source: 'SupervisorAdd', reason: 'ปรับเวลาใหม่',
+                addition: { reason: 'สแกนไม่ติด', recordedAt: '2026-11-04T06:35:00Z' },
+                edit: { reason: 'ปรับเวลาใหม่', recordedAt: '2026-11-04T06:45:00Z' } },
+              { id: 6, areaId: 91, userId: 201, event: 'ShiftOut', occurredAt: '2026-11-04T08:05:00Z', edited: false },
+              { id: 7, areaId: 91, userId: 202, event: 'ShiftIn', occurredAt: '2026-11-04T00:05:00Z', edited: false },
             ],
+            people: [...base.facts.people, { id: 202, displayName: 'แม่บ้านอีกคน' }],
             attendanceGaps: [
               { id: 3, areaId: 91, userId: 201, event: 'Break1Out', reason: 'ข้ามช่วงพัก' },
               { id: 4, areaId: 91, userId: 201, event: 'Break1In', reason: 'ช่องว่างที่เติมแล้ว' },
             ],
-            attendanceLeaves: [{ id: 5, userId: 201, startsAt: '2026-11-04T08:00:00Z', endsAt: '2026-11-04T12:00:00Z' }],
+            attendanceLeaves: [
+              { id: 5, userId: 201, startsAt: '2026-11-04T08:00:00Z', endsAt: '2026-11-04T12:00:00Z' },
+              { id: 8, userId: 202, startsAt: '2026-11-04T00:00:00Z', endsAt: '2026-11-04T02:00:00Z' },
+            ],
+            attendanceLeaveEffects: [
+              { userId: 201, event: 'Break2Out', kind: 'exempt' },
+              { userId: 202, event: 'ShiftIn', kind: 'check-in-conflict' },
+            ],
           },
         },
       }),
@@ -73,10 +85,19 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     expect(within(evidence).getByText(/ยืนยันถึงพื้นที่หลังย้าย/)).toHaveTextContent('รายการย้าย #77');
     const actions = screen.getByRole('region', { name: 'เวลาที่บันทึกในพื้นที่' });
     expect(within(actions).getByText(/กลับจากพัก 1/)).toBeVisible();
-    expect(within(actions).getByText(/หัวหน้างานเติมเวลา/)).toHaveTextContent('สแกนไม่ติด');
+    const addition = within(actions).getByText(/หัวหน้างานเติมเวลา/);
+    expect(addition).toHaveTextContent('สแกนไม่ติด');
+    expect(addition).not.toHaveTextContent('ปรับเวลาใหม่');
+    expect(within(actions).getByText(/แอดมินแก้เวลา/)).toHaveTextContent('ปรับเวลาใหม่');
     expect(within(actions).getByText(/ออกพัก 1/)).toHaveTextContent('— (ข้ามการสแกน)');
-    expect(within(actions).queryByText(/ช่องว่างที่เติมแล้ว|พัก 2|พื้นที่ #92|เข้างาน ·/)).not.toBeInTheDocument();
-    expect(within(actions).getByText(/ช่วงลาที่บันทึก/)).toBeVisible();
+    expect(within(actions).queryByText(/ช่องว่างที่เติมแล้ว|พัก 2|พื้นที่ #92|แม่บ้านทดลอง 91 · เข้างาน ·/)).not.toBeInTheDocument();
+    const leave = within(screen.getByRole('region', { name: 'การลาของกะนี้' }));
+    expect(leave.getByText(/แม่บ้านทดลอง 91 · ช่วงลาที่บันทึก/)).toBeVisible();
+    const exempt = leave.getByText(/ออกพัก 2 · ไม่ต้องลงเวลาเนื่องจากลา/);
+    expect(exempt).toBeVisible();
+    expect(exempt.querySelector('time')).toBeNull();
+    expect(leave.getByText(/แม่บ้านอีกคน · เข้างาน · ลงเวลาในช่วงลาที่บันทึก/)).toBeVisible();
+    expect(within(actions).queryByText(/ไม่ต้องลงเวลาเนื่องจากลา/)).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'ความรับผิดชอบจากการย้ายพื้นที่' })).toHaveTextContent('แม่บ้านทดลอง 91');
     expect(screen.getByRole('region', { name: 'การมอบหมายคนทำแทน' })).toHaveTextContent('มอบหมาย');
     expect(screen.getByText('ประวัติสำหรับอ่านข้อมูล')).toBeVisible();

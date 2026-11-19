@@ -663,6 +663,11 @@ public class OverviewDetailTests
                 },
                 new AuditEntry
                 {
+                    EntityType = "shift_attendances", EntityId = entered.Id, Action = "ATTENDANCE_EDIT",
+                    OccurredAt = At(10, 15), Reason = "แอดมินแก้หลังจากหัวหน้าเติม",
+                },
+                new AuditEntry
+                {
                     EntityType = "shift_attendances", EntityId = edited.Id, Action = "ATTENDANCE_ADD",
                     OccurredAt = At(11, 5), Reason = "เหตุผลเดิม",
                 },
@@ -698,8 +703,12 @@ public class OverviewDetailTests
             Assert.True(actual.GetProperty("edited").GetBoolean());
             Assert.Equal(area, actual.GetProperty("areaId").GetInt32());
             Assert.Equal("SupervisorAdd", actual.GetProperty("source").GetString());
-            Assert.Equal("เหตุผลการเติมเวลา", actual.GetProperty("reason").GetString());
-            Assert.Equal(At(10, 5), actual.GetProperty("correctedAt").GetDateTime());
+            var addition = actual.GetProperty("addition");
+            Assert.Equal("เหตุผลการเติมเวลา", addition.GetProperty("reason").GetString());
+            Assert.Equal(At(10, 5), addition.GetProperty("recordedAt").GetDateTime());
+            var edit = actual.GetProperty("edit");
+            Assert.Equal("แอดมินแก้หลังจากหัวหน้าเติม", edit.GetProperty("reason").GetString());
+            Assert.Equal(At(10, 15), edit.GetProperty("recordedAt").GetDateTime());
         }, actual =>
         {
             Assert.Equal(area, actual.GetProperty("areaId").GetInt32());
@@ -717,6 +726,101 @@ public class OverviewDetailTests
         Assert.Equal(userId, leave.GetProperty("userId").GetInt32());
         Assert.Equal(At(15), leave.GetProperty("startsAt").GetDateTime());
         Assert.Empty(detail.GetProperty("entryEvidence").EnumerateArray());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Scoped_leave_reports_a_check_in_conflict_and_exempts_missing_numbered_breaks_after_departure(bool numbered)
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (_, cleaner, _) = await AuthApi.LoggedInAsync(factory);
+        var area = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var date = new DateOnly(2026, 10, 8);
+        DateTime At(int hour, int minute = 0) => ThaiClock.At(8, hour, minute).UtcDateTime;
+        await OverviewTestData.StartHistoryAsync(factory, ThaiClock.At(8, 1, 0));
+
+        int otherCleaner = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var userId = cleaner.User.Id;
+            otherCleaner = await db.Users.Where(u => u.Role == UserRole.Cleaner && u.Id != userId).Select(u => u.Id).FirstAsync();
+            ShiftAttendance Recorded(int who, AttendanceEvent action, DateTime time) => new()
+            {
+                UserId = who, AreaId = area, ShiftDate = date, Shift = Shift.Day,
+                EventType = action, OccurredAt = time, CreatedAt = time, Source = AttendanceSource.Scan,
+            };
+            ScheduleException Leave(int who, DateTime start, DateTime end) => new()
+            {
+                UserId = who, ShiftDate = date, Shift = Shift.Day, Kind = ScheduleExceptionKind.Leave,
+                StartsAt = start, EndsAt = end, CreatedById = adminAuth.User.Id, CreatedAt = At(1), UpdatedAt = At(1),
+            };
+            db.ShiftAttendances.AddRange(
+                Recorded(userId, AttendanceEvent.ShiftIn, At(7, 5)),
+                Recorded(userId, AttendanceEvent.ShiftOut, At(12, 15)),
+                Recorded(otherCleaner, AttendanceEvent.ShiftIn, At(7, 30)));
+            db.ScheduleExceptions.AddRange(Leave(userId, At(12), At(19)), Leave(otherCleaner, At(7), At(9)));
+            if (numbered)
+            {
+                db.AttendanceSlotLifecycles.Add(new AttendanceSlotLifecycle
+                {
+                    ShiftDate = date, Shift = Shift.Day, Version = AttendanceLifecycleVersion.Numbered6,
+                    ActivatedAt = At(1), CreatedAt = At(1),
+                });
+            }
+
+            await db.SaveChangesAsync();
+        });
+
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 15, 0));
+        var detail = await GetDetailAsync(admin, area, "2026-10-08", "Day", "entered");
+        var facts = detail.GetProperty("facts");
+        Assert.Equal(3, facts.GetProperty("attendance").GetArrayLength());
+        var effects = facts.GetProperty("attendanceLeaveEffects").EnumerateArray().ToArray();
+        var conflict = Assert.Single(effects, e => e.GetProperty("kind").GetString() == "check-in-conflict");
+        Assert.Equal(otherCleaner, conflict.GetProperty("userId").GetInt32());
+        Assert.Equal("ShiftIn", conflict.GetProperty("event").GetString());
+        var exempt = effects.Where(e => e.GetProperty("kind").GetString() == "exempt").ToArray();
+        Assert.Equal(numbered ? ["Break2Out", "Break2In"] : Array.Empty<string>(),
+            exempt.Select(e => e.GetProperty("event").GetString()).ToArray());
+        Assert.All(exempt, e =>
+        {
+            Assert.Equal(cleaner.User.Id, e.GetProperty("userId").GetInt32());
+            Assert.False(e.TryGetProperty("occurredAt", out _));
+        });
+    }
+
+    [Fact]
+    public async Task Multiple_upcoming_windows_for_a_point_have_distinct_window_ids_until_a_round_opens()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var area = await TestData.AddAreaAsync(factory, "AR03", "A");
+        var pointId = await AddPointAsync(factory, area, "AR03-01", "tok-ar03-window-id", 10, 11);
+        await factory.WithDbAsync(async db =>
+        {
+            db.PointRoundWindows.Add(new PointRoundWindow
+            {
+                ServicePointId = pointId, Shift = Shift.Day, StartTime = new TimeOnly(13, 0), EndTime = new TimeOnly(14, 0),
+                CreatedAt = ThaiClock.At(8, 1, 0).UtcDateTime,
+            });
+            await db.SaveChangesAsync();
+        });
+        await OverviewTestData.StartHistoryAsync(factory, ThaiClock.At(8, 1, 0));
+
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 0));
+        var before = await GetDetailAsync(admin, area, "2026-10-08", "Day", "upcoming");
+        var windows = before.GetProperty("points").EnumerateArray().ToArray();
+        Assert.Equal(new[] { "10:00:00", "13:00:00" }, windows.Select(p => p.GetProperty("start").GetString()).ToArray());
+        Assert.Equal(2, windows.Select(p => p.GetProperty("windowId").GetInt32()).Distinct().Count());
+        Assert.All(windows, p => Assert.Equal(pointId, p.GetProperty("work").GetProperty("pointId").GetInt32()));
+
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 30));
+        var after = await GetDetailAsync(admin, area, "2026-10-08", "Day", "upcoming");
+        var current = Assert.Single(after.GetProperty("points").EnumerateArray());
+        Assert.Equal("10:00:00", current.GetProperty("start").GetString());
+        Assert.False(string.IsNullOrEmpty(current.GetProperty("roundKey").GetString()));
     }
 
     private static async Task<JsonElement> GetDetailAsync(

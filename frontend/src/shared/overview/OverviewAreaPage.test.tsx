@@ -1,5 +1,5 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { adminSession } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { overviewDetailFixture, overviewFixture } from '../../test/overviewFixtures';
@@ -162,5 +162,42 @@ describe('Overview Area destinations', () => {
     expect(within(results).getByText(/รอบถัดไป/)).toBeVisible();
     expect(within(results).queryByText(report)).not.toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'ปัญหาที่แจ้ง' })).getByText(report)).toBeVisible();
+  });
+
+  it('keeps distinct windows for one upcoming Point and replaces them when the current round opens', async () => {
+    const base = scopedFixture();
+    const point = base.points[0];
+    const upcoming = { ...point, roundKey: null, work: { ...point.work, isDue: false, isUpcoming: true } };
+    let body = scopedFixture({
+      points: [
+        { ...upcoming, windowId: 61, start: '10:00:00', end: '11:00:00' },
+        { ...upcoming, windowId: 72, start: '13:00:00', end: '14:00:00' },
+      ],
+      availability: { ...base.availability, work: { state: 'partial', reasons: ['targetCoverageGap'] } },
+    });
+    serve({ 'GET /api/admin/overview/areas/91': () => ({ status: 200, body }) });
+    const errors = vi.spyOn(console, 'error');
+    try {
+      const { user } = await renderApp(cleaningUrl.replace('group=incomplete', 'group=upcoming'));
+      expect(await screen.findByText('รอบถัดไป 10:00–11:00')).toBeVisible();
+      expect(screen.getByText('รอบถัดไป 13:00–14:00')).toBeVisible();
+
+      body = scopedFixture({ points: [{ ...point, start: '10:00:00', end: '11:00:00' }] });
+      await user.click(screen.getByRole('button', { name: 'ลองโหลดข้อมูลอีกครั้ง' }));
+      expect(await screen.findByText('รอบ 10:00–11:00')).toBeVisible();
+      expect(screen.queryByText(/รอบถัดไป/)).not.toBeInTheDocument();
+      expect(errors.mock.calls.some(([message]) => String(message).includes('same key'))).toBe(false);
+    } finally {
+      errors.mockRestore();
+    }
+  });
+
+  it('describes an Area selected from No Rounds as having no rounds in that shift', async () => {
+    serve({ 'GET /api/admin/overview/areas/91': () => ({
+      status: 200, body: scopedFixture({ points: [], rounds: [] }),
+    }) });
+    await renderApp(cleaningUrl.replace('group=incomplete', 'group=noRounds'));
+    expect(await screen.findByText('ไม่มีรอบทำความสะอาดในกะที่เลือก')).toBeVisible();
+    expect(screen.queryByText('ไม่มีจุดทำความสะอาดในบริบทนี้')).not.toBeInTheDocument();
   });
 });

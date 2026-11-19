@@ -17,7 +17,10 @@ public sealed record OverviewInspection(long Id, long SubmissionId,
 /// <summary>An attendance fact. It supports Entry but never proves it (spec §13, ADR facility-0216).</summary>
 public sealed record OverviewAttendance(long Id, int AreaId, int UserId,
     AttendanceEvent Event, DateTime OccurredAt, bool Edited, AttendanceSource? Source = null,
-    string? Reason = null, DateTime? CorrectedAt = null);
+    string? Reason = null, DateTime? CorrectedAt = null,
+    OverviewAttendanceChange? Addition = null, OverviewAttendanceChange? Edit = null);
+
+public sealed record OverviewAttendanceChange(string? Reason, DateTime RecordedAt);
 
 /// <summary>An explicitly skipped action, without an attendance time.</summary>
 public sealed record OverviewAttendanceGap(int Id, int AreaId, int UserId,
@@ -25,6 +28,9 @@ public sealed record OverviewAttendanceGap(int Id, int AreaId, int UserId,
 
 /// <summary>Stored leave for a referenced person in the slot, separate from actual attendance.</summary>
 public sealed record OverviewAttendanceLeave(int Id, int UserId, DateTime StartsAt, DateTime EndsAt);
+
+/// <summary>A scheduling explanation about a person's action, without a recorded attendance time.</summary>
+public sealed record OverviewAttendanceLeaveEffect(int UserId, AttendanceEvent Event, string Kind);
 
 /// <summary>A live cover assignment. It assigns an Area but is never entry evidence.</summary>
 public sealed record OverviewCover(int Id, int AreaId, int UserId,
@@ -44,7 +50,8 @@ public sealed record OverviewFacts(IReadOnlyList<OverviewSubmission> Submissions
     IReadOnlyList<OverviewPerson> People, IReadOnlyList<AreaEntryEvidence> EntryEvidence,
     IReadOnlySet<int> AssignedAreas, bool OriginsComplete, bool IssueStateKnown,
     IReadOnlyList<OverviewAttendanceGap>? AttendanceGaps = null,
-    IReadOnlyList<OverviewAttendanceLeave>? AttendanceLeaves = null);
+    IReadOnlyList<OverviewAttendanceLeave>? AttendanceLeaves = null,
+    IReadOnlyList<OverviewAttendanceLeaveEffect>? AttendanceLeaveEffects = null);
 
 /// <summary>One point's current round. <see cref="IsDue"/> decides whether Work counts it.</summary>
 public sealed record OverviewPoint(int PointId, bool IsDue, bool IsSubmitted,

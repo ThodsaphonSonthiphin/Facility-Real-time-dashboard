@@ -2,7 +2,37 @@ import { EditedMark } from '../../components/Badge';
 import { Note } from '../../components/Note';
 import { actionStateLabel, eventLabel, transferStateLabel } from '../../utils/labels';
 import { formatDayTime } from '../../utils/thaiTime';
+import type { OverviewAttendance } from '../types';
 import type { AreaAttendanceProps } from './type';
+
+function CorrectionProvenance({ fact }: { fact: OverviewAttendance }) {
+  const additionLabel = fact.source === 'SupervisorAdd' ? 'หัวหน้างานเติมเวลา'
+    : fact.source === 'AdminAdd' ? 'แอดมินเติมเวลา' : undefined;
+  const legacyAudit = fact.correctedAt ? { reason: fact.reason, recordedAt: fact.correctedAt } : undefined;
+  const addition = fact.addition ?? (additionLabel && !fact.edit ? legacyAudit : undefined);
+  const edit = fact.edit ?? (!additionLabel ? legacyAudit : undefined);
+  const additionReason = fact.addition?.reason ?? (fact.edit ? undefined : fact.reason);
+  const editReason = fact.edit ? fact.edit.reason : fact.reason;
+  return (
+    <>
+      {additionLabel && (
+        <p className="wrap-break-word text-text-2">
+          {fact.source === 'AdminAdd' && <><EditedMark /> </>}
+          {additionLabel}
+          {additionReason && ` · ${additionReason}`}
+          {addition && <> · <time dateTime={addition.recordedAt}>{formatDayTime(addition.recordedAt)}</time></>}
+        </p>
+      )}
+      {(fact.edit || !additionLabel) && (
+        <p className="wrap-break-word text-text-2">
+          <EditedMark /> แอดมินแก้เวลา
+          {editReason && ` · ${editReason}`}
+          {edit && <> · <time dateTime={edit.recordedAt}>{formatDayTime(edit.recordedAt)}</time></>}
+        </p>
+      )}
+    </>
+  );
+}
 
 export function AreaAttendance({ detail }: AreaAttendanceProps) {
   const { area, availability, context, facts } = detail;
@@ -12,6 +42,7 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
   const gaps = facts.attendanceGaps?.filter((gap) => gap.areaId === area.areaId
     && !events.some((fact) => fact.userId === gap.userId && fact.event === gap.event)) ?? [];
   const leaves = facts.attendanceLeaves ?? [];
+  const leaveEffects = facts.attendanceLeaveEffects ?? [];
   const covers = facts.covers.filter((fact) => fact.areaId === area.areaId);
   const responsibility = detail.currentResponsibility?.areaId === area.areaId ? detail.currentResponsibility : undefined;
   const person = (id: number) => facts.people.find((one) => one.id === id)?.displayName ?? `แม่บ้าน #${id}`;
@@ -55,22 +86,16 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
       </section>
       <section aria-labelledby="overview-area-events" className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
         <h2 id="overview-area-events" className="text-lg font-semibold">เวลาที่บันทึกในพื้นที่</h2>
-        {events.length === 0 && gaps.length === 0 && leaves.length === 0
+        {events.length === 0 && gaps.length === 0
           && <p className="text-text-2">ไม่พบรายการลงเวลาของพื้นที่นี้</p>}
-        {(events.length > 0 || gaps.length > 0 || leaves.length > 0) && (
+        {(events.length > 0 || gaps.length > 0) && (
           <ul className="list-disc space-y-2 ps-5">
             {events.map((fact) => (
               <li key={fact.id}>
                 <span>{person(fact.userId)} · {eventLabel[fact.event]} · </span>
                 <time dateTime={fact.occurredAt}>{formatDayTime(fact.occurredAt)}</time>
                 <span className="text-text-2"> · พื้นที่ #{fact.areaId}</span>
-                {fact.edited && (
-                  <p className="wrap-break-word text-text-2">
-                    {fact.source === 'SupervisorAdd' ? 'หัวหน้างานเติมเวลา' : <EditedMark />}
-                    {fact.reason && ` · ${fact.reason}`}
-                    {fact.correctedAt && <> · บันทึกการแก้ไข <time dateTime={fact.correctedAt}>{formatDayTime(fact.correctedAt)}</time></>}
-                  </p>
-                )}
+                {fact.edited && <CorrectionProvenance fact={fact} />}
               </li>
             ))}
             {gaps.map((fact) => (
@@ -80,16 +105,29 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
                 {fact.recordedAt && <p className="text-text-2">บันทึกการข้าม <time dateTime={fact.recordedAt}>{formatDayTime(fact.recordedAt)}</time></p>}
               </li>
             ))}
+          </ul>
+        )}
+      </section>
+      {(leaves.length > 0 || leaveEffects.length > 0) && (
+        <section aria-labelledby="overview-area-leave" className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
+          <h2 id="overview-area-leave" className="text-lg font-semibold">การลาของกะนี้</h2>
+          <ul className="list-disc space-y-2 ps-5">
             {leaves.map((fact) => (
-              <li key={`leave:${fact.id}`}>
+              <li key={fact.id}>
                 {person(fact.userId)} · ช่วงลาที่บันทึก{' '}
                 <time dateTime={fact.startsAt}>{formatDayTime(fact.startsAt)}</time>
                 {'–'}<time dateTime={fact.endsAt}>{formatDayTime(fact.endsAt)}</time>
               </li>
             ))}
+            {leaveEffects.map((effect) => (
+              <li key={`${effect.userId}:${effect.event}:${effect.kind}`}>
+                {person(effect.userId)} · {eventLabel[effect.event]} ·{' '}
+                {effect.kind === 'exempt' ? actionStateLabel['not-applicable'] : 'ลงเวลาในช่วงลาที่บันทึก'}
+              </li>
+            ))}
           </ul>
-        )}
-      </section>
+        </section>
+      )}
       <section aria-labelledby="overview-area-covers" className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
         <h2 id="overview-area-covers" className="text-lg font-semibold">การมอบหมายคนทำแทน</h2>
         {covers.length === 0

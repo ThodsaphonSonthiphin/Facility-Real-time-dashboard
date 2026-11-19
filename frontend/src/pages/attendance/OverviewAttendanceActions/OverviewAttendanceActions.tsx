@@ -16,33 +16,37 @@ export function ScopedAttendanceActions() {
 
 export function OverviewAttendanceActions(scope: OverviewAttendanceActionsProps) {
   const model = useOverviewAttendanceActions(scope);
-  const { action, board, row } = model;
+  const { action, board, row, target } = model;
   return (
     <section className="flex flex-col gap-2" aria-labelledby="overview-attendance-actions">
       <h2 id="overview-attendance-actions" className="text-lg font-semibold">จัดการการเข้างานกะปัจจุบัน</h2>
       {model.notice && <Toast notice={model.notice} onClose={model.clearNotice} />}
-      {model.isFetching && !board && <PageLoading>กำลังตรวจข้อมูลกะปัจจุบัน...</PageLoading>}
+      {!model.verified && !model.error && <PageLoading>กำลังตรวจข้อมูลกะปัจจุบัน...</PageLoading>}
       {model.error && <Note tone="error" onRetry={model.retry}>{model.error}</Note>}
-      {!model.isFetching && !model.error && !row && (
+      {model.verified && !model.isFetching && !model.error && !row && (
         <Note tone="info">ไม่พบพื้นที่นี้ในกะปัจจุบัน กรุณาตรวจข้อมูลอีกครั้ง</Note>
       )}
       {row && !model.error && (
         <div className="flex flex-wrap gap-2">
-          {row.cleaner && (
-            <Button size="desk" disabled={model.opening || !!action} onClick={() => void model.openAction('correction')}>
-              แก้เวลา {row.cleaner.displayName}
+          {model.targets.map(({ cleaner }) => (
+            <Button key={cleaner.id} size="desk" disabled={model.opening || !!action}
+              onClick={() => void model.openAction('correction', cleaner.id)}>
+              แก้เวลา {cleaner.displayName}
             </Button>
-          )}
+          ))}
           <Button size="desk" disabled={model.opening || !!action} onClick={() => void model.openAction('cover')}>
             มอบหมายทำแทน
           </Button>
         </div>
       )}
-      {action?.kind === 'correction' && board && row?.cleaner && (
+      {action?.kind === 'correction' && board && row && target && (
         <CorrectionForm
-          key={`${board.shiftDate}:${board.shift}:${row.areaId}:${row.cleaner.id}:${action.id}`}
-          board={board} row={row} cleaner={row.cleaner}
-          beforeWrite={() => model.canSubmit(action)}
+          key={`${board.shiftDate}:${board.shift}:${row.areaId}:${target.cleaner.id}:${action.id}`}
+          board={board}
+          row={{ ...row, events: target.events.filter((event) => event.areaId === scope.areaId) }}
+          cleaner={target.cleaner}
+          unavailableEvents={model.unavailableEvents}
+          beforeWrite={(event) => model.canSubmit(action, event)}
           onDone={(text) => model.done(action, text)}
           onCancel={() => model.close(action)}
         />

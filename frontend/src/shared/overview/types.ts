@@ -150,6 +150,7 @@ export interface OverviewPointDetail {
   name: string;
   sortOrder: number;
   roundKey?: string | null;
+  windowId?: number | null;
   start?: string | null;
   end?: string | null;
 }
@@ -230,6 +231,13 @@ export interface OverviewAttendance {
   source?: AttendanceSource | null;
   reason?: string | null;
   correctedAt?: string | null;
+  addition?: OverviewAttendanceChange | null;
+  edit?: OverviewAttendanceChange | null;
+}
+
+export interface OverviewAttendanceChange {
+  reason?: string | null;
+  recordedAt: string;
 }
 
 export interface OverviewAttendanceGap {
@@ -248,6 +256,12 @@ export interface OverviewAttendanceLeave {
   endsAt: string;
 }
 
+export interface OverviewAttendanceLeaveEffect {
+  userId: number;
+  event: AttendanceEvent;
+  kind: 'exempt' | 'check-in-conflict';
+}
+
 export interface OverviewCover {
   id: number;
   areaId: number;
@@ -262,6 +276,7 @@ export interface OverviewFacts {
   attendance: OverviewAttendance[];
   attendanceGaps?: OverviewAttendanceGap[];
   attendanceLeaves?: OverviewAttendanceLeave[];
+  attendanceLeaveEffects?: OverviewAttendanceLeaveEffect[];
   covers: OverviewCover[];
   people: { id: number; displayName: string }[];
   entryEvidence: OverviewEntryEvidence[];

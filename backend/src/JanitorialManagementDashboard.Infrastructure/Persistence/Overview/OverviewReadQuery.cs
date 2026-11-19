@@ -237,18 +237,29 @@ public sealed class OverviewReadQuery(
         var editedIds = attendance.Where(a => a.Edited).Select(a => a.Id).ToArray();
         if (editedIds.Length > 0)
         {
-            // Corrections update the actual row in place. Use the audit entry for that same latest persisted value.
+            // The event retains the source of an addition even when Admin later edits its actual time.
             var audits = await db.AuditLog.AsNoTracking()
                 .Where(a => a.EntityType == "shift_attendances" && a.EntityId != null
                     && editedIds.Contains(a.EntityId.Value) && a.OccurredAt <= readAtUtc
                     && (a.Action == "ATTENDANCE_ADD" || a.Action == "ATTENDANCE_EDIT"))
                 .OrderByDescending(a => a.OccurredAt).ThenByDescending(a => a.Id)
-                .Select(a => new { Id = a.EntityId!.Value, a.Reason, a.OccurredAt })
+                .Select(a => new { Id = a.EntityId!.Value, a.Action, a.Reason, a.OccurredAt })
                 .ToListAsync(ct);
-            var latest = audits.GroupBy(a => a.Id).ToDictionary(group => group.Key, group => group.First());
-            attendance = attendance.Select(fact => latest.TryGetValue(fact.Id, out var audit)
-                ? fact with { Reason = audit.Reason, CorrectedAt = Utc(audit.OccurredAt) }
-                : fact).ToArray();
+            var byEvent = audits.ToLookup(a => a.Id);
+            attendance = attendance.Select(fact =>
+            {
+                var history = byEvent[fact.Id];
+                var latest = history.FirstOrDefault();
+                var added = history.LastOrDefault(a => a.Action == "ATTENDANCE_ADD");
+                var edited = history.FirstOrDefault(a => a.Action == "ATTENDANCE_EDIT");
+                return fact with
+                {
+                    Reason = latest?.Reason,
+                    CorrectedAt = latest is null ? null : Utc(latest.OccurredAt),
+                    Addition = added is null ? null : new OverviewAttendanceChange(added.Reason, Utc(added.OccurredAt)),
+                    Edit = edited is null ? null : new OverviewAttendanceChange(edited.Reason, Utc(edited.OccurredAt)),
+                };
+            }).ToArray();
         }
 
         var storedGaps = await db.AttendanceGaps.AsNoTracking()
@@ -277,6 +288,7 @@ public sealed class OverviewReadQuery(
                 .ToListAsync(ct);
         var leaves = storedLeaves.Select(l => new OverviewAttendanceLeave(l.Id, l.UserId, Utc(l.StartsAt), Utc(l.EndsAt))).ToArray();
 
+        var leaveEffects = await LoadLeaveEffectsAsync(slot, leaves, attendance, facts.Attendance, ct);
         var gapPeople = gaps.Select(g => g.UserId).Except(facts.People.Select(p => p.Id)).ToArray();
         var additionalPeople = gapPeople.Length == 0
             ? []
@@ -287,8 +299,53 @@ public sealed class OverviewReadQuery(
             Attendance = attendance,
             AttendanceGaps = gaps,
             AttendanceLeaves = leaves,
+            AttendanceLeaveEffects = leaveEffects,
             People = facts.People.Concat(additionalPeople).ToArray(),
         };
+    }
+
+    private async Task<IReadOnlyList<OverviewAttendanceLeaveEffect>> LoadLeaveEffectsAsync(
+        ShiftSlot slot, IReadOnlyList<OverviewAttendanceLeave> leaves, IReadOnlyList<OverviewAttendance> areaEvents,
+        IReadOnlyList<OverviewAttendance> slotEvents, CancellationToken ct)
+    {
+        if (leaves.Count == 0) return [];
+
+        var effects = new List<OverviewAttendanceLeaveEffect>();
+        var version = AttendanceLifecycle.VersionFor(await db.AttendanceSlotLifecycles.AsNoTracking()
+            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift)
+            .Select(row => (AttendanceLifecycleVersion?)row.Version)
+            .FirstOrDefaultAsync(ct));
+        var eventsByPerson = areaEvents.ToLookup(row => row.UserId);
+        var recorded = slotEvents.Select(a => (a.UserId, a.Event)).ToHashSet();
+        foreach (var intervals in leaves.GroupBy(row => row.UserId))
+        {
+            var personId = intervals.Key;
+            var events = eventsByPerson[personId];
+            var checkIn = events.FirstOrDefault(row => row.Event == AttendanceEvent.ShiftIn);
+            if (checkIn is not null && intervals.Any(l => checkIn.OccurredAt >= l.StartsAt && checkIn.OccurredAt < l.EndsAt))
+            {
+                effects.Add(new OverviewAttendanceLeaveEffect(personId, AttendanceEvent.ShiftIn, "check-in-conflict"));
+            }
+
+            var departure = events.FirstOrDefault(row => row.Event == AttendanceEvent.ShiftOut);
+            if (version != AttendanceLifecycleVersion.Numbered6 || departure is null
+                || !intervals.Any(l => l.EndsAt > departure.OccurredAt)) continue;
+
+            var relief = await store.LiveReliefAsync(personId, slot.ShiftDate, slot.Shift, ct);
+            var breakGroup = relief?.BreakGroup
+                ?? (await store.ReadPersonDayAsync(personId, slot.ShiftDate, slot.Shift, ct))?.BreakGroup.Value;
+            var expectations = AttendanceExpectations.ForSlot(slot, breakGroup);
+            foreach (var action in AttendanceLifecycle.Order(version).Where(AttendanceLifecycle.IsSkippable))
+            {
+                if (recorded.Contains((personId, action)) || !expectations.TryGetValue(action, out var expected)) continue;
+                if (intervals.Any(l => AttendanceApplicability.NotApplicable(expected, departure.OccurredAt, l.StartsAt, l.EndsAt)))
+                {
+                    effects.Add(new OverviewAttendanceLeaveEffect(personId, action, "exempt"));
+                }
+            }
+        }
+
+        return effects;
     }
 
     private static DateTime Utc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);

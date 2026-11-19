@@ -493,6 +493,7 @@ public static class AdminOverviewEndpoints
             string? roundKey = null;
             TimeOnly? start = null;
             TimeOnly? end = null;
+            int? windowId = null;
 
             if (point.IsDue && currentRoundsByPoint.TryGetValue(point.PointId, out var round))
             {
@@ -503,6 +504,7 @@ public static class AdminOverviewEndpoints
             else if (point.IsUpcoming && upcomingByPoint.TryGetValue(point.PointId, out var queue) && queue.Count > 0)
             {
                 var window = queue.Dequeue();
+                windowId = window.Id;
                 start = window.Start;
                 end = window.End;
             }
@@ -520,7 +522,8 @@ public static class AdminOverviewEndpoints
                 meta?.SortOrder ?? 0,
                 roundKey,
                 start,
-                end));
+                end,
+                windowId));
         }
 
         return details
@@ -612,6 +615,7 @@ public static class AdminOverviewEndpoints
             : [];
         var gaps = allowEntryFacts ? read.Facts.AttendanceGaps ?? [] : [];
         var leaves = allowEntryFacts ? read.Facts.AttendanceLeaves ?? [] : [];
+        var leaveEffects = allowEntryFacts ? read.Facts.AttendanceLeaveEffects ?? [] : [];
         var assignedAreas = allowEntryFacts && read.Facts.AssignedAreas.Contains(area.Id)
             ? new HashSet<int> { area.Id }
             : new HashSet<int>();
@@ -642,7 +646,8 @@ public static class AdminOverviewEndpoints
             areaOriginsComplete,
             areaIssueKnown,
             gaps,
-            leaves);
+            leaves,
+            leaveEffects);
     }
 
     private static bool TryParseCommonQuery(

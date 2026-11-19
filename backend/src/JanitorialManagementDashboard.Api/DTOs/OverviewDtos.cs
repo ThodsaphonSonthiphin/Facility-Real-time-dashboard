@@ -71,7 +71,8 @@ public sealed record OverviewPointDetailDto(
     int SortOrder,
     string? RoundKey,
     TimeOnly? Start,
-    TimeOnly? End);
+    TimeOnly? End,
+    int? WindowId = null);
 
 public sealed record OverviewResponsibilityDto(
     int UserId,

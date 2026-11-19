@@ -1,7 +1,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
+import { attendanceBoardApi, type AttendanceBoard, type BoardRow } from '../../shared/api/attendanceBoardApi';
 import { baseApi } from '../../shared/api/baseApi';
 import { adminSession, buildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
@@ -522,7 +522,7 @@ const scopedRow: BoardRow = {
   areaId: 91,
   areaCode: 'AR91',
   areaName: 'พื้นที่ทดลอง 91',
-  events: [boardEvent(1001, 'ShiftIn', '2026-11-04T00:05:00Z')],
+  events: [boardEvent(1001, 'ShiftIn', '2026-11-04T00:05:00Z', { areaId: 91 })],
 };
 const reassignedRow: BoardRow = {
   ...scopedRow,
@@ -542,6 +542,115 @@ function serveScoped(routes: FakeRoutes = {}) {
 }
 
 describe('Overview Attendance actions', () => {
+  it('blocks an origin Shift-In when a confirmed transfer is corrected from the destination Area', async () => {
+    const row = {
+      ...scopedRow,
+      events: [
+        boardEvent(1001, 'ShiftIn', '2026-11-04T00:05:00Z', { areaId: 92 }),
+        boardEvent(1002, 'BreakOut', '2026-11-04T02:30:00Z', { areaId: 91 }),
+      ],
+    };
+    const server = serveScoped({
+      'GET /api/admin/attendance': () => ({ status: 200, body: attendanceBoard([row], { shiftDate: '2026-11-04' }) }),
+      'PUT /api/admin/attendance': () => savedEvent,
+    });
+    const { user } = await renderApp(scopedUrl);
+    await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
+    const form = await screen.findByRole('dialog', { name: 'แก้เวลา' });
+    const originTime = time(form, 'เข้างาน');
+    expect(originTime).toBeDisabled();
+    expect(originTime).toHaveValue('');
+    expect(within(form).getByText('ลงไว้ที่พื้นที่อื่น')).toBeVisible();
+
+    await user.clear(time(form, 'ออกพัก'));
+    await user.type(time(form, 'ออกพัก'), '09:45');
+    await user.click(within(form).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
+    await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
+    expect(await screen.findByText(/บันทึกเวลาออกพักของ/)).toBeVisible();
+    expect(puts(server).map(({ body }) => body)).toEqual([expect.objectContaining({ eventType: 'BreakOut' })]);
+  });
+
+  it('refuses a save if its event is newly recorded in another Area before the fresh check', async () => {
+    let row = scopedRow;
+    const server = serveScoped({
+      'GET /api/admin/attendance': () => ({ status: 200, body: attendanceBoard([row], { shiftDate: '2026-11-04' }) }),
+      'PUT /api/admin/attendance': () => savedEvent,
+    });
+    const { user } = await renderApp(scopedUrl);
+    await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
+    const form = await screen.findByRole('dialog', { name: 'แก้เวลา' });
+    await user.type(time(form, 'ออกพัก'), '09:45');
+    await user.click(within(form).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
+    row = {
+      ...row,
+      events: [...row.events, boardEvent(1002, 'BreakOut', '2026-11-04T02:30:00Z', { areaId: 92 })],
+    };
+    await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
+    await waitFor(() => expect(form).not.toBeInTheDocument());
+    expect(puts(server)).toHaveLength(0);
+  });
+
+  it('opens the additional Cleaner’s own scoped correction and closes it when that Cleaner leaves', async () => {
+    const incoming = { id: 74, employeeId: '650074', displayName: 'แม่บ้านย้ายมา' };
+    let row: BoardRow = {
+      ...scopedRow,
+      additionalCleaners: [{
+        cleaner: incoming,
+        events: [boardEvent(1005, 'BreakOut', '2026-11-04T03:30:00Z', { areaId: 91 })],
+      }],
+    };
+    const server = serveScoped({
+      'GET /api/admin/attendance': () => ({ status: 200, body: attendanceBoard([row], { shiftDate: '2026-11-04' }) }),
+      'PUT /api/admin/attendance': () => savedEvent,
+    });
+    const { user, store } = await renderApp(scopedUrl);
+    await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านย้ายมา' }));
+    const form = await screen.findByRole('dialog', { name: 'แก้เวลา' });
+    expect(form).toHaveTextContent('แม่บ้านย้ายมา');
+    expect(time(form, 'ออกพัก')).toHaveValue('10:30');
+    await user.type(time(form, 'กลับจากพัก'), '10:45');
+    await user.click(within(form).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
+    await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
+    expect(await screen.findByText(/บันทึกเวลากลับจากพักของ แม่บ้านย้ายมา/)).toBeVisible();
+    expect(puts(server).map(({ body }) => body)).toEqual([expect.objectContaining({ userId: incoming.id })]);
+
+    await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านย้ายมา' }));
+    const reopened = await screen.findByRole('dialog', { name: 'แก้เวลา' });
+    row = scopedRow;
+    act(() => { store.dispatch(baseApi.internalActions.onFocus()); });
+    await waitFor(() => expect(reopened).not.toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'แก้เวลา แม่บ้านย้ายมา' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' })).toBeEnabled();
+  });
+
+  it('waits for a successful board read when mounting with a cached row for an old Cleaner', async () => {
+    let hold = false;
+    let release = () => {};
+    const server = serveScoped({
+      'GET /api/admin/attendance': () => {
+        const fresh = { status: 200, body: attendanceBoard([reassignedRow], { shiftDate: '2026-11-04' }) };
+        if (!hold) return { status: 200, body: attendanceBoard([scopedRow], { shiftDate: '2026-11-04' }) };
+        return new Promise<typeof fresh>((resolve) => { release = () => resolve(fresh); });
+      },
+    });
+    const { router, store } = await renderApp('/admin/attendance');
+    expect(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' })).toBeVisible();
+    await apiIdle(store);
+    const cached = attendanceBoardApi.endpoints.getAttendanceBoard.select({})(store.getState()).data;
+    expect(cached?.rows[0]?.cleaner?.id).toBe(scopedRow.cleaner?.id);
+    const priorCalls = boardCalls(server).length;
+    hold = true;
+    await act(() => router.navigate(scopedUrl));
+    expect(await screen.findByText('กำลังตรวจข้อมูลกะปัจจุบัน...')).toBeVisible();
+    await waitFor(() => expect(boardCalls(server).length).toBeGreaterThan(priorCalls));
+    expect(screen.queryByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'มอบหมายทำแทน' })).not.toBeInTheDocument();
+
+    await act(async () => release());
+    expect(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านคนใหม่' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' })).not.toBeInTheDocument();
+  });
+
   it('writes using the exact current board row and refreshes both that board and the Overview detail', async () => {
     const server = serveScoped({ 'PUT /api/admin/attendance': () => savedEvent });
     const { router, user } = await renderApp(scopedUrl);
