@@ -12,8 +12,8 @@ interface StatusScreenProps {
 /** The full-page message of "not found", "no permission" and similar dead ends. */
 export function StatusScreen({ title, detail, linkTo, linkText }: StatusScreenProps) {
   return (
-    <main className={`${statusScreenClass.main} min-h-svh justify-center text-text`}>
-      <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-6">
+    <main className={statusScreenClass.main}>
+      <div className={statusScreenClass.card}>
         <CircleAlert aria-hidden="true" className="size-8 self-center text-text-2" />
         <h1 className={statusScreenClass.title}>{title}</h1>
         {detail && <p className="text-text-2">{detail}</p>}

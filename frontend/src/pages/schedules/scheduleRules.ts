@@ -1,7 +1,7 @@
 import { addDays } from '../../shared/utils/dateRange';
 import { formatShiftDate } from '../../shared/utils/thaiTime';
 import type { Shift } from '../../shared/api/types';
-import type { ScheduleAvailability, ScheduleSourceKind, ScheduleWeekAvailability } from '../../shared/api/scheduleTypes';
+import type { ScheduleAvailability, SchedulePerson, ScheduleSourceKind, ScheduleWeekAvailability } from '../../shared/api/scheduleTypes';
 
 /**
  * The week and filter rules of the scheduling pages, pure so every case is decidable without a server or a clock the test
@@ -179,6 +179,13 @@ export const sourceLabel: Record<ScheduleSourceKind, string> = {
   baseline: 'ตามแผนประจำ',
   unset: 'ยังไม่มีแผน',
   unavailable: 'ไม่มีข้อมูล',
+};
+
+/** Thai display labels for a cleaner's schedule kind. */
+export const cleanerKindLabel: Record<SchedulePerson['cleanerKind'], string> = {
+  Regular: 'แม่บ้านประจำ',
+  Relief: 'แม่บ้านสแปร์',
+  unknown: 'ยังไม่ระบุ',
 };
 
 /**

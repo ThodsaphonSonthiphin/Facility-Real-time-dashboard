@@ -42,9 +42,9 @@ export function NothingToInspect({ visit, notice }: { visit: InspectionVisit; no
       <Panel title="จุดนี้ตอนนี้">
         <p className="flex flex-wrap items-center gap-2">
           <StatusChip status={point.status} />
-          <span>{roundLine(point)}</span>
+          <span className="tabular-nums">{roundLine(point)}</span>
         </p>
-        {point.rework && <p>{`ให้แก้ ${formatTime(point.rework.requestedAt)}: “${point.rework.defect}”`}</p>}
+        {point.rework && <p className="tabular-nums">{`ให้แก้ ${formatTime(point.rework.requestedAt)}: “${point.rework.defect}”`}</p>}
       </Panel>
       <DistanceLine visit={visit} />
       <p className="text-center text-sm text-text-2">เมื่อมีงานให้ตรวจ ให้สแกนป้ายอีกครั้ง</p>

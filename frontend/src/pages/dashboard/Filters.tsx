@@ -27,6 +27,7 @@ const statusIconCircle: Record<PointStatus, string> = {
 };
 
 /** A status card (the design file's Dashboard): 6/7 per row, circular semantic icon, words, count at 24/700. Pressed = pale blue with a 2 px blue frame. */
+// 13 px / 11 px padding compensates for the 2 px pressed border (vs 1 px resting) so no token fits without layout shift.
 const cardClass =
   'flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-3 text-left ' +
   'enabled:hover:border-accent aria-pressed:border-2 aria-pressed:border-accent aria-pressed:bg-accent-subtle ' +

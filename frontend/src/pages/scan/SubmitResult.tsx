@@ -72,7 +72,7 @@ export function SubmitResult({ point, draft, result }: SubmitResultProps) {
           </Note>
         )}
         {result.withinRadius === true && (
-          <p className="text-center text-sm text-text-2">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>
+          <p className="text-center text-sm text-text-2 tabular-nums">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>
         )}
       </div>
     </ResultScreen>

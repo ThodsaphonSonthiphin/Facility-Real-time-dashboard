@@ -173,6 +173,7 @@ export const boxClass = 'rounded-lg border border-border bg-surface px-4 py-3.5'
 
 /** The full-page message of StatusScreen and CrashScreen. */
 export const statusScreenClass = {
-  main: 'mx-auto flex max-w-mobile flex-col gap-3 px-5 py-12 text-center text-base',
+  main: 'mx-auto flex min-h-svh max-w-mobile flex-col justify-center gap-3 px-5 py-12 text-center text-base text-text',
+  card: 'flex flex-col gap-4 rounded-lg border border-border bg-surface p-6',
   title: 'text-xl font-bold',
 };

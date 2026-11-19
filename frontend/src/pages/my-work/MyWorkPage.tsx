@@ -288,7 +288,7 @@ function MiniKpis({
       {tiles.map(({ label, value, Icon, tone }) => (
         <div
           key={label}
-          className="flex flex-col items-center justify-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-2.5 text-center"
+          className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-2.5 text-center"
         >
           <Icon aria-hidden="true" className={`size-5 shrink-0 ${tone}`} />
           <span className="text-xs text-text-2">{label}</span>

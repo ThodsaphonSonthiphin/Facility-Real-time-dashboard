@@ -1,20 +1,13 @@
 import { ArrowRightLeft, CalendarDays, Check, Clock3, History, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { lazy, Suspense } from 'react';
-import type { SchedulePerson } from '../../../shared/api/scheduleTypes';
 import { Button } from '../../../shared/components/Button';
 import { focusRing } from '../../../shared/components/styles';
 import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
-import { cellLabel } from '../scheduleRules';
+import { cellLabel, cleanerKindLabel } from '../scheduleRules';
 import type { SchedulePageView } from './type';
 
 const ScheduleHistory = lazy(() => import('../ScheduleHistory/ScheduleHistory')
   .then((module) => ({ default: module.ScheduleHistory })));
-
-const kindLabel: Record<SchedulePerson['cleanerKind'], string> = {
-  Regular: 'แม่บ้านประจำ',
-  Relief: 'แม่บ้านสแปร',
-  unknown: 'ยังไม่ระบุ',
-};
 
 export interface ScheduleContextBarProps {
   view: SchedulePageView;
@@ -55,7 +48,7 @@ export function ScheduleContextBar({ view }: ScheduleContextBarProps) {
             <span>เลือกอยู่</span>
           </span>
           <strong className="font-bold text-text">{person.displayName}</strong>
-          <span className="text-text-2">({kindLabel[person.cleanerKind]})</span>
+          <span className="text-text-2">({cleanerKindLabel[person.cleanerKind]})</span>
           <span aria-hidden="true" className="text-text-2">·</span>
           <strong className="font-semibold text-text tabular-nums">{`${formatWeekday(day.date)} ${dateText}`}</strong>
           <span aria-hidden="true" className="text-text-2">·</span>

@@ -123,7 +123,7 @@ export function AlertsPage() {
           tone="purple"
         />
         <KpiCard
-          label="เตือนที่ยังไม่ได้คุย"
+          label={`เตือนที่ยังไม่ได้คุย (${day === 'today' ? 'วันนี้' : 'เมื่อวาน'})`}
           value={openAlertsCount ?? '–'}
           unit="รายการ"
           icon={TriangleAlert}

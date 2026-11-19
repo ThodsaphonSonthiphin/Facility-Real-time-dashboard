@@ -79,7 +79,7 @@ export function InspectionSummaryPage() {
         </summary>
         <div className="flex flex-col gap-3 pt-2">
           <span className="text-xs text-text-2">{page.rangeLine}</span>
-          <FilterToolbar label="ตัวกรองเพิ่มเติม" className="items-end justify-start">
+          <FilterToolbar label="ตัวกรองเพิ่มเติม" align="end">
             <RangeFields value={page.texts} onChange={page.setTexts} onEnter={page.show} />
             <Button size="desk" onClick={page.show}>แสดง</Button>
             <BuildingSelect value={page.buildingId} onChange={page.selectBuilding} />

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Alert } from '../../shared/api/alertListApi';
 import { adminSession } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
-import { alerts, attendanceBoard, attendanceGpsAlert } from '../../test/liveFixtures';
+import { aheadBoard, alerts, attendanceBoard, attendanceGpsAlert } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
 import { expectBehindMoreInfo } from '../../test/moreInfo';
 
@@ -226,14 +226,28 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
   });
 
   it('shows real KPI summary cards from boardNow and alerts.data', async () => {
-    serve();
-    await renderApp('/admin/alerts');
+    serve({
+      'GET /api/admin/attendance': (request) => ({
+        status: 200,
+        body: request.search.includes('2026-10-16') ? aheadBoard : attendanceBoard(),
+      }),
+    });
+    const { user } = await renderApp('/admin/alerts');
     await screen.findByRole('row', { name: /สแกนผิดพื้นที่/ });
 
     const kpis = screen.getByRole('region', { name: 'สรุปสถานะและเตือน' });
-    expect(within(kpis).getByText('พื้นที่ที่ยังไม่มีคน')).toBeInTheDocument();
-    expect(within(kpis).getByText('คนทำแทนกะนี้')).toBeInTheDocument();
-    expect(within(kpis).getByText('เตือนที่ยังไม่ได้คุย')).toBeInTheDocument();
-    expect(within(kpis).getByText('คุยแล้ว (วันนี้)')).toBeInTheDocument();
+    expect(within(kpis).getByText('พื้นที่ที่ยังไม่มีคน').parentElement).toHaveTextContent('พื้นที่ที่ยังไม่มีคน2 พื้นที่');
+    expect(within(kpis).getByText('คนทำแทนกะนี้').parentElement).toHaveTextContent('คนทำแทนกะนี้1 คน');
+    expect(within(kpis).getByText('เตือนที่ยังไม่ได้คุย (วันนี้)').parentElement).toHaveTextContent('เตือนที่ยังไม่ได้คุย (วันนี้)4 รายการ');
+    expect(within(kpis).getByText('คุยแล้ว (วันนี้)').parentElement).toHaveTextContent('คุยแล้ว (วันนี้)0 รายการ');
+
+    await user.click(screen.getByRole('button', { name: 'เมื่อวาน 14/10' }));
+    expect(within(kpis).getByText('เตือนที่ยังไม่ได้คุย (เมื่อวาน)').parentElement).toHaveTextContent('เตือนที่ยังไม่ได้คุย (เมื่อวาน)0 รายการ');
+    expect(within(kpis).getByText('คุยแล้ว (เมื่อวาน)').parentElement).toHaveTextContent('คุยแล้ว (เมื่อวาน)1 รายการ');
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'วันและกะ' }), '2026-10-16:Day');
+    expect(await within(kpis).findByText('พื้นที่ยังไม่มีคนทำแทน')).toBeInTheDocument();
+    expect(within(kpis).getByText('พื้นที่ยังไม่มีคนทำแทน').parentElement).toHaveTextContent('พื้นที่ยังไม่มีคนทำแทน3 พื้นที่');
+    expect(within(kpis).getByText('คนทำแทนกะที่เลือก').parentElement).toHaveTextContent('คนทำแทนกะที่เลือก0 คน');
   });
 });

@@ -33,21 +33,34 @@ export interface FilterToolbarProps {
   label: string;
   children: ReactNode;
   actions?: ReactNode;
+  align?: 'center' | 'end';
   className?: string;
 }
+
+const toolbarAlign = {
+  center: 'items-center',
+  end: 'items-end',
+} as const;
 
 /**
  * Responsive flex/wrap toolbar wrapper for Admin filter controls and secondary actions.
  */
-export function FilterToolbar({ label, children, actions, className }: FilterToolbarProps) {
+export function FilterToolbar({ label, children, actions, align = 'center', className }: FilterToolbarProps) {
+  const alignClass = toolbarAlign[align];
   return (
     <div
       role="region"
       aria-label={label}
-      className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3${className ? ` ${className}` : ''}`}
+      className={`flex flex-wrap ${alignClass} ${actions ? 'justify-between' : 'justify-start'} gap-3 rounded-lg border border-border bg-surface px-4 py-3${className ? ` ${className}` : ''}`}
     >
-      <div className="flex flex-wrap items-center gap-2">{children}</div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions ? (
+        <>
+          <div className={`flex flex-wrap ${alignClass} gap-2`}>{children}</div>
+          <div className="flex flex-wrap items-center gap-2">{actions}</div>
+        </>
+      ) : (
+        children
+      )}
     </div>
   );
 }

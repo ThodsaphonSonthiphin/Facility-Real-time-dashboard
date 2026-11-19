@@ -37,7 +37,13 @@ export function PrintSignsPage() {
       </header>
       <FilterToolbar
         label="ตัวเลือก"
-        className="min-w-0 justify-start gap-4 print:hidden"
+        className="min-w-0 print:hidden"
+        actions={
+          <span className="inline-flex items-center gap-1.5 rounded-sm bg-idle-bg px-2 py-0.5 text-xs text-idle">
+            <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
+            เปลี่ยนขนาดได้ รูปแบบป้ายเหมือนเดิม
+          </span>
+        }
       >
         <label className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-2">
           พื้นที่
@@ -62,10 +68,6 @@ export function PrintSignsPage() {
           <span>ขนาดป้าย</span>
           <Segmented label="ขนาดป้าย" options={sizeOptions} value={size} onChange={setSize} disabled={printing} />
         </div>
-        <span className="ml-auto inline-flex items-center gap-1.5 rounded-sm bg-idle-bg px-2 py-0.5 text-xs text-idle">
-          <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
-          เปลี่ยนขนาดได้ รูปแบบป้ายเหมือนเดิม
-        </span>
       </FilterToolbar>
       {(areas.isLoading || areas.error || areas.data?.length === 0 || print.isFetching || print.error ||
         which === '' || emptyMessage || (signId !== undefined && singleArea)) && (

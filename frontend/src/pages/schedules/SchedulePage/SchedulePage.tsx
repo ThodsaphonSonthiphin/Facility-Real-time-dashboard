@@ -1,6 +1,6 @@
 import { ArrowRightLeft, Building2, CalendarDays, ChevronLeft, ChevronRight, RefreshCw, UserCheck, UserPlus } from 'lucide-react';
 import { lazy, Suspense } from 'react';
-import type { ScheduleAvailability, ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
+import type { ScheduleAvailability, ScheduleDay, ScheduleWeek } from '../../../shared/api/scheduleTypes';
 import type { Shift } from '../../../shared/api/types';
 import { AvatarBadge } from '../../../shared/components/AvatarBadge/AvatarBadge';
 import { Badge } from '../../../shared/components/Badge';
@@ -18,7 +18,7 @@ import { FilterToolbar } from '../../../shared/components/SurfacePanel';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { shiftShortLabel, transferStateLabel } from '../../../shared/utils/labels';
 import { formatDayTime, formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
-import { availabilityLabel, cellLabel, sourceLabel, weekIsUnavailable, weekRangeLabel, type ScheduleRole } from '../scheduleRules';
+import { availabilityLabel, cellLabel, cleanerKindLabel, sourceLabel, weekIsUnavailable, weekRangeLabel, type ScheduleRole } from '../scheduleRules';
 import type { TeamSlotArgs } from '../schedulesApi';
 import { ScheduleContextBar } from './ScheduleContextBar';
 import { ScheduleSummaryCards } from './ScheduleSummaryCards';
@@ -97,7 +97,9 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
   const canEditRelief = Boolean(
     view.latest?.rows.some((row) => row.cleanerKind === 'Relief' && row.days.some((day) => day.edit?.canChange)),
   );
-  const showSummary = Boolean(view.week && view.week.availability !== 'empty' && !weekIsUnavailable(view.week));
+  const showSummary = Boolean(
+    view.week && view.week.availability !== 'empty' && !weekIsUnavailable(view.week) && view.week.rows.length > 0,
+  );
 
   return (
     <main className="flex min-w-0 flex-col gap-6 text-base text-text sm:text-sm">
@@ -383,7 +385,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                       />
                       <div className="min-w-0 flex-1">
                         <span className="block truncate font-semibold text-text">{person.displayName}</span>
-                        <span className="block text-xs font-normal text-text-2">{kindLabel[person.cleanerKind]}</span>
+                        <span className="block text-xs font-normal text-text-2">{cleanerKindLabel[person.cleanerKind]}</span>
                         {person.cleanerKind === 'Relief' && person.homeBuildingCode && (
                           <span className="block text-xs font-normal text-text-2">ตึกประจำ: {person.homeBuildingCode}</span>
                         )}
@@ -562,12 +564,6 @@ function Notes({ role }: { role: ScheduleRole }) {
     </MoreInfo>
   );
 }
-
-const kindLabel: Record<SchedulePerson['cleanerKind'], string> = {
-  Regular: 'แม่บ้านประจำ',
-  Relief: 'แม่บ้านสแปร',
-  unknown: 'ยังไม่ระบุ',
-};
 
 /** The dates of the read week. A Supervisor's row may hold fewer days, so the columns come from the week itself. */
 function datesOf(week: ScheduleWeek): string[] {
