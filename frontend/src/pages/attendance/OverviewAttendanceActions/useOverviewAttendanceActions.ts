@@ -31,8 +31,14 @@ export function useScopedAttendanceActionArgs(): OverviewAttendanceActionsProps 
 
 export function useOverviewAttendanceActions(scope: OverviewAttendanceActionsProps) {
   const dispatch = useAppDispatch();
-  const { currentData: board, error, isFetching, refetch } = useGetAttendanceBoardQuery({}, { ...livePoll, refetchOnMountOrArgChange: false });
+  const { currentData: board, error, isFetching, isSuccess, requestId, refetch } =
+    useGetAttendanceBoardQuery({}, { ...livePoll, refetchOnMountOrArgChange: false });
+  const [initialRequestId] = useState(requestId);
   const [verified, setVerified] = useState(false);
+  // Ignore the request already present at mount. A later success can come from opening, retry, polling or focus.
+  if (!verified && isSuccess && !isFetching && requestId && requestId !== initialRequestId) {
+    setVerified(true);
+  }
   const row = verified ? rowFor(board, scope) : undefined;
   const targets = row ? attendanceTargets(row) : [];
   const [open, setOpen] = useState<OpenAttendanceAction | null>(null);
@@ -75,10 +81,8 @@ export function useOverviewAttendanceActions(scope: OverviewAttendanceActionsPro
 
   const readOnMount = useEffectEvent(freshRow);
   useEffect(() => {
-    let active = true;
-    // The query state displays failures and exposes Retry. Only a successful response unlocks actions.
-    void readOnMount().then(() => { if (active) setVerified(true); }, () => {});
-    return () => { active = false; };
+    // The query result supplies the error and verification state, including refreshes other than this read.
+    void readOnMount().catch(() => {});
   }, []);
 
   const openAction = async (kind: AttendanceActionKind, cleanerId?: number) => {
@@ -123,7 +127,7 @@ export function useOverviewAttendanceActions(scope: OverviewAttendanceActionsPro
   return {
     board, row, targets, target, unavailableEvents, action, notice, opening, isFetching, verified,
     error: error ? getErrorMessage(error) : undefined,
-    retry: () => void freshRow().then(() => { if (mounted.current) setVerified(true); }, () => {}),
+    retry: () => void freshRow().catch(() => {}),
     openAction,
     canSubmit,
     close,

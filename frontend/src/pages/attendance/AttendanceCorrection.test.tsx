@@ -651,6 +651,29 @@ describe('Overview Attendance actions', () => {
     expect(screen.queryByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' })).not.toBeInTheDocument();
   });
 
+  it('unlocks scoped actions when a focus refresh succeeds after mount verification failed', async () => {
+    let recovered = false;
+    const server = serveScoped({
+      'GET /api/admin/attendance': () => recovered
+        ? { status: 200, body: attendanceBoard([scopedRow], { shiftDate: '2026-11-04' }) }
+        : { status: 503, body: { message: 'โหลดข้อมูลกะปัจจุบันไม่สำเร็จ' } },
+    });
+    const { store } = await renderApp(scopedUrl);
+    expect(await screen.findByRole('alert')).toHaveTextContent('โหลดข้อมูลกะปัจจุบันไม่สำเร็จ');
+    await apiIdle(store);
+    expect(screen.queryByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' })).not.toBeInTheDocument();
+
+    const failedReads = boardCalls(server).length;
+    recovered = true;
+    act(() => { store.dispatch(baseApi.internalActions.onFocus()); });
+
+    expect(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'มอบหมายทำแทน' })).toBeEnabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('กำลังตรวจข้อมูลกะปัจจุบัน...')).not.toBeInTheDocument();
+    expect(boardCalls(server).length).toBeGreaterThan(failedReads);
+  });
+
   it('writes using the exact current board row and refreshes both that board and the Overview detail', async () => {
     const server = serveScoped({ 'PUT /api/admin/attendance': () => savedEvent });
     const { router, user } = await renderApp(scopedUrl);
