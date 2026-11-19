@@ -26,8 +26,12 @@ export function useAreasPage() {
       `${area.code} ${area.name} ${area.buildingCode} ${names.get(area.buildingCode) ?? ''}`.toLocaleLowerCase().includes(query));
   }, [areas.data, buildingId, names, search]);
   const clearFilters = () => { setSearch(''); setBuildingId(''); };
+  const retryError = () => {
+    if (areas.error) void areas.refetch();
+    if (detail.error) void detail.refetch();
+  };
   return {
     areaId, areas, detail, selectedId, names, buildings, filteredAreas, search, setSearch, buildingId, setBuildingId,
-    clearFilters, hasFilters: search !== '' || buildingId !== '', error: areas.error ?? detail.error,
+    clearFilters, hasFilters: search !== '' || buildingId !== '', error: areas.error ?? detail.error, retryError,
   };
 }

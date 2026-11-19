@@ -314,4 +314,23 @@ describe('HistoryPage (D9, facility-0057)', () => {
     await user.click(screen.getByText('ค้นหาประวัติ'));
     await waitFor(() => expect(screen.getByRole('searchbox', { name: 'ค้นหา' })).toHaveValue(''));
   });
+
+  it('retries failed log read without clearing active filters or refetching actors (UX-05)', async () => {
+    let logAttempts = 0;
+    const server = serve({
+      'GET /api/admin/audit-log': () => ++logAttempts === 1
+        ? { status: 500, body: { message: 'โหลดประวัติไม่สำเร็จ' } }
+        : { status: 200, body: firstPage },
+    });
+    const { user } = await renderApp('/admin/history?category=Cover');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('โหลดประวัติไม่สำเร็จ');
+    expect(screen.getByRole('combobox', { name: 'ประเภท' })).toHaveValue('Cover');
+
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+    expect(await screen.findByText('แสดง 1–5 รายการ')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'ประเภท' })).toHaveValue('Cover');
+    expect(logGets(server)).toHaveLength(2);
+    expect(server.calls.filter((call) => call.path === '/api/admin/audit-log/actors')).toHaveLength(1);
+  });
 });

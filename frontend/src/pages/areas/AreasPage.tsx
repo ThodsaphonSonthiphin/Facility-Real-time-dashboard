@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { MapPin, Plus } from 'lucide-react';
 import { Link } from 'react-router';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
@@ -17,14 +17,17 @@ import { useAreasPage } from './useAreasPage';
 export function AreasPage() {
   const {
     areaId, areas, detail, selectedId, names, buildings, filteredAreas, search, setSearch,
-    buildingId, setBuildingId, clearFilters, hasFilters, error,
+    buildingId, setBuildingId, clearFilters, hasFilters, error, retryError,
   } = useAreasPage();
 
   return (
     <main className="flex flex-col gap-6 text-sm text-text">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">พื้นที่และป้าย</h1>
+          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
+            <MapPin aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+            พื้นที่และป้าย
+          </h1>
           {/* As tall as its words before the answer, so nothing under it moves */}
           <span className="min-h-5 text-text-2">{areas.data ? areaTotals(areas.data) : '\u00A0'}</span>
         </div>
@@ -33,7 +36,7 @@ export function AreasPage() {
           เพิ่มพื้นที่
         </Link>
       </header>
-      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
+      {error && <Note tone="error" onRetry={retryError}>{getErrorMessage(error)}</Note>}
       {areaId !== undefined && selectedId === undefined && <Note tone="error">ไม่พบพื้นที่นี้</Note>}
       {/* the design file's list rail, then the rest; no token describes a two-column track list */}
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">

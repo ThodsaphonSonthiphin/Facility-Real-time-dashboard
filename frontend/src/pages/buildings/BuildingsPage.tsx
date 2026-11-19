@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Building2, Plus } from 'lucide-react';
 import { Button } from '../../shared/components/Button';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
@@ -23,7 +23,10 @@ export function BuildingsPage() {
     <main className="flex flex-col gap-6 text-sm text-text">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">ตึก</h1>
+          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
+            <Building2 aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+            ตึก
+          </h1>
           {/* As tall as its words before the answer, so nothing under it moves */}
           <span className="min-h-5 text-text-2">ตึกที่ปิดใช้งาน จะไม่แสดงในหน้าสถานะจุด และสแกนป้ายในตึกนั้นไม่ได้</span>
         </div>
@@ -33,9 +36,9 @@ export function BuildingsPage() {
         </Button>
       </header>
       {accounts.error && <Note tone="error" onRetry={() => void accounts.refetch()}>โหลดรายชื่อหัวหน้าไม่ได้</Note>}
-      {buildings.error && <Note tone="error">{getErrorMessage(buildings.error)}</Note>}
+      {buildings.error && <Note tone="error" onRetry={() => void buildings.refetch()}>{getErrorMessage(buildings.error)}</Note>}
       <section
-        className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface"
+        className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface"
         aria-labelledby="buildings-list-title"
       >
         <div className="sr-only">

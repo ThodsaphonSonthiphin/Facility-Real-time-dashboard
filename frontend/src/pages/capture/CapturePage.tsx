@@ -1,3 +1,4 @@
+import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import {
@@ -66,12 +67,15 @@ export function CapturePage() {
           {detail && (
             <span className="text-sm text-text-2">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>
           )}
-          <h1 className="text-2xl font-bold">เก็บพิกัดป้าย</h1>
+          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
+            <MapPin aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+            เก็บพิกัดป้าย
+          </h1>
           <span className="text-sm text-text-2">ยืนชิดป้าย เลือกป้าย แล้วกดใช้ตำแหน่ง</span>
         </PhoneHeader>
       }
     >
-      {area.error && <Note tone="error">{getErrorMessage(area.error)}</Note>}
+      {area.error && <Note tone="error" retrySize="phone" onRetry={() => void area.refetch()}>{getErrorMessage(area.error)}</Note>}
       {!detail && !area.error && <PageLoading>กำลังโหลด...</PageLoading>}
       {detail && (
         <CaptureWorkspace

@@ -25,7 +25,7 @@ export function PointTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (ta
   const printLink = (signId: number) => `/admin/print?area=${area.id}&sign=${signId}`;
 
   return (
-    <section className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface">
+    <section className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <h3 className="text-base font-bold">{`จุดในพื้นที่ · ${points.length}`}</h3>
         {area.isActive && (

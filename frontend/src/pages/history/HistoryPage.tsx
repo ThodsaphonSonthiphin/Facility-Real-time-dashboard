@@ -1,4 +1,4 @@
-import { Eye } from 'lucide-react';
+import { Eye, History } from 'lucide-react';
 import { Button } from '../../shared/components/Button';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
@@ -15,7 +15,10 @@ export function HistoryPage() {
     <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold">ประวัติการแก้ไขของแอดมิน</h1>
+          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
+            <History aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+            ประวัติการแก้ไขของแอดมิน
+          </h1>
           <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-idle-bg px-2 py-0.5 text-xs font-semibold text-idle">
             <Eye aria-hidden="true" className="size-4" />อ่านอย่างเดียว
           </span>
@@ -27,7 +30,7 @@ export function HistoryPage() {
         preset={view.preset} onPreset={view.selectPreset} />
       {view.problem && <Note tone="error">{view.problem}</Note>}
       {view.log.isFetching && !view.log.currentData && <PageLoading>กำลังโหลด...</PageLoading>}
-      {view.log.error && <Note tone="error">{getErrorMessage(view.log.error)}</Note>}
+      {view.log.error && <Note tone="error" onRetry={() => void view.log.refetch()}>{getErrorMessage(view.log.error)}</Note>}
       {view.actors.error && <Note tone="error" onRetry={() => void view.actors.refetch()}>{getErrorMessage(view.actors.error)}</Note>}
       {view.log.currentData && (
         <HistoryTable entries={view.entries} emptyText={view.args.q ? 'ไม่พบรายการที่ตรงกับที่ค้นหาในช่วงนี้' : 'ไม่มีประวัติในช่วงนี้'}

@@ -31,7 +31,7 @@ const itemIdleClass = 'border-transparent hover:border-border-control';
 export function AreaList({ areas, total, selectedId, loading, names, buildings, search, onSearch,
   buildingId, onBuilding, onClear, hasFilters }: AreaListProps) {
   return (
-    <section className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface"
+    <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface"
       aria-labelledby="areas-list-title">
       <h2 id="areas-list-title" className="sr-only">{`พื้นที่ทั้งหมด (${total ?? 0})`}</h2>
       <div className="flex flex-col gap-2 border-b border-border p-3">

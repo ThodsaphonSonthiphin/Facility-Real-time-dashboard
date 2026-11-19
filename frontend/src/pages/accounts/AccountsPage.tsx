@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
 import { Drawer } from '../../shared/components/Modal';
@@ -25,7 +25,10 @@ export function AccountsPage() {
     <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">บัญชีผู้ใช้</h1>
+          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
+            <Users aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+            บัญชีผู้ใช้
+          </h1>
           {/* As tall as its words before the answer, so nothing under it moves */}
           <span className="min-h-5 text-text-2">เพิ่มบัญชีให้แม่บ้าน หัวหน้า หรือแอดมินทีละคน</span>
         </div>
@@ -41,7 +44,7 @@ export function AccountsPage() {
         </Note>
       )}
       <section
-        className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface"
+        className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface"
         aria-label="รายชื่อบัญชี"
       >
         <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-4">

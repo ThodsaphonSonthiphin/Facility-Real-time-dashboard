@@ -6,6 +6,7 @@ import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../shared/components/PageState';
 import { Segmented } from '../../shared/components/Segmented';
+import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { linkClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import type { SignSize } from './printRules';
@@ -23,7 +24,10 @@ export function PrintSignsPage() {
     <main className="flex min-w-0 flex-col gap-6 text-sm text-text print:gap-0">
       <header className="flex flex-wrap items-end justify-between gap-4 print:hidden">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-bold">พิมพ์ป้าย</h1>
+          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
+            <Printer aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+            พิมพ์ป้าย
+          </h1>
           <span className="text-text-2">{summary}</span>
         </div>
         <Button variant="primary" size="desk" disabled={disabled} onClick={() => void printNow()}>
@@ -31,9 +35,9 @@ export function PrintSignsPage() {
           พิมพ์
         </Button>
       </header>
-      <section
-        aria-label="ตัวเลือก"
-        className="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border border-border bg-surface px-4 py-3 print:hidden"
+      <FilterToolbar
+        label="ตัวเลือก"
+        className="min-w-0 justify-start gap-4 print:hidden"
       >
         <label className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-2">
           พื้นที่
@@ -62,7 +66,7 @@ export function PrintSignsPage() {
           <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
           เปลี่ยนขนาดได้ รูปแบบป้ายเหมือนเดิม
         </span>
-      </section>
+      </FilterToolbar>
       {(areas.isLoading || areas.error || areas.data?.length === 0 || print.isFetching || print.error ||
         which === '' || emptyMessage || (signId !== undefined && singleArea)) && (
         <div className="flex min-w-0 flex-col gap-3 print:hidden">

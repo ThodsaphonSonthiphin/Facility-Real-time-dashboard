@@ -261,4 +261,21 @@ describe('BuildingsPage (facility-0090)', () => {
     expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');
   });
 
+  it('retries failed buildings read without refetching accounts (UX-05)', async () => {
+    let attempts = 0;
+    const server = serve({
+      'GET /api/admin/buildings/all': () => ++attempts === 1
+        ? { status: 500, body: { message: 'โหลดตึกไม่สำเร็จ' } }
+        : { status: 200, body: managedBuildings },
+    });
+    const { user } = await renderApp('/admin/buildings');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('โหลดตึกไม่สำเร็จ');
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('row', { name: /^A / })).toBeInTheDocument();
+    expect(sent(server, 'GET', '/api/admin/buildings/all')).toHaveLength(2);
+    expect(sent(server, 'GET', '/api/admin/accounts')).toHaveLength(1);
+  });
+
 });

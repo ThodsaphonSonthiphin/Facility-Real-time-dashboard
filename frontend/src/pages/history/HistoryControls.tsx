@@ -1,6 +1,7 @@
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
 import { RangeFields } from '../../shared/components/RangeFields';
+import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { focusRing } from '../../shared/components/styles';
 import type { RangeTexts } from '../../shared/utils/dateRange';
 import type { AuditActor, HistoryArgs } from './historyApi';
@@ -21,7 +22,7 @@ interface HistoryControlsProps {
 
 export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, search, onSearch, preset, onPreset }: HistoryControlsProps) {
   return (
-    <section aria-label="ตัวกรองประวัติ" className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+    <FilterToolbar label="ตัวกรองประวัติ" className="min-w-0 flex-col items-stretch justify-start gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <label className="inline-flex items-center gap-2">ช่วงวัน
           <Select size="desk" value={preset} onChange={(event) => onPreset(event.target.value)}>
@@ -60,6 +61,6 @@ export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, 
           <Button size="desk" onClick={onShow}>ค้นหา</Button>
         </div>
       </details>
-    </section>
+    </FilterToolbar>
   );
 }
