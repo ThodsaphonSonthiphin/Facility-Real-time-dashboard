@@ -1,5 +1,5 @@
-import { loginAsAdmin } from '../support/login.ts';
-import { openSchedule } from '../support/scheduling.ts';
+import { loginAsAdmin, loginAsEmployee } from '../support/login.ts';
+import { openSchedule, type ScheduleWeek } from '../support/scheduling.ts';
 import { schedulingFixture } from '../support/seed.ts';
 import { expect, test } from '../support/test.ts';
 
@@ -137,4 +137,47 @@ test('UX-01–03 focus, menu stacking and roster separators hold at mobile and d
     expect(await scroller.getAttribute('tabindex')).toBe(fits ? null : '0');
     await info.attach(`roster-${width}px`, { body: await page.screenshot(), contentType: 'image/png' });
   }
+});
+
+test('UX-03 keeps focused Supervisor roster dates visible in a partial week', async ({ page }, info) => {
+  const fixture = schedulingFixture();
+  await page.setViewportSize({ width: 320, height: 844 });
+  await loginAsEmployee(page, fixture.supervisorAB);
+  await expect(page).toHaveURL(/\/my-building$/);
+
+  // A dated Supervisor assignment can expose only part of a week. Keep the live fixture's rows and roles.
+  await page.route((url) => url.pathname === '/api/schedules', async (route) => {
+    const response = await route.fetch();
+    const week = await response.json() as ScheduleWeek;
+    const dates = new Set(week.rows.flatMap((row) => row.days.map((day) => day.date)).sort());
+    const visibleDates = [...dates].slice(0, 2);
+    const rows = week.rows.map((row) => ({
+      ...row,
+      days: row.days.filter((day) => visibleDates.includes(day.date)),
+    }));
+    await route.fulfill({ response, json: { ...week, rows } });
+  });
+  await openSchedule(page, '/schedule-management', fixture.planningWeek);
+
+  const table = page.getByRole('table', { name: 'ตารางงานรายสัปดาห์' });
+  await expect(table.getByRole('columnheader')).toHaveCount(3);
+  const scroller = page.getByRole('region', { name: 'ตารางงานรายสัปดาห์' });
+  const name = table.getByRole('rowheader').first();
+  const dates = table.getByRole('row').nth(1).getByRole('button', { name: /^เลือกช่อง / });
+  await expect(dates).toHaveCount(2);
+  await scroller.focus();
+
+  for (const date of await dates.all()) {
+    await page.keyboard.press('Tab');
+    await expect(date).toBeFocused();
+    await expect.poll(async () => {
+      const dateBounds = (await date.boundingBox())!;
+      const nameBounds = (await name.boundingBox())!;
+      const scrollBounds = (await scroller.boundingBox())!;
+      return dateBounds.x >= nameBounds.x + nameBounds.width - 1
+        && dateBounds.x + dateBounds.width <= scrollBounds.x + scrollBounds.width + 1;
+    }, { message: 'The focused date fits beside the sticky name' }).toBe(true);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  await info.attach('supervisor-partial-week-320px', { body: await page.screenshot(), contentType: 'image/png' });
 });

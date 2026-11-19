@@ -348,11 +348,17 @@ function OwnWeek({ week, businessDate }: { week: ScheduleWeek; businessDate: str
 function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   const week = view.week!;
   const dates = datesOf(week);
+  const nameColumnWidth = 160;
+  const dateColumnMinWidth = 86;
   return (
     <div className="flex flex-col gap-3">
       <section className="overflow-hidden rounded-xl border border-border bg-surface">
-        <HorizontalScrollArea label="ตารางงานรายสัปดาห์" leadingOverlayWidth={160}>
-          <table aria-label="ตารางงานรายสัปดาห์" className="w-full min-w-190 table-fixed border-separate border-spacing-0">
+        <HorizontalScrollArea label="ตารางงานรายสัปดาห์" leadingOverlayWidth={nameColumnWidth}>
+          <table
+            aria-label="ตารางงานรายสัปดาห์"
+            className="w-full table-fixed border-separate border-spacing-0"
+            style={{ minWidth: nameColumnWidth + dates.length * dateColumnMinWidth }}
+          >
             {/* Leave enough room for a whole date button beside the sticky name at phone widths. */}
             <colgroup><col className="w-28 sm:w-40" /></colgroup>
             <thead className="bg-surface-2 text-xs font-bold text-text-2">
