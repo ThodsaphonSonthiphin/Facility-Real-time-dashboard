@@ -48,7 +48,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
 
     expect(menuSummary).toHaveAttribute('aria-expanded', 'true');
     const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
-    expect(within(menu).getAllByRole('link')).toHaveLength(11);
+    expect(within(menu).getAllByRole('link')).toHaveLength(12);
     expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'ออกจากระบบ' })).toBeInTheDocument();
 

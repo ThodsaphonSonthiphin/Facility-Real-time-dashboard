@@ -82,6 +82,7 @@ export const routes: RouteObject[] = [
           {
             element: <AppLayout wide />,
             children: [
+              { path: 'admin/overview', lazy: async () => ({ Component: (await import('./pages/overview')).OverviewPage }) },
               { path: 'dashboard', lazy: async () => ({ Component: (await import('./pages/dashboard')).DashboardPage }) },
               // facility-0027, 0050, 0051, wireframe D2: ?date=yyyy-MM-dd&shift=Day|Night&building=<id>
               {
