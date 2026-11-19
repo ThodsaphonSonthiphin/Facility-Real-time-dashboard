@@ -119,10 +119,10 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 | | `scanAnswers.ts` | Non-hook helpers: `blockedScanOf` (403 + areaCode = a blocked scan), `isNotSent` (why the send failed). |
 | `shared/auth/` | `session.ts` | Single-flight `refreshSession`, `startSession`, `getValidAccessToken`, `abandonSession`. Raw `fetch` to `/api/auth/refresh` with a 15 s timeout. |
 | | `endSession.ts` | Logout: forget locally → await in-flight refresh → `POST /api/auth/logout`. |
-| | `roles.ts` | `homeOf(role)`: cleaner → `/my-work`, supervisor → `/my-building`, admin → `/dashboard`. |
+| | `roles.ts` | `homeOf(role)`: cleaner → `/my-work`, supervisor → `/my-building`, admin → `/admin/overview` (`facility-0224`). |
 | `shared/geo/` | `readLocation.ts` | Fresh scan reads and permission-retry detection; setup capture separately uses watchPosition. See [Part 8](#part-8--scan-gps-and-real-time-flow). |
-| `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `Drawer`, `Modal`, `ConfirmationDialog`, `LocationHelp` | Shared Tailwind UI, feedback and route/layout components. |
-| `shared/cover/` | `coverApi.ts`, `CandidateChoices.tsx`, `CoverCancellationDialog.tsx`, `useCoverCancellation.ts`, `coverCandidates.ts`, `coverSlots.ts`, `coverText.ts` | Cover Assignment endpoints, UI and helpers shared by Alerts and Attendance. The Alerts form and alert review mutation live in `pages/alerts/`. |
+| `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `Drawer`, `Modal`, `ConfirmationDialog`, `LocationHelp`, `CleanerBottomNav`, `SupervisorNav` | Shared Tailwind UI, CSS motion classes (`facility-0229`), feedback and route/layout components. |
+| `shared/cover/` | `coverApi.ts`, `CandidateChoices.tsx`, `CoverCancellationDialog.tsx`, `useCoverCancellation.ts`, `coverCandidates.ts`, `coverSlots.ts`, `coverText.ts` | Emergency cover assignment endpoints, UI and helpers consumed by `pages/schedules/CoverDrawer.tsx` (`facility-0225`). |
 | `shared/utils/` | `thaiTime.ts`, `getErrorMessage.ts` (31), `labels.ts` (26), `dateRange.ts` (11), `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock — every time you see a strange time, look here first. |
 | `shared/version/` | `buildInfo.ts` | The build commit shown on the login pages. |
 
@@ -136,9 +136,10 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 | `scan/` | **Cleaner submits cleaning at a sign** | `ScanPage.tsx` (state machine), `SubmitForm.tsx`, `SubmitResult.tsx`, `sendFailed`/`OffDuty`, `scanApi.ts`, `scanRules.ts` |
 | `inspect/` | **Supervisor judges that submission — same URL, different role** | `InspectPage.tsx`, `InspectForm.tsx`, `NothingToInspect.tsx`, `DistanceLine.tsx`, `inspectApi.ts`, `inspectRules.ts` |
 | `my-building/` | Supervisor's queue of what to inspect next | `MyBuildingPage.tsx`, `buildingRules.ts`, `myBuildingApi.ts` (hub follow) |
-| `dashboard/` | Admin live point board (D1) | `DashboardPage.tsx`, `PointTile.tsx`, `boardRules.ts`, `dashboardApi.ts` (hub follow) |
-| `attendance/` | Admin attendance board + corrections (D2) | `AttendancePage.tsx`, `CorrectionForm.tsx`, `attendanceRules.ts` |
-| `alerts/` | Empty areas, covers, alert list (D3) | `AlertsPage.tsx`, `CoversThisShift.tsx`, `alertRules.ts` |
+| `dashboard/` | Admin slim live point board (D1, `facility-0224`) | `DashboardPage.tsx`, `LegacyDashboardPage.tsx`, `PointTile.tsx`, `boardRules.ts`, `dashboardApi.ts` (hub follow) |
+| `attendance/` | Admin attendance board + time corrections (D2, `facility-0225`) | `AttendancePage.tsx`, `LegacyAttendancePage.tsx`, `CorrectionForm.tsx`, `attendanceRules.ts` |
+| `alerts/` | Exception review queue only (D3, `facility-0225`) | `AlertsPage.tsx`, `AlertTable.tsx`, `alertRules.ts` |
+| `schedules/` | Cleaner own week, Supervisor roster, Admin roster + emergency cover (`facility-0225`) | `SchedulePage.tsx`, `CoverDrawer.tsx`, `WeeklyOffEditor/`, `ReliefAssignmentEditor/`, `DatedScheduleEditor/` |
 | `areas/` | Area / point / sign setup (D4, D10) | `AreasPage.tsx`, `PointEditor.tsx`, `SignPanel.tsx`, `signRules.ts` (radius 10–500 m) |
 | `buildings/` | Building setup: add, rename, on/off (facility-0090) | `BuildingsPage.tsx`, `BuildingDrawer.tsx`, `buildingRules.ts` (same counts as the server's `BuildingRules`) |
 | `accounts/` | Account CRUD, no delete (D6) | `AccountsPage.tsx`, `CreateAccountForm.tsx`, `SecretForms.tsx` |

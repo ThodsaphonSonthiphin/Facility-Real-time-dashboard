@@ -33,7 +33,10 @@ export async function openSchedule(page: Page, route: ScheduleRoute, weekStart: 
   if (new URL(page.url()).pathname === route) {
     await page.getByRole('button', { name: 'อัปเดต', exact: true }).click();
   } else {
-    await page.getByRole('link', { name: scheduleLinks[route], exact: true }).click();
+    const link = route === '/my-schedule'
+      ? page.getByRole('navigation', { name: 'เมนูหลักแม่บ้าน' }).getByRole('link', { name: scheduleLinks[route], exact: true })
+      : page.getByRole('link', { name: scheduleLinks[route], exact: true });
+    await link.click();
     await expect(page).toHaveURL((url) => url.pathname === route);
   }
   let response = await initial;
