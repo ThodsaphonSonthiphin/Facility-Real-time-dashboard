@@ -81,7 +81,9 @@ export function PrintSignsPage() {
           {emptyMessage && <Note tone="warn">{emptyMessage}</Note>}
           {signId !== undefined && singleArea && (
             <p className="text-text-2">พิมพ์ป้ายเดียว{' '}
-              <Link className={linkClass} to={`/admin/print?area=${which}`}>พิมพ์ทั้งพื้นที่</Link>
+              <Link className={`${linkClass} inline-flex min-h-9 items-center`} to={`/admin/print?area=${which}`}>
+                พิมพ์ทั้งพื้นที่
+              </Link>
             </p>
           )}
         </div>
