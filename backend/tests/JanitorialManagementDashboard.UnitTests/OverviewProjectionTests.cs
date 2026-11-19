@@ -588,4 +588,33 @@ public class OverviewProjectionTests
         Assert.All(OverviewGroupKeys.All, group => Assert.True(OverviewGroupKeys.IsKnown(group)));
         Assert.False(OverviewGroupKeys.IsKnown("unknown"));
     }
+
+    [Fact]
+    public void Day_only_area_is_excluded_from_night_shift_staffing_but_keeps_finalized_rounds_if_changed_mid_shift()
+    {
+        var nightSlot = new ShiftSlot(new(2026, 11, 16), Shift.Night);
+        var nightStart = ShiftCalendar.StartUtc(nightSlot);
+        var nightEval = ShiftCalendar.ToUtc(nightSlot, new(23, 0));
+        var nightMoment = new OverviewMoment("running", nightEval, ShiftCalendar.EndUtc(nightSlot), true);
+
+        var dayOnlyArea = A(11, pattern: ShiftPattern.DayOnly);
+        var dayAndNightArea = A(10, pattern: ShiftPattern.DayAndNight);
+        var image = Image([B(1)], [dayAndNightArea, dayOnlyArea], [P(100, 10), P(101, 11)]);
+        var finalizedNightRound = Round(101, 2000, 20, areaId: 11, areaCode: "A11",
+            activeFrom: ShiftCalendar.ToUtc(nightSlot, new(20, 0)),
+            finalized: ShiftCalendar.ToUtc(nightSlot, new(22, 0)), reason: "configurationChanged");
+
+        var pureNight = OverviewProjection.Build(
+            nightSlot, nightMoment, Timeline(image), Facts(), Sections, null);
+        Assert.Single(pureNight.Areas, a => a.Id == 10);
+        Assert.DoesNotContain(pureNight.Areas, a => a.Id == 11);
+
+        var changedMidShift = OverviewProjection.Build(
+            nightSlot, nightMoment, Timeline(image, finalizedNightRound), Facts(), Sections, null);
+        var historical = Assert.Single(changedMidShift.Areas, a => a.Id == 11);
+        Assert.Equal("notDone", Assert.Single(historical.History).Outcome);
+        Assert.Contains(OverviewGroupKeys.MissedCleaning, historical.Groups);
+        Assert.DoesNotContain(OverviewGroupKeys.Unassigned, historical.Groups);
+        Assert.DoesNotContain(OverviewGroupKeys.NoRounds, historical.Groups);
+    }
 }

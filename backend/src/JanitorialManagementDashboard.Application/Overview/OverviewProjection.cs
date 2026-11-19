@@ -162,7 +162,8 @@ public static class OverviewProjection
         if (image is not null)
         {
             var buildings = image.Buildings.Where(b => b.IsActive && b.CreatedAt <= at).ToDictionary(b => b.Id);
-            foreach (var area in image.Areas.Where(a => a.IsActive && a.CreatedAt <= at))
+            foreach (var area in image.Areas.Where(a => a.IsActive && a.CreatedAt <= at
+                && (slot.Shift == Shift.Day || a.ShiftPattern == ShiftPattern.DayAndNight)))
             {
                 if (!buildings.TryGetValue(area.BuildingId, out var building)) continue;
                 var view = Get(area.Id, area.BuildingId);

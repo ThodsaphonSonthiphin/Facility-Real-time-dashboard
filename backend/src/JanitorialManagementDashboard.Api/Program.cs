@@ -125,6 +125,7 @@ try
 
     builder.Services.AddScoped<OverviewTargetRecorder>();
     builder.Services.AddScoped<OverviewMutation>();
+    builder.Services.AddScoped<OverviewReadQuery>();
     builder.Services.AddSingleton(attendance);
     builder.Services.AddFacilityAuth(builder.Configuration);
 
@@ -277,6 +278,7 @@ try
     app.MapAdminAccountEndpoints();
     app.MapAdminExportEndpoints();
     app.MapAdminInspectionSummaryEndpoints();
+    app.MapAdminOverviewEndpoints();
     // Spec §11: the scheduling group maps itself last, and maps nothing at all while Scheduling:Enabled is false.
     app.MapScheduleEndpoints();
 
