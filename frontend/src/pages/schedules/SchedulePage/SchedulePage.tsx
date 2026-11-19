@@ -13,6 +13,7 @@ import { Note } from '../../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../../shared/components/PhoneScreen';
 import { Segmented } from '../../../shared/components/Segmented';
+import { focusRing } from '../../../shared/components/styles';
 import { FilterToolbar } from '../../../shared/components/SurfacePanel';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { shiftShortLabel, transferStateLabel } from '../../../shared/utils/labels';
@@ -396,7 +397,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                             aria-pressed={isSelected}
                             aria-label={`เลือกช่อง ${person.displayName} ${formatWeekday(day.date)} ${formatShiftDate(day.date)}`}
                             onClick={() => view.selectCell(person.userId, day.date)}
-                            className={`flex min-h-14 w-full cursor-pointer flex-col items-start gap-1 rounded-lg px-2 py-1.5 text-left transition-colors ${
+                            className={`flex min-h-14 w-full cursor-pointer flex-col items-start gap-1 rounded-lg px-2 py-1.5 text-left transition-colors ${focusRing} ${
                               isSelected
                                 ? 'bg-accent-subtle ring-2 ring-accent ring-inset'
                                 : 'hover:bg-surface-2'

@@ -71,55 +71,57 @@ export function ScheduleContextBar({ view }: ScheduleContextBarProps) {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {canEditDated && (
-          <Button
-            variant="primary"
-            size={size}
-            aria-label={`${datedActionLabel} ${person.displayName} ${dateText}`}
-            onClick={() => view.openDated(person, day)}
-          >
-            {isPastDate
-              ? <RotateCcw aria-hidden="true" className="size-4" />
-              : <CalendarDays aria-hidden="true" className="size-4" />}
-            <span>{datedActionLabel}</span>
-          </Button>
-        )}
+      {(canEditDated || canEditBaseline || (canSupervisorTeamSlot && day.shift)) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {canEditDated && (
+            <Button
+              variant="primary"
+              size={size}
+              aria-label={`${datedActionLabel} ${person.displayName} ${dateText}`}
+              onClick={() => view.openDated(person, day)}
+            >
+              {isPastDate
+                ? <RotateCcw aria-hidden="true" className="size-4" />
+                : <CalendarDays aria-hidden="true" className="size-4" />}
+              <span>{datedActionLabel}</span>
+            </Button>
+          )}
 
-        {canEditBaseline && (
-          <Button
-            variant="secondary"
-            size={size}
-            onClick={() => view.openBaseline(person)}
-          >
-            <SlidersHorizontal aria-hidden="true" className="size-4" />
-            <span>แก้ตารางประจำ</span>
-          </Button>
-        )}
-
-        {canSupervisorTeamSlot && day.shift && (
-          <>
+          {canEditBaseline && (
             <Button
               variant="secondary"
               size={size}
-              aria-label={`เพิ่มเวลาที่ขาด ${person.displayName} ${dateText}`}
-              onClick={() => view.openTeamSlot('missing-time', { userId: person.userId, shiftDate: day.date, shift: day.shift! }, person.displayName)}
+              onClick={() => view.openBaseline(person)}
             >
-              <Clock3 aria-hidden="true" className="size-4" />
-              <span>เพิ่มเวลาที่ขาด</span>
+              <SlidersHorizontal aria-hidden="true" className="size-4" />
+              <span>แก้ตารางประจำ</span>
             </Button>
-            <Button
-              variant="secondary"
-              size={size}
-              aria-label={`ย้ายพื้นที่ระหว่างกะ ${person.displayName} ${dateText}`}
-              onClick={() => view.openTeamSlot('transfer', { userId: person.userId, shiftDate: day.date, shift: day.shift! }, person.displayName)}
-            >
-              <ArrowRightLeft aria-hidden="true" className="size-4" />
-              <span>ย้ายพื้นที่</span>
-            </Button>
-          </>
-        )}
-      </div>
+          )}
+
+          {canSupervisorTeamSlot && day.shift && (
+            <>
+              <Button
+                variant="secondary"
+                size={size}
+                aria-label={`เพิ่มเวลาที่ขาด ${person.displayName} ${dateText}`}
+                onClick={() => view.openTeamSlot('missing-time', { userId: person.userId, shiftDate: day.date, shift: day.shift! }, person.displayName)}
+              >
+                <Clock3 aria-hidden="true" className="size-4" />
+                <span>เพิ่มเวลาที่ขาด</span>
+              </Button>
+              <Button
+                variant="secondary"
+                size={size}
+                aria-label={`ย้ายพื้นที่ระหว่างกะ ${person.displayName} ${dateText}`}
+                onClick={() => view.openTeamSlot('transfer', { userId: person.userId, shiftDate: day.date, shift: day.shift! }, person.displayName)}
+              >
+                <ArrowRightLeft aria-hidden="true" className="size-4" />
+                <span>ย้ายพื้นที่</span>
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {day.edit?.corrections.length ? (
         <details className="border-t border-border pt-2">

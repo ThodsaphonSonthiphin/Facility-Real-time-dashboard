@@ -422,4 +422,40 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     expect(within(contextBar).getByRole('button', { name: /แก้ไขแผนย้อนหลัง.*16\/11\/2026/ })).toBeInTheDocument();
     expect(within(contextBar).queryByRole('button', { name: /แก้เฉพาะวันที่/ })).not.toBeInTheDocument();
   });
+
+  it('shows supervisor team actions and schedule history inside ScheduleContextBar when eligible', async () => {
+    pinClock();
+    const editablePerson = person();
+    editablePerson.days = editablePerson.days.map((d) => ({
+      ...d,
+      edit: {
+        canChange: true,
+        weeklyOff: false,
+        baselineDayOff: false,
+        areaRevision: '0',
+        breakRevision: '0',
+        areas: [{ id: 4, label: 'AR04' }],
+        corrections: d.date === '2026-11-17'
+          ? [{
+              field: 'breakGroup',
+              before: 1,
+              after: 2,
+              reason: 'ปรับกลุ่มพักตามหน้างาน',
+              at: '2026-11-17T02:00:00Z',
+              actor: 'หัวหน้าทดสอบ',
+            }]
+          : [],
+      },
+    }));
+    serveWeeks('supervisor', () => week({ rows: [editablePerson] }));
+    const { user } = await renderApp('/schedule-management');
+
+    const contextBar = await screen.findByRole('region', { name: 'คำสั่งตามบริบทของช่องที่เลือก' });
+    expect(within(contextBar).getByRole('button', { name: /เพิ่มเวลาที่ขาด แม่บ้านทดสอบ 17\/11\/2026/ })).toBeInTheDocument();
+    expect(within(contextBar).getByRole('button', { name: /ย้ายพื้นที่ระหว่างกะ แม่บ้านทดสอบ 17\/11\/2026/ })).toBeInTheDocument();
+
+    const historySummary = within(contextBar).getByText('ประวัติการแก้ไขแผน', { selector: 'summary span' });
+    await user.click(historySummary);
+    expect(await within(contextBar).findByText('เหตุผล · ปรับกลุ่มพักตามหน้างาน')).toBeVisible();
+  });
 });
