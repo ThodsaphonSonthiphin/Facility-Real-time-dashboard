@@ -6,7 +6,6 @@ import { PageEmpty, PageLoading } from '../../../shared/components/PageState';
 import { Button } from '../../../shared/components/Button';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { useBuildingNames, buildingText } from '../../../shared/api/buildingNames';
-import { BuildingSummary } from '../BuildingSummary';
 import { DASHBOARD_HUB } from '../dashboardApi';
 import { Filters } from '../Filters';
 import { PointTile } from '../PointTile';
@@ -39,7 +38,6 @@ export function LegacyDashboardPage() {
         </p>
       </header>
       {data && <Filters points={data} />}
-      {data && data.length > 0 && <BuildingSummary points={data} />}
       {!isLoading && <MoreInfo summary="วิธีอ่านการ์ด">{RULES_NOTE}</MoreInfo>}
       {isLoading && <PageLoading lines={3}>กำลังโหลดจุด...</PageLoading>}
       {error && (

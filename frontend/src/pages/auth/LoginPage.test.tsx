@@ -175,13 +175,13 @@ describe('AdminLoginPage (D0)', () => {
     await user.click(screen.getByRole('button', { name: 'ซ่อน' }));
     expect(password).toHaveAttribute('type', 'password');
     await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
-    await screen.findByRole('heading', { name: 'สถานะจุดทำความสะอาด' });
+    await screen.findByRole('heading', { name: 'ภาพรวมการดูแลพื้นที่' });
     expect(server.calls.find((call) => call.path === '/api/auth/login')?.body).toEqual({
       username: 'admin', password: 'example-password-for-test',
     });
   });
 
-  it('the Admin logs in with username and password and lands on the Dashboard', async () => {
+  it('the Admin logs in with username and password and lands on Overview (facility-0224)', async () => {
     const server = fakeServer({ ...noSession, 'POST /api/auth/login': () => authAnswer('admin') });
     const { user, router } = await renderApp('/login/admin');
 
@@ -189,8 +189,8 @@ describe('AdminLoginPage (D0)', () => {
     await user.type(screen.getByLabelText('รหัสผ่าน'), 'not-a-real-password');
     await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
 
-    expect(await screen.findByRole('heading', { name: 'สถานะจุดทำความสะอาด' })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/dashboard');
+    expect(await screen.findByRole('heading', { name: 'ภาพรวมการดูแลพื้นที่' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/admin/overview');
     expect(server.calls.find((c) => c.path === '/api/auth/login')?.body).toEqual({
       username: 'admin',
       password: 'not-a-real-password',

@@ -146,13 +146,14 @@ describe('routing (facility-0026, 0058)', () => {
     expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
   });
 
-  it('keeps default Admin home at Dashboard while allowing Admin on lazy /admin/overview without eager import', async () => {
+  it('sets default Admin home to lazy /admin/overview without eager import (facility-0224)', async () => {
     fakeServer({
       'POST /api/auth/refresh': () => authAnswer('admin'),
       'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': () => ({ status: 200, body: overviewFixture() }),
     });
     const { router } = await renderApp('/');
-    expect(router.state.location.pathname).toBe('/dashboard');
+    expect(router.state.location.pathname).toBe('/admin/overview');
     const overviewRoute = pagesOf('admin').find((route) => route.path === 'admin/overview');
     expect(overviewRoute?.lazy).toEqual(expect.any(Function));
     expect(overviewRoute?.element).toBeUndefined();

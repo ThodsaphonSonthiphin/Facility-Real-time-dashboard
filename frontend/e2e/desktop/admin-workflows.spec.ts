@@ -16,9 +16,9 @@ test('Admin password visibility, failed login and session restoration @smoke', a
   await expect(page.getByRole('alert')).toBeVisible();
   await password.fill(admin.password);
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/admin\/overview$/);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'สถานะจุดทำความสะอาด' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'ภาพรวมการดูแลพื้นที่' })).toBeVisible();
 });
 
 test('Building create, duplicate refusal, edit, typed confirmation, deactivate and reactivate', async ({ page }) => {

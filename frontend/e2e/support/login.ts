@@ -9,11 +9,11 @@ export async function loginAsEmployee(page: Page, who: Pick<Employee, 'employeeI
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
 }
 
-/** The Admin login; an Admin's home is D1 (facility-0058). */
+/** The Admin login; an Admin's home is Overview (facility-0224). */
 export async function loginAsAdmin(page: Page): Promise<void> {
   await page.goto('/login/admin');
   await page.getByLabel('ชื่อผู้ใช้').fill(admin.username);
   await page.getByLabel('รหัสผ่าน').fill(admin.password);
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/admin\/overview$/);
 }

@@ -46,10 +46,13 @@ test('Admin navigation keeps its geometry while alert counts load at phone, narr
   }
 });
 
-test('an Admin lands on D1 and sees AR01', async ({ page }) => {
+test('an Admin lands on Overview and opens slim D1 to see AR01 (facility-0224)', async ({ page }) => {
   await loginAsAdmin(page);
+  await expect(page.getByRole('heading', { name: 'ภาพรวมการดูแลพื้นที่' })).toBeVisible();
+  await page.goto('/dashboard');
   await expect(page.getByRole('heading', { name: 'สถานะจุดทำความสะอาด' })).toBeVisible();
   await expectAreaShown(page);
+  await expect(page.getByRole('heading', { name: 'สถานะพื้นที่ (ตามตึก)' })).toBeHidden();
 });
 
 test.describe('on a narrow window (half a laptop screen)', () => {
@@ -61,6 +64,7 @@ test.describe('on a narrow window (half a laptop screen)', () => {
   test('D1 does not move when the building names arrive', async ({ page }, testInfo) => {
     test.skip(!measuresLayoutShift, 'Layout shifts are measured with an API only Chromium has');
     await loginAsAdmin(page);
+    await page.goto('/dashboard');
     await expectAreaShown(page);
 
     await recordLayoutShifts(page);
@@ -72,19 +76,16 @@ test.describe('on a narrow window (half a laptop screen)', () => {
       page.waitForResponse('**/api/service-points'),
     ]);
     const nameRequest = page.waitForRequest('**/api/admin/buildings/all');
-    const summary = page.getByRole('table', { name: 'สถานะพื้นที่ (ตามตึก)' });
     try {
       await page.goto('/dashboard');
       for (const response of await initialResponses) expect(response.ok()).toBe(true);
       await nameRequest;
       await expect(page.getByText('กำลังโหลดจุด...')).toBeVisible();
-      await expect(summary).toBeHidden();
     } finally {
       releaseNames();
     }
     await expectAreaShown(page);
     await expect(page.getByLabel('ตึก').getByRole('option')).not.toHaveCount(1);
-    await expect(summary.getByRole('button', { name: /^A · / })).toBeVisible();
 
     const total = await layoutShiftTotal(page);
     await testInfo.attach('layout-shifts', { body: JSON.stringify({ total, entries: await page.evaluate(() => window.e2eLayoutEntries) }, null, 2), contentType: 'application/json' });

@@ -1,6 +1,6 @@
 import type { Role } from '../api/types';
 
-/** facility-0058: each role has its own first page. Only the Admin opens the Dashboard. */
+/** facility-0058, facility-0224: each role has its own first page. Admin lands on Overview. */
 export function homeOf(role: Role): string {
   switch (role) {
     case 'cleaner':
@@ -8,7 +8,7 @@ export function homeOf(role: Role): string {
     case 'supervisor':
       return '/my-building';
     case 'admin':
-      return '/dashboard';
+      return '/admin/overview';
   }
 }
 
