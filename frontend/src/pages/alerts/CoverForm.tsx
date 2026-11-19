@@ -70,7 +70,11 @@ export function CoverForm({ board, row, ahead, onDone, onCancel }: CoverFormProp
       />
       <div className="flex flex-col gap-3">
         {candidates.isLoading && <PageLoading>กำลังโหลดรายชื่อ...</PageLoading>}
-        {candidates.error && <Note tone="error">{getErrorMessage(candidates.error)}</Note>}
+        {candidates.error && (
+          <Note tone="error" onRetry={() => void candidates.refetch()}>
+            {getErrorMessage(candidates.error)}
+          </Note>
+        )}
         {candidates.data && list.length === 0 && <Note tone="info">ไม่มีแม่บ้านกะนี้ที่ทำแทนได้</Note>}
         {list.length > 0 && (
           <CandidateChoices

@@ -1,10 +1,13 @@
+import { ClipboardCheck, Clock, MapPin, RotateCcw } from 'lucide-react';
 import { BuildingSelect } from '../../shared/components/BuildingSelect';
 import { Button } from '../../shared/components/Button';
 import { Select } from '../../shared/components/Field';
+import { KpiCard } from '../../shared/components/KpiCard/KpiCard';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { RangeFields } from '../../shared/components/RangeFields';
+import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { focusRing } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { SummaryTable } from './SummaryTable';
@@ -13,11 +16,24 @@ import { useInspectionSummaryPage } from './useInspectionSummaryPage';
 /** facility-0100: coverage information, never a score or ranking. */
 export function InspectionSummaryPage() {
   const page = useInspectionSummaryPage();
+  const totals = page.rows.reduce(
+    (acc, row) => ({
+      inspections: acc.inspections + row.inspections,
+      notInspected: acc.notInspected + row.notInspected,
+      gpsFlagged: acc.gpsFlagged + row.gpsFlagged,
+      reworks: acc.reworks + row.reworks,
+    }),
+    { inspections: 0, notInspected: 0, gpsFlagged: 0, reworks: 0 },
+  );
+
   return (
     <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">สรุปการตรวจ</h1>
+          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
+            <ClipboardCheck aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+            สรุปการตรวจ
+          </h1>
           <span className="text-text-2">การตรวจงานของหัวหน้าแต่ละคน ตามช่วงวันที่เลือก</span>
         </div>
         <div className="flex max-w-full flex-wrap items-center gap-3">
@@ -43,6 +59,14 @@ export function InspectionSummaryPage() {
       <Note tone="info">
         <span>ตัวเลขใช้ดูว่าการตรวจครอบคลุมหรือไม่ <strong>ระบบไม่ให้คะแนนหรือจัดอันดับหัวหน้า</strong></span>
       </Note>
+      {page.summary && (
+        <section aria-label="สรุปตัวเลขการตรวจ" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard label="ตรวจแล้วทั้งหมด" value={totals.inspections} unit="ครั้ง" icon={ClipboardCheck} tone="blue" />
+          <KpiCard label="ส่งแล้วไม่ได้ตรวจ" value={totals.notInspected} unit="รอบ" icon={Clock} tone="amber" />
+          <KpiCard label="ตรวจไกลป้าย" value={totals.gpsFlagged} unit="ครั้ง" icon={MapPin} tone="amber" />
+          <KpiCard label="ให้แก้ไข" value={totals.reworks} unit="ครั้ง" icon={RotateCcw} tone="red" />
+        </section>
+      )}
       {page.isFetching && !page.summary && <PageLoading lines={3} />}
       {page.error && <Note tone="error" onRetry={() => void page.refetch()}>{getErrorMessage(page.error)}</Note>}
       {page.summary && <SummaryTable key={page.tableKey} rows={page.rows} filteredShift={Boolean(page.shift)} />}
@@ -55,11 +79,11 @@ export function InspectionSummaryPage() {
         </summary>
         <div className="flex flex-col gap-3 pt-2">
           <span className="text-xs text-text-2">{page.rangeLine}</span>
-          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+          <FilterToolbar label="ตัวกรองเพิ่มเติม" className="items-end justify-start">
             <RangeFields value={page.texts} onChange={page.setTexts} onEnter={page.show} />
             <Button size="desk" onClick={page.show}>แสดง</Button>
             <BuildingSelect value={page.buildingId} onChange={page.selectBuilding} />
-          </div>
+          </FilterToolbar>
           {page.problem && <Note tone="error">{page.problem}</Note>}
         </div>
       </details>

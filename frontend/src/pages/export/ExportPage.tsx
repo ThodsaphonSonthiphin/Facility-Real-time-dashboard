@@ -3,6 +3,7 @@ import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
+import { SurfacePanel } from '../../shared/components/SurfacePanel';
 import { focusRing } from '../../shared/components/styles';
 import { ExportBuildings } from './ExportBuildings';
 import { exportSets, setDetail, setSummary, setTitle } from './exportRules';
@@ -13,12 +14,15 @@ export function ExportPage() {
   return (
     <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">ส่งออก Excel</h1>
+        <h1 className="flex items-center gap-2.5 text-2xl font-bold">
+          <FileSpreadsheet aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+          ส่งออก Excel
+        </h1>
         <span className="text-text-2">เลือกข้อมูล วันที่ และตึกที่ต้องการ แล้วกด “ดาวน์โหลด Excel”</span>
       </header>
       {/* The approved summary column is 280px; no theme width token matches this page-specific layout. */}
       <div className="grid min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
+        <SurfacePanel className="min-w-0">
           <section className={sectionClass} aria-labelledby="export-sets">
             <h2 id="export-sets" className={titleClass}>1. ชุดข้อมูล</h2>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -84,7 +88,7 @@ export function ExportPage() {
             )}
             {page.missingBuilding && <Note tone="error">ไม่พบตึกที่เลือก กรุณาเลือกตึกใหม่</Note>}
           </section>
-          <section className="flex flex-col gap-4 p-6" aria-label="ดาวน์โหลดไฟล์">
+          <section className="flex flex-col gap-4 p-4 sm:p-6" aria-label="ดาวน์โหลดไฟล์">
             <div className="flex items-start gap-3 rounded-md border border-overdue-border bg-overdue-bg p-4">
               <ShieldAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-overdue" />
               <p>
@@ -118,9 +122,9 @@ export function ExportPage() {
               </Note>
             )}
           </section>
-        </div>
+        </SurfacePanel>
         <aside
-          className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-6"
+          className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:p-6 lg:sticky lg:top-6"
           aria-labelledby="export-summary"
         >
           <h2 id="export-summary" className="flex items-center gap-2 text-base font-bold">
@@ -145,5 +149,5 @@ export function ExportPage() {
   );
 }
 
-const sectionClass = 'flex flex-col gap-4 border-b border-border p-6';
+const sectionClass = 'flex flex-col gap-4 border-b border-border p-4 sm:p-6';
 const titleClass = 'text-base font-bold';

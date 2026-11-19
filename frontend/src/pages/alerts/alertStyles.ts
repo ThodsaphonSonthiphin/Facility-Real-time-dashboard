@@ -1,5 +1,5 @@
 /** D3's three boxes (the design file's Alerts): a white box whose head is its own band, the rows reaching its edges. */
-export const panelClass = 'flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface';
+export const panelClass = 'flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface';
 export const panelHeadClass = 'flex flex-wrap items-center justify-between gap-3 border-b border-border p-4';
 export const panelTitleClass = 'flex items-center gap-2 text-lg font-semibold';
 

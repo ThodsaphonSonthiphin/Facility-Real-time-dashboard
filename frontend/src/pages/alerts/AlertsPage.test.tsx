@@ -224,4 +224,16 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
     );
     expectBehindMoreInfo('รายการคนทำแทนยังไม่แสดงการตรวจแทนตึกของหัวหน้า', 'เกี่ยวกับหน้านี้');
   });
+
+  it('shows real KPI summary cards from boardNow and alerts.data', async () => {
+    serve();
+    await renderApp('/admin/alerts');
+    await screen.findByRole('row', { name: /สแกนผิดพื้นที่/ });
+
+    const kpis = screen.getByRole('region', { name: 'สรุปสถานะและเตือน' });
+    expect(within(kpis).getByText('พื้นที่ที่ยังไม่มีคน')).toBeInTheDocument();
+    expect(within(kpis).getByText('คนทำแทนกะนี้')).toBeInTheDocument();
+    expect(within(kpis).getByText('เตือนที่ยังไม่ได้คุย')).toBeInTheDocument();
+    expect(within(kpis).getByText('คุยแล้ว (วันนี้)')).toBeInTheDocument();
+  });
 });

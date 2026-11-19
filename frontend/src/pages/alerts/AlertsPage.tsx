@@ -4,7 +4,8 @@ import { useGetAlertsQuery } from '../../shared/api/alertListApi';
 import { useGetAttendanceBoardQuery } from '../../shared/api/attendanceBoardApi';
 import { livePoll } from '../../shared/api/baseApi';
 import type { Shift } from '../../shared/api/types';
-import { Ban, Clock, MapPin, TriangleAlert, type LucideIcon } from 'lucide-react';
+import { ArrowRightLeft, Ban, Check, Clock, MapPin, TriangleAlert, UserX, type LucideIcon } from 'lucide-react';
+import { KpiCard } from '../../shared/components/KpiCard/KpiCard';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
@@ -83,11 +84,20 @@ export function AlertsPage() {
       open && open.areaId === areaId && open.shiftDate === shiftDate && open.shift === shift ? null : open,
     );
   const yesterday = addDays(today, -1);
+  const emptyOrUncoveredCount = boardNow
+    ? boardNow.rows.filter((row) => (ahead ? row.covers.length === 0 : row.state === 'Empty')).length
+    : undefined;
+  const coversCount = boardNow ? boardNow.rows.reduce((sum, row) => sum + row.covers.length, 0) : undefined;
+  const openAlertsCount = alerts.data ? list.filter((alert) => !alert.reviewed).length : undefined;
+  const reviewedAlertsCount = alerts.data ? list.filter((alert) => alert.reviewed).length : undefined;
 
   return (
     <main className="flex flex-col gap-6 text-sm text-text">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">รายการที่ขึ้นเตือน</h1>
+        <h1 className="flex items-center gap-2.5 text-2xl font-bold">
+          <TriangleAlert aria-hidden="true" className="size-6 shrink-0 text-overdue" />
+          รายการที่ขึ้นเตือน
+        </h1>
         {/* As tall as its words before the board comes, so nothing under it moves */}
         <span className="min-h-5 text-text-2">
           {`พื้นที่ที่ยังไม่มีคน คนทำแทน และการสแกนที่ต้องตาม${
@@ -97,11 +107,42 @@ export function AlertsPage() {
           }`}
         </span>
       </header>
+      <section aria-label="สรุปสถานะและเตือน" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label={ahead ? 'พื้นที่ยังไม่มีคนทำแทน' : 'พื้นที่ที่ยังไม่มีคน'}
+          value={emptyOrUncoveredCount ?? '–'}
+          unit="พื้นที่"
+          icon={UserX}
+          tone="amber"
+        />
+        <KpiCard
+          label={ahead ? 'คนทำแทนกะที่เลือก' : 'คนทำแทนกะนี้'}
+          value={coversCount ?? '–'}
+          unit="คน"
+          icon={ArrowRightLeft}
+          tone="purple"
+        />
+        <KpiCard
+          label="เตือนที่ยังไม่ได้คุย"
+          value={openAlertsCount ?? '–'}
+          unit="รายการ"
+          icon={TriangleAlert}
+          tone="red"
+        />
+        <KpiCard
+          label={`คุยแล้ว (${day === 'today' ? 'วันนี้' : 'เมื่อวาน'})`}
+          value={reviewedAlertsCount ?? '–'}
+          unit="รายการ"
+          icon={Check}
+          tone="green"
+        />
+      </section>
       {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
       <div className="flex flex-wrap items-stretch gap-6">
         <EmptyAreas
           board={boardNow}
           error={board.error}
+          onRetry={() => void board.refetch()}
           slots={slots}
           slot={aheadSlot ?? current}
           ahead={ahead}

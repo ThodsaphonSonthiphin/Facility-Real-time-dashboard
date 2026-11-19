@@ -242,7 +242,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     const before = summaryGets(server).length;
     await user.selectOptions(screen.getByRole('combobox', { name: 'กะ' }), 'Day');
     expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual(['หัวหน้าทดสอบ', 'หัวหน้าตึกบี']);
-    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /รายละเอียดของ/ })).not.toBeInTheDocument();
     await user.selectOptions(screen.getByRole('combobox', { name: 'กะ' }), 'Night');
     expect(screen.getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual(['หัวหน้ากะดึก']);
     expect(cellsOf('หัวหน้ากะดึก')[1]).toBe('41');
@@ -288,4 +288,17 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     expect(summaryGets(server)).toHaveLength(0);
   });
 
+  it('shows non-ranking coverage KPI summary cards and FilterToolbar for additional filters', async () => {
+    serve();
+    await renderApp('/admin/inspection-summary');
+    await screen.findByText('หัวหน้าทดสอบ');
+
+    const kpis = screen.getByRole('region', { name: 'สรุปตัวเลขการตรวจ' });
+    expect(within(kpis).getByText('ตรวจแล้วทั้งหมด')).toBeInTheDocument();
+    expect(within(kpis).getByText('ส่งแล้วไม่ได้ตรวจ')).toBeInTheDocument();
+    expect(within(kpis).getByText('ตรวจไกลป้าย')).toBeInTheDocument();
+    expect(within(kpis).getByText('ให้แก้ไข')).toBeInTheDocument();
+    expect(within(kpis).queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'ตัวกรองเพิ่มเติม' })).toBeInTheDocument();
+  });
 });

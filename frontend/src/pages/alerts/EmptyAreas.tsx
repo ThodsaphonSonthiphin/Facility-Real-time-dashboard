@@ -15,6 +15,7 @@ import { countClass, countTones, panelClass, panelHeadClass, panelTitleClass } f
 interface EmptyAreasProps {
   board?: AttendanceBoard;
   error?: unknown;
+  onRetry?: () => void;
   /** The shifts the Admin may pick, the one on the clock first (facility-0075). */
   slots: CoverSlot[];
   /** The shift picked. */
@@ -33,7 +34,7 @@ interface EmptyAreasProps {
  * Cleaner, so the Admin can cover a known absence before leaving (facility-0075, 0084). The search only narrows the rows
  * on screen.
  */
-export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, onChoose, children }: EmptyAreasProps) {
+export function EmptyAreas({ board, error, onRetry, slots, slot, ahead, onSlot, onChoose, children }: EmptyAreasProps) {
   const [search, setSearch] = useState('');
   const rows = board ? board.rows.filter((row) => ahead || row.state === 'Empty') : [];
   const shown = rows.filter((row) => matchesSearch(row, search));
@@ -72,7 +73,9 @@ export function EmptyAreas({ board, error, slots, slot, ahead, onSlot, onChoose,
       </div>
       {error != null && (
         <div className="p-4">
-          <Note tone="error">{getErrorMessage(error)}</Note>
+          <Note tone="error" onRetry={onRetry}>
+            {getErrorMessage(error)}
+          </Note>
         </div>
       )}
       {board && !ahead && rows.length === 0 && (

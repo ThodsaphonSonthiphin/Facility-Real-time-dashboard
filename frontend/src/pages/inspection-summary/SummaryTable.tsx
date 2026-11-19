@@ -13,7 +13,7 @@ export function SummaryTable(props: SummaryTableProps) {
   const table = useSummaryTable(props);
   if (table.rows.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-surface">
+      <div className="rounded-xl border border-border bg-surface">
         <PageEmpty title={props.filteredShift ? 'ไม่มีหัวหน้าที่เปิดใช้งานในกะที่เลือก' : 'ไม่มีหัวหน้าที่เปิดใช้งานในตึกที่เลือก'}>
           เลือกตึกอื่นหรือทั้งสองกะเพื่อดูทุกคน
         </PageEmpty>

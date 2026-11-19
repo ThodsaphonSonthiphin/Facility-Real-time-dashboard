@@ -427,4 +427,44 @@ describe('covers ahead on the alert page (D3, facility-0075, 0084)', () => {
     expect(await screen.findByRole('region', { name: named('พื้นที่ที่ยังไม่มีคน', 2) })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'วันและกะ' })).toHaveValue('2026-10-17:Day');
   });
+
+  it('retries a failed attendance board request in EmptyAreas', async () => {
+    let calls = 0;
+    serveAhead({
+      'GET /api/admin/attendance': () => {
+        calls++;
+        return calls === 1
+          ? { status: 500, body: { message: 'โหลดตารางกะไม่สำเร็จ' } }
+          : { status: 200, body: attendanceBoard() };
+      },
+    });
+    const { user } = await renderApp('/admin/alerts');
+
+    const emptyBox = screen.getByRole('region', { name: /พื้นที่ที่ยังไม่มีคน/ });
+    expect(await within(emptyBox).findByRole('alert')).toHaveTextContent('โหลดตารางกะไม่สำเร็จ');
+    await user.click(within(emptyBox).getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('region', { name: named('พื้นที่ที่ยังไม่มีคน', 2) })).toBeInTheDocument();
+  });
+
+  it('retries a failed cover candidates request in CoverForm', async () => {
+    let calls = 0;
+    serveAhead({
+      'GET /api/admin/cover-assignments/candidates': () => {
+        calls++;
+        return calls === 1
+          ? { status: 500, body: { message: 'โหลดรายชื่อไม่สำเร็จ' } }
+          : { status: 200, body: candidates };
+      },
+    });
+    const { user } = await renderApp('/admin/alerts');
+    const emptyBox = await screen.findByRole('region', { name: named('พื้นที่ที่ยังไม่มีคน', 2) });
+
+    await user.click(within(emptyBox).getByRole('button', { name: 'มอบหมายคนทำแทน AR12' }));
+    const dialog = screen.getByRole('dialog', { name: 'มอบหมายคนทำแทน AR12 Area สิบสอง' });
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('โหลดรายชื่อไม่สำเร็จ');
+
+    await user.click(within(dialog).getByRole('button', { name: 'ลองอีกครั้ง' }));
+    expect(await within(dialog).findByRole('radiogroup', { name: 'แม่บ้านที่ทำแทน' })).toBeInTheDocument();
+  });
 });
