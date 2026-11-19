@@ -439,10 +439,13 @@ describe('OverviewPage', () => {
     fakeServer({
       ...adminSession,
       'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
-      'GET /api/admin/overview/areas': () => ({ status: 200, body: closedFixture }),
+      'GET /api/admin/overview/areas': (req) => {
+        const group = (new URLSearchParams(req.search).get('group') as OverviewAreaList['group'] | null) ?? 'notEntered';
+        return { status: 200, body: { ...closedFixture, group } };
+      },
     });
 
-    await renderApp('/admin/overview?date=2026-11-04&shift=Day&group=notEntered&page=1');
+    const { user } = await renderApp('/admin/overview?date=2026-11-04&shift=Day&group=notEntered&page=1');
 
     // Exact CONTEXT.md metric headings
     expect(await screen.findByRole('heading', { name: 'พื้นที่ที่ลงเวลาเข้าแล้ว' })).toBeVisible();
@@ -455,12 +458,19 @@ describe('OverviewPage', () => {
     expect(screen.getByRole('button', { name: 'มีงานต้องแก้ 3 พื้นที่' })).toBeVisible();
 
     // Closed history uses ผลรอบในกะนี้ and has no current-live wording
+    expect(screen.getByText(/· ปิดรับข้อมูลแล้ว/)).toBeVisible();
+    expect(screen.queryByText(/กำลังทำงาน/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'ผลรอบในกะนี้' })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'รอบที่ผ่านมาในกะนี้' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'พื้นที่ที่ต้องตามตอนนี้' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'รายการที่พบในกะที่เลือก' })).toBeVisible();
     expect(screen.getByText('รอบที่ไม่ได้แก้ (Rework)')).toBeVisible();
     expect(screen.getByText('รอบที่ถูกเปลี่ยนหรือยกเลิก')).toBeVisible();
+
+    // Clicking rework switches only to rework while keeping inspected count distinct
+    await user.click(screen.getByRole('button', { name: 'มีงานต้องแก้ 3 พื้นที่' }));
+    expect(await screen.findByRole('region', { name: 'พื้นที่ที่มีงานต้องแก้' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'ตรวจครบแล้ว 60 พื้นที่' })).toBeVisible();
   });
 
   it('derives destination views by group, renders every missed round link when multiple exist, and supports building comparison click', async () => {
@@ -489,6 +499,23 @@ describe('OverviewPage', () => {
               group: 'missedCleaning',
               total: base.summary.groups.missedCleaning,
               rows: [multiRoundRow],
+            }),
+          };
+        }
+        if (group === 'missedInspection') {
+          return {
+            status: 200,
+            body: overviewFixture({
+              group: 'missedInspection',
+              total: base.summary.groups.missedInspection,
+              rows: [
+                makeAreaRow(88, {
+                  code: 'AR88',
+                  name: 'พื้นที่ตรวจหลายรอบ',
+                  reasons: ['entered', 'missedInspection'],
+                  roundKeys: ['key-1', 'key-2'],
+                }),
+              ],
             }),
           };
         }
@@ -522,6 +549,20 @@ describe('OverviewPage', () => {
     const round2 = within(results).getByRole('link', { name: /รอบ 09:00–10:00/ });
     expect(round1).toHaveAttribute('href', expect.stringContaining('roundKey=2026-11-04%3ADay%3A77%3A7701%3A12%3A0700-0800'));
     expect(round2).toHaveAttribute('href', expect.stringContaining('roundKey=2026-11-04%3ADay%3A77%3A7701%3A13%3A0900-1000'));
+
+    // Also verify missedInspection with generic roundKeys ['key-1', 'key-2'] renders distinct per-round links
+    await user.click(screen.getByRole('button', { name: /พื้นที่ที่มีรอบไม่ได้ตรวจ/ }));
+    const inspResults = await screen.findByRole('region', { name: 'พื้นที่ที่มีรอบไม่ได้ตรวจ' });
+    const inspAreaLink = within(inspResults).getByRole('link', { name: 'ดูพื้นที่ AR88 พื้นที่ตรวจหลายรอบ' });
+    expect(inspAreaLink).toHaveAttribute('href', expect.stringContaining('view=inspection'));
+    expect(inspAreaLink.getAttribute('href')).not.toContain('roundKey=');
+    const key1Link = within(inspResults).getByRole('link', { name: /รอบที่ 1/ });
+    const key2Link = within(inspResults).getByRole('link', { name: /รอบที่ 2/ });
+    expect(key1Link).toHaveAttribute('href', expect.stringContaining('view=inspection'));
+    expect(key1Link).toHaveAttribute('href', expect.stringContaining('roundKey=key-1'));
+    expect(key2Link).toHaveAttribute('href', expect.stringContaining('view=inspection'));
+    expect(key2Link).toHaveAttribute('href', expect.stringContaining('roundKey=key-2'));
+    expect(key1Link.getAttribute('href')).not.toBe(key2Link.getAttribute('href'));
 
     // Click Building B inspection cell -> sets building=2, group=inspected, page=1
     await user.click(screen.getByRole('button', { name: /ตึก B · ตึกทดลอง B ตรวจครบ/ }));
@@ -604,6 +645,47 @@ describe('OverviewPage', () => {
     } finally {
       stopListening();
     }
+  });
+
+  it('shows error without stale data from previous context when switching to a new context fails', async () => {
+    const base = overviewFixture();
+    let failEntered = true;
+    fakeServer({
+      ...adminSession,
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': (req) => {
+        const params = new URLSearchParams(req.search);
+        if (params.get('group') === 'entered') {
+          if (failEntered) {
+            return { status: 500, body: { message: 'โหลดกลุ่มใหม่ไม่สำเร็จ' } };
+          }
+          return {
+            status: 200,
+            body: overviewFixture({
+              group: 'entered',
+              total: base.summary.groups.entered,
+              rows: [makeAreaRow(202, { code: 'AR202', name: 'พื้นที่เข้าใหม่' })],
+            }),
+          };
+        }
+        return { status: 200, body: base };
+      },
+    });
+
+    const { user } = await renderApp('/admin/overview?date=2026-11-04&shift=Day&group=notEntered&page=1');
+    const initialResults = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' });
+    const firstRowText = within(initialResults).getAllByRole('link', { name: /ดูพื้นที่/ })[0].getAttribute('aria-label')!;
+
+    await user.click(screen.getByRole('button', { name: 'ลงเวลาแล้ว 90 พื้นที่' }));
+    expect(await screen.findByText('โหลดกลุ่มใหม่ไม่สำเร็จ')).toBeVisible();
+    expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: firstRowText })).not.toBeInTheDocument();
+
+    failEntered = false;
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+    expect(await screen.findByRole('region', { name: 'พื้นที่ที่ลงเวลาแล้ว' })).toBeVisible();
+    expect(screen.getByText(/AR202/)).toBeVisible();
   });
 
   it('shows visible date/shift/building labels and server range help instead of mockup dates', async () => {
