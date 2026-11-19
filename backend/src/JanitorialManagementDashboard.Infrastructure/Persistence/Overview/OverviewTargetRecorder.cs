@@ -94,8 +94,11 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
             TargetRevision? winner = null;
             foreach (var row in groups[i])
             {
-                var image = ReadChecked(row);
-                if (image == null)
+                var image = ReadIntegrityChecked(row);
+                if (image?.CoverageGapFromUtc is { } from && from < effectiveAt)
+                    structuralGaps.Add((from, effectiveAt));
+
+                if (image == null || !IsReplayable(image, effectiveAt))
                 {
                     winner = null;
                     logger.LogWarning("Could not read overview target revision {RevisionId}", row.Id);
@@ -103,8 +106,6 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
                 }
 
                 winner = new(row.Id, effectiveAt, image);
-                if (image.CoverageGapFromUtc is { } from && from < effectiveAt)
-                    structuralGaps.Add((from, effectiveAt));
             }
 
             if (winner != null)
@@ -115,7 +116,7 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
         return (revisions.ToArray(), unreadable.ToArray(), structuralGaps.ToArray());
     }
 
-    private static TargetImage? ReadChecked(OverviewTargetRevision row)
+    private static TargetImage? ReadIntegrityChecked(OverviewTargetRevision row)
     {
         if (row.SchemaVersion != CurrentSchemaVersion)
             return null;
@@ -124,15 +125,8 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
         {
             var image = JsonSerializer.Deserialize<TargetImage>(row.Payload, ReadOptions);
             return image != null && image.SchemaVersion == row.SchemaVersion
-                && image.Policy is
-                {
-                    OpensMinutesBeforeShift: >= 0 and <= AttendanceSettings.MaxReceivingOffsetMinutes,
-                    ClosesMinutesAfterShift: >= 0 and <= AttendanceSettings.MaxReceivingOffsetMinutes,
-                }
-                && !(image.CaptureStartedAtUtc > row.EffectiveAt || image.CoverageGapFromUtc > row.EffectiveAt)
                 // MySQL's JSON column may reorder properties and whitespace on storage.
                 && (HashMatches(row, JsonSerializer.Serialize(image)) || HashMatches(row, row.Payload))
-                && IsStructurallyValid(image)
                 ? image : null;
         }
         catch (JsonException)
@@ -140,6 +134,15 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
             return null;
         }
     }
+
+    private static bool IsReplayable(TargetImage image, DateTime effectiveAt) =>
+        image.Policy is
+        {
+            OpensMinutesBeforeShift: >= 0 and <= AttendanceSettings.MaxReceivingOffsetMinutes,
+            ClosesMinutesAfterShift: >= 0 and <= AttendanceSettings.MaxReceivingOffsetMinutes,
+        }
+        && !(image.CaptureStartedAtUtc > effectiveAt || image.CoverageGapFromUtc > effectiveAt)
+        && IsStructurallyValid(image);
 
     private static bool IsStructurallyValid(TargetImage image)
     {

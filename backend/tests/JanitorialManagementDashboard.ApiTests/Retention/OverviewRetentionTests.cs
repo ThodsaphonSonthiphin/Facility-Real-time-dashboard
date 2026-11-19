@@ -192,6 +192,57 @@ public class OverviewRetentionTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Invalid_target_reference_preserves_only_an_integrity_checked_gap(bool hashMatches)
+    {
+        using var factory = new JanitorialApiFactory();
+        var slot = new ShiftSlot(new(2026, 11, 3), Shift.Day);
+        var start = ShiftCalendar.StartUtc(slot);
+        var end = ShiftCalendar.EndUtc(slot);
+        var baseline = new TargetImage(1, new(60, 0), [], [], [], [], CaptureStarted);
+        var early = Revision(1, start.AddDays(-1), baseline);
+        var gapFrom = end.AddHours(-1);
+        var changedAt = end.AddHours(1);
+        var invalid = Revision(2, changedAt, baseline with
+        {
+            Points = [new(1, 99, null, "Synthetic Point", 0, true, CaptureStarted)],
+            CoverageGapFromUtc = gapFrom,
+        });
+        if (!hashMatches)
+            invalid.PayloadHash = early.PayloadHash;
+
+        var decoded = OverviewTargetRecorder.DecodeForRead([early, invalid],
+            factory.Services.GetRequiredService<ILogger<OverviewRetentionTests>>());
+        Assert.Equal(early.Id, Assert.Single(decoded.Revisions).Id);
+        Assert.Equal((changedAt, DateTime.MaxValue), Assert.Single(decoded.UnreadableIntervals));
+        var warning = Assert.Single(factory.Logs.Lines, line => line.Message.Contains("Could not read overview target revision"));
+        Assert.Equal("Could not read overview target revision 2", warning.Message);
+
+        var readAt = changedAt.AddHours(1);
+        var coverage = DetailCoverage.FromRetention(readAt, Settings, CaptureStarted, true, decoded.StructuralGaps)
+            with { UnreadableTargetIntervals = decoded.UnreadableIntervals };
+        var moment = OverviewTime.Evaluate(slot, readAt, decoded.Revisions);
+        Assert.Equal("closed", moment.Phase);
+        Assert.Equal(end, moment.EvaluationUtc);
+
+        var availability = OverviewAvailability.Calculate(slot, moment, OverviewTimeline.Build(slot, moment, decoded.Revisions), coverage);
+
+        Assert.Equal(hashMatches ? "partial" : "complete", availability.Work.State);
+        Assert.Equal(hashMatches ? "partial" : "complete", availability.History.State);
+        if (hashMatches)
+        {
+            Assert.Equal((gapFrom, changedAt), Assert.Single(decoded.StructuralGaps));
+            Assert.Contains("targetCoverageGap", availability.Work.Reasons);
+            Assert.Contains("targetCoverageGap", availability.History.Reasons);
+        }
+        else
+        {
+            Assert.Empty(decoded.StructuralGaps);
+        }
+    }
+
+    [Theory]
     [InlineData("windowShift")]
     [InlineData("areaShiftPattern")]
     [InlineData("missingBuilding")]
