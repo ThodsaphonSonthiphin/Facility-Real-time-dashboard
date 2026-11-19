@@ -35,6 +35,7 @@ test.describe('scheduling attendance', () => {
       await expect(manager).toHaveURL(/\/my-building$/);
       await openSchedule(manager, '/schedule-management', fixture.weekStart);
       const date = formatShiftDate(fixture.shiftDate);
+      await manager.getByRole('button', { name: new RegExp(`^เลือกช่อง ${fixture.leave.name} .* ${date}$`) }).click();
       await manager.getByRole('button', { name: new RegExp(`^(แก้เฉพาะวันที่|แก้ไขแผนย้อนหลัง) ${fixture.leave.name} ${date}$`) }).click();
       const dialog = manager.getByRole('dialog');
       await dialog.getByLabel('รายการที่จะแก้').selectOption('leave');

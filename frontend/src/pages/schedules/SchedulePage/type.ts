@@ -45,7 +45,14 @@ export interface SchedulePageView {
   openTeamSlot: (kind: 'missing-time' | 'transfer', slot: TeamSlotArgs, displayName: string) => void;
   closeEditor: () => void;
   dateAction: (day: ScheduleDay) => string;
+  businessDate: string;
+  selectedCell: SelectedScheduleCell | null;
+  selectCell: (userId: number, date: string) => void;
+}
 
+export interface SelectedScheduleCell {
+  userId: number;
+  date: string;
 }
 
 /** One table row of the management view: a person and the days the reader may see (seven, or fewer mid-week). */

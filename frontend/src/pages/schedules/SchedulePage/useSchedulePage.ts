@@ -13,7 +13,7 @@ import {
   type ScheduleSelection,
 } from '../scheduleRules';
 import { selectionChosen } from '../scheduleViewSlice';
-import type { OpenScheduleEditor, SchedulePageView } from './type';
+import type { OpenScheduleEditor, SchedulePageView, SelectedScheduleCell } from './type';
 
 /**
  * One schedule page's state, for the three roles that read a week (ADR facility-0180–0186, 0218; spec §4, §12).
@@ -29,6 +29,7 @@ import type { OpenScheduleEditor, SchedulePageView } from './type';
 export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   const dispatch = useAppDispatch();
   const [editor, setEditor] = useState<OpenScheduleEditor | null>(null);
+  const [selectedCellState, setSelectedCellState] = useState<SelectedScheduleCell | null>(null);
   const phone = useSyncExternalStore(subscribeToPhoneWidth, isPhoneWidth);
   const restored = useAppSelector((state: RootState) => state.scheduleView.views[role]);
   const changedAt = useAppSelector((state: RootState) => state.scheduleView.changedAt);
@@ -77,6 +78,24 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   });
   const manage = role !== 'cleaner' && latest && !editor;
   const businessDate = clockSlot(new Date()).startDate;
+
+  const selectedCell: SelectedScheduleCell | null = (() => {
+    if (!week || week.rows.length === 0) return null;
+    if (selectedCellState) {
+      const matchedRow = week.rows.find((row) => row.userId === selectedCellState.userId);
+      if (matchedRow?.days.some((day) => day.date === selectedCellState.date)) {
+        return selectedCellState;
+      }
+    }
+    const firstRow = week.rows[0];
+    const defaultDay = firstRow.days.find((day) => day.date === businessDate) ?? firstRow.days[0];
+    return defaultDay ? { userId: firstRow.userId, date: defaultDay.date } : null;
+  })();
+
+  const selectCell = useCallback((userId: number, date: string) => {
+    setSelectedCellState({ userId, date });
+  }, []);
+
   return {
     role,
     week,
@@ -84,6 +103,9 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     standaloneTransfers,
     phone,
     editor,
+    businessDate,
+    selectedCell,
+    selectCell,
     openRelief: (kind) => {
       if (manage && latest.destinations?.length) setEditor({ kind, week: latest });
     },

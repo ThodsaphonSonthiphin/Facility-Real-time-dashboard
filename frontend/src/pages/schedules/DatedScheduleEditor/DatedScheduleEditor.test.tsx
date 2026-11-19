@@ -10,6 +10,7 @@ afterEach(() => vi.useRealTimers());
 
 it('labels a past plan correction and requires a reason before submitting the dated payload', async () => {
   const app = await editorApp();
+  await app.user.click(await screen.findByRole('button', { name: /เลือกช่อง แม่บ้านทดสอบ .* 16\/11\/2026/ }));
   await app.user.click(await screen.findByRole('button', { name: /แก้ไขแผนย้อนหลัง.*16\/11/ }));
   const drawer = within(await screen.findByRole('dialog', { name: 'แก้ไขแผนย้อนหลัง' }));
   await app.user.selectOptions(drawer.getByLabelText('พื้นที่เฉพาะวันนี้'), '5');
@@ -28,6 +29,7 @@ it('records Thai night-shift leave using UTC instants and the date the shift sta
   const person = fixturePerson();
   person.days[1].shift = 'Night';
   const app = await editorApp({ week: () => fixtureWeek([person]) });
+  await app.user.click(await screen.findByRole('button', { name: /เลือกช่อง แม่บ้านทดสอบ .* 17\/11\/2026/ }));
   await app.user.click(await screen.findByRole('button', { name: /แก้เฉพาะวันที่.*17\/11/ }));
   const drawer = within(await screen.findByRole('dialog', { name: 'แก้ตารางเฉพาะวันที่' }));
   await app.user.selectOptions(drawer.getByLabelText('รายการที่จะแก้'), 'leave');

@@ -333,3 +333,93 @@ describe("a week's filters and the authority behind them (facility-0184, 0185, 0
     expect(reads()[0].search).not.toContain('shift=');
   });
 });
+
+describe('clean roster, KPI summary cards, and contextual action bar', () => {
+  it('renders 4 KPI summary cards from real week data for businessDate', async () => {
+    pinClock();
+    serveWeeks('admin', () =>
+      week({
+        rows: [
+          person({ userId: 7, displayName: 'แม่บ้านหนึ่ง' }),
+          person({
+            userId: 8,
+            displayName: 'แม่บ้านสอง',
+            days: [
+              day('2026-11-16'),
+              day('2026-11-17', 'leave'),
+              day('2026-11-18'),
+              day('2026-11-19'),
+              day('2026-11-20'),
+              day('2026-11-21'),
+              day('2026-11-22'),
+            ],
+          }),
+          person({
+            userId: 9,
+            displayName: 'แม่บ้านสาม',
+            days: [
+              day('2026-11-16'),
+              day('2026-11-17', 'unset'),
+              day('2026-11-18'),
+              day('2026-11-19'),
+              day('2026-11-20'),
+              day('2026-11-21'),
+              day('2026-11-22'),
+            ],
+          }),
+        ],
+      }),
+    );
+    await renderApp('/admin/schedules');
+
+    const summary = await screen.findByRole('list', { name: 'สรุปตารางงาน' });
+    const items = within(summary).getAllByRole('listitem');
+    expect(items).toHaveLength(4);
+    expect(items[0]).toHaveTextContent('พนักงานทั้งหมด');
+    expect(items[0]).toHaveTextContent('3');
+    expect(items[1]).toHaveTextContent('กำลังทำงาน');
+    expect(items[1]).toHaveTextContent('1');
+    expect(items[2]).toHaveTextContent('ลา / หยุด');
+    expect(items[2]).toHaveTextContent('1');
+    expect(items[3]).toHaveTextContent('มีปัญหา / รอจัดคนแทน');
+    expect(items[3]).toHaveTextContent('1');
+  });
+
+  it('defaults selection to first row and businessDate, keeps table cells clean, and switches context bar between today and past', async () => {
+    pinClock();
+    const editablePerson = person();
+    editablePerson.days = editablePerson.days.map((d) => ({
+      ...d,
+      edit: {
+        canChange: true,
+        weeklyOff: false,
+        baselineDayOff: false,
+        areaRevision: '0',
+        breakRevision: '0',
+        areas: [{ id: 4, label: 'AR04' }],
+        corrections: [],
+      },
+    }));
+    serveWeeks('admin', () => week({ rows: [editablePerson] }));
+    const { user } = await renderApp('/admin/schedules');
+
+    const table = await screen.findByRole('table', { name: 'ตารางงานรายสัปดาห์' });
+    expect(within(table).queryByRole('button', { name: /แก้เฉพาะวันที่|แก้ไขแผนย้อนหลัง|แก้ตารางประจำ/ })).not.toBeInTheDocument();
+
+    const todayCell = within(table).getByRole('button', { name: /เลือกช่อง แม่บ้านทดสอบ .* 17\/11\/2026/ });
+    const pastCell = within(table).getByRole('button', { name: /เลือกช่อง แม่บ้านทดสอบ .* 16\/11\/2026/ });
+    expect(todayCell).toHaveAttribute('aria-pressed', 'true');
+    expect(pastCell).toHaveAttribute('aria-pressed', 'false');
+
+    const contextBar = screen.getByRole('region', { name: 'คำสั่งตามบริบทของช่องที่เลือก' });
+    expect(within(contextBar).getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
+    expect(within(contextBar).getByRole('button', { name: /แก้เฉพาะวันที่.*17\/11\/2026/ })).toBeInTheDocument();
+    expect(within(contextBar).getByRole('button', { name: 'แก้ตารางประจำ' })).toBeInTheDocument();
+
+    await user.click(pastCell);
+    expect(pastCell).toHaveAttribute('aria-pressed', 'true');
+    expect(todayCell).toHaveAttribute('aria-pressed', 'false');
+    expect(within(contextBar).getByRole('button', { name: /แก้ไขแผนย้อนหลัง.*16\/11\/2026/ })).toBeInTheDocument();
+    expect(within(contextBar).queryByRole('button', { name: /แก้เฉพาะวันที่/ })).not.toBeInTheDocument();
+  });
+});

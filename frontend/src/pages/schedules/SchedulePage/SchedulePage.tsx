@@ -1,7 +1,8 @@
-import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { ArrowRightLeft, Building2, CalendarDays, ChevronLeft, ChevronRight, RefreshCw, UserCheck, UserPlus } from 'lucide-react';
 import { lazy, Suspense } from 'react';
-import type { ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
+import type { ScheduleAvailability, ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
 import type { Shift } from '../../../shared/api/types';
+import { AvatarBadge } from '../../../shared/components/AvatarBadge/AvatarBadge';
 import { Badge } from '../../../shared/components/Badge';
 import { BuildingSelect } from '../../../shared/components/BuildingSelect';
 import { Button } from '../../../shared/components/Button';
@@ -12,12 +13,14 @@ import { Note } from '../../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../../shared/components/PhoneScreen';
 import { Segmented } from '../../../shared/components/Segmented';
-import { focusRing } from '../../../shared/components/styles';
+import { FilterToolbar } from '../../../shared/components/SurfacePanel';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { shiftShortLabel, transferStateLabel } from '../../../shared/utils/labels';
 import { formatDayTime, formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { availabilityLabel, cellLabel, sourceLabel, weekIsUnavailable, weekRangeLabel, type ScheduleRole } from '../scheduleRules';
 import type { TeamSlotArgs } from '../schedulesApi';
+import { ScheduleContextBar } from './ScheduleContextBar';
+import { ScheduleSummaryCards } from './ScheduleSummaryCards';
 import { useSchedulePage } from './useSchedulePage';
 
 const WeeklyOffEditor = lazy(() => import('../WeeklyOffEditor/WeeklyOffEditor')
@@ -36,8 +39,6 @@ const TeamMissingTime = lazy(() => import('../TeamMissingTime/TeamMissingTime')
   .then((module) => ({ default: module.TeamMissingTime })));
 const TransferInstruction = lazy(() => import('../TransferInstruction/TransferInstruction')
   .then((module) => ({ default: module.TransferInstruction })));
-const ScheduleHistory = lazy(() => import('../ScheduleHistory/ScheduleHistory')
-  .then((module) => ({ default: module.ScheduleHistory })));
 
 /**
  * ADR facility-0176–0179; spec §4: one week per role. A Cleaner opens their own week from My Work, a Supervisor
@@ -90,6 +91,13 @@ export function AdminSchedulesPage() {
 
 function ManagementWeekPage({ role }: { role: ScheduleRole }) {
   const view = useSchedulePage(role);
+  const canEditWeekly = Boolean(view.latest?.rows.some((row) => row.days.some((day) => day.edit?.canChange)));
+  const hasDestinations = Boolean(view.latest?.destinations?.length);
+  const canEditRelief = Boolean(
+    view.latest?.rows.some((row) => row.cleanerKind === 'Relief' && row.days.some((day) => day.edit?.canChange)),
+  );
+  const showSummary = Boolean(view.week && view.week.availability !== 'empty' && !weekIsUnavailable(view.week));
+
   return (
     <main className="flex min-w-0 flex-col gap-6 text-base text-text sm:text-sm">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -97,8 +105,8 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
           <h1 className="text-2xl font-bold">{role === 'admin' ? 'ตารางงาน' : 'จัดตารางงาน'}</h1>
           <span className="text-text-2">
             {role === 'admin'
-              ? 'ดูตารางของทุกตึกและทุกกะ ใครแก้อะไรดูได้ที่ประวัติการแก้ไข'
-              : 'ตารางรวมของตึกและกะที่คุณรับผิดชอบ'}
+              ? 'ดูตารางของทุกตึกและทุกกะ คลิกช่องวันเพื่อดูคำสั่งจัดการรายคน'
+              : 'ตารางรวมของตึกและกะที่คุณรับผิดชอบ คลิกช่องวันเพื่อจัดการรายคน'}
           </span>
         </div>
         <Button variant="secondary" size="desk" disabled={view.isFetching} onClick={view.refetch}>
@@ -106,24 +114,44 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
           {view.isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
         </Button>
       </header>
-      <WeekControls view={view} />
-      {role === 'admin' && <AdminFilters view={view} />}
-      {view.latest?.rows.some((row) => row.days.some((day) => day.edit?.canChange)) && (
-        <div>
-          <Button variant="primary" size={view.phone ? 'main' : 'desk'} onClick={view.openWeekly}>จัดวันหยุดรายสัปดาห์</Button>
-        </div>
-      )}
-      {!!view.latest?.destinations?.length && (
-        <div className="flex flex-wrap gap-2" aria-label="จัดงานสแปร์">
-          {view.latest.rows.some((row) => row.cleanerKind === 'Relief' && row.days.some((day) => day.edit?.canChange)) && (
-            <>
-              <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-roster')}>จัดตารางประจำสแปร์</Button>
-              <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-assignment')}>มอบหมายงานสแปร์</Button>
-            </>
-          )}
-          <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-loan')}>บันทึกการยืมสแปร์</Button>
-        </div>
-      )}
+
+      <FilterToolbar
+        label="ตัวกรองและคำสั่งตารางงาน"
+        actions={(canEditWeekly || hasDestinations) ? (
+          <div className="flex flex-wrap items-center gap-2" aria-label="จัดงานสแปร์">
+            {canEditWeekly && (
+              <Button variant="primary" size={view.phone ? 'main' : 'desk'} onClick={view.openWeekly}>
+                <CalendarDays aria-hidden="true" className="size-4" />
+                <span>จัดวันหยุดรายสัปดาห์</span>
+              </Button>
+            )}
+            {hasDestinations && canEditRelief && (
+              <>
+                <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-roster')}>
+                  <Building2 aria-hidden="true" className="size-4" />
+                  <span>จัดตารางประจำสแปร์</span>
+                </Button>
+                <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-assignment')}>
+                  <UserCheck aria-hidden="true" className="size-4" />
+                  <span>มอบหมายงานสแปร์</span>
+                </Button>
+              </>
+            )}
+            {hasDestinations && (
+              <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-loan')}>
+                <UserPlus aria-hidden="true" className="size-4" />
+                <span>บันทึกการยืมสแปร์</span>
+              </Button>
+            )}
+          </div>
+        ) : undefined}
+      >
+        <WeekControls view={view} />
+        {role === 'admin' && <AdminFilters view={view} />}
+      </FilterToolbar>
+
+      {showSummary && view.week && <ScheduleSummaryCards week={view.week} businessDate={view.businessDate} />}
+
       <WeekBody view={view} />
       {view.week && <ReliefDuties week={view.week} view={view} />}
       {role === 'supervisor' && <RelatedTransfers view={view} />}
@@ -171,16 +199,19 @@ function OpenEditor({ view }: { view: ReturnType<typeof useSchedulePage> }) {
 function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typeof useSchedulePage> }) {
   if (!week.relief.length) return null;
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
-      <h2 className="text-lg font-semibold">งานสแปร์ที่บันทึก</h2>
+    <section className="space-y-3 rounded-xl border border-border bg-surface p-4">
+      <div className="flex items-center gap-2">
+        <UserCheck aria-hidden="true" className="size-4 text-accent" />
+        <h2 className="text-lg font-semibold">งานสแปร์ที่บันทึก</h2>
+      </div>
       <ul className="space-y-2">
         {week.relief.map((duty) => (
-          <li key={duty.id} className="space-y-1 rounded-md border border-border p-3">
+          <li key={duty.id} className="space-y-1 rounded-lg border border-border bg-surface-2/40 p-3">
             <p className="font-semibold">{duty.displayName} · {formatShiftDate(duty.shiftDate)} · {shiftShortLabel[duty.shift]}</p>
             <p>ตึก {duty.destinationBuildingCode} · {duty.areaCode} · กลุ่มพัก {duty.breakGroup ?? 'ยังไม่กำหนด'}</p>
             <p className="text-text-2">ตึกต้นทาง {duty.sourceBuildingCode}{duty.sourceSupervisorName && ` · ${duty.sourceSupervisorName}`}</p>
             {duty.replacedDisplayName && <p>แทน {duty.replacedDisplayName}</p>}
-            {duty.agreementReported && <p>ผู้บันทึกยืนยันว่าตกลงกับตึกต้นทางนอกเว็บแล้ว</p>}
+            {duty.agreementReported && <p className="text-text-2">ผู้บันทึกยืนยันว่าตกลงกับตึกต้นทางนอกเว็บแล้ว</p>}
             {!duty.isCancelled && (
               <TeamSlotActions view={view} displayName={duty.displayName}
                 slot={{ userId: duty.userId, shiftDate: duty.shiftDate, shift: duty.shift }} />
@@ -196,7 +227,7 @@ function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typ
 /** The Admin's filters (0184): every building in the shift on the clock, and any shift they choose. */
 function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   return (
-    <section className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+    <div className="flex flex-wrap items-end gap-3">
       <div className="min-w-0 max-w-full">
         <BuildingSelect value={view.selection.buildingId} onChange={view.chooseBuilding} />
       </div>
@@ -210,7 +241,7 @@ function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
         ]}
         onChange={(value) => view.chooseShift(value === '' ? undefined : value)}
       />
-    </section>
+    </div>
   );
 }
 
@@ -302,71 +333,91 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
   const week = view.week!;
   const dates = datesOf(week);
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-surface">
-      <HorizontalScrollArea label="ตารางงานรายสัปดาห์" leadingOverlayWidth={140}>
-        <table aria-label="ตารางงานรายสัปดาห์" className="w-full min-w-180 border-separate border-spacing-0">
-          <thead className="bg-surface-2 text-xs font-semibold text-text-2">
-            <tr>
-              <th scope="col" className="sticky left-0 z-20 w-35 min-w-35 border-r border-border bg-surface-2 px-3 py-2.5 text-left">
-                {view.role === 'admin' ? 'พนักงาน' : 'แม่บ้าน'}
-              </th>
-              {dates.map((date) => (
-                <th key={date} className="px-3 py-2.5 text-left">
-                  <span className="block">{formatWeekday(date)}</span>
-                  <span className="block">{formatShiftDate(date).slice(0, 5)}</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {week.rows.map((person) => (
-              <tr key={person.userId}>
-                <th scope="row" className="sticky left-0 z-10 w-35 min-w-35 border-t border-r border-border bg-surface px-3 py-2.5 text-left font-semibold">
-                  <span className="block">{person.displayName}</span>
-                  <span className="block text-text-2">{kindLabel[person.cleanerKind]}</span>
-                  {person.cleanerKind === 'Relief' && person.homeBuildingCode && (
-                    <span className="block text-text-2">ตึกประจำ: {person.homeBuildingCode}</span>
-                  )}
-                  {person.cleanerKind === 'Regular' && !person.hasWeeklyChoice
-                    && person.days.some((day) => day.edit) && <Badge kind="edited">ยังไม่กำหนดวันหยุด</Badge>}
-                  {view.latest && person.cleanerKind === 'Regular' && person.days.some((day) => day.edit?.canChange) && (
-                    <Button variant="link" size={view.phone ? 'phone' : 'desk'} onClick={() => view.openBaseline(person)}>
-                      แก้ตารางประจำ
-                    </Button>
-                  )}
+    <div className="flex flex-col gap-4">
+      <section className="overflow-hidden rounded-xl border border-border bg-surface">
+        <HorizontalScrollArea label="ตารางงานรายสัปดาห์" leadingOverlayWidth={160}>
+          <table aria-label="ตารางงานรายสัปดาห์" className="w-full min-w-180 border-separate border-spacing-0">
+            <thead className="bg-surface-2 text-xs font-semibold text-text-2">
+              <tr>
+                <th scope="col" className="sticky left-0 z-20 w-40 min-w-40 border-r border-border bg-surface-2 px-3 py-2.5 text-left">
+                  {view.role === 'admin' ? 'พนักงาน' : 'แม่บ้าน'}
                 </th>
                 {dates.map((date) => {
-                  const day = person.days.find((one) => one.date === date);
+                  const isToday = date === view.businessDate;
                   return (
-                    <td key={date} className="border-t border-border px-3 py-2.5 align-top">
-                      <Cell day={day} />
-                      {view.latest && day?.edit?.canChange && (
-                        <Button variant="link" size={view.phone ? 'phone' : 'desk'} onClick={() => view.openDated(person, day)}
-                          aria-label={`${view.dateAction(day)} ${person.displayName} ${formatShiftDate(day.date)}`}>
-                          {view.dateAction(day)}
-                        </Button>
-                      )}
-                      {day?.shift && day.area.value != null && (
-                        <TeamSlotActions view={view} displayName={person.displayName}
-                          slot={{ userId: person.userId, shiftDate: day.date, shift: day.shift }} />
-                      )}
-                      {day?.edit?.corrections.length ? (
-                        <details>
-                          <summary className={`min-h-12 cursor-pointer text-accent sm:min-h-9 ${focusRing}`}>ประวัติการแก้ไขแผน</summary>
-                          <Suspense fallback={<p role="status">กำลังโหลดประวัติ...</p>}>
-                            <ScheduleHistory corrections={day.edit.corrections} />
-                          </Suspense>
-                        </details>
-                      ) : null}
-                    </td>
+                    <th
+                      key={date}
+                      className={`px-3 py-2.5 text-left ${isToday ? 'bg-accent-subtle text-accent' : 'bg-surface-2 text-text-2'}`}
+                    >
+                      <span className="block">{formatWeekday(date)}</span>
+                      <span className="block tabular-nums">{formatShiftDate(date).slice(0, 5)}</span>
+                    </th>
                   );
                 })}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </HorizontalScrollArea>
-    </section>
+            </thead>
+            <tbody>
+              {week.rows.map((person) => (
+                <tr key={person.userId}>
+                  <th scope="row" className="sticky left-0 z-10 w-40 min-w-40 border-t border-r border-border bg-surface px-3 py-2.5 text-left align-top font-semibold">
+                    <div className="flex items-start gap-2.5">
+                      <AvatarBadge
+                        name={person.displayName}
+                        tone={person.cleanerKind === 'Relief' ? 'teal' : 'blue'}
+                        size="sm"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-text">{person.displayName}</span>
+                        <span className="block text-xs font-normal text-text-2">{kindLabel[person.cleanerKind]}</span>
+                        {person.cleanerKind === 'Relief' && person.homeBuildingCode && (
+                          <span className="block text-xs font-normal text-text-2">ตึกประจำ: {person.homeBuildingCode}</span>
+                        )}
+                        {person.cleanerKind === 'Regular' && !person.hasWeeklyChoice
+                          && person.days.some((day) => day.edit) && (
+                            <div className="mt-1">
+                              <Badge kind="edited">ยังไม่กำหนดวันหยุด</Badge>
+                            </div>
+                        )}
+                      </div>
+                    </div>
+                  </th>
+                  {dates.map((date) => {
+                    const day = person.days.find((one) => one.date === date);
+                    const isToday = date === view.businessDate;
+                    const isSelected = view.selectedCell?.userId === person.userId && view.selectedCell?.date === date;
+                    return (
+                      <td
+                        key={date}
+                        className={`border-t border-border p-1.5 align-top ${isToday ? 'bg-accent-subtle/30' : ''}`}
+                      >
+                        {day ? (
+                          <button
+                            type="button"
+                            aria-pressed={isSelected}
+                            aria-label={`เลือกช่อง ${person.displayName} ${formatWeekday(day.date)} ${formatShiftDate(day.date)}`}
+                            onClick={() => view.selectCell(person.userId, day.date)}
+                            className={`flex min-h-14 w-full cursor-pointer flex-col items-start gap-1 rounded-lg px-2 py-1.5 text-left transition-colors ${
+                              isSelected
+                                ? 'bg-accent-subtle ring-2 ring-accent ring-inset'
+                                : 'hover:bg-surface-2'
+                            }`}
+                          >
+                            <Cell day={day} />
+                          </button>
+                        ) : (
+                          <span className="block px-2 py-1.5 text-text-3">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </HorizontalScrollArea>
+      </section>
+      <ScheduleContextBar view={view} />
+    </div>
   );
 }
 
@@ -374,11 +425,14 @@ function RelatedTransfers({ view }: { view: ReturnType<typeof useSchedulePage> }
   const slots = view.standaloneTransfers;
   if (!slots.length) return null;
   return (
-    <section aria-labelledby="related-transfers" className="space-y-3 rounded-lg border border-border bg-surface p-4">
-      <h2 id="related-transfers" className="text-lg font-semibold">การย้ายพื้นที่ที่เกี่ยวข้อง</h2>
+    <section aria-labelledby="related-transfers" className="space-y-3 rounded-xl border border-border bg-surface p-4">
+      <div className="flex items-center gap-2">
+        <ArrowRightLeft aria-hidden="true" className="size-4 text-accent" />
+        <h2 id="related-transfers" className="text-lg font-semibold">การย้ายพื้นที่ที่เกี่ยวข้อง</h2>
+      </div>
       <ul className="space-y-2">
         {slots.map((slot) => (
-          <li key={slot.id} className="space-y-1 rounded-md border border-border p-3">
+          <li key={slot.id} className="space-y-1 rounded-lg border border-border bg-surface-2/40 p-3">
             <p className="font-semibold">{slot.displayName} · {formatShiftDate(slot.shiftDate)} · {shiftShortLabel[slot.shift]}</p>
             <p>{slot.fromAreaCode} → {slot.toAreaCode}</p>
             <p className="text-text-2">
@@ -417,16 +471,31 @@ function TeamSlotActions({ view, displayName, slot, canOpenMissingTime = true }:
   );
 }
 
-/** One table cell: its short word, and the Area it works where there is one. A date it may not see says nothing false. */
-function Cell({ day }: { day: ScheduleDay | undefined }) {
-  if (!day) {
-    return <span className="text-text-3">—</span>;
-  }
+const cellPillClass: Record<ScheduleAvailability, string> = {
+  available: 'border-passed-border bg-passed-bg text-passed',
+  leave: 'border-overdue-border bg-overdue-bg text-overdue',
+  'day-off': 'border-idle-border bg-idle-bg text-idle',
+  unset: 'border-rework-border bg-rework-bg text-rework',
+  unavailable: 'border-idle-border bg-surface-2 text-text-2',
+};
+
+/** One table cell: its semantic status pill, area, and break group. */
+function Cell({ day }: { day: ScheduleDay }) {
   return (
-    <span className="flex flex-col gap-0.5">
-      <span className="font-semibold">{cellLabel[day.availability]}</span>
-      {day.area.value != null && <span className="text-xs text-text-2">{`พื้นที่ ${day.area.value}`}</span>}
-    </span>
+    <>
+      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${cellPillClass[day.availability]}`}>
+        {cellLabel[day.availability]}
+      </span>
+      {day.area.value != null && (
+        <span className="text-xs font-medium text-text-2">{`พื้นที่ ${day.area.value}`}</span>
+      )}
+      {day.breakGroup.value != null && (
+        <span className="text-xs text-text-2">{`กลุ่ม ${day.breakGroup.value}`}</span>
+      )}
+      {day.problems.length > 0 && (
+        <span className="text-xs font-semibold text-rework">มีข้อขัดแย้ง</span>
+      )}
+    </>
   );
 }
 
