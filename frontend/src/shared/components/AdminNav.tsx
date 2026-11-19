@@ -50,9 +50,9 @@ const adminGroups = [
 ] as const;
 
 // 40 px items; the chosen one in the accent's light blue, since blue means "can be pressed"
-const linkClass = `flex min-h-12 items-center gap-3 rounded-md px-3 text-sm no-underline lg:min-h-10 ${focusRing}`;
-const idleClass = 'font-medium text-text-3 hover:bg-surface-2';
-const activeClass = 'bg-accent-subtle font-semibold text-accent';
+const linkClass = `flex min-h-12 items-center gap-2.5 rounded-lg px-2.5 text-sm no-underline lg:min-h-10 ${focusRing}`;
+const idleClass = 'font-semibold text-text-3 hover:bg-surface-2';
+const activeClass = 'bg-accent-subtle font-bold text-accent';
 
 export function AdminNav({ mobileDisclosure = false, footer }: { mobileDisclosure?: boolean; footer?: ReactNode }) {
   // plan 11 decision 12: the open alerts, asked every 30 s on every Admin page; no count while unknown or none
@@ -70,14 +70,14 @@ export function AdminNav({ mobileDisclosure = false, footer }: { mobileDisclosur
   }, [location.pathname, location.search]);
 
   const menu = (
-    <nav aria-label="เมนูแอดมิน" className="flex flex-col gap-6 print:hidden">
+    <nav aria-label="เมนูแอดมิน" className="flex flex-col gap-4 print:hidden">
       {adminGroups.map((group) => (
         <div key={group.label} className="flex flex-col gap-0.5">
-          <p id={`menu-${group.label}`} className="px-3 pb-1 text-xs font-semibold text-text-2">
+          <p id={`menu-${group.label}`} className="px-2.5 pb-1 text-xs font-bold text-text-2">
             {group.label}
           </p>
           {/* A row that wraps above the page on a narrow screen, a column in the sidebar from 1024 px */}
-          <ul aria-labelledby={`menu-${group.label}`} className="m-0 grid list-none grid-cols-2 gap-0.5 p-0 lg:grid-cols-1">
+          <ul aria-labelledby={`menu-${group.label}`} className="m-0 grid list-none grid-cols-2 gap-1 p-0 lg:grid-cols-1">
             {group.links.map((link) => (
               <li key={link.to}>
                 <NavLink
@@ -86,7 +86,7 @@ export function AdminNav({ mobileDisclosure = false, footer }: { mobileDisclosur
                   aria-label={link.counted && open > 0 ? `${link.label} (${open})` : undefined}
                   className={({ isActive }) => (isActive ? `${linkClass} ${activeClass}` : `${linkClass} ${idleClass}`)}
                 >
-                  <link.Icon aria-hidden="true" className="size-5 shrink-0" />
+                  <link.Icon aria-hidden="true" className="size-5 shrink-0 lg:size-4" />
                   <span className="flex-1">{link.label}</span>
                   {/* Keep the same badge slot while loading, empty and populated, so the menu never rewraps. */}
                   {link.counted && (
@@ -94,7 +94,7 @@ export function AdminNav({ mobileDisclosure = false, footer }: { mobileDisclosur
                       {open > 0 && (
                         <span
                           title={String(open)}
-                          className="inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-sm bg-rework px-1.5 text-xs font-bold text-on-accent tabular-nums"
+                          className="inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-md bg-rework px-1.5 text-xs font-bold text-on-accent tabular-nums"
                         >
                           {open > 999 ? '999+' : open}
                         </span>
@@ -140,13 +140,13 @@ export function AdminNav({ mobileDisclosure = false, footer }: { mobileDisclosur
   };
 
   return (
-    <div className="relative min-w-0 lg:flex lg:min-h-0 lg:flex-1" onBlur={closeWhenFocusLeaves} onKeyDown={closeOnEscape}>
+    <div className="relative min-w-0 shrink-0 lg:flex lg:min-h-0 lg:flex-1" onBlur={closeWhenFocusLeaves} onKeyDown={closeOnEscape}>
       <button
         ref={menuButton}
         type="button"
         aria-expanded={mobileOpen}
         aria-controls="admin-navigation-panel"
-        className={`inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-md border border-border-control bg-surface px-3 text-sm font-semibold text-accent lg:hidden ${focusRing}`}
+        className={`inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-md border border-border-control bg-surface px-3 text-sm font-semibold whitespace-nowrap text-accent lg:hidden ${focusRing}`}
         onClick={() => setMobileOpen((open) => !open)}
       >
         <Menu aria-hidden="true" className="size-4" />
@@ -157,10 +157,14 @@ export function AdminNav({ mobileDisclosure = false, footer }: { mobileDisclosur
         id="admin-navigation-panel"
         onClick={closeAfterNavigation}
         // The panel is anchored below the small-screen menu button and constrained to the viewport because no width token fits it.
-        className={`${mobileOpen ? 'block' : 'hidden'} absolute right-0 top-full z-40 mt-2 max-h-svh w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-lg border border-border bg-surface p-3 shadow-overlay lg:static lg:z-auto lg:mt-6 lg:flex lg:min-h-0 lg:w-auto lg:max-w-none lg:flex-1 lg:flex-col lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none`}
+        className={`${mobileOpen ? 'block' : 'hidden'} absolute right-0 top-full z-40 mt-2 max-h-svh w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-lg border border-border bg-surface p-3 shadow-overlay lg:static lg:z-auto lg:mt-4 lg:flex lg:min-h-0 lg:w-auto lg:max-w-none lg:flex-1 lg:flex-col lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none`}
       >
         {menu}
-        {footer && <div className="mt-4 border-t border-border px-3 pt-4 text-sm lg:mt-auto">{footer}</div>}
+        {footer && (
+          <div className="mt-4 lg:mt-auto lg:pt-4">
+            <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-sm">{footer}</div>
+          </div>
+        )}
       </div>
     </div>
   );

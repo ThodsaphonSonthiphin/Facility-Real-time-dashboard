@@ -61,19 +61,21 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
 
     return (
       <div className="min-h-svh lg:flex print:block">
-        <aside className="flex flex-col gap-6 border-b border-border bg-surface px-3 py-5 lg:sticky lg:top-0 lg:h-svh lg:w-sidebar lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0 print:hidden">
+        <aside className="flex flex-col border-b border-border bg-surface px-3 py-4 lg:sticky lg:top-0 lg:h-svh lg:w-sidebar lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0 print:hidden">
           <SkipToContent />
           <div className="flex items-center justify-between gap-3 lg:contents">
-            <ProjectLogo compact />
+            <div className="min-w-0 lg:border-b lg:border-border lg:px-2 lg:pt-1 lg:pb-3">
+              <ProjectLogo compact />
+            </div>
             <AdminNav
               mobileDisclosure
               footer={
-                <div className="flex flex-col items-start gap-2">
-                  <span className="font-semibold text-text">{user?.fullName}</span>
+                <div className="flex flex-col items-start gap-1">
+                  <span className="max-w-full font-bold break-words text-text">{user?.fullName}</span>
                   <button
                     type="button"
                     data-tap=""
-                    className={`inline-flex min-h-12 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 font-semibold text-accent hover:text-accent-hover ${focusRing}`}
+                    className={`inline-flex min-h-12 cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-semibold text-accent hover:text-accent-hover lg:min-h-9 ${focusRing}`}
                     onClick={logOut}
                   >
                     <LogOut aria-hidden="true" className="size-4" />

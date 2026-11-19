@@ -54,6 +54,7 @@ export function BuildingSummary({ points }: { points: readonly PointCard[] }) {
   return (
     <SurfacePanel
       title="สถานะพื้นที่ (ตามตึก)"
+      className="shadow-xs"
       actions={
         selectedBuilding !== '' ? (
           <Button variant="link" size="desk" onClick={() => dispatch(buildingChosen(''))}>
@@ -65,7 +66,7 @@ export function BuildingSummary({ points }: { points: readonly PointCard[] }) {
       <Table label="สถานะพื้นที่ (ตามตึก)" framed={false} minWidth="min-w-160">
         <thead>
           <tr>
-            <th scope="col" className="min-w-44">
+            <th scope="col" className="min-w-44 pl-4">
               ตึก
             </th>
             <th scope="col" className={tableCell.num}>
@@ -77,7 +78,7 @@ export function BuildingSummary({ points }: { points: readonly PointCard[] }) {
             <th scope="col" className={tableCell.num}>
               มีปัญหา
             </th>
-            <th scope="col" className="min-w-48">
+            <th scope="col" className="w-60 min-w-48">
               ความคืบหน้า
             </th>
           </tr>
@@ -87,13 +88,13 @@ export function BuildingSummary({ points }: { points: readonly PointCard[] }) {
             const isSelected = selectedBuilding === row.buildingCode;
             return (
               <tr key={row.buildingCode} className={isSelected ? '[&>*]:bg-accent-subtle/50' : undefined}>
-                <th scope="row">
+                <th scope="row" className="py-1.5">
                   <button
                     type="button"
                     data-tap=""
                     aria-pressed={isSelected}
                     onClick={() => dispatch(buildingChosen(isSelected ? '' : row.buildingCode))}
-                    className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-left font-semibold text-accent hover:bg-accent-subtle aria-pressed:bg-accent-subtle aria-pressed:ring-1 aria-pressed:ring-accent ${focusRing}`}
+                    className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md px-1 py-1 text-left font-semibold text-accent hover:bg-accent-subtle aria-pressed:bg-accent-subtle aria-pressed:ring-1 aria-pressed:ring-accent ${focusRing}`}
                   >
                     <span>{buildingText(row.buildingCode, names)}</span>
                     <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
@@ -105,8 +106,8 @@ export function BuildingSummary({ points }: { points: readonly PointCard[] }) {
                   {row.problem}
                 </td>
                 <td>
-                  <div className="flex items-center gap-2.5">
-                    <span aria-hidden="true" className="w-10 text-right font-bold tabular-nums text-text">
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden="true" className="w-10 shrink-0 text-right text-xs font-bold text-text tabular-nums">
                       {row.progress}%
                     </span>
                     <div

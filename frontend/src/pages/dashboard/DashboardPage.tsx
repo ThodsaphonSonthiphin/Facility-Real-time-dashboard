@@ -47,18 +47,16 @@ export function DashboardPage() {
   const quietShown = showAllQuiet ? quiet : quiet.slice(0, QUIET_ROWS);
 
   return (
-    <main className="flex flex-col gap-6 text-sm text-text">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">สถานะจุดทำความสะอาด</h1>
-          {/* Kept as tall as its words before the answer comes, so the cards under it do not move (layout shift) */}
-          <span className="min-h-5 text-text-2">
-            {data ? `${new Set(data.map((point) => point.areaId)).size} พื้นที่ · ${data.length} จุด` : ''}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
+    <main className="flex flex-col gap-5 text-sm text-text">
+      <header className="flex flex-col gap-0.5">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h1 className="text-2xl font-extrabold tracking-tight">สถานะจุดทำความสะอาด</h1>
           <LiveBadge hubKey={DASHBOARD_HUB} />
         </div>
+        {/* Reserve the count line while the query loads so the content below keeps its place. */}
+        <p className="min-h-5 text-text-2">
+          {data ? `${new Set(data.map((point) => point.areaId)).size} พื้นที่ · ${data.length} จุด` : ''}
+        </p>
       </header>
       {data && <Filters points={data} />}
       {data && data.length > 0 && <BuildingSummary points={data} />}

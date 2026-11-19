@@ -26,15 +26,14 @@ const statusIconCircle: Record<PointStatus, string> = {
   OffHours: 'bg-idle-bg text-idle',
 };
 
-/** A status card (the design file's Dashboard): 6/7 per row, circular semantic icon, words, count at 24/700. Pressed = pale blue with a 2 px blue frame. */
-// 13 px / 11 px padding compensates for the 2 px pressed border (vs 1 px resting) so no token fits without layout shift.
+// The inset ring adds the second pressed stroke without changing the card's size.
 const cardClass =
-  'flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-3 text-left ' +
-  'enabled:hover:border-accent aria-pressed:border-2 aria-pressed:border-accent aria-pressed:bg-accent-subtle ' +
-  'aria-pressed:px-[13px] aria-pressed:py-[11px] ' +
+  'flex h-full w-full cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-2 py-3 text-left shadow-xs ' +
+  'sm:max-xl:gap-2.5 sm:max-xl:px-3 enabled:hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent-subtle ' +
+  'aria-pressed:inset-ring-1 aria-pressed:inset-ring-accent ' +
   focusRing;
 
-/** Wireframe D1's filters: the legend as six status cards with counts, then the building and "มีปัญหาที่แจ้ง" (facility-0024). */
+/** Wireframe D1's filters: the status cards with counts, then the building and "มีปัญหาที่แจ้ง" (facility-0024). */
 export function Filters({ points }: { points: PointCard[] }) {
   const filters = useAppSelector((state) => state.dashboard);
   const dispatch = useAppDispatch();
@@ -45,7 +44,8 @@ export function Filters({ points }: { points: PointCard[] }) {
 
   return (
     <>
-      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3 p-0" aria-label="สถานะ">
+      {/* Keep two tracks on narrow screens. At xl, the tighter gutters allow a 130 px track without wrapping the Thai labels. */}
+      <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 md:grid-cols-[repeat(auto-fit,minmax(140px,1fr))] xl:grid-cols-[repeat(auto-fit,minmax(130px,1fr))]" aria-label="สถานะ">
         {legendOrder.map((status) => {
           const Icon = statusIcon[status];
           return (
@@ -57,12 +57,12 @@ export function Filters({ points }: { points: PointCard[] }) {
                 aria-pressed={filters.status === status}
                 onClick={() => dispatch(statusToggled(status))}
               >
-                <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${statusIconCircle[status]}`}>
-                  <Icon aria-hidden="true" className="size-4.5" strokeWidth={2} />
+                <span className={`flex size-8 shrink-0 items-center justify-center rounded-full sm:size-9 ${statusIconCircle[status]}`}>
+                  <Icon aria-hidden="true" className="size-4 sm:size-5" strokeWidth={2} />
                 </span>
                 <span className="min-w-0">
                   <span className={`block text-xs font-semibold ${statusText[status]}`}>{pointStatusLabel[status]}</span>{' '}
-                  <span className="block text-2xl leading-tight font-bold text-text tabular-nums">{counts[status]}</span>
+                  <span className="block text-2xl leading-tight font-extrabold text-text tabular-nums">{counts[status]}</span>
                 </span>
               </button>
             </li>
@@ -70,11 +70,11 @@ export function Filters({ points }: { points: PointCard[] }) {
         })}
       </ul>
       <FilterToolbar label="ตัวกรองจุด">
-        <label className="inline-flex min-w-0 items-center gap-2 font-semibold">
+        <label className="inline-flex w-full min-w-0 items-center gap-2 font-semibold sm:w-auto">
           ตึก
           <Select
             size="desk"
-            className="w-85 max-w-full font-normal text-ellipsis"
+            className="min-w-0 flex-1 font-normal text-ellipsis sm:w-56 sm:flex-none"
             value={filters.buildingCode}
             onChange={(event) => dispatch(buildingChosen(event.target.value))}
           >
@@ -96,7 +96,7 @@ export function Filters({ points }: { points: PointCard[] }) {
           <Wrench aria-hidden="true" className="size-4 text-rework" />
           มีปัญหาที่แจ้ง <span className="font-bold tabular-nums">{issues}</span>
         </button>
-        <label className="relative flex min-w-50 flex-1 basis-56 items-center">
+        <label className="relative flex min-w-0 flex-1 basis-56 items-center">
           <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 size-4 text-text-2" />
           <TextInput
             size="desk"
