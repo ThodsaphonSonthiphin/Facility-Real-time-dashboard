@@ -16,13 +16,15 @@ export function CrashScreen() {
   }, [error]);
 
   return (
-    <main className={statusScreenClass.main}>
-      <CircleX aria-hidden="true" className="size-8 self-center text-rework" />
-      <h1 className={statusScreenClass.title}>เปิดหน้านี้ไม่ได้</h1>
-      <p className="text-text-2">กด “โหลดใหม่” เพื่อลองเปิดหน้านี้อีกครั้ง</p>
-      <Button variant="primary" size="main" onClick={() => window.location.reload()}>
-        โหลดใหม่
-      </Button>
+    <main className={`${statusScreenClass.main} min-h-svh justify-center text-text`}>
+      <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-6">
+        <CircleX aria-hidden="true" className="size-8 self-center text-rework" />
+        <h1 className={statusScreenClass.title}>เปิดหน้านี้ไม่ได้</h1>
+        <p className="text-text-2">กด “โหลดใหม่” เพื่อลองเปิดหน้านี้อีกครั้ง</p>
+        <Button variant="primary" size="main" onClick={() => window.location.reload()}>
+          โหลดใหม่
+        </Button>
+      </div>
     </main>
   );
 }

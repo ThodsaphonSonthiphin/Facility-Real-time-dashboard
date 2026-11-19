@@ -35,9 +35,14 @@ export function useLogin(wrongSecretText: string) {
     submit,
     isLoading,
     errorText: error ? loginErrorText(error, wrongSecretText) : null,
+    credentialInvalid: isStatus(error, 401),
     returnsToPage: from !== undefined,
     redirectTo: user ? (from ? `${from.pathname}${from.search}` : homeOf(user.role)) : null,
   };
+}
+
+function isStatus(error: unknown, code: number): boolean {
+  return typeof error === 'object' && error !== null && (error as { status?: unknown }).status === code;
 }
 
 /** 401 is a wrong ID or secret, or a deactivated account; 429 is the login throttle (facility-0054). */

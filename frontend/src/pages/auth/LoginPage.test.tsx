@@ -33,27 +33,77 @@ describe('LoginPage (M0)', () => {
     expect(await screen.findByRole('heading', { name: 'ตึกของฉัน' })).toBeInTheDocument();
   });
 
-  it('a wrong ID or phone shows the M0 message and stays on the page', async () => {
+  it('a wrong ID or phone shows the M0 message, marks both fields invalid with accessible descriptions, and keeps typed values (UX-04)', async () => {
     fakeServer({ ...noSession, 'POST /api/auth/login': () => ({ status: 401 }) });
     const { user, router } = await renderApp('/login');
 
-    await user.type(screen.getByLabelText('รหัสพนักงาน'), '650001');
-    await user.type(screen.getByLabelText('เบอร์โทรศัพท์'), '0999999999');
+    const employeeInput = screen.getByLabelText('รหัสพนักงาน');
+    const phoneInput = screen.getByLabelText('เบอร์โทรศัพท์');
+    await user.type(employeeInput, '650001');
+    await user.type(phoneInput, '0999999999');
     await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง');
     expect(router.state.location.pathname).toBe('/login');
+    expect(employeeInput).toHaveAttribute('aria-invalid', 'true');
+    expect(phoneInput).toHaveAttribute('aria-invalid', 'true');
+    expect(employeeInput).toHaveAccessibleDescription('รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง เลข 7 หลัก');
+    expect(phoneInput).toHaveAccessibleDescription('รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง เบอร์ที่แจ้งแอดมินไว้ตอนสร้างบัญชี');
+    expect(employeeInput).toHaveValue('650001');
+    expect(phoneInput).toHaveValue('0999999999');
   });
 
-  it('the login throttle (429) asks the person to wait', async () => {
+  it('the login throttle (429) asks the person to wait and leaves both inputs valid (UX-04)', async () => {
     fakeServer({ ...noSession, 'POST /api/auth/login': () => ({ status: 429 }) });
     const { user } = await renderApp('/login');
 
-    await user.type(screen.getByLabelText('รหัสพนักงาน'), '650001');
-    await user.type(screen.getByLabelText('เบอร์โทรศัพท์'), '0999999999');
+    const employeeInput = screen.getByLabelText('รหัสพนักงาน');
+    const phoneInput = screen.getByLabelText('เบอร์โทรศัพท์');
+    await user.type(employeeInput, '650001');
+    await user.type(phoneInput, '0999999999');
     await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('กรอกผิดหลายครั้ง รอสักครู่แล้วลองใหม่');
+    expect(employeeInput).not.toHaveAttribute('aria-invalid');
+    expect(phoneInput).not.toHaveAttribute('aria-invalid');
+    expect(employeeInput).toHaveAccessibleDescription('เลข 7 หลัก');
+    expect(phoneInput).toHaveAccessibleDescription('เบอร์ที่แจ้งแอดมินไว้ตอนสร้างบัญชี');
+    expect(employeeInput).toHaveValue('650001');
+    expect(phoneInput).toHaveValue('0999999999');
+  });
+
+  it('a 503 service outage shows the service error, leaves both inputs valid, and keeps typed values (UX-04)', async () => {
+    fakeServer({ ...noSession, 'POST /api/auth/login': () => ({ status: 503 }) });
+    const { user } = await renderApp('/login');
+
+    const employeeInput = screen.getByLabelText('รหัสพนักงาน');
+    const phoneInput = screen.getByLabelText('เบอร์โทรศัพท์');
+    await user.type(employeeInput, '650001');
+    await user.type(phoneInput, '0999999999');
+    await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่');
+    expect(employeeInput).not.toHaveAttribute('aria-invalid');
+    expect(phoneInput).not.toHaveAttribute('aria-invalid');
+    expect(employeeInput).toHaveValue('650001');
+    expect(phoneInput).toHaveValue('0999999999');
+  });
+
+  it('a network failure shows the connection error and leaves both inputs valid (UX-04)', async () => {
+    fakeServer({ ...noSession, 'POST /api/auth/login': () => Promise.reject(new TypeError('Failed to fetch')) });
+    const { user } = await renderApp('/login');
+
+    const employeeInput = screen.getByLabelText('รหัสพนักงาน');
+    const phoneInput = screen.getByLabelText('เบอร์โทรศัพท์');
+    await user.type(employeeInput, '650001');
+    await user.type(phoneInput, '0999999999');
+    await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('เชื่อมต่อระบบไม่ได้ ตรวจดูสัญญาณอินเทอร์เน็ตแล้วลองอีกครั้ง');
+    expect(employeeInput).not.toHaveAttribute('aria-invalid');
+    expect(phoneInput).not.toHaveAttribute('aria-invalid');
+    expect(employeeInput).toHaveValue('650001');
+    expect(phoneInput).toHaveValue('0999999999');
   });
 
   it('shows the build commit (facility-0068)', async () => {
