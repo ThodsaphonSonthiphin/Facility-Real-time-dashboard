@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -138,6 +139,8 @@ public class OverviewCaptureTests
         var failure = await Save();
         Assert.Equal(HttpStatusCode.ServiceUnavailable, failure.StatusCode);
         Assert.Contains("ลองใหม่", await AdminSetupApi.MessageAsync(failure));
+        Assert.Contains(factory.Logs.Lines, l => l.Message.StartsWith(
+            "Setup history capture failed. Transaction rollback confirmed", StringComparison.Ordinal));
         await factory.WithDbAsync(async db =>
         {
             Assert.Equal(oldName, (await db.ServicePoints.SingleAsync(p => p.Id == id)).Name);
@@ -217,6 +220,69 @@ public class OverviewCaptureTests
         });
         Assert.NotEqual("Changed", Image(revisions[0]).Buildings.Single(b => b.Id == id).Name);
         Assert.Equal("Changed", Image(revisions[1]).Buildings.Single(b => b.Id == id).Name);
+    }
+
+    [Fact]
+    public async Task Backward_clock_rejects_changed_capture_and_restores_setup_audit_and_head()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var now = ThaiClock.At(8, 9, 0);
+        var head = await OverviewTestData.StartHistoryAsync(factory, now);
+        var id = await AdminSetupApi.BuildingIdAsync(factory);
+        var original = Image(Assert.Single(await RevisionsAsync(factory))).Buildings.Single(b => b.Id == id).Name;
+        Task<HttpResponseMessage> Rename(string name) => admin.PutAsJsonAsync($"/api/admin/buildings/{id}", new { name });
+
+        factory.Clock.SetUtcNow(now.AddSeconds(-1));
+        Assert.Equal(HttpStatusCode.OK, (await Rename(original)).StatusCode);
+        var failed = await Rename("Later name");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, failed.StatusCode);
+        Assert.Contains("ลองใหม่", await AdminSetupApi.MessageAsync(failed));
+        await factory.WithDbAsync(async db =>
+        {
+            Assert.Equal(original, (await db.Buildings.SingleAsync(b => b.Id == id)).Name);
+            Assert.Empty(await db.AuditLog.ToListAsync());
+            Assert.Equal(head, (await db.OverviewTargetStates.SingleAsync()).LatestRevisionId);
+            Assert.Equal(head, (await db.OverviewTargetRevisions.SingleAsync()).Id);
+        });
+
+        factory.Clock.SetUtcNow(now.AddTicks(9));
+        Assert.Equal(HttpStatusCode.OK, (await Rename("Later name")).StatusCode);
+        var revisions = await RevisionsAsync(factory);
+        Assert.Equal(2, revisions.Count);
+        Assert.True(revisions[1].Id > head);
+        Assert.Equal(revisions[0].EffectiveAt, revisions[1].EffectiveAt);
+    }
+
+    [Fact]
+    public async Task Capture_and_rollback_failure_returns_retry_and_logs_both_causes()
+    {
+        var revisionFault = new RevisionFault();
+        var rollbackFault = new RollbackFault();
+        using var factory = new JanitorialApiFactory
+        {
+            ConfigureTestServices = services => services.ConfigureDbContext<AppDbContext>(o =>
+                o.AddInterceptors(revisionFault, rollbackFault)),
+        };
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await OverviewTestData.StartHistoryAsync(factory, ThaiClock.At(8, 9, 0));
+        var id = await AdminSetupApi.BuildingIdAsync(factory);
+        revisionFault.Armed = rollbackFault.Armed = true;
+        var failed = await admin.PutAsJsonAsync($"/api/admin/buildings/{id}", new { name = "Changed" });
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, failed.StatusCode);
+        Assert.Contains("ลองใหม่", await AdminSetupApi.MessageAsync(failed));
+        var error = Assert.Single(factory.Logs.Lines, l => l.Message.StartsWith("Setup history capture failed.", StringComparison.Ordinal) &&
+            l.Message.Contains("Synthetic revision write failure") && l.Message.Contains("Synthetic rollback failure"));
+        Assert.Contains("unconfirmed", error.Message);
+    }
+
+    private sealed class RollbackFault : DbTransactionInterceptor
+    {
+        public bool Armed { get; set; }
+
+        public override ValueTask<InterceptionResult> TransactionRollingBackAsync(DbTransaction transaction,
+            TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default) =>
+            Armed ? throw new InvalidOperationException("Synthetic rollback failure") : ValueTask.FromResult(result);
     }
 
     private static Task<List<OverviewTargetRevision>> RevisionsAsync(JanitorialApiFactory factory) =>

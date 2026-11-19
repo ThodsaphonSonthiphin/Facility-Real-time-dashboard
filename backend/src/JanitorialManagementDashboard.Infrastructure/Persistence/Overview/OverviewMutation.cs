@@ -58,6 +58,7 @@ public sealed class OverviewMutationLease : IAsyncDisposable
     private readonly IDbContextTransaction transaction;
     private bool committed;
     private bool disposed;
+    private bool rollbackConfirmed;
 
     internal OverviewMutationLease(AppDbContext db, OverviewTargetRecorder recorder, IDbContextTransaction transaction)
     {
@@ -87,11 +88,17 @@ public sealed class OverviewMutationLease : IAsyncDisposable
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            throw new OverviewCaptureException(ex);
+            // Finish cleanup before unwinding the caller's await using, so a provider error cannot hide
+            // the capture failure from the retry handler. Keep each cause in the server log.
+            List<Exception> failures = [ex];
+            await DisposeAsync(failures);
+            throw new OverviewCaptureException(failures.Count == 1 ? ex : new AggregateException(failures), rollbackConfirmed);
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync() => DisposeAsync(captureFailures: null);
+
+    private async ValueTask DisposeAsync(List<Exception>? captureFailures)
     {
         if (disposed)
             return;
@@ -99,15 +106,38 @@ public sealed class OverviewMutationLease : IAsyncDisposable
         try
         {
             if (!committed)
-                await transaction.RollbackAsync();
+            {
+                try
+                {
+                    await transaction.RollbackAsync();
+                    rollbackConfirmed = true;
+                }
+                finally
+                {
+                    db.ChangeTracker.Clear();
+                }
+            }
+        }
+        catch (Exception ex) when (captureFailures != null)
+        {
+            captureFailures.Add(ex);
         }
         finally
         {
-            if (!committed)
-                db.ChangeTracker.Clear();
-            await transaction.DisposeAsync();
+            try
+            {
+                await transaction.DisposeAsync();
+            }
+            catch (Exception ex) when (captureFailures != null)
+            {
+                captureFailures.Add(ex);
+            }
         }
     }
 }
 
-public sealed class OverviewCaptureException(Exception cause) : Exception("Could not capture overview target history.", cause);
+public sealed class OverviewCaptureException(Exception cause, bool rollbackConfirmed)
+    : Exception("Could not capture overview target history.", cause)
+{
+    public bool RollbackConfirmed { get; } = rollbackConfirmed;
+}

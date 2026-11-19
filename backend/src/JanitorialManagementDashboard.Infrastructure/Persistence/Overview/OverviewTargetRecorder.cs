@@ -50,6 +50,10 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
             return head.Id;
 
         var instant = UtcMicroseconds(clock.GetUtcNow().UtcDateTime);
+        // Replay orders by effective time, then ID. An earlier timestamp cannot supersede the head.
+        if (head != null && instant < head.EffectiveAt)
+            throw new InvalidOperationException("The capture clock is earlier than the latest overview revision.");
+
         image = image with
         {
             CaptureStartedAtUtc = previous?.CaptureStartedAtUtc ?? (head == null ? instant : UtcMicroseconds(head.EffectiveAt)),

@@ -216,7 +216,8 @@ try
         }
         catch (OverviewCaptureException ex)
         {
-            app.Logger.LogError(ex, "Setup save rolled back because overview history could not be captured");
+            app.Logger.LogError(ex, "Setup history capture failed. Transaction rollback {RollbackStatus}",
+                ex.RollbackConfirmed ? "confirmed" : "unconfirmed");
             await ApiResults.Message(StatusCodes.Status503ServiceUnavailable, "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง").ExecuteAsync(context);
         }
     });
