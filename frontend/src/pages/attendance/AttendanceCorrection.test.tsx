@@ -6,7 +6,7 @@ import { baseApi } from '../../shared/api/baseApi';
 import { adminSession, buildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
-import { apiIdle, attendanceBoard, boardEvent, candidates, workingRow } from '../../test/liveFixtures';
+import { apiIdle, attendanceBoard, boardEvent, workingRow } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
 import { overviewDetailFixture } from '../../test/overviewFixtures';
 
@@ -346,85 +346,16 @@ describe('attendance corrections (D2, facility-0051)', () => {
     expect(puts(server)).toHaveLength(1);
   });
 
-  it('no button for an Area with no regular Cleaner', async () => {
+  it('no button for an Area with no regular Cleaner; empty row links to /admin/schedules (facility-0225)', async () => {
     serve();
     await renderApp('/admin/attendance');
     await screen.findByText('แสดง 1–6 จาก 6 พื้นที่');
 
     const row = screen.getAllByRole('row').find((r) => within(r).queryByRole('rowheader')?.textContent?.startsWith('AR09 '));
     expect(row).toBeDefined();
-    // nobody to correct, so no time button; the Area has nobody, so "หาคนทำแทน" is the only one
-    expect(within(row as HTMLElement).getAllByRole('button').map((button) => button.textContent)).toEqual(['หาคนทำแทน']);
-  });
-
-  it('หาคนทำแทน opens the cover Drawer on that Area: pick the Cleaner, see the summary, assign (the design file D2)', async () => {
-    const server = serve({
-      'GET /api/admin/cover-assignments/candidates': () => ({ status: 200, body: candidates }),
-      'POST /api/admin/cover-assignments': () => ({
-        status: 201,
-        body: { id: 72, userId: 21, personName: 'แม่บ้านทดสอบ', areaId: 12, areaCode: 'AR12', shiftDate: '2026-10-15', shift: 'Day', assignedAt: '2026-10-15T03:20:00Z' },
-      }),
-    });
-    const { user } = await renderApp('/admin/attendance');
-
-    await user.click(await screen.findByRole('button', { name: 'หาคนทำแทน AR12' }));
-    const form = screen.getByRole('dialog', { name: 'มอบหมายทำแทน' });
-    expect(within(form).getByRole('combobox', { name: /^วันที่/ })).toHaveValue('2026-10-15');
-    expect(within(form).getByRole('button', { name: 'เช้า 07:00–19:00' })).toHaveAttribute('aria-pressed', 'true');
-    const areas = within(form).getByRole('radiogroup', { name: '2. พื้นที่ที่ต้องมีคนทำแทน' });
-    expect(within(areas).getByRole('radio', { name: /^AR12 Area สิบสอง/ })).toBeChecked();
-    expect(within(areas).getByRole('radio', { name: /^AR12 Area สิบสอง/ }).closest('label')).toHaveTextContent('ยังไม่มีคน');
-
-    await within(form).findByRole('radiogroup', { name: 'แม่บ้านที่จะทำแทน' });
-    await user.click(within(form).getByRole('radio', { name: /^แม่บ้านทดสอบ/ }));
-    expect(within(form).getByText(/จะดูแล 2 พื้นที่ในกะเช้า พฤ\. 15\/10\/2026/)).toBeInTheDocument();
-    await user.click(within(form).getByRole('button', { name: 'มอบหมาย' }));
-
-    expect(await screen.findByText('มอบหมาย แม่บ้านทดสอบ ทำแทน AR12 แล้ว')).toBeInTheDocument();
-    expect(
-      server.calls.filter((call) => call.method === 'POST' && call.path === '/api/admin/cover-assignments').map((call) => call.body),
-    ).toEqual([{ userId: 21, areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }]);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('the main มอบหมายทำแทน opens the Drawer with no Area; a later shift lists its Areas and asks its candidates', async () => {
-    const server = serve({ 'GET /api/admin/cover-assignments/candidates': () => ({ status: 200, body: candidates }) });
-    const { user } = await renderApp('/admin/attendance');
-
-    await user.click(await screen.findByRole('button', { name: 'มอบหมายทำแทน' }));
-    const form = screen.getByRole('dialog', { name: 'มอบหมายทำแทน' });
-    expect(within(form).getByText('เลือกพื้นที่ก่อน แล้วรายชื่อแม่บ้านที่ทำแทนได้จะขึ้นที่นี่')).toBeInTheDocument();
-    expect(within(form).getByRole('button', { name: 'มอบหมาย' })).toBeDisabled();
-
-    await user.selectOptions(within(form).getByRole('combobox', { name: /^วันที่/ }), '2026-10-16');
-    await user.click(await within(form).findByRole('radio', { name: /^AR09/ }));
-    await within(form).findByRole('radiogroup', { name: 'แม่บ้านที่จะทำแทน' });
-
-    expect(server.calls.filter((call) => call.path === '/api/admin/cover-assignments/candidates').map((call) => call.search)).toEqual([
-      '?areaId=9&shiftDate=2026-10-16&shift=Day',
-    ]);
-  });
-
-  it('an Area that already has a cover is warned about: the new one is added, the old one is cancelled from the list', async () => {
-    const server = serve({
-      'GET /api/admin/cover-assignments/candidates': () => ({ status: 200, body: candidates }),
-      'DELETE /api/admin/cover-assignments/71': () => ({ status: 204 }),
-    });
-    const { user } = await renderApp('/admin/attendance');
-
-    await user.click(await screen.findByRole('button', { name: 'มอบหมายทำแทน' }));
-    const form = screen.getByRole('dialog', { name: 'มอบหมายทำแทน' });
-    await user.click(await within(form).findByRole('radio', { name: /^AR02/ }));
-
-    expect(within(form).getByText('AR02 มีคนทำแทนอยู่แล้ว')).toBeInTheDocument();
-    expect(within(form).getByText(/พื้นที่นี้จะมีคนทำแทน 2 คน/)).toBeInTheDocument();
-    expect(within(form).getByRole('heading', { name: 'ทำแทนที่มอบหมายไว้แล้วกะนี้ · 1' })).toBeInTheDocument();
-    await user.click(within(form).getByRole('button', { name: 'ยกเลิกการทำแทนของ แม่บ้านที่อื่น ที่ AR02' }));
-    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'ยกเลิกการทำแทน' }));
-
-    await waitFor(() =>
-      expect(server.calls.some((call) => call.method === 'DELETE' && call.path === '/api/admin/cover-assignments/71')).toBe(true),
-    );
+    expect(within(row as HTMLElement).queryAllByRole('button')).toHaveLength(0);
+    expect(within(row as HTMLElement).getByRole('link', { name: 'ไปจัดคนแทนที่ตารางงาน' })).toHaveAttribute('href', '/admin/schedules');
+    expect(screen.queryByRole('button', { name: 'มอบหมายทำแทน' })).not.toBeInTheDocument();
   });
 
   it('a link from a missing Shift-Out alert opens the form on that Cleaner and event; closing it leaves the address clean', async () => {
@@ -668,7 +599,7 @@ describe('Overview Attendance actions', () => {
     act(() => { store.dispatch(baseApi.internalActions.onFocus()); });
 
     expect(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'มอบหมายทำแทน' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'มอบหมายทำแทน' })).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('กำลังตรวจข้อมูลกะปัจจุบัน...')).not.toBeInTheDocument();
     expect(boardCalls(server).length).toBeGreaterThan(failedReads);
@@ -694,39 +625,6 @@ describe('Overview Attendance actions', () => {
     expect(boardCalls(server).length).toBeGreaterThan(boardBefore);
     await waitFor(() => expect(detailCalls()).toHaveLength(3));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(scopedUrl);
-  });
-
-  it('locks the cover drawer to the selected Area and slot and refreshes Overview after the assignment', async () => {
-    const server = serveScoped({
-      'GET /api/admin/attendance': () => ({
-        status: 200, body: attendanceBoard([scopedRow, workingRow], { shiftDate: '2026-11-04' }),
-      }),
-      'GET /api/admin/cover-assignments/candidates': () => ({ status: 200, body: candidates }),
-      'POST /api/admin/cover-assignments': () => ({
-        status: 200,
-        body: {
-          id: 501, userId: 25, personName: 'แม่บ้านที่อื่น', areaId: 91, areaCode: 'AR91',
-          shiftDate: '2026-11-04', shift: 'Day', assignedAt: '2026-11-04T02:00:00Z',
-        },
-      }),
-    });
-    const { router, user } = await renderApp(scopedUrl);
-    const detailCalls = () => server.calls.filter((call) => call.path === '/api/admin/overview/areas/91');
-    // Wait for the initial read and the connection's catch-up before checking the save's invalidation.
-    await waitFor(() => expect(detailCalls()).toHaveLength(2));
-    await user.click(await screen.findByRole('button', { name: 'มอบหมายทำแทน' }));
-    const drawer = await screen.findByRole('dialog', { name: 'มอบหมายทำแทน' });
-    expect(within(drawer).getByText('กะเช้า พ. 04/11/2026 · AR91 พื้นที่ทดลอง 91')).toBeVisible();
-    expect(within(drawer).queryByRole('combobox', { name: 'วันที่' })).not.toBeInTheDocument();
-    expect(within(drawer).queryByRole('radiogroup', { name: /พื้นที่ที่ต้องมีคนทำแทน/ })).not.toBeInTheDocument();
-    await within(drawer).findByRole('radiogroup', { name: 'แม่บ้านที่จะทำแทน' });
-    await user.click(within(drawer).getByRole('button', { name: 'มอบหมาย' }));
-
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    const assigned = server.calls.filter((call) => call.method === 'POST' && call.path === '/api/admin/cover-assignments');
-    expect(assigned.map(({ body }) => body)).toEqual([{ userId: 25, areaId: 91, shiftDate: '2026-11-04', shift: 'Day' }]);
-    await waitFor(() => expect(detailCalls()).toHaveLength(3));
     expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(scopedUrl);
   });
 

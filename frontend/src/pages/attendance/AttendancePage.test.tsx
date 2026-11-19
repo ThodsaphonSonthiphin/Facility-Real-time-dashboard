@@ -167,14 +167,21 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     expect(within(rowOf('AR01')).getByRole('img', { name: 'ไกลป้าย 85 ม.' })).toBeInTheDocument();
     expect(within(rowOf('AR02')).getByText('ทำแทน')).toBeInTheDocument();
     expect(within(rowOf('AR02')).getByText('พื้นที่ของตัวเอง AR03 · แอดมินมอบหมาย 07:10 · เข้างาน 06:50')).toBeInTheDocument();
-    expect(within(rowOf('AR12')).getAllByRole('button').map((button) => button.textContent)).toEqual(['แก้เวลา', 'หาคนทำแทน']);
+    expect(within(rowOf('AR12')).getAllByRole('button').map((button) => button.textContent)).toEqual(['แก้เวลา']);
+    expect(within(rowOf('AR12')).getByRole('link', { name: 'ไปจัดคนแทนที่ตารางงาน' })).toHaveAttribute('href', '/admin/schedules');
+    expect(within(rowOf('AR09')).getByRole('link', { name: 'ไปจัดคนแทนที่ตารางงาน' })).toHaveAttribute('href', '/admin/schedules');
+    expect(screen.queryByRole('button', { name: 'มอบหมายทำแทน' })).not.toBeInTheDocument();
     expect(cells('AR02')[1]).toBe('มีคนทำแทน');
     // the [แก้] mark comes before the time (DESIGN_SPEC §5 Table); its name is แก้โดยแอดมิน
     expect(cells('AR05')[2]).toBe('แก้07:02');
     expect(within(rowOf('AR05')).getByRole('img', { name: 'แก้โดยแอดมิน' })).toBeInTheDocument();
     expect(cells('AR07')).toEqual(['มแม่บ้านพัก', 'พักเบรก', '06:55', '09:30', '–', '–']);
-    // facility-0059: no link to a sign page
-    expect(within(screen.getByRole('table')).queryAllByRole('link')).toHaveLength(0);
+    // facility-0059: no link to a sign page; empty rows only link to /admin/schedules (facility-0225)
+    expect(
+      within(screen.getByRole('table'))
+        .queryAllByRole('link')
+        .every((link) => link.getAttribute('href') === '/admin/schedules'),
+    ).toBe(true);
   });
 
   it('กะดึก shows the night of the same date, and the address keeps it', async () => {

@@ -4,7 +4,6 @@ import { useGetAttendanceBoardQuery, type BoardArgs, type BoardRow } from '../..
 import { livePoll } from '../../../shared/api/baseApi';
 import type { Shift } from '../../../shared/api/types';
 import type { Notice } from '../../../shared/components/Toast';
-import type { CoverSlot } from '../../../shared/cover/coverSlots';
 import { attendanceTargets, readBoardArgs, readFill, searchRows, toBoardParams } from '../attendanceRules';
 import { PAGE_SIZE, type Editing } from './type';
 
@@ -17,11 +16,6 @@ export function useLegacyAttendancePage() {
   const { data: board, error, isLoading, refetch } = useGetAttendanceBoardQuery(args, livePoll);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Editing | null>(null);
-  // The board of the shift on the clock (the same query as this page's when no other shift is asked): covers go from it
-  const nowBoard = useGetAttendanceBoardQuery({}, livePoll);
-  const current = nowBoard.data ? { shiftDate: nowBoard.data.shiftDate, shift: nowBoard.data.shift } : undefined;
-  // The cover Drawer, with the shift it opens on and the Area of the row it was opened from; it picks its own shift
-  const [cover, setCover] = useState<(CoverSlot & { areaId?: number }) | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const go = (next: BoardArgs) => setParams(toBoardParams(next));
   const shown = board ? searchRows(board.rows, search) : [];
@@ -67,13 +61,6 @@ export function useLegacyAttendancePage() {
     }
   };
 
-  const openCover = (row?: BoardRow) => {
-    setNotice(null);
-    if (board) {
-      setCover({ areaId: row?.areaId, shiftDate: board.shiftDate, shift: board.shift });
-    }
-  };
-
   const openCorrection = (row: BoardRow, userId: number) => {
     if (!board) return;
     setNotice(null);
@@ -81,18 +68,13 @@ export function useLegacyAttendancePage() {
   };
 
   return {
-    args, board, error, isLoading, current, search, setSearch, notice, shown, page, setPage, cover,
+    args, board, error, isLoading, search, setSearch, notice, shown, page, setPage,
     fillTargetMissing: board && fill && !fillRow && !editing,
-    open, openKey, formRow, formTarget, closeForm, openCover, openCorrection,
+    open, openKey, formRow, formTarget, closeForm, openCorrection,
     onSlot: (shiftDate: string, shift: Shift) => go({ ...args, shiftDate, shift }),
     onBuilding: (buildingId?: number) => go({ ...args, buildingId }),
     retry: () => void refetch(),
     clearNotice: () => setNotice(null),
-    closeCover: () => setCover(null),
-    onCovered: (text: string) => {
-      setNotice({ kind: 'ok', text });
-      setCover(null);
-    },
     onCorrected: (text: string, key: string) => {
       setNotice({ kind: 'ok', text });
       closeForm(key);

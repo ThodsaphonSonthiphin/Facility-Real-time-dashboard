@@ -14,7 +14,6 @@ import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { AttendanceTable } from '../AttendanceTable';
 import { BoardControls } from '../BoardControls';
 import { CorrectionForm } from '../CorrectionForm';
-import { CoverDrawer } from '../CoverDrawer';
 import { PAGE_SIZE } from './type';
 import { useLegacyAttendancePage } from './useLegacyAttendancePage';
 
@@ -22,12 +21,13 @@ import { useLegacyAttendancePage } from './useLegacyAttendancePage';
  * facility-0027, 0050, wireframe D2: whether each Area that works the shift has someone in it, never late or early.
  * The shift on the clock by default; the address keeps another date, shift or building. Live on AttendanceRecorded,
  * every open, every 30 s and on focus (facility-0061). facility-0051: the Admin adds or moves a time with a reason.
+ * Emergency cover assignment lives under /admin/schedules (facility-0225).
  */
 export function LegacyAttendancePage() {
   const {
-    args, board, error, isLoading, current, search, setSearch, notice, shown, page, setPage, cover,
-    fillTargetMissing, open, openKey, formRow, formTarget, closeForm, openCover, openCorrection,
-    onSlot, onBuilding, retry, clearNotice, closeCover, onCovered, onCorrected,
+    args, board, error, isLoading, search, setSearch, notice, shown, page, setPage,
+    fillTargetMissing, open, openKey, formRow, formTarget, closeForm, openCorrection,
+    onSlot, onBuilding, retry, clearNotice, onCorrected,
   } = useLegacyAttendancePage();
 
   return (
@@ -35,20 +35,10 @@ export function LegacyAttendancePage() {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-0.5">
           <h1 className="text-2xl font-extrabold tracking-tight">การเข้างาน</h1>
-          <p className="text-text-2">ดูว่าพื้นที่ไหนมีแม่บ้านอยู่ แก้เวลาที่ลงผิด และมอบหมายคนทำแทน</p>
+          <p className="text-text-2">ดูว่าพื้นที่ไหนมีแม่บ้านอยู่ และแก้เวลาที่ลงผิด</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LiveBadge hubKey={attendanceHubKey(args)} />
-          {/* The design file's main action: the cover Drawer without picking a row first; the Area is chosen inside it */}
-          <Button
-            variant="primary"
-            size="desk"
-            disabled={!board || !current}
-            onClick={() => openCover()}
-          >
-            <ArrowRightLeft aria-hidden="true" className="size-4" />
-            มอบหมายทำแทน
-          </Button>
         </div>
       </header>
       <Note tone="info">
@@ -88,17 +78,8 @@ export function LegacyAttendancePage() {
               onCancel={() => closeForm(openKey)}
             />
           )}
-          {cover && current && (
-            <CoverDrawer
-              current={current}
-              start={cover}
-              onDone={onCovered}
-              onCancel={closeCover}
-            />
-          )}
           <AttendanceTable
             lifecycleVersion={board.lifecycleVersion}
-            onCover={openCover}
             rows={shown.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)}
             footer={shown.length > 0 && <TableFooter page={page} total={shown.length} onPage={setPage} />}
             onCorrect={openCorrection}
@@ -166,8 +147,8 @@ function BoardNotes() {
     <MoreInfo summary="เกี่ยวกับหน้านี้">
       <span>
         เรียงพื้นที่ที่ยังไม่มีคนขึ้นก่อน · พื้นที่ที่ทำเฉพาะกะเช้าไม่นับเป็น "ต้องมีคน" ในกะดึก · มอบหมายคนทำแทนได้ที่{' '}
-        <Link className={linkClass} to="/admin/alerts">
-          รายการที่ขึ้นเตือน
+        <Link className={linkClass} to="/admin/schedules">
+          ตารางงาน
         </Link>
       </span>
       <span>

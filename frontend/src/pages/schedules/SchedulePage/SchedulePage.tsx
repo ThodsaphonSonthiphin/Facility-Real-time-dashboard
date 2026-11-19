@@ -15,6 +15,7 @@ import { PhoneHeader, PhoneScreen } from '../../../shared/components/PhoneScreen
 import { Segmented } from '../../../shared/components/Segmented';
 import { focusRing } from '../../../shared/components/styles';
 import { FilterToolbar } from '../../../shared/components/SurfacePanel';
+import { Toast } from '../../../shared/components/Toast';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { shiftShortLabel, transferStateLabel } from '../../../shared/utils/labels';
 import { formatDayTime, formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
@@ -40,6 +41,8 @@ const TeamMissingTime = lazy(() => import('../TeamMissingTime/TeamMissingTime')
   .then((module) => ({ default: module.TeamMissingTime })));
 const TransferInstruction = lazy(() => import('../TransferInstruction/TransferInstruction')
   .then((module) => ({ default: module.TransferInstruction })));
+const CoverDrawer = lazy(() => import('../CoverDrawer')
+  .then((module) => ({ default: module.CoverDrawer })));
 
 /**
  * ADR facility-0176–0179; spec §4: one week per role. A Cleaner opens their own week from My Work, a Supervisor
@@ -153,6 +156,12 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
                 <span>บันทึกการยืมสแปร์</span>
               </Button>
             )}
+            {role === 'admin' && (
+              <Button size={view.phone ? 'phone' : 'desk'} disabled={!view.coverSlot} onClick={view.openCover}>
+                <ArrowRightLeft aria-hidden="true" className="size-4" />
+                <span>มอบหมายทำแทนฉุกเฉิน</span>
+              </Button>
+            )}
             <Button variant="secondary" size={view.phone ? 'phone' : 'desk'} disabled={view.isFetching} onClick={view.refetch}>
               <RefreshCw aria-hidden="true" className="size-4" />
               {view.isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
@@ -169,8 +178,17 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
       <WeekBody view={view} />
       {view.week && <ReliefDuties week={view.week} view={view} />}
       {role === 'supervisor' && <RelatedTransfers view={view} />}
+      {view.coverNotice && <Toast notice={view.coverNotice} onClose={view.clearCoverNotice} />}
       <Suspense fallback={<PageLoading lines={1}>กำลังโหลดแบบแก้ไข...</PageLoading>}>
         <OpenEditor view={view} />
+        {view.coverOpen && view.coverSlot && (
+          <CoverDrawer
+            current={view.coverSlot}
+            start={view.coverSlot}
+            onDone={view.onCoverDone}
+            onCancel={view.closeCover}
+          />
+        )}
       </Suspense>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
         <LiveLine view={view} />

@@ -1,10 +1,7 @@
-import { skipToken } from '@reduxjs/toolkit/query/react';
+import { Ban, Check, Clock, MapPin, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useGetAlertsQuery } from '../../shared/api/alertListApi';
-import { useGetAttendanceBoardQuery } from '../../shared/api/attendanceBoardApi';
 import { livePoll } from '../../shared/api/baseApi';
-import type { Shift } from '../../shared/api/types';
-import { ArrowRightLeft, Ban, Check, Clock, MapPin, TriangleAlert, UserX, type LucideIcon } from 'lucide-react';
 import { KpiCard } from '../../shared/components/KpiCard/KpiCard';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
@@ -12,11 +9,9 @@ import { PageLoading } from '../../shared/components/PageState';
 import { Segmented } from '../../shared/components/Segmented';
 import { Tabs } from '../../shared/components/Tabs';
 import { Toast, type Notice } from '../../shared/components/Toast';
-import { coverSlots, sameSlot, type CoverSlot } from '../../shared/cover/coverSlots';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { shiftLabel } from '../../shared/utils/labels';
 import { addDays } from '../../shared/utils/dateRange';
-import { formatShiftDate, formatWeekday, thaiToday } from '../../shared/utils/thaiTime';
+import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
 import { AlertTable } from './AlertTable';
 import {
   alertDay,
@@ -29,65 +24,26 @@ import {
   type AlertTab,
   type ReviewTab,
 } from './alertRules';
-import { CoverForm } from './CoverForm';
-import { CoversThisShift } from './CoversThisShift';
-import { EmptyAreas } from './EmptyAreas';
 import { countClass, countTones, panelClass } from './alertStyles';
 
 const tabIcon: Record<AlertTab, LucideIcon> = { blocked: Ban, far: MapPin, missing: Clock };
 
 /**
- * Wireframe D3: the Areas with nobody this shift and their covers (facility-0041, 0048), and the alerts of yesterday and
- * today for the Admin to talk through (facility-0035, 0037, 0051). A shift up to 7 days ahead can be picked, so covers
- * for the night and the weekend are given before the Admin leaves (facility-0075, 0084). The boards follow the hub like
- * the attendance page; no hub event carries alerts, so they are asked on every open, every 30 s and after each action.
+ * Wireframe D3 (facility-0225): exception review queue of yesterday and today for the Admin to talk through
+ * (facility-0035, 0037, 0051). Emergency cover assignment lives under /admin/schedules.
  */
 export function AlertsPage() {
   const alerts = useGetAlertsQuery(undefined, livePoll);
-  const nowBoard = useGetAttendanceBoardQuery({}, livePoll);
-  const [picked, setPicked] = useState<CoverSlot | null>(null);
-  const current = nowBoard.data ? { shiftDate: nowBoard.data.shiftDate, shift: nowBoard.data.shift } : undefined;
-  const slots = current ? coverSlots(current) : [];
-  // A pick the clock has reached or passed shows the board of now again
-  const aheadSlot =
-    picked && current && !sameSlot(picked, current) && slots.some((slot) => sameSlot(slot, picked))
-      ? picked
-      : undefined;
-  const aheadBoard = useGetAttendanceBoardQuery(aheadSlot ?? skipToken, livePoll);
-  const ahead = aheadSlot !== undefined;
-  const board = ahead ? aheadBoard : nowBoard;
-  // currentData: never the board of the shift picked before while the new one loads
-  const boardNow = board.currentData;
   const [tab, setTab] = useState<AlertTab>('blocked');
   const [review, setReview] = useState<ReviewTab>('open');
   const [day, setDay] = useState<AlertDay>('today');
   const [notice, setNotice] = useState<Notice | null>(null);
-  // The Area and the slot the cover form was opened for: a board of another shift closes it
-  const [cover, setCover] = useState<{ areaId: number; shiftDate: string; shift: Shift } | null>(null);
   const today = thaiToday();
   const list = (alerts.data ?? []).filter((alert) => alertDay(alert, today) === day);
   const inTab = list.filter((alert) => alertTabOf(alert) === tab);
   const openInTab = inTab.filter((alert) => !alert.reviewed).length;
   const shown = filterAlerts(list, { tab, review, day, today });
-  // The form closes by itself once the Area has someone (a cover made here or elsewhere) or another shift is shown
-  if (cover && boardNow && (boardNow.shiftDate !== cover.shiftDate || boardNow.shift !== cover.shift)) {
-    setCover(null);
-  }
-  const coverRow = cover
-    ? boardNow?.rows.find(
-        (row) => row.areaId === cover.areaId && (ahead ? row.covers.length === 0 : row.state === 'Empty'),
-      )
-    : undefined;
-  // Closes only the form the send belongs to: the Admin may have opened another since
-  const closeCover = (areaId: number, shiftDate: string, shift: Shift) =>
-    setCover((open) =>
-      open && open.areaId === areaId && open.shiftDate === shiftDate && open.shift === shift ? null : open,
-    );
   const yesterday = addDays(today, -1);
-  const emptyOrUncoveredCount = boardNow
-    ? boardNow.rows.filter((row) => (ahead ? row.covers.length === 0 : row.state === 'Empty')).length
-    : undefined;
-  const coversCount = boardNow ? boardNow.rows.reduce((sum, row) => sum + row.covers.length, 0) : undefined;
   const openAlertsCount = alerts.data ? list.filter((alert) => !alert.reviewed).length : undefined;
   const reviewedAlertsCount = alerts.data ? list.filter((alert) => alert.reviewed).length : undefined;
 
@@ -98,30 +54,11 @@ export function AlertsPage() {
           <TriangleAlert aria-hidden="true" className="size-4 shrink-0 text-overdue" />
           รายการที่ขึ้นเตือน
         </h1>
-        {/* As tall as its words before the board comes, so nothing under it moves */}
         <span className="min-h-5 text-text-2">
-          {`พื้นที่ที่ยังไม่มีคน คนทำแทน และการสแกนที่ต้องตาม${
-            current
-              ? ` · ${shiftLabel[current.shift]} ${formatWeekday(current.shiftDate)} ${formatShiftDate(current.shiftDate)}`
-              : ''
-          }`}
+          รายการสแกนที่ต้องติดตาม (สแกนผิดพื้นที่ ไกลป้าย และลืมลงเวลาเลิกงาน)
         </span>
       </header>
-      <section aria-label="สรุปสถานะและเตือน" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
-          label={ahead ? 'พื้นที่ยังไม่มีคนทำแทน' : 'พื้นที่ที่ยังไม่มีคน'}
-          value={emptyOrUncoveredCount ?? '–'}
-          unit="พื้นที่"
-          icon={UserX}
-          tone="amber"
-        />
-        <KpiCard
-          label={ahead ? 'คนทำแทนกะที่เลือก' : 'คนทำแทนกะนี้'}
-          value={coversCount ?? '–'}
-          unit="คน"
-          icon={ArrowRightLeft}
-          tone="purple"
-        />
+      <section aria-label="สรุปสถานะและเตือน" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <KpiCard
           label={`เตือนที่ยังไม่ได้คุย (${day === 'today' ? 'วันนี้' : 'เมื่อวาน'})`}
           value={openAlertsCount ?? '–'}
@@ -138,41 +75,6 @@ export function AlertsPage() {
         />
       </section>
       {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
-      <div className="flex flex-wrap items-stretch gap-4">
-        <EmptyAreas
-          board={boardNow}
-          error={board.error}
-          onRetry={() => void board.refetch()}
-          slots={slots}
-          slot={aheadSlot ?? current}
-          ahead={ahead}
-          onSlot={(slot) => {
-            setNotice(null);
-            setPicked(current && sameSlot(slot, current) ? null : slot);
-          }}
-          onChoose={(areaId) => {
-            setNotice(null);
-            if (boardNow) {
-              setCover({ areaId, shiftDate: boardNow.shiftDate, shift: boardNow.shift });
-            }
-          }}
-        >
-          {boardNow && coverRow && (
-            <CoverForm
-              key={`${boardNow.shiftDate}:${boardNow.shift}:${coverRow.areaId}`}
-              board={boardNow}
-              row={coverRow}
-              ahead={ahead}
-              onDone={(text) => {
-                setNotice({ kind: 'ok', text });
-                closeCover(coverRow.areaId, boardNow.shiftDate, boardNow.shift);
-              }}
-              onCancel={() => closeCover(coverRow.areaId, boardNow.shiftDate, boardNow.shift)}
-            />
-          )}
-        </EmptyAreas>
-        {boardNow && <CoversThisShift board={boardNow} ahead={ahead} onNotice={setNotice} />}
-      </div>
       <section className={panelClass} aria-labelledby="alerts-list">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3.5">
           <h2 id="alerts-list" className="text-base font-bold">
@@ -246,7 +148,6 @@ export function AlertsPage() {
       </section>
       <MoreInfo summary="เกี่ยวกับหน้านี้">
         <span>ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน</span>
-        <span>รายการคนทำแทนยังไม่แสดงการตรวจแทนตึกของหัวหน้า</span>
       </MoreInfo>
     </main>
   );

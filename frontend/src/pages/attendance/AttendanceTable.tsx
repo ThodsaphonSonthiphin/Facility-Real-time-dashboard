@@ -1,12 +1,13 @@
 import { ArrowRightLeft, Check, Coffee, MapPin, Minus, Pencil, UserX, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router';
 import type { AreaAttendanceState, BoardEvent, BoardRow } from '../../shared/api/attendanceBoardApi';
 import { AvatarBadge } from '../../shared/components/AvatarBadge/AvatarBadge';
 import { Table } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
 import { Badge, EditedMark } from '../../shared/components/Badge';
 import { PageEmpty } from '../../shared/components/PageState';
-import { tableCell } from '../../shared/components/styles';
+import { buttonClass, tableCell } from '../../shared/components/styles';
 import type { AttendanceLifecycleVersion } from '../../shared/api/types';
 import { entryLabel, eventLabel, lifecycleEvents, transferStateLabel } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
@@ -16,10 +17,8 @@ import { areaStateLabel, attendanceTargets, coverDetail, eventOf } from './atten
 interface AttendanceTableProps {
   rows: BoardRow[];
   lifecycleVersion?: AttendanceLifecycleVersion;
-  /** "เพิ่มเวลา" / "แก้เวลา" on a row with a regular Cleaner (facility-0051). Without it the table has no action column. */
+  /** "เพิ่มเวลา" / "แก้เวลา" on a row with a regular Cleaner (facility-0051). */
   onCorrect?: (row: BoardRow, userId: number) => void;
-  /** "หาคนทำแทน" on a row with nobody (the design file's D2): the cover form opens beside the table. */
-  onCover?: (row: BoardRow) => void;
   /** The bar under the table, inside its box: the count, the [แก้] legend and the pages. */
   footer?: ReactNode;
 }
@@ -37,9 +36,10 @@ const stateChip: Record<AreaAttendanceState, { tone: string; Icon: LucideIcon }>
 const subClass = 'block text-xs font-normal text-text-2';
 
 /** Wireframe D2's table, in the server's order: Areas with nobody first (facility-0050). Names are React text only. */
-export function AttendanceTable({ rows, lifecycleVersion, onCorrect, onCover, footer }: AttendanceTableProps) {
+export function AttendanceTable({ rows, lifecycleVersion, onCorrect, footer }: AttendanceTableProps) {
   const names = useBuildingNames();
   const actions = lifecycleEvents(lifecycleVersion);
+  const showActionColumn = Boolean(onCorrect || rows.some((row) => row.state === 'Empty'));
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-surface">
@@ -65,7 +65,7 @@ export function AttendanceTable({ rows, lifecycleVersion, onCorrect, onCover, fo
               {eventLabel[type]}
             </th>
           ))}
-          {(onCorrect || onCover) && (
+          {showActionColumn && (
             <th scope="col" className={`relative ${tableCell.actions}`}>
               {/* Contain the absolute sr-only label inside the scrolling table, so it cannot widen the document. */}
               <span className="sr-only">การกระทำ</span>
@@ -93,7 +93,7 @@ export function AttendanceTable({ rows, lifecycleVersion, onCorrect, onCover, fo
                 <EventTime event={eventOf(row, type)} />
               </td>
             ))}
-            {(onCorrect || onCover) && (
+            {showActionColumn && (
               <td className={tableCell.actions}>
                 <span className="inline-flex flex-col items-start gap-2">
                   {onCorrect && attendanceTargets(row).map(({ cleaner }) => (
@@ -108,11 +108,11 @@ export function AttendanceTable({ rows, lifecycleVersion, onCorrect, onCover, fo
                       {row.additionalCleaners?.length ? `แก้เวลา ${cleaner.displayName}` : 'แก้เวลา'}
                     </Button>
                   ))}
-                  {row.state === 'Empty' && onCover && (
-                    <Button size="desk" aria-label={`หาคนทำแทน ${row.areaCode}`} onClick={() => onCover(row)}>
+                  {row.state === 'Empty' && (
+                    <Link to="/admin/schedules" data-tap="" className={buttonClass('link', 'desk')}>
                       <ArrowRightLeft aria-hidden="true" className="size-4" />
-                      หาคนทำแทน
-                    </Button>
+                      ไปจัดคนแทนที่ตารางงาน
+                    </Link>
                   )}
                 </span>
               </td>

@@ -8,17 +8,15 @@ import { readOverviewContext } from '../../../shared/overview/overviewContext';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { useAppDispatch } from '../../../store/hooks';
 import { attendanceTargets } from '../attendanceRules';
-import type { AttendanceActionKind, OpenAttendanceAction, OverviewAttendanceActionsProps } from './type';
+import type { OpenAttendanceAction, OverviewAttendanceActionsProps } from './type';
 
 function rowFor(board: AttendanceBoard | undefined, scope: OverviewAttendanceActionsProps) {
   if (!board || board.shiftEnded || board.shift !== scope.shift || board.shiftDate !== scope.shiftDate) return;
   return board.rows.find((row) => row.areaId === scope.areaId);
 }
 
-function actionStillMatches(row: BoardRow, action: Pick<OpenAttendanceAction, 'kind' | 'userId'>) {
-  return action.kind === 'cover'
-    ? row.cleaner?.id === action.userId
-    : attendanceTargets(row).some(({ cleaner }) => cleaner.id === action.userId);
+function actionStillMatches(row: BoardRow, action: Pick<OpenAttendanceAction, 'userId'>) {
+  return attendanceTargets(row).some(({ cleaner }) => cleaner.id === action.userId);
 }
 
 export function useScopedAttendanceActionArgs(): OverviewAttendanceActionsProps | undefined {
@@ -45,7 +43,7 @@ export function useOverviewAttendanceActions(scope: OverviewAttendanceActionsPro
   const [opening, setOpening] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const action = open && row && actionStillMatches(row, open) ? open : null;
-  const target = action?.kind === 'correction' ? targets.find(({ cleaner }) => cleaner.id === action.userId) : undefined;
+  const target = action ? targets.find(({ cleaner }) => cleaner.id === action.userId) : undefined;
   const unavailableEvents = new Set(target?.events
     .filter((event) => event.areaId !== scope.areaId).map((event) => event.eventType));
   const nextAction = useRef(0);
@@ -85,19 +83,18 @@ export function useOverviewAttendanceActions(scope: OverviewAttendanceActionsPro
     void readOnMount().catch(() => {});
   }, []);
 
-  const openAction = async (kind: AttendanceActionKind, cleanerId?: number) => {
+  const openCorrection = async (userId: number) => {
     if (!row || opening || action) return;
-    const userId = kind === 'cover' ? row.cleaner?.id : cleanerId;
     setOpening(true);
     setNotice(null);
     try {
       const fresh = await freshRow();
       if (!mounted.current) return;
-      if (!fresh || !actionStillMatches(fresh, { kind, userId })) {
+      if (!fresh || !actionStillMatches(fresh, { userId })) {
         warnChanged();
         return;
       }
-      setOpen({ kind, id: ++nextAction.current, userId });
+      setOpen({ id: ++nextAction.current, userId });
     } catch (error) {
       if (mounted.current) setNotice({ kind: 'warn', text: getErrorMessage(error) });
     } finally {
@@ -114,7 +111,6 @@ export function useOverviewAttendanceActions(scope: OverviewAttendanceActionsPro
     const latest = await freshRow();
     if (activeAction.current !== current) return false;
     if (latest && actionStillMatches(latest, current)) {
-      if (current.kind === 'cover') return true;
       const selected = attendanceTargets(latest).find(({ cleaner }) => cleaner.id === current.userId);
       if (event && selected
         && !selected.events.some((fact) => fact.eventType === event && fact.areaId !== scope.areaId)) return true;
@@ -128,7 +124,7 @@ export function useOverviewAttendanceActions(scope: OverviewAttendanceActionsPro
     board, row, targets, target, unavailableEvents, action, notice, opening, isFetching, verified,
     error: error ? getErrorMessage(error) : undefined,
     retry: () => void freshRow().catch(() => {}),
-    openAction,
+    openCorrection,
     canSubmit,
     close,
     done: (current: OpenAttendanceAction, text: string) => {

@@ -1,4 +1,6 @@
 import type { ScheduleDay, SchedulePerson, ScheduleTransferSlot, ScheduleWeek } from '../../../shared/api/scheduleTypes';
+import type { Notice } from '../../../shared/components/Toast';
+import type { CoverSlot } from '../../../shared/cover/coverSlots';
 import type { TeamSlotArgs } from '../schedulesApi';
 import type { ScheduleRole, ScheduleSelection } from '../scheduleRules';
 
@@ -48,6 +50,14 @@ export interface SchedulePageView {
   businessDate: string;
   selectedCell: SelectedScheduleCell | null;
   selectCell: (userId: number, date: string) => void;
+  /** Admin emergency cover drawer (facility-0225). */
+  coverSlot: CoverSlot | undefined;
+  coverOpen: boolean;
+  coverNotice: Notice | null;
+  openCover: () => void;
+  closeCover: () => void;
+  onCoverDone: (text: string) => void;
+  clearCoverNotice: () => void;
 }
 
 export interface SelectedScheduleCell {

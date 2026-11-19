@@ -135,4 +135,21 @@ export const attendanceBoardApi = baseApi.injectEndpoints({
   }),
 });
 
+/** The rows a search keeps: the Area's code or name, its regular/additional Cleaners, or a cover, in any letter case. */
+export function searchBoardRows(rows: readonly BoardRow[], search: string): BoardRow[] {
+  const text = search.trim().toLowerCase();
+  if (text === '') {
+    return [...rows];
+  }
+  return rows.filter((row) =>
+    [
+      row.areaCode,
+      row.areaName,
+      row.cleaner?.displayName,
+      ...(row.additionalCleaners?.map(({ cleaner }) => cleaner.displayName) ?? []),
+      ...row.covers.map((cover) => cover.displayName),
+    ].some((value) => value?.toLowerCase().includes(text)),
+  );
+}
+
 export const { useGetAttendanceBoardQuery } = attendanceBoardApi;

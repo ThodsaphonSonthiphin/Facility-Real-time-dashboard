@@ -90,15 +90,18 @@ test('a date picked while another shift is still loading keeps that shift', asyn
   await expect(page.getByLabel('วันที่', { exact: true })).toHaveValue('2026-10-01');
 });
 
-test('cover assignment and nested cancellation preserve the parent drawer @dataset', async ({ page }) => {
-  await page.getByRole('button', { name: 'มอบหมายทำแทน', exact: true }).click();
+test('cover assignment and nested cancellation preserve the parent drawer from Schedules @dataset', async ({ page }) => {
+  await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'ตารางงาน', exact: true }).click();
+  const trigger = page.getByRole('button', { name: 'มอบหมายทำแทนฉุกเฉิน', exact: true });
+  await expect(trigger).toBeEnabled();
+  await trigger.click();
   const drawer = page.getByRole('dialog');
   await drawer.getByLabel('ค้นหาพื้นที่หรือแม่บ้านประจำ', { exact: true }).fill('E2EA0002');
   await drawer.getByRole('radiogroup', { name: '2. พื้นที่ที่ต้องมีคนทำแทน' }).getByText('E2EA0002', { exact: true }).click();
   await expect(drawer.getByRole('button', { name: 'มอบหมาย', exact: true })).toBeEnabled();
   await drawer.getByRole('button', { name: 'มอบหมาย', exact: true }).click();
   await expect(drawer).toBeHidden();
-  await page.getByRole('button', { name: 'มอบหมายทำแทน', exact: true }).click();
+  await trigger.click();
   const cancel = drawer.getByRole('button', { name: /ยกเลิกการทำแทนของ .* ที่ E2EA0002/ });
   await expect(cancel).toBeVisible();
   // A mouse click does not focus a button on Apple platforms (WebKit), so there the keyboard opens it: focus going back

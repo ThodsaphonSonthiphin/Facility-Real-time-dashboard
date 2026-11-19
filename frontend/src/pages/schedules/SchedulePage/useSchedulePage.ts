@@ -1,5 +1,8 @@
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { useCallback, useState, useSyncExternalStore } from 'react';
+import { useGetAttendanceBoardQuery } from '../../../shared/api/attendanceBoardApi';
+import { livePoll } from '../../../shared/api/baseApi';
+import type { Notice } from '../../../shared/components/Toast';
 import type { RootState } from '../../../store';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectHubStatus } from '../../../store/slices/hubSlice';
@@ -30,6 +33,10 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   const dispatch = useAppDispatch();
   const [editor, setEditor] = useState<OpenScheduleEditor | null>(null);
   const [selectedCellState, setSelectedCellState] = useState<SelectedScheduleCell | null>(null);
+  const [coverOpen, setCoverOpen] = useState(false);
+  const [coverNotice, setCoverNotice] = useState<Notice | null>(null);
+  const nowBoard = useGetAttendanceBoardQuery(role === 'admin' ? {} : skipToken, livePoll);
+  const coverSlot = nowBoard.data ? { shiftDate: nowBoard.data.shiftDate, shift: nowBoard.data.shift } : undefined;
   const phone = useSyncExternalStore(subscribeToPhoneWidth, isPhoneWidth);
   const restored = useAppSelector((state: RootState) => state.scheduleView.views[role]);
   const changedAt = useAppSelector((state: RootState) => state.scheduleView.changedAt);
@@ -106,6 +113,21 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     businessDate,
     selectedCell,
     selectCell,
+    coverSlot,
+    coverOpen,
+    coverNotice,
+    openCover: () => {
+      if (role === 'admin' && coverSlot) {
+        setCoverNotice(null);
+        setCoverOpen(true);
+      }
+    },
+    closeCover: () => setCoverOpen(false),
+    onCoverDone: (text) => {
+      setCoverNotice({ kind: 'ok', text });
+      setCoverOpen(false);
+    },
+    clearCoverNotice: () => setCoverNotice(null),
     openRelief: (kind) => {
       if (manage && latest.destinations?.length) setEditor({ kind, week: latest });
     },

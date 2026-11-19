@@ -6,10 +6,7 @@ export interface OverviewAttendanceActionsProps {
   shift: Shift;
 }
 
-export type AttendanceActionKind = 'correction' | 'cover';
-
 export interface OpenAttendanceAction {
   id: number;
-  kind: AttendanceActionKind;
-  userId?: number;
+  userId: number;
 }
