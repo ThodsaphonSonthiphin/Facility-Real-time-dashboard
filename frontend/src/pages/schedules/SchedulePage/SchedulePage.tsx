@@ -1,13 +1,17 @@
-import { ArrowRightLeft, Building2, CalendarDays, ChevronLeft, ChevronRight, RefreshCw, UserCheck, UserPlus } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, RefreshCw, UserCheck } from 'lucide-react';
 import { lazy, Suspense } from 'react';
+import { useGetBuildingsQuery } from '../../../shared/api/adminSetupApi';
+import { buildingOptionText } from '../../../shared/api/buildingNames';
 import type { ScheduleAvailability, ScheduleDay, ScheduleWeek } from '../../../shared/api/scheduleTypes';
 import type { Shift } from '../../../shared/api/types';
+import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
 import { AvatarBadge } from '../../../shared/components/AvatarBadge/AvatarBadge';
 import { Badge } from '../../../shared/components/Badge';
 import { BuildingSelect } from '../../../shared/components/BuildingSelect';
 import { Button } from '../../../shared/components/Button';
 import { HorizontalScrollArea } from '../../../shared/components/Boxes';
-import { LogoutButton } from '../../../shared/components/LogoutButton';
+import { ConnectionBanner } from '../../../shared/components/ConnectionBanner/ConnectionBanner';
+import { Select } from '../../../shared/components/Field';
 import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { Note } from '../../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../../shared/components/PageState';
@@ -21,6 +25,7 @@ import { shiftShortLabel, transferStateLabel } from '../../../shared/utils/label
 import { formatDayTime, formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { availabilityLabel, cellLabel, cleanerKindLabel, sourceLabel, weekIsUnavailable, weekRangeLabel, type ScheduleRole } from '../scheduleRules';
 import type { TeamSlotArgs } from '../schedulesApi';
+import { DesktopScheduleActions, MobileScheduleActionSheet } from './ScheduleActionsMenu';
 import { ScheduleContextBar } from './ScheduleContextBar';
 import { ScheduleSummaryCards } from './ScheduleSummaryCards';
 import { useSchedulePage } from './useSchedulePage';
@@ -45,62 +50,40 @@ const CoverDrawer = lazy(() => import('../CoverDrawer')
   .then((module) => ({ default: module.CoverDrawer })));
 
 /**
- * ADR facility-0176–0179; spec §4: one week per role. A Cleaner opens their own week from My Work, a Supervisor
- * the roster of the buildings they hold from My Building, an Admin every building in a shift from the menu. Reading needs
- * no QR and no location (0179). Management editors load only when opened.
- *
- * The three week states are drawn differently on purpose (spec §3, §10): a week outside retained coverage says so rather
- * than showing an empty roster, a week with nothing to read says the filter has nothing, and a real plan shows its days —
- * including the ones nobody has chosen yet, which is not a working day.
- *
- * A Supervisor's page is a table, so it takes the Admin desk's width (the sidebar is not theirs and is not drawn).
+ * Cleaner's own weekly schedule (`/my-schedule`): top-level tab in CleanerBottomNav (no redundant back button,
+ * no stacked BottomBar, compact top-right refresh, and quick `สัปดาห์นี้` shortcut).
  */
-
-/** The Cleaner's own week (0176): before the work list on งานของฉัน, with a return control. */
 export function OwnSchedulePage() {
   const view = useSchedulePage('cleaner');
   return (
     <PhoneScreen
       header={
-        <PhoneHeader back={{ to: '/my-work', label: 'งานของฉัน' }}>
-          <h1 className="text-xl font-extrabold">ตารางของฉัน</h1>
+        <PhoneHeader
+          action={
+            <Button variant="secondary" size="desk" className="min-h-11" disabled={view.isFetching} onClick={view.refetch}>
+              <RefreshCw aria-hidden="true" className="size-4" />
+              {view.isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
+            </Button>
+          }
+        >
+          <h1 className="text-xl font-extrabold text-text">ตารางของฉัน</h1>
           <p className="text-sm text-text-2">ตารางเวรประจำสัปดาห์และกลุ่มพัก</p>
         </PhoneHeader>
       }
-      bottom={
-        <Button variant="primary" size="main" disabled={view.isFetching} onClick={view.refetch}>
-          <RefreshCw aria-hidden="true" className="size-6" />
-          {view.isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
-        </Button>
-      }
     >
-      {/* Previous button, flexible week label, next button; no theme token describes a three-column auto/1fr/auto track list */}
-      <section className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-border bg-surface p-1.5" aria-label="เลือกสัปดาห์">
-        <Button variant="link" size="phone" className="min-w-12" aria-label="สัปดาห์ก่อนหน้า" onClick={() => view.goWeek(-1)}>
-          <ChevronLeft aria-hidden="true" className="size-4 shrink-0" />
-          ก่อนหน้า
-        </Button>
-        <strong className="min-w-0 text-center text-sm wrap-break-word tabular-nums">{weekRangeLabel(view.selection.weekStart)}</strong>
-        <Button variant="link" size="phone" className="min-w-12" aria-label="สัปดาห์ถัดไป" onClick={() => view.goWeek(1)}>
-          ถัดไป
-          <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
-        </Button>
-      </section>
+      <ConnectionBanner status={view.hubStatus} stale={view.mayBeStale} refreshing={view.isFetching} onRetry={view.refetch} />
+      <MobileWeekStrip view={view} />
       <WeekBody view={view} />
-      <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
-        <LiveLine view={view} />
-        <LogoutButton />
-      </footer>
     </PhoneScreen>
   );
 }
 
-/** The Supervisor's team timetable (0177): every building assigned to them in their own shift, with a return control. */
+/** The Supervisor's team timetable: every building assigned to them in their own shift. */
 export function ScheduleManagementPage() {
   return <ManagementWeekPage role="supervisor" />;
 }
 
-/** The Admin's timetable (0178): every building and any shift; the menu above is the way back. */
+/** The Admin's timetable: every building and any shift. */
 export function AdminSchedulesPage() {
   return <ManagementWeekPage role="admin" />;
 }
@@ -115,63 +98,44 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
   const showSummary = Boolean(
     view.week && view.week.availability !== 'empty' && !weekIsUnavailable(view.week) && view.week.rows.length > 0,
   );
+  const actionProps = { view, canEditWeekly, canEditRelief, hasDestinations };
 
   return (
-    <main className="flex min-w-0 flex-col gap-5 text-base text-text sm:text-sm">
-      <header className="space-y-0.5">
-        <h1 className="text-2xl font-extrabold tracking-tight">{role === 'admin' ? 'ตารางงาน' : 'จัดตารางงาน'}</h1>
-        <p className="text-sm text-text-2">
-          {role === 'admin'
-            ? 'ดูตารางของทุกตึกและทุกกะ คลิกช่องวันเพื่อดูคำสั่งจัดการรายคน'
-            : 'ตารางรวมของตึกและกะที่คุณรับผิดชอบ คลิกช่องวันเพื่อจัดการรายคน'}
-        </p>
-      </header>
-
-      <FilterToolbar
-        label="ตัวกรองและคำสั่งตารางงาน"
-        align="end"
-        actions={
-          <>
-            {canEditWeekly && (
-              <Button variant="primary" size={view.phone ? 'main' : 'desk'} onClick={view.openWeekly}>
-                <CalendarDays aria-hidden="true" className="size-4" />
-                <span>จัดวันหยุดรายสัปดาห์</span>
-              </Button>
-            )}
-            {hasDestinations && canEditRelief && (
-              <>
-                <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-roster')}>
-                  <Building2 aria-hidden="true" className="size-4" />
-                  <span>จัดตารางประจำสแปร์</span>
-                </Button>
-                <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-assignment')}>
-                  <UserCheck aria-hidden="true" className="size-4" />
-                  <span>มอบหมายงานสแปร์</span>
-                </Button>
-              </>
-            )}
-            {hasDestinations && (
-              <Button size={view.phone ? 'phone' : 'desk'} onClick={() => view.openRelief('relief-loan')}>
-                <UserPlus aria-hidden="true" className="size-4" />
-                <span>บันทึกการยืมสแปร์</span>
-              </Button>
-            )}
-            {role === 'admin' && (
-              <Button size={view.phone ? 'phone' : 'desk'} disabled={!view.coverSlot} onClick={view.openCover}>
-                <ArrowRightLeft aria-hidden="true" className="size-4" />
-                <span>มอบหมายทำแทนฉุกเฉิน</span>
-              </Button>
-            )}
-            <Button variant="secondary" size={view.phone ? 'phone' : 'desk'} disabled={view.isFetching} onClick={view.refetch}>
-              <RefreshCw aria-hidden="true" className="size-4" />
-              {view.isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
-            </Button>
-          </>
+    <main className="flex min-w-0 flex-col gap-4 text-base text-text sm:gap-5 sm:text-sm">
+      <AdminPageHeader
+        title={role === 'admin' ? 'ตารางงาน' : 'จัดตารางงาน'}
+        subtitle={
+          role === 'admin'
+            ? 'ดูและจัดการตารางของทุกตึกและทุกกะ แตะช่องวันเพื่อแก้ไขรายคน'
+            : 'ตารางรวมของตึกและกะที่คุณรับผิดชอบ แตะช่องวันเพื่อจัดการรายคน'
         }
-      >
-        <WeekControls view={view} />
-        {role === 'admin' && <AdminFilters view={view} />}
-      </FilterToolbar>
+        actions={
+          <Button variant="secondary" size="desk" className="min-h-10 sm:min-h-9" disabled={view.isFetching} onClick={view.refetch}>
+            <RefreshCw aria-hidden="true" className="size-4" />
+            {view.isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
+          </Button>
+        }
+      />
+
+      <ConnectionBanner status={view.hubStatus} stale={view.mayBeStale} refreshing={view.isFetching} onRetry={view.refetch} />
+
+      {/* Render only the active viewport's controls so screen readers and DOM never carry duplicate week/filter controls. */}
+      {view.phone ? (
+        <div className="flex flex-col gap-2.5">
+          <MobileWeekStrip view={view} />
+          {role === 'admin' && <MobileAdminFilters view={view} />}
+          <MobileScheduleActionSheet {...actionProps} />
+        </div>
+      ) : (
+        <FilterToolbar
+          label="ตัวกรองและคำสั่งตารางงาน"
+          align="end"
+          actions={<DesktopScheduleActions {...actionProps} />}
+        >
+          <WeekControls view={view} />
+          {role === 'admin' && <AdminFilters view={view} />}
+        </FilterToolbar>
+      )}
 
       {showSummary && view.week && <ScheduleSummaryCards week={view.week} businessDate={view.businessDate} />}
 
@@ -190,11 +154,76 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
           />
         )}
       </Suspense>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-        <LiveLine view={view} />
-      </div>
       <Notes role={role} />
     </main>
+  );
+}
+
+/** Clean full-width mobile week navigator with direct `สัปดาห์นี้` shortcut. */
+function MobileWeekStrip({ view }: { view: ReturnType<typeof useSchedulePage> }) {
+  return (
+    <section
+      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 rounded-xl border border-border bg-surface p-1.5"
+      aria-label="เลือกสัปดาห์"
+    >
+      <Button variant="link" size="phone" className="min-w-12 px-1.5 text-sm" aria-label="สัปดาห์ก่อนหน้า" onClick={() => view.goWeek(-1)}>
+        <ChevronLeft aria-hidden="true" className="size-4 shrink-0" />
+        ก่อนหน้า
+      </Button>
+      <div className="flex min-w-0 flex-col items-center text-center">
+        <strong className="min-w-0 text-sm font-extrabold wrap-break-word tabular-nums">
+          {weekRangeLabel(view.selection.weekStart)}
+        </strong>
+        {!view.isCurrentWeek && (
+          <button
+            type="button"
+            data-tap=""
+            onClick={view.goToday}
+            className={`cursor-pointer border-0 bg-transparent text-xs font-semibold text-accent underline ${focusRing}`}
+          >
+            กลับสัปดาห์นี้
+          </button>
+        )}
+      </div>
+      <Button variant="link" size="phone" className="min-w-12 px-1.5 text-sm" aria-label="สัปดาห์ถัดไป" onClick={() => view.goWeek(1)}>
+        ถัดไป
+        <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+      </Button>
+    </section>
+  );
+}
+
+/** Clean 2-column equal-width mobile Admin filters (Building + Shift) that never awkwardly wrap. */
+function MobileAdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
+  const { data: buildings } = useGetBuildingsQuery();
+  return (
+    <div className="grid grid-cols-2 gap-2" aria-label="ตัวกรองตึกและกะ">
+      <Select
+        size="phone"
+        aria-label="ตึก"
+        className="w-full min-w-0 text-sm"
+        value={view.selection.buildingId ?? ''}
+        onChange={(event) => view.chooseBuilding(event.target.value === '' ? undefined : Number(event.target.value))}
+      >
+        <option value="">ทุกตึก</option>
+        {(buildings ?? []).map((building) => (
+          <option key={building.id} value={building.id}>
+            {buildingOptionText(building)}
+          </option>
+        ))}
+      </Select>
+      <Select
+        size="phone"
+        aria-label="กะ"
+        className="w-full min-w-0 text-sm"
+        value={view.selection.shift ?? ''}
+        onChange={(event) => view.chooseShift((event.target.value || undefined) as Shift | undefined)}
+      >
+        <option value="">กะของฉัน</option>
+        <option value="Day">{shiftShortLabel.Day}</option>
+        <option value="Night">{shiftShortLabel.Night}</option>
+      </Select>
+    </div>
   );
 }
 
@@ -256,7 +285,7 @@ function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typ
   );
 }
 
-/** The Admin's filters (0184): every building in the shift on the clock, and any shift they choose. */
+/** Desktop Admin filters: every building in the shift on the clock, and any shift they choose. */
 function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   return (
     <div className="flex min-w-0 flex-wrap items-end gap-2">
@@ -277,13 +306,10 @@ function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   );
 }
 
-/**
- * The week control: the range, and the two neighbour weeks. Choosing a week needs no QR and no location (0179). One range
- * per screen: this is the only place it is written, whichever layout the page is drawn in.
- */
+/** Desktop week control: previous/next week plus `สัปดาห์นี้` quick reset. */
 function WeekControls({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   return (
-    <section className="flex flex-wrap items-center justify-between gap-3" aria-label="เลือกสัปดาห์">
+    <section className="flex flex-wrap items-center gap-2" aria-label="เลือกสัปดาห์">
       <div className="flex items-center gap-2">
         <Button variant="secondary" size="desk" aria-label="สัปดาห์ก่อนหน้า" onClick={() => view.goWeek(-1)}>
           <ChevronLeft aria-hidden="true" className="size-4" />
@@ -293,14 +319,15 @@ function WeekControls({ view }: { view: ReturnType<typeof useSchedulePage> }) {
           <ChevronRight aria-hidden="true" className="size-4" />
         </Button>
       </div>
+      {!view.isCurrentWeek && (
+        <Button variant="secondary" size="desk" onClick={view.goToday}>
+          สัปดาห์นี้
+        </Button>
+      )}
     </section>
   );
 }
 
-/**
- * What the read says: loading, the shared error, a week outside coverage, a week with nothing under the filter, or the
- * days. The first two states are never drawn as an empty roster (spec §3, §10).
- */
 function WeekBody({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   const { week, error } = view;
   return (
@@ -334,7 +361,6 @@ function WeekBody({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   );
 }
 
-/** One person's week as cards, one per day, each saying its state in words (spec §5). */
 function OwnWeek({ week, businessDate }: { week: ScheduleWeek; businessDate: string }) {
   const person = week.rows[0];
   if (!person) {
@@ -374,7 +400,6 @@ function OwnWeek({ week, businessDate }: { week: ScheduleWeek; businessDate: str
   );
 }
 
-/** The management table: a row per person, a column per date the reader may see (keyed by date, never by index). */
 function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   const week = view.week!;
   const dates = datesOf(week);
@@ -389,7 +414,6 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
             className="w-full table-fixed border-separate border-spacing-0"
             style={{ minWidth: nameColumnWidth + dates.length * dateColumnMinWidth }}
           >
-            {/* Leave enough room for a whole date button beside the sticky name at phone widths. */}
             <colgroup><col className="w-28 sm:w-40" /></colgroup>
             <thead className="bg-surface-2 text-xs font-bold text-text-2">
               <tr>
@@ -413,7 +437,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
             <tbody>
               {week.rows.map((person) => (
                 <tr key={person.userId}>
-                  <th scope="row" className="sticky left-0 z-10 border-t border-r border-border bg-surface px-2 py-2.5 sm:px-3 text-left align-top font-semibold">
+                  <th scope="row" className="sticky left-0 z-10 border-t border-r border-border bg-surface px-2 py-2.5 text-left align-top font-semibold sm:px-3">
                     <div className="flex items-start gap-1.5 sm:gap-2.5">
                       <AvatarBadge
                         name={person.displayName}
@@ -533,7 +557,6 @@ const cellPillClass: Record<ScheduleAvailability, string> = {
   unavailable: 'border-idle-border bg-surface-2 text-text-2',
 };
 
-/** One table cell: its semantic status pill, area, and break group. */
 function Cell({ day }: { day: ScheduleDay }) {
   return (
     <>
@@ -553,7 +576,6 @@ function Cell({ day }: { day: ScheduleDay }) {
   );
 }
 
-/** One day's Area and break group, each with where it came from, so a one-day choice never reads as a recurring plan. */
 function DayFacts({ day }: { day: ScheduleDay }) {
   return (
     <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
@@ -571,38 +593,19 @@ function DayFacts({ day }: { day: ScheduleDay }) {
   );
 }
 
-/**
- * Spec §12: the page asks again on its own; a read that may be older than the plan keeps its notice until a read that
- * started after the change succeeded, and a dropped connection says the data may not be current.
- */
-function LiveLine({ view }: { view: ReturnType<typeof useSchedulePage> }) {
-  if (view.hubStatus === 'reconnecting' || view.mayBeStale) {
-    return (
-      <span role="status" className="text-sm font-semibold text-overdue">
-        ข้อมูลอาจยังไม่ล่าสุด กำลังโหลดใหม่...
-      </span>
-    );
-  }
-  return <span className="text-sm text-text-2">หน้านี้อัปเดตเองเมื่อมีคนแก้ตาราง</span>;
-}
-
-/**
- * What the page is and is not (MASTER.md: the notes wait behind ℹ), worded for the role reading it.
- */
 function Notes({ role }: { role: ScheduleRole }) {
   return (
     <MoreInfo summary="เกี่ยวกับหน้านี้">
       <span>
         {role === 'admin'
-          ? 'แสดงแผนตามวันของแต่ละคน ไม่ใช่เวลาที่สแกนจริง'
-          : 'แสดงแผนตามวันของแม่บ้านในตึกและกะที่คุณรับผิดชอบ ไม่ใช่เวลาที่สแกนจริง'}
+          ? 'แสดงแผนตามวันของแต่ละคน ไม่ใช่เวลาที่สแกนจริง · หน้านี้อัปเดตเองเมื่อมีคนแก้ตาราง'
+          : 'แสดงแผนตามวันของแม่บ้านในตึกและกะที่คุณรับผิดชอบ ไม่ใช่เวลาที่สแกนจริง · หน้านี้อัปเดตเองเมื่อมีคนแก้ตาราง'}
       </span>
       <span>วันหยุดและลาทั้งกะไม่ปิดพื้นที่และไม่ลดรอบงาน · “ยังไม่กำหนด” ไม่ใช่คำยืนยันว่ามาทำงาน</span>
     </MoreInfo>
   );
 }
 
-/** The dates of the read week. A Supervisor's row may hold fewer days, so the columns come from the week itself. */
 function datesOf(week: ScheduleWeek): string[] {
   const seen = new Set<string>();
   for (const person of week.rows) {

@@ -41,7 +41,7 @@ const fourPoints = [
 ];
 
 describe('MyWorkPage (M9, M14, facility-0052)', () => {
-  it('shows the live line and "อัปเดต" only with the list, so the list never pushes them down (layout shift)', async () => {
+  it('keeps the top header refresh button disabled while loading so nothing jumps when data lands', async () => {
     let answer: () => void = () => {};
     fakeServer({
       ...cleanerSession,
@@ -53,14 +53,14 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     await renderApp('/my-work');
 
     await screen.findByText('กำลังโหลดงาน...');
-    expect(screen.queryByRole('button', { name: /อัปเดต/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'กำลังอัปเดต...' })).toBeDisabled();
 
     act(() => answer());
     await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
     expect(screen.getByRole('button', { name: /อัปเดต/ })).toBeInTheDocument();
   });
 
-  it('shows every point most urgent first, whatever order the server sends, under the shift line', async () => {
+  it('shows every point most urgent first, whatever order the server sends, under the shift summary', async () => {
     serveMyWork(myWork(undefined, [area(fourPoints)]));
     await renderApp('/my-work');
 
@@ -71,7 +71,8 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
       'ห้องน้ำชาย',
       'ห้องน้ำหญิง',
     ]);
-    expect(screen.getByText('กะเช้า 07:00–19:00 · เข้างาน 06:52')).toBeInTheDocument();
+    expect(screen.getByText('กะเช้า 07:00–19:00')).toBeInTheDocument();
+    expect(screen.getByText('เข้างาน 06:52')).toBeInTheDocument();
   });
 
   it('puts the most urgent point first in "ทำอันนี้ก่อน", with its defect and what to do (variant B, #73)', async () => {
@@ -107,7 +108,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     const next = await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
     expect(within(next).getByRole('heading', { level: 3 })).toHaveTextContent('ห้องพักพนักงาน');
     expect(within(next).getByText('Area 12 · ตึก B (ทำแทน) · รอบ 08:00–09:30')).toBeInTheDocument();
-    expect(screen.getByText('0 จาก 2 จุด ส่งแล้ว')).toBeInTheDocument();
+    expect(screen.getByText('ส่งแล้ว 0 จาก 2 จุด')).toBeInTheDocument();
     expect(within(next).getByText('ยังไม่ส่งงาน · เลยเวลารอบแล้ว')).toBeInTheDocument();
     expect(within(next).getByText('สแกน QR ที่จุดนี้เพื่อส่งงาน')).toBeInTheDocument();
   });
@@ -160,14 +161,14 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     for (const group of ['ต้องทำต่อ', 'ส่งแล้ว', 'ยังไม่ต้องทำ']) {
       expect(screen.queryByRole('region', { name: group })).not.toBeInTheDocument();
     }
-    expect(screen.getByText('0 จาก 1 จุด ส่งแล้ว')).toBeInTheDocument();
+    expect(screen.getByText('ส่งแล้ว 0 จาก 1 จุด')).toBeInTheDocument();
   });
 
   it('counts the sent points out of all of them, รอตรวจ and ตรวจผ่าน both counting as sent (#73)', async () => {
     serveMyWork(myWork(undefined, [area(fourPoints)]));
     await renderApp('/my-work');
 
-    expect(await screen.findByText('2 จาก 4 จุด ส่งแล้ว')).toBeInTheDocument();
+    expect(await screen.findByText('ส่งแล้ว 2 จาก 4 จุด')).toBeInTheDocument();
   });
 
   it('with nothing left to do now, a note takes the large card\'s place (#73)', async () => {
@@ -184,8 +185,8 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
 
     expect(await screen.findByText('หัวหน้าให้แก้ 09:40: “รอบถังขยะยังมีคราบ”')).toBeInTheDocument();
     expect(screen.getByText('แก้แล้วสแกน QR ที่จุดนี้เพื่อส่งงานใหม่')).toBeInTheDocument();
-    // facility-0059: a point card is never a link to the scan page; facility-0176's schedule entry is the only link here
-    expect(within(screen.getByRole('main')).getAllByRole('link').map((link) => link.textContent)).toEqual(['ตารางของฉัน']);
+    // No point card is a link and no duplicate ScheduleLink sits inside main (navigation lives in CleanerBottomNav)
+    expect(within(screen.getByRole('main')).queryAllByRole('link')).toHaveLength(0);
   });
 
   it('a covered Area\'s points join the same groups, marked ทำแทน, under the cover line (M14)', async () => {
@@ -206,11 +207,12 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     expect(within(later).getByText('Area 12 · ตึก B (ทำแทน) · รอบ 10:00–12:00')).toBeInTheDocument();
   });
 
-  it('before Shift-In the shift line says so', async () => {
+  it('before Shift-In the shift summary says so', async () => {
     serveMyWork(myWork(notCheckedIn));
     await renderApp('/my-work');
 
-    expect(await screen.findByText('กะเช้า 07:00–19:00 · ยังไม่ได้ลงเวลาเข้างาน')).toBeInTheDocument();
+    expect(await screen.findByText('ยังไม่ได้ลงเวลาเข้างาน')).toBeInTheDocument();
+    expect(screen.getByText('ยังไม่เข้างาน')).toBeInTheDocument();
     const next = screen.getByRole('region', { name: 'ทำอันนี้ก่อน' });
     expect(within(next).getByText('ยังไม่ส่ง · ส่งได้ถึง 12:00')).toBeInTheDocument();
     expect(within(next).getByText('สแกน QR ที่จุดนี้เพื่อส่งงาน')).toBeInTheDocument();
@@ -281,13 +283,14 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     expect(screen.getByRole('heading', { name: 'งานของฉัน' })).toBeInTheDocument();
   });
 
-  it("opens a live connection with the Cleaner's token and says the page updates by itself", async () => {
+  it("opens a live connection with the Cleaner's token and stays quiet while connected", async () => {
     serveMyWork(myWork(undefined, [area(fourPoints)]));
     await renderApp('/my-work');
 
-    expect(await screen.findByText('หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน')).toBeInTheDocument();
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
+    expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
     expect(hub.latest().tokens).toEqual(['token-cleaner']);
-    expect(hub.latest().serverTimeoutInMilliseconds).toBe(30_000); // a phone keeps the client's own wait (facility-0107)
+    expect(hub.latest().serverTimeoutInMilliseconds).toBe(30_000);
   });
 
   it('asks again when the hub says a point changed, so an inspection shows without a press', async () => {
@@ -312,36 +315,32 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3);
   });
 
-  it('a dropped hub says so, and coming back asks the server again (facility-0064)', async () => {
+  it('a dropped hub shows the top connection banner, and coming back hides it and refetches (facility-0064)', async () => {
     const server = serveMyWork(myWork(undefined, [area(fourPoints)]));
     await renderApp('/my-work');
-    await screen.findByText('หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน');
+    await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
     await settled(server);
 
     act(() => hub.latest().reconnecting());
-    expect(screen.getByText('ข้อมูลอาจยังไม่ล่าสุด กด "อัปเดต" เพื่อลองโหลดใหม่')).toBeInTheDocument();
+    expect(screen.getByText('ข้อมูลอาจยังไม่ล่าสุด การเชื่อมต่อกำลังลองใหม่')).toBeInTheDocument();
 
     act(() => hub.latest().reconnected());
 
     await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3));
-    expect(screen.getByText('หน้านี้อัปเดตเองเมื่อหัวหน้าตรวจงาน')).toBeInTheDocument();
+    expect(screen.queryByText('ข้อมูลอาจยังไม่ล่าสุด การเชื่อมต่อกำลังลองใหม่')).not.toBeInTheDocument();
   });
 
-  it('shows the shift banner and 4 real-data mini KPI tiles without adding h2/h3 headings', async () => {
+  it('shows a single consolidated shift + progress summary card without adding h2/h3 headings', async () => {
     serveMyWork(myWork(undefined, [area(fourPoints)]));
     await renderApp('/my-work');
 
     await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
-    const kpis = screen.getByRole('region', { name: 'สรุปงานวันนี้' });
-    expect(within(kpis).getByText('งานวันนี้')).toBeInTheDocument();
-    expect(within(kpis).getByText('4 จุด')).toBeInTheDocument();
-    expect(within(kpis).getByText('ส่งแล้ว')).toBeInTheDocument();
-    expect(within(kpis).getByText('คงเหลือ')).toBeInTheDocument();
-    expect(within(kpis).getByText('พบปัญหา')).toBeInTheDocument();
-    expect(within(kpis).getAllByText('2 จุด')).toHaveLength(3);
-    expect(within(kpis.parentElement!).getByText('กำลังปฏิบัติงาน')).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'สถานะกะและความคืบหน้า' });
+    expect(within(summary).getByText('กำลังปฏิบัติงาน')).toBeInTheDocument();
+    expect(within(summary).getByText('ส่งแล้ว 2 จาก 4 จุด')).toBeInTheDocument();
+    expect(within(summary).getByText(/คงเหลือ 2/)).toBeInTheDocument();
+    expect(within(summary).getByText('ปัญหา 2')).toBeInTheDocument();
 
-    // Preserved exact h2/h3 contract (fourPoints has no later-round points, so ยังไม่ต้องทำ is omitted)
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
       'ทำอันนี้ก่อน',
       'ต้องทำต่อ',

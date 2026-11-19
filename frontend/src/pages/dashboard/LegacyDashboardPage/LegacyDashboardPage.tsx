@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
 import { LiveBadge } from '../../../shared/components/LiveBadge';
 import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { Note } from '../../../shared/components/Note';
@@ -27,18 +28,12 @@ export function LegacyDashboardPage() {
 
   return (
     <main className="flex flex-col gap-5 text-sm text-text">
-      <header className="flex flex-col gap-0.5">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <h1 className="text-2xl font-extrabold tracking-tight">สถานะจุดทำความสะอาด</h1>
-          <LiveBadge hubKey={DASHBOARD_HUB} />
-        </div>
-        {/* Reserve the count line while the query loads so the content below keeps its place. */}
-        <p className="min-h-5 text-text-2">
-          {data ? `${new Set(data.map((point) => point.areaId)).size} พื้นที่ · ${data.length} จุด` : ''}
-        </p>
-      </header>
+      <AdminPageHeader
+        title="สถานะจุดทำความสะอาด"
+        subtitle={data ? `${new Set(data.map((point) => point.areaId)).size} พื้นที่ · ${data.length} จุด` : ''}
+        actions={<LiveBadge hubKey={DASHBOARD_HUB} />}
+      />
       {data && <Filters points={data} />}
-      {!isLoading && <MoreInfo summary="วิธีอ่านการ์ด">{RULES_NOTE}</MoreInfo>}
       {isLoading && <PageLoading lines={3}>กำลังโหลดจุด...</PageLoading>}
       {error && (
         <Note tone="error" onRetry={retry}>
@@ -85,6 +80,7 @@ export function LegacyDashboardPage() {
           )}
         </section>
       )}
+      {!isLoading && <MoreInfo summary="วิธีอ่านการ์ด">{RULES_NOTE}</MoreInfo>}
     </main>
   );
 }

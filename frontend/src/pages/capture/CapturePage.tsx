@@ -10,7 +10,6 @@ import {
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { isNotFound } from '../../shared/api/scanAnswers';
 import { Button } from '../../shared/components/Button';
-import { LogoutButton } from '../../shared/components/LogoutButton';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
@@ -63,6 +62,7 @@ export function CapturePage() {
   return (
     // M17 is used at the sign, so it takes the phone sizes (pages/admin.md, #79)
     <PhoneScreen
+      navMode="none"
       header={
         <PhoneHeader back={{ to: `/admin/areas/${areaId}`, label: 'กลับไปหน้าจัดการพื้นที่และป้าย' }}>
           {detail && (
@@ -93,7 +93,6 @@ export function CapturePage() {
       <MoreInfo size="phone" summary="เกี่ยวกับหน้านี้">
         เมื่อบันทึกพิกัดแล้ว ดูรายการย้อนหลังได้ในหน้า “ประวัติการแก้ไขของแอดมิน”
       </MoreInfo>
-      <LogoutButton />
     </PhoneScreen>
   );
 }

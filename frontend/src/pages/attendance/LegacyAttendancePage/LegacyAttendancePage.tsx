@@ -1,6 +1,7 @@
 import { ArrowRightLeft, Check, Coffee, MapPin, UserX } from 'lucide-react';
 import { Link } from 'react-router';
 import { attendanceHubKey, type BoardSummary } from '../../../shared/api/attendanceBoardApi';
+import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../../shared/components/Button';
 import { EditedMark } from '../../../shared/components/Badge';
 import { KpiCard } from '../../../shared/components/KpiCard/KpiCard';
@@ -27,29 +28,22 @@ export function LegacyAttendancePage() {
   const {
     args, board, error, isLoading, search, setSearch, notice, shown, page, setPage,
     fillTargetMissing, open, openKey, formRow, formTarget, closeForm, openCorrection,
-    onSlot, onBuilding, retry, clearNotice, onCorrected,
+    canResetToCurrent, onResetToCurrent, onSlot, onBuilding, retry, clearNotice, onCorrected,
   } = useLegacyAttendancePage();
 
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-0.5">
-          <h1 className="text-2xl font-extrabold tracking-tight">การเข้างาน</h1>
-          <p className="text-text-2">ดูว่าพื้นที่ไหนมีแม่บ้านอยู่ และแก้เวลาที่ลงผิด</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <LiveBadge hubKey={attendanceHubKey(args)} />
-        </div>
-      </header>
-      <Note tone="info">
-        <span>
-          หน้านี้ใช้ดูว่ามีคนดูแลพื้นที่หรือไม่ <strong>ไม่ใช่ระบบลงเวลาทำงาน และไม่คิดสาย</strong>
-        </span>
-      </Note>
+      <AdminPageHeader
+        title="การเข้างาน"
+        subtitle="ดูว่าพื้นที่ไหนมีคนดูแลอยู่และแก้เวลาที่ลงผิด · ไม่ใช่ระบบคิดสายหรือลงเวลาทำงาน"
+        actions={<LiveBadge hubKey={attendanceHubKey(args)} />}
+      />
       <BoardControls
         board={board}
         args={args}
         search={search}
+        canResetToCurrent={canResetToCurrent}
+        onResetToCurrent={onResetToCurrent}
         onSearch={setSearch}
         onSlot={onSlot}
         onBuilding={onBuilding}

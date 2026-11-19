@@ -1,11 +1,13 @@
-import { MapPinOff, RefreshCw } from 'lucide-react';
+import { Home, MapPinOff, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { refusalNeedsReload, type LocationProblem } from '../geo/readLocation';
 import { browserPage } from '../utils/reloadPage';
 import { Panel } from './Boxes';
 import { Button } from './Button';
 import { Note } from './Note';
 import { ResultScreen } from './ResultScreen';
+import { buttonClass } from './styles';
 
 interface LocationHelpProps {
   problem: LocationProblem;
@@ -42,14 +44,20 @@ export function LocationHelp({ problem, action, busy, onRetry }: LocationHelpPro
       tone="err"
       icon={<MapPinOff aria-hidden="true" className="size-14" strokeWidth={2.25} />}
       title={denied ? `เปิดตำแหน่งก่อน${action}` : 'อ่านตำแหน่งไม่ได้'}
-      // On plain http no browser gives a location, so there is nothing to retry
+      // Always offer a recovery path back home so insecure HTTP or denied GPS never becomes a dead end (Heuristic #3, #9)
       bottom={
-        insecure ? undefined : (
-          <Button variant="primary" size="main" disabled={busy || checking} onClick={() => void retry()}>
-            <RefreshCw aria-hidden="true" className="size-6" />
-            {denied ? 'เปิดแล้ว ลองอีกครั้ง' : 'ลองอีกครั้ง'}
-          </Button>
-        )
+        <>
+          {!insecure && (
+            <Button variant="primary" size="main" disabled={busy || checking} onClick={() => void retry()}>
+              <RefreshCw aria-hidden="true" className="size-6" />
+              {denied ? 'เปิดแล้ว ลองอีกครั้ง' : 'ลองอีกครั้ง'}
+            </Button>
+          )}
+          <Link className={buttonClass(insecure ? 'primary' : 'secondary', insecure ? 'main' : 'phone')} data-tap="" to="/">
+            <Home aria-hidden="true" className="size-5" />
+            กลับหน้าแรก
+          </Link>
+        </>
       }
     >
       <div className="flex w-full flex-col gap-4 text-left">

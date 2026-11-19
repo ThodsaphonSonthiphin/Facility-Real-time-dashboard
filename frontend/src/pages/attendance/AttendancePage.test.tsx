@@ -329,7 +329,7 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     await renderApp('/admin/attendance');
 
     await loaded();
-    expectInView('ไม่ใช่ระบบลงเวลาทำงาน และไม่คิดสาย');
+    expectInView(/ไม่ใช่ระบบคิดสายหรือลงเวลาทำงาน/);
     expectBehindMoreInfo(/^เรียงพื้นที่ที่ยังไม่มีคนขึ้นก่อน/, 'เกี่ยวกับหน้านี้');
     expectBehindMoreInfo(/^ลืมลงเวลาเลิกงาน/, 'เกี่ยวกับหน้านี้');
   });

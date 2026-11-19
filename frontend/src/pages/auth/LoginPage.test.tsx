@@ -129,10 +129,10 @@ describe('LoginPage (M0)', () => {
 
   it('after an on-purpose logout the login page is the plain one', async () => {
     fakeServer({ 'POST /api/auth/refresh': () => authAnswer('cleaner'), 'POST /api/auth/logout': () => ({ status: 204 }) });
-    const { user } = await renderApp('/my-work');
+    const { user } = await renderApp('/my-account');
 
-    // A Cleaner's ออกจากระบบ is at the end of My Work, shown once the work has loaded (the design file's Main)
     await user.click(await screen.findByRole('button', { name: 'ออกจากระบบ' }));
+    await user.click(await screen.findByRole('button', { name: 'ยืนยันออกจากระบบ' }));
 
     expect(await screen.findByRole('heading', { name: 'เข้าสู่ระบบ' })).toBeInTheDocument();
     expect(screen.queryByText('เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที')).not.toBeInTheDocument();

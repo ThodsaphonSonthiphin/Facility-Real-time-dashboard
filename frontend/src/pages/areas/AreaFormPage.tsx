@@ -1,8 +1,9 @@
-import { ChevronLeft, MapPin } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { useGetAreaQuery, useGetBuildingsQuery, useGetCleanersQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { isNotFound } from '../../shared/api/scanAnswers';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
@@ -34,17 +35,16 @@ export function AreaFormPage() {
   return (
     // D10's one column at 880 px, so a name or a date is not a 1216 px line; no width token names it
     <main className="flex min-w-0 max-w-220 flex-col gap-5 text-sm text-text">
-      <header className="flex flex-col gap-2">
-        <Link className={`${linkClass} inline-flex min-h-9 items-center gap-1 self-start font-semibold`} to={id === undefined ? '/admin/areas' : `/admin/areas/${id}`}>
-          <ChevronLeft aria-hidden="true" className="size-4" />
-          พื้นที่และป้าย
-        </Link>
-        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-          <MapPin aria-hidden="true" className="size-4 shrink-0 text-text-2" />
-          {title}
-        </h1>
-        <span className="text-text-2">พื้นที่ = งานของแม่บ้าน 1 คนต่อกะ มีป้ายลงเวลา 1 ป้าย และจุดหลายจุด</span>
-      </header>
+      <AdminPageHeader
+        back={
+          <Link className={`${linkClass} inline-flex min-h-9 items-center gap-1 self-start font-semibold`} to={id === undefined ? '/admin/areas' : `/admin/areas/${id}`}>
+            <ChevronLeft aria-hidden="true" className="size-4" />
+            พื้นที่และป้าย
+          </Link>
+        }
+        title={title}
+        subtitle="พื้นที่ = งานของแม่บ้าน 1 คนต่อกะ มีป้ายลงเวลา 1 ป้าย และจุดหลายจุด"
+      />
       {error && <Note tone="error" onRetry={isNotFound(error) ? undefined : retryError}>{getErrorMessage(error)}</Note>}
       {buildings.data && cleaners.data && (id === undefined || detail) ? (
         <AreaForm key={id ?? 'new'} detail={detail} buildings={buildings.data} cleaners={cleaners.data} />

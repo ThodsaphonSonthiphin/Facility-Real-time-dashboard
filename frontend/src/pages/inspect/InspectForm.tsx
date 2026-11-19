@@ -48,6 +48,7 @@ export function InspectForm({
   const alert = problem ?? errorText;
   return (
     <PhoneScreen
+      navMode="none"
       header={<InspectHeading visit={visit} />}
       bottom={
         // The verdict button is the page's one main action, so it sits in the bar; `form` ties it to the form above

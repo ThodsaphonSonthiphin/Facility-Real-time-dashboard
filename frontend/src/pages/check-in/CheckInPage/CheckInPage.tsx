@@ -52,6 +52,7 @@ export function CheckInPage() {
 
   return (
     <PhoneScreen
+      navMode="none"
       header={
         <PhoneHeader back={{ to: '/my-work', label: 'งานของฉัน' }}>
           <span className="text-sm font-semibold text-text-2">ป้ายลงเวลา</span>

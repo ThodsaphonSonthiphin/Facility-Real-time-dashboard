@@ -14,30 +14,27 @@ function renderMobileNav(path = '/dashboard') {
   render(
     <Provider store={makeStore()}>
       <MemoryRouter initialEntries={[path]}>
-        <AdminNav mobileDisclosure />
+        <AdminNav mobileDisclosure userName="แอดมินทดสอบ" />
         <main id="main-content" tabIndex={-1}>
           <Routes>
             <Route path="/dashboard" element={<h1>Dashboard test page</h1>} />
             <Route path="/admin/attendance" element={<h1>Attendance test page</h1>} />
           </Routes>
         </main>
-        <button type="button">Outside navigation</button>
       </MemoryRouter>
     </Provider>,
   );
   return user;
 }
 
-describe('AdminNav alert count', () => {
+describe('AdminNav (3-group IA + mobile slide-over Drawer)', () => {
   it.each([0, 9, 99, 999, 1000, 10000])('keeps the exact accessible count for %i open alerts', async (count) => {
     let respond!: (answer: FakeResponse) => void;
     fakeServer({ 'GET /api/admin/alerts': () => new Promise((resolve) => { respond = resolve; }) });
     render(<Provider store={makeStore()}><MemoryRouter><AdminNav /></MemoryRouter></Provider>);
     const link = screen.getByRole('link', { name: 'รายการที่ขึ้นเตือน' });
     expect(within(link).queryByTitle(String(count))).not.toBeInTheDocument();
-    // The request remains pending until the test releases it, so the unknown state is exercised too.
     await screen.findByRole('navigation', { name: 'เมนูแอดมิน' });
-    // RTK Query starts the request asynchronously.
     await waitFor(() => expect(respond).toBeDefined());
     await act(async () => {
       respond({ status: 200, body: Array.from({ length: count }, (_, i) => ({ ...attendanceGpsAlert, recordId: i + 1 })) });
@@ -51,46 +48,44 @@ describe('AdminNav alert count', () => {
     }
   });
 
-  it('closes the mobile menu when keyboard focus leaves the navigation', async () => {
+  it('opens a modal slide-over drawer on mobile and closes via Escape returning focus to trigger', async () => {
     const user = renderMobileNav();
     const trigger = screen.getByRole('button', { name: 'เมนูแอดมิน' });
     await user.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const dialog = screen.getByRole('dialog', { name: 'เมนูแอดมิน' });
+    expect(within(dialog).getByText('แอดมินทดสอบ')).toBeInTheDocument();
 
-    screen.getByRole('link', { name: 'ประวัติการแก้ไข' }).focus();
-    screen.getByRole('button', { name: 'Outside navigation' }).focus();
-
-    await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'false'));
-    expect(screen.getByRole('button', { name: 'Outside navigation' })).toHaveFocus();
-  });
-
-  it('returns focus to the menu button when the current page is selected', async () => {
-    const user = renderMobileNav();
-    const trigger = screen.getByRole('button', { name: 'เมนูแอดมิน' });
-    await user.click(trigger);
-    await user.click(screen.getByRole('link', { name: 'สถานะจุด' }));
-
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'เมนูแอดมิน' })).not.toBeInTheDocument();
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     expect(trigger).toHaveFocus();
   });
 
-  it('moves focus to the main content after mobile navigation and supports Escape in the menu', async () => {
+  it('returns focus to the menu button when the current page is selected inside the drawer', async () => {
     const user = renderMobileNav();
     const trigger = screen.getByRole('button', { name: 'เมนูแอดมิน' });
     await user.click(trigger);
-    await user.click(screen.getByRole('link', { name: 'การเข้างาน' }));
+    const dialog = screen.getByRole('dialog', { name: 'เมนูแอดมิน' });
+    await user.click(within(dialog).getByRole('link', { name: 'สถานะจุด' }));
+
+    expect(screen.queryByRole('dialog', { name: 'เมนูแอดมิน' })).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
+  });
+
+  it('moves focus to main content after navigating to another page from the mobile drawer', async () => {
+    const user = renderMobileNav();
+    const trigger = screen.getByRole('button', { name: 'เมนูแอดมิน' });
+    await user.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'เมนูแอดมิน' });
+    await user.click(within(dialog).getByRole('link', { name: 'การเข้างาน' }));
 
     expect(await screen.findByRole('heading', { name: 'Attendance test page' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('main')).toHaveFocus());
-
-    await user.click(trigger);
-    screen.getByRole('link', { name: 'ประวัติการแก้ไข' }).focus();
-    await user.keyboard('{Escape}');
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(trigger).toHaveFocus();
   });
 
-  it('places ภาพรวม above สถานะจุด and preserves the exact follow-up order including ตารางงาน', () => {
+  it('organizes all 12 Admin links into 3 clear groups (หน้างานวันนี้, ตารางและรายงาน, ตั้งค่าระบบ)', () => {
     fakeServer({ 'GET /api/admin/alerts': () => ({ status: 200, body: [] }) });
     render(
       <Provider store={makeStore()}>
@@ -100,18 +95,29 @@ describe('AdminNav alert count', () => {
       </Provider>,
     );
 
-    const followGroup = screen.getByRole('list', { name: 'ติดตามงาน' });
-    const links = within(followGroup).getAllByRole('link');
-    expect(links.map((link) => link.textContent)).toEqual([
+    const liveGroup = screen.getByRole('list', { name: 'หน้างานวันนี้' });
+    expect(within(liveGroup).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'ภาพรวม',
       'สถานะจุด',
       'การเข้างาน',
-      'ตารางงาน',
       'รายการที่ขึ้นเตือน',
+    ]);
+    expect(within(liveGroup).getByRole('link', { name: 'ภาพรวม' })).toHaveAttribute('aria-current', 'page');
+
+    const planGroup = screen.getByRole('list', { name: 'ตารางและรายงาน' });
+    expect(within(planGroup).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'ตารางงาน',
       'สรุปการตรวจ',
       'ส่งออก Excel',
     ]);
-    expect(within(followGroup).getByRole('link', { name: 'ภาพรวม' })).toHaveAttribute('href', '/admin/overview');
-    expect(within(followGroup).getByRole('link', { name: 'ภาพรวม' })).toHaveAttribute('aria-current', 'page');
+
+    const setupGroup = screen.getByRole('list', { name: 'ตั้งค่าระบบ' });
+    expect(within(setupGroup).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'พื้นที่และป้าย',
+      'ตึก',
+      'พิมพ์ป้าย',
+      'บัญชีผู้ใช้',
+      'ประวัติการแก้ไข',
+    ]);
   });
 });

@@ -1,4 +1,4 @@
-import { Pencil, Plus, QrCode } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { Link } from 'react-router';
 import type { AreaDetail, AdminPoint } from '../../shared/api/adminSetupApi';
 import { Table } from '../../shared/components/Boxes';
@@ -75,7 +75,7 @@ export function PointTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (ta
                   <SignPlace sign={point.sign} />
                 </td>
                 <td className="w-px text-right whitespace-nowrap">
-                  <div className="inline-flex items-center gap-2">
+                  <div className="inline-flex items-center gap-3">
                     <Button
                       variant="link"
                       size="desk"
@@ -83,15 +83,8 @@ export function PointTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (ta
                       onClick={() => onEdit({ kind: 'point', pointId: point.id })}
                     >
                       <Pencil aria-hidden="true" className="size-4" />
-                      แก้
+                      แก้ไข
                     </Button>
-                    {area.isActive && point.isActive && (
-                      <Button variant="link" size="desk" aria-label={`จัดการ QR ${point.sign.code}`}
-                        onClick={() => onEdit({ kind: 'point', pointId: point.id })}>
-                        <QrCode aria-hidden="true" className="size-4" />
-                        จัดการ QR
-                      </Button>
-                    )}
                     {area.isActive && point.isActive && (
                       <Link className={buttonClass('link', 'desk')} data-tap="" to={printLink(point.sign.id)}>
                         พิมพ์

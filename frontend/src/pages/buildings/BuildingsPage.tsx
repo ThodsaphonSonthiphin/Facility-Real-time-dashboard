@@ -1,4 +1,5 @@
-import { Building2, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
@@ -21,20 +22,16 @@ export function BuildingsPage() {
 
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-            <Building2 aria-hidden="true" className="size-4 shrink-0 text-text-2" />
-            ตึก
-          </h1>
-          {/* As tall as its words before the answer, so nothing under it moves */}
-          <span className="min-h-5 text-text-2">ตึกที่ปิดใช้งาน จะไม่แสดงในหน้าสถานะจุด และสแกนป้ายในตึกนั้นไม่ได้</span>
-        </div>
-        <Button variant="primary" size="desk" onClick={create}>
-          <Plus aria-hidden="true" className="size-4" />
-          เพิ่มตึก
-        </Button>
-      </header>
+      <AdminPageHeader
+        title="ตึก"
+        subtitle="ตึกที่ปิดใช้งาน จะไม่แสดงในหน้าสถานะจุด และสแกนป้ายในตึกนั้นไม่ได้"
+        actions={
+          <Button variant="primary" size="desk" onClick={create}>
+            <Plus aria-hidden="true" className="size-4" />
+            เพิ่มตึก
+          </Button>
+        }
+      />
       {accounts.error && <Note tone="error" onRetry={() => void accounts.refetch()}>โหลดรายชื่อหัวหน้าไม่ได้</Note>}
       {buildings.error && <Note tone="error" onRetry={() => void buildings.refetch()}>{getErrorMessage(buildings.error)}</Note>}
       <section

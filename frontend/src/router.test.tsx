@@ -70,8 +70,8 @@ describe('routing (facility-0026, 0058)', () => {
       'ภาพรวม',
       'สถานะจุด',
       'การเข้างาน',
-      'ตารางงาน',
       'รายการที่ขึ้นเตือน',
+      'ตารางงาน',
       'สรุปการตรวจ',
       'ส่งออก Excel',
       'พื้นที่และป้าย',
@@ -80,10 +80,11 @@ describe('routing (facility-0026, 0058)', () => {
       'บัญชีผู้ใช้',
       'ประวัติการแก้ไข',
     ]);
-    // Two groups (DESIGN_SPEC §4, #121): following the work, then setting it up
-    expect(within(menu).getAllByRole('list')).toHaveLength(2);
-    expect(within(menu).getByRole('list', { name: 'ติดตามงาน' })).toBeInTheDocument();
-    expect(within(menu).getByRole('list', { name: 'ตั้งค่า' })).toBeInTheDocument();
+    // Three groups (Option A): หน้างานวันนี้, ตารางและรายงาน, ตั้งค่าระบบ
+    expect(within(menu).getAllByRole('list')).toHaveLength(3);
+    expect(within(menu).getByRole('list', { name: 'หน้างานวันนี้' })).toBeInTheDocument();
+    expect(within(menu).getByRole('list', { name: 'ตารางและรายงาน' })).toBeInTheDocument();
+    expect(within(menu).getByRole('list', { name: 'ตั้งค่าระบบ' })).toBeInTheDocument();
     expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
     expect(within(menu).getByRole('link', { name: 'พื้นที่และป้าย' })).toHaveAttribute('href', '/admin/areas');
     expect(within(menu).getByRole('link', { name: 'พิมพ์ป้าย' })).toHaveAttribute('href', '/admin/print');
@@ -190,19 +191,22 @@ describe('routing (facility-0026, 0058)', () => {
     fakeServer(noSession);
     await renderApp('/no-such-page');
 
-    expect(screen.getByRole('heading', { name: 'ไม่พบหน้านี้' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ไม่พบหน้าที่ต้องการ' })).toBeInTheDocument();
   });
 
-  it('logout ends the session on the server and the next login starts at the own home', async () => {
+  it('logout requires confirmation from the Account tab, ends the session on the server, and starts next login at home', async () => {
     const server = fakeServer({
       'POST /api/auth/refresh': () => authAnswer('cleaner'),
       'POST /api/auth/logout': () => ({ status: 204 }),
     });
     const { user, router, store } = await renderApp('/my-work');
-    expect(screen.getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
+    const nav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
+    await user.click(within(nav).getByRole('link', { name: 'บัญชี' }));
+    expect(await screen.findByText('แม่บ้านทดสอบ')).toBeInTheDocument();
 
-    // A Cleaner's ออกจากระบบ is at the end of My Work, which shows it once the work has loaded (the design file's Main)
-    await user.click(await screen.findByRole('button', { name: 'ออกจากระบบ' }));
+    await user.click(screen.getByRole('button', { name: 'ออกจากระบบ' }));
+    const confirmDialog = await screen.findByRole('alertdialog', { name: 'ยืนยันออกจากระบบ' });
+    await user.click(within(confirmDialog).getByRole('button', { name: 'ยืนยันออกจากระบบ' }));
 
     expect(router.state.location.pathname).toBe('/login');
     expect(router.state.location.state).toBeNull();

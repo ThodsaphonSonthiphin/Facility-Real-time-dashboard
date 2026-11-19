@@ -33,7 +33,6 @@ test('history cursor paging: distinct descending records, previous page, search 
   test.skip(process.env.E2E_DATASET === 'baseline', 'Requires generated history');
   await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'ประวัติการแก้ไข', exact: true }).click();
   await historyRange(page);
-  await page.getByText('ค้นหาประวัติ', { exact: true }).click();
   await page.getByLabel('ค้นหา', { exact: true }).fill('E2E-HISTORY');
   const answer = page.waitForResponse((r) => r.url().includes('/api/admin/audit-log?') && r.url().includes('q=E2E-HISTORY'));
   await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
@@ -65,7 +64,6 @@ test('history category filters and literal search do not treat percent as a wild
   await historyRange(page);
   await page.getByRole('combobox', { name: 'ประเภท', exact: true }).selectOption('Setup');
   await expect(page.getByRole('table')).toBeVisible();
-  await page.getByText('ค้นหาประวัติ', { exact: true }).click();
   await page.getByLabel('ค้นหา', { exact: true }).fill('%');
   await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
   await expect(page.getByText('ไม่พบรายการที่ตรงกับที่ค้นหาในช่วงนี้')).toBeVisible();

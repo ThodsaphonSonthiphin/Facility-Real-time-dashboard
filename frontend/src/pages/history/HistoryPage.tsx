@@ -1,4 +1,5 @@
-import { Eye, History } from 'lucide-react';
+import { Eye } from 'lucide-react';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
@@ -13,18 +14,15 @@ export function HistoryPage() {
   const view = useHistoryPage();
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
-      <header className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-            <History aria-hidden="true" className="size-4 shrink-0 text-text-2" />
-            ประวัติการแก้ไขของแอดมิน
-          </h1>
+      <AdminPageHeader
+        title="ประวัติการแก้ไขของแอดมิน"
+        subtitle="ใคร แก้อะไร เมื่อไร ค่าก่อนและหลัง แก้หรือลบรายการไม่ได้"
+        badge={
           <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-idle-bg px-2 py-0.5 text-xs font-semibold text-idle">
             <Eye aria-hidden="true" className="size-4" />อ่านอย่างเดียว
           </span>
-        </div>
-        <span className="min-h-5 text-text-2">ใคร แก้อะไร เมื่อไร ค่าก่อนและหลัง แก้หรือลบรายการไม่ได้</span>
-      </header>
+        }
+      />
       <HistoryControls args={view.args} actors={view.actors.data} texts={view.texts} onTexts={view.setTexts}
         onShow={view.show} onArgs={view.go} search={view.search} onSearch={view.setSearch}
         preset={view.preset} onPreset={view.selectPreset} />

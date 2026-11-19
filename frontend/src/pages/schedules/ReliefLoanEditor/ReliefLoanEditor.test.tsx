@@ -13,7 +13,8 @@ it('finds an exact source and employee, requires attestation, and records the na
       agreementRequired: true, sourceSupervisorId: 22, sourceSupervisorName: 'หัวหน้าตึก C',
     }) }) },
   });
-  await user.click(await screen.findByRole('button', { name: 'บันทึกการยืมสแปร์' }));
+  await user.click(await screen.findByRole('button', { name: 'จัดการเพิ่มเติม' }));
+  await user.click(await screen.findByRole('menuitem', { name: 'บันทึกการยืมสแปร์' }));
   const drawer = within(await screen.findByRole('dialog', { name: 'บันทึกการยืมสแปร์' }));
   expect(drawer.getByText('ตกลงกับซุปตึกต้นทางก่อน แล้วจึงบันทึกงานที่นี่')).toBeVisible();
   await user.selectOptions(drawer.getByLabelText('พื้นที่ปลายทาง'), '4');
@@ -55,7 +56,8 @@ it('keeps the loan search and choice after a stale result and asks again only if
       },
     },
   });
-  await user.click(await screen.findByRole('button', { name: 'บันทึกการยืมสแปร์' }));
+  await user.click(await screen.findByRole('button', { name: 'จัดการเพิ่มเติม' }));
+  await user.click(await screen.findByRole('menuitem', { name: 'บันทึกการยืมสแปร์' }));
   const drawer = within(await screen.findByRole('dialog'));
   await user.selectOptions(drawer.getByLabelText('พื้นที่ปลายทาง'), '4');
   await user.selectOptions(drawer.getByLabelText('ตึกต้นทาง'), '3');

@@ -1,7 +1,8 @@
-import { Search, Wrench } from 'lucide-react';
+import { RotateCcw, Search, Wrench } from 'lucide-react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { PointCard, PointStatus } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
 import { Select, TextInput } from '../../shared/components/Field';
 import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { focusRing, statusIcon, statusText, toggleClass } from '../../shared/components/styles';
@@ -9,6 +10,7 @@ import { pointStatusLabel } from '../../shared/utils/labels';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   buildingChosen,
+  filtersCleared,
   issueOnlyToggled,
   problemFirstToggled,
   searchChanged,
@@ -41,6 +43,7 @@ export function Filters({ points }: { points: PointCard[] }) {
   const shown = inBuilding(points, filters.buildingCode);
   const counts = statusCounts(shown);
   const issues = shown.filter((point) => point.issue).length;
+  const hasActiveFilters = Boolean(filters.status || filters.buildingCode || filters.issueOnly || filters.search.trim());
 
   return (
     <>
@@ -117,6 +120,12 @@ export function Filters({ points }: { points: PointCard[] }) {
           />
           เรียงพื้นที่ที่มีปัญหาขึ้นก่อน
         </label>
+        {hasActiveFilters && (
+          <Button variant="link" size="desk" onClick={() => dispatch(filtersCleared())}>
+            <RotateCcw aria-hidden="true" className="size-4" />
+            ล้างตัวกรอง
+          </Button>
+        )}
       </FilterToolbar>
     </>
   );

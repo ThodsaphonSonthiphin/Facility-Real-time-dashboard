@@ -31,38 +31,41 @@ function serveCleaner(routes: Record<string, () => { status: number; body?: unkn
   });
 }
 
-describe('CleanerBottomNav (facility-0227)', () => {
-  it('renders exactly 2 real navigation tabs on /my-work without สแกน QR, ลงเวลา, or บัญชี', async () => {
+describe('CleanerBottomNav (3-tab mobile navigation + Focused Task Mode)', () => {
+  it('renders 3 real navigation tabs on /my-work (งานของฉัน, ตารางของฉัน, บัญชี) without QR fabrication', async () => {
     serveCleaner();
     await renderApp('/my-work');
 
     const nav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
     const items = Array.from(nav.querySelectorAll('a, button'));
-    expect(items.map((el) => el.textContent)).toEqual(['งานของฉัน', 'ตารางของฉัน']);
+    expect(items.map((el) => el.textContent)).toEqual(['งานของฉัน', 'ตารางของฉัน', 'บัญชี']);
     expect(within(nav).queryByText('สแกน QR')).not.toBeInTheDocument();
     expect(within(nav).queryByText('ลงเวลา')).not.toBeInTheDocument();
-    expect(within(nav).queryByText('บัญชี')).not.toBeInTheDocument();
     expect(within(nav).getByRole('link', { name: 'งานของฉัน' })).toHaveAttribute('aria-current', 'page');
     expect(within(nav).getByRole('link', { name: 'ตารางของฉัน' })).toHaveAttribute('href', '/my-schedule');
+    expect(within(nav).getByRole('link', { name: 'บัญชี' })).toHaveAttribute('href', '/my-account');
   });
 
-  it('marks ตารางของฉัน current on /my-schedule', async () => {
+  it('marks ตารางของฉัน current on /my-schedule and บัญชี current on /my-account', async () => {
     serveCleaner();
-    await renderApp('/my-schedule');
+    const { user } = await renderApp('/my-schedule');
 
     const nav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
     expect(within(nav).getByRole('link', { name: 'ตารางของฉัน' })).toHaveAttribute('aria-current', 'page');
     expect(within(nav).getByRole('link', { name: 'งานของฉัน' })).not.toHaveAttribute('aria-current');
+
+    await user.click(within(nav).getByRole('link', { name: 'บัญชี' }));
+    expect(await screen.findByRole('heading', { name: 'บัญชีของฉัน' })).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'เมนูหลักแม่บ้าน' })).getByRole('link', { name: 'บัญชี' }))
+      .toHaveAttribute('aria-current', 'page');
   });
 
-  it('stays visible with 2 real links on tokenized routes without fabricating QR links', async () => {
+  it('hides bottom navigation on focused QR check-in flow so bottom CTAs never double-stack', async () => {
     serveCleaner();
     await renderApp('/check-in/token-checkin');
 
-    const nav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
-    const links = within(nav).getAllByRole('link');
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/my-work', '/my-schedule']);
-    expect(within(nav).queryAllByRole('button')).toHaveLength(0);
+    expect(await screen.findByRole('heading', { name: 'ลงเวลา' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'เมนูหลักแม่บ้าน' })).not.toBeInTheDocument();
   });
 
   it('never renders for supervisor or admin', async () => {

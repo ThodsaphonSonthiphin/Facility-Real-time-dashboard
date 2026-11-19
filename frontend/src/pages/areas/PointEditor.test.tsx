@@ -64,10 +64,10 @@ describe('PointEditor (D4, facility-0045, 0047)', () => {
     expect(within(row).getByLabelText('เริ่มรอบ 1')).toHaveValue('24');
   });
 
-  it('opens QR management from its table row and retains the safe confirmation without sending on cancel', async () => {
+  it('opens QR management from its single edit button and retains the safe confirmation without sending on cancel', async () => {
     const server = serve();
     const { user } = await renderApp('/admin/areas/1');
-    const opener = await screen.findByRole('button', { name: 'จัดการ QR AR01-01' });
+    const opener = await screen.findByRole('button', { name: 'แก้ไข AR01-01' });
     await user.click(opener);
     await user.click(await screen.findByText('พิกัดและ QR ของป้าย'));
     const editor = screen.getByRole('dialog', { name: 'แก้ไขจุด · AR01-01' });

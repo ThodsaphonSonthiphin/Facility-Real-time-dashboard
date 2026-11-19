@@ -69,7 +69,7 @@ export function useAccountsPage() {
 
   return {
     accounts, areas, buildings, me, role, setRole, active, changeActive, search, changeSearch,
-    panel, notice, list, shown, counts, error, target, closePanel, done, act, openCreate,
+    panel, notice, clearNotice: () => setNotice(null), list, shown, counts, error, target, closePanel, done, act, openCreate,
     busy: activating.isLoading,
   };
 }

@@ -1,5 +1,6 @@
 import { RotateCcw } from 'lucide-react';
 import { Link } from 'react-router';
+import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../../shared/components/Button';
 import { Field, Select, TextInput } from '../../../shared/components/Field';
 import { LiveBadge } from '../../../shared/components/LiveBadge';
@@ -7,6 +8,7 @@ import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { Note } from '../../../shared/components/Note';
 import { PageLoading } from '../../../shared/components/PageState';
 import { Segmented } from '../../../shared/components/Segmented';
+import { FilterToolbar } from '../../../shared/components/SurfacePanel';
 import { linkClass } from '../../../shared/components/styles';
 import { AreaResults } from '../AreaResults/AreaResults';
 import { BuildingComparison } from '../BuildingComparison/BuildingComparison';
@@ -20,27 +22,19 @@ export function OverviewPage() {
   const model = useOverviewPage();
 
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">ภาพรวมการดูแลพื้นที่</h1>
-          <p className="text-text-2">{model.periodText}</p>
-        </div>
-        {model.hubKey && <LiveBadge hubKey={model.hubKey} />}
-        {model.canResetToCurrent && (
-          <Button size="desk" variant="secondary" onClick={model.onResetToCurrent}>
-            <RotateCcw aria-hidden="true" className="size-4" />
-            กลับกะปัจจุบัน
-          </Button>
-        )}
-      </header>
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
+      <AdminPageHeader
+        title="ภาพรวมการดูแลพื้นที่"
+        subtitle={model.periodText}
+        actions={model.hubKey ? <LiveBadge hubKey={model.hubKey} /> : undefined}
+      />
 
       <p role="status" aria-label="สถานะภาพรวม" aria-live="polite" className="sr-only">
         {model.statusAnnouncement}
       </p>
 
       {model.invalidContext ? (
-        <Note tone="error" title="พารามิเตอร์หน้าไม่ถูกต้อง">
+        <Note tone="error" title="ลิงก์หน้านี้ไม่ถูกต้อง">
           <p>{model.error}</p>
           <p className="mt-2">
             <Link className={linkClass} to="/admin/overview">
@@ -50,9 +44,17 @@ export function OverviewPage() {
         </Note>
       ) : (
         <>
-          <section
-            aria-label="เลือกบริบทภาพรวม"
-            className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-surface p-4"
+          <FilterToolbar
+            label="ตัวกรองภาพรวม"
+            align="end"
+            actions={
+              model.canResetToCurrent ? (
+                <Button size="desk" variant="secondary" onClick={model.onResetToCurrent}>
+                  <RotateCcw aria-hidden="true" className="size-4" />
+                  กลับกะปัจจุบัน
+                </Button>
+              ) : undefined
+            }
           >
             <Field label="วันที่ของกะ" help={model.dateHelpText}>
               <TextInput
@@ -93,7 +95,7 @@ export function OverviewPage() {
                 ))}
               </Select>
             </Field>
-          </section>
+          </FilterToolbar>
 
           {model.loading && <PageLoading lines={3}>กำลังโหลดภาพรวม...</PageLoading>}
 

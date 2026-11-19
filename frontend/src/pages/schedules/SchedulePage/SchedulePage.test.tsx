@@ -251,7 +251,8 @@ describe('a changed plan and a read that may be old (spec §12)', () => {
       },
     });
     await renderApp('/my-schedule');
-    await screen.findByText('หน้านี้อัปเดตเองเมื่อมีคนแก้ตาราง');
+    await screen.findByRole('heading', { level: 1, name: 'ตารางของฉัน' });
+    await screen.findByText('16/11–22/11 2026');
 
     act(() => hub.latest().push('ScheduleChanged', { commandId: '7f1c2f22-6a44-4c11-9a1e-0f4c8a1b2c33' }));
 
@@ -262,7 +263,7 @@ describe('a changed plan and a read that may be old (spec §12)', () => {
     await act(async () => release?.({ status: 200, body: week({ revision: 'digest-2' }) }));
 
     // Only a successful read that started after the push clears it
-    await waitFor(() => expect(screen.queryByText('ข้อมูลอาจยังไม่ล่าสุด กำลังโหลดใหม่...')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
   });
 
   it('keeps its warning when the newer read fails, since a request that failed is not evidence', async () => {
@@ -276,20 +277,20 @@ describe('a changed plan and a read that may be old (spec §12)', () => {
       },
     });
     await renderApp('/my-schedule');
-    await screen.findByText('หน้านี้อัปเดตเองเมื่อมีคนแก้ตาราง');
+    await screen.findByRole('heading', { level: 1, name: 'ตารางของฉัน' });
     const before = reads;
 
     act(() => hub.latest().push('ScheduleChanged', { commandId: '7f1c2f22-6a44-4c11-9a1e-0f4c8a1b2c33' }));
 
     await waitFor(() => expect(reads).toBeGreaterThan(before));
-    expect(await screen.findByText('ข้อมูลอาจยังไม่ล่าสุด กำลังโหลดใหม่...')).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent('ข้อมูลอาจยังไม่ล่าสุด');
   });
 
   it('keeps its warning while the connection is down, and asks again when it comes back', async () => {
     pinClock();
     const { reads } = serveWeeks('cleaner', () => week());
     await renderApp('/my-schedule');
-    await screen.findByText('หน้านี้อัปเดตเองเมื่อมีคนแก้ตาราง');
+    await screen.findByRole('heading', { level: 1, name: 'ตารางของฉัน' });
     const before = reads().length;
 
     act(() => hub.latest().reconnecting());
@@ -411,7 +412,7 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     expect(todayCell).toHaveAttribute('aria-pressed', 'true');
     expect(pastCell).toHaveAttribute('aria-pressed', 'false');
 
-    const contextBar = screen.getByRole('region', { name: 'คำสั่งตามบริบทของช่องที่เลือก' });
+    const contextBar = screen.getByRole('region', { name: 'จัดการวันที่เลือก' });
     expect(within(contextBar).getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
     expect(within(contextBar).getByRole('button', { name: /แก้เฉพาะวันที่.*17\/11\/2026/ })).toBeInTheDocument();
     expect(within(contextBar).getByRole('button', { name: 'แก้ตารางประจำ' })).toBeInTheDocument();
@@ -421,6 +422,10 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     expect(todayCell).toHaveAttribute('aria-pressed', 'false');
     expect(within(contextBar).getByRole('button', { name: /แก้ไขแผนย้อนหลัง.*16\/11\/2026/ })).toBeInTheDocument();
     expect(within(contextBar).queryByRole('button', { name: /แก้เฉพาะวันที่/ })).not.toBeInTheDocument();
+
+    // Closing the context bar deselects cleanly (Heuristic #3)
+    await user.click(within(contextBar).getByRole('button', { name: 'ปิด' }));
+    expect(screen.queryByRole('region', { name: 'จัดการวันที่เลือก' })).not.toBeInTheDocument();
   });
 
   it('shows supervisor team actions and schedule history inside ScheduleContextBar when eligible', async () => {
@@ -450,7 +455,7 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     serveWeeks('supervisor', () => week({ rows: [editablePerson] }));
     const { user } = await renderApp('/schedule-management');
 
-    const contextBar = await screen.findByRole('region', { name: 'คำสั่งตามบริบทของช่องที่เลือก' });
+    const contextBar = await screen.findByRole('region', { name: 'จัดการวันที่เลือก' });
     expect(within(contextBar).getByRole('button', { name: /เพิ่มเวลาที่ขาด แม่บ้านทดสอบ 17\/11\/2026/ })).toBeInTheDocument();
     expect(within(contextBar).getByRole('button', { name: /ย้ายพื้นที่ระหว่างกะ แม่บ้านทดสอบ 17\/11\/2026/ })).toBeInTheDocument();
 

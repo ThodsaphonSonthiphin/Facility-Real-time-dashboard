@@ -71,6 +71,8 @@ export function useLegacyAttendancePage() {
     args, board, error, isLoading, search, setSearch, notice, shown, page, setPage,
     fillTargetMissing: board && fill && !fillRow && !editing,
     open, openKey, formRow, formTarget, closeForm, openCorrection,
+    canResetToCurrent: Boolean(args.shiftDate || args.shift),
+    onResetToCurrent: () => go({ buildingId: args.buildingId }),
     onSlot: (shiftDate: string, shift: Shift) => go({ ...args, shiftDate, shift }),
     onBuilding: (buildingId?: number) => go({ ...args, buildingId }),
     retry: () => void refetch(),

@@ -1,4 +1,6 @@
+import { ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router';
+import { AdminPageHeader } from '../../components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../components/Button';
 import { LiveBadge } from '../../components/LiveBadge';
 import { Note } from '../../components/Note';
@@ -12,21 +14,30 @@ import { useOverviewAreaPage } from './useOverviewAreaPage';
 export function OverviewAreaPage({ view, actions }: OverviewAreaPageProps) {
   const model = useOverviewAreaPage(view);
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
-      <Link className={`${linkClass} inline-flex min-h-9 items-center self-start`} to={model.backHref}>กลับภาพรวม</Link>
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">
-          {model.detail ? `${model.detail.area.code} ${model.detail.area.name}` : 'รายละเอียดพื้นที่'}
-        </h1>
-        {model.periodText && (
-          <p className="text-text-2">
-            {model.periodText}
-            {model.detail && ` · ตึก ${model.detail.area.buildingName}`}
-          </p>
-        )}
-        {model.phaseText && <p className="text-text-2">{model.phaseText}</p>}
-        {model.hubKey && <LiveBadge hubKey={model.hubKey} />}
-      </header>
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
+      <AdminPageHeader
+        back={
+          <Link className={`${linkClass} inline-flex min-h-9 items-center gap-1 self-start font-semibold`} to={model.backHref}>
+            <ChevronLeft aria-hidden="true" className="size-4" />
+            กลับภาพรวม
+          </Link>
+        }
+        title={model.detail ? `${model.detail.area.code} ${model.detail.area.name}` : 'รายละเอียดพื้นที่'}
+        subtitle={
+          (model.periodText || model.phaseText) ? (
+            <>
+              {model.periodText && (
+                <span className="block">
+                  {model.periodText}
+                  {model.detail && ` · ตึก ${model.detail.area.buildingName}`}
+                </span>
+              )}
+              {model.phaseText && <span className="block">{model.phaseText}</span>}
+            </>
+          ) : undefined
+        }
+        actions={model.hubKey ? <LiveBadge hubKey={model.hubKey} /> : undefined}
+      />
       {model.loading && <PageLoading lines={3}>กำลังโหลดพื้นที่...</PageLoading>}
       {model.error && (
         <Note tone={model.detail ? 'warn' : 'error'} onRetry={model.canRetry ? model.retry : undefined}>

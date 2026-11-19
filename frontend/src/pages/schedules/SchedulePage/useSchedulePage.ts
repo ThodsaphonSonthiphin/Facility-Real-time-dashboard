@@ -33,6 +33,7 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   const dispatch = useAppDispatch();
   const [editor, setEditor] = useState<OpenScheduleEditor | null>(null);
   const [selectedCellState, setSelectedCellState] = useState<SelectedScheduleCell | null>(null);
+  const [selectedCellDismissed, setSelectedCellDismissed] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
   const [coverNotice, setCoverNotice] = useState<Notice | null>(null);
   const nowBoard = useGetAttendanceBoardQuery(role === 'admin' ? {} : skipToken, livePoll);
@@ -41,7 +42,8 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   const restored = useAppSelector((state: RootState) => state.scheduleView.views[role]);
   const changedAt = useAppSelector((state: RootState) => state.scheduleView.changedAt);
   // A Supervisor's and an Admin's initial filters follow the shift on the clock; a Cleaner has none
-  const requested = restored ?? initialScheduleSelection(role, clockSlot(new Date()));
+  const currentDefault = initialScheduleSelection(role, clockSlot(new Date()));
+  const requested = restored ?? currentDefault;
   const fallback = withoutBuilding(requested);
 
   // The read the person asked for, and the unfiltered one it falls back to. Both hooks run and one is skipped: a hook
@@ -87,7 +89,7 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   const businessDate = clockSlot(new Date()).startDate;
 
   const selectedCell: SelectedScheduleCell | null = (() => {
-    if (!week || week.rows.length === 0) return null;
+    if (selectedCellDismissed || !week || week.rows.length === 0) return null;
     if (selectedCellState) {
       const matchedRow = week.rows.find((row) => row.userId === selectedCellState.userId);
       if (matchedRow?.days.some((day) => day.date === selectedCellState.date)) {
@@ -100,7 +102,13 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   })();
 
   const selectCell = useCallback((userId: number, date: string) => {
+    setSelectedCellDismissed(false);
     setSelectedCellState({ userId, date });
+  }, []);
+
+  const clearSelectedCell = useCallback(() => {
+    setSelectedCellDismissed(true);
+    setSelectedCellState(null);
   }, []);
 
   return {
@@ -113,6 +121,7 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     businessDate,
     selectedCell,
     selectCell,
+    clearSelectedCell,
     coverSlot,
     coverOpen,
     coverNotice,
@@ -162,6 +171,8 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     chooseBuilding: (buildingId) => remember({ ...requested, buildingId }),
     chooseShift: (shift) => remember({ ...requested, shift }),
     goWeek: (weeks) => remember({ ...requested, weekStart: moveWeek(requested.weekStart, weeks) }),
+    isCurrentWeek: selection.weekStart === currentDefault.weekStart,
+    goToday: () => remember({ ...requested, weekStart: currentDefault.weekStart }),
   };
 }
 

@@ -7,7 +7,8 @@ installReliefFixtureClock();
 
 it('saves edited cells for multiple people in one partial batch', async () => {
   const { user, calls } = await editorApp({ week: reliefWeek, source: reliefWeek('2026-11-23') });
-  await user.click(await screen.findByRole('button', { name: 'จัดตารางประจำสแปร์' }));
+  await user.click(await screen.findByRole('button', { name: 'จัดการเพิ่มเติม' }));
+  await user.click(await screen.findByRole('menuitem', { name: 'จัดตารางประจำสแปร์' }));
   const drawer = within(await screen.findByRole('dialog', { name: 'จัดตารางประจำสแปร์' }));
   const first = within(drawer.getByRole('group', { name: 'สแปร์หนึ่ง' }));
   const second = within(drawer.getByRole('group', { name: 'สแปร์สอง' }));
@@ -52,7 +53,8 @@ it('keeps the first-edit, refreshed and draft weekday values distinct until the 
       ] } };
     } },
   });
-  await user.click(await screen.findByRole('button', { name: 'จัดตารางประจำสแปร์' }));
+  await user.click(await screen.findByRole('button', { name: 'จัดการเพิ่มเติม' }));
+  await user.click(await screen.findByRole('menuitem', { name: 'จัดตารางประจำสแปร์' }));
   const drawer = within(await screen.findByRole('dialog'));
   const first = within(drawer.getByRole('group', { name: 'สแปร์หนึ่ง' }));
   await first.findByText('จัดแล้ว 1 วัน · เป้าหมาย 6 วัน');

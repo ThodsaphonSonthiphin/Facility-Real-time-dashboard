@@ -1,25 +1,30 @@
 import { Download, FileSpreadsheet, ShieldAlert } from 'lucide-react';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { SurfacePanel } from '../../shared/components/SurfacePanel';
-import { focusRing } from '../../shared/components/styles';
+import { focusRing, toggleClass } from '../../shared/components/styles';
+import type { RangePreset } from '../../shared/utils/dateRange';
 import { ExportBuildings } from './ExportBuildings';
 import { exportSets, setDetail, setSummary, setTitle } from './exportRules';
 import { useExportPage } from './useExportPage';
+
+const exportPresets: { value: RangePreset; label: string }[] = [
+  { value: 'today', label: 'วันนี้' },
+  { value: 'week', label: '7 วันล่าสุด' },
+  { value: 'month', label: 'เดือนนี้' },
+];
 
 export function ExportPage() {
   const page = useExportPage();
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
-      <header className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-          <FileSpreadsheet aria-hidden="true" className="size-4 shrink-0 text-text-2" />
-          ส่งออก Excel
-        </h1>
-        <span className="text-text-2">เลือกข้อมูล วันที่ และตึกที่ต้องการ แล้วกด “ดาวน์โหลด Excel”</span>
-      </header>
+      <AdminPageHeader
+        title="ส่งออก Excel"
+        subtitle="เลือกข้อมูล วันที่ และตึกที่ต้องการ แล้วกด “ดาวน์โหลด Excel”"
+      />
       {/* The approved summary column is 280px; no theme width token matches this page-specific layout. */}
       <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <SurfacePanel className="min-w-0">
@@ -48,6 +53,20 @@ export function ExportPage() {
           </section>
           <section className={sectionClass} aria-labelledby="export-dates">
             <h2 id="export-dates" className={titleClass}>2. ช่วงวัน</h2>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="เลือกช่วงวันด่วน">
+              {exportPresets.map((preset) => (
+                <button
+                  key={preset.value}
+                  type="button"
+                  data-tap=""
+                  aria-pressed={page.activePreset === preset.value}
+                  className={toggleClass}
+                  onClick={() => page.selectDatePreset(preset.value)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-4">
               <Field label="ตั้งแต่">
                 <TextInput

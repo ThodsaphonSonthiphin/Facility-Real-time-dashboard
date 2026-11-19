@@ -2,6 +2,7 @@ import { Ban, Check, Clock, MapPin, TriangleAlert, type LucideIcon } from 'lucid
 import { useState } from 'react';
 import { useGetAlertsQuery } from '../../shared/api/alertListApi';
 import { livePoll } from '../../shared/api/baseApi';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { KpiCard } from '../../shared/components/KpiCard/KpiCard';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
@@ -49,15 +50,10 @@ export function AlertsPage() {
 
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
-      <header className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-          <TriangleAlert aria-hidden="true" className="size-4 shrink-0 text-overdue" />
-          รายการที่ขึ้นเตือน
-        </h1>
-        <span className="min-h-5 text-text-2">
-          รายการสแกนที่ต้องติดตาม (สแกนผิดพื้นที่ ไกลป้าย และลืมลงเวลาเลิกงาน)
-        </span>
-      </header>
+      <AdminPageHeader
+        title="รายการที่ขึ้นเตือน"
+        subtitle="รายการสแกนที่ต้องติดตาม (สแกนผิดพื้นที่ ไกลป้าย และลืมลงเวลาเลิกงาน)"
+      />
       <section aria-label="สรุปสถานะและเตือน" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <KpiCard
           label={`เตือนที่ยังไม่ได้คุย (${day === 'today' ? 'วันนี้' : 'เมื่อวาน'})`}

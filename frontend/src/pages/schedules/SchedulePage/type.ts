@@ -38,6 +38,10 @@ export interface SchedulePageView {
   chooseShift: (shift: ScheduleSelection['shift']) => void;
   /** The previous or next week, always a Monday (a week is read one at a time). */
   goWeek: (weeks: number) => void;
+  /** True when the selected week matches the current business week. */
+  isCurrentWeek: boolean;
+  /** Jump directly back to the current business week. */
+  goToday: () => void;
   phone: boolean;
   editor: OpenScheduleEditor | null;
   openRelief: (kind: 'relief-roster' | 'relief-assignment' | 'relief-loan') => void;
@@ -50,6 +54,7 @@ export interface SchedulePageView {
   businessDate: string;
   selectedCell: SelectedScheduleCell | null;
   selectCell: (userId: number, date: string) => void;
+  clearSelectedCell: () => void;
   /** Admin emergency cover drawer (facility-0225). */
   coverSlot: CoverSlot | undefined;
   coverOpen: boolean;

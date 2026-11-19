@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useGetAllBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { freshOnOpen } from '../../shared/api/baseApi';
-import { checkRange, lastSevenDays, rangeDays, rangeTexts, readBuildingId, readRange } from '../../shared/utils/dateRange';
+import { checkRange, lastSevenDays, matchesPreset, presetRange, rangeDays, rangeTexts, readBuildingId, readRange, type RangePreset } from '../../shared/utils/dateRange';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
 import { useExportExcelMutation } from './exportApi';
@@ -52,6 +52,12 @@ export function useExportPage() {
     setLegacyBuilding(undefined);
     setBuildingIds(buildingIds === null ? [] : null);
   };
+  const today = thaiToday();
+  const selectDatePreset = (preset: RangePreset) => {
+    setTexts(rangeTexts(presetRange(preset, today)));
+    setNotice(null);
+  };
+  const activePreset = (['today', 'week', 'month'] as const).find((preset) => matchesPreset(texts, preset, today)) ?? null;
   const download = async () => {
     const problem = sets.length === 0 ? 'ต้องเลือกข้อมูลอย่างน้อย 1 ชุด'
       : typeof range === 'string' ? range
@@ -74,7 +80,7 @@ export function useExportPage() {
     }
   };
   return {
-    sets, texts, setTexts, toggleSet, buildingIds, buildings, selectedBuildings, missingBuilding,
+    sets, texts, setTexts, selectDatePreset, activePreset, toggleSet, buildingIds, buildings, selectedBuildings, missingBuilding,
     buildingsReady, buildingLoading: buildingQuery.isFetching, buildingError: buildingQuery.error,
     retryBuildings: () => void buildingQuery.refetch(), toggleBuilding, toggleAllBuildings,
     acknowledged, setAcknowledged, sending, notice, download, days,

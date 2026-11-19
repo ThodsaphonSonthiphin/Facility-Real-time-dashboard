@@ -22,23 +22,30 @@ function serveSupervisor() {
   });
 }
 
-describe('SupervisorNav (facility-0228)', () => {
-  it('renders both links with ตึกของฉัน active on /my-building and switches to /schedule-management', async () => {
+describe('SupervisorNav & SupervisorBottomNav', () => {
+  it('renders the 3-tab mobile bottom nav consistently on /my-building, /schedule-management, and /my-account', async () => {
     serveSupervisor();
     const { user, router } = await renderApp('/my-building');
 
-    const nav = await screen.findByRole('navigation', { name: 'เมนูหัวหน้างาน' });
+    const nav = await screen.findByRole('navigation', { name: 'เมนูหลักหัวหน้างาน' });
     const myBuildingLink = within(nav).getByRole('link', { name: 'ตึกของฉัน' });
     const scheduleLink = within(nav).getByRole('link', { name: 'จัดตารางงาน' });
+    const accountLink = within(nav).getByRole('link', { name: 'บัญชี' });
     expect(myBuildingLink).toHaveAttribute('href', '/my-building');
     expect(myBuildingLink).toHaveAttribute('aria-current', 'page');
     expect(scheduleLink).toHaveAttribute('href', '/schedule-management');
-    expect(scheduleLink).not.toHaveAttribute('aria-current');
+    expect(accountLink).toHaveAttribute('href', '/my-account');
 
     await user.click(scheduleLink);
     expect(router.state.location.pathname).toBe('/schedule-management');
-    const scheduleNav = await screen.findByRole('navigation', { name: 'เมนูหัวหน้างาน' });
-    expect(within(scheduleNav).getByRole('link', { name: 'จัดตารางงาน' })).toHaveAttribute('aria-current', 'page');
-    expect(within(scheduleNav).getByRole('link', { name: 'ตึกของฉัน' })).not.toHaveAttribute('aria-current');
+    const desktopNav = await screen.findByRole('navigation', { name: 'เมนูหัวหน้างาน' });
+    expect(within(desktopNav).getByRole('link', { name: 'จัดตารางงาน' })).toHaveAttribute('aria-current', 'page');
+
+    await user.click(within(desktopNav).getByRole('link', { name: 'ตึกของฉัน' }));
+    expect(router.state.location.pathname).toBe('/my-building');
+    const mobileNavAgain = await screen.findByRole('navigation', { name: 'เมนูหลักหัวหน้างาน' });
+    await user.click(within(mobileNavAgain).getByRole('link', { name: 'บัญชี' }));
+    expect(router.state.location.pathname).toBe('/my-account');
+    expect(await screen.findByRole('heading', { name: 'บัญชีของฉัน' })).toBeInTheDocument();
   });
 });

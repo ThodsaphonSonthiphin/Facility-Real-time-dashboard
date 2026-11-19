@@ -20,6 +20,9 @@ test('Admin navigation keeps its geometry while alert counts load at phone, narr
       if (await menu.isVisible()) {
         await menu.click();
         await expect(menu).toHaveAttribute('aria-expanded', 'true');
+        const drawer = page.getByRole('dialog', { name: 'เมนูแอดมิน' });
+        await expect(drawer).toBeVisible();
+        await drawer.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
       }
       const nav = page.getByRole('navigation', { name: 'เมนูแอดมิน' });
       const alertLink = nav.getByRole('link', { name: 'รายการที่ขึ้นเตือน', exact: true });

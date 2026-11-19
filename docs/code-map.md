@@ -121,15 +121,16 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 | | `endSession.ts` | Logout: forget locally → await in-flight refresh → `POST /api/auth/logout`. |
 | | `roles.ts` | `homeOf(role)`: cleaner → `/my-work`, supervisor → `/my-building`, admin → `/admin/overview` (`facility-0224`). |
 | `shared/geo/` | `readLocation.ts` | Fresh scan reads and permission-retry detection; setup capture separately uses watchPosition. See [Part 8](#part-8--scan-gps-and-real-time-flow). |
-| `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `Drawer`, `Modal`, `ConfirmationDialog`, `LocationHelp`, `CleanerBottomNav`, `SupervisorNav` | Shared Tailwind UI, CSS motion classes (`facility-0229`), feedback and route/layout components. |
+| `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `Drawer`, `Modal`, `ConfirmationDialog`, `LogoutConfirmDialog`, `AdminPageHeader`, `ConnectionBanner`, `LocationHelp`, `CleanerBottomNav`, `SupervisorNav` | Shared Tailwind UI, CSS motion classes (`facility-0229`), confirmed logout, mobile/admin shell (`facility-0230`). |
 | `shared/cover/` | `coverApi.ts`, `CandidateChoices.tsx`, `CoverCancellationDialog.tsx`, `useCoverCancellation.ts`, `coverCandidates.ts`, `coverSlots.ts`, `coverText.ts` | Emergency cover assignment endpoints, UI and helpers consumed by `pages/schedules/CoverDrawer.tsx` (`facility-0225`). |
 | `shared/utils/` | `thaiTime.ts`, `getErrorMessage.ts` (31), `labels.ts` (26), `dateRange.ts` (11), `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock — every time you see a strange time, look here first. |
 | `shared/version/` | `buildInfo.ts` | The build commit shown on the login pages. |
 
-### pages — 17 feature folders
+### pages — 18 feature folders
 
 | Folder | Purpose | Key files |
 |---|---|---|
+| `account/` | Mobile Account tab + confirmed logout (`/my-account`, `facility-0230`) | `AccountPage.tsx`, `useAccountPage.ts` |
 | `auth/` | Both login screens | `LoginPage.tsx`, `AdminLoginPage.tsx`, `useLogin.ts` (the hook both pages share), `authApi.ts` |
 | `my-work/` | Cleaner's own task list | `MyWorkPage.tsx`, `workRules.ts` (status buckets) |
 | `check-in/` | Shift in/out at the area's check-in sign | `CheckInPage.tsx`, `checkInApi.ts`, `AttendanceTimeline.tsx` |
@@ -176,9 +177,12 @@ From `frontend/src/router.tsx`. Guards come from `shared/components/ProtectedRou
 | `/login` | `pages/auth/LoginPage.tsx` | public |
 | `/login/admin` | `pages/auth/AdminLoginPage.tsx` | public |
 | `/my-work` | `pages/my-work/MyWorkPage.tsx` | cleaner |
+| `/my-schedule` | `pages/schedules/SchedulePage/SchedulePage.tsx` (`OwnSchedulePage`) | cleaner |
+| `/my-account` | `pages/account/AccountPage.tsx` | cleaner, supervisor |
 | `/check-in/:token` | `pages/check-in/CheckInPage.tsx` | cleaner |
 | `/scan/:token` | `shared/components/ByRole.tsx` → cleaner: `pages/scan/ScanPage.tsx`, supervisor: `pages/inspect/InspectPage.tsx` | cleaner, supervisor |
 | `/my-building` | `pages/my-building/MyBuildingPage.tsx` | supervisor |
+| `/schedule-management` | `pages/schedules/SchedulePage/SchedulePage.tsx` (`ScheduleManagementPage`) | supervisor |
 | `/dashboard` | `pages/dashboard/DashboardPage.tsx` (lazy) | admin |
 | `/admin/overview` | `pages/overview/OverviewPage.tsx` (lazy) | admin |
 | `/admin/attendance` | `pages/attendance/AttendancePage.tsx` (lazy) | admin |

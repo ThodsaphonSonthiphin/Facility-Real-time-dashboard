@@ -46,7 +46,9 @@ describe('Schedules emergency cover consolidation (facility-0225)', () => {
     });
     const { user } = await renderApp('/admin/schedules');
 
-    const trigger = await screen.findByRole('button', { name: 'มอบหมายทำแทนฉุกเฉิน' });
+    const moreButton = await screen.findByRole('button', { name: 'จัดการเพิ่มเติม' });
+    await user.click(moreButton);
+    const trigger = await screen.findByRole('menuitem', { name: 'มอบหมายทำแทนฉุกเฉิน' });
     await waitFor(() => expect(trigger).toBeEnabled());
     await user.click(trigger);
 
@@ -69,7 +71,8 @@ describe('Schedules emergency cover consolidation (facility-0225)', () => {
     ).toEqual([{ userId: 21, areaId: 12, shiftDate: '2026-10-15', shift: 'Day' }]);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    await user.click(trigger);
+    await user.click(moreButton);
+    await user.click(await screen.findByRole('menuitem', { name: 'มอบหมายทำแทนฉุกเฉิน' }));
     const reopen = await screen.findByRole('dialog', { name: 'มอบหมายทำแทน' });
     await user.click(await within(reopen).findByRole('radio', { name: /^AR02/ }));
     expect(within(reopen).getByText('AR02 มีคนทำแทนอยู่แล้ว')).toBeInTheDocument();

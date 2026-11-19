@@ -44,6 +44,7 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
 
   return (
     <PhoneScreen
+      navMode="none"
       header={
         <PhoneHeader back={{ to: '/my-work', label: 'งานของฉัน' }}>
           <PointHeading point={point} />

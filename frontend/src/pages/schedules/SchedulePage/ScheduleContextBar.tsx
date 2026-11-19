@@ -1,4 +1,4 @@
-import { ArrowRightLeft, CalendarDays, Check, Clock3, History, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, Check, Clock3, History, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { Button } from '../../../shared/components/Button';
 import { focusRing } from '../../../shared/components/styles';
@@ -38,10 +38,10 @@ export function ScheduleContextBar({ view }: ScheduleContextBarProps) {
   return (
     <section
       role="region"
-      aria-label="คำสั่งตามบริบทของช่องที่เลือก"
+      aria-label="จัดการวันที่เลือก"
       className="flex flex-col gap-2.5 rounded-xl border border-border bg-surface px-4 py-3"
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="inline-flex items-center gap-1 rounded-md border border-passed-border bg-passed-bg px-2 py-0.5 text-xs font-semibold text-passed">
             <Check aria-hidden="true" className="size-4" />
@@ -57,12 +57,16 @@ export function ScheduleContextBar({ view }: ScheduleContextBarProps) {
             {day.area.value != null ? ` (พื้นที่ ${day.area.value})` : ''}
           </span>
         </div>
-        {day.problems.length > 0 && (
-          <span className="text-xs font-semibold text-rework">
-            {day.problems.map((problem) => problem.message).join(' · ')}
-          </span>
-        )}
+        <Button variant="link" size="desk" onClick={view.clearSelectedCell}>
+          <X aria-hidden="true" className="size-4" />
+          ปิด
+        </Button>
       </div>
+      {day.problems.length > 0 && (
+        <span className="text-xs font-semibold text-rework">
+          {day.problems.map((problem) => problem.message).join(' · ')}
+        </span>
+      )}
 
       {(canEditDated || canEditBaseline || (canSupervisorTeamSlot && day.shift)) && (
         <div className="flex flex-wrap items-center gap-2">

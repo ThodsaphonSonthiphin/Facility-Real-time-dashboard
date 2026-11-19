@@ -58,7 +58,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     expect(store.getState().dashboard.search).toBe('สำนักงานเดิม');
   });
 
-  it('keeps the Admin menu behind a keyboard-accessible disclosure on narrow layouts', async () => {
+  it('keeps the Admin menu behind a keyboard-accessible slide-over drawer on narrow layouts', async () => {
     serve();
     const { user } = await renderApp('/dashboard');
 
@@ -69,17 +69,18 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     await user.click(menuSummary);
 
     expect(menuSummary).toHaveAttribute('aria-expanded', 'true');
-    const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
-    expect(within(menu).getAllByRole('link')).toHaveLength(12);
-    expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'ออกจากระบบ' })).toBeInTheDocument();
+    const drawer = screen.getByRole('dialog', { name: 'เมนูแอดมิน' });
+    expect(within(drawer).getAllByRole('link')).toHaveLength(12);
+    expect(within(drawer).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
+    expect(within(drawer).getByRole('button', { name: 'ออกจากระบบ' })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
     expect(menuSummary).toHaveAttribute('aria-expanded', 'false');
     expect(menuSummary).toHaveFocus();
 
     await user.click(menuSummary);
-    await user.click(within(menu).getByRole('link', { name: 'สถานะจุด' }));
+    const reopened = screen.getByRole('dialog', { name: 'เมนูแอดมิน' });
+    await user.click(within(reopened).getByRole('link', { name: 'สถานะจุด' }));
     expect(menuSummary).toHaveAttribute('aria-expanded', 'false');
   });
 

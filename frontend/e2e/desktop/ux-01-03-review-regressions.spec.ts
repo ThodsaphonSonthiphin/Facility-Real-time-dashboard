@@ -28,6 +28,9 @@ test('UX-01–03 focus, menu stacking and roster separators hold at mobile and d
     const trigger = page.getByRole('button', { name: 'เมนูแอดมิน' });
     await trigger.click();
     await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const drawer = page.getByRole('dialog', { name: 'เมนูแอดมิน' });
+    await expect(drawer).toBeVisible();
+    await drawer.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
     const historyLink = page.getByRole('navigation', { name: 'เมนูแอดมิน' })
       .getByRole('link', { name: 'ประวัติการแก้ไข', exact: true });
     const hitTest = await historyLink.evaluate((link) => {
@@ -52,7 +55,8 @@ test('UX-01–03 focus, menu stacking and roster separators hold at mobile and d
       return {
         overlapsTable: x >= tableBounds.left && x <= tableBounds.right && y >= tableBounds.top && y <= tableBounds.bottom,
         receivesPointer: hit === link || link.contains(hit),
-        panelIsAboveTable: panelIndex >= 0 && tableIndex >= 0 && panelIndex < tableIndex,
+        // A top-layer modal <dialog> renders background elements inert (tableIndex === -1) or strictly behind the drawer.
+        panelIsAboveTable: panelIndex >= 0 && (tableIndex === -1 || panelIndex < tableIndex),
       };
     });
     expect(hitTest.overlapsTable).toBe(true);

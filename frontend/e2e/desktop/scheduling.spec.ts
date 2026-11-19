@@ -135,7 +135,8 @@ test.describe('scheduling', () => {
     await expect(page).toHaveURL(/\/my-building$/);
     const before = await openSchedule(page, '/schedule-management', fixture.planningWeek);
     expect(before.relief.some(({ userId }) => userId === fixture.relief.id)).toBe(false);
-    await page.getByRole('button', { name: 'บันทึกการยืมสแปร์', exact: true }).click();
+    await page.getByRole('button', { name: 'จัดการเพิ่มเติม', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'บันทึกการยืมสแปร์', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'บันทึกการยืมสแปร์' });
     await dialog.getByLabel('วันที่ทำงาน').selectOption(fixture.planningWeek);
     await dialog.getByLabel('พื้นที่ปลายทาง').selectOption(String(fixture.destinationArea.id));

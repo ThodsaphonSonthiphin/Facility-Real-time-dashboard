@@ -27,7 +27,8 @@ async function assignment(conflict: boolean | 'stale' = false) {
       } } : {}),
     },
   });
-  const opener = await screen.findByRole('button', { name: 'มอบหมายงานสแปร์' });
+  await app.user.click(await screen.findByRole('button', { name: 'จัดการเพิ่มเติม' }));
+  const opener = await screen.findByRole('menuitem', { name: 'มอบหมายงานสแปร์' });
   opener.focus();
   await app.user.keyboard('{Enter}');
   const drawer = within(await screen.findByRole('dialog', { name: 'มอบหมายงานสแปร์' }));

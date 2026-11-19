@@ -1,5 +1,6 @@
-import { MapPin, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Link } from 'react-router';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../shared/components/PageState';
@@ -22,20 +23,16 @@ export function AreasPage() {
 
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-            <MapPin aria-hidden="true" className="size-4 shrink-0 text-text-2" />
-            พื้นที่และป้าย
-          </h1>
-          {/* As tall as its words before the answer, so nothing under it moves */}
-          <span className="min-h-5 text-text-2">{areas.data ? areaTotals(areas.data) : '\u00A0'}</span>
-        </div>
-        <Link className={buttonClass('primary', 'desk')} data-tap="" to="/admin/areas/new">
-          <Plus aria-hidden="true" className="size-4" />
-          เพิ่มพื้นที่
-        </Link>
-      </header>
+      <AdminPageHeader
+        title="พื้นที่และป้าย"
+        subtitle={areas.data ? areaTotals(areas.data) : '\u00A0'}
+        actions={
+          <Link className={buttonClass('primary', 'desk')} data-tap="" to="/admin/areas/new">
+            <Plus aria-hidden="true" className="size-4" />
+            เพิ่มพื้นที่
+          </Link>
+        }
+      />
       {error && <Note tone="error" onRetry={retryError}>{getErrorMessage(error)}</Note>}
       {areaId !== undefined && selectedId === undefined && <Note tone="error">ไม่พบพื้นที่นี้</Note>}
       {/* the design file's list rail, then the rest; no token describes a two-column track list */}

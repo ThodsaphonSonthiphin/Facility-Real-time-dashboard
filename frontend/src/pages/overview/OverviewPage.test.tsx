@@ -590,7 +590,7 @@ describe('OverviewPage', () => {
     });
 
     await renderApp('/admin/overview?date=2026-11-04');
-    expect(await screen.findByText('พารามิเตอร์หน้าไม่ถูกต้อง')).toBeVisible();
+    expect(await screen.findByText('ลิงก์หน้านี้ไม่ถูกต้อง')).toBeVisible();
     expect(screen.getByText('ต้องระบุวันที่และกะคู่กัน')).toBeVisible();
     expect(server.calls.some((c) => c.path === '/api/admin/overview/areas')).toBe(false);
   });
