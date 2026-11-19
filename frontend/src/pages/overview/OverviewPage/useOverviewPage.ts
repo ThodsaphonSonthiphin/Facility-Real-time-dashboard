@@ -17,7 +17,7 @@ import type {
   OverviewSummary,
   OverviewView,
 } from '../../../shared/overview/types';
-import { useOverviewRefresh } from '../../../shared/overview/useOverviewRefresh';
+import { useOverviewRecovering, useOverviewRefresh } from '../../../shared/overview/useOverviewRefresh';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { shiftLabel, shiftShortLabel } from '../../../shared/utils/labels';
 import { formatDate, formatShiftDate, formatTime, thaiToday } from '../../../shared/utils/thaiTime';
@@ -623,6 +623,7 @@ export function useOverviewPage(): OverviewPageModel {
 
   const { currentData: cached } = overviewApi.endpoints.getOverviewAreas.useQueryState(queryArgs);
   const refresh = useOverviewRefresh(cached?.summary.context);
+  const recovering = useOverviewRecovering(queryArgs);
   const query = useGetOverviewAreasQuery(queryArgs, { ...freshOnOpen, ...refresh });
   const rawResponse = contextResult.ok ? query.currentData : undefined;
   const argsKey = contextResult.ok ? overviewParams(selection).toString() : '';
@@ -832,6 +833,7 @@ export function useOverviewPage(): OverviewPageModel {
     response,
     loading,
     refreshing,
+    recovering,
     hubKey: queryArgs !== skipToken && response && response.summary.context.phase !== 'closed'
       ? overviewHubKey(queryArgs)
       : undefined,

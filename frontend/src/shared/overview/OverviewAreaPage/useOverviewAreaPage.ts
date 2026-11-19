@@ -7,7 +7,7 @@ import { formatDate, formatShiftDate, formatTime } from '../../utils/thaiTime';
 import { overviewApi, overviewHubKey, useGetOverviewAreaQuery } from '../overviewApi';
 import { overviewHref, readOverviewContext } from '../overviewContext';
 import type { OverviewContext, OverviewView } from '../types';
-import { useOverviewRefresh } from '../useOverviewRefresh';
+import { useOverviewRecovering, useOverviewRefresh } from '../useOverviewRefresh';
 import type { OverviewAreaPageModel } from './type';
 
 function phaseWords({ phase, closeUtc }: OverviewContext): string | undefined {
@@ -38,6 +38,7 @@ export function useOverviewAreaPage(routeView: OverviewView): OverviewAreaPageMo
     : skipToken;
   const { currentData: cached } = overviewApi.endpoints.getOverviewArea.useQueryState(args);
   const refresh = useOverviewRefresh(cached?.context);
+  const recovering = useOverviewRecovering(args);
   const result = useGetOverviewAreaQuery(args, { ...freshOnOpen, ...refresh });
   // currentData never carries the previous Area or round under a newly navigated URL.
   const detail = result.currentData;
@@ -61,6 +62,7 @@ export function useOverviewAreaPage(routeView: OverviewView): OverviewAreaPageMo
     detail,
     loading: args !== skipToken && result.isFetching && !detail,
     error,
+    recovering,
     hubKey: args !== skipToken && detail && detail.context.phase !== 'closed' ? overviewHubKey(args) : undefined,
     readAtText: detail && formatTime(detail.context.readAtUtc),
     backHref: back.ok ? overviewHref(back.context) : '/admin/overview',

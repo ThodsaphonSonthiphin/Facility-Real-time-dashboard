@@ -185,49 +185,95 @@ it('holds one connection across StrictMode and cached remount, then stops it whe
   }
 });
 
-it.each([
+function holdRead() {
+  let release!: (answer: FakeResponse) => void;
+  const response = new Promise<FakeResponse>((resolve) => { release = resolve; });
+  return { response, release };
+}
+
+const recoveryViews = [
   { label: 'list', url: listUrl, path: LIST },
   { label: 'detail', url: detailUrl, path: DETAIL },
-])('retains the last $label snapshot until a reconnect recovery read succeeds', async ({ url, path }) => {
-  let fail = false;
-  let response = listResponse();
-  let detail = overviewDetailFixture();
-  let retrying = false;
-  let finish!: (body: FakeResponse) => void;
-  const delayed = new Promise<FakeResponse>((resolve) => { finish = resolve; });
+];
+
+function recoveryFixture(path: string, revision: number): FakeResponse {
+  const detail = overviewDetailFixture();
+  return {
+    status: 200,
+    body: path === LIST ? projection(revision) : {
+      ...detail,
+      context: { ...detail.context, readAtUtc: `2026-11-04T03:0${revision}:00Z` },
+    },
+  };
+}
+
+it.each(recoveryViews)('keeps the $label snapshot marked stale until a read started after reconnect succeeds', async ({ url, path }) => {
+  const beforeReconnect = holdRead();
+  const afterReconnect = holdRead();
+  const queued = [beforeReconnect.response, afterReconnect.response];
+  let reads = 0;
   const { calls } = serve({
-    [`GET ${path}`]: () => retrying ? delayed : (fail
-      ? { status: 500, body: { message: 'เซิร์ฟเวอร์ขัดข้อง' } }
-      : { status: 200, body: path === LIST ? response : detail }),
+    [`GET ${path}`]: () => ++reads <= 2 ? recoveryFixture(path, 0) : queued.shift() ?? recoveryFixture(path, 2),
+  });
+  await renderApp(url);
+  const requests = () => calls.filter((call) => call.path === path);
+  await waitFor(() => expect(requests()).toHaveLength(2));
+  const connection = hub.latest();
+
+  act(() => connection.push('OverviewChanged', { revisionId: 13 }));
+  await waitFor(() => expect(requests()).toHaveLength(3));
+  act(() => connection.reconnecting());
+  expect(screen.getByText(/กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด/)).toBeVisible();
+  act(() => connection.reconnected());
+  expect(screen.getByText(/ข้อมูลอาจยังไม่ล่าสุด/)).toHaveTextContent('10:00');
+  expect(requests()).toHaveLength(3);
+
+  await act(async () => beforeReconnect.release(recoveryFixture(path, 1)));
+  await waitFor(() => expect(requests()).toHaveLength(4));
+  await waitFor(() => expect(screen.getByText(/ข้อมูลอาจยังไม่ล่าสุด/)).toHaveTextContent('10:01'));
+
+  await act(async () => afterReconnect.release(recoveryFixture(path, 2)));
+  await waitFor(() => expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument());
+});
+
+it.each(recoveryViews)('keeps the $label snapshot marked stale through a failed reconnect recovery and until retry succeeds', async ({ url, path }) => {
+  const recovery = holdRead();
+  const retry = holdRead();
+  let reads = 0;
+  const { calls } = serve({
+    [`GET ${path}`]: () => {
+      reads += 1;
+      if (reads === 3) return recovery.response;
+      if (reads === 4) return retry.response;
+      return recoveryFixture(path, 0);
+    },
   });
   const { user } = await renderApp(url);
-  await waitFor(() => expect(calls.filter((call) => call.path === path)).toHaveLength(2));
+  const requests = () => calls.filter((call) => call.path === path);
+  await waitFor(() => expect(requests()).toHaveLength(2));
   const connection = hub.latest();
   const retained = () => path === LIST ? areaLinks()[0] : screen.getByRole('heading', { name: /AR91 พื้นที่ทดลอง 91/ });
   expect(retained()).toBeVisible();
 
   act(() => connection.reconnecting());
   expect(screen.getByText(/กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด/)).toBeVisible();
-  fail = true;
   act(() => connection.reconnected());
+  await waitFor(() => expect(requests()).toHaveLength(3));
+  expect(screen.getByText(/ข้อมูลอาจยังไม่ล่าสุด/)).toHaveTextContent('10:00');
+  expect(retained()).toBeVisible();
+
+  await act(async () => recovery.release({ status: 500, body: { message: 'เซิร์ฟเวอร์ขัดข้อง' } }));
   const warning = await screen.findByText(outdated);
   expect(warning).toHaveTextContent('10:00');
   expect(retained()).toBeVisible();
   expect(screen.queryByText(/กำลังเชื่อมต่อใหม่/)).not.toBeInTheDocument();
 
-  retrying = true;
   await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+  await waitFor(() => expect(requests()).toHaveLength(4));
   expect(warning).toBeVisible();
   expect(retained()).toBeVisible();
-  response = projection(1);
-  detail = { ...detail, area: { ...detail.area, name: 'พื้นที่หลังอัปเดต' } };
-  await act(async () => finish({ status: 200, body: path === LIST ? response : detail }));
-  await waitFor(() => expect(screen.queryByText(outdated)).not.toBeInTheDocument());
-  if (path === LIST) {
-    expect(screen.getByRole('button', { name: 'ยังไม่ลงเวลา 9 พื้นที่' })).toBeVisible();
-  } else {
-    expect(screen.getByRole('heading', { name: 'AR91 พื้นที่หลังอัปเดต' })).toBeVisible();
-  }
+  await act(async () => retry.release(recoveryFixture(path, 1)));
+  await waitFor(() => expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument());
 });
 
 it('polls before the slot, on a server-defined receiving window and through the inclusive close boundary', async () => {
@@ -343,14 +389,21 @@ it('keeps the new selection visible when an event response for the previous slot
   await listSettled(store);
 
   holdPrevious = true;
-  act(() => hub.latest().push('OverviewChanged', { revisionId: 13 }));
+  const connection = hub.latest();
+  act(() => connection.push('OverviewChanged', { revisionId: 13 }));
   await waitFor(() => expect(calls.filter((call) => call.path === LIST)).toHaveLength(3));
+  act(() => {
+    connection.reconnecting();
+    connection.reconnected();
+  });
+  expect(screen.getByText(/ข้อมูลอาจยังไม่ล่าสุด/)).toBeVisible();
   await act(() => router.navigate(listUrl.replace('Day', 'Night')));
 
   expect(await screen.findByRole('link', { name: 'ดูพื้นที่ AR91 พื้นที่กะดึก' })).toBeVisible();
   await act(async () => resolvePrevious({ status: 200, body: projection(1) }));
 
   expect(screen.getByRole('link', { name: 'ดูพื้นที่ AR91 พื้นที่กะดึก' })).toBeVisible();
+  expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'ยังไม่ลงเวลา 10 พื้นที่' })).toBeVisible();
   expect(router.state.location.search).toContain('shift=Night');
 });

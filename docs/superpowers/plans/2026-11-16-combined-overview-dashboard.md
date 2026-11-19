@@ -1181,7 +1181,8 @@ Test both destination routes, inspection view, selected old round, moved/deactiv
 - Modify: `frontend/src/shared/overview/overviewApi.ts` (cache-owned hub subscription)
 - Create: `frontend/src/shared/overview/useOverviewRefresh.ts`
 - Modify: `frontend/src/pages/overview/OverviewPage/useOverviewPage.ts`, `frontend/src/shared/overview/OverviewAreaPage/useOverviewAreaPage.ts`
-- Modify: `frontend/src/shared/api/adminSetupApi.ts`, `frontend/src/pages/buildings/buildingsApi.ts`, `frontend/src/pages/attendance/attendanceApi.ts` (Overview invalidation on successful relevant local mutations)
+- Modify: `frontend/src/shared/api/adminSetupApi.ts`, `frontend/src/pages/buildings/buildingsApi.ts` (Overview invalidation on successful relevant local mutations)
+- Verify: `frontend/src/pages/attendance/attendanceApi.ts` (Task 9 already invalidates Overview after a successful correction)
 - Create: `frontend/src/shared/overview/overviewLive.test.tsx`
 - Modify: `frontend/src/shared/api/scanHub.test.ts`
 - Create: `backend/tests/JanitorialManagementDashboard.ApiTests/Admin/OverviewLiveTests.cs`

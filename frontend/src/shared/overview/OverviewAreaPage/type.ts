@@ -12,6 +12,7 @@ export interface OverviewAreaPageModel {
   hubKey?: string;
   readAtText?: string;
   error?: string;
+  recovering: boolean;
   backHref: string;
   readOnly: boolean;
   stateChanged: boolean;

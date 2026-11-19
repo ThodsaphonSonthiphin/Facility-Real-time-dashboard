@@ -109,13 +109,19 @@ export function OverviewPage() {
             </Note>
           )}
 
-          {model.refreshing && !model.error && (
+          {model.response && model.recovering && !model.error && (
+            <Note tone="warn" status>
+              {`กำลังตรวจสอบข้อมูลล่าสุด · กำลังแสดงข้อมูลที่อ่านเมื่อ ${model.readAtText} น. (ข้อมูลอาจยังไม่ล่าสุด)`}
+            </Note>
+          )}
+
+          {model.refreshing && !model.recovering && !model.error && (
             <Note tone="info">
               {`กำลังอัปเดตข้อมูล... (กำลังแสดงข้อมูลที่อ่านเมื่อ ${model.readAtText} น.)`}
             </Note>
           )}
 
-          {!model.refreshing && !model.error && model.updatedNotice && (
+          {!model.refreshing && !model.recovering && !model.error && model.updatedNotice && (
             <Note tone="info">{model.updatedNotice}</Note>
           )}
 

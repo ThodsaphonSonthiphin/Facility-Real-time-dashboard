@@ -1,4 +1,6 @@
+import { nanoid } from '@reduxjs/toolkit';
 import type { RootState } from '../../store';
+import { hubRecoveryReadSucceeded, hubRecoveryStarted, selectHubRecovery } from '../../store/slices/hubSlice';
 import { baseApi } from '../api/baseApi';
 import { ADMIN_HUB_SERVER_TIMEOUT_MS, followScanHub, type ScanHubFollow } from '../api/scanHub';
 import { getValidAccessToken } from '../auth/session';
@@ -38,9 +40,10 @@ function followOverview(
 ): Promise<void> | void {
   // The list's default-slot read is immediately replaced by the canonical date and shift.
   if (!args.shiftDate || !args.shift) return;
+  const key = overviewHubKey(args);
   const invalidate = () => { dispatch(baseApi.util.invalidateTags(['Overview'])); };
   return followScanHub({
-    key: overviewHubKey(args),
+    key,
     cacheDataLoaded,
     cacheEntryRemoved,
     dispatch,
@@ -51,9 +54,27 @@ function followOverview(
     // Includes actual transfer arrivals and corrections. ScheduleChanged also carries instructions.
     onAttendance: invalidate,
     onOverview: invalidate,
+    onResumed: () => { dispatch(hubRecoveryStarted({ key, recoveryId: nanoid() })); },
     // Only this connection may have missed pushes. Keep unrelated inactive selections cached.
     onMissed: () => { dispatch(baseApi.util.invalidateTags([overviewTag(args)])); },
   });
+}
+
+async function settleOverviewRecovery(
+  args: OverviewListArgs | OverviewDetailArgs,
+  { dispatch, getState, queryFulfilled }: Pick<OverviewCacheLifecycle, 'dispatch' | 'getState'>
+    & { queryFulfilled: Promise<unknown> },
+): Promise<void> {
+  const key = overviewHubKey(args);
+  // Take the recovery ID at request start so a read already in flight cannot settle a later recovery.
+  const recoveryId = selectHubRecovery(getState() as RootState, key);
+  if (!recoveryId) return;
+  try {
+    await queryFulfilled;
+  } catch {
+    return;
+  }
+  dispatch(hubRecoveryReadSucceeded({ key, recoveryId }));
 }
 
 export const overviewApi = baseApi.injectEndpoints({
@@ -66,6 +87,7 @@ export const overviewApi = baseApi.injectEndpoints({
       query: (args) => ({ url: '/admin/overview/areas', params: cleanParams(args) }),
       providesTags: (_result, _error, args) => [overviewTag(args)],
       onCacheEntryAdded: followOverview,
+      onQueryStarted: settleOverviewRecovery,
     }),
     getOverviewArea: build.query<OverviewAreaDetail, OverviewDetailArgs>({
       query: ({ areaId, ...params }) => ({
@@ -73,6 +95,7 @@ export const overviewApi = baseApi.injectEndpoints({
         params: cleanParams(params),
       }),
       onCacheEntryAdded: followOverview,
+      onQueryStarted: settleOverviewRecovery,
       providesTags: (_result, _error, args) => [overviewTag(args)],
     }),
   }),

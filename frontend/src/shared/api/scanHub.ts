@@ -46,6 +46,8 @@ export interface ScanHubFollow {
   onOverview?: (change: { revisionId: number }) => void;
   /** Pushes may have been missed while the connection was down: ask the server again (facility-0064 item 2). */
   onMissed: () => void;
+  /** Invoked before a recovering transport goes live so a follower can track its own data recovery. */
+  onResumed?: () => void;
   /** How long to wait to hear from the server before the link counts as lost; left out, the client's own 30 s. */
   serverTimeoutMs?: number;
 }
@@ -65,6 +67,7 @@ export async function followScanHub({
   onSchedule,
   onOverview,
   onMissed,
+  onResumed,
   serverTimeoutMs,
 }: ScanHubFollow): Promise<void> {
   // The SignalR client is a third of the main JS and no page needs it before its first answer, so it comes in its own
@@ -105,7 +108,12 @@ export async function followScanHub({
   let removed = false;
   let restartTimer: ReturnType<typeof setTimeout> | undefined;
   let onlineAskTimer: ReturnType<typeof setTimeout> | undefined;
-  const setStatus = (status: HubStatus) => dispatch(hubStatusChanged({ key, status }));
+  let lastStatus: HubStatus = 'connecting';
+  const setStatus = (status: HubStatus) => {
+    if (status === 'live' && lastStatus === 'reconnecting') onResumed?.();
+    lastStatus = status;
+    dispatch(hubStatusChanged({ key, status }));
+  };
 
   const restartLater = () => {
     if (!removed) {

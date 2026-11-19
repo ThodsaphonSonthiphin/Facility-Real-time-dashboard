@@ -35,6 +35,11 @@ export function OverviewAreaPage({ view, actions }: OverviewAreaPageProps) {
             : model.error}
         </Note>
       )}
+      {model.detail && model.recovering && !model.error && (
+        <Note tone="warn" status>
+          {`กำลังตรวจสอบข้อมูลล่าสุด · กำลังแสดงข้อมูลที่อ่านเมื่อ ${model.readAtText} น. (ข้อมูลอาจยังไม่ล่าสุด)`}
+        </Note>
+      )}
       {model.detail && model.selection && (
         <>
           {model.stateChanged && <Note tone="info" status>สถานะพื้นที่เปลี่ยนจากรายการที่เลือกแล้ว</Note>}
