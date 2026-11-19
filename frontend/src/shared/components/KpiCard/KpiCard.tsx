@@ -47,7 +47,7 @@ export function KpiCard({
 
   return (
     <Tag
-      className={`flex flex-col gap-2.5 rounded-xl border border-border bg-surface p-3.5${className ? ` ${className}` : ''}`}
+      className={`flex flex-col gap-2.5 rounded-xl border border-border bg-surface p-3.5 ${className ?? ''}`}
     >
       <div className="flex items-center gap-3">
         <div className={`flex size-10 shrink-0 items-center justify-center rounded-full ${iconCircleClass[tone]}`}>

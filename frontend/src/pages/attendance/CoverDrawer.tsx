@@ -108,12 +108,12 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
         closeDisabled={isLoading}
         onClose={onCancel}
       />
-      <div className="relative -mx-6 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-5">
+      <div className="relative -mx-6 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 pb-4">
         <section className="flex flex-col gap-3" aria-labelledby="cover-step-1">
           <h3 id="cover-step-1" className="text-base font-bold">
             1. วันและกะ
           </h3>
-          <div className="flex flex-wrap items-start gap-4">
+          <div className="flex flex-wrap items-start gap-3">
             <label className="flex flex-col gap-1">
               <span className="font-semibold">วันที่</span>
               <Select
@@ -243,7 +243,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
           </div>
         )}
         {problem && <Note tone="error">{problem}</Note>}
-        <section className="flex flex-col gap-2 border-t border-border pt-4" aria-labelledby="cover-given">
+        <section className="flex flex-col gap-2 border-t border-border pt-3" aria-labelledby="cover-given">
           <h3 id="cover-given" className="text-sm font-bold">
             {`ทำแทนที่มอบหมายไว้แล้ว${ahead ? slotWords : 'กะนี้'} · ${covers.length}`}
           </h3>

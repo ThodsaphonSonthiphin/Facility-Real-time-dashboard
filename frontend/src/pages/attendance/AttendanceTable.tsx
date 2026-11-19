@@ -49,7 +49,7 @@ export function AttendanceTable({ rows, lifecycleVersion, onCorrect, onCover, fo
   }
   return (
     <Table label="การเข้างานรายพื้นที่" minWidth="min-w-225" footer={footer}>
-      <thead>
+      <thead className="[&_th]:font-bold">
         <tr>
           <th scope="col" className="min-w-40">
             พื้นที่

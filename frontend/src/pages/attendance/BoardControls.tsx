@@ -33,7 +33,8 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onBuildin
   return (
     <FilterToolbar
       label="ตัวกรอง"
-      actions={<SearchBox label="ค้นหาพื้นที่หรือแม่บ้าน" value={search} onChange={onSearch} className="w-60 max-w-full" />}
+      className="[&>div:last-child]:ml-auto"
+      actions={<SearchBox label="ค้นหาพื้นที่หรือแม่บ้าน" value={search} onChange={onSearch} className="w-56 max-w-full" />}
     >
       <Segmented
         label="กะ"
@@ -57,10 +58,11 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onBuildin
           }}
         />
       </label>
-      <label className="inline-flex items-center gap-2">
+      <label className="inline-flex min-w-0 max-w-full items-center gap-2">
         ตึก
         <Select
           size="desk"
+          className="w-44 min-w-0"
           value={args.buildingId ?? ''}
           onChange={(event) => onBuilding(event.target.value === '' ? undefined : Number(event.target.value))}
         >
