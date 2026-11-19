@@ -154,7 +154,8 @@ if (existing is null)
                 var submitted = Utc(shiftDate, shift == Shift.Day ? 8 : 20).AddMinutes(point.SortOrder);
                 var issue = (point.Id + day) % 9 == 0;
                 var scan = new ScanRecord { ServicePointId = point.Id, SignId = sign.Id, UserId = cleaners[(a, shift)].Id,
-                    ShiftDate = shiftDate, Shift = shift, RoundWindowId = window.Id, RoundStart = window.StartTime, RoundEnd = window.EndTime,
+                    ShiftDate = shiftDate, Shift = shift, RoundWindowId = window.Id, RoundOriginId = window.Id,
+                    RoundStart = window.StartTime, RoundEnd = window.EndTime,
                     Placement = Placement.OnTime, Status = issue ? CleaningStatus.Issue : CleaningStatus.Normal,
                     IssueTags = issue ? "พื้นเปียก" : null, Note = issue ? "ข้อมูลทดสอบ: พื้นเปียก" : null,
                     SubmittedAt = submitted, Latitude = 13.7563m, Longitude = 100.5018m, AccuracyM = 5, DistanceM = 0, WithinRadius = true };

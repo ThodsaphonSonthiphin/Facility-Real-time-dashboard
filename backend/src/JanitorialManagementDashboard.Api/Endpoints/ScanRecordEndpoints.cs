@@ -131,6 +131,7 @@ public static class ScanRecordEndpoints
             ShiftDate = slot.ShiftDate,
             Shift = slot.Shift,
             RoundWindowId = placed.Round?.Id,
+            RoundOriginId = placed.Round?.Id,
             RoundStart = placed.Round?.Start,
             RoundEnd = placed.Round?.End,
             Placement = placed.Placement,
