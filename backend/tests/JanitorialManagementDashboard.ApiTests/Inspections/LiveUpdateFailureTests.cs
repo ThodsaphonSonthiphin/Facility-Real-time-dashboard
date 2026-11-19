@@ -17,7 +17,7 @@ public class LiveUpdateFailureTests
     }
 
     /// <summary>Check-in pushes too, so every call is quiet until the test switches the fake to failing.</summary>
-    private sealed class FakeClients : IHubClients
+    internal sealed class FakeClients : IHubClients
     {
         public bool Failing { get; set; }
 
@@ -34,7 +34,7 @@ public class LiveUpdateFailureTests
         public IClientProxy Users(IReadOnlyList<string> userIds) => Proxy();
     }
 
-    private sealed class FakeHubContext(FakeClients clients) : IHubContext<ScanHub>
+    internal sealed class FakeHubContext(FakeClients clients) : IHubContext<ScanHub>
     {
         public IHubClients Clients => clients;
 

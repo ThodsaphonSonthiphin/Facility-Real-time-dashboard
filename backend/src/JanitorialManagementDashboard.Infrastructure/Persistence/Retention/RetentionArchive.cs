@@ -11,8 +11,7 @@ public sealed partial class RetentionRunner
     private async Task<(int Summaries, int Deleted)> ArchiveAsync(DateTime now, DateTime annual, CancellationToken ct)
     {
         // Complete Thai calendar months only: November 2026 archives October 2025 and earlier.
-        var thai = ThaiTime.FromUtc(now);
-        var before = new DateOnly(thai.Year, thai.Month, 1).AddYears(-settings.RecordYears);
+        var before = settings.WorkFromShiftDate(now);
         var points = await db.ServicePoints.AsNoTracking().Select(p => new
         {
             p.Id, p.CreatedAt, Counted = p.IsActive && p.Area!.IsActive,

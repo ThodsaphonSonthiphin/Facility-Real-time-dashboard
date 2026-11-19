@@ -50,7 +50,8 @@ export const baseApi = createApi({
   // AdminSetup: every Admin setup read; every save that changes what they show invalidates it (plan 10 decision 3).
   // AttendanceBoard (per shift, plan 11 decision 5) and Alerts: the Admin's live board; corrections and covers invalidate them
   // Schedules: every authorised weekly read (Tasks 13–16); a committed command invalidates the views it touched (spec §12)
-  tagTypes: ['MyBuilding', 'MyWork', 'AdminSetup', 'ServicePoints', 'AttendanceBoard', 'Alerts', 'Schedules'],
+  // Overview: combined overview summary, paginated area rows, and area detail reads
+  tagTypes: ['MyBuilding', 'MyWork', 'AdminSetup', 'ServicePoints', 'AttendanceBoard', 'Alerts', 'Schedules', 'Overview'],
   endpoints: () => ({}),
 });
 

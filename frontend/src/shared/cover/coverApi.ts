@@ -53,11 +53,11 @@ const coverApi = baseApi.injectEndpoints({
     }),
     assignCover: build.mutation<CoverAssignment, AssignCoverRequest>({
       query: (body) => ({ url: '/admin/cover-assignments', method: 'POST', body }),
-      invalidatesTags: ['AttendanceBoard', 'Alerts'],
+      invalidatesTags: (_result, error) => error ? ['AttendanceBoard', 'Alerts'] : ['AttendanceBoard', 'Alerts', 'Overview'],
     }),
     cancelCover: build.mutation<void, number>({
       query: (id) => ({ url: `/admin/cover-assignments/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['AttendanceBoard', 'Alerts'],
+      invalidatesTags: (_result, error) => error ? ['AttendanceBoard', 'Alerts'] : ['AttendanceBoard', 'Alerts', 'Overview'],
     }),
   }),
 });

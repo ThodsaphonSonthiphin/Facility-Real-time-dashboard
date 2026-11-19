@@ -1,6 +1,7 @@
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -42,6 +43,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ScheduleScopeAnchor> ScheduleScopeAnchors => Set<ScheduleScopeAnchor>();
     public DbSet<ScheduleCommandReceipt> ScheduleCommandReceipts => Set<ScheduleCommandReceipt>();
     public DbSet<ScheduleChange> ScheduleChanges => Set<ScheduleChange>();
+    public DbSet<OverviewTargetRevision> OverviewTargetRevisions => Set<OverviewTargetRevision>();
+    public DbSet<OverviewTargetState> OverviewTargetStates => Set<OverviewTargetState>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -260,6 +263,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         // ADR facility-0215: the dated scheduling records live in one grouped mapping file; this context keeps the
         // per-entity lambda convention for the legacy tables above.
         SchedulingModel.Configure(modelBuilder);
+        OverviewTargetModel.Configure(modelBuilder);
 
         modelBuilder.UseSnakeCaseColumns();
     }

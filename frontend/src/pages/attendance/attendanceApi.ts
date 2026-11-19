@@ -17,7 +17,7 @@ const attendanceApi = baseApi.injectEndpoints({
     /** Adds a missing time or moves one. The board changes, and a missing Shift-Out alert closes, so both are asked again. */
     correctAttendance: build.mutation<BoardEvent, CorrectionRequest>({
       query: (body) => ({ url: '/admin/attendance', method: 'PUT', body }),
-      invalidatesTags: ['AttendanceBoard', 'Alerts'],
+      invalidatesTags: (_result, error) => error ? ['AttendanceBoard', 'Alerts'] : ['AttendanceBoard', 'Alerts', 'Overview'],
     }),
   }),
 });

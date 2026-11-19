@@ -89,4 +89,29 @@ describe('AdminNav alert count', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     expect(trigger).toHaveFocus();
   });
+
+  it('places ภาพรวม above สถานะจุด and preserves the exact follow-up order including ตารางงาน', () => {
+    fakeServer({ 'GET /api/admin/alerts': () => ({ status: 200, body: [] }) });
+    render(
+      <Provider store={makeStore()}>
+        <MemoryRouter initialEntries={['/admin/overview']}>
+          <AdminNav />
+        </MemoryRouter>
+      </Provider>,
+    );
+
+    const followGroup = screen.getByRole('list', { name: 'ติดตามงาน' });
+    const links = within(followGroup).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual([
+      'ภาพรวม',
+      'สถานะจุด',
+      'การเข้างาน',
+      'ตารางงาน',
+      'รายการที่ขึ้นเตือน',
+      'สรุปการตรวจ',
+      'ส่งออก Excel',
+    ]);
+    expect(within(followGroup).getByRole('link', { name: 'ภาพรวม' })).toHaveAttribute('href', '/admin/overview');
+    expect(within(followGroup).getByRole('link', { name: 'ภาพรวม' })).toHaveAttribute('aria-current', 'page');
+  });
 });

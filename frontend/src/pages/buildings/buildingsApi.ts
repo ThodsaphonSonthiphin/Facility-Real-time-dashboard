@@ -1,4 +1,4 @@
-import type { ManagedBuilding } from '../../shared/api/adminSetupApi';
+import { targetSetupTags, type ManagedBuilding } from '../../shared/api/adminSetupApi';
 import { baseApi } from '../../shared/api/baseApi';
 import type { BuildingSupervisor } from './type';
 
@@ -12,18 +12,18 @@ const buildingsApi = baseApi.injectEndpoints({
     }),
     createBuilding: build.mutation<ManagedBuilding, { code: string; name: string }>({
       query: (body) => ({ url: '/admin/buildings', method: 'POST', body }),
-      invalidatesTags: ['AdminSetup'],
+      invalidatesTags: targetSetupTags,
     }),
     renameBuilding: build.mutation<ManagedBuilding, { buildingId: number; name: string }>({
       query: ({ buildingId, name }) => ({ url: `/admin/buildings/${buildingId}`, method: 'PUT', body: { name } }),
-      invalidatesTags: ['AdminSetup'],
+      invalidatesTags: targetSetupTags,
     }),
     setBuildingActive: build.mutation<ManagedBuilding, { buildingId: number; active: boolean }>({
       query: ({ buildingId, active }) => ({
         url: `/admin/buildings/${buildingId}/${active ? 'activate' : 'deactivate'}`,
         method: 'POST',
       }),
-      invalidatesTags: ['AdminSetup'],
+      invalidatesTags: targetSetupTags,
     }),
   }),
 });

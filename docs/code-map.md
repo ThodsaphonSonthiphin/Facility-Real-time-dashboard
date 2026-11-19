@@ -147,6 +147,7 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 | `inspection-summary/` | Per-supervisor tallies (D7) | `InspectionSummaryPage.tsx`, `summaryRules.ts` |
 | `export/` | Excel export (D8) | `ExportPage.tsx`, `exportRules.ts` (1–31 days), `saveFile.ts` |
 | `history/` | Audit log with previous/next navigation over API cursors (D9) | `HistoryPage.tsx`, `historyRules.ts` (max 92 days) |
+| `overview/` | Admin combined overview dashboard (entry, work, inspection, history, issue, drill-through) | `OverviewPage.tsx`, `useOverviewPage.ts`, `OverviewResults.tsx`, `RoundHistory.tsx` |
 
 ### store
 
@@ -178,6 +179,7 @@ From `frontend/src/router.tsx`. Guards come from `shared/components/ProtectedRou
 | `/scan/:token` | `shared/components/ByRole.tsx` → cleaner: `pages/scan/ScanPage.tsx`, supervisor: `pages/inspect/InspectPage.tsx` | cleaner, supervisor |
 | `/my-building` | `pages/my-building/MyBuildingPage.tsx` | supervisor |
 | `/dashboard` | `pages/dashboard/DashboardPage.tsx` (lazy) | admin |
+| `/admin/overview` | `pages/overview/OverviewPage.tsx` (lazy) | admin |
 | `/admin/attendance` | `pages/attendance/AttendancePage.tsx` (lazy) | admin |
 | `/admin/alerts` | `pages/alerts/AlertsPage.tsx` (lazy) | admin |
 | `/admin/inspection-summary` | `pages/inspection-summary/InspectionSummaryPage.tsx` (lazy) | admin |
@@ -273,7 +275,8 @@ Business rules without database or HTTP dependencies, mostly static; LoginThrott
 |---|---|
 | `Persistence/AppDbContext.cs` | All EF mapping: 15 `DbSet`s, snake_case columns, unique indexes, computed columns, check constraints. |
 | `Persistence/Retention/` | Scoped RetentionRunner: GPS SQL batches, source/dependent cleanup and atomic PointMonthlySummary archives. |
-| `Persistence/*Query.cs` | Reusable read models: `PointBoardQuery`, `RoundFactsQuery`, `AlertQuery`, `AuditLogQuery`, `ExportQuery`, `InspectionHistoryQuery`. |
+| `Persisted / Queries` | `Persistence/*Query.cs`: `PointBoardQuery`, `RoundFactsQuery`, `AlertQuery`, `AuditLogQuery`, `ExportQuery`, `InspectionHistoryQuery`, `OverviewReadQuery`. |
+| `Overview History` | `Persistence/Overview/`: `OverviewMutation`, `OverviewTargetRecorder`, `OverviewHistoryBootstrap`, `OverviewFactLoader` — immutable `overview_target_revisions` + singleton `overview_target_state` lock, `round_origin_id` provenance. |
 | `Auth/Pbkdf2PasswordHasher.cs` | PBKDF2-HMAC-SHA256, 600 000 iterations, `pbkdf2-sha256$…` format. Also used for the phone number-as-secret. |
 | `Export/ExcelWorkbook.cs` | ClosedXML `.xlsx` writer. |
 | `Migrations/` | 6 migrations + model snapshot, applied at startup with `MigrateAsync()`. |
@@ -650,6 +653,9 @@ graph LR
 | GET | `/api/admin/audit-log/actors` | `AdminAuditLogEndpoints.cs` | Actor filter options. |
 | POST | `/api/admin/export` | `AdminExportEndpoints.cs` → `ExportAsync` | **POST not GET** precisely because downloading personnel data is itself an audited action. The file omits coordinates, phones, QR tokens and passwords. It accepts `buildingId` or multiple `buildingIds` (never both), including inactive buildings (0100). |
 | GET | `/api/admin/inspection-summary` | `AdminInspectionSummaryEndpoints.cs` → `GetAsync` | How much of the beat was actually checked — supervisor coverage evidence, including expandable uninspected points (0100). |
+| GET | `/api/admin/overview/summary` | `AdminOverviewEndpoints.cs` | Combined overview snapshot counts, per-building summaries and section availability for one `(date, shift)`. |
+| GET | `/api/admin/overview/areas` | `AdminOverviewEndpoints.cs` | Paged overview Area list (max 50) filtered by group and building, with drill-through keys. |
+| GET | `/api/admin/overview/areas/{areaId}` | `AdminOverviewEndpoints.cs` | Read-only historical/live detail for one Area in the selected `(date, shift)` and optional `roundKey`. |
 
 ### Non-HTTP routes
 
@@ -729,7 +735,7 @@ Backend paths below are relative to `backend/tests/`; frontend paths are relativ
 | Submission/inspection screens, live Dashboard and date/shift race | `pages/scan/ScanPage.test.tsx`, `pages/inspect/InspectPage.test.tsx`, `pages/dashboard/DashboardPage.test.tsx`, `pages/attendance/AttendancePage.test.tsx` |
 | Route roles and lazy boundaries | `router.test.tsx` |
 
-Retention tests are in `JanitorialManagementDashboard.ApiTests/Retention/` (real relational deletion/rollback, race cases, schedule/lifecycle and MySQL migration/provider) and `JanitorialManagementDashboard.UnitTests/RetentionRulesTests.cs` (settings/calendar/anonymous counts). See [the retention guide](data-retention.md).
+Retention tests are in `JanitorialManagementDashboard.ApiTests/Retention/` (real relational deletion/rollback, race cases, schedule/lifecycle, `OverviewReadRaceTests.cs`, and MySQL migration/provider) and `JanitorialManagementDashboard.UnitTests/RetentionRulesTests.cs` (settings/calendar/anonymous counts). MySQL overview migration and concurrency tests are in `JanitorialManagementDashboard.ApiTests/Persistence/MySqlOverviewTests.cs`, and desktop overview E2E is in `frontend/e2e/desktop/overview.spec.ts`. See [the retention guide](data-retention.md).
 
 The frontend harness is `src/test/`: fake fetch, SignalR, GPS and `renderApp`. Real-API workflows and runner safety checks are described in [testing/e2e.md](testing/e2e.md). Current recorded counts belong in [handoff](handoff.md), not in this file map.
 

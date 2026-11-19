@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { routes } from './router';
 import type { Role } from './shared/api/types';
 import { authAnswer, fakeServer } from './test/fakeServer';
+import { overviewFixture } from './test/overviewFixtures';
 import { renderApp } from './test/renderApp';
 
 const noSession = { 'POST /api/auth/refresh': () => ({ status: 401 }) };
@@ -66,6 +67,7 @@ describe('routing (facility-0026, 0058)', () => {
 
     const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
     expect(within(menu).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'ภาพรวม',
       'สถานะจุด',
       'การเข้างาน',
       'ตารางงาน',
@@ -113,6 +115,7 @@ describe('routing (facility-0026, 0058)', () => {
     const pages = pagesOf('admin');
 
     expect(pages.map((page) => page.path)).toEqual([
+      'admin/overview',
       'dashboard',
       'admin/attendance',
       'admin/schedules',
@@ -129,6 +132,41 @@ describe('routing (facility-0026, 0058)', () => {
       'admin/areas/:areaId/capture',
     ]);
     expect(pages.every((page) => typeof page.lazy === 'function' && page.element === undefined)).toBe(true);
+  });
+
+  it('denies Cleaner and Supervisor access to /admin/overview', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('cleaner') });
+    await renderApp('/admin/overview');
+    expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
+  });
+
+  it('denies Supervisor access to /admin/overview', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('supervisor') });
+    await renderApp('/admin/overview');
+    expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
+  });
+
+  it('keeps default Admin home at Dashboard while allowing Admin on lazy /admin/overview without eager import', async () => {
+    fakeServer({
+      'POST /api/auth/refresh': () => authAnswer('admin'),
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+    });
+    const { router } = await renderApp('/');
+    expect(router.state.location.pathname).toBe('/dashboard');
+    const overviewRoute = pagesOf('admin').find((route) => route.path === 'admin/overview');
+    expect(overviewRoute?.lazy).toEqual(expect.any(Function));
+    expect(overviewRoute?.element).toBeUndefined();
+  });
+
+  it('loads lazy /admin/overview for Admin', async () => {
+    fakeServer({
+      'POST /api/auth/refresh': () => authAnswer('admin'),
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': () => ({ status: 200, body: overviewFixture() }),
+    });
+    const adminOverview = await renderApp('/admin/overview');
+    expect(adminOverview.router.state.location.pathname).toBe('/admin/overview');
+    expect(await screen.findByRole('heading', { name: 'ภาพรวมการดูแลพื้นที่' })).toBeInTheDocument();
   });
 
   it('phone pages stay in the main file, so a scanned sign opens without a second download', () => {

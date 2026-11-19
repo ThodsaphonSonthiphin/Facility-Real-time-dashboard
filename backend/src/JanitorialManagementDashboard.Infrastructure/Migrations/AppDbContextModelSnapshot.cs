@@ -396,6 +396,62 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.OverviewTargetRevision", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("EffectiveAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("effective_at");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("json")
+                        .HasColumnName("payload");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("payload_hash");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("int")
+                        .HasColumnName("schema_version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EffectiveAt", "Id");
+
+                    b.ToTable("overview_target_revisions", (string)null);
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.OverviewTargetState", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<long?>("LatestRevisionId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("latest_revision_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LatestRevisionId");
+
+                    b.ToTable("overview_target_state", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1
+                        });
+                });
+
             modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.PointMonthlySummary", b =>
                 {
                     b.Property<int>("ServicePointId")
@@ -580,6 +636,10 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     b.Property<TimeSpan?>("RoundEnd")
                         .HasColumnType("time")
                         .HasColumnName("round_end");
+
+                    b.Property<int?>("RoundOriginId")
+                        .HasColumnType("int")
+                        .HasColumnName("round_origin_id");
 
                     b.Property<TimeSpan?>("RoundStart")
                         .HasColumnType("time")
@@ -2036,6 +2096,16 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                     b.Navigation("ScanRecord");
 
                     b.Navigation("Supervisor");
+                });
+
+            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.OverviewTargetState", b =>
+                {
+                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.OverviewTargetRevision", "LatestRevision")
+                        .WithMany()
+                        .HasForeignKey("LatestRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("LatestRevision");
                 });
 
             modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.PointMonthlySummary", b =>

@@ -3,12 +3,14 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { PointCard } from '../../shared/api/types';
 import type { AppStore } from '../../store';
+import { searchChanged } from '../../store/slices/dashboardSlice';
 import { adminSession, buildings, managedBuildings } from '../../test/adminFixtures';
 import { point } from '../../test/cleanerFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
 import { apiIdle, boardPoints } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
+import { overviewDetailFixture } from '../../test/overviewFixtures';
 import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 function serve(answer: PointCard[] = boardPoints, routes: FakeRoutes = {}) {
@@ -36,6 +38,26 @@ const tileNames = (region: HTMLElement) =>
     .map((h) => h.textContent);
 
 describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
+  it('keeps the ordinary Dashboard search while visiting a scoped Area', async () => {
+    const overview = overviewDetailFixture();
+    const server = serve(boardPoints, {
+      'GET /api/admin/overview/areas/91': () => ({ status: 200, body: overview }),
+    });
+    const { store, router } = await renderApp('/dashboard');
+    await settled(server, store);
+    act(() => { store.dispatch(searchChanged('สำนักงานเดิม')); });
+    const savedFilters = store.getState().dashboard;
+
+    await act(() => router.navigate('/dashboard?source=overview&date=2026-11-04&shift=Day&areaId=91&view=inspection'));
+    expect(await screen.findByRole('heading', { name: 'AR91 พื้นที่ทดลอง 91' })).toBeVisible();
+    expect(store.getState().dashboard).toEqual(savedFilters);
+    expect(pointGets(server)).toHaveLength(2);
+
+    await act(() => router.navigate(-1));
+    expect(await screen.findByRole('heading', { name: 'สถานะจุดทำความสะอาด' })).toBeVisible();
+    expect(store.getState().dashboard.search).toBe('สำนักงานเดิม');
+  });
+
   it('keeps the Admin menu behind a keyboard-accessible disclosure on narrow layouts', async () => {
     serve();
     const { user } = await renderApp('/dashboard');
@@ -48,7 +70,7 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
 
     expect(menuSummary).toHaveAttribute('aria-expanded', 'true');
     const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
-    expect(within(menu).getAllByRole('link')).toHaveLength(11);
+    expect(within(menu).getAllByRole('link')).toHaveLength(12);
     expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'ออกจากระบบ' })).toBeInTheDocument();
 

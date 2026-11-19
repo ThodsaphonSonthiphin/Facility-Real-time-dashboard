@@ -1,6 +1,7 @@
 import {
   Building2,
   CalendarDays,
+  ChartNoAxesCombined,
   ClipboardCheck,
   Download,
   History,
@@ -28,6 +29,7 @@ const adminGroups = [
   {
     label: 'ติดตามงาน',
     links: [
+      { to: '/admin/overview', label: 'ภาพรวม', Icon: ChartNoAxesCombined, counted: false },
       { to: '/dashboard', label: 'สถานะจุด', Icon: LayoutGrid, counted: false },
       { to: '/admin/attendance', label: 'การเข้างาน', Icon: Users, counted: false },
       // facility-0178: the schedule follows attendance in the group that follows the work

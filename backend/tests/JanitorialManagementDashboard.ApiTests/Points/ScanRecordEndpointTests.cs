@@ -168,6 +168,8 @@ public class ScanRecordEndpointTests
         Assert.Equal(new DateOnly(2026, 10, 8), stored.ShiftDate);
         Assert.Equal(Shift.Day, stored.Shift);
         Assert.Equal(new TimeOnly(7, 0), stored.RoundStart);
+        Assert.NotNull(stored.RoundWindowId);
+        Assert.Equal(stored.RoundWindowId, stored.RoundOriginId);
         Assert.Equal(13.756300m, stored.Latitude);
         Assert.Null(stored.CoverAssignmentId);
     }
@@ -194,7 +196,9 @@ public class ScanRecordEndpointTests
         var created = await CheckInAndScanAtAsync(factory, cleaner, ThaiClock.At(8, 9, 40));
 
         Assert.Equal("OffRound", created.Placement);
-        Assert.Null((await StoredAsync(factory, created.ScanRecordId)).RoundWindowId);
+        var stored = await StoredAsync(factory, created.ScanRecordId);
+        Assert.Null(stored.RoundWindowId);
+        Assert.Null(stored.RoundOriginId);
     }
 
     [Fact]

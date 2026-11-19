@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Application.Overview;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
@@ -45,9 +47,9 @@ var today = DateOnly.FromDateTime(seedNow.AddHours(7));
 var anchor = Environment.GetEnvironmentVariable("E2E_SEED_DATE") is string date ? DateOnly.ParseExact(date, "yyyy-MM-dd") : today;
 if (anchor > today) throw new ArgumentException("Seed date cannot be in the future");
 // Dedicated metadata lives only in the isolated database; no production migration or schema change.
-await db.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS __e2e_dataset (identity VARCHAR(100) PRIMARY KEY)");
+await db.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS __e2e_dataset (identity VARCHAR(100) PRIMARY KEY, overview_revision BIGINT NOT NULL, overview_hash CHAR(64) NOT NULL)");
 marker.CommandText = "SELECT identity FROM __e2e_dataset";
-var identity = $"v1:{profile}:{anchor:yyyy-MM-dd}";
+var identity = $"v2:{profile}:{anchor:yyyy-MM-dd}";
 var existing = (await marker.ExecuteScalarAsync())?.ToString();
 if (existing is not null && existing != identity)
     throw new InvalidOperationException("A different dataset already exists; start a fresh run");
@@ -154,7 +156,8 @@ if (existing is null)
                 var submitted = Utc(shiftDate, shift == Shift.Day ? 8 : 20).AddMinutes(point.SortOrder);
                 var issue = (point.Id + day) % 9 == 0;
                 var scan = new ScanRecord { ServicePointId = point.Id, SignId = sign.Id, UserId = cleaners[(a, shift)].Id,
-                    ShiftDate = shiftDate, Shift = shift, RoundWindowId = window.Id, RoundStart = window.StartTime, RoundEnd = window.EndTime,
+                    ShiftDate = shiftDate, Shift = shift, RoundWindowId = window.Id, RoundOriginId = window.Id,
+                    RoundStart = window.StartTime, RoundEnd = window.EndTime,
                     Placement = Placement.OnTime, Status = issue ? CleaningStatus.Issue : CleaningStatus.Normal,
                     IssueTags = issue ? "พื้นเปียก" : null, Note = issue ? "ข้อมูลทดสอบ: พื้นเปียก" : null,
                     SubmittedAt = submitted, Latitude = 13.7563m, Longitude = 100.5018m, AccuracyM = 5, DistanceM = 0, WithinRadius = true };
@@ -192,9 +195,25 @@ if (existing is null)
             CancelledById = a % 2 == 0 ? admin.Id : null, CancelledAt = a % 2 == 0 ? Utc(shiftDate, 6) : null });
     }
     await db.SaveChangesAsync();
-    await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO __e2e_dataset (identity) VALUES ({identity})");
+    var startupImage = JsonSerializer.Deserialize<TargetImage>((await db.OverviewTargetRevisions.SingleAsync()).Payload)!;
+    var policy = new AttendanceSettings {
+        OpensMinutesBeforeShift = startupImage.Policy.OpensMinutesBeforeShift,
+        ClosesMinutesAfterShift = startupImage.Policy.ClosesMinutesAfterShift
+    };
+    await OverviewSeed.CaptureAsync(db, created, policy, CancellationToken.None);
+    var baseline = await db.OverviewTargetRevisions.SingleAsync();
+    await db.Database.ExecuteSqlInterpolatedAsync(
+        $"INSERT INTO __e2e_dataset (identity,overview_revision,overview_hash) VALUES ({identity},{baseline.Id},{baseline.PayloadHash})");
     await transaction.CommitAsync();
 }
+
+// Both passes verify the identity and checksum recorded atomically by the first seed transaction.
+marker.CommandText = """
+    SELECT COUNT(*) FROM __e2e_dataset d JOIN overview_target_state s ON s.latest_revision_id = d.overview_revision
+    JOIN overview_target_revisions r ON r.id = s.latest_revision_id AND r.payload_hash = d.overview_hash
+    """;
+if (Convert.ToInt32(await marker.ExecuteScalarAsync()) != 1)
+    throw new InvalidOperationException("Synthetic overview baseline changed");
 
 // Persist measured counts, not estimates, and fail the run on semantic relationship violations.
 var invalidScans = await db.ScanRecords.CountAsync(s => s.Sign!.ServicePointId != s.ServicePointId
@@ -239,6 +258,7 @@ var report = new {
     invalidScans, invalidInspections, futureEvents, reworks, passed, uninspected,
     seedNow = seedNow.ToString("O"), summaryFromDate = summaryFrom.ToString("yyyy-MM-dd"),
     summaryToDate = summaryTo.ToString("yyyy-MM-dd"), expectedSummary,
+    overview = await OverviewSeed.ManifestAsync(db, anchor, volume.Days),
     scheduling = scheduling is null ? null : await scheduling.ReadManifestAsync(db),
 };
 var output = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });

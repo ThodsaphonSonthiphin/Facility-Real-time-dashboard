@@ -42,6 +42,7 @@ public static class TestData
                 ShiftDate = slot.ShiftDate,
                 Shift = slot.Shift,
                 RoundWindowId = round?.Id,
+                RoundOriginId = round?.Id,
                 RoundStart = round?.Start,
                 RoundEnd = round?.End,
                 Placement = round is null ? Placement.OffRound : Placement.OnTime,

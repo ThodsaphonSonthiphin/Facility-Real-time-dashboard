@@ -16,6 +16,7 @@ export type AreaAttendanceState = 'Empty' | 'Working' | 'OnBreak' | 'Done' | 'Co
 /** BoardEventDto. source AdminAdd or AdminEdit is the "แก้โดย Admin" badge (facility-0051); withinRadius false is a flag. */
 export interface BoardEvent {
   id: number;
+  areaId?: number;
   eventType: AttendanceEvent;
   occurredAt: string;
   source: 'Scan' | 'AdminAdd' | 'AdminEdit' | 'SupervisorAdd';
@@ -111,7 +112,7 @@ export function attendanceHubKey({ shiftDate, shift, buildingId }: BoardArgs): s
   return `attendance-board:${shiftDate ?? 'now'}:${shift ?? ''}:${buildingId ?? 'all'}`;
 }
 
-const attendanceBoardApi = baseApi.injectEndpoints({
+export const attendanceBoardApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getAttendanceBoard: build.query<AttendanceBoard, BoardArgs>({
       query: ({ shiftDate, shift, buildingId }) => ({ url: '/admin/attendance', params: { shiftDate, shift, buildingId } }),

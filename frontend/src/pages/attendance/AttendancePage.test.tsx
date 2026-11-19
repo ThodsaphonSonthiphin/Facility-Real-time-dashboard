@@ -5,6 +5,7 @@ import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
 import { apiIdle, attendanceBoard, emptyRow, workingRow } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
+import { overviewDetailFixture } from '../../test/overviewFixtures';
 import { expectBehindMoreInfo, expectInView } from '../../test/moreInfo';
 
 function serve(routes: FakeRoutes = {}) {
@@ -40,6 +41,97 @@ const cells = (code: string) => within(rowOf(code)).getAllByRole('cell').slice(0
 const loaded = (shown = 'แสดง 1–6 จาก 6 พื้นที่') => screen.findByText(shown);
 
 describe('AttendancePage (D2, facility-0027, 0050)', () => {
+  it('keeps historical Area actions, transfer arrival, and assignment separate from attendance', async () => {
+    const base = overviewDetailFixture();
+    const server = serve({
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas/91': () => ({
+        status: 200,
+        body: {
+          ...base,
+          context: { ...base.context, isClockCurrent: false, phase: 'closed' },
+          entryEvidence: [{ areaId: 91, shiftDate: base.context.shiftDate, shift: 'Day', kind: 'transfer-arrival', recordedAt: '2026-11-04T05:05:00Z', transferId: 77 }],
+          currentResponsibility: { userId: 201, areaId: 91, state: 'confirmed', lastConfirmedAreaId: 91, confirmedAt: '2026-11-04T05:05:00Z' },
+          facts: {
+            ...base.facts,
+            attendance: [
+              { id: 1, areaId: 92, userId: 201, event: 'ShiftIn', occurredAt: '2026-11-04T00:00:00Z', edited: false },
+              { id: 2, areaId: 91, userId: 201, event: 'Break1In', occurredAt: '2026-11-04T06:30:00Z', edited: true, source: 'SupervisorAdd', reason: 'ปรับเวลาใหม่',
+                addition: { reason: 'สแกนไม่ติด', recordedAt: '2026-11-04T06:35:00Z' },
+                edit: { reason: 'ปรับเวลาใหม่', recordedAt: '2026-11-04T06:45:00Z' } },
+              { id: 6, areaId: 91, userId: 201, event: 'ShiftOut', occurredAt: '2026-11-04T08:05:00Z', edited: false },
+              { id: 7, areaId: 91, userId: 202, event: 'ShiftIn', occurredAt: '2026-11-04T00:05:00Z', edited: false },
+            ],
+            people: [...base.facts.people, { id: 202, displayName: 'แม่บ้านอีกคน' }],
+            attendanceGaps: [
+              { id: 3, areaId: 91, userId: 201, event: 'Break1Out', reason: 'ข้ามช่วงพัก' },
+              { id: 4, areaId: 91, userId: 201, event: 'Break1In', reason: 'ช่องว่างที่เติมแล้ว' },
+            ],
+            attendanceLeaves: [
+              { id: 5, userId: 201, startsAt: '2026-11-04T08:00:00Z', endsAt: '2026-11-04T12:00:00Z' },
+              { id: 8, userId: 202, startsAt: '2026-11-04T00:00:00Z', endsAt: '2026-11-04T02:00:00Z' },
+            ],
+            attendanceLeaveEffects: [
+              { userId: 201, event: 'Break2Out', kind: 'exempt' },
+              { userId: 202, event: 'ShiftIn', kind: 'check-in-conflict' },
+            ],
+          },
+        },
+      }),
+    });
+    await renderApp('/admin/attendance?source=overview&date=2026-11-04&shift=Day&building=1&group=entered&page=2&areaId=91&view=attendance');
+
+    const evidence = await screen.findByRole('region', { name: 'หลักฐานเข้าพื้นที่' });
+    expect(within(evidence).getByText(/ยืนยันถึงพื้นที่หลังย้าย/)).toHaveTextContent('รายการย้าย #77');
+    const actions = screen.getByRole('region', { name: 'เวลาที่บันทึกในพื้นที่' });
+    expect(within(actions).getByText(/กลับจากพัก 1/)).toBeVisible();
+    const addition = within(actions).getByText(/หัวหน้างานเติมเวลา/);
+    expect(addition).toHaveTextContent('สแกนไม่ติด');
+    expect(addition).not.toHaveTextContent('ปรับเวลาใหม่');
+    expect(within(actions).getByText(/แอดมินแก้เวลา/)).toHaveTextContent('ปรับเวลาใหม่');
+    expect(within(actions).getByText(/ออกพัก 1/)).toHaveTextContent('— (ข้ามการสแกน)');
+    expect(within(actions).queryByText(/ช่องว่างที่เติมแล้ว|พัก 2|พื้นที่ #92|แม่บ้านทดลอง 91 · เข้างาน ·/)).not.toBeInTheDocument();
+    const leave = within(screen.getByRole('region', { name: 'การลาของกะนี้' }));
+    expect(leave.getByText(/แม่บ้านทดลอง 91 · ช่วงลาที่บันทึก/)).toBeVisible();
+    const exempt = leave.getByText(/ออกพัก 2 · ไม่ต้องลงเวลาเนื่องจากลา/);
+    expect(exempt).toBeVisible();
+    expect(exempt.querySelector('time')).toBeNull();
+    expect(leave.getByText(/แม่บ้านอีกคน · เข้างาน · ลงเวลาในช่วงลาที่บันทึก/)).toBeVisible();
+    expect(within(actions).queryByText(/ไม่ต้องลงเวลาเนื่องจากลา/)).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'ความรับผิดชอบจากการย้ายพื้นที่' })).toHaveTextContent('แม่บ้านทดลอง 91');
+    expect(screen.getByRole('region', { name: 'การมอบหมายคนทำแทน' })).toHaveTextContent('มอบหมาย');
+    expect(screen.getByText('ประวัติสำหรับอ่านข้อมูล')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'มอบหมายทำแทน' })).not.toBeInTheDocument();
+    expect(boardCalls(server)).toHaveLength(0);
+  });
+
+  it('keeps the receiving window read-only even when the API marks the selected slot as clock-current', async () => {
+    const base = overviewDetailFixture();
+    const server = serve({
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas/91': () => ({
+        status: 200, body: { ...base, context: { ...base.context, phase: 'receiving', isClockCurrent: true } },
+      }),
+    });
+    await renderApp('/admin/attendance?source=overview&date=2026-11-04&shift=Day&areaId=91&view=attendance');
+
+    expect(await screen.findByText('ประวัติสำหรับอ่านข้อมูล')).toBeVisible();
+    expect(screen.getByText(/ยังรับข้อมูลถึง/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'มอบหมายทำแทน' })).not.toBeInTheDocument();
+    expect(boardCalls(server)).toHaveLength(0);
+  });
+
+  it.each(['source=other&source=overview&areaId=91', 'source=overview&date=2026-11-04&shift=Day&areaId=0&view=attendance'])(
+    'rejects malformed Overview context without starting a board or detail read', async (search) => {
+      const server = serve({ 'GET /api/admin/alerts': () => ({ status: 200, body: [] }) });
+      await renderApp(`/admin/attendance?${search}`);
+      expect(await screen.findByRole('alert')).toBeVisible();
+      expect(screen.getByRole('link', { name: 'กลับภาพรวม' })).toBeVisible();
+      expect(boardCalls(server)).toHaveLength(0);
+      expect(server.calls.some((call) => call.path.startsWith('/api/admin/overview/areas/'))).toBe(false);
+    },
+  );
+
   it("shows the clock's shift: Areas with nobody first, each Cleaner's four times, covers and flags", async () => {
     serve();
     await renderApp('/admin/attendance');

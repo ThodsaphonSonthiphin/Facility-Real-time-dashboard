@@ -18,6 +18,9 @@ public class ScanRecord : IGpsStamped
     /// <summary>Null for an Off-Round Submission, or when an Admin later deletes the window.</summary>
     public int? RoundWindowId { get; set; }
 
+    /// <summary>The recorded round identity, retained even if the window is deleted.</summary>
+    public int? RoundOriginId { get; set; }
+
     /// <summary>Copied from the window at submission, because an Admin may edit the window later.</summary>
     public TimeOnly? RoundStart { get; set; }
 
