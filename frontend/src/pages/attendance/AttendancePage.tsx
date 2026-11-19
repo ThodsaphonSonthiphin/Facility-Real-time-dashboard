@@ -11,6 +11,7 @@ import { livePoll } from '../../shared/api/baseApi';
 import type { AttendanceEvent, Shift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { EditedMark } from '../../shared/components/Badge';
+import { KpiCard } from '../../shared/components/KpiCard/KpiCard';
 import { LiveBadge } from '../../shared/components/LiveBadge';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { linkClass } from '../../shared/components/styles';
@@ -227,23 +228,17 @@ function TableFooter({ page, total, onPage }: { page: number; total: number; onP
  */
 function Tiles({ summary, onBreak }: { summary: BoardSummary; onBreak: number }) {
   const tiles = [
-    { label: 'พื้นที่ที่ต้องมีคน', count: summary.required, Icon: MapPin, tone: 'text-text-3' },
-    { label: 'มีคนแล้ว', count: summary.present, Icon: Check, tone: 'text-passed' },
-    { label: 'ยังไม่มีคน', count: summary.empty, Icon: UserX, tone: 'text-overdue' },
-    { label: 'มีคนทำแทน', count: summary.covered, Icon: ArrowRightLeft, tone: 'text-break' },
-    { label: 'พักเบรก', count: onBreak, Icon: Coffee, tone: 'text-break' },
+    { label: 'พื้นที่ที่ต้องมีคน', count: summary.required, Icon: MapPin, tone: 'blue' as const },
+    { label: 'มีคนแล้ว', count: summary.present, Icon: Check, tone: 'green' as const },
+    { label: 'ยังไม่มีคน', count: summary.empty, Icon: UserX, tone: 'amber' as const },
+    { label: 'มีคนทำแทน', count: summary.covered, Icon: ArrowRightLeft, tone: 'purple' as const },
+    { label: 'พักเบรก', count: onBreak, Icon: Coffee, tone: 'purple' as const },
   ];
   return (
-    // auto-fit tiles at least 160 px wide: five across on a computer; no token describes a track list
-    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 p-0" aria-label="สรุปกะนี้">
+    // auto-fit tiles at least 175 px wide: five across on a computer; no token describes a track list
+    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(175px,1fr))] gap-3 p-0" aria-label="สรุปกะนี้">
       {tiles.map(({ label, count, Icon, tone }) => (
-        <li key={label} className="flex flex-col gap-0.5 rounded-lg border border-border bg-surface px-4 py-3">
-          <span className={`flex items-center gap-1.5 text-sm font-semibold ${tone}`}>
-            <Icon aria-hidden="true" className="size-4" />
-            {label}
-          </span>
-          <strong className="text-3xl leading-tight font-bold tabular-nums">{count}</strong>
-        </li>
+        <KpiCard key={label} as="li" label={label} value={count} icon={Icon} tone={tone} />
       ))}
     </ul>
   );

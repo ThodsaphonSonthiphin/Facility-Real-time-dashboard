@@ -5,6 +5,7 @@ import type { Shift } from '../../shared/api/types';
 import { SearchBox } from '../../shared/components/SearchBox';
 import { Select, TextInput } from '../../shared/components/Field';
 import { Segmented } from '../../shared/components/Segmented';
+import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { shiftLabel } from '../../shared/utils/labels';
 
 const shiftOptions = (['Day', 'Night'] as const).map((shift) => ({ value: shift, label: shiftLabel[shift] }));
@@ -30,7 +31,10 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onBuildin
   const date = board?.shiftDate ?? args.shiftDate ?? '';
 
   return (
-    <section aria-label="ตัวกรอง" className="flex flex-wrap items-center gap-3">
+    <FilterToolbar
+      label="ตัวกรอง"
+      actions={<SearchBox label="ค้นหาพื้นที่หรือแม่บ้าน" value={search} onChange={onSearch} className="w-60 max-w-full" />}
+    >
       <Segmented
         label="กะ"
         options={shiftOptions}
@@ -68,7 +72,6 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onBuildin
           ))}
         </Select>
       </label>
-      <SearchBox label="ค้นหาพื้นที่หรือแม่บ้าน" value={search} onChange={onSearch} className="ml-auto w-60" />
-    </section>
+    </FilterToolbar>
   );
 }

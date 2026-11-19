@@ -265,4 +265,26 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
     expectBehindMoreInfo(/^ถ้าจบรอบแล้วยังไม่มีงาน/, 'วิธีอ่านการ์ด');
   });
+
+  it('shows BuildingSummary derived from real points and filters by building via button without links in main', async () => {
+    serve();
+    const { user } = await renderApp('/dashboard');
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
+
+    const summaryHeading = screen.getByRole('heading', { level: 2, name: 'สถานะพื้นที่ (ตามตึก)' });
+    const summarySection = summaryHeading.closest('section');
+    expect(summarySection).not.toBeNull();
+    const withinSummary = within(summarySection as HTMLElement);
+
+    expect(withinSummary.getByRole('progressbar', { name: 'ความคืบหน้าตึก A' })).toHaveAttribute('aria-valuenow', '25');
+    expect(withinSummary.getByRole('progressbar', { name: 'ความคืบหน้าตึก B' })).toHaveAttribute('aria-valuenow', '0');
+
+    const buildingBButton = withinSummary.getByRole('button', { name: 'B · ตึกข้างเคียง' });
+    await user.click(buildingBButton);
+
+    expect(buildingBButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('region', { name: 'AR01 Area ทดลอง' })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'ตึก' })).toHaveValue('B');
+    expect(within(screen.getByRole('main')).queryAllByRole('link')).toEqual([]);
+  });
 });

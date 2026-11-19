@@ -1,8 +1,9 @@
 import { Search, Wrench } from 'lucide-react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { buildingOptionText } from '../../shared/api/buildingNames';
-import type { PointCard } from '../../shared/api/types';
+import type { PointCard, PointStatus } from '../../shared/api/types';
 import { Select, TextInput } from '../../shared/components/Field';
+import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { focusRing, statusIcon, statusText, toggleClass } from '../../shared/components/styles';
 import { pointStatusLabel } from '../../shared/utils/labels';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -15,11 +16,21 @@ import {
 } from '../../store/slices/dashboardSlice';
 import { inBuilding, legendOrder, statusCounts } from './boardRules';
 
-/** A status card (the design file's Dashboard): 6 per row, the status's icon and words, the count at 30/700. Pressed = pale blue with a 2 px blue frame. */
+const statusIconCircle: Record<PointStatus, string> = {
+  Rework: 'bg-rework-bg text-rework',
+  Overdue: 'bg-overdue-bg text-overdue',
+  PendingInspection: 'bg-pending-bg text-pending',
+  Passed: 'bg-passed-bg text-passed',
+  NotYetDone: 'bg-idle-bg text-idle',
+  BeforeFirstRound: 'bg-idle-bg text-idle',
+  OffHours: 'bg-idle-bg text-idle',
+};
+
+/** A status card (the design file's Dashboard): 6/7 per row, circular semantic icon, words, count at 24/700. Pressed = pale blue with a 2 px blue frame. */
 const cardClass =
-  'flex w-full cursor-pointer flex-col items-start gap-1 rounded-lg border border-border bg-surface px-4 py-3 text-left ' +
+  'flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-3 text-left ' +
   'enabled:hover:border-accent aria-pressed:border-2 aria-pressed:border-accent aria-pressed:bg-accent-subtle ' +
-  'aria-pressed:px-[15px] aria-pressed:py-[11px] ' +
+  'aria-pressed:px-[13px] aria-pressed:py-[11px] ' +
   focusRing;
 
 /** Wireframe D1's filters: the legend as six status cards with counts, then the building and "มีปัญหาที่แจ้ง" (facility-0024). */
@@ -33,7 +44,7 @@ export function Filters({ points }: { points: PointCard[] }) {
 
   return (
     <>
-      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3 p-0" aria-label="สถานะ">
+      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3 p-0" aria-label="สถานะ">
         {legendOrder.map((status) => {
           const Icon = statusIcon[status];
           return (
@@ -45,17 +56,19 @@ export function Filters({ points }: { points: PointCard[] }) {
                 aria-pressed={filters.status === status}
                 onClick={() => dispatch(statusToggled(status))}
               >
-                <span className={`flex items-center gap-1.5 text-xs font-semibold ${statusText[status]}`}>
-                  <Icon aria-hidden="true" className="size-4" />
-                  {pointStatusLabel[status]}
-                </span>{' '}
-                <span className="text-3xl leading-tight font-bold tabular-nums">{counts[status]}</span>
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${statusIconCircle[status]}`}>
+                  <Icon aria-hidden="true" className="size-4.5" strokeWidth={2} />
+                </span>
+                <span className="min-w-0">
+                  <span className={`block text-xs font-semibold ${statusText[status]}`}>{pointStatusLabel[status]}</span>{' '}
+                  <span className="block text-2xl leading-tight font-bold text-text tabular-nums">{counts[status]}</span>
+                </span>
               </button>
             </li>
           );
         })}
       </ul>
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+      <FilterToolbar label="ตัวกรองจุด">
         <label className="inline-flex min-w-0 items-center gap-2 font-semibold">
           ตึก
           <Select
@@ -103,7 +116,7 @@ export function Filters({ points }: { points: PointCard[] }) {
           />
           เรียงพื้นที่ที่มีปัญหาขึ้นก่อน
         </label>
-      </div>
+      </FilterToolbar>
     </>
   );
 }

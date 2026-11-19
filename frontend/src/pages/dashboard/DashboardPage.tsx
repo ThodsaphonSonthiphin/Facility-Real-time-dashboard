@@ -14,6 +14,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { filtersCleared } from '../../store/slices/dashboardSlice';
 import { filterPoints, groupByArea, hasProblem, isUnfiltered, statusCounts, type AreaGroup } from './boardRules';
 import { DASHBOARD_HUB, useGetServicePointsQuery } from './dashboardApi';
+import { BuildingSummary } from './BuildingSummary';
 import { Filters } from './Filters';
 import { PointTile } from './PointTile';
 
@@ -60,6 +61,7 @@ export function DashboardPage() {
         </div>
       </header>
       {data && <Filters points={data} />}
+      {data && data.length > 0 && <BuildingSummary points={data} />}
       {!isLoading && <MoreInfo summary="วิธีอ่านการ์ด">{RULES_NOTE}</MoreInfo>}
       {isLoading && <PageLoading lines={3}>กำลังโหลดจุด...</PageLoading>}
       {error && (

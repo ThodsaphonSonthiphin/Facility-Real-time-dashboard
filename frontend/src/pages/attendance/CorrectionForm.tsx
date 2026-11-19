@@ -317,8 +317,11 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
             </span>
           )}
         </fieldset>
-        <div className="flex flex-col gap-1 rounded-md border border-pending-border bg-accent-subtle px-4 py-3">
-          <strong>สรุปก่อนบันทึก</strong>
+        <div className="flex flex-col gap-1.5 rounded-xl border border-pending-border bg-accent-subtle px-4 py-3.5">
+          <strong className="flex items-center gap-1.5">
+            <Check aria-hidden="true" className="size-4 text-accent" />
+            สรุปก่อนบันทึก
+          </strong>
           <span>
             {changed.length === 0
               ? 'ยังไม่ได้แก้เวลาช่องไหน'
@@ -337,7 +340,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
           ยกเลิก
         </Button>
         <Button variant="primary" size="desk" disabled={busy} onClick={() => void save()}>
-          {busy && <Spinner />}
+          {busy ? <Spinner /> : <Check aria-hidden="true" className="size-4" />}
           {busy ? 'กำลังบันทึก…' : `บันทึกการแก้ไข (${changed.length} ช่อง)`}
         </Button>
       </DialogFooter>

@@ -1,6 +1,7 @@
 import { ArrowRightLeft, Check, Coffee, MapPin, Minus, Pencil, UserX, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { AreaAttendanceState, BoardEvent, BoardRow } from '../../shared/api/attendanceBoardApi';
+import { AvatarBadge } from '../../shared/components/AvatarBadge/AvatarBadge';
 import { Table } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
 import { Badge, EditedMark } from '../../shared/components/Badge';
@@ -157,12 +158,25 @@ function EntryDetails({ row }: { row: BoardRow }) {
 function Who({ row }: { row: BoardRow }) {
   return (
     <div className="flex flex-col">
-      <span>{row.cleaner ? row.cleaner.displayName : 'ไม่มีแม่บ้านประจำ'}</span>
+      {row.cleaner ? (
+        <span className="flex items-center gap-2">
+          <AvatarBadge name={row.cleaner.displayName} size="sm" tone={row.state === 'Empty' ? 'amber' : 'blue'} />
+          <span>{row.cleaner.displayName}</span>
+        </span>
+      ) : (
+        <span>ไม่มีแม่บ้านประจำ</span>
+      )}
       {row.cleaner && !eventOf(row, 'ShiftIn') && <span className={subClass}>ยังไม่ลงเวลา</span>}
-      {row.additionalCleaners?.map(({ cleaner }) => <span key={cleaner.id}>{cleaner.displayName}</span>)}
+      {row.additionalCleaners?.map(({ cleaner }) => (
+        <span key={cleaner.id} className="mt-1 flex items-center gap-2">
+          <AvatarBadge name={cleaner.displayName} size="sm" tone="teal" />
+          <span>{cleaner.displayName}</span>
+        </span>
+      ))}
       {row.covers.map((cover) => (
         <span key={cover.id} className="mt-1 flex flex-col">
           <span className="flex flex-wrap items-center gap-1.5">
+            <AvatarBadge name={cover.displayName} size="sm" tone="purple" />
             {cover.displayName}
             <Badge kind="cover">ทำแทน</Badge>
           </span>

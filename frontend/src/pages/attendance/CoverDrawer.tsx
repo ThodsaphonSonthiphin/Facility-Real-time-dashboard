@@ -226,7 +226,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
           </Note>
         )}
         {area && person && (
-          <div className="flex flex-col gap-2 rounded-md border border-pending-border bg-accent-subtle px-4 py-3">
+          <div className="flex flex-col gap-2 rounded-xl border border-pending-border bg-accent-subtle px-4 py-3.5">
             <strong className="flex items-center gap-1.5">
               <ArrowRightLeft aria-hidden="true" className="size-4 text-break" />
               สรุป
@@ -286,6 +286,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
           disabled={!area || userId == null || isLoading}
           onClick={() => void save()}
         >
+          <ArrowRightLeft aria-hidden="true" className="size-4" />
           มอบหมาย
         </Button>
       </DialogFooter>
