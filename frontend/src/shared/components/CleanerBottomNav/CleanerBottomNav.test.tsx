@@ -31,65 +31,38 @@ function serveCleaner(routes: Record<string, () => { status: number; body?: unkn
   });
 }
 
-describe('CleanerBottomNav (R-01 Option A)', () => {
-  it('renders the 4 cleaner tabs with Thai labels on /my-work and marks งานของฉัน current', async () => {
+describe('CleanerBottomNav (facility-0227)', () => {
+  it('renders exactly 2 real navigation tabs on /my-work without สแกน QR, ลงเวลา, or บัญชี', async () => {
     serveCleaner();
     await renderApp('/my-work');
 
     const nav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
     const items = Array.from(nav.querySelectorAll('a, button'));
-    expect(items.map((el) => el.textContent)).toEqual(['งานของฉัน', 'ลงเวลา', 'สแกน QR', 'ตารางเวร']);
+    expect(items.map((el) => el.textContent)).toEqual(['งานของฉัน', 'ตารางของฉัน']);
+    expect(within(nav).queryByText('สแกน QR')).not.toBeInTheDocument();
+    expect(within(nav).queryByText('ลงเวลา')).not.toBeInTheDocument();
+    expect(within(nav).queryByText('บัญชี')).not.toBeInTheDocument();
     expect(within(nav).getByRole('link', { name: 'งานของฉัน' })).toHaveAttribute('aria-current', 'page');
-    expect(within(nav).getByRole('link', { name: 'ตารางเวร' })).toHaveAttribute('href', '/my-schedule');
+    expect(within(nav).getByRole('link', { name: 'ตารางของฉัน' })).toHaveAttribute('href', '/my-schedule');
   });
 
-  it('marks ตารางเวร current on /my-schedule', async () => {
+  it('marks ตารางของฉัน current on /my-schedule', async () => {
     serveCleaner();
     await renderApp('/my-schedule');
 
     const nav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
-    expect(within(nav).getByRole('link', { name: 'ตารางเวร' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).getByRole('link', { name: 'ตารางของฉัน' })).toHaveAttribute('aria-current', 'page');
     expect(within(nav).getByRole('link', { name: 'งานของฉัน' })).not.toHaveAttribute('aria-current');
   });
 
-  it('marks ลงเวลา current on /check-in/:token and สแกน QR current on /scan/:token', async () => {
+  it('stays visible with 2 real links on tokenized routes without fabricating QR links', async () => {
     serveCleaner();
     await renderApp('/check-in/token-checkin');
 
-    const checkInNav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
-    expect(within(checkInNav).getByRole('button', { name: 'ลงเวลา' })).toHaveAttribute('aria-current', 'page');
-
-    serveCleaner();
-    await renderApp('/scan/token-point');
-
-    const scanNav = await screen.findAllByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
-    const latestNav = scanNav[scanNav.length - 1];
-    expect(within(latestNav).getByRole('button', { name: 'สแกน QR' })).toHaveAttribute('aria-current', 'page');
-  });
-
-  it('toggles inline QR camera guidance when tapping ลงเวลา or สแกน QR on /my-work without navigating to fake tokens', async () => {
-    serveCleaner();
-    const { user, router } = await renderApp('/my-work');
-
     const nav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
-    await user.click(within(nav).getByRole('button', { name: 'ลงเวลา' }));
-
-    expect(router.state.location.pathname).toBe('/my-work');
-    expect(screen.getByRole('status')).toHaveTextContent(/สแกนป้ายลงเวลาด้วยกล้องมือถือ/);
-
-    // Tapping สแกน QR switches the inline guidance to point QR instructions
-    await user.click(within(nav).getByRole('button', { name: 'สแกน QR' }));
-    expect(router.state.location.pathname).toBe('/my-work');
-    expect(screen.getByRole('status')).toHaveTextContent(/สแกนป้าย QR ที่จุดทำความสะอาด/);
-
-    // Tapping สแกน QR again closes the guidance
-    await user.click(within(nav).getByRole('button', { name: 'สแกน QR' }));
-    expect(screen.queryByText(/สแกนป้าย QR ที่จุดทำความสะอาด/)).not.toBeInTheDocument();
-
-    // Never renders fake /check-in/ or /scan/ links
-    for (const link of within(nav).getAllByRole('link')) {
-      expect(link.getAttribute('href')).not.toMatch(/^\/(check-in|scan)/);
-    }
+    const links = within(nav).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/my-work', '/my-schedule']);
+    expect(within(nav).queryAllByRole('button')).toHaveLength(0);
   });
 
   it('never renders for supervisor or admin', async () => {
@@ -126,21 +99,6 @@ describe('CleanerBottomNav (R-01 Option A)', () => {
     await renderApp('/admin/areas/1/capture');
     await screen.findByText(/AR01/);
     expect(screen.queryByRole('navigation', { name: 'เมนูหลักแม่บ้าน' })).not.toBeInTheDocument();
-  });
-
-  it('does not open QR guidance when tapping the active ลงเวลา or สแกน QR tab on its tokenized route', async () => {
-    serveCleaner();
-    const checkInSession = await renderApp('/check-in/token-checkin');
-    const checkInNav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
-    await checkInSession.user.click(within(checkInNav).getByRole('button', { name: 'ลงเวลา' }));
-    expect(screen.queryByText(/สแกนป้ายลงเวลาด้วยกล้องมือถือ/)).not.toBeInTheDocument();
-
-    serveCleaner();
-    const scanSession = await renderApp('/scan/token-point');
-    const scanNavs = await screen.findAllByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
-    const latestNav = scanNavs[scanNavs.length - 1];
-    await scanSession.user.click(within(latestNav).getByRole('button', { name: 'สแกน QR' }));
-    expect(screen.queryByText(/สแกนป้าย QR ที่จุดทำความสะอาด/)).not.toBeInTheDocument();
   });
 
   it('never renders for a supervisor on /scan/:token', async () => {

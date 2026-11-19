@@ -1,9 +1,10 @@
-import { ChevronDown, ChevronLeft, LogOut } from 'lucide-react';
-import { Link, Outlet } from 'react-router';
+import { ChevronDown, LogOut } from 'lucide-react';
+import { Outlet } from 'react-router';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { endSession } from '../auth/endSession';
 import { AdminNav } from './AdminNav';
 import { ProjectLogo } from './ProjectLogo';
+import { SupervisorNav } from './SupervisorNav/SupervisorNav';
 import { focusRing } from './styles';
 
 /**
@@ -26,14 +27,8 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
       return (
         <div className="mx-auto flex min-h-svh w-full max-w-content flex-col gap-4 p-4 sm:p-6 print:p-0">
           <SkipToContent />
-          <header className="flex items-center justify-between gap-3 print:hidden">
-            <Link
-              to="/my-building"
-              className={`inline-flex min-h-12 items-center gap-1 font-semibold text-accent hover:text-accent-hover ${focusRing}`}
-            >
-              <ChevronLeft aria-hidden="true" className="size-5" />
-              ตึกของฉัน
-            </Link>
+          <header className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+            <SupervisorNav />
             <details className="relative">
               <summary className={`inline-flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-md border border-border-control bg-surface px-3 text-sm font-semibold ${focusRing}`}>
                 <span className="max-w-40 truncate">{user.fullName}</span>
