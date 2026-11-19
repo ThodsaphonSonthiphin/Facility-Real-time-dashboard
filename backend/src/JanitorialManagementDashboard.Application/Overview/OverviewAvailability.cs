@@ -9,17 +9,31 @@ namespace JanitorialManagementDashboard.Application.Overview;
 public sealed record DetailCoverage(DateTime AttendanceAfterUtc, DateOnly WorkFromShiftDate,
     DateTime? TargetCaptureFromUtc, bool IssueStateKnown, IReadOnlyList<(DateTime From, DateTime To)> Gaps)
 {
+    public DateTime? ReadAtUtc { get; init; }
+
     // The read boundary supplies this evidence for invalid revisions, including their unknown receiving policies.
     public IReadOnlyList<(DateTime From, DateTime To)> UnreadableTargetIntervals { get; init; } = [];
 
     public static DetailCoverage FromRetention(DateTime nowUtc, RetentionSettings settings,
         DateTime? targetCaptureFromUtc, bool issueStateKnown, IReadOnlyList<(DateTime From, DateTime To)> gaps) =>
-        new(settings.RecordCutoffUtc(nowUtc), settings.WorkFromShiftDate(nowUtc), targetCaptureFromUtc, issueStateKnown, gaps);
+        new(settings.RecordCutoffUtc(nowUtc), settings.WorkFromShiftDate(nowUtc), targetCaptureFromUtc, issueStateKnown, gaps)
+        {
+            ReadAtUtc = nowUtc,
+        };
 }
 
 public sealed record Availability(string State, string[] Reasons);
 public sealed record SectionAvailability(Availability Entry, Availability Work, Availability Inspection,
     Availability History, Availability Issue);
+
+public sealed record OverviewSlotAvailability(ShiftSlot Slot, SectionAvailability Sections)
+{
+    public bool DetailComplete =>
+        Sections.Entry.State == "complete" && Sections.Work.State == "complete"
+        && Sections.Inspection.State == "complete" && Sections.History.State == "complete";
+
+    public bool FullySupported => DetailComplete && Sections.Issue.State == "complete";
+}
 
 public static class OverviewAvailability
 {
@@ -51,10 +65,12 @@ public static class OverviewAvailability
 
         var entryReasons = new List<string>(current);
         if (!receivingKnown) entryReasons.Add("receivingPolicyUnknown");
-        if ((openingKnown ? earliestAttendance : firstPossibleOpen) <= coverage.AttendanceAfterUtc)
+        if ((openingKnown && !policyUnreadable ? earliestAttendance : firstPossibleOpen) <= coverage.AttendanceAfterUtc)
             entryReasons.Add("attendancePartlyExpired");
-        var lastPossibleAttendance = moment.CloseUtc is { } close && !currentUnreadable
-            ? Earlier(evaluation, close) : Earlier(evaluation, LastPossibleClose(slot));
+        // An unreadable policy could have kept receiving open after the provisional evaluation time.
+        var readAt = coverage.ReadAtUtc ?? (moment.Phase == "closed" ? DateTime.MaxValue : evaluation);
+        var lastPossibleAttendance = moment is { PolicyComplete: true, CloseUtc: { } close } && !currentUnreadable
+            ? Earlier(evaluation, close) : Earlier(readAt, LastPossibleClose(slot));
         var entry = lastPossibleAttendance <= coverage.AttendanceAfterUtc
             ? new Availability("unavailable", ["attendanceExpired"])
             : FromReasons(entryReasons);
@@ -81,30 +97,27 @@ public static class OverviewAvailability
         // Archive defers a point-month if any source was submitted after the annual cutoff.
         || (verifiedPointCreatedAtUtc > annualCutoffUtc && verifiedPointCreatedAtUtc <= evaluationUtc);
 
-    /// <summary>Slots with complete selected-slot details. Issue depends on separate, per-point source evidence.</summary>
-    public static IReadOnlyList<ShiftSlot> FullySupportedSlots(DateTime nowUtc, RetentionSettings settings,
-        IReadOnlyList<TargetRevision> revisions, DetailCoverage coverage)
+    /// <summary>Evaluates each retained date's shifts. A slot needs its own Issue evidence to be fully supported.</summary>
+    public static IReadOnlyList<OverviewSlotAvailability> EvaluateRange(DateTime nowUtc, RetentionSettings settings,
+        IReadOnlyList<TargetRevision> revisions, DetailCoverage coverage, IReadOnlySet<ShiftSlot>? issueKnownSlots = null)
     {
         var ordered = OverviewTime.OrderRevisions(revisions, nowUtc);
         var gaps = MergeIntervals(coverage.Gaps.Concat(OverviewTimeline.StructuralGaps(revisions)));
         var unreadable = MergeIntervals(coverage.UnreadableTargetIntervals);
         var firstDate = DateOnly.FromDateTime(ThaiTime.FromUtc(settings.RecordCutoffUtc(nowUtc)));
-        if (firstDate < coverage.WorkFromShiftDate) firstDate = coverage.WorkFromShiftDate;
         var lastDate = DateOnly.FromDateTime(ThaiTime.FromUtc(nowUtc));
-        var supported = new List<ShiftSlot>();
+        var slots = new List<OverviewSlotAvailability>();
+        var shifts = new[] { Shift.Day, Shift.Night };
         var firstRevision = 0;
         var afterLastRevision = 0;
-        var nextGap = 0;
-        var nextUnreadable = 0;
+        var firstGap = 0;
+        var firstUnreadable = 0;
         for (var date = firstDate; date <= lastDate; date = date.AddDays(1))
-        foreach (var shift in new[] { Shift.Day, Shift.Night })
+        foreach (var shift in shifts)
         {
             var slot = new ShiftSlot(date, shift);
-            var start = ShiftCalendar.StartUtc(slot);
-            if (start > nowUtc) continue;
             var from = FirstPossibleOpen(slot);
             var to = Earlier(nowUtc, LastPossibleClose(slot));
-            var end = ShiftCalendar.EndUtc(slot);
             while (firstRevision + 1 < ordered.Length && ordered[firstRevision + 1].EffectiveAt <= from)
                 firstRevision++;
             while (afterLastRevision < ordered.Length && ordered[afterLastRevision].EffectiveAt <= to)
@@ -113,21 +126,26 @@ public static class OverviewAvailability
             // Only the predecessor and this slot's policy changes can affect its evaluation.
             var relevant = ordered[firstRevision..afterLastRevision];
             var moment = OverviewTime.EvaluateOrdered(slot, nowUtc, relevant);
-            if (!moment.PolicyComplete || relevant.Length == 0) continue;
             var timeline = OverviewTimeline.DescribeCoverage(slot, moment, relevant);
-
-            // Intervals are merged, so the first one ending after the start is the only candidate needed.
-            while (nextGap < gaps.Count && gaps[nextGap].To <= start) nextGap++;
-            while (nextUnreadable < unreadable.Count && unreadable[nextUnreadable].To <= from) nextUnreadable++;
-            if (nextGap < gaps.Count && gaps[nextGap].From <= moment.EvaluationUtc) continue;
-            if (nextUnreadable < unreadable.Count && unreadable[nextUnreadable].From <= moment.EvaluationUtc) continue;
-
-            var availability = Calculate(slot, moment, timeline, coverage with { Gaps = [], UnreadableTargetIntervals = [] });
-            if (availability.Entry.State == "complete" && availability.History.State == "complete"
-                && availability.Work.State == "complete" && availability.Inspection.State == "complete")
-                supported.Add(slot);
+            var availability = Calculate(slot, moment, timeline, coverage with
+            {
+                ReadAtUtc = nowUtc,
+                IssueStateKnown = issueKnownSlots?.Contains(slot) == true,
+                Gaps = RelevantIntervals(gaps, ref firstGap, ShiftCalendar.StartUtc(slot), to),
+                UnreadableTargetIntervals = RelevantIntervals(unreadable, ref firstUnreadable, from, to),
+            });
+            slots.Add(new(slot, availability));
         }
-        return supported;
+        return slots;
+    }
+
+    private static ArraySegment<(DateTime From, DateTime To)> RelevantIntervals(
+        (DateTime From, DateTime To)[] intervals, ref int first, DateTime from, DateTime to)
+    {
+        while (first < intervals.Length && intervals[first].To <= from) first++;
+        var afterLast = first;
+        while (afterLast < intervals.Length && intervals[afterLast].From <= to) afterLast++;
+        return new(intervals, first, afterLast - first);
     }
 
     private static DateTime? EarliestAttendance(DateTime start, DateTime evaluation, IReadOnlyList<TargetRevision> history)
@@ -158,7 +176,7 @@ public static class OverviewAvailability
     private static bool Intersects(IEnumerable<(DateTime From, DateTime To)> gaps, DateTime from, DateTime to) =>
         gaps.Any(gap => gap.From < gap.To && gap.From <= to && gap.To > from);
 
-    private static List<(DateTime From, DateTime To)> MergeIntervals(IEnumerable<(DateTime From, DateTime To)> intervals)
+    private static (DateTime From, DateTime To)[] MergeIntervals(IEnumerable<(DateTime From, DateTime To)> intervals)
     {
         var merged = new List<(DateTime From, DateTime To)>();
         foreach (var interval in intervals.Where(gap => gap.From < gap.To).OrderBy(gap => gap.From))
@@ -168,6 +186,6 @@ public static class OverviewAvailability
             else if (merged[^1].To < interval.To)
                 merged[^1] = (merged[^1].From, interval.To);
         }
-        return merged;
+        return merged.ToArray();
     }
 }

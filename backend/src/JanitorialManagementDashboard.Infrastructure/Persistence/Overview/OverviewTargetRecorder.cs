@@ -79,37 +79,40 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
         return revision.Id;
     }
 
-    /// <summary>Decodes the revision stream for replay and preserves the intervals with unknown targets and policies.</summary>
-    public static (TargetRevision[] Revisions, (DateTime From, DateTime To)[] UnreadableIntervals) DecodeForRead(
-        IEnumerable<OverviewTargetRevision> rows, ILogger logger)
+    /// <summary>Decodes effective images and independently preserves evidence of earlier structural gaps.</summary>
+    public static (TargetRevision[] Revisions, (DateTime From, DateTime To)[] UnreadableIntervals,
+        (DateTime From, DateTime To)[] StructuralGaps) DecodeForRead(IEnumerable<OverviewTargetRevision> rows, ILogger logger)
     {
         var groups = rows.OrderBy(row => row.EffectiveAt).ThenBy(row => row.Id)
             .GroupBy(row => DateTime.SpecifyKind(row.EffectiveAt, DateTimeKind.Utc)).ToArray();
         var revisions = new List<TargetRevision>();
         var unreadable = new List<(DateTime From, DateTime To)>();
+        var structuralGaps = new List<(DateTime From, DateTime To)>();
         for (var i = 0; i < groups.Length; i++)
         {
             var effectiveAt = groups[i].Key;
-            var groupStart = revisions.Count;
-            var winnerReadable = false;
+            TargetRevision? winner = null;
             foreach (var row in groups[i])
             {
                 var image = ReadChecked(row);
-                winnerReadable = image != null;
-                if (image != null)
-                    revisions.Add(new(row.Id, effectiveAt, image));
-                else
+                if (image == null)
+                {
+                    winner = null;
                     logger.LogWarning("Could not read overview target revision {RevisionId}", row.Id);
+                    continue;
+                }
+
+                winner = new(row.Id, effectiveAt, image);
+                if (image.CoverageGapFromUtc is { } from && from < effectiveAt)
+                    structuralGaps.Add((from, effectiveAt));
             }
 
-            if (!winnerReadable)
-            {
-                // A same-time predecessor must not replace an unreadable winning image.
-                revisions.RemoveRange(groupStart, revisions.Count - groupStart);
+            if (winner != null)
+                revisions.Add(winner);
+            else
                 unreadable.Add((effectiveAt, i + 1 < groups.Length ? groups[i + 1].Key : DateTime.MaxValue));
-            }
         }
-        return (revisions.ToArray(), unreadable.ToArray());
+        return (revisions.ToArray(), unreadable.ToArray(), structuralGaps.ToArray());
     }
 
     private static TargetImage? ReadChecked(OverviewTargetRevision row)
@@ -126,19 +129,33 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
                     OpensMinutesBeforeShift: >= 0 and <= AttendanceSettings.MaxReceivingOffsetMinutes,
                     ClosesMinutesAfterShift: >= 0 and <= AttendanceSettings.MaxReceivingOffsetMinutes,
                 }
-                && image.Buildings?.All(building => building?.Code != null && building.Name != null) == true
-                && image.Areas?.All(area => area?.Code != null && area.Name != null) == true
-                && image.Points?.All(point => point?.Name != null) == true
-                && image.Windows?.All(window => window != null) == true
                 && !(image.CaptureStartedAtUtc > row.EffectiveAt || image.CoverageGapFromUtc > row.EffectiveAt)
                 // MySQL's JSON column may reorder properties and whitespace on storage.
                 && (HashMatches(row, JsonSerializer.Serialize(image)) || HashMatches(row, row.Payload))
+                && IsStructurallyValid(image)
                 ? image : null;
         }
         catch (JsonException)
         {
             return null;
         }
+    }
+
+    private static bool IsStructurallyValid(TargetImage image)
+    {
+        var buildings = new HashSet<int>();
+        var areas = new HashSet<int>();
+        var points = new HashSet<int>();
+        var windows = new HashSet<int>();
+
+        return image.Buildings?.All(building => building is { Id: > 0, Code: not null, Name: not null }
+                && buildings.Add(building.Id)) == true
+            && image.Areas?.All(area => area is { Id: > 0, Code: not null, Name: not null }
+                && buildings.Contains(area.BuildingId) && Enum.IsDefined(area.ShiftPattern) && areas.Add(area.Id)) == true
+            && image.Points?.All(point => point is { Id: > 0, Name: not null }
+                && areas.Contains(point.AreaId) && points.Add(point.Id)) == true
+            && image.Windows?.All(window => window is { Id: > 0 }
+                && points.Contains(window.PointId) && Enum.IsDefined(window.Shift) && windows.Add(window.Id)) == true;
     }
 
     private static bool HashMatches(OverviewTargetRevision row, string json) =>

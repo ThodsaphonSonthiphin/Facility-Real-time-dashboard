@@ -135,10 +135,11 @@ public class OverviewRetentionTests
         using (var document = JsonDocument.Parse(restored.Payload))
             restored.Payload = "{ " + string.Join(", ", document.RootElement.EnumerateObject().Reverse()) + " }";
 
-        var (revisions, gaps) = OverviewTargetRecorder.DecodeForRead([restored, invalid, superseded, previous],
+        var (revisions, gaps, structuralGaps) = OverviewTargetRecorder.DecodeForRead([restored, invalid, superseded, previous],
             factory.Services.GetRequiredService<ILogger<OverviewRetentionTests>>());
         Assert.Equal(new long[] { previous.Id, restored.Id }, revisions.Select(r => r.Id));
         Assert.Equal((invalid.EffectiveAt, restored.EffectiveAt), Assert.Single(gaps));
+        Assert.Empty(structuralGaps);
         var warning = Assert.Single(factory.Logs.Lines, line => line.Message.Contains("Could not read overview target revision"));
         Assert.Equal("Could not read overview target revision 3", warning.Message);
 
@@ -155,10 +156,90 @@ public class OverviewRetentionTests
         Assert.Equal("partial", resumed.History.State);
     }
 
-    private static OverviewTargetRevision Revision(long id, DateTime effectiveAt, bool legacy = false)
+    [Fact]
+    public void Superseded_structural_gap_evidence_survives_an_unreadable_equal_time_winner()
     {
-        var payload = JsonSerializer.Serialize(new TargetImage(1, new(60, 60), [], [], [], [],
-            legacy ? null : CaptureStarted));
+        using var factory = new JanitorialApiFactory();
+        var slot = new ShiftSlot(new(2026, 11, 3), Shift.Day);
+        var start = ShiftCalendar.StartUtc(slot);
+        var end = ShiftCalendar.EndUtc(slot);
+        var baseline = new TargetImage(1, new(60, 0), [], [], [], [], CaptureStarted);
+        var early = Revision(1, start.AddDays(-1), baseline);
+        var gapFrom = end.AddHours(-1);
+        var changedAt = end.AddHours(1);
+        var gapMarker = Revision(2, changedAt, baseline with { CoverageGapFromUtc = gapFrom });
+        var unreadableWinner = Revision(3, changedAt, baseline);
+        unreadableWinner.SchemaVersion++;
+
+        var decoded = OverviewTargetRecorder.DecodeForRead([unreadableWinner, gapMarker, early],
+            factory.Services.GetRequiredService<ILogger<OverviewRetentionTests>>());
+        Assert.Equal(early.Id, Assert.Single(decoded.Revisions).Id);
+        Assert.Equal((gapFrom, changedAt), Assert.Single(decoded.StructuralGaps));
+        Assert.Equal((changedAt, DateTime.MaxValue), Assert.Single(decoded.UnreadableIntervals));
+
+        var readAt = changedAt.AddHours(1);
+        var coverage = DetailCoverage.FromRetention(readAt, Settings, CaptureStarted, true, decoded.StructuralGaps)
+            with { UnreadableTargetIntervals = decoded.UnreadableIntervals };
+        var moment = OverviewTime.Evaluate(slot, readAt, decoded.Revisions);
+        Assert.Equal("closed", moment.Phase);
+        Assert.Equal(end, moment.EvaluationUtc);
+
+        var availability = OverviewAvailability.Calculate(slot, moment, OverviewTimeline.Build(slot, moment, decoded.Revisions), coverage);
+
+        Assert.Equal("partial", availability.History.State);
+        Assert.Contains("targetCoverageGap", availability.History.Reasons);
+        Assert.Equal("partial", availability.Work.State);
+    }
+
+    [Theory]
+    [InlineData("windowShift")]
+    [InlineData("areaShiftPattern")]
+    [InlineData("missingBuilding")]
+    [InlineData("missingArea")]
+    [InlineData("missingPoint")]
+    [InlineData("duplicateBuilding")]
+    [InlineData("duplicateArea")]
+    [InlineData("duplicatePoint")]
+    [InlineData("duplicateWindow")]
+    public void Hash_valid_inconsistent_target_images_are_unreadable(string defect)
+    {
+        using var factory = new JanitorialApiFactory();
+        var building = new TargetBuilding(1, "B1", "Synthetic Building", true, CaptureStarted);
+        var area = new TargetArea(2, building.Id, "A2", "Synthetic Area", true, ShiftPattern.DayAndNight, CaptureStarted);
+        var point = new TargetPoint(3, area.Id, null, "Synthetic Point", 0, true, CaptureStarted);
+        var window = new TargetWindow(4, point.Id, Shift.Day, new(7, 0), new(8, 0), CaptureStarted);
+        var image = new TargetImage(1, new(60, 60), [building], [area], [point], [window], CaptureStarted);
+        var corrupted = defect switch
+        {
+            "windowShift" => image with { Windows = [window with { Shift = (Shift)99 }] },
+            "areaShiftPattern" => image with { Areas = [area with { ShiftPattern = (ShiftPattern)99 }] },
+            "missingBuilding" => image with { Areas = [area with { BuildingId = 99 }] },
+            "missingArea" => image with { Points = [point with { AreaId = 99 }] },
+            "missingPoint" => image with { Windows = [window with { PointId = 99 }] },
+            "duplicateBuilding" => image with { Buildings = [building, building] },
+            "duplicateArea" => image with { Areas = [area, area] },
+            "duplicatePoint" => image with { Points = [point, point] },
+            "duplicateWindow" => image with { Windows = [window, window] },
+            _ => throw new ArgumentOutOfRangeException(nameof(defect)),
+        };
+        var bad = Revision(1, Now, corrupted);
+        var restored = Revision(2, Now.AddHours(1), image);
+
+        var decoded = OverviewTargetRecorder.DecodeForRead([bad, restored],
+            factory.Services.GetRequiredService<ILogger<OverviewRetentionTests>>());
+
+        Assert.Equal(restored.Id, Assert.Single(decoded.Revisions).Id);
+        Assert.Equal((bad.EffectiveAt, restored.EffectiveAt), Assert.Single(decoded.UnreadableIntervals));
+        var warning = Assert.Single(factory.Logs.Lines, line => line.Message.Contains("Could not read overview target revision"));
+        Assert.Equal("Could not read overview target revision 1", warning.Message);
+    }
+
+    private static OverviewTargetRevision Revision(long id, DateTime effectiveAt, bool legacy = false) =>
+        Revision(id, effectiveAt, new TargetImage(1, new(60, 60), [], [], [], [], legacy ? null : CaptureStarted));
+
+    private static OverviewTargetRevision Revision(long id, DateTime effectiveAt, TargetImage image)
+    {
+        var payload = JsonSerializer.Serialize(image);
         return new() { Id = id, EffectiveAt = effectiveAt, Payload = payload, PayloadHash = Hash(payload) };
     }
 

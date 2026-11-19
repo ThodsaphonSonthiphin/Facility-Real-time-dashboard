@@ -63,6 +63,24 @@ public class OverviewAvailabilityTests
         Assert.Equal("complete", Calculate(history, Retained with { AttendanceAfterUtc = opening.AddTicks(-1) }).Entry.State);
     }
 
+    [Theory]
+    [InlineData(15, "partial")]
+    [InlineData(360, "unavailable")]
+    public void Unreadable_policy_uses_the_latest_possible_close_for_attendance_expiry(int cutoffMinutes, string expected)
+    {
+        var end = ShiftCalendar.EndUtc(Slot);
+        var readAt = end.AddYears(1).AddMinutes(cutoffMinutes);
+        var coverage = DetailCoverage.FromRetention(readAt, new(), Baseline, false, [])
+            with { UnreadableTargetIntervals = [(end.AddMinutes(-10), end.AddHours(2))] };
+        var revisions = new[] { Revision(1, Baseline, closes: 0) };
+        var moment = OverviewTime.Evaluate(Slot, readAt, revisions);
+        Assert.Equal(end, moment.EvaluationUtc);
+
+        var result = OverviewAvailability.Calculate(Slot, moment, OverviewTimeline.Build(Slot, moment, revisions), coverage);
+
+        Assert.Equal(expected, result.Entry.State);
+    }
+
     [Fact]
     public void The_archived_work_month_does_not_make_retained_entry_unavailable()
     {
@@ -142,14 +160,26 @@ public class OverviewAvailabilityTests
             // The previous Night can receive until 08:00, one hour into Day.
             Revision(2, ShiftCalendar.StartUtc(nextDay).AddHours(2), gapFrom: ShiftCalendar.StartUtc(nextDay).AddMinutes(90)),
         };
-        var coverage = DetailCoverage.FromRetention(now, settings, Baseline, false, []);
-        var slots = OverviewAvailability.FullySupportedSlots(now, settings, revisions, coverage);
+        var coverage = DetailCoverage.FromRetention(now, settings, Baseline, true, []);
+        var slots = OverviewAvailability.EvaluateRange(now, settings, revisions, coverage,
+            new HashSet<ShiftSlot> { cutoffNight });
 
-        Assert.Equal(cutoffNight, slots[0]);
-        Assert.DoesNotContain(nextDay, slots);
-        Assert.Contains(nextDay with { Shift = Shift.Night }, slots);
-        Assert.Equal(Slot.ShiftDate.AddYears(1), slots[^1].ShiftDate);
-        Assert.Equal(Shift.Day, slots[^1].Shift);
+        Assert.Equal(Slot, slots[0].Slot);
+        Assert.False(slots[0].DetailComplete);
+        Assert.Contains("attendancePartlyExpired", slots[0].Sections.Entry.Reasons);
+        Assert.Equal(cutoffNight, Assert.Single(slots, slot => slot.FullySupported).Slot);
+
+        var dayWithGap = Assert.Single(slots, slot => slot.Slot == nextDay);
+        Assert.False(dayWithGap.DetailComplete);
+        Assert.Contains("targetCoverageGap", dayWithGap.Sections.History.Reasons);
+
+        var followingNight = Assert.Single(slots, slot => slot.Slot == nextDay with { Shift = Shift.Night });
+        Assert.True(followingNight.DetailComplete);
+        Assert.False(followingNight.FullySupported);
+        Assert.Contains("issueStateUnknown", followingNight.Sections.Issue.Reasons);
+
+        Assert.Equal(new ShiftSlot(Slot.ShiftDate.AddYears(1), Shift.Night), slots[^1].Slot);
+        Assert.Equal("notStarted", slots[^1].Sections.Entry.State);
     }
 
     [Fact]
@@ -168,8 +198,8 @@ public class OverviewAvailabilityTests
         return OverviewAvailability.Calculate(Slot, moment, OverviewTimeline.Build(Slot, moment, revisions), coverage);
     }
 
-    private static TargetRevision Revision(long id, DateTime at, int opens = 60, DateTime? gapFrom = null) =>
-        new(id, at, new(1, new(opens, 60), [], [], [], [], Baseline, gapFrom));
+    private static TargetRevision Revision(long id, DateTime at, int opens = 60, int closes = 60, DateTime? gapFrom = null) =>
+        new(id, at, new(1, new(opens, closes), [], [], [], [], Baseline, gapFrom));
 
     private static Availability[] Sections(SectionAvailability result) =>
         [result.Entry, result.Work, result.Inspection, result.History, result.Issue];
