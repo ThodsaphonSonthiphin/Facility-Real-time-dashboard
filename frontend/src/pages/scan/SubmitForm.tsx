@@ -62,17 +62,17 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
           <span>{`“${point.rework.defect}”`}</span>
         </Note>
       )}
-      <form id="scan-form" className="flex flex-col gap-5" onSubmit={onSubmit}>
-        <fieldset className="m-0 border-0 p-0">
-          <legend className="mb-3 p-0 text-lg font-bold">ผลการทำความสะอาด</legend>
-          <div className="grid grid-cols-2 gap-3">
+      <form id="scan-form" className="flex min-w-0 flex-col gap-4" onSubmit={onSubmit}>
+        <fieldset className="m-0 min-w-0 border-0 p-0">
+          <legend className="mb-2.5 p-0 text-base font-extrabold">ผลการทำความสะอาด</legend>
+          <div className="grid grid-cols-2 gap-2.5">
             <ChoiceTile
               name="scan-status"
               disabled={sending}
               checked={draft.status === 'Normal'}
               onChange={() => onChange({ ...draft, status: 'Normal' })}
             >
-              <span className="flex size-12 items-center justify-center rounded-full bg-accent-subtle text-accent">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-accent">
                 <CircleCheck aria-hidden="true" className="size-7" />
               </span>
               เรียบร้อย
@@ -83,7 +83,7 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
               checked={draft.status === 'Issue'}
               onChange={() => onChange({ ...draft, status: 'Issue' })}
             >
-              <span className="flex size-12 items-center justify-center rounded-full bg-overdue-bg text-overdue">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-overdue-bg text-overdue">
                 <Wrench aria-hidden="true" className="size-7" />
               </span>
               พบปัญหา
@@ -91,7 +91,7 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
           </div>
         </fieldset>
         {draft.status === 'Issue' && (
-          <fieldset className="m-0 border-0 p-0">
+          <fieldset className="m-0 min-w-0 border-0 p-0">
             <legend className="mb-2 p-0 font-bold">
               ปัญหาที่พบ <span className="font-normal text-text-2">เลือกได้หลายข้อ</span>
             </legend>

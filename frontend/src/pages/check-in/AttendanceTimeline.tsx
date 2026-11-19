@@ -42,7 +42,7 @@ function timelineRows(attendance: AttendanceState): TimelineRow[] {
 export function AttendanceTimeline({ attendance, next }: { attendance: AttendanceState; next?: AttendanceEvent }) {
   return (
     <ol
-      className="m-0 flex list-none flex-col gap-2 p-0"
+      className="m-0 flex list-none flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface p-0"
       aria-label="วันนี้"
     >
       {timelineRows(attendance).map((row, index) => {
@@ -58,20 +58,20 @@ export function AttendanceTimeline({ attendance, next }: { attendance: Attendanc
         return (
           <li
             key={row.eventType}
-            className={`flex min-h-18 items-center gap-3 rounded-lg border px-4 py-3 ${
-              isNext ? 'border-accent bg-accent-subtle' : 'border-border bg-surface'
+            className={`flex min-h-12 items-center gap-2.5 px-3.5 py-2.5 ${
+              isNext ? 'bg-accent-subtle' : ''
             }`}
           >
             <span
               aria-hidden="true"
               // The number is drawn from data-n, so it is not part of the row's text
               data-n={index + 1}
-              className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${recorded ? '' : 'before:content-[attr(data-n)]'} ${dot}`}
+              className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${recorded ? '' : 'before:content-[attr(data-n)]'} ${dot}`}
             >
               {recorded && <Check className="size-4" />}
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-lg font-semibold">{eventLabel[row.eventType]}</span>
+              <span className={`text-sm font-bold ${isNext ? 'text-accent' : ''}`}>{eventLabel[row.eventType]}</span>
               {recorded && row.source === 'SupervisorAdd' && <span className="text-xs text-text-2">หัวหน้าเติมเวลา</span>}
               {recorded && (row.source === 'AdminAdd' || row.source === 'AdminEdit') && (
                 <span className="text-xs text-text-2">แอดมินแก้เวลา</span>
@@ -83,8 +83,8 @@ export function AttendanceTimeline({ attendance, next }: { attendance: Attendanc
             </span>{' '}
             {!onLeave && (
               <span
-                className={`text-right tabular-nums ${
-                  recorded ? 'font-semibold text-passed' : isNext ? 'font-semibold text-accent' : 'text-text-2'
+                className={`max-w-24 text-right text-sm tabular-nums ${
+                  recorded ? 'font-extrabold text-passed' : isNext ? 'font-semibold text-accent' : 'text-text-2'
                 }`}
               >
                 {recorded ? formatTime(actualAt) : actionStateLabel[row.state]}
@@ -93,7 +93,7 @@ export function AttendanceTimeline({ attendance, next }: { attendance: Attendanc
             {row.withinRadius === false && (
               <>
                 {' '}
-                <span className="font-bold text-overdue">ไกลป้าย</span>
+                <span className="text-xs font-bold text-overdue">ไกลป้าย</span>
               </>
             )}
           </li>

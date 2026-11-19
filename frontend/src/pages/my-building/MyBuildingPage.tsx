@@ -38,9 +38,9 @@ export function MyBuildingPage() {
   const header = (
     <PhoneHeader>
       <h1 className="sr-only">ตึกของฉัน</h1>
-      <span className="text-lg font-bold">{user?.fullName}</span>
-      <span className="min-h-6 text-sm text-text-2">{data ? `ตอนนี้ ${shiftLabel[data.shift]}` : ''}</span>
-      <span className="min-h-6 text-sm text-text-2">{data ? countLine(data) : ''}</span>
+      <span className="min-w-0 text-xl font-extrabold wrap-break-word">{user?.fullName}</span>
+      <span className="min-h-6 min-w-0 text-sm wrap-break-word text-text-2 tabular-nums">{data ? `ตอนนี้ ${shiftLabel[data.shift]}` : ''}</span>
+      <span className="min-h-6 min-w-0 text-sm wrap-break-word text-text-2 tabular-nums">{data ? countLine(data) : ''}</span>
       {data && data.buildings.length > 0 && <Summary building={data} />}
     </PhoneHeader>
   );
@@ -83,7 +83,7 @@ function ScheduleLink() {
       className={`flex min-h-12 items-center gap-3 rounded-md border border-border-control bg-surface px-4 text-base font-semibold no-underline text-text hover:border-accent ${focusRing}`}
     >
       <CalendarDays aria-hidden="true" className="size-5 shrink-0 text-accent" />
-      <span className="flex-1">จัดตารางงาน</span>
+      <span className="min-w-0 flex-1">จัดตารางงาน</span>
       <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-text-2" />
     </NavLink>
   );
@@ -110,9 +110,9 @@ function Summary({ building }: { building: MyBuilding }) {
 /** One count. The number comes first in the markup (read as "2 รอตรวจ") and is drawn under its label. */
 function Tile({ label, count, icon: Icon, look }: { label: string; count: number; icon: LucideIcon; look: string }) {
   return (
-    <li className={`flex min-w-0 flex-col-reverse rounded-md border px-2 py-2 ${look}`}>
-      <strong className="text-2xl leading-tight font-bold text-text tabular-nums">{count}</strong>{' '}
-      <span className="flex items-center gap-1 leading-snug font-semibold">
+    <li className={`flex min-w-0 flex-col-reverse gap-1 rounded-xl border px-2 py-2 shadow-xs ${look}`}>
+      <strong className="text-xl leading-tight font-extrabold text-text tabular-nums">{count}</strong>{' '}
+      <span className="flex items-center gap-1 text-xs leading-snug font-semibold">
         <Icon aria-hidden="true" className="size-4 shrink-0" />
         <span className="min-w-0">{label}</span>
       </span>

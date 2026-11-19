@@ -60,7 +60,8 @@ export function OwnSchedulePage() {
     <PhoneScreen
       header={
         <PhoneHeader back={{ to: '/my-work', label: 'งานของฉัน' }}>
-          <h1 className="text-lg font-bold">ตารางของฉัน</h1>
+          <h1 className="text-xl font-extrabold">ตารางของฉัน</h1>
+          <p className="text-sm text-text-2">ตารางเวรประจำสัปดาห์และกลุ่มพัก</p>
         </PhoneHeader>
       }
       bottom={
@@ -70,7 +71,17 @@ export function OwnSchedulePage() {
         </Button>
       }
     >
-      <WeekControls view={view} />
+      <section className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-border bg-surface p-1.5" aria-label="เลือกสัปดาห์">
+        <Button variant="link" size="phone" className="min-w-12" aria-label="สัปดาห์ก่อนหน้า" onClick={() => view.goWeek(-1)}>
+          <ChevronLeft aria-hidden="true" className="size-4 shrink-0" />
+          ก่อนหน้า
+        </Button>
+        <strong className="min-w-0 text-center text-sm wrap-break-word tabular-nums">{weekRangeLabel(view.selection.weekStart)}</strong>
+        <Button variant="link" size="phone" className="min-w-12" aria-label="สัปดาห์ถัดไป" onClick={() => view.goWeek(1)}>
+          ถัดไป
+          <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+        </Button>
+      </section>
       <WeekBody view={view} />
       <footer className="flex flex-col gap-2.5 border-t border-border pt-3">
         <LiveLine view={view} />
@@ -148,7 +159,7 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
           </>
         }
       >
-        <WeekControls view={view} compact />
+        <WeekControls view={view} />
         {role === 'admin' && <AdminFilters view={view} />}
       </FilterToolbar>
 
@@ -251,14 +262,14 @@ function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
  * The week control: the range, and the two neighbour weeks. Choosing a week needs no QR and no location (0179). One range
  * per screen: this is the only place it is written, whichever layout the page is drawn in.
  */
-function WeekControls({ view, compact = false }: { view: ReturnType<typeof useSchedulePage>; compact?: boolean }) {
+function WeekControls({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   return (
     <section className="flex flex-wrap items-center justify-between gap-3" aria-label="เลือกสัปดาห์">
       <div className="flex items-center gap-2">
         <Button variant="secondary" size="desk" aria-label="สัปดาห์ก่อนหน้า" onClick={() => view.goWeek(-1)}>
           <ChevronLeft aria-hidden="true" className="size-4" />
         </Button>
-        <strong className={compact ? 'text-sm font-semibold tabular-nums' : 'min-w-40 text-base'}>{weekRangeLabel(view.selection.weekStart)}</strong>
+        <strong className="text-sm font-semibold tabular-nums">{weekRangeLabel(view.selection.weekStart)}</strong>
         <Button variant="secondary" size="desk" aria-label="สัปดาห์ถัดไป" onClick={() => view.goWeek(1)}>
           <ChevronRight aria-hidden="true" className="size-4" />
         </Button>
@@ -311,18 +322,18 @@ function OwnWeek({ week, businessDate }: { week: ScheduleWeek; businessDate: str
     return <Note tone="info">ยังไม่มีตารางของคุณในสัปดาห์นี้</Note>;
   }
   return (
-    <>
+    <div className="flex min-w-0 flex-col gap-2">
       {person.days.map((day) => {
         const isToday = day.date === businessDate;
         return (
           <article
             key={day.date}
-            className={`flex flex-col gap-2 rounded-lg border px-4 py-3 ${
+            className={`flex min-w-0 flex-col gap-1.5 rounded-xl border px-3.5 py-3 shadow-xs ${
               isToday ? 'border-accent bg-accent-subtle' : 'border-border bg-surface'
             }`}
           >
-            <header className="flex items-center justify-between gap-2">
-              <strong className={`text-base ${isToday ? 'text-accent' : 'text-text'}`}>
+            <header className="flex flex-wrap items-center justify-between gap-2">
+              <strong className={`min-w-0 text-sm font-extrabold tabular-nums ${isToday ? 'text-accent' : 'text-text'}`}>
                 {`${formatWeekday(day.date)} ${formatShiftDate(day.date)}${isToday ? ' (วันนี้)' : ''}`}
               </strong>
               <span
@@ -340,7 +351,7 @@ function OwnWeek({ week, businessDate }: { week: ScheduleWeek; businessDate: str
           </article>
         );
       })}
-    </>
+    </div>
   );
 }
 

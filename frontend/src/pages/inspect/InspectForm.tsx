@@ -66,18 +66,18 @@ export function InspectForm({
         <p className="font-semibold">{submissionLine(submission, visit.point)}</p>
       </Panel>
       <DistanceLine visit={visit} />
-      <form id="inspect-form" className="flex flex-col gap-5" onSubmit={onSubmit}>
+      <form id="inspect-form" className="flex min-w-0 flex-col gap-4" onSubmit={onSubmit}>
         {/* The two verdicts as large tiles (#76), still a real radio group */}
-        <fieldset className="m-0 border-0 p-0">
-          <legend className="mb-3 p-0 text-lg font-bold">ผลการตรวจ</legend>
-          <div className="grid grid-cols-2 gap-3">
+        <fieldset className="m-0 min-w-0 border-0 p-0">
+          <legend className="mb-2.5 p-0 text-base font-extrabold">ผลการตรวจ</legend>
+          <div className="grid grid-cols-2 gap-2.5">
             <ChoiceTile
               name="inspect-result"
               disabled={sending}
               checked={draft.result === 'Passed'}
               onChange={() => onChange({ ...draft, result: 'Passed' })}
             >
-              <span className="flex size-12 items-center justify-center rounded-full bg-accent-subtle text-accent">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-accent">
                 <CircleCheck aria-hidden="true" className="size-7" />
               </span>
               สะอาด
@@ -88,7 +88,7 @@ export function InspectForm({
               checked={draft.result === 'Rework'}
               onChange={() => onChange({ ...draft, result: 'Rework' })}
             >
-              <span className="flex size-12 items-center justify-center rounded-full bg-rework-bg text-rework">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-rework-bg text-rework">
                 <CircleX aria-hidden="true" className="size-7" />
               </span>
               ไม่สะอาด

@@ -48,9 +48,9 @@ export function MyWorkPage() {
   const header = (
     <PhoneHeader>
       <h1 className="sr-only">งานของฉัน</h1>
-      <span className="text-lg font-bold">{user?.fullName}</span>
-      <span className="min-h-6 text-sm text-text-2">{where}</span>
-      <span className="min-h-6 text-sm text-text-2">{data && shift ? attendanceLine(shift, data.attendance) : ''}</span>
+      <span className="min-w-0 text-xl font-extrabold wrap-break-word">{user?.fullName}</span>
+      <span className="min-h-6 min-w-0 text-sm wrap-break-word text-text-2">{where}</span>
+      <span className="min-h-6 min-w-0 text-sm wrap-break-word text-text-2">{data && shift ? attendanceLine(shift, data.attendance) : ''}</span>
     </PhoneHeader>
   );
 
@@ -99,7 +99,7 @@ function ScheduleLink() {
       className={`flex min-h-12 items-center gap-3 rounded-md border border-border-control bg-surface px-4 text-base font-semibold no-underline text-text hover:border-accent ${focusRing}`}
     >
       <CalendarDays aria-hidden="true" className="size-5 shrink-0 text-accent" />
-      <span className="flex-1">ตารางของฉัน</span>
+      <span className="min-w-0 flex-1">ตารางของฉัน</span>
       <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-text-2" />
     </NavLink>
   );
@@ -243,14 +243,14 @@ function ShiftBanner({ attendance }: { attendance: AttendanceState }) {
   return (
     <section
       aria-label="สถานะกะวันนี้"
-      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3"
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-border bg-surface px-3.5 py-3 shadow-xs"
     >
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-subtle text-accent">
           <CalendarDays aria-hidden="true" className="size-5" />
         </span>
         <div className="flex min-w-0 flex-col">
-          <span className="font-bold text-text">{shiftLabel[attendance.shift]}</span>
+          <span className="text-sm font-extrabold text-text tabular-nums">{shiftLabel[attendance.shift]}</span>
           <span className="text-sm text-text-2 tabular-nums">
             {shiftIn ? `เข้างาน ${formatTime(shiftIn.occurredAt)}` : 'ยังไม่ได้ลงเวลาเข้างาน'}
             {shiftOut ? ` · เลิกงาน ${formatTime(shiftOut.occurredAt)}` : ''}
@@ -288,11 +288,11 @@ function MiniKpis({
       {tiles.map(({ label, value, Icon, tone }) => (
         <div
           key={label}
-          className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-border bg-surface px-1.5 py-2.5 text-center"
+          className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl border border-border bg-surface px-1.5 py-2.5 text-center shadow-xs"
         >
           <Icon aria-hidden="true" className={`size-5 shrink-0 ${tone}`} />
-          <span className="text-xs text-text-2">{label}</span>
-          <span className="text-sm font-bold text-text tabular-nums">{value}</span>
+          <span className="text-xs font-semibold text-text-2">{label}</span>
+          <span className="text-base font-extrabold text-text tabular-nums">{value}</span>
         </div>
       ))}
     </section>

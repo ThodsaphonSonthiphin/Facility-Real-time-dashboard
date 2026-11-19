@@ -19,7 +19,7 @@ export function PhoneHeader({ back, children }: { back?: { to: string; label: st
         <Link
           to={back.to}
           data-tap=""
-          className={`-ml-2 inline-flex min-h-11 items-center gap-1 self-start px-2 font-semibold text-accent hover:text-accent-hover ${focusRing}`}
+          className={`-ml-2 inline-flex min-h-12 items-center gap-1 self-start px-2 font-semibold text-accent hover:text-accent-hover ${focusRing}`}
         >
           <ChevronLeft aria-hidden="true" className="size-5" />
           {back.label}
