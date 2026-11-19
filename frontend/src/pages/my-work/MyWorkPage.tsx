@@ -245,7 +245,7 @@ function ShiftBanner({ attendance }: { attendance: AttendanceState }) {
       aria-label="สถานะกะวันนี้"
       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-border bg-surface px-3.5 py-3 shadow-xs"
     >
-      <div className="flex min-w-0 flex-[1_1_11rem] items-center gap-2.5">
+      <div className="flex min-w-0 flex-1 basis-44 items-center gap-2.5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-subtle text-accent">
           <CalendarDays aria-hidden="true" className="size-5" />
         </span>

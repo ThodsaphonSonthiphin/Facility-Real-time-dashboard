@@ -71,6 +71,7 @@ export function OwnSchedulePage() {
         </Button>
       }
     >
+      {/* Previous button, flexible week label, next button; no theme token describes a three-column auto/1fr/auto track list */}
       <section className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-border bg-surface p-1.5" aria-label="เลือกสัปดาห์">
         <Button variant="link" size="phone" className="min-w-12" aria-label="สัปดาห์ก่อนหน้า" onClick={() => view.goWeek(-1)}>
           <ChevronLeft aria-hidden="true" className="size-4 shrink-0" />
