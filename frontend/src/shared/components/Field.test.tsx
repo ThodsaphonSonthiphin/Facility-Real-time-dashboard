@@ -33,4 +33,18 @@ describe('Field (Enterprise Light, #122)', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('บันทึกไม่ได้ ตรวจ 1 ช่อง');
     expect(screen.getByRole('link', { name: 'รัศมีป้าย' })).toHaveAttribute('href', '#radius');
   });
+
+  it('appends optional errorId to aria-describedby alongside helpId', () => {
+    render(
+      <>
+        <Field label="รหัสพื้นที่" help="ตัวอักษรภาษาอังกฤษ" errorId="external-area-error">
+          <TextInput size="desk" />
+        </Field>
+        <p id="external-area-error">รหัสนี้ถูกใช้แล้ว</p>
+      </>,
+    );
+
+    const input = screen.getByLabelText('รหัสพื้นที่');
+    expect(input).toHaveAccessibleDescription('รหัสนี้ถูกใช้แล้ว ตัวอักษรภาษาอังกฤษ');
+  });
 });
