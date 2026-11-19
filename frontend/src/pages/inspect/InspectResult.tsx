@@ -71,7 +71,7 @@ export function InspectResult({ visit, draft, result }: InspectResultProps) {
           <Note tone="warn">{`ไกลป้าย: ห่างป้าย ${result.distanceM} ม. แอดมินจะเห็นรายการนี้`}</Note>
         )}
         {result.withinRadius === true && (
-          <p className="text-center text-sm text-text-2">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>
+          <p className="text-center text-sm text-text-2 tabular-nums">{`ห่างป้าย ${result.distanceM} ม. · อยู่ในรัศมี`}</p>
         )}
       </div>
     </ResultScreen>

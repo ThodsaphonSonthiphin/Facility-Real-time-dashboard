@@ -77,7 +77,9 @@ export function InspectForm({
               checked={draft.result === 'Passed'}
               onChange={() => onChange({ ...draft, result: 'Passed' })}
             >
-              <CircleCheck aria-hidden="true" className="size-9" />
+              <span className="flex size-12 items-center justify-center rounded-full bg-accent-subtle text-accent">
+                <CircleCheck aria-hidden="true" className="size-7" />
+              </span>
               สะอาด
             </ChoiceTile>
             <ChoiceTile
@@ -86,7 +88,9 @@ export function InspectForm({
               checked={draft.result === 'Rework'}
               onChange={() => onChange({ ...draft, result: 'Rework' })}
             >
-              <CircleX aria-hidden="true" className="size-9" />
+              <span className="flex size-12 items-center justify-center rounded-full bg-rework-bg text-rework">
+                <CircleX aria-hidden="true" className="size-7" />
+              </span>
               ไม่สะอาด
             </ChoiceTile>
           </div>

@@ -50,6 +50,8 @@ describe('InspectPage (M6, M7, M16, facility-0029)', () => {
     expect(screen.queryByLabelText('สิ่งที่ต้องแก้')).not.toBeInTheDocument();
     // The Supervisor's page never touches the Cleaner's endpoints
     expect(server.calls.some((c) => c.path.startsWith('/api/service-points') || c.path === '/api/scan-records')).toBe(false);
+    // Supervisor never sees CleanerBottomNav
+    expect(screen.queryByRole('navigation', { name: 'เมนูหลักแม่บ้าน' })).not.toBeInTheDocument();
   });
 
   it('สะอาด records Passed with a fresh location and shows the saved result (M7)', async () => {

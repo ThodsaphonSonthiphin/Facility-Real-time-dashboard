@@ -48,7 +48,11 @@ export function MyBuildingPage() {
   return (
     <PhoneScreen header={header}>
       {isLoading && <PageLoading lines={3}>กำลังโหลดจุด...</PageLoading>}
-      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
+      {error && (
+        <Note tone="error" retrySize="phone" onRetry={() => void refetch()}>
+          {getErrorMessage(error)}
+        </Note>
+      )}
       {/* facility-0177: the timetable sits before the building list; reading it needs no QR and no location (0179) */}
       <ScheduleLink />
       {data && <BuildingList building={data} />}
@@ -106,11 +110,11 @@ function Summary({ building }: { building: MyBuilding }) {
 /** One count. The number comes first in the markup (read as "2 รอตรวจ") and is drawn under its label. */
 function Tile({ label, count, icon: Icon, look }: { label: string; count: number; icon: LucideIcon; look: string }) {
   return (
-    <li className={`flex flex-col-reverse rounded-md border px-2.5 py-2 ${look}`}>
+    <li className={`flex min-w-0 flex-col-reverse rounded-md border px-2 py-2 ${look}`}>
       <strong className="text-2xl leading-tight font-bold text-text tabular-nums">{count}</strong>{' '}
-      <span className="flex items-center gap-1 font-semibold">
+      <span className="flex items-center gap-1 leading-snug font-semibold">
         <Icon aria-hidden="true" className="size-4 shrink-0" />
-        {label}
+        <span className="min-w-0">{label}</span>
       </span>
     </li>
   );
@@ -126,7 +130,7 @@ function BuildingList({ building }: { building: MyBuilding }) {
         const headingId = `building-${section.buildingId}`;
         return (
           <section key={section.buildingId} className="flex flex-col gap-2" aria-labelledby={headingId}>
-            <h2 id={headingId} className="text-base font-bold">
+            <h2 id={headingId} className="text-lg font-bold">
               {section.isCover ? `${section.buildingName} (ตรวจแทนกะนี้)` : section.buildingName}
             </h2>
             {!section.canInspect && <Note tone="warn">ตอนนี้ไม่ใช่กะของคุณ ดูได้ แต่สแกนตรวจไม่ได้</Note>}

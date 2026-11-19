@@ -209,4 +209,30 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่');
     expect(screen.getByRole('heading', { level: 1, name: 'ตึกของฉัน' })).toBeInTheDocument();
   });
+
+  it('read error offers a retry button that reloads the building', async () => {
+    let attempts = 0;
+    const server = serve(myBuilding([section(fourPoints)]), {
+      'GET /api/my-building': () => {
+        attempts += 1;
+        return attempts === 1 ? { status: 503 } : { status: 200, body: myBuilding([section(fourPoints)]) };
+      },
+    });
+    const { user } = await renderApp('/my-building');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่');
+    await user.click(within(alert).getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('region', { name: 'ตึกทดลอง' })).toBeInTheDocument();
+    expect(server.calls.filter((c) => c.path === '/api/my-building').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('never renders CleanerBottomNav for a Supervisor', async () => {
+    serve(myBuilding([section(fourPoints)]));
+    await renderApp('/my-building');
+
+    await screen.findByRole('region', { name: 'ตึกทดลอง' });
+    expect(screen.queryByRole('navigation', { name: 'เมนูหลักแม่บ้าน' })).not.toBeInTheDocument();
+  });
 });
