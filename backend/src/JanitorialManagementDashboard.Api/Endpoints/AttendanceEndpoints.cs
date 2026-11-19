@@ -137,12 +137,12 @@ public static class AttendanceEndpoints
 
         var state = await AttendanceStateView.LoadAsync(db, user.Id, slot, duty, now, ct);
 
-        // Spec §8 Cutover: a numbered slot only accepts a write from a page that knows the contract and the slot state it
-        // read. Nothing is written on a mismatch — the page reloads and shows the current facts instead.
+        // Spec §8 Cutover: a numbered slot only accepts a new write from a page that knows the contract and the slot state
+        // it read. Check the contract marker first, then let an already-recorded action replay idempotently before checking
+        // its revision. The successful first write necessarily changed that revision.
         if (state.Version == AttendanceLifecycleVersion.Numbered6)
         {
-            if (!string.Equals(request.LifecycleVersion, nameof(AttendanceLifecycleVersion.Numbered6), StringComparison.Ordinal)
-                || !string.Equals(request.StateRevision, state.Revision, StringComparison.Ordinal))
+            if (!string.Equals(request.LifecycleVersion, nameof(AttendanceLifecycleVersion.Numbered6), StringComparison.Ordinal))
             {
                 return Refused(RefreshRequired, RefreshRequiredMessage, state);
             }
@@ -163,6 +163,12 @@ public static class AttendanceEndpoints
         if (state.Events.Any(entry => entry.EventType == eventType))
         {
             return Results.Ok(state.ToDto(duty, AttendanceOutcome.AlreadyRecorded));
+        }
+
+        if (state.Version == AttendanceLifecycleVersion.Numbered6
+            && !string.Equals(request.StateRevision, state.Revision, StringComparison.Ordinal))
+        {
+            return Refused(RefreshRequired, RefreshRequiredMessage, state);
         }
 
         var latest = state.Events.Count == 0 ? null : state.Events.MaxBy(entry => entry.OccurredAt)!;

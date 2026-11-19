@@ -635,4 +635,175 @@ public class AttendanceEndpointTests
             Assert.Null(gap.Reason);
         });
     }
+
+    [Fact]
+    public async Task A_numbered_slot_replays_already_recorded_action_idempotently_with_stale_prewrite_revision()
+    {
+        using var factory = new JanitorialApiFactory();
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
+        var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
+
+        var afterShiftIn = await EffectiveAttendanceApi.RecordAndReadAsync(
+            factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn",
+            lifecycleVersion: "Numbered6", stateRevision: empty);
+        Assert.NotEqual(empty, afterShiftIn.StateRevision);
+
+        // Re-submitting ShiftIn with the pre-write revision replays idempotently instead of returning refresh-required.
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 2));
+        var replayShiftIn = await EffectiveAttendanceApi.RecordAsync(
+            cleaner, "ShiftIn", lifecycleVersion: "Numbered6", stateRevision: empty);
+        Assert.Equal(HttpStatusCode.OK, replayShiftIn.StatusCode);
+        var replayShiftInBody = (await replayShiftIn.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
+        Assert.Equal("AlreadyRecorded", replayShiftInBody.Outcome);
+        Assert.Equal(afterShiftIn.StateRevision, replayShiftInBody.StateRevision);
+        Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
+        Assert.Empty(await EffectiveAttendanceApi.GapsAsync(factory));
+
+        // Missing or wrong lifecycleVersion on a repeated submission for an already-recorded action still refuses.
+        var missingMarker = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn", stateRevision: empty);
+        var wrongMarker = await EffectiveAttendanceApi.RecordAsync(
+            cleaner, "ShiftIn", lifecycleVersion: "Legacy4", stateRevision: empty);
+        Assert.Equal(HttpStatusCode.Conflict, missingMarker.StatusCode);
+        Assert.Equal("refresh-required", (await missingMarker.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+        Assert.Equal(HttpStatusCode.Conflict, wrongMarker.StatusCode);
+        Assert.Equal("refresh-required", (await wrongMarker.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+
+        // Same idempotent replay behavior for a gap-confirming action (Break2Out).
+        var afterBreak2Out = await EffectiveAttendanceApi.RecordAndReadAsync(
+            factory, cleaner, EffectiveAttendanceApi.Thai(8, 16, 0), "Break2Out",
+            lifecycleVersion: "Numbered6", stateRevision: afterShiftIn.StateRevision,
+            confirmGaps: new[] { "Break1Out", "Break1In" });
+        Assert.NotEqual(afterShiftIn.StateRevision, afterBreak2Out.StateRevision);
+
+        var replayBreak2Out = await EffectiveAttendanceApi.RecordAsync(
+            cleaner, "Break2Out", lifecycleVersion: "Numbered6", stateRevision: afterShiftIn.StateRevision,
+            confirmGaps: new[] { "Break1Out", "Break1In" });
+        Assert.Equal(HttpStatusCode.OK, replayBreak2Out.StatusCode);
+        var replayBreak2OutBody = (await replayBreak2Out.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
+        Assert.Equal("AlreadyRecorded", replayBreak2OutBody.Outcome);
+        Assert.Equal(afterBreak2Out.StateRevision, replayBreak2OutBody.StateRevision);
+        Assert.Equal(2, (await EffectiveAttendanceApi.FactsAsync(factory)).Count);
+        Assert.Equal(2, (await EffectiveAttendanceApi.GapsAsync(factory)).Count);
+    }
+
+    [Fact]
+    public async Task A_numbered_slot_refuses_new_action_with_stale_prewrite_revision()
+    {
+        using var factory = new JanitorialApiFactory();
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
+        var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
+
+        await EffectiveAttendanceApi.RecordAndReadAsync(
+            factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn",
+            lifecycleVersion: "Numbered6", stateRevision: empty);
+
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
+        var staleNewAction = await EffectiveAttendanceApi.RecordAsync(
+            cleaner, "Break1Out", lifecycleVersion: "Numbered6", stateRevision: empty);
+
+        Assert.Equal(HttpStatusCode.Conflict, staleNewAction.StatusCode);
+        Assert.Equal("refresh-required", (await staleNewAction.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+        Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
+        Assert.Empty(await EffectiveAttendanceApi.GapsAsync(factory));
+    }
+
+    [Fact]
+    public async Task A_numbered_slot_press_that_loses_the_same_action_race_returns_already_recorded()
+    {
+        var race = new RacingShiftInInterceptor();
+        using var factory = new JanitorialApiFactory
+        {
+            ConfigureTestServices = services => services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(race)),
+        };
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
+        var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
+        race.Armed = true;
+
+        var response = await EffectiveAttendanceApi.RecordAsync(
+            cleaner, "ShiftIn", lifecycleVersion: "Numbered6", stateRevision: empty);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = (await response.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
+        Assert.Equal("AlreadyRecorded", body.Outcome);
+        Assert.NotEqual(empty, body.StateRevision);
+        Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
+        Assert.Empty(await EffectiveAttendanceApi.GapsAsync(factory));
+    }
+
+    [Fact]
+    public async Task A_numbered_slot_refuses_concurrent_different_action_when_slot_advances_under_lock()
+    {
+        var race = new RacingSlotAdvanceInterceptor(
+            AttendanceEvent.Break1Out, EffectiveAttendanceApi.Thai(8, 12, 0).UtcDateTime);
+        using var factory = new JanitorialApiFactory
+        {
+            ConfigureTestServices = services => services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(race)),
+        };
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
+        var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
+
+        var afterShiftIn = await EffectiveAttendanceApi.RecordAndReadAsync(
+            factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn",
+            lifecycleVersion: "Numbered6", stateRevision: empty);
+
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 16, 0));
+        race.Armed = true;
+        var response = await EffectiveAttendanceApi.RecordAsync(
+            cleaner, "Break2Out", lifecycleVersion: "Numbered6", stateRevision: afterShiftIn.StateRevision,
+            confirmGaps: new[] { "Break1Out", "Break1In" });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("refresh-required", (await response.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+        // Returning 409 rolls back the request transaction on the shared SQLite connection, leaving only ShiftIn and no Break2Out/gaps.
+        var facts = await EffectiveAttendanceApi.FactsAsync(factory);
+        Assert.Equal(new[] { AttendanceEvent.ShiftIn }, facts.Select(f => f.EventType));
+        Assert.Empty(await EffectiveAttendanceApi.GapsAsync(factory));
+    }
+
+    /// <summary>Commits a competing action for the slot right as the next writer acquires the slot anchor.</summary>
+    private sealed class RacingSlotAdvanceInterceptor(AttendanceEvent competingEvent, DateTime occurredAtUtc) : SaveChangesInterceptor
+    {
+        public bool Armed { get; set; }
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            var anchor = eventData.Context!.ChangeTracker.Entries<ScheduleAnchor>()
+                .FirstOrDefault(e => e.State == EntityState.Modified);
+            if (Armed && anchor is not null)
+            {
+                Armed = false;
+                var a = anchor.Entity;
+                var options = new DbContextOptionsBuilder<AppDbContext>()
+                    .UseSqlite(eventData.Context.Database.GetDbConnection()).Options;
+                await using var other = new AppDbContext(options);
+                var existing = await other.ShiftAttendances.AsNoTracking()
+                    .FirstAsync(s => s.UserId == a.PersonId && s.ShiftDate == a.ShiftDate && s.Shift == a.Shift,
+                        cancellationToken);
+                other.ShiftAttendances.Add(new ShiftAttendance
+                {
+                    UserId = a.PersonId,
+                    AreaId = existing.AreaId,
+                    ShiftDate = a.ShiftDate,
+                    Shift = a.Shift,
+                    EventType = competingEvent,
+                    OccurredAt = occurredAtUtc,
+                    Source = AttendanceSource.Scan,
+                    SignId = existing.SignId,
+                    CreatedAt = occurredAtUtc,
+                });
+                await other.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
+    }
 }
