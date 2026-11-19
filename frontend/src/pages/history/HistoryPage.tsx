@@ -12,11 +12,11 @@ import { useHistoryPage } from './useHistoryPage';
 export function HistoryPage() {
   const view = useHistoryPage();
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
-            <History aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+            <History aria-hidden="true" className="size-4 shrink-0 text-text-2" />
             ประวัติการแก้ไขของแอดมิน
           </h1>
           <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-idle-bg px-2 py-0.5 text-xs font-semibold text-idle">

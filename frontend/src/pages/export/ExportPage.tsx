@@ -12,16 +12,16 @@ import { useExportPage } from './useExportPage';
 export function ExportPage() {
   const page = useExportPage();
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <header className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2.5 text-2xl font-bold">
-          <FileSpreadsheet aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+          <FileSpreadsheet aria-hidden="true" className="size-4 shrink-0 text-text-2" />
           ส่งออก Excel
         </h1>
         <span className="text-text-2">เลือกข้อมูล วันที่ และตึกที่ต้องการ แล้วกด “ดาวน์โหลด Excel”</span>
       </header>
       {/* The approved summary column is 280px; no theme width token matches this page-specific layout. */}
-      <div className="grid min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <SurfacePanel className="min-w-0">
           <section className={sectionClass} aria-labelledby="export-sets">
             <h2 id="export-sets" className={titleClass}>1. ชุดข้อมูล</h2>
@@ -124,7 +124,7 @@ export function ExportPage() {
           </section>
         </SurfacePanel>
         <aside
-          className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:p-6 lg:sticky lg:top-6"
+          className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:p-5 lg:sticky lg:top-5"
           aria-labelledby="export-summary"
         >
           <h2 id="export-summary" className="flex items-center gap-2 text-base font-bold">

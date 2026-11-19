@@ -92,10 +92,10 @@ export function AlertsPage() {
   const reviewedAlertsCount = alerts.data ? list.filter((alert) => alert.reviewed).length : undefined;
 
   return (
-    <main className="flex flex-col gap-6 text-sm text-text">
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <header className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2.5 text-2xl font-bold">
-          <TriangleAlert aria-hidden="true" className="size-6 shrink-0 text-overdue" />
+        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+          <TriangleAlert aria-hidden="true" className="size-4 shrink-0 text-overdue" />
           รายการที่ขึ้นเตือน
         </h1>
         {/* As tall as its words before the board comes, so nothing under it moves */}
@@ -138,7 +138,7 @@ export function AlertsPage() {
         />
       </section>
       {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
-      <div className="flex flex-wrap items-stretch gap-6">
+      <div className="flex flex-wrap items-stretch gap-4">
         <EmptyAreas
           board={boardNow}
           error={board.error}
@@ -174,8 +174,8 @@ export function AlertsPage() {
         {boardNow && <CoversThisShift board={boardNow} ahead={ahead} onNotice={setNotice} />}
       </div>
       <section className={panelClass} aria-labelledby="alerts-list">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
-          <h2 id="alerts-list" className="text-lg font-semibold">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3.5">
+          <h2 id="alerts-list" className="text-base font-bold">
             เตือนจากการสแกน
           </h2>
           <Segmented

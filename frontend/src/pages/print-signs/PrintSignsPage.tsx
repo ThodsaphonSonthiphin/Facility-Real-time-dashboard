@@ -21,11 +21,11 @@ export function PrintSignsPage() {
   } = usePrintSignsPage();
 
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text print:gap-0">
-      <header className="flex flex-wrap items-end justify-between gap-4 print:hidden">
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text print:gap-0">
+      <header className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
-            <Printer aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+            <Printer aria-hidden="true" className="size-4 shrink-0 text-text-2" />
             พิมพ์ป้าย
           </h1>
           <span className="text-text-2">{summary}</span>
@@ -81,7 +81,7 @@ export function PrintSignsPage() {
           {emptyMessage && <Note tone="warn">{emptyMessage}</Note>}
           {signId !== undefined && singleArea && (
             <p className="text-text-2">พิมพ์ป้ายเดียว{' '}
-              <Link className={linkClass} to={`/admin/print?area=${which}`}>พิมพ์ทั้งพื้นที่ ›</Link>
+              <Link className={linkClass} to={`/admin/print?area=${which}`}>พิมพ์ทั้งพื้นที่</Link>
             </p>
           )}
         </div>

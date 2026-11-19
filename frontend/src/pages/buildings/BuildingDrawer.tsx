@@ -24,14 +24,14 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
 
   return (
     <Drawer labelledBy={titleId} onClose={dismissal.close}>
+      <DialogHeader
+        id={titleId}
+        title={building ? `แก้ไขตึก · ${building.code} ${building.name}` : 'เพิ่มตึก'}
+        detail="ตึกเก็บพื้นที่และบัญชีหัวหน้า · ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน"
+        onClose={dismissal.close}
+        closeDisabled={sending}
+      />
       <div className="flex flex-col gap-5">
-        <DialogHeader
-          id={titleId}
-          title={building ? `แก้ไขตึก · ${building.code} ${building.name}` : 'เพิ่มตึก'}
-          detail="ตึกเก็บพื้นที่และบัญชีหัวหน้า · ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน"
-          onClose={dismissal.close}
-          closeDisabled={sending}
-        />
         <form className="flex flex-col gap-4" onSubmit={(event) => void submit(event)}>
           {problem && <Note tone="error">{problem}</Note>}
           {building ? (
@@ -71,7 +71,7 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
         </form>
         {building && (
           <section
-            className="flex flex-col gap-2 rounded-md border border-border p-3"
+            className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3.5"
             aria-labelledby="building-active-title"
           >
             <h3 id="building-active-title" className="text-base font-bold">

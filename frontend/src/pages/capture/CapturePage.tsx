@@ -68,8 +68,8 @@ export function CapturePage() {
           {detail && (
             <span className="text-sm text-text-2">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>
           )}
-          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
-            <MapPin aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+            <MapPin aria-hidden="true" className="size-5 shrink-0 text-text-2" />
             เก็บพิกัดป้าย
           </h1>
           <span className="text-sm text-text-2">ยืนชิดป้าย เลือกป้าย แล้วกดใช้ตำแหน่ง</span>
@@ -214,7 +214,7 @@ function SignCapture({ target, phase, problem, saving, onStart, onSave }: SignCa
   const verdict = result?.kind === 'fix' ? accuracyVerdict(result.fix.accuracyM, sign.radiusM) : undefined;
 
   return (
-    <section className={`flex flex-col gap-2.5 ${boxClass}`} aria-labelledby="capture-sign-title">
+    <section className={`flex flex-col gap-3 ${boxClass}`} aria-labelledby="capture-sign-title">
       <h2 id="capture-sign-title" className="text-lg font-bold">{`${sign.code} ${title}`}</h2>
       <p className="text-sm text-text-2">{`รัศมี ${sign.radiusM} ม. · ตอนนี้: ${signPlaceLabel(sign)}`}</p>
       {phase.kind === 'reading' && (

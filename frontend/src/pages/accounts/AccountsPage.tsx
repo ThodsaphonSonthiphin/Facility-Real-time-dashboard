@@ -22,11 +22,11 @@ export function AccountsPage() {
   } = useAccountsPage();
 
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
-            <Users aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+            <Users aria-hidden="true" className="size-4 shrink-0 text-text-2" />
             บัญชีผู้ใช้
           </h1>
           {/* As tall as its words before the answer, so nothing under it moves */}
@@ -47,7 +47,7 @@ export function AccountsPage() {
         className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface"
         aria-label="รายชื่อบัญชี"
       >
-        <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-4">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-4 pt-1">
           <Tabs
             label="บทบาทบัญชี"
             idPrefix="accounts"
@@ -68,7 +68,7 @@ export function AccountsPage() {
               ),
             }))}
           />
-          <div className="flex w-full flex-wrap gap-3 py-2 sm:w-auto">
+          <div className="flex w-full flex-wrap gap-3 py-3 sm:w-auto">
             <Field label="สถานะบัญชี">
               <Select size="desk" value={active} onChange={changeActive}>
                 <option value="all">ทั้งหมด</option>
@@ -97,7 +97,7 @@ export function AccountsPage() {
           )}
           {accounts.data && <AccountTable accounts={shown} role={role} me={me} busy={busy} onAction={act} />}
           {accounts.data && (
-            <div className="border-t border-border px-4 py-3 text-text-2">
+            <div className="border-t border-border px-4 py-2.5 text-text-2">
               {`แสดง ${shown.length > 0 ? `1–${shown.length}` : '0'} จาก ${counts[role]} บัญชี`}
             </div>
           )}

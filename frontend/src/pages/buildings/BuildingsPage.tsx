@@ -20,11 +20,11 @@ export function BuildingsPage() {
   } = useBuildingsPage();
 
   return (
-    <main className="flex flex-col gap-6 text-sm text-text">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
-            <Building2 aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+            <Building2 aria-hidden="true" className="size-4 shrink-0 text-text-2" />
             ตึก
           </h1>
           {/* As tall as its words before the answer, so nothing under it moves */}

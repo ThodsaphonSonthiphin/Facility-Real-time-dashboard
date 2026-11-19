@@ -27,35 +27,33 @@ export function InspectionSummaryPage() {
   );
 
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2.5 text-2xl font-bold">
-            <ClipboardCheck aria-hidden="true" className="size-6 shrink-0 text-text-2" />
-            สรุปการตรวจ
-          </h1>
-          <span className="text-text-2">การตรวจงานของหัวหน้าแต่ละคน ตามช่วงวันที่เลือก</span>
-        </div>
-        <div className="flex max-w-full flex-wrap items-center gap-3">
-          <label className="inline-flex max-w-full items-center gap-2">
-            <span className="shrink-0">ช่วงวัน</span>
-            <Select size="desk" className="min-w-0 max-w-full" value={page.preset} onChange={(event) => page.selectPreset(event.target.value)}>
-              <option value="today">วันนี้</option>
-              <option value="week">{page.weekLabel}</option>
-              <option value="month">เดือนนี้</option>
-              <option value="custom">{page.customLabel}</option>
-            </Select>
-          </label>
-          <label className="inline-flex items-center gap-2">
-            กะ
-            <Select size="desk" value={page.shift} onChange={(event) => page.setShift(event.target.value as typeof page.shift)}>
-              <option value="">ทั้งสองกะ</option>
-              <option value="Day">กะเช้า</option>
-              <option value="Night">กะดึก</option>
-            </Select>
-          </label>
-        </div>
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
+      <header className="flex flex-col gap-1">
+        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+          <ClipboardCheck aria-hidden="true" className="size-4 shrink-0 text-text-2" />
+          สรุปการตรวจ
+        </h1>
+        <span className="text-text-2">การตรวจงานของหัวหน้าแต่ละคน ตามช่วงวันที่เลือก</span>
       </header>
+      <FilterToolbar label="ตัวกรองการตรวจ">
+        <label className="inline-flex max-w-full items-center gap-2">
+          <span className="shrink-0">ช่วงวัน</span>
+          <Select size="desk" className="min-w-0 max-w-full" value={page.preset} onChange={(event) => page.selectPreset(event.target.value)}>
+            <option value="today">วันนี้</option>
+            <option value="week">{page.weekLabel}</option>
+            <option value="month">เดือนนี้</option>
+            <option value="custom">{page.customLabel}</option>
+          </Select>
+        </label>
+        <label className="inline-flex items-center gap-2">
+          กะ
+          <Select size="desk" value={page.shift} onChange={(event) => page.setShift(event.target.value as typeof page.shift)}>
+            <option value="">ทั้งสองกะ</option>
+            <option value="Day">กะเช้า</option>
+            <option value="Night">กะดึก</option>
+          </Select>
+        </label>
+      </FilterToolbar>
       <Note tone="info">
         <span>ตัวเลขใช้ดูว่าการตรวจครอบคลุมหรือไม่ <strong>ระบบไม่ให้คะแนนหรือจัดอันดับหัวหน้า</strong></span>
       </Note>

@@ -33,14 +33,14 @@ export function AreaFormPage() {
 
   return (
     // D10's one column at 880 px, so a name or a date is not a 1216 px line; no width token names it
-    <main className="flex max-w-220 flex-col gap-6 text-sm text-text">
+    <main className="flex min-w-0 max-w-220 flex-col gap-5 text-sm text-text">
       <header className="flex flex-col gap-2">
-        <Link className={`${linkClass} inline-flex min-h-8 items-center gap-1 self-start font-semibold`} to={id === undefined ? '/admin/areas' : `/admin/areas/${id}`}>
+        <Link className={`${linkClass} inline-flex min-h-9 items-center gap-1 self-start font-semibold`} to={id === undefined ? '/admin/areas' : `/admin/areas/${id}`}>
           <ChevronLeft aria-hidden="true" className="size-4" />
           พื้นที่และป้าย
         </Link>
-        <h1 className="flex items-center gap-2.5 text-2xl font-bold">
-          <MapPin aria-hidden="true" className="size-6 shrink-0 text-text-2" />
+        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+          <MapPin aria-hidden="true" className="size-4 shrink-0 text-text-2" />
           {title}
         </h1>
         <span className="text-text-2">พื้นที่ = งานของแม่บ้าน 1 คนต่อกะ มีป้ายลงเวลา 1 ป้าย และจุดหลายจุด</span>

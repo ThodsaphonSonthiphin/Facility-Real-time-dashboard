@@ -98,7 +98,7 @@ export function EmptyAreas({ board, error, onRetry, slots, slot, ahead, onSlot, 
               <th scope="col">พื้นที่</th>
               <th scope="col">ตึก</th>
               <th scope="col">แม่บ้านประจำ</th>
-              <th scope="col" className={tableCell.actions}>
+              <th scope="col" className={`relative ${tableCell.actions}`}>
                 <span className="sr-only">การกระทำ</span>
               </th>
             </tr>
