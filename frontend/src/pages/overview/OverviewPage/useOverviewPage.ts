@@ -624,27 +624,24 @@ export function useOverviewPage(): OverviewPageModel {
   const rawResponse = contextResult.ok ? query.currentData : undefined;
   const argsKey = contextResult.ok ? overviewParams(selection).toString() : '';
 
-  // Wait for a fresh settlement before canonicalizing when RTK Query surfaces a cached hit with isFetching=false on Render 1.
-  const [seenRequest, setSeenRequest] = useState<{ argsKey: string; staleRequestId?: string }>({
-    argsKey,
-    staleRequestId: undefined,
-  });
+  // A settled cache hit needs a new request. A refresh already in flight can settle under its existing ID.
+  const cacheAtEntry = rawResponse
+    ? { settledRequestId: query.isFetching ? undefined : query.requestId }
+    : undefined;
+  const [seenRequest, setSeenRequest] = useState({ argsKey, cacheAtEntry });
   if (seenRequest.argsKey !== argsKey) {
-    setSeenRequest({
-      argsKey,
-      staleRequestId: rawResponse ? query.requestId : undefined,
-    });
+    setSeenRequest({ argsKey, cacheAtEntry });
   } else if (
-    seenRequest.staleRequestId !== undefined &&
+    seenRequest.cacheAtEntry &&
     !query.isFetching &&
     !query.error &&
     rawResponse &&
-    query.requestId !== seenRequest.staleRequestId
+    query.requestId !== seenRequest.cacheAtEntry.settledRequestId
   ) {
-    setSeenRequest({ argsKey, staleRequestId: undefined });
+    setSeenRequest({ argsKey, cacheAtEntry: undefined });
   }
 
-  const awaitingFreshCache = seenRequest.argsKey === argsKey && seenRequest.staleRequestId !== undefined;
+  const awaitingFreshCache = seenRequest.argsKey === argsKey && seenRequest.cacheAtEntry !== undefined;
   const isUncanonicalSlot = contextResult.ok && (!selection.date || !selection.shift);
   const freshRawResponse = isUncanonicalSlot && awaitingFreshCache ? undefined : rawResponse;
 
@@ -724,7 +721,7 @@ export function useOverviewPage(): OverviewPageModel {
     }
   }
 
-  const loading = contextResult.ok && response === undefined && query.isFetching;
+  const loading = contextResult.ok && response === undefined && (query.isFetching || (awaitingFreshCache && !query.error));
   const refreshing = contextResult.ok && response !== undefined && query.isFetching && !isCanonicalizing;
   const error = !contextResult.ok
     ? contextResult.message

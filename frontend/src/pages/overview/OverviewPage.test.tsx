@@ -688,8 +688,20 @@ describe('OverviewPage', () => {
     expect(screen.getByText(/AR202/)).toBeVisible();
   });
 
-  it('waits for fresh default slot on กลับกะปัจจุบัน instead of canonicalizing cached older shift in URL', async () => {
+  it.each(['reset to current', 'remount', 'Back and Forward'] as const)('waits for the fresh default slot after %s', async (navigation) => {
     const base = overviewFixture();
+    const day = {
+      ...base,
+      rows: [makeAreaRow(1, { name: 'พื้นที่กะเช้า' })],
+    };
+    const night = {
+      ...base,
+      summary: {
+        ...base.summary,
+        context: { ...base.summary.context, shift: 'Night' as const },
+      },
+      rows: [makeAreaRow(2, { name: 'พื้นที่กะดึก' })],
+    };
     let rolledOver = false;
     let resolveRollover!: (res: FakeResponse) => void;
     const rolloverPromise = new Promise<FakeResponse>((resolve) => {
@@ -699,6 +711,7 @@ describe('OverviewPage', () => {
     const { calls } = fakeServer({
       ...adminSession,
       'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/buildings/all': () => ({ status: 200, body: [] }),
       'GET /api/admin/overview/areas': (req) => {
         const params = new URLSearchParams(req.search);
         const shiftDate = params.get('shiftDate');
@@ -707,17 +720,7 @@ describe('OverviewPage', () => {
           if (rolledOver) {
             return rolloverPromise;
           }
-          return {
-            status: 200,
-            body: {
-              ...base,
-              summary: {
-                ...base.summary,
-                context: { ...base.summary.context, shiftDate: '2026-11-04', shift: 'Day', isClockCurrent: true },
-              },
-              rows: [makeAreaRow(1, { code: 'AR1', name: 'พื้นที่กะเช้า' })],
-            },
-          };
+          return { status: 200, body: day };
         }
         if (shiftDate === '2026-11-03') {
           return {
@@ -728,25 +731,11 @@ describe('OverviewPage', () => {
                 ...base.summary,
                 context: { ...base.summary.context, shiftDate: '2026-11-03', shift: 'Day', isClockCurrent: false },
               },
-              rows: [makeAreaRow(3, { code: 'AR3', name: 'พื้นที่เมื่อวาน' })],
+              rows: [makeAreaRow(3, { name: 'พื้นที่เมื่อวาน' })],
             },
           };
         }
-        return {
-          status: 200,
-          body: {
-            ...base,
-            summary: {
-              ...base.summary,
-              context: {
-                ...base.summary.context,
-                shiftDate: shiftDate ?? '2026-11-04',
-                shift: (shift as 'Day' | 'Night') ?? 'Day',
-                isClockCurrent: true,
-              },
-            },
-          },
-        };
+        return { status: 200, body: shift === 'Night' ? night : day };
       },
     });
 
@@ -757,38 +746,42 @@ describe('OverviewPage', () => {
       expect(p.get('shift')).toBe('Day');
     });
 
-    fireEvent.change(screen.getByLabelText('วันที่ของกะ'), { target: { value: '2026-11-03' } });
-    expect(await screen.findByText(/AR3/)).toBeVisible();
-    const resetButton = await screen.findByRole('button', { name: 'กลับกะปัจจุบัน' });
+    if (navigation === 'remount') {
+      await act(() => router.navigate('/admin/export'));
+      expect(screen.queryByRole('heading', { name: 'ภาพรวมการดูแลพื้นที่' })).not.toBeInTheDocument();
+    } else {
+      fireEvent.change(screen.getByLabelText('วันที่ของกะ'), { target: { value: '2026-11-03' } });
+      expect(await screen.findByRole('row', { name: /AR3/ })).toBeVisible();
+    }
 
-    // Server rolls over to Night before กลับกะปัจจุบัน is clicked while Day default-slot entry is still cached
+    // Night is now current while the earlier default Day response remains cached.
     rolledOver = true;
-    await user.click(resetButton);
-    await waitFor(() => {
-      const defaultCalls = calls.filter((c) => {
-        if (c.path !== '/api/admin/overview/areas') return false;
-        const sp = new URLSearchParams(c.search);
-        return !sp.has('shiftDate') && !sp.has('shift');
-      });
-      expect(defaultCalls).toHaveLength(2);
+    if (navigation === 'remount') {
+      await act(() => router.navigate('/admin/overview'));
+    } else {
+      await user.click(screen.getByRole('button', { name: 'กลับกะปัจจุบัน' }));
+    }
+    const defaultCalls = () => calls.filter((call) => {
+      if (call.path !== '/api/admin/overview/areas') return false;
+      const params = new URLSearchParams(call.search);
+      return !params.has('shiftDate') && !params.has('shift');
     });
+    await waitFor(() => expect(defaultCalls()).toHaveLength(2));
 
-    // While rollover refetch is in flight, stale cached Day must NOT overwrite the URL
+    if (navigation === 'Back and Forward') {
+      await act(() => router.navigate(-1));
+      expect(await screen.findByRole('row', { name: /AR3/ })).toBeVisible();
+      await act(() => router.navigate(1));
+    }
+
+    // The URL stays unresolved while the server's current slot is still pending.
     expect(new URLSearchParams(router.state.location.search).get('date')).toBeNull();
     expect(new URLSearchParams(router.state.location.search).get('shift')).toBeNull();
+    expect(screen.queryByRole('row', { name: /AR1/ })).not.toBeInTheDocument();
+    expect(screen.getByText('กำลังโหลดภาพรวม...')).toBeVisible();
 
     await act(async () => {
-      resolveRollover({
-        status: 200,
-        body: {
-          ...base,
-          summary: {
-            ...base.summary,
-            context: { ...base.summary.context, shiftDate: '2026-11-04', shift: 'Night', isClockCurrent: true },
-          },
-          rows: [makeAreaRow(2, { code: 'AR2', name: 'พื้นที่กะดึก' })],
-        },
-      });
+      resolveRollover({ status: 200, body: night });
     });
 
     await waitFor(() => {
@@ -796,7 +789,8 @@ describe('OverviewPage', () => {
       expect(p.get('date')).toBe('2026-11-04');
       expect(p.get('shift')).toBe('Night');
     });
-    expect(await screen.findByText(/AR2/)).toBeVisible();
+    expect(await screen.findByRole('row', { name: /AR2/ })).toBeVisible();
+    expect(defaultCalls()).toHaveLength(2);
   });
 
   it('renders — instead of ยังไม่มีรอบในกะนี้ when a partial row has duePoints 0 without upcoming or noRounds', async () => {
