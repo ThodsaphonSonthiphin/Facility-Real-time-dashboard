@@ -112,7 +112,9 @@ public class OverviewProjectionTests
             area.Groups.Count(g => g is OverviewGroupKeys.Entered or OverviewGroupKeys.Covered
                 or OverviewGroupKeys.Unassigned)));
         // A confirmed transfer keeps the origin entered and adds the destination.
-        Assert.Contains(OverviewProjection.Members(snapshot, OverviewGroupKeys.Entered), a => a.Id is 50 or 90);
+        var enteredMembers = OverviewProjection.Members(snapshot, OverviewGroupKeys.Entered);
+        Assert.Contains(enteredMembers, a => a.Id == 50);
+        Assert.Contains(enteredMembers, a => a.Id == 90);
         // Attendance (even Shift-In), a live cover and a cancelled instruction never prove entry.
         Assert.Contains(OverviewProjection.Members(snapshot, OverviewGroupKeys.Unassigned), a => a.Id == 96);
     }
@@ -392,14 +394,40 @@ public class OverviewProjectionTests
         var unique = Assert.Single(Build(timeline, Facts([unlinked], [passed])).Areas);
         Assert.Equal("passed", Assert.Single(unique.History).Outcome);
         Assert.Equal(1L, unique.History[0].SubmissionId);
+        Assert.False(unique.History[0].IsPartial);
+        Assert.Null(unique.History[0].UnresolvedSubmissions);
+        Assert.False(unique.OriginsIncomplete);
         Assert.True(unique.Work.Incomplete);
 
         var ambiguousScan = Scan(2, 100, null, 8, At(11), existingWindow: null);
         var ambiguous = Assert.Single(Build(timeline, Facts([ambiguousScan])).Areas);
-        Assert.Equal("notDone", Assert.Single(ambiguous.History).Outcome);
-        Assert.Null(ambiguous.History[0].SubmissionId);
+        var result = Assert.Single(ambiguous.History);
+        Assert.Equal(OverviewOutcomes.Unresolved, result.Outcome);
+        Assert.True(result.IsPartial);
+        Assert.Equal(2L, Assert.Single(result.UnresolvedSubmissions!).Id);
+        Assert.Null(result.SubmissionId);
         Assert.Null(Assert.Single(ambiguous.Points).SubmissionId);
         Assert.True(ambiguous.Work.Incomplete);
+        Assert.True(ambiguous.OriginsIncomplete);
+        Assert.DoesNotContain(OverviewGroupKeys.MissedCleaning, ambiguous.Groups);
+        Assert.DoesNotContain(OverviewGroupKeys.MissedInspection, ambiguous.Groups);
+    }
+
+    [Fact]
+    public void Ambiguous_current_origin_marks_the_area_partial_without_inventing_a_history_row()
+    {
+        var image = Image();
+        var first = Round(100, 1000, 8);
+        var second = Round(100, 1001, 8, activeFrom: At(10));
+        var scan = Scan(7, 100, null, 8, At(11), existingWindow: null);
+
+        var area = Assert.Single(Build(Timeline(image, first, second), Facts([scan])).Areas);
+
+        Assert.True(area.OriginsIncomplete);
+        Assert.Empty(area.History);
+        Assert.True(area.Work.NoSubmission);
+        Assert.Null(Assert.Single(area.Points).SubmissionId);
+        Assert.DoesNotContain(OverviewGroupKeys.MissedCleaning, area.Groups);
     }
 
     [Fact]

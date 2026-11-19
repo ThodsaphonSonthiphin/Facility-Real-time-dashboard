@@ -54,14 +54,19 @@ public static class OverviewProjection
         ArgumentNullException.ThrowIfNull(facts);
         ArgumentNullException.ThrowIfNull(availability);
 
-        var scans = ResolveOrigins(facts.Submissions, slot, targets.Rounds);
+        var origins = ResolveOrigins(facts.Submissions, slot, targets.Rounds);
+        var scans = origins.Resolved;
         var current = CurrentPoints(slot, moment, targets.Rounds, scans, facts.Inspections);
-        var history = History(slot, targets.Rounds, scans, facts.Inspections);
+        var history = History(slot, targets.Rounds, scans, facts.Inspections, origins.Ambiguous);
         var image = targets.Current;
         var entered = ScheduleEntryEvidence.EnteredAreas(
             new ScheduleSlot(slot.ShiftDate, slot.Shift), facts.EntryEvidence);
         var nextRoundAreas = AreasWithNextRound(image, slot, moment.EvaluationUtc);
         var currentPointIds = current.Select(c => c.Round.PointId).ToHashSet();
+        // Ambiguity is scoped to the ownership view that owns a candidate round, so a moved Area can mark the affected
+        // historical row without claiming the current owner's row is unproven.
+        var ambiguousViews = origins.Ambiguous
+            .SelectMany(a => a.Rounds).Select(r => (r.AreaId, r.BuildingId)).ToHashSet();
 
         var views = Views(targets, image, current, history, currentPointIds, slot, moment.EvaluationUtc);
 
@@ -77,7 +82,8 @@ public static class OverviewProjection
                 var merged = all.SelectMany(v => v.History)
                     .OrderBy(h => h.Round.ActiveFromUtc).ThenBy(h => h.Round.PointId).ToArray();
                 areas.Add(Row(primary, merged, entered, facts.AssignedAreas, nextRoundAreas,
-                    includeStructure: all.Any(v => v.IsCurrentOwner)));
+                    includeStructure: all.Any(v => v.IsCurrentOwner),
+                    originsIncomplete: all.Any(v => ambiguousViews.Contains((v.AreaId, v.BuildingId)))));
             }
         }
         else
@@ -85,7 +91,8 @@ public static class OverviewProjection
             foreach (var view in views.Where(v => v.BuildingId == buildingId.Value))
                 areas.Add(Row(view, view.History
                     .OrderBy(h => h.Round.ActiveFromUtc).ThenBy(h => h.Round.PointId).ToArray(),
-                    entered, facts.AssignedAreas, nextRoundAreas, view.IsCurrentOwner));
+                    entered, facts.AssignedAreas, nextRoundAreas, view.IsCurrentOwner,
+                    ambiguousViews.Contains((view.AreaId, view.BuildingId))));
         }
 
         areas.Sort((left, right) =>
@@ -194,7 +201,7 @@ public static class OverviewProjection
 
     private static OverviewArea Row(View view, IReadOnlyList<OverviewRoundResult> history,
         IReadOnlySet<int> entered, IReadOnlySet<int> assigned, IReadOnlySet<int> nextRoundAreas,
-        bool includeStructure)
+        bool includeStructure, bool originsIncomplete)
     {
         var points = view.Points.OrderBy(p => p.Start).ThenBy(p => p.PointId).Select(p => p.Point).ToArray();
         var work = OverviewRules.Work(points);
@@ -203,7 +210,7 @@ public static class OverviewProjection
         var noRounds = includeStructure && work.DuePoints == 0 && !upcoming;
         return new(view.AreaId, view.BuildingId, view.AreaCode, view.AreaName,
             view.BuildingCode, view.BuildingName, entry, work, points, history,
-            Groups(entry, work, history, upcoming, noRounds, includeStructure));
+            Groups(entry, work, history, upcoming, noRounds, includeStructure), originsIncomplete);
     }
 
     private static HashSet<string> Groups(string entry, AreaWork work,
@@ -227,9 +234,12 @@ public static class OverviewProjection
         if (work.Overdue) groups.Add(OverviewGroupKeys.Overdue);
         if (upcoming) groups.Add(OverviewGroupKeys.Upcoming);
         if (noRounds) groups.Add(OverviewGroupKeys.NoRounds);
-        if (history.Any(h => h.Outcome == OverviewOutcomes.NotDone)) groups.Add(OverviewGroupKeys.MissedCleaning);
+        // An ambiguous round is not a proven miss: the user sees the partial marker and the retained candidate scans.
+        if (history.Any(h => !h.IsPartial && h.Outcome == OverviewOutcomes.NotDone))
+            groups.Add(OverviewGroupKeys.MissedCleaning);
         // Rework unfinished is not an inspection miss: the Supervisor did inspect it.
-        if (history.Any(h => h.Outcome == OverviewOutcomes.NotInspected)) groups.Add(OverviewGroupKeys.MissedInspection);
+        if (history.Any(h => !h.IsPartial && h.Outcome == OverviewOutcomes.NotInspected))
+            groups.Add(OverviewGroupKeys.MissedInspection);
         return groups;
     }
 
@@ -250,31 +260,42 @@ public static class OverviewProjection
     }
 
     private static List<OverviewRoundResult> History(ShiftSlot slot, IReadOnlyList<RoundObligation> rounds,
-        IReadOnlyList<OverviewSubmission> scans, IReadOnlyList<OverviewInspection> inspections)
+        IReadOnlyList<OverviewSubmission> scans, IReadOnlyList<OverviewInspection> inspections,
+        IReadOnlyList<AmbiguousOrigin> ambiguous)
     {
         var history = new List<OverviewRoundResult>();
         foreach (var round in rounds.Where(r => r.FinalizedAtUtc is not null)
             .OrderBy(r => r.ActiveFromUtc).ThenBy(r => r.PointId))
         {
             var point = OverviewRules.Latest(slot, round, scans, inspections, round.FinalizedAtUtc!.Value);
-            var outcome = !point.IsSubmitted ? OverviewOutcomes.NotDone
+            var unresolved = ambiguous
+                .Where(a => a.Rounds.Contains(round))
+                .Select(a => a.Scan).DistinctBy(s => s.Id).ToArray();
+            var outcome = unresolved.Length > 0 && !point.IsSubmitted ? OverviewOutcomes.Unresolved
+                : !point.IsSubmitted ? OverviewOutcomes.NotDone
                 : !point.IsInspected ? OverviewOutcomes.NotInspected
                 : point.NeedsRework ? OverviewOutcomes.NotReworked
                 : OverviewOutcomes.Passed;
             history.Add(new(OverviewTimeline.RoundKey(slot, round), round, outcome,
-                point.SubmissionId, point.InspectionId));
+                point.SubmissionId, point.InspectionId, unresolved.Length > 0,
+                unresolved.Length > 0 ? unresolved : null));
         }
         return history;
     }
 
+    /// <summary>A legacy scan that could belong to more than one round, together with every candidate round.</summary>
+    private sealed record AmbiguousOrigin(OverviewSubmission Scan, IReadOnlyList<RoundObligation> Rounds);
+
     /// <summary>
     /// A legacy scan with neither a copied origin nor its window link joins a round only when the point, slot, copied
-    /// times and active intervals leave exactly one origin. Otherwise it stays an observed fact and no round claims it.
+    /// times and active intervals leave exactly one origin. A scan with several candidate origins is retained as an
+    /// <see cref="AmbiguousOrigin"/> so the affected rounds become partial instead of silently reading as missed.
     /// </summary>
-    private static IReadOnlyList<OverviewSubmission> ResolveOrigins(IReadOnlyList<OverviewSubmission> scans,
-        ShiftSlot slot, IReadOnlyList<RoundObligation> rounds)
+    private static (List<OverviewSubmission> Resolved, List<AmbiguousOrigin> Ambiguous) ResolveOrigins(
+        IReadOnlyList<OverviewSubmission> scans, ShiftSlot slot, IReadOnlyList<RoundObligation> rounds)
     {
         var resolved = new List<OverviewSubmission>(scans.Count);
+        var ambiguous = new List<AmbiguousOrigin>();
         foreach (var scan in scans)
         {
             if ((scan.OriginId ?? scan.ExistingWindowId) is not null)
@@ -283,16 +304,23 @@ public static class OverviewProjection
                 continue;
             }
 
-            var origins = scan.ShiftDate == slot.ShiftDate && scan.Shift == slot.Shift
+            var candidates = scan.ShiftDate == slot.ShiftDate && scan.Shift == slot.Shift
                 && scan.RoundStart is { } start && scan.RoundEnd is { } end
                 ? rounds.Where(r => r.PointId == scan.PointId && r.Start == start && r.End == end
                         && r.ActiveFromUtc <= scan.SubmittedAt
                         && (r.FinalizedAtUtc is null || scan.SubmittedAt <= r.FinalizedAtUtc))
-                    .Select(r => r.OriginId).Distinct().ToArray()
+                    .ToArray()
                 : [];
-            resolved.Add(origins.Length == 1 ? scan with { OriginId = origins[0] } : scan);
+            var origins = candidates.Select(r => r.OriginId).Distinct().ToArray();
+            if (origins.Length == 1)
+            {
+                resolved.Add(scan with { OriginId = origins[0] });
+                continue;
+            }
+            if (origins.Length > 1) ambiguous.Add(new(scan, candidates));
+            resolved.Add(scan);
         }
-        return resolved;
+        return (resolved, ambiguous);
     }
 
     /// <summary>The eligible windows whose start has not passed: a next configured round for an Area with no due point.</summary>

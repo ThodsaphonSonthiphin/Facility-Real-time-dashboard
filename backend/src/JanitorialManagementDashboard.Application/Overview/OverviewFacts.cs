@@ -46,26 +46,35 @@ public sealed record AreaWork(int DuePoints, int SubmittedPoints, int InspectedP
     bool Submitted, bool Inspected, bool Incomplete, bool PendingInspection,
     bool NoSubmission, bool Rework, bool Issue, bool Overdue);
 
-/// <summary>One finalized round's outcome, keyed by the opaque round key Task 6 returns.</summary>
+/// <summary>
+/// One finalized round's outcome, keyed by the opaque round key Task 6 returns. A round with an ambiguous legacy origin
+/// is partial: its outcome is <see cref="OverviewOutcomes.Unresolved"/> when no submission could be verified, and the
+/// candidate scans stay inspectable in <paramref name="UnresolvedSubmissions"/> instead of being deleted.
+/// </summary>
 public sealed record OverviewRoundResult(string RoundKey, RoundObligation Round,
-    string Outcome, long? SubmissionId, long? InspectionId);
+    string Outcome, long? SubmissionId, long? InspectionId,
+    bool IsPartial = false, IReadOnlyList<OverviewSubmission>? UnresolvedSubmissions = null);
 
 /// <summary>One target Area under one historical owner. Groups drive every cardinality.</summary>
 public sealed record OverviewArea(int Id, int BuildingId, string Code, string Name,
     string BuildingCode, string BuildingName, string Entry, AreaWork Work,
     IReadOnlyList<OverviewPoint> Points, IReadOnlyList<OverviewRoundResult> History,
-    IReadOnlySet<string> Groups);
+    IReadOnlySet<string> Groups, bool OriginsIncomplete = false);
 
 /// <summary>The single projection Task 6 pages, filters and counts from.</summary>
 public sealed record OverviewSnapshot(ShiftSlot Slot, OverviewMoment Moment,
     TargetTimeline Targets, SectionAvailability Availability,
     IReadOnlyList<OverviewArea> Areas);
 
-/// <summary>The four locked history outcomes. A later pass never removes an earlier failure.</summary>
+/// <summary>
+/// The locked history outcomes. A later pass never removes an earlier failure. <see cref="Unresolved"/> is used only
+/// for an ambiguous legacy origin: the round cannot be called done or missed because a real scan might belong to it.
+/// </summary>
 public static class OverviewOutcomes
 {
     public const string NotDone = "notDone";
     public const string NotInspected = "notInspected";
     public const string NotReworked = "notReworked";
     public const string Passed = "passed";
+    public const string Unresolved = "unresolved";
 }
