@@ -13,7 +13,7 @@ test('phone key screens match visual baselines', async ({ page }) => {
   await expect(page).toHaveScreenshot('phone-login.png', {
     animations: 'disabled',
     maxDiffPixelRatio: 0.01,
-    mask: [page.locator('footer .text-xs')],
+    mask: [page.getByText(/^เวอร์ชัน /)],
   });
 
   await page.clock.setFixedTime(visualTime);

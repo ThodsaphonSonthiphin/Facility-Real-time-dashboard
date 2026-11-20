@@ -1,5 +1,7 @@
-import { expectNoSeriousViolations } from '../support/audit.ts';
+import { expectNoSeriousViolations, settlePage } from '../support/audit.ts';
 import { loginAsAdmin } from '../support/login.ts';
+import { holdUntilReleased } from '../support/pageWatch.ts';
+import { overviewFixture } from '../support/seed.ts';
 import { expect, test } from '../support/test.ts';
 
 test('admin login and core admin pages have zero critical or serious WCAG violations', async ({ page }) => {
@@ -28,4 +30,33 @@ test('admin navigation and drawers support Tab and Escape keyboard interaction',
   await expect(dialog.locator(':focus')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
+});
+
+test('Overview retains accessible results while a filter request is pending', async ({ page }) => {
+  test.skip(process.env.E2E_DATASET !== 'medium', 'Requires the medium historical Overview fixture');
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await loginAsAdmin(page);
+  const { date, shift, buildingId, submitted } = overviewFixture();
+  await page.goto(`/admin/overview?date=${date}&shift=${shift}&building=${buildingId}&group=entered&page=1`);
+  const results = page.getByRole('region', { name: 'พื้นที่ที่ลงเวลาแล้ว' });
+  await expect(results.getByRole('link', { name: /^ดูพื้นที่ / }).first()).toBeVisible();
+  await settlePage(page);
+  const table = results.getByRole('table');
+  const tableTop = () => table.evaluate((element) => {
+    const section = element.closest('section')!;
+    return element.getBoundingClientRect().top - section.getBoundingClientRect().top;
+  });
+  const initialTableTop = await tableTop();
+
+  const release = await holdUntilReleased(page, /\/api\/admin\/overview\/areas\?.*group=submitted/);
+  try {
+    await page.getByRole('button', { name: `ส่งงานครบ ${submitted} พื้นที่`, exact: true }).click();
+    await expect(results.getByText('กำลังอัปเดต...', { exact: true })).toBeVisible();
+    await expect(page.getByText('กำลังอัปเดตข้อมูล...', { exact: true })).toBeHidden();
+    expect(await tableTop()).toBeCloseTo(initialTableTop, 1);
+    await expectNoSeriousViolations(page, { waitForNetwork: false });
+  } finally {
+    release();
+  }
 });

@@ -3,7 +3,7 @@ import { focusRing } from '../../../shared/components/styles';
 import { ChartBar } from '../ChartBar/ChartBar';
 import type { FollowUpGroupsProps } from './type';
 
-export function FollowUpGroups({ title, subtitle, max, items, onGroup }: FollowUpGroupsProps) {
+export function FollowUpGroups({ title, max, items, onGroup }: FollowUpGroupsProps) {
   return (
     <section
       aria-labelledby="overview-followup-heading"
@@ -13,7 +13,6 @@ export function FollowUpGroups({ title, subtitle, max, items, onGroup }: FollowU
         <h2 id="overview-followup-heading" className="text-lg font-bold">
           {title}
         </h2>
-        {subtitle && <span className="text-sm text-text-2">{subtitle}</span>}
       </div>
       <div className="rounded-lg border border-border bg-surface px-3 py-2">
         <ul className="list-none">

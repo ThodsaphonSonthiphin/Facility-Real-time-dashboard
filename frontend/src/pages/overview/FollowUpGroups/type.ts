@@ -11,7 +11,6 @@ export interface FollowUpGroupItem {
 
 export interface FollowUpGroupsProps {
   title: string;
-  subtitle: string;
   max: number;
   items: readonly FollowUpGroupItem[];
   onGroup: (group: OverviewGroup) => void;

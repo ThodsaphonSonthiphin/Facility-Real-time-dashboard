@@ -691,6 +691,67 @@ describe('OverviewPage', () => {
     expect(screen.getByText(/AR202/)).toBeVisible();
   });
 
+  it('keeps the visible context while revisiting a cached selection and clears it if the request fails', async () => {
+    const base = overviewFixture();
+    const building = base.summary.buildings[1];
+    let pendingReturn: Promise<FakeResponse> | undefined;
+    let resolveReturn!: (response: FakeResponse) => void;
+    const scopedResponse = overviewFixture({
+      summary: { ...base.summary, context: { ...base.summary.context, buildingId: building.id } },
+      rows: [makeAreaRow(202, { buildingId: building.id, buildingCode: building.code, buildingName: building.name })],
+    });
+
+    fakeServer({
+      ...adminSession,
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': (req) => {
+        const scoped = new URLSearchParams(req.search).get('buildingId') === String(building.id);
+        if (scoped && pendingReturn) {
+          return pendingReturn;
+        }
+        return { status: 200, body: scoped ? scopedResponse : base };
+      },
+    });
+
+    const { user } = await renderApp('/admin/overview?date=2026-11-04&shift=Day&group=notEntered&page=1');
+    const results = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' });
+    const picker = screen.getByLabelText('ตึก');
+
+    await user.selectOptions(picker, String(building.id));
+    await within(results).findByRole('link', { name: /AR202/ });
+    await user.selectOptions(picker, '');
+    await within(results).findByText(/ทุกตึก/);
+
+    pendingReturn = new Promise<FakeResponse>((resolve) => { resolveReturn = resolve; });
+    await user.selectOptions(picker, String(building.id));
+    expect(within(results).getByText(/ทุกตึก/)).toBeVisible();
+    expect(within(results).getByText('กำลังอัปเดต...')).toBeVisible();
+    expect(within(results).queryByRole('link', { name: /AR202/ })).not.toBeInTheDocument();
+    expect(within(results).getByRole('button', { name: 'ถัดไป' })).toBeDisabled();
+    expect(screen.queryByText('กำลังอัปเดตข้อมูล...')).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveReturn({ status: 500, body: { message: 'โหลดตึกที่เลือกไม่สำเร็จ' } });
+    });
+
+    expect(await screen.findByText('โหลดตึกที่เลือกไม่สำเร็จ')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'ลองอีกครั้ง' })).toBeVisible();
+    expect(results).not.toBeInTheDocument();
+
+    await user.selectOptions(picker, '');
+    const restored = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' });
+    expect(within(restored).getByText(/ทุกตึก/)).toBeVisible();
+
+    pendingReturn = new Promise<FakeResponse>((resolve) => { resolveReturn = resolve; });
+    await user.selectOptions(picker, String(building.id));
+    expect(within(restored).getByText('กำลังอัปเดต...')).toBeVisible();
+    expect(screen.queryByText('โหลดตึกที่เลือกไม่สำเร็จ')).not.toBeInTheDocument();
+    await act(async () => {
+      resolveReturn({ status: 200, body: scopedResponse });
+    });
+    expect(await within(restored).findByRole('link', { name: /AR202/ })).toBeVisible();
+  });
+
   it.each(['reset to current', 'remount', 'Back and Forward'] as const)('waits for the fresh default slot after %s', async (navigation) => {
     const base = overviewFixture();
     const day = {
@@ -934,6 +995,6 @@ describe('OverviewPage', () => {
 
     const nextResults = await screen.findByRole('region', { name: 'พื้นที่ที่ลงเวลาแล้ว' });
     expect(within(nextResults).getByText(/AR301/)).toBeVisible();
-    expect(within(nextResults).queryByText('กำลังอัปเดต...')).not.toBeInTheDocument();
+    expect(within(nextResults).getByText('กำลังอัปเดต...')).toHaveAttribute('aria-hidden', 'true');
   });
 });

@@ -18,7 +18,6 @@ export interface BuildingComparisonRow {
 
 export interface BuildingComparisonProps {
   title: string;
-  subtitle: string;
   rows: readonly BuildingComparisonRow[];
   emptyText?: string;
   onSelect: (buildingId: number, group: OverviewGroup) => void;

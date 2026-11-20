@@ -7,6 +7,8 @@ import { PageEmpty } from '../../../shared/components/PageState';
 import { buttonClass, tableCell } from '../../../shared/components/styles';
 import type { AreaResultBadge, AreaResultsProps } from './type';
 
+const updatingLabel = 'กำลังอัปเดต...';
+
 const badgeTones: Record<AreaResultBadge['tone'], string> = {
   passed: 'border-passed-border bg-passed-bg text-passed',
   pending: 'border-pending-border bg-pending-bg text-pending',
@@ -43,11 +45,9 @@ export function AreaResults({
           {title}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-xs text-text-2">
-          {updating && (
-            <span role="status" className="font-semibold text-accent">
-              กำลังอัปเดต...
-            </span>
-          )}
+          <span role="status" className="font-semibold text-text-3">
+            {updating ? updatingLabel : <span aria-hidden="true" className="invisible">{updatingLabel}</span>}
+          </span>
           <span>{contextText}</span>
         </div>
       </div>
@@ -58,7 +58,7 @@ export function AreaResults({
       )}
       <div
         aria-busy={updating || undefined}
-        className={`motion-safe:transition-opacity duration-150${updating ? ' opacity-50' : ''}`}
+        className={`motion-safe:transition-colors duration-150${updating ? ' rounded-md bg-surface-2' : ''}`}
       >
         {rows.length === 0 && emptyState ? (
           emptyState.kind === 'empty' ? (

@@ -297,7 +297,6 @@ function buildFollowUp(summary: OverviewSummary, selectedGroup: OverviewGroup): 
         : 'พื้นที่ที่ต้องตามตอนนี้';
   return {
     title,
-    subtitle: '',
     max,
     items: chartGroups.map(([key, tone]) => {
       const count = groups[key];
@@ -340,7 +339,6 @@ function buildBuildings(
 
   return {
     title: 'เปรียบเทียบแต่ละตึก',
-    subtitle: '',
     rows: buildings.map((building) => ({
       id: building.id,
       label: `${building.code} · ${building.name}`,
@@ -386,14 +384,12 @@ function buildHistory(summary: OverviewSummary, selectedGroup: OverviewGroup): R
         selected: selectedGroup === 'missedInspection',
       },
     ],
-    details: [],
     onGroup: () => {},
   };
 }
 
 function buildResults(
   response: OverviewAreaList,
-  selection: OverviewSelection,
   href: (areaId: number, view: OverviewView, roundKey?: string) => string,
   refreshing: boolean,
   onPage: (page: number) => void,
@@ -401,13 +397,12 @@ function buildResults(
 ): AreaResultsProps {
   const { summary, group, page, pageSize, total, rows } = response;
   const meta = GROUP_META[group];
-  const buildingObj = selection.building !== undefined
-    ? summary.buildings.find((b) => b.id === selection.building)
-    : undefined;
+  const buildingId = summary.context.buildingId;
+  const buildingObj = summary.buildings.find((building) => building.id === buildingId);
   const buildingWord = buildingObj
     ? `ตึก ${buildingObj.code} · ${buildingObj.name}`
-    : selection.building !== undefined
-      ? `ตึก #${selection.building}`
+    : buildingId != null
+      ? `ตึก #${buildingId}`
       : 'ทุกตึก';
   const contextText = `${formatShiftDate(summary.context.shiftDate)} · ${shiftShortLabel[summary.context.shift]} · ${buildingWord}`;
 
@@ -544,7 +539,6 @@ const EMPTY_RESULTS: AreaResultsProps = {
 
 const EMPTY_FOLLOWUP: FollowUpGroupsProps = {
   title: 'พื้นที่ที่ต้องตามตอนนี้',
-  subtitle: '',
   max: 0,
   items: [],
   onGroup: () => {},
@@ -552,7 +546,6 @@ const EMPTY_FOLLOWUP: FollowUpGroupsProps = {
 
 const EMPTY_BUILDINGS: BuildingComparisonProps = {
   title: 'เปรียบเทียบแต่ละตึก',
-  subtitle: '',
   rows: [],
   onSelect: () => {},
 };
@@ -561,7 +554,6 @@ const EMPTY_HISTORY: RoundHistoryProps = {
   title: 'รอบที่ผ่านมาในกะนี้',
   subtitle: '',
   groups: [],
-  details: [],
   onGroup: () => {},
 };
 
@@ -590,7 +582,7 @@ export function useOverviewPage(): OverviewPageModel {
   const argsKey = contextResult.ok ? overviewParams(selection).toString() : '';
 
   // A settled cache hit needs a new request. A refresh already in flight can settle under its existing ID.
-  const cacheAtEntry = rawResponse
+  const cacheAtEntry = rawResponse || query.isError
     ? { settledRequestId: query.isFetching ? undefined : query.requestId }
     : undefined;
   const [seenRequest, setSeenRequest] = useState({ argsKey, cacheAtEntry });
@@ -599,19 +591,25 @@ export function useOverviewPage(): OverviewPageModel {
   } else if (
     seenRequest.cacheAtEntry &&
     !query.isFetching &&
-    !query.error &&
+    !query.isError &&
     rawResponse &&
     query.requestId !== seenRequest.cacheAtEntry.settledRequestId
   ) {
     setSeenRequest({ argsKey, cacheAtEntry: undefined });
   }
 
-  const awaitingFreshCache = seenRequest.argsKey === argsKey && seenRequest.cacheAtEntry !== undefined;
+  // Use the entry gate on the first render too, before it is stored for the new selection.
+  const entryGate = seenRequest.argsKey === argsKey ? seenRequest.cacheAtEntry : cacheAtEntry;
+  const awaitingFreshCache = entryGate !== undefined;
+  // RTK Query keeps the previous error in its cache during a refetch. Only a settled new failure belongs to this visit.
+  const requestError = contextResult.ok && query.isError && (!entryGate || query.requestId !== entryGate.settledRequestId)
+    ? query.error
+    : undefined;
   const isUncanonicalSlot = contextResult.ok && (!selection.date || !selection.shift);
-  const freshRawResponse = isUncanonicalSlot && awaitingFreshCache ? undefined : rawResponse;
+  const freshRawResponse = awaitingFreshCache ? undefined : rawResponse;
 
   const canonicalSelection: OverviewSelection | null = useMemo(() => {
-    if (!contextResult.ok || !freshRawResponse || awaitingFreshCache || query.isFetching || query.error) {
+    if (!contextResult.ok || !freshRawResponse || query.isFetching || requestError) {
       return null;
     }
     const current = contextResult.context;
@@ -625,7 +623,7 @@ export function useOverviewPage(): OverviewPageModel {
       shift: current.shift ?? freshRawResponse.summary.context.shift,
       page: effectivePage,
     };
-  }, [awaitingFreshCache, contextResult, freshRawResponse, query.error, query.isFetching]);
+  }, [contextResult, freshRawResponse, query.isFetching, requestError]);
 
   const canonicalKey = canonicalSelection ? overviewParams(canonicalSelection).toString() : '';
   const [canonicalSeed, setCanonicalSeed] = useState<{ key: string; data: OverviewAreaList } | null>(null);
@@ -643,25 +641,16 @@ export function useOverviewPage(): OverviewPageModel {
   // Retain the last valid snapshot across interactive group/page/filter transitions so charts stay mounted cleanly.
   // Drop it immediately on invalid URLs, default-slot rollover waits, or failed requests (never leak stale rows on error).
   const [retainedResponse, setRetainedResponse] = useState<OverviewAreaList | undefined>(undefined);
-  if (!contextResult.ok || isUncanonicalSlot || (response === undefined && query.error)) {
+  if (!contextResult.ok || isUncanonicalSlot || (response === undefined && requestError)) {
     if (retainedResponse !== undefined) {
       setRetainedResponse(undefined);
     }
   } else if (response && retainedResponse !== response) {
     setRetainedResponse(response);
   }
-  const displayResponse = response ?? (
-    contextResult.ok && !isUncanonicalSlot && query.isFetching && !query.error ? retainedResponse : undefined
-  );
-  const switching = Boolean(
-    contextResult.ok &&
-    !isUncanonicalSlot &&
-    !query.error &&
-    response === undefined &&
-    displayResponse !== undefined &&
-    query.isFetching &&
-    !isCanonicalizing,
-  );
+  const waitingForResponse = contextResult.ok && !requestError && (query.isFetching || awaitingFreshCache);
+  const switching = response === undefined && retainedResponse !== undefined && !isUncanonicalSlot && waitingForResponse;
+  const displayResponse = switching ? retainedResponse : response;
 
   // Replace server-default slot once and replace stale server-clamped page without a request loop or loading flash.
   // React can render the old route while a router transition is in flight. Consult the live router
@@ -718,12 +707,12 @@ export function useOverviewPage(): OverviewPageModel {
     }
   }
 
-  const loading = contextResult.ok && displayResponse === undefined && (query.isFetching || (awaitingFreshCache && !query.error));
+  const loading = displayResponse === undefined && waitingForResponse;
   const refreshing = contextResult.ok && response !== undefined && query.isFetching && !isCanonicalizing;
   const error = !contextResult.ok
     ? contextResult.message
-    : query.error
-      ? getErrorMessage(query.error)
+    : requestError
+      ? getErrorMessage(requestError)
       : undefined;
 
   const updateSelection = (next: OverviewSelection) => {
@@ -819,7 +808,7 @@ export function useOverviewPage(): OverviewPageModel {
   const readAtText = response ? formatTime(response.summary.context.readAtUtc) : undefined;
   const activeGroup = switching ? selection.group : displayResponse?.group;
   const results = displayResponse
-    ? buildResults(displayResponse, selection, href, switching, onPage, switching || refreshing)
+    ? buildResults(displayResponse, href, switching, onPage, switching || refreshing)
     : EMPTY_RESULTS;
   const panels = displayResponse && activeGroup
     ? buildPanels(displayResponse.summary, activeGroup).map((panel) => ({ ...panel, onGroup }))

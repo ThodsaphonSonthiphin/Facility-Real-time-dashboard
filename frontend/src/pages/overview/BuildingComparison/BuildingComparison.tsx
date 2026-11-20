@@ -6,7 +6,7 @@ import type { BuildingComparisonProps } from './type';
 const plotColumns = 'grid grid-cols-[4.5rem_minmax(0,1fr)_5rem] items-center gap-2 sm:grid-cols-[6rem_minmax(0,1fr)_7.5rem]';
 
 /** Per-building Entry/Submission/Inspection comparison using each metric's own denominator. */
-export function BuildingComparison({ title, subtitle, rows, emptyText, onSelect }: BuildingComparisonProps) {
+export function BuildingComparison({ title, rows, emptyText, onSelect }: BuildingComparisonProps) {
   return (
     <section
       aria-labelledby="overview-buildings-heading"
@@ -16,7 +16,6 @@ export function BuildingComparison({ title, subtitle, rows, emptyText, onSelect 
         <h2 id="overview-buildings-heading" className="text-lg font-bold">
           {title}
         </h2>
-        {subtitle && <span className="text-sm text-text-2">{subtitle}</span>}
       </div>
       {rows.length === 0 ? (
         <p className="rounded-lg border border-border bg-surface p-3 text-text-2">

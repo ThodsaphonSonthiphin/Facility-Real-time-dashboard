@@ -2,7 +2,13 @@ import { expect, test } from '../support/test.ts';
 import { measuresLayoutShift } from '../support/browser.ts';
 import { loginAsEmployee } from '../support/login.ts';
 import { holdBack, layoutShiftTotal, recordLayoutShifts } from '../support/pageWatch.ts';
-import { cleanerOnShift } from '../support/seed.ts';
+import { cleanerOnShift, restroomName } from '../support/seed.ts';
+
+test('My Work shows the assigned work after login', async ({ page }) => {
+  await loginAsEmployee(page, cleanerOnShift());
+  await expect(page).toHaveURL(/\/my-work$/);
+  await expect(page.getByRole('heading', { name: restroomName, exact: true })).toBeVisible();
+});
 
 // Measured 0.10 before bdfd581: the footer showed while loading and the list pushed it down
 test('My Work does not move while its work loads', async ({ page }) => {

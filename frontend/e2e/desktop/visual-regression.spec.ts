@@ -13,7 +13,7 @@ test('desktop key admin screens match visual baselines', async ({ page }) => {
   await expect(page).toHaveScreenshot('desktop-admin-login.png', {
     animations: 'disabled',
     maxDiffPixelRatio: 0.01,
-    mask: [page.locator('footer span').last()],
+    mask: [page.getByText(/^เวอร์ชัน /)],
   });
 
   await loginAsAdmin(page);

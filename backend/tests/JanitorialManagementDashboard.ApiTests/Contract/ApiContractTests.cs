@@ -64,12 +64,11 @@ public sealed class ApiContractTests
             "noSubmission", "rework", "issue", "overdue",
             "upcoming", "noRounds", "missedCleaning", "missedInspection");
 
-        var row = body.GetProperty("rows").EnumerateArray().First();
-        AssertHasProperties(row, "areaId", "buildingId", "code", "name", "buildingCode", "buildingName",
-            "entry", "work", "reasons", "roundKeys", "originsIncomplete");
-        Assert.Contains(row.GetProperty("entry").GetString(), new[] { "entered", "covered", "unassigned", "notEntered" });
+        var rows = body.GetProperty("rows").EnumerateArray().ToArray();
+        Assert.NotEmpty(rows);
+        Assert.All(rows, AssertOverviewAreaRow);
 
-        var areaId = row.GetProperty("areaId").GetInt32();
+        var areaId = rows[0].GetProperty("areaId").GetInt32();
         var detail = await ReadJsonAsync(await admin.GetAsync($"/api/admin/overview/areas/{areaId}?group=notEntered"));
         AssertHasProperties(detail, "context", "availability", "area", "matchesGroup", "entryEvidence", "facts", "points", "rounds");
         Assert.Equal(areaId, detail.GetProperty("area").GetProperty("areaId").GetInt32());
@@ -90,7 +89,19 @@ public sealed class ApiContractTests
 
         var myWork = await ReadJsonAsync(await cleaner.GetAsync("/api/my-work"));
         AssertHasProperties(myWork, "attendance", "areas");
-        AssertHasProperties(myWork.GetProperty("attendance"), "events", "actions");
+        var attendance = myWork.GetProperty("attendance");
+        AssertHasProperties(attendance, "events", "actions");
+        Assert.Equal(JsonValueKind.Array, attendance.GetProperty("events").ValueKind);
+        var actions = attendance.GetProperty("actions").EnumerateArray().ToArray();
+        Assert.Equal(
+            new[] { "ShiftIn", "Break1Out", "Break1In", "Break2Out", "Break2In", "ShiftOut" },
+            actions.Select(action => action.GetProperty("eventType").GetString()));
+        Assert.All(actions, action =>
+        {
+            Assert.Contains(action.GetProperty("state").GetString(),
+                new[] { "recorded", "skipped", "missing", "not-applicable", "pending" });
+        });
+
         var area = myWork.GetProperty("areas").EnumerateArray().First();
         AssertHasProperties(area, "areaId", "areaCode", "areaName", "isCover", "points");
         Assert.NotEmpty(area.GetProperty("points").EnumerateArray());
@@ -108,6 +119,22 @@ public sealed class ApiContractTests
         var body = await ReadJsonAsync(await cleaner.GetAsync(sign + "?transferId=1"));
         Assert.False(body.GetProperty("canConfirmTransfer").GetBoolean());
         Assert.False(body.GetProperty("canShiftOutOrigin").GetBoolean());
+    }
+
+    private static void AssertOverviewAreaRow(JsonElement row)
+    {
+        AssertHasProperties(row, "areaId", "buildingId", "code", "name", "buildingCode", "buildingName",
+            "entry", "work", "reasons", "roundKeys");
+        Assert.Contains(row.GetProperty("entry").GetString(), new[] { "entered", "covered", "unassigned" });
+        var work = row.GetProperty("work");
+        foreach (var count in new[] { "duePoints", "submittedPoints", "inspectedPoints" })
+        {
+            Assert.True(work.GetProperty(count).TryGetInt32(out _), $"Expected integer work.{count}: {work}");
+        }
+        foreach (var flag in new[] { "submitted", "inspected", "incomplete", "pendingInspection", "noSubmission", "rework", "issue", "overdue" })
+        {
+            Assert.Contains(work.GetProperty(flag).ValueKind, new[] { JsonValueKind.True, JsonValueKind.False });
+        }
     }
 
     private static void AssertPointCard(JsonElement point)

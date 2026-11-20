@@ -4,7 +4,7 @@
 
 **Goal:** Eliminate the full-page reload flash on `/admin/overview` when switching groups, pages, or filters, and deliver a complete, repeatable 12-category automated test matrix with strict pass/fail gates.
 
-**Architecture:** Track 1 retains the last valid `OverviewAreaList` snapshot in `useOverviewPage` during in-flight context switches (`!query.error && !isUncanonicalSlot`) while dimming `AreaResults` (`opacity-50`, `aria-busy`, inline `"กำลังอัปเดต..."`) and strictly clearing stale rows on error. Track 2 runs the 7 existing test suites and adds 5 new automated suites (Contract, Visual Regression, Axe Accessibility, Performance/Load, and Chromium+WebKit Compatibility) using the existing repo stack (`.NET 10`, Vitest, Playwright, Node.js, plus `@axe-core/playwright`).
+**Architecture:** Track 1 retains the last valid `OverviewAreaList` snapshot in `useOverviewPage` during in-flight context switches (`!query.error && !isUncanonicalSlot`) while tinting the `AreaResults` background (`aria-busy`, inline `"กำลังอัปเดต..."`) and strictly clearing stale rows on error. Track 2 runs the 7 existing test suites and adds 5 new automated suites (Contract, Visual Regression, Axe Accessibility, Performance/Load, and Chromium+WebKit Compatibility) using the existing repo stack (`.NET 10`, Vitest, Playwright, Node.js, plus `@axe-core/playwright`).
 
 **Tech Stack:** React 19, TypeScript 6, RTK Query, Tailwind CSS 4 (`@theme` tokens only), Vitest 5, Playwright 1.64 (`chromium` + `webkit`), `@axe-core/playwright`, .NET 10 xUnit, MySQL 8 (isolated test databases only).
 
@@ -28,7 +28,8 @@ Completed on `codex/overview-transition-verification` on 2026-11-20 (Asia/Bangko
 - Contract checks use the application's login response, seeded non-empty rows, Overview detail, and both response modes of the attendance sign endpoint.
 - Visual checks cover 11 macOS Chromium baselines. A fixed browser clock and typed responses stabilize live views for screenshot comparison. Historical Overview and Attendance use the seeded medium API.
 - The load npm script starts an isolated large dataset before running the concurrent Node benchmark. All thresholds remain as specified.
-- Carried forward the in-progress attendance, dashboard, and seed prerequisites in a separate local commit.
+- Carried forward the in-progress attendance, dashboard, and seed prerequisites in a separate local commit. The six-action contract and browser attendance flows use that implementation.
+- The follow-up uses a background tint for the loading state to preserve text and control contrast. It also waits for a fresh response on cached switches and keeps the label and links tied to the visible rows.
 
 ### Task 1: Smooth `/admin/overview` transition without full-page unmount (`facility-0233`)
 
@@ -136,7 +137,7 @@ In `frontend/src/pages/overview/AreaResults/AreaResults.tsx`:
           <span>{contextText}</span>
         </div>
 ```
-- Wrap `<Table ...>` in `<div aria-busy={updating || undefined} className={updating ? 'opacity-50 transition-opacity duration-150' : 'transition-opacity duration-150'}>`.
+- Wrap `<Table ...>` in `<div aria-busy={updating || undefined} className={updating ? 'rounded-md bg-surface-2 motion-safe:transition-colors duration-150' : 'motion-safe:transition-colors duration-150'}>`.
 
 - [x] **Step 4: Retain last valid response during in-flight switches in `useOverviewPage.ts` and update `OverviewPage.tsx`**
 

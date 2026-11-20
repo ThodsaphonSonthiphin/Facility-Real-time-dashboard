@@ -44,7 +44,7 @@ sequenceDiagram
     P->>H: Update URL searchParams (new queryArgs)
     H->>API: Fetch new queryArgs
     H-->>P: Keep previous snapshot visible + set updating=true + highlight newly selected group
-    P-->>U: Charts stay mounted; AreaResults dims (opacity-50) + shows "กำลังอัปเดต..."
+    P-->>U: Charts stay mounted and AreaResults tints its background and shows "กำลังอัปเดต..."
     alt Request succeeds (200)
         API-->>H: New OverviewAreaList
         H-->>P: Replace snapshot + updating=false
@@ -60,16 +60,16 @@ sequenceDiagram
 
 1. **Initial load (no prior snapshot) or uncanonical default-slot rollover (`!selection.date || !selection.shift`):**
    - Preserve existing behavior: show `<PageLoading lines={3}>กำลังโหลดภาพรวม...</PageLoading>` until the first canonical response arrives (keeps the rollover tests in `OverviewPage.test.tsx` intact).
-2. **Subsequent context switches (clicking a group, follow-up bar, building bar, page button, date, shift, or building filter) while `query.isFetching && !query.error`:**
-   - Keep the last valid `OverviewAreaList` mounted (`displayResponse = response ?? retainedResponse`).
+2. **Subsequent context switches (clicking a group, follow-up bar, building bar, page button, date, shift, or building filter) while waiting for the new selection without a request error:**
+   - Keep the last valid `OverviewAreaList` mounted, including its context label and links. Treat a cached target as pending until a fresh request succeeds.
    - Do **not** render full-page `<PageLoading>` or unmount the charts/sections.
    - Reflect the newly clicked `selection.group` / `selection.building` immediately in the active pressed states (`aria-pressed`) so the click feels instant.
    - Pass `updating: boolean` to `AreaResults` (`AreaResultsProps`):
      - Render an inline `"กำลังอัปเดต..."` status badge next to the `AreaResults` context text.
-     - Apply `opacity-50` transition and `aria-busy={updating || undefined}` to the table wrapper while keeping row height stable.
+     - Tint the table background and set `aria-busy={updating || undefined}` on the wrapper. Preserve text and control contrast and keep row height stable.
      - Disable pagination buttons while `updating` is true.
    - Suppress the top-level `"กำลังอัปเดตข้อมูล..."` `Note` banner during interactive context switches (avoiding vertical layout shift above the charts).
-3. **Failed context switch (`query.error` when `response === undefined`):**
+3. **Failed context switch, including a previously cached target:**
    - Drop `retainedResponse` immediately so stale rows from the previous group/slot are never shown under a failed request.
    - Render the error `<Note tone="error" onRetry={model.retry}>` cleanly.
 4. **Failed background refresh (`query.error` when `response !== undefined` for the same context):**
@@ -79,7 +79,7 @@ sequenceDiagram
 
 - `frontend/src/pages/overview/OverviewPage/useOverviewPage.ts` — retain last valid `OverviewAreaList` during in-flight context switches (`!query.error && !isUncanonicalSlot`), clear on error/invalid context, expose `updating` to `AreaResults`.
 - `frontend/src/pages/overview/OverviewPage/OverviewPage.tsx` — keep body mounted when `displayResponse` exists, avoid top-banner layout jump on interactive switches.
-- `frontend/src/pages/overview/AreaResults/type.ts` & `AreaResults.tsx` — add `updating?: boolean`, subtle `opacity-50` transition, `aria-busy`, and inline `"กำลังอัปเดต..."` indicator.
+- `frontend/src/pages/overview/AreaResults/type.ts` & `AreaResults.tsx` — add `updating?: boolean`, subtle background tint, `aria-busy`, and inline `"กำลังอัปเดต..."` indicator.
 - `frontend/src/pages/overview/OverviewPage.test.tsx` — add regression tests verifying:
   - Charts and table stay mounted (no full-page `กำลังโหลดภาพรวม...`) while switching groups/pages, with `AreaResults` showing `"กำลังอัปเดต..."` and `aria-busy="true"`.
   - Failed context switch still clears stale rows and shows error + retry.

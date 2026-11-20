@@ -4,7 +4,15 @@ Updated 2026-11-20 (Asia/Bangkok). Read this first every session and update it a
 
 ## Overview transitions and 12-category verification
 
-Completed 2026-11-20 (Asia/Bangkok) on `codex/overview-transition-verification`. See the [implementation plan](superpowers/plans/2026-11-20-overview-smooth-transition-and-12-layer-testing.md). Switching date, shift, building, group, or page keeps the Overview charts and the last successful result visible while the new selection loads. The results are dimmed, expose `aria-busy`, and show `กำลังอัปเดต...`. Row links keep the context of the visible results. Late default reads respect navigation to other Admin pages. A failed selection clears the previous rows and exposes Retry. Same-selection refresh errors retain the prior result with its read time.
+**Review fixes on `codex/overview-transition-verification`.** Overview preserves the visible rows, context label, and links while a new selection loads. A previously cached target waits for a fresh response. A failure during a switch clears the results and shows Retry, including when the target was cached. Retrying a previously failed selection ignores the old error while the new request is pending. Same-selection background failures preserve the last good results and read time. The pending indicator keeps its space at narrow widths and tints the table background while preserving text contrast.
+
+The follow-up also removes unused Overview props, uses the version label to locate the screenshot mask, validates nested Overview work fields and ordered Attendance actions in the API contract, and checks loaded My Work content on both browsers.
+
+**Follow-up verification.** Frontend lint, TypeScript, build, and all 779 Vitest tests passed. The main JavaScript bundle was 111.65 kB gzip. The four API contract tests passed. Chromium passed 20 cases including all 11 visual baselines and the held-request audit at 375 px. WebKit passed 13 cases, with the Chromium-only layout metric skipped. Both runs used isolated medium databases and cleaned them up. Reports are in `.run/e2e/20261120131327_faf4493d` and `.run/e2e/20261120131033_401769fb`.
+
+**Integration scope.** The branch includes inherited Attendance, Dashboard, and fixture work in `b8596a6`. Its six-action Attendance implementation is exercised by the contract and check-in tests. Use `git diff b8596a6...HEAD` to inspect the Overview and verification work above that prerequisite.
+
+The table below records the original implementation run for the [12-category plan](superpowers/plans/2026-11-20-overview-smooth-transition-and-12-layer-testing.md).
 
 | # | Category | Verification |
 |---|---|---|

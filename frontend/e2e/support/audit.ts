@@ -15,9 +15,11 @@ export async function settlePage(page: Page): Promise<void> {
   ]));
 }
 
-/** WCAG 2.2 A/AA with no critical or serious violation allowed on the settled screen. */
-export async function expectNoSeriousViolations(page: Page): Promise<void> {
-  await settlePage(page);
+/** WCAG 2.2 A/AA with no critical or serious violation allowed. */
+export async function expectNoSeriousViolations(page: Page, { waitForNetwork = true } = {}): Promise<void> {
+  if (waitForNetwork) {
+    await settlePage(page);
+  }
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'])
     .analyze();
