@@ -30,13 +30,13 @@ export function LogoutConfirmDialog({ onCancel, onConfirm }: LogoutConfirmDialog
           </div>
         </div>
         <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-          <Button size="desk" className="min-h-11 sm:min-h-9" onClick={onCancel}>
+          <Button size="desk" className="min-h-12 sm:min-h-9" onClick={onCancel}>
             ยกเลิก
           </Button>
           <button
             type="button"
             data-tap=""
-            className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent bg-rework px-4 text-sm font-semibold text-on-accent transition-[color,background-color,transform] duration-150 not-disabled:hover:bg-rework-strong not-disabled:active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 sm:min-h-9 ${focusRing}`}
+            className={`inline-flex min-h-12 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent bg-rework px-4 text-sm font-semibold text-on-accent transition-[color,background-color,transform] duration-150 not-disabled:hover:bg-rework-strong not-disabled:active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 sm:min-h-9 ${focusRing}`}
             onClick={onConfirm}
           >
             <LogOut aria-hidden="true" className="size-4" />

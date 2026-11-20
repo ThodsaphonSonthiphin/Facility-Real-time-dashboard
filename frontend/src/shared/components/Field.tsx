@@ -53,8 +53,8 @@ export function Field({ label, help, error, errorId, children }: FieldProps) {
         })
       : children;
   return (
-    <div className="flex flex-col gap-1">
-      <label className="flex flex-col gap-1">
+    <div className="flex min-w-0 max-w-full flex-col gap-1">
+      <label className="flex min-w-0 max-w-full flex-col gap-1">
         <span className="font-semibold has-disabled:text-text-2">{label}</span>
         {control}
       </label>

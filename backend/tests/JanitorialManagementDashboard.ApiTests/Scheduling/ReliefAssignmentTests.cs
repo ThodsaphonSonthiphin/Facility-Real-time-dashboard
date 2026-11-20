@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
@@ -427,13 +428,23 @@ internal static class ReliefApi
     public const string Eligible = "eligible";
     public const string Conflict = "conflict";
 
-    public static readonly DateOnly Week = new(2026, 11, 16);
+    public static readonly DateOnly Today = ScheduleAuthority.BusinessDate(DateTime.UtcNow);
 
-    /// <summary>Tuesday 17 November 2026: the business date of every relief test.</summary>
-    public static readonly DateOnly Today = new(2026, 11, 17);
+    /// <summary>An editable future weekday (Mon–Fri) after Today so weekday baselines and live profiles cover it on any date.</summary>
+    public static readonly DateOnly Wednesday = NextWeekday(Today);
 
-    /// <summary>An editable future date in the same week.</summary>
-    public static readonly DateOnly Wednesday = new(2026, 11, 18);
+    public static readonly DateOnly Week = ScheduleRules.WeekStart(Wednesday);
+
+    private static DateOnly NextWeekday(DateOnly from)
+    {
+        var date = from.AddDays(1);
+        while (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+        {
+            date = date.AddDays(1);
+        }
+
+        return date;
+    }
 
     public static JanitorialApiFactory NewFactory() => ScheduleWriteApi.NewFactory();
 

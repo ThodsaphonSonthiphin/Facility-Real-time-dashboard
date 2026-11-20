@@ -422,6 +422,39 @@ public class EffectiveAttendanceTests
                 accuracyM = 10,
             });
     }
+
+    [Fact]
+    public async Task A_repeat_numbered_action_replays_as_already_recorded_while_a_new_stale_action_is_refused()
+    {
+        using var factory = new JanitorialApiFactory();
+        var baselineStart = new DateOnly(2026, 10, 1);
+        await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000001", baselineStart);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", baselineStart, "AR01", breakGroup: 1);
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 5));
+        var initial = await EffectiveAttendanceApi.StateAsync(cleaner);
+
+        var first = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 5), "ShiftIn",
+            lifecycleVersion: initial.LifecycleVersion, stateRevision: initial.StateRevision);
+        Assert.Equal("Recorded", first.Outcome);
+
+        // Replaying the same Numbered6 action with the pre-write revision answers AlreadyRecorded idempotently.
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 6));
+        var replay = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn",
+            lifecycleVersion: initial.LifecycleVersion, stateRevision: initial.StateRevision);
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        var replayed = await replay.Content.ReadFromJsonAsync<AttendanceStateAnswer>();
+        Assert.NotNull(replayed);
+        Assert.Equal("AlreadyRecorded", replayed.Outcome);
+
+        // A *new* action carrying that same stale revision is still refused with 409 refresh-required.
+        var staleNew = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out",
+            lifecycleVersion: initial.LifecycleVersion, stateRevision: initial.StateRevision);
+        Assert.Equal(HttpStatusCode.Conflict, staleNew.StatusCode);
+        Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
+    }
 }
 
 /// <summary>The attendance calls and fixtures the Task 9 test files share: a slot lifecycle, a leave interval, and the state answer.</summary>

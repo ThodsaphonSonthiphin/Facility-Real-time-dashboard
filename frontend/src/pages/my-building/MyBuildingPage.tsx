@@ -34,7 +34,7 @@ export function MyBuildingPage() {
   const header = (
     <PhoneHeader
       action={
-        <Button variant="secondary" size="desk" className="min-h-11" disabled={isFetching} onClick={() => void refetch()}>
+        <Button variant="secondary" size="desk" className="min-h-12" disabled={isFetching} onClick={() => void refetch()}>
           <RefreshCw aria-hidden="true" className="size-4" />
           {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
         </Button>
@@ -137,13 +137,13 @@ function FilterTile({
   onClick: () => void;
 }) {
   return (
-    <li className="min-w-0">
+    <li className="flex min-w-0">
       <button
         type="button"
         data-tap=""
         aria-pressed={pressed}
         onClick={onClick}
-        className={`flex min-h-16 w-full cursor-pointer flex-col-reverse items-start gap-1 rounded-xl border px-2.5 py-2 text-left transition-colors ${look} ${
+        className={`flex h-full min-h-16 w-full cursor-pointer flex-col-reverse items-start justify-between gap-1 rounded-xl border px-2.5 py-2 text-left transition-colors ${look} ${
           pressed ? 'ring-2 ring-accent ring-inset' : 'hover:border-accent'
         } ${focusRing}`}
       >

@@ -60,7 +60,7 @@ export function OwnSchedulePage() {
       header={
         <PhoneHeader
           action={
-            <Button variant="secondary" size="desk" className="min-h-11" disabled={view.isFetching} onClick={view.refetch}>
+            <Button variant="secondary" size="desk" className="min-h-12" disabled={view.isFetching} onClick={view.refetch}>
               <RefreshCw aria-hidden="true" className="size-4" />
               {view.isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
             </Button>

@@ -46,7 +46,7 @@ export function OverviewPage() {
         <>
           <FilterToolbar
             label="ตัวกรองภาพรวม"
-            align="end"
+            align="start"
             actions={
               model.canResetToCurrent ? (
                 <Button size="desk" variant="secondary" onClick={model.onResetToCurrent}>
@@ -81,6 +81,7 @@ export function OverviewPage() {
             <Field label="ตึก">
               <Select
                 size="desk"
+                className="w-full max-w-full sm:w-auto sm:max-w-72"
                 value={model.buildingValue}
                 disabled={model.controlsDisabled}
                 onChange={(event) =>

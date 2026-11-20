@@ -23,6 +23,7 @@ export function BuildingSelect({ value, onChange, includeOff = false }: Building
     <Field label="ตึก">
       <Select
         size="desk"
+        className="w-full max-w-full sm:w-auto sm:max-w-72"
         value={value ?? ''}
         onChange={(event) => onChange(event.target.value === '' ? undefined : Number(event.target.value))}
       >

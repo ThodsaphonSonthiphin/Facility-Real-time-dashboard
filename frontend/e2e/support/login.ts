@@ -15,5 +15,5 @@ export async function loginAsAdmin(page: Page): Promise<void> {
   await page.getByLabel('ชื่อผู้ใช้').fill(admin.username);
   await page.getByLabel('รหัสผ่าน').fill(admin.password);
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
-  await expect(page).toHaveURL(/\/admin\/overview$/);
+  await expect(page).toHaveURL(/\/admin\/overview(\?|$)/);
 }

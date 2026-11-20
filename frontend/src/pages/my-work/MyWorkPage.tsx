@@ -35,7 +35,7 @@ export function MyWorkPage() {
   const header = (
     <PhoneHeader
       action={
-        <Button variant="secondary" size="desk" className="min-h-11" disabled={isFetching} onClick={() => void refetch()}>
+        <Button variant="secondary" size="desk" className="min-h-12" disabled={isFetching} onClick={() => void refetch()}>
           <RefreshCw aria-hidden="true" className="size-4" />
           {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
         </Button>

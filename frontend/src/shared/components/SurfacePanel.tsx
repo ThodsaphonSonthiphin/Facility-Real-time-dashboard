@@ -33,11 +33,12 @@ export interface FilterToolbarProps {
   label: string;
   children: ReactNode;
   actions?: ReactNode;
-  align?: 'center' | 'end';
+  align?: 'start' | 'center' | 'end';
   className?: string;
 }
 
 const toolbarAlign = {
+  start: 'items-start',
   center: 'items-center',
   end: 'items-end',
 } as const;
