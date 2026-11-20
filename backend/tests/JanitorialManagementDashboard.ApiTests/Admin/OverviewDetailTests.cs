@@ -351,8 +351,10 @@ public class OverviewDetailTests
         Assert.False(unresolved.TryGetProperty("userId", out _));
     }
 
-    [Fact]
-    public async Task Batched_issue_lookup_returns_only_latest_submission_across_slots_with_id_tie_break()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Batched_issue_lookup_returns_only_latest_submission_across_slots_with_id_tie_break(bool overlappingShifts)
     {
         using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
@@ -363,19 +365,20 @@ public class OverviewDetailTests
         // Older scan on Oct 5 (Normal)
         await TestData.AddScanAsync(factory, "token-restroom-m1", ThaiClock.At(5, 7, 30), CleaningStatus.Normal);
 
-        // Two equal-timestamp scans on Oct 6: lower ID = Normal, higher ID = Issue!
+        // Equal timestamps: the higher ID wins even if the lower ID belongs to the selected shift.
         long winningId = 0;
         await factory.WithDbAsync(async db =>
         {
             var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
             var sign = await db.Signs.SingleAsync(s => s.ServicePointId == p1);
-            var equalAt = ThaiClock.At(6, 12, 0).UtcDateTime;
+            var equalAt = (overlappingShifts ? ThaiClock.At(8, 19, 10) : ThaiClock.At(6, 12, 0)).UtcDateTime;
+            var scanDate = new DateOnly(2026, 10, overlappingShifts ? 8 : 6);
             var first = new ScanRecord
             {
                 ServicePointId = p1,
                 SignId = sign.Id,
                 UserId = cleaner.Id,
-                ShiftDate = new DateOnly(2026, 10, 6),
+                ShiftDate = scanDate,
                 Shift = Shift.Day,
                 Placement = Placement.OffRound,
                 Status = CleaningStatus.Normal,
@@ -386,8 +389,8 @@ public class OverviewDetailTests
                 ServicePointId = p1,
                 SignId = sign.Id,
                 UserId = cleaner.Id,
-                ShiftDate = new DateOnly(2026, 10, 6),
-                Shift = Shift.Day,
+                ShiftDate = scanDate,
+                Shift = overlappingShifts ? Shift.Night : Shift.Day,
                 Placement = Placement.OffRound,
                 Status = CleaningStatus.Issue,
                 IssueTags = "broken_tap",
@@ -398,10 +401,12 @@ public class OverviewDetailTests
             winningId = second.Id;
         });
 
-        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+        factory.Clock.SetUtcNow(overlappingShifts ? ThaiClock.At(8, 19, 20) : ThaiClock.At(8, 10, 0));
         var detail = await GetDetailAsync(admin, ar01, "2026-10-08", "Day", "issue");
         Assert.True(detail.GetProperty("area").GetProperty("work").GetProperty("issue").GetBoolean());
-        var sub = Assert.Single(detail.GetProperty("facts").GetProperty("submissions").EnumerateArray());
+        var submissions = detail.GetProperty("facts").GetProperty("submissions").EnumerateArray().ToArray();
+        Assert.Equal(overlappingShifts ? 2 : 1, submissions.Length);
+        var sub = Assert.Single(submissions, submission => submission.GetProperty("id").GetInt64() == winningId);
         Assert.Equal(winningId, sub.GetProperty("id").GetInt64());
         Assert.Equal("Issue", sub.GetProperty("status").GetString());
     }

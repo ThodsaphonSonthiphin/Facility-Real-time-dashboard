@@ -118,6 +118,7 @@ public static class OverviewFactLoader
                     ServicePointId = g.Key,
                     FirstSubmittedAt = g.Min(s => s.SubmittedAt),
                     MaxSubmittedAt = g.Max(s => s.SubmittedAt),
+                    MaxId = g.Max(s => s.Id),
                 })
                 .ToListAsync(ct);
 
@@ -125,13 +126,13 @@ public static class OverviewFactLoader
 
             if (allPointSet.Count > 0)
             {
-                var maxSlotAtByPoint = new Dictionary<int, DateTime>();
+                var latestSlotScanByPoint = new Dictionary<int, (DateTime SubmittedAt, long Id)>();
                 foreach (var scan in slotScans)
                 {
-                    var submitted = Utc(scan.SubmittedAt);
-                    if (!maxSlotAtByPoint.TryGetValue(scan.ServicePointId, out var existing) || submitted > existing)
+                    var key = (Utc(scan.SubmittedAt), scan.Id);
+                    if (!latestSlotScanByPoint.TryGetValue(scan.ServicePointId, out var existing) || key.CompareTo(existing) > 0)
                     {
-                        maxSlotAtByPoint[scan.ServicePointId] = submitted;
+                        latestSlotScanByPoint[scan.ServicePointId] = key;
                     }
                 }
 
@@ -140,7 +141,10 @@ public static class OverviewFactLoader
                 {
                     if (!allPointSet.Contains(bound.ServicePointId)) continue;
                     var maxAt = Utc(bound.MaxSubmittedAt);
-                    if (!maxSlotAtByPoint.TryGetValue(bound.ServicePointId, out var slotAt) || slotAt < maxAt)
+                    // Equal timestamps can cross shift windows. A greater ID makes the global winner uncertain.
+                    if (!latestSlotScanByPoint.TryGetValue(bound.ServicePointId, out var slotScan)
+                        || slotScan.SubmittedAt < maxAt
+                        || (slotScan.SubmittedAt == maxAt && slotScan.Id < bound.MaxId))
                     {
                         stalePointIds.Add(bound.ServicePointId);
                     }
