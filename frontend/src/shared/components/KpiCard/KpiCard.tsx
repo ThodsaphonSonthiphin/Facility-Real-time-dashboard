@@ -55,7 +55,7 @@ export function KpiCard({
         </div>
         <div className="min-w-0">
           <div className="text-xs font-semibold text-text-2">{label}</div>
-          <div className="text-2xl leading-tight font-bold text-text tabular-nums">
+          <div className="text-2xl/tight font-bold text-text tabular-nums">
             {formattedValue}
             {unit ? (
               <>

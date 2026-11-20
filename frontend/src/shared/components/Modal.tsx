@@ -68,7 +68,7 @@ function DialogFrame({ labelledBy, describedBy, role, onClose, className, childr
       }}
       // text-text: a dialog does not inherit the colour (the browser sets its own). The design file's dim page behind and
       // overlay shadow; preflight already removes the browser's frame, and border-0 repeats it on purpose
-      className={`motion-backdrop border-0 bg-surface text-text shadow-overlay backdrop:bg-backdrop ${className}`}
+      className={`motion-backdrop border-0 bg-surface text-text shadow-overlay ${className}`}
     >
       {children}
     </dialog>
@@ -115,7 +115,7 @@ export function Drawer({ labelledBy, width = 'md', onClose, children }: DialogPr
     <DialogFrame
       labelledBy={labelledBy}
       onClose={onClose}
-      className={`motion-drawer m-0 ml-auto h-dvh max-h-none ${drawerWidths[width]} max-w-[calc(100%-1rem)] overflow-y-auto rounded-none px-6 py-5 open:flex open:flex-col`}
+      className={`motion-drawer my-0 mr-0 ml-auto h-dvh max-h-none ${drawerWidths[width]} max-w-[calc(100%-1rem)] overflow-y-auto rounded-none px-6 py-5 open:flex open:flex-col`}
     >
       {children}
     </DialogFrame>

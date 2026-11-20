@@ -113,7 +113,7 @@ function QuietArea({ group }: AreaSectionProps) {
       {open && (
         <ul
           id={regionId}
-          className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3 p-4 pt-1"
+          className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3 px-4 pt-1 pb-4"
           aria-label={`จุดของ ${group.areaCode}`}
         >
           {group.points.map((point) => (

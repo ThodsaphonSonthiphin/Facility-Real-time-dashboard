@@ -65,7 +65,7 @@ export function Filters({ points }: { points: PointCard[] }) {
                 </span>
                 <span className="min-w-0">
                   <span className={`block text-xs font-semibold ${statusText[status]}`}>{pointStatusLabel[status]}</span>{' '}
-                  <span className="block text-2xl leading-tight font-extrabold text-text tabular-nums">{counts[status]}</span>
+                  <span className="block text-2xl/tight font-extrabold text-text tabular-nums">{counts[status]}</span>
                 </span>
               </button>
             </li>

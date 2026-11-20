@@ -35,7 +35,7 @@ export function ExportPage() {
               {exportSets.map((set) => (
                 <label
                   key={set}
-                  className="flex cursor-pointer items-start gap-3 rounded-md border border-border-control px-4 py-3 has-checked:border-2 has-checked:border-accent has-checked:bg-accent-subtle has-checked:px-[15px] has-checked:py-[11px] has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
+                  className="flex cursor-pointer items-start gap-3 rounded-md border border-border-control px-4 py-3 has-checked:border-2 has-checked:border-accent has-checked:bg-accent-subtle has-checked:px-3.75 has-checked:py-2.75 has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
                 >
                   <input
                     type="checkbox"

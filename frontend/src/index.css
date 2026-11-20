@@ -231,6 +231,7 @@
   }
 
   .motion-backdrop::backdrop {
+    background-color: var(--color-backdrop);
     animation: motion-fade-in 160ms ease-out;
   }
 

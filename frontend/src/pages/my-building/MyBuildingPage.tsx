@@ -147,8 +147,8 @@ function FilterTile({
           pressed ? 'ring-2 ring-accent ring-inset' : 'hover:border-accent'
         } ${focusRing}`}
       >
-        <strong className="text-xl leading-tight font-extrabold text-text tabular-nums">{count}</strong>{' '}
-        <span className="flex items-center gap-1 text-xs leading-snug font-semibold">
+        <strong className="text-xl/tight font-extrabold text-text tabular-nums">{count}</strong>{' '}
+        <span className="flex items-center gap-1 text-xs/snug font-semibold">
           <Icon aria-hidden="true" className="size-4 shrink-0" />
           <span className="min-w-0">{label}</span>
         </span>
