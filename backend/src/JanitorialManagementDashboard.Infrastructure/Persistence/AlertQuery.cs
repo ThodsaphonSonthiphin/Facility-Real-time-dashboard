@@ -2,9 +2,11 @@ using JanitorialManagementDashboard.Application.Alerts;
 using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Common;
 using JanitorialManagementDashboard.Application.Inspections;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Infrastructure.Persistence;
@@ -105,6 +107,12 @@ public static class AlertQuery
             .ToList();
         var reviews = await db.AlertReviews.AsNoTracking().Where(r => recordIds.Contains(r.RecordId)).ToListAsync();
         var blockedUserIds = blocked.Select(b => b.UserId).Distinct().ToList();
+        var blockedSupervisors = blockedUserIds
+            .Select(id => users[id])
+            .Where(user => user.Role == UserRole.Supervisor)
+            .ToList();
+        var supervisorPeriods = await SupervisorScopes.ReadManyAsync(
+            db, blockedSupervisors, ScheduleAuthority.BusinessDate(nowUtc));
         var activeCovers = await db.CoverAssignments.AsNoTracking()
             .Where(c => c.CancelledAt == null && c.ShiftDate >= firstDate && blockedUserIds.Contains(c.UserId))
             .ToListAsync();
@@ -145,7 +153,7 @@ public static class AlertQuery
 
             var slot = ShiftCalendar.SlotAt(scan.ScannedAt);
             return ShiftCalendar.EndUtc(slot) > nowUtc
-                && SupervisorScope.WithoutCover(user.BuildingId, user.Shift, area.BuildingId, slot.Shift) is not null
+                && SupervisorScope.WithoutCover(supervisorPeriods, user.Id, area.BuildingId, slot.Shift, slot.ShiftDate) is not null
                 && !activeCovers.Any(c => c.UserId == user.Id && c.BuildingId == area.BuildingId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift)
                     ? slot
                     : null;

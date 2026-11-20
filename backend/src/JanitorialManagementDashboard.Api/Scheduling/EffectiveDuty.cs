@@ -166,17 +166,18 @@ public static class EffectiveDutyReader
     private static async Task<EffectiveDuty> ResolveAsync(
         AppDbContext db, ScheduleStore store, User user, ShiftSlot slot, CancellationToken ct)
     {
-        // Spec §6: a live assignment for this very slot is the day's duty; a cancelled row holds nothing.
+        var leave = await LiveLeaveIntervalAsync(db, user.Id, slot, ct);
+        // Spec §6: a live assignment for this very slot is the day's duty; a cancelled row holds nothing, and an agreed
+        // leave interval still applies to the slot (spec §7).
         if (await store.LiveReliefAsync(user.Id, slot.ShiftDate, slot.Shift, ct) is { } relief)
         {
             return new EffectiveDuty(relief.AreaId, relief.BreakGroup, EffectiveDuty.ReliefSource,
-                IsDayOff: false, IsLeave: false, LeaveStart: null, LeaveEnd: null);
+                IsDayOff: false, IsLeave: leave.Start is not null, leave.Start, leave.End);
         }
 
         // Spec §5 and §7: the resolved day, through the very resolver the week read uses, so a dated Area, a baseline Area
         // and a day off or leave with the underlying Area all answer here and nowhere else.
         var day = await store.ReadPersonDayAsync(user.Id, slot.ShiftDate, slot.Shift, ct);
-        var leave = await LiveLeaveIntervalAsync(db, user.Id, slot, ct);
 
         // An agreed leave is a record of its own, so the marker comes from the live interval as well as the resolved day: a
         // person whose history coverage does not reach this date still has a leave the screen has to show (spec §7).

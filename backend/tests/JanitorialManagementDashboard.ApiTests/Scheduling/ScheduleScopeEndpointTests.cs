@@ -640,6 +640,55 @@ public class ScheduleScopeMySqlTests
         }
     }
 
+    [Fact]
+    public async Task Blocked_scan_cover_slot_reads_dated_multi_building_supervisor_scope()
+    {
+        using var factory = new JanitorialApiFactory();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+        factory.Clock.SetUtcNow(new DateTimeOffset(today.Year, today.Month, today.Day, 9, 0, 0, TimeSpan.FromHours(7)));
+
+        var (supervisorId, signAId, signBId) = await AdminSetupApi.ReadAsync(factory, async db =>
+        {
+            var sup = await db.Users.FirstAsync(u => u.Role == UserRole.Supervisor);
+            var signs = await db.Signs.Include(s => s.Area!).OrderBy(s => s.Area!.BuildingId).ToListAsync();
+            return (sup.Id, signs.First(s => s.Area!.BuildingId == 1).Id, signs.First(s => s.Area!.BuildingId == 2).Id);
+        });
+
+        await factory.WithDbAsync(async db =>
+        {
+            // Legacy User.BuildingId still says Building 1, but dated scope moved the Supervisor to Building 2 only.
+            db.SupervisorScopePeriods.Add(Period(supervisorId, buildingId: 2, from: today));
+            db.BlockedScans.AddRange(
+                new Domain.Entities.BlockedScan
+                {
+                    UserId = supervisorId,
+                    SignId = signAId,
+                    ScannedAt = factory.Clock.GetUtcNow().UtcDateTime,
+                    Reason = BlockReason.OtherBuilding,
+                    DistanceM = 0,
+                    AccuracyM = 10,
+                },
+                new Domain.Entities.BlockedScan
+                {
+                    UserId = supervisorId,
+                    SignId = signBId,
+                    ScannedAt = factory.Clock.GetUtcNow().UtcDateTime,
+                    Reason = BlockReason.OtherBuilding,
+                    DistanceM = 0,
+                    AccuracyM = 10,
+                });
+            await db.SaveChangesAsync();
+        });
+
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var alerts = await Admin.AdminAttendanceApi.AlertsAsync(admin);
+        var buildingAAlert = alerts.Single(a => a.Kind == "BlockedScan" && a.AreaCode == "AR01");
+        var buildingBAlert = alerts.Single(a => a.Kind == "BlockedScan" && a.AreaCode != "AR01");
+
+        Assert.NotNull(buildingAAlert.Cover);
+        Assert.Null(buildingBAlert.Cover);
+    }
+
     private static Domain.Entities.User Supervisor(string employeeId) => new()
     {
         Role = UserRole.Supervisor,

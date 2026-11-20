@@ -2,6 +2,13 @@
 
 Updated 2026-11-20 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
 
+**Deferred Scheduling Edge Cases resolved (`master`, 2026-11-20, Asia/Bangkok):** Closed three deferred Tasks 9–12 backend findings and added API regression coverage:
+
+- **Relief + Leave coexistence (`EffectiveDuty.cs`):** `EffectiveDutyReader.ResolveAsync` now loads `LiveLeaveIntervalAsync` before the relief short-circuit so an agreed leave interval on the same slot still sets `IsLeave`, `LeaveStart`, and `LeaveEnd` alongside the relief `AreaId` and `ReliefSource`.
+- **Admin attendance add vs skip-gap (`AdminAttendanceEndpoints.cs`):** Verified `AdminAdd` already routes through `AttendanceWrites.RecordAsync` (resolving `Skipped` `AttendanceGap` rows to `Resolved`) and added an API regression test (`Admin_attendance_add_resolves_a_stored_skip_gap`).
+- **Multi-building Supervisor `AlertQuery` (`AlertQuery.cs`, `SupervisorScopes.cs`):** Added `SupervisorScopes.ReadManyAsync` and updated `AlertQuery.SupervisorCoverSlot` to evaluate `SupervisorScope.WithoutCover` against dated `SupervisorScopePeriods` (with spec §14 compatibility fallback) instead of `User.BuildingId`/`User.Shift`.
+- **Verification:** Targeted `ApiTests` (`EffectiveAttendanceTests`, `ScheduleScopeEndpointTests`, `AlertEndpointTests`, `SupervisorCoverTests`) passed **74/74, 0 failed, 0 skipped**.
+
 **Final Quality Assurance Review complete (`codex/cleaner-scheduling`, 2026-11-20, Asia/Bangkok):** Performed visual (real Chromium across `320px`, `375px`, `768px`, `1024px`, `1280px` on all Cleaner, Supervisor, Admin, and public routes + overlays, with direct screenshot inspection), functional (full `--dataset large` and `--dataset medium` isolated E2E suites), and regression review (unit, API, and Scheduling Tasks 9–12 deferred risk assessment). Preserved the owner's uncommitted `OverviewPage` `FilterToolbar` `align="start"` / `SurfacePanel.tsx` edit. Confirmed and fixed 6 defects locally (uncommitted):
 
 - **[High — Visual] Mobile horizontal overflow (+208px at `320px`, +153px at `375px`) on `/admin/overview` and `/admin/inspection-summary`:** Bounded `Field` (`min-w-0 max-w-full`) and building `<Select>` in `BuildingSelect.tsx` and `OverviewPage.tsx` (`w-full max-w-full sm:w-auto sm:max-w-72`); re-verified 0 overflows and 0 clipped controls across all 142 page x viewport checks and updated screenshots (`.run/qa-screenshots/`).

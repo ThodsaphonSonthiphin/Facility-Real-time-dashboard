@@ -455,6 +455,98 @@ public class EffectiveAttendanceTests
         Assert.Equal(HttpStatusCode.Conflict, staleNew.StatusCode);
         Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
     }
+
+    [Fact]
+    public async Task Relief_assignment_preserves_coexisting_leave_interval_and_applies_leave_window()
+    {
+        using var factory = new JanitorialApiFactory();
+        var ar02QrToken = await AdminSetupApi.ReadAsync(factory, async db =>
+            (await db.Signs.SingleAsync(s => s.Area!.Code == "AR02" && s.ServicePointId == null)).QrToken);
+        await factory.WithDbAsync(async db =>
+        {
+            var cleaner = await db.Users.FirstAsync(u => u.EmployeeId == "1000001");
+            var area = await db.Areas.FirstAsync(a => a.Code == "AR02");
+            var admin = await db.Users.FirstAsync(u => u.Role == UserRole.Admin);
+            db.ReliefAssignments.Add(new ReliefAssignment
+            {
+                UserId = cleaner.Id,
+                ShiftDate = Day8,
+                Shift = Shift.Day,
+                AreaId = area.Id,
+                BreakGroup = 1,
+                SourceBuildingId = area.BuildingId,
+                Revision = 1,
+                CreatedById = admin.Id,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        });
+        await EffectiveAttendanceApi.AddLeaveAsync(factory, "1000001", Day8, Shift.Day,
+            EffectiveAttendanceApi.Thai(8, 12, 0).UtcDateTime, EffectiveAttendanceApi.Thai(8, 17, 0).UtcDateTime);
+        var (cleanerClient, _, _) = await AuthApi.LoggedInAsync(factory);
+
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 5));
+        var state = await EffectiveAttendanceApi.StateAsync(cleanerClient);
+        var reliefArea = await AdminSetupApi.ReadAsync(factory, db => db.Areas.SingleAsync(a => a.Code == "AR02"));
+        Assert.True(state.IsLeave);
+        Assert.Equal(reliefArea.Id, state.DutyAreaId);
+        Assert.Equal("relief", state.DutySource);
+
+        var recorded = await EffectiveAttendanceApi.RecordAndReadAsync(
+            factory, cleanerClient, EffectiveAttendanceApi.Thai(8, 7, 5), "ShiftIn", qrToken: ar02QrToken);
+        Assert.Equal("Recorded", recorded.Outcome);
+        var fact = Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
+        Assert.Equal(reliefArea.Id, fact.AreaId);
+    }
+
+    [Fact]
+    public async Task Admin_attendance_add_resolves_a_stored_skip_gap()
+    {
+        using var factory = new JanitorialApiFactory();
+        var baselineStart = new DateOnly(2026, 10, 1);
+        await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000001", baselineStart);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", baselineStart, "AR01", breakGroup: 1);
+        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
+        var cleanerId = await AdminSetupApi.ReadAsync(factory, async db => (await db.Users.SingleAsync(u => u.EmployeeId == "1000001")).Id);
+        var areaId = await AdminSetupApi.ReadAsync(factory, async db => (await db.Areas.SingleAsync(a => a.Code == "AR01")).Id);
+        await factory.WithDbAsync(async db =>
+        {
+            db.ShiftAttendances.Add(new Domain.Entities.ShiftAttendance
+            {
+                UserId = cleanerId,
+                AreaId = areaId,
+                ShiftDate = Day8,
+                Shift = Shift.Day,
+                EventType = AttendanceEvent.ShiftIn,
+                OccurredAt = EffectiveAttendanceApi.Thai(8, 7, 5).UtcDateTime,
+                Source = AttendanceSource.Scan,
+                CreatedAt = DateTime.UtcNow,
+            });
+            db.AttendanceGaps.Add(new AttendanceGap
+            {
+                UserId = cleanerId,
+                ShiftDate = Day8,
+                Shift = Shift.Day,
+                EventType = AttendanceEvent.Break1Out,
+                Status = AttendanceGapStatus.Skipped,
+                AreaId = areaId,
+                Revision = 1,
+                CreatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
+        var response = await Admin.AdminAttendanceApi.CorrectAsync(
+            admin, cleanerId, Day8, "Day", "Break1Out", "10:15", "เพิ่มเวลาพักที่ตกหล่น");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var gap = Assert.Single(await EffectiveAttendanceApi.GapsAsync(factory));
+        Assert.Equal(AttendanceGapStatus.Resolved, gap.Status);
+    }
 }
 
 /// <summary>The attendance calls and fixtures the Task 9 test files share: a slot lifecycle, a leave interval, and the state answer.</summary>
