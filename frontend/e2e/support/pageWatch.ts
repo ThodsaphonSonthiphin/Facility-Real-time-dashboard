@@ -64,7 +64,7 @@ export async function holdBack(page: Page, url: string, ms: number): Promise<voi
  * Holds every request matching the glob until the returned function is called, so a test can read the screen while a
  * request is certainly still in flight instead of racing a fixed delay against a loaded machine.
  */
-export async function holdUntilReleased(page: Page, url: string): Promise<() => void> {
+export async function holdUntilReleased(page: Page, url: string | RegExp): Promise<() => void> {
   let release!: () => void;
   const held = new Promise<void>((resolve) => {
     release = resolve;

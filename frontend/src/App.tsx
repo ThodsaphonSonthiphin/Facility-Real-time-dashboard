@@ -1,6 +1,7 @@
 import { Provider } from 'react-redux';
 import { RouterProvider, type createBrowserRouter } from 'react-router';
 import { SessionGate } from './shared/components/SessionGate';
+import { AppRouterContext } from './shared/routing/appRouterContext';
 import type { AppStore } from './store';
 
 interface AppProps {
@@ -13,7 +14,9 @@ export function App({ store, router }: AppProps) {
   return (
     <Provider store={store}>
       <SessionGate>
-        <RouterProvider router={router} />
+        <AppRouterContext.Provider value={router}>
+          <RouterProvider router={router} />
+        </AppRouterContext.Provider>
       </SessionGate>
     </Provider>
   );

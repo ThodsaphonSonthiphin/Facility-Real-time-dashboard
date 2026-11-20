@@ -1,6 +1,6 @@
 import { skipToken } from '@reduxjs/toolkit/query/react';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigation, useSearchParams } from 'react-router';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigation, useSearchParams } from 'react-router';
 import { freshOnOpen } from '../../../shared/api/baseApi';
 import type { Shift } from '../../../shared/api/types';
 import { overviewApi, overviewHubKey, useGetOverviewAreasQuery } from '../../../shared/overview/overviewApi';
@@ -18,6 +18,7 @@ import type {
   OverviewView,
 } from '../../../shared/overview/types';
 import { useOverviewRecovering, useOverviewRefresh } from '../../../shared/overview/useOverviewRefresh';
+import { AppRouterContext } from '../../../shared/routing/appRouterContext';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { shiftLabel, shiftShortLabel } from '../../../shared/utils/labels';
 import { formatDate, formatShiftDate, formatTime, thaiToday } from '../../../shared/utils/thaiTime';
@@ -663,15 +664,21 @@ export function useOverviewPage(): OverviewPageModel {
   );
 
   // Replace server-default slot once and replace stale server-clamped page without a request loop or loading flash.
-  // A navigation the user started (another Admin page, whose lazy chunk may still be loading) keeps this page mounted;
-  // replacing the URL then would resolve against the old path and pull the user back, so the replace waits for idle.
+  // React can render the old route while a router transition is in flight. Consult the live router
+  // before replacing its URL so a late Overview read cannot cancel a link the Admin just followed.
+  const router = useContext(AppRouterContext);
+  const locationKey = useLocation().key;
   const navigation = useNavigation();
   useEffect(() => {
-    if (!canonicalSelection || navigation.state !== 'idle') {
+    if (
+      !canonicalSelection ||
+      router?.state.navigation.state !== 'idle' ||
+      router.state.location.key !== locationKey
+    ) {
       return;
     }
     setSearchParams(overviewParams(canonicalSelection), { replace: true });
-  }, [canonicalSelection, navigation.state, setSearchParams]);
+  }, [canonicalSelection, locationKey, navigation.state, router, setSearchParams]);
 
   const [seenData, setSeenData] = useState<{ argsKey: string; digest: string; changed: boolean }>({
     argsKey,

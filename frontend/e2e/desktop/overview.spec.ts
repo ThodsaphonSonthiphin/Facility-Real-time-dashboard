@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { loginAsAdmin } from '../support/login.ts';
-import { sidewaysOverflow } from '../support/pageWatch.ts';
+import { holdUntilReleased, sidewaysOverflow } from '../support/pageWatch.ts';
 import { overviewFixture } from '../support/seed.ts';
 import { expect, test } from '../support/test.ts';
 
@@ -14,6 +14,29 @@ function overviewUrl(group = 'entered', date = overviewFixture().date) {
 function resultLinks(page: Page) {
   return page.getByRole('link', { name: /^ดูพื้นที่ / });
 }
+
+test('the default Overview read does not pull the Admin back from an open navigation', async ({ page }) => {
+  const overviewApi = '**/api/admin/overview/areas?*';
+  const accountsChunk = /\/assets\/accounts-[^/]+\.js$/;
+  const releaseOverview = await holdUntilReleased(page, overviewApi);
+  const releaseAccountsPage = await holdUntilReleased(page, accountsChunk);
+  try {
+    await loginAsAdmin(page);
+    const accountsRequested = page.waitForRequest(accountsChunk);
+    await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'บัญชีผู้ใช้' }).click();
+    await accountsRequested;
+    const defaultRead = page.waitForResponse(overviewApi);
+    releaseOverview();
+    expect((await defaultRead).ok()).toBe(true);
+    await expect(page.getByRole('heading', { name: 'สรุปผลของกะ' })).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/overview$/);
+    releaseAccountsPage();
+    await expect(page).toHaveURL(/\/admin\/accounts$/);
+  } finally {
+    releaseOverview();
+    releaseAccountsPage();
+  }
+});
 
 test('overview fits a narrow screen and respects the system motion preference', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 812 });
