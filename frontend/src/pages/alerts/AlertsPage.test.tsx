@@ -5,7 +5,6 @@ import { adminSession } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { alerts, attendanceGpsAlert } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
-import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 function serve(routes: FakeRoutes = {}, list: () => Alert[] = () => alerts) {
   return fakeServer({
@@ -84,7 +83,7 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
     );
     const { user } = await renderApp('/admin/alerts');
     const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
-    expect(await within(menu).findByRole('link', { name: 'รายการที่ขึ้นเตือน (4)' })).toHaveAttribute('aria-current', 'page');
+    expect(await within(menu).findByRole('link', { name: 'รายการที่ขึ้นเตือน 4' })).toHaveAttribute('aria-current', 'page');
     await screen.findByRole('row', { name: /สแกนผิดพื้นที่/ });
     await user.click(screen.getByRole('tab', { name: /^ไกลป้าย/ }));
     const item = await farRow();
@@ -103,7 +102,7 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
       note: 'GPS ในอาคารเพี้ยน',
     });
     await waitFor(() => expect(screen.queryByRole('row', { name: /ลงเวลาไกลป้าย/ })).not.toBeInTheDocument());
-    await waitFor(() => expect(within(menu).getByRole('link', { name: 'รายการที่ขึ้นเตือน (3)' })).toBeInTheDocument());
+    await waitFor(() => expect(within(menu).getByRole('link', { name: 'รายการที่ขึ้นเตือน 3' })).toBeInTheDocument());
 
     await user.click(screen.getByRole('button', { name: 'คุยแล้ว (1)' }));
     expect(within(await farRow()).getByText('คุยแล้ว 10:30')).toBeInTheDocument();
@@ -212,15 +211,12 @@ describe('AlertsPage (D3, facility-0035, 0041, 0051)', () => {
     expect(server.calls.filter((call) => call.path === '/api/admin/alerts/review')).toHaveLength(1);
   });
 
-  it('the page notes wait behind ℹ (owner, 2026-10-27)', async () => {
+  it('omits redundant page notes', async () => {
     serve();
     await renderApp('/admin/alerts');
 
     await screen.findByRole('row', { name: /สแกนผิดพื้นที่/ });
-    expectBehindMoreInfo(
-      'ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน',
-      'เกี่ยวกับหน้านี้',
-    );
+    expect(screen.queryByText('เกี่ยวกับหน้านี้')).not.toBeInTheDocument();
   });
 
   it('shows exception-only KPI summary cards without EmptyAreas or CoversThisShift (facility-0225)', async () => {

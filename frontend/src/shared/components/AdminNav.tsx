@@ -94,11 +94,11 @@ export function AdminNav({
               <li key={link.to}>
                 <NavLink
                   to={link.to}
-                  aria-label={link.counted && open > 0 ? `${link.label} (${open})` : undefined}
+                  aria-label={link.counted && open > 0 ? `${link.label} ${open > 999 ? `999+ (${open})` : open}` : undefined}
                   className={({ isActive }) => (isActive ? `${linkClass} ${activeClass}` : `${linkClass} ${idleClass}`)}
                 >
                   <link.Icon aria-hidden="true" className="size-5 shrink-0 lg:size-4" />
-                  <span className="flex-1">{link.label}</span>
+                  <span className="flex-1">{link.label}</span>{link.counted && open > 0 ? ' ' : null}
                   {/* Reserve a 48px count slot across loading, zero, and positive counts so the menu never rewraps. */}
                   {link.counted && (
                     <span aria-hidden="true" className="inline-flex w-12 shrink-0 justify-end">

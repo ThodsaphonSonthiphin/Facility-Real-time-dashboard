@@ -78,7 +78,9 @@ export function AreaList({ areas, total, selectedId, loading, names, buildings, 
                 aria-current={area.id === selectedId ? 'true' : undefined}>
                 <span className="flex min-w-0 flex-col" title={areaMeta(area, names)}>
                   <span className="font-semibold">{`${area.code} ${area.name}`}</span>
-                  <span className="text-xs text-text-2">{`ตึก ${area.buildingCode} · ${area.activePointCount} จุด`}</span>
+                  <span className={`text-xs ${area.id === selectedId ? 'text-text-3' : 'text-text-2'}`}>
+                    {`ตึก ${area.buildingCode} · ${area.activePointCount} จุด`}
+                  </span>
                 </span>
                 {!area.isActive && <ActiveTag active={false} />}
               </Link>

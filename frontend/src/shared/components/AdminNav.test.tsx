@@ -43,7 +43,7 @@ describe('AdminNav (3-group IA + mobile slide-over Drawer)', () => {
       await waitFor(() => expect(screen.queryByTitle('0')).not.toBeInTheDocument());
       expect(link).toHaveAccessibleName('รายการที่ขึ้นเตือน');
     } else {
-      await screen.findByRole('link', { name: `รายการที่ขึ้นเตือน (${count})` });
+      await screen.findByRole('link', { name: `รายการที่ขึ้นเตือน ${count > 999 ? `999+ (${count})` : count}` });
       expect(within(link).getByTitle(String(count))).toHaveTextContent(count > 999 ? '999+' : String(count));
     }
   });
