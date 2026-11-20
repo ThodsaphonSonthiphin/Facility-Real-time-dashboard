@@ -465,7 +465,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                             type="button"
                             aria-pressed={isSelected}
                             onClick={() => view.selectCell(person.userId, day.date)}
-                            className={`flex min-h-14 w-full cursor-pointer flex-col items-start gap-1 rounded-lg px-1.5 py-1.5 text-left wrap-anywhere transition-colors ${focusRing} ${
+                            className={`relative flex min-h-14 w-full cursor-pointer flex-col items-start gap-1 rounded-lg px-1.5 py-1.5 text-left wrap-anywhere transition-colors ${focusRing} ${
                               isSelected
                                 ? 'bg-accent-subtle ring-2 ring-accent ring-inset'
                                 : 'hover:bg-surface-2'
