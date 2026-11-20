@@ -1,6 +1,6 @@
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useNavigation, useSearchParams } from 'react-router';
 import { freshOnOpen } from '../../../shared/api/baseApi';
 import type { Shift } from '../../../shared/api/types';
 import { overviewApi, overviewHubKey, useGetOverviewAreasQuery } from '../../../shared/overview/overviewApi';
@@ -63,16 +63,16 @@ const GROUP_META: Record<OverviewGroup, GroupMeta> = {
 
 const AVAILABILITY_REASONS: Record<string, string> = {
   shiftNotStarted: 'กะนี้ยังไม่เริ่ม',
-  targetCoverageMissing: 'ยังไม่มีประวัติเป้าหมายครบทั้งช่วงกะ',
-  targetCoverageGap: 'ประวัติเป้าหมายมีช่วงขาดความต่อเนื่อง',
-  targetRevisionUnreadable: 'มีประวัติเป้าหมายบางรายการที่อ่านไม่ได้',
-  receivingPolicyUnknown: 'ยังไม่มีประวัตินโยบายเวลารับข้อมูลครบทั้งกะ',
-  attendancePartlyExpired: 'ข้อมูลลงเวลาบางส่วนพ้นช่วงจัดเก็บแล้ว',
-  attendanceExpired: 'ข้อมูลลงเวลาของกะนี้พ้นช่วงจัดเก็บแล้ว',
-  workArchived: 'ข้อมูลงานทำความสะอาดและการตรวจอยู่นอกช่วงจัดเก็บรายวันแล้ว',
-  issueStateUnknown: 'ไม่สามารถยืนยันสถานะปัญหาของบางจุดได้เนื่องจากพ้นช่วงจัดเก็บ',
-  originsIncomplete: 'มีงานส่งเก่าที่ไม่มีรหัสรอบเดิมและจับคู่ได้หลายรอบ',
-  buildingOwnershipUnproven: 'ยังไม่มีประวัติเป้าหมายเพื่อยืนยันตึกของพื้นที่ในกะนี้',
+  targetCoverageMissing: 'ข้อมูลกะนี้ยังไม่ครบ',
+  targetCoverageGap: 'ข้อมูลกะนี้ขาดบางช่วง',
+  targetRevisionUnreadable: 'ข้อมูลบางรายการอ่านไม่ได้',
+  receivingPolicyUnknown: 'ยังไม่ทราบเวลาปิดรับข้อมูล',
+  attendancePartlyExpired: 'ข้อมูลลงเวลาบางส่วนหมดอายุแล้ว',
+  attendanceExpired: 'ข้อมูลลงเวลาหมดอายุแล้ว',
+  workArchived: 'ข้อมูลงานถูกเก็บเข้าคลังแล้ว',
+  issueStateUnknown: 'ข้อมูลปัญหาบางจุดหมดอายุแล้ว',
+  originsIncomplete: 'ข้อมูลรอบของงานบางรายการไม่ครบ',
+  buildingOwnershipUnproven: 'ข้อมูลตึกของบางพื้นที่ยังไม่ครบ',
 };
 
 const ENTRY_BADGES: Record<'entered' | 'covered' | 'unassigned', AreaResultBadge> = {
@@ -109,10 +109,10 @@ function formatMetricRatio(metric: OverviewMetric): { text: string; percent: num
   if (metric.denominator.value === 0) {
     return { text: '0/0', percent: null };
   }
-  const pct = Math.round((metric.numerator.value / metric.denominator.value) * 100);
+  const percent = (metric.numerator.value / metric.denominator.value) * 100;
   return {
-    text: `${metric.numerator.value}/${metric.denominator.value} (${pct}%)`,
-    percent: pct,
+    text: `${metric.numerator.value}/${metric.denominator.value} (${Math.round(percent)}%)`,
+    percent,
   };
 }
 
@@ -144,7 +144,7 @@ function responseDigest(data: OverviewAreaList): string {
 
 function buildPeriodText(response?: OverviewAreaList): string {
   if (!response) {
-    return 'ดูความครอบคลุมการเข้าพื้นที่ การส่งงาน และการตรวจของทั้งกะในหน้าเดียว';
+    return '';
   }
   const { context } = response.summary;
   const shiftWord = shiftShortLabel[context.shift];
@@ -152,30 +152,30 @@ function buildPeriodText(response?: OverviewAreaList): string {
   const readWord = formatTime(context.readAtUtc);
   if (context.phase === 'closed') {
     const closedTime = context.closeUtc ? ` (${formatTime(context.closeUtc)} น.)` : '';
-    return `${shiftWord} · ${dateWord} · ปิดรับข้อมูลแล้ว${closedTime} · อ่านข้อมูลเมื่อ ${readWord} น.`;
+    return `${shiftWord} · ${dateWord} · ปิดรับข้อมูลแล้ว${closedTime}`;
   }
   if (context.phase === 'receiving') {
-    const closeText = context.closeUtc ? `ถึง ${formatTime(context.closeUtc)} น.` : 'ยังไม่ทราบเวลาปิดรับ';
-    return `${shiftWord} · ${dateWord} · หมดกะแล้ว ยังเปิดรับข้อมูล${closeText} · อ่านข้อมูลเมื่อ ${readWord} น.`;
+    const closeText = context.closeUtc ? `ถึง ${formatTime(context.closeUtc)} น.` : '';
+    return `${shiftWord} · ${dateWord} · จบกะแล้ว${closeText ? ` (รับข้อมูล${closeText})` : ''}`;
   }
   if (context.phase === 'notStarted') {
-    return `${shiftWord} · ${dateWord} · กะนี้ยังไม่เริ่ม · อ่านข้อมูลเมื่อ ${readWord} น.`;
+    return `${shiftWord} · ${dateWord} · กะนี้ยังไม่เริ่ม`;
   }
-  return `${shiftWord} · ${dateWord} · กำลังทำงาน · ประเมินเมื่อ ${formatTime(context.evaluationUtc)} น. · อ่านข้อมูลเมื่อ ${readWord} น.`;
+  return `${shiftWord} · ${dateWord} · อัปเดต ${readWord} น.`;
 }
 
-function buildDateHelpText(response?: OverviewAreaList): string {
+function buildDateHelpText(response?: OverviewAreaList): string | undefined {
   if (!response) {
-    return 'ช่วงวันที่ที่เก็บเป้าหมายครบจะแสดงเมื่อโหลดข้อมูลจากระบบ';
+    return undefined;
   }
   const { range } = response.summary.context;
   if (range.completeFrom && range.completeThrough) {
-    return `ข้อมูลครบช่วง ${formatShiftDate(range.completeFrom)}–${formatShiftDate(range.completeThrough)}`;
+    return `มีข้อมูล ${formatShiftDate(range.completeFrom)}–${formatShiftDate(range.completeThrough)}`;
   }
   if (range.captureStartedAtUtc) {
-    return `เริ่มเก็บเป้าหมายตั้งแต่ ${formatDate(range.captureStartedAtUtc)} (ยังไม่มีช่วงที่ครบทั้งกะ)`;
+    return `เริ่มเก็บข้อมูล ${formatDate(range.captureStartedAtUtc)}`;
   }
-  return 'ยังไม่มีช่วงวันที่ที่เก็บประวัติเป้าหมายครบ';
+  return undefined;
 }
 
 function buildPanels(summary: OverviewSummary, selectedGroup: OverviewGroup): CoveragePanelProps[] {
@@ -186,16 +186,16 @@ function buildPanels(summary: OverviewSummary, selectedGroup: OverviewGroup): Co
 
   const entryDenomText =
     entry.denominator.value !== null
-      ? `จาก ${entry.denominator.value} พื้นที่ที่ต้องมีคน`
+      ? `จาก ${entry.denominator.value} พื้นที่`
       : entry.denominator.availability.state === 'notStarted'
         ? 'กะนี้ยังไม่เริ่ม'
         : entry.denominator.observed > 0
-          ? `ยืนยันได้ ${entry.denominator.observed} พื้นที่ (ฐานเป้า: —)`
-          : 'ไม่สามารถคำนวณฐานเป้าได้';
+          ? `พบ ${entry.denominator.observed} พื้นที่`
+          : 'ไม่มีข้อมูล';
   const entryExplanation =
     availability.entry.state === 'complete'
-      ? 'นับพื้นที่ที่มีหลักฐานเข้างานหรือยืนยันถึงพื้นที่แล้ว (คงนับแม้พักหรือเลิกงาน) ไม่รวมพื้นที่ที่เพียงมอบหมายทำแทน'
-      : formatAvailabilityReasons(availability.entry) || 'ข้อมูลการลงเวลายังไม่ครบ';
+      ? ''
+      : formatAvailabilityReasons(availability.entry) || 'ข้อมูลลงเวลายังไม่ครบ';
 
   const workDenomText =
     submission.denominator.value !== null
@@ -203,13 +203,13 @@ function buildPanels(summary: OverviewSummary, selectedGroup: OverviewGroup): Co
       : submission.denominator.availability.state === 'notStarted'
         ? 'กะนี้ยังไม่เริ่ม'
         : submission.denominator.observed > 0
-          ? `ยืนยันได้ ${submission.denominator.observed} พื้นที่ที่มีรอบ (ฐานงาน: —)`
-          : 'ไม่สามารถคำนวณฐานงานที่ถึงรอบได้';
+          ? `พบ ${submission.denominator.observed} พื้นที่`
+          : 'ไม่มีข้อมูล';
   const workExplanation =
     availability.work.state === 'complete'
       ? submission.denominator.value === 0
-        ? 'ยังไม่มีพื้นที่ที่มีจุดถึงรอบในกะนี้ (ฐานงานปัจจุบัน 0 พื้นที่)'
-        : 'นับพื้นที่ที่ส่งงานครบทุกจุดในรอบที่ถึงเวลาแล้ว (รายละเอียดจำนวนจุดแสดงในตารางด้านล่าง)'
+        ? 'ยังไม่มีจุดถึงรอบ'
+        : ''
       : formatAvailabilityReasons(availability.work) || 'ข้อมูลงานยังไม่ครบ';
 
   const inspDenomText =
@@ -218,13 +218,13 @@ function buildPanels(summary: OverviewSummary, selectedGroup: OverviewGroup): Co
       : inspection.denominator.availability.state === 'notStarted'
         ? 'กะนี้ยังไม่เริ่ม'
         : inspection.denominator.observed > 0
-          ? `ยืนยันได้ ${inspection.denominator.observed} พื้นที่ที่มีรอบ (ฐานงาน: —)`
-          : 'ไม่สามารถคำนวณฐานงานที่ถึงรอบได้';
+          ? `พบ ${inspection.denominator.observed} พื้นที่`
+          : 'ไม่มีข้อมูล';
   const inspExplanation =
     availability.inspection.state === 'complete'
       ? inspection.denominator.value === 0
-        ? 'ยังไม่มีพื้นที่ที่มีจุดถึงรอบให้ติดตามการตรวจในกะนี้'
-        : 'นับพื้นที่ที่ตรวจงานส่งล่าสุดครบทุกจุดแล้ว (รวมผลต้องแก้ไข — งานค้างแก้แสดงแยกในรายการติดตาม)'
+        ? 'ยังไม่มีจุดถึงรอบ'
+        : ''
       : formatAvailabilityReasons(availability.inspection) || 'ข้อมูลการตรวจยังไม่ครบ';
 
   return [
@@ -280,6 +280,14 @@ function buildPanels(summary: OverviewSummary, selectedGroup: OverviewGroup): Co
 function buildFollowUp(summary: OverviewSummary, selectedGroup: OverviewGroup): FollowUpGroupsProps {
   const { phase } = summary.context;
   const { groups } = summary;
+  const chartGroups = [
+    ['notEntered', 'overdue'],
+    ['overdue', 'overdue'],
+    ['pendingInspection', 'pending'],
+    ['rework', 'rework'],
+    ['issue', 'rework'],
+  ] as const;
+  const max = Math.max(...chartGroups.map(([key]) => groups[key].value ?? 0));
   const title =
     phase === 'closed'
       ? 'รายการที่พบในกะที่เลือก'
@@ -288,14 +296,19 @@ function buildFollowUp(summary: OverviewSummary, selectedGroup: OverviewGroup): 
         : 'พื้นที่ที่ต้องตามตอนนี้';
   return {
     title,
-    subtitle: 'กดรายการเพื่อดูพื้นที่ — พื้นที่เดียวอาจอยู่หลายกลุ่ม จึงไม่นำยอดแต่ละกลุ่มมาบวกรวมกัน',
-    items: [
-      { key: 'notEntered', label: 'ยังไม่ลงเวลา', text: formatCountValue(groups.notEntered), selected: selectedGroup === 'notEntered', tone: 'overdue' },
-      { key: 'overdue', label: 'มีงานเลยเวลา', text: formatCountValue(groups.overdue), selected: selectedGroup === 'overdue', tone: 'overdue' },
-      { key: 'pendingInspection', label: 'มีงานรอตรวจ', text: formatCountValue(groups.pendingInspection), selected: selectedGroup === 'pendingInspection', tone: 'pending' },
-      { key: 'rework', label: 'มีงานต้องแก้', text: formatCountValue(groups.rework), selected: selectedGroup === 'rework', tone: 'rework' },
-      { key: 'issue', label: 'แม่บ้านแจ้งปัญหา', text: formatCountValue(groups.issue), selected: selectedGroup === 'issue', tone: 'rework' },
-    ],
+    subtitle: '',
+    max,
+    items: chartGroups.map(([key, tone]) => {
+      const count = groups[key];
+      return {
+        key,
+        label: GROUP_META[key].label,
+        text: formatCountValue(count),
+        percent: count.value === null ? null : (count.value / (max || 1)) * 100,
+        selected: selectedGroup === key,
+        tone,
+      };
+    }),
     onGroup: () => {},
   };
 }
@@ -326,7 +339,7 @@ function buildBuildings(
 
   return {
     title: 'เปรียบเทียบแต่ละตึก',
-    subtitle: 'กดตัวเลขเพื่อดูพื้นที่ในตึกนั้น (แต่ละตัวเลขใช้ฐานของหมวดนั้น)',
+    subtitle: '',
     rows: buildings.map((building) => ({
       id: building.id,
       label: `${building.code} · ${building.name}`,
@@ -345,17 +358,13 @@ function buildHistory(summary: OverviewSummary, selectedGroup: OverviewGroup): R
   const { history } = summary.availability;
   const title = phase === 'closed' ? 'ผลรอบในกะนี้' : 'รอบที่ผ่านมาในกะนี้';
   const subtitle =
-    phase === 'closed'
-      ? 'สรุปทุกรอบในกะที่ปิดรับข้อมูลแล้ว รวมรอบสุดท้ายของกะ'
-      : phase === 'receiving'
-        ? 'ผลของรอบก่อนที่จบแล้วในกะนี้ รอบสุดท้ายยังเปิดรับข้อมูลและจะสรุปหลังปิดรับ'
-        : phase === 'notStarted'
-          ? 'กะนี้ยังไม่เริ่ม จึงยังไม่มีผลรอบในกะ'
-          : 'ผลของรอบก่อนที่จบหรือเปลี่ยนแล้วในกะนี้ แม้วันนี้มีรอบใหม่แล้ว';
+    phase === 'notStarted'
+      ? 'กะนี้ยังไม่เริ่ม'
+      : '';
 
   const availabilityNote =
     history.state === 'partial' || history.state === 'unavailable'
-      ? formatAvailabilityReasons(history) || 'ข้อมูลประวัติรอบของกะนี้ยังไม่ครบถ้วน'
+      ? formatAvailabilityReasons(history) || 'ข้อมูลรอบยังไม่ครบ'
       : undefined;
 
   return {
@@ -365,27 +374,18 @@ function buildHistory(summary: OverviewSummary, selectedGroup: OverviewGroup): R
     groups: [
       {
         key: 'missedCleaning',
-        label: 'พื้นที่ที่มีรอบไม่ได้ทำ',
+        label: 'มีรอบไม่ได้ทำ',
         text: formatCountValue(summary.groups.missedCleaning),
         selected: selectedGroup === 'missedCleaning',
       },
       {
         key: 'missedInspection',
-        label: 'พื้นที่ที่มีรอบไม่ได้ตรวจ',
+        label: 'มีรอบไม่ได้ตรวจ',
         text: formatCountValue(summary.groups.missedInspection),
         selected: selectedGroup === 'missedInspection',
       },
     ],
-    details: [
-      {
-        title: 'รอบที่ไม่ได้แก้ (Rework)',
-        description: 'รอบที่หัวหน้าตรวจแล้วสั่งแก้ไขแต่ยังไม่มีงานแก้ส่งกลับก่อนจบรอบ นับแยกจากพื้นที่ที่มีรอบไม่ได้ตรวจ',
-      },
-      {
-        title: 'รอบที่ถูกเปลี่ยนหรือยกเลิก',
-        description: 'รอบที่ถูกแก้เวลา ปิดจุด/พื้นที่ หรือเอาออกจากตารางระหว่างกะ จะเก็บเหตุผลที่เปลี่ยนหรือยกเลิกแยกไว้ในหน้ารายละเอียดของพื้นที่นั้น',
-      },
-    ],
+    details: [],
     onGroup: () => {},
   };
 }
@@ -396,6 +396,7 @@ function buildResults(
   href: (areaId: number, view: OverviewView, roundKey?: string) => string,
   refreshing: boolean,
   onPage: (page: number) => void,
+  updating = false,
 ): AreaResultsProps {
   const { summary, group, page, pageSize, total, rows } = response;
   const meta = GROUP_META[group];
@@ -435,25 +436,25 @@ function buildResults(
       emptyState = {
         kind: 'notStarted',
         title: 'กะนี้ยังไม่เริ่ม',
-        detail: 'ยังไม่ถึงเวลาเริ่มกะที่เลือก จึงยังไม่มีรายการพื้นที่ในกลุ่มนี้',
+        detail: '',
       };
     } else if (total.availability.state === 'unavailable') {
       emptyState = {
         kind: 'unavailable',
-        title: 'ไม่มีข้อมูลของหมวดนี้',
-        detail: formatAvailabilityReasons(total.availability) || 'ข้อมูลของกะนี้อยู่นอกช่วงที่ระบบจัดเก็บแล้ว',
+        title: 'ไม่มีข้อมูล',
+        detail: formatAvailabilityReasons(total.availability) || 'ไม่มีข้อมูลของกะนี้',
       };
     } else if (total.availability.state === 'partial') {
       emptyState = {
         kind: 'partial',
-        title: 'ไม่พบรายการที่ยืนยันได้ (ยอดรวม: —)',
-        detail: formatAvailabilityReasons(total.availability) || 'ข้อมูลของกะนี้ยังไม่ครบ จึงไม่สามารถสรุปจำนวนทั้งหมดได้',
+        title: 'ไม่พบรายการ (ยอดรวม: —)',
+        detail: formatAvailabilityReasons(total.availability) || 'ข้อมูลของกะนี้ยังไม่ครบ',
       };
     } else {
       emptyState = {
         kind: 'empty',
         title: 'ไม่มีพื้นที่ในกลุ่มนี้',
-        detail: 'ข้อมูลครบถ้วนแล้ว ไม่พบพื้นที่ที่ตรงกับหมวดหมู่ วันที่ กะ และตึกที่เลือก',
+        detail: '',
       };
     }
   }
@@ -466,6 +467,7 @@ function buildResults(
     contextText,
     countText,
     availabilityWarning,
+    updating,
     rows: rows.map((row) => {
       const entryBadge: AreaResultBadge = entryHidden
         ? { label: 'ไม่มีข้อมูลลงเวลา', tone: 'idle' }
@@ -542,6 +544,7 @@ const EMPTY_RESULTS: AreaResultsProps = {
 const EMPTY_FOLLOWUP: FollowUpGroupsProps = {
   title: 'พื้นที่ที่ต้องตามตอนนี้',
   subtitle: '',
+  max: 0,
   items: [],
   onGroup: () => {},
 };
@@ -636,13 +639,39 @@ export function useOverviewPage(): OverviewPageModel {
   const isCanonicalizing = freshRawResponse === undefined && canonicalSeed !== null && canonicalSeed.key === argsKey;
   const response = freshRawResponse ?? (canonicalSeed && canonicalSeed.key === argsKey ? canonicalSeed.data : undefined);
 
+  // Retain the last valid snapshot across interactive group/page/filter transitions so charts stay mounted cleanly.
+  // Drop it immediately on invalid URLs, default-slot rollover waits, or failed requests (never leak stale rows on error).
+  const [retainedResponse, setRetainedResponse] = useState<OverviewAreaList | undefined>(undefined);
+  if (!contextResult.ok || isUncanonicalSlot || (response === undefined && query.error)) {
+    if (retainedResponse !== undefined) {
+      setRetainedResponse(undefined);
+    }
+  } else if (response && retainedResponse !== response) {
+    setRetainedResponse(response);
+  }
+  const displayResponse = response ?? (
+    contextResult.ok && !isUncanonicalSlot && query.isFetching && !query.error ? retainedResponse : undefined
+  );
+  const switching = Boolean(
+    contextResult.ok &&
+    !isUncanonicalSlot &&
+    !query.error &&
+    response === undefined &&
+    displayResponse !== undefined &&
+    query.isFetching &&
+    !isCanonicalizing,
+  );
+
   // Replace server-default slot once and replace stale server-clamped page without a request loop or loading flash.
+  // A navigation the user started (another Admin page, whose lazy chunk may still be loading) keeps this page mounted;
+  // replacing the URL then would resolve against the old path and pull the user back, so the replace waits for idle.
+  const navigation = useNavigation();
   useEffect(() => {
-    if (!canonicalSelection) {
+    if (!canonicalSelection || navigation.state !== 'idle') {
       return;
     }
     setSearchParams(overviewParams(canonicalSelection), { replace: true });
-  }, [canonicalSelection, setSearchParams]);
+  }, [canonicalSelection, navigation.state, setSearchParams]);
 
   const [seenData, setSeenData] = useState<{ argsKey: string; digest: string; changed: boolean }>({
     argsKey,
@@ -682,7 +711,7 @@ export function useOverviewPage(): OverviewPageModel {
     }
   }
 
-  const loading = contextResult.ok && response === undefined && (query.isFetching || (awaitingFreshCache && !query.error));
+  const loading = contextResult.ok && displayResponse === undefined && (query.isFetching || (awaitingFreshCache && !query.error));
   const refreshing = contextResult.ok && response !== undefined && query.isFetching && !isCanonicalizing;
   const error = !contextResult.ok
     ? contextResult.message
@@ -761,25 +790,42 @@ export function useOverviewPage(): OverviewPageModel {
     }
   };
 
-  const href = (areaId: number, view: OverviewView, roundKey?: string) =>
-    areaHref(effectiveSelection, areaId, view, roundKey);
+  const href = (areaId: number, view: OverviewView, roundKey?: string) => {
+    const sourceSelection: OverviewSelection = displayResponse
+      ? {
+          date: displayResponse.summary.context.shiftDate,
+          shift: displayResponse.summary.context.shift,
+          building: displayResponse.summary.context.buildingId ?? undefined,
+          group: displayResponse.group,
+          page: displayResponse.page,
+        }
+      : effectiveSelection;
+    return areaHref(sourceSelection, areaId, view, roundKey);
+  };
 
   const cachedOptions = buildingCache && buildingCache.slotKey === activeSlotKey ? buildingCache.options : [];
-  const currentBuildingOptions: BuildingOption[] = response
-    ? response.summary.buildings.map((b) => ({ id: b.id, label: `${b.code} · ${b.name}` }))
+  const currentBuildingOptions: BuildingOption[] = displayResponse
+    ? displayResponse.summary.buildings.map((b) => ({ id: b.id, label: `${b.code} · ${b.name}` }))
     : [];
   const buildingOptions = cachedOptions.length >= currentBuildingOptions.length ? cachedOptions : currentBuildingOptions;
 
   const readAtText = response ? formatTime(response.summary.context.readAtUtc) : undefined;
-  const results = response ? buildResults(response, selection, href, refreshing, onPage) : EMPTY_RESULTS;
-  const panels = response
-    ? buildPanels(response.summary, response.group).map((panel) => ({ ...panel, onGroup }))
+  const activeGroup = switching ? selection.group : displayResponse?.group;
+  const results = displayResponse
+    ? buildResults(displayResponse, selection, href, switching, onPage, switching || refreshing)
+    : EMPTY_RESULTS;
+  const panels = displayResponse && activeGroup
+    ? buildPanels(displayResponse.summary, activeGroup).map((panel) => ({ ...panel, onGroup }))
     : [];
-  const followUp = response ? { ...buildFollowUp(response.summary, response.group), onGroup } : EMPTY_FOLLOWUP;
-  const buildings = response
-    ? { ...buildBuildings(response.summary.buildings, selection.building, response.group), onSelect: onBuildingGroup }
+  const followUp = displayResponse && activeGroup
+    ? { ...buildFollowUp(displayResponse.summary, activeGroup), onGroup }
+    : EMPTY_FOLLOWUP;
+  const buildings = displayResponse && activeGroup
+    ? { ...buildBuildings(displayResponse.summary.buildings, selection.building, activeGroup), onSelect: onBuildingGroup }
     : EMPTY_BUILDINGS;
-  const history = response ? { ...buildHistory(response.summary, response.group), onGroup } : EMPTY_HISTORY;
+  const history = displayResponse && activeGroup
+    ? { ...buildHistory(displayResponse.summary, activeGroup), onGroup }
+    : EMPTY_HISTORY;
 
   const statusAnnouncement = response
     ? `${results.title} · ${results.countText} · อ่านข้อมูลเมื่อ ${readAtText} น.${changed ? ' (อัปเดตข้อมูลแล้ว)' : ''}`
@@ -787,7 +833,7 @@ export function useOverviewPage(): OverviewPageModel {
 
   return {
     selection,
-    response,
+    response: displayResponse,
     loading,
     refreshing,
     recovering,
@@ -805,22 +851,22 @@ export function useOverviewPage(): OverviewPageModel {
     href,
 
     invalidContext: !contextResult.ok,
-    periodText: buildPeriodText(response),
+    periodText: buildPeriodText(displayResponse),
     readAtText,
-    updatedNotice: changed && readAtText ? `อัปเดตข้อมูลชุดล่าสุดแล้วเมื่อ ${readAtText} น.` : undefined,
+    updatedNotice: changed && readAtText ? `อัปเดตล่าสุด ${readAtText} น.` : undefined,
     notStartedMessage:
-      response?.summary.context.phase === 'notStarted'
-        ? 'ยังไม่ถึงเวลาเริ่มกะที่เลือก จึงยังไม่มีข้อมูลการเข้าพื้นที่ การส่งงาน หรือการตรวจ'
+      displayResponse?.summary.context.phase === 'notStarted'
+        ? 'ยังไม่ถึงเวลาเริ่มกะนี้'
         : undefined,
     dateInputValue: effectiveSelection.date ?? '',
-    dateMaxValue: response ? thaiToday(new Date(response.summary.context.readAtUtc)) : thaiToday(),
-    dateHelpText: buildDateHelpText(response),
+    dateMaxValue: displayResponse ? thaiToday(new Date(displayResponse.summary.context.readAtUtc)) : thaiToday(),
+    dateHelpText: buildDateHelpText(displayResponse),
     shiftValue: effectiveSelection.shift,
     shiftOptions: SHIFT_OPTIONS,
     buildingValue: selection.building !== undefined ? String(selection.building) : '',
     buildingOptions,
     controlsDisabled: !contextResult.ok || !effectiveSelection.date,
-    canResetToCurrent: Boolean(response && !response.summary.context.isClockCurrent),
+    canResetToCurrent: Boolean(displayResponse && !displayResponse.summary.context.isClockCurrent),
     onResetToCurrent,
     onBuildingGroup,
     panels,

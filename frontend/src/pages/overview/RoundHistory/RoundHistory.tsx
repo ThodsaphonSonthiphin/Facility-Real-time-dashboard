@@ -13,7 +13,7 @@ export function RoundHistory({ title, subtitle, availabilityNote, groups, detail
         <h2 id="overview-history-heading" className="text-lg font-semibold">
           {title}
         </h2>
-        <p className="text-xs text-text-2">{subtitle}</p>
+        {subtitle && <p className="text-xs text-text-2">{subtitle}</p>}
       </div>
       {availabilityNote && (
         <Note tone="warn" alert={false}>
@@ -33,14 +33,16 @@ export function RoundHistory({ title, subtitle, availabilityNote, groups, detail
           </Button>
         ))}
       </div>
-      <dl className="m-0 grid grid-cols-1 gap-2 border-t border-border pt-3 text-xs text-text-2 sm:grid-cols-2 sm:gap-4">
-        {details.map((detail) => (
-          <div key={detail.title} className="flex flex-col gap-0.5">
-            <dt className="font-semibold text-text-3">{detail.title}</dt>
-            <dd className="m-0">{detail.description}</dd>
-          </div>
-        ))}
-      </dl>
+      {details.length > 0 && (
+        <dl className="m-0 grid grid-cols-1 gap-2 border-t border-border pt-3 text-xs text-text-2 sm:grid-cols-2 sm:gap-4">
+          {details.map((detail) => (
+            <div key={detail.title} className="flex flex-col gap-0.5">
+              <dt className="font-semibold text-text-3">{detail.title}</dt>
+              <dd className="m-0">{detail.description}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </section>
   );
 }

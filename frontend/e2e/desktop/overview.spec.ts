@@ -68,7 +68,7 @@ for (const [width, height] of [[1280, 900], [375, 812]]) {
         page: '2', areaId: String(id), source: 'overview', view: 'attendance',
       });
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-      await expect(page.getByText('ประวัติสำหรับอ่านข้อมูล')).toBeVisible();
+      await expect(page.getByText('ดูย้อนหลังเท่านั้น')).toBeVisible();
       if (id === pageTwo[0].id) {
         await page.reload();
         await expect(page).toHaveURL(destination);
@@ -87,7 +87,7 @@ test('overview opens cleaning, inspection, Issue and the exact historical round 
   await page.goto(overviewUrl());
   const cases = [
     ['ส่งงานครบ', 'submitted', 'งานทำความสะอาด'], ['ตรวจครบแล้ว', 'inspected', 'ผลการตรวจ'], ['แม่บ้านแจ้งปัญหา', 'issue', 'ปัญหาที่แจ้ง'],
-    ['พื้นที่ที่มีรอบไม่ได้ทำ', 'missedCleaning', 'รอบที่เลือก'],
+    ['มีรอบไม่ได้ทำ', 'missedCleaning', 'รอบที่เลือก'],
   ] as const;
   for (const [group, groupKey, title] of cases) {
     await page.getByRole('button', { name: new RegExp(`^${group} [1-9]\\d* พื้นที่$`) }).click();
@@ -105,7 +105,7 @@ test('overview opens cleaning, inspection, Issue and the exact historical round 
       expect(key).toBeTruthy();
       await expect(page.locator('a[aria-current="true"]')).toHaveAttribute('href', href!);
     }
-    await expect(page.getByText('ประวัติสำหรับอ่านข้อมูล')).toBeVisible();
+    await expect(page.getByText('ดูย้อนหลังเท่านั้น')).toBeVisible();
     await expect(page.getByRole('button', { name: /บันทึก|แก้ไข/ })).toHaveCount(0);
     await page.getByRole('link', { name: 'กลับภาพรวม' }).click();
   }
@@ -119,7 +119,7 @@ test('overview retries an aborted read and distinguishes complete empty from unk
   await page.getByRole('button', { name: 'ลองอีกครั้ง' }).click();
   await expect(page.getByText('ไม่มีพื้นที่ในกลุ่มนี้', { exact: true })).toBeVisible();
   await page.getByLabel('วันที่ของกะ').fill(preBaselineDate);
-  await expect(page.getByText('ไม่พบรายการที่ยืนยันได้ (ยอดรวม: —)', { exact: true })).toBeVisible();
+  await expect(page.getByText('ไม่พบรายการ (ยอดรวม: —)', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'ลงเวลาแล้ว — พื้นที่', exact: true })).toBeVisible();
 });
 
@@ -143,6 +143,10 @@ test('overview keeps the second filter when the first real request finishes late
   try {
     await dateInput.fill(firstDate);
     await started;
+    await expect(page.getByRole('heading', { name: 'สรุปผลของกะ' })).toBeVisible();
+    await expect(page.getByText('กำลังโหลดภาพรวม...')).toBeHidden();
+    await expect(page.getByText('กำลังอัปเดต...', { exact: true })).toBeVisible();
+    await expect(page.locator('[aria-busy="true"]')).toContainText(overviewFixture().enteredAreas[0].code);
     await dateInput.fill(emptyDate);
     await expect(page.getByText('ไม่มีพื้นที่ในกลุ่มนี้', { exact: true })).toBeVisible();
     const settled = page.waitForEvent('requestfinished', req => req.url().includes(firstDate) && req.url().includes('/api/admin/overview/areas'));

@@ -4,7 +4,6 @@ import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/Admi
 import { Button } from '../../../shared/components/Button';
 import { Field, Select, TextInput } from '../../../shared/components/Field';
 import { LiveBadge } from '../../../shared/components/LiveBadge';
-import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { Note } from '../../../shared/components/Note';
 import { PageLoading } from '../../../shared/components/PageState';
 import { Segmented } from '../../../shared/components/Segmented';
@@ -39,7 +38,7 @@ export function OverviewPage() {
           <p>{model.error}</p>
           <p className="mt-2">
             <Link className={linkClass} to="/admin/overview">
-              กลับไปหน้าภาพรวมเริ่มต้น
+              กลับหน้าภาพรวม
             </Link>
           </p>
         </Note>
@@ -110,20 +109,18 @@ export function OverviewPage() {
 
           {model.response && model.error && (
             <Note tone="warn" onRetry={model.retry}>
-              {`ไม่สามารถอัปเดตข้อมูลล่าสุดได้ (${model.error}) · กำลังแสดงข้อมูลที่อ่านเมื่อ ${model.readAtText} น. (ข้อมูลอาจยังไม่ล่าสุด)`}
+              {`อัปเดตข้อมูลไม่ได้ (${model.error}) · แสดงข้อมูลเมื่อ ${model.readAtText} น.`}
             </Note>
           )}
 
           {model.response && model.recovering && !model.error && (
             <Note tone="warn" status>
-              {`กำลังตรวจสอบข้อมูลล่าสุด · กำลังแสดงข้อมูลที่อ่านเมื่อ ${model.readAtText} น. (ข้อมูลอาจยังไม่ล่าสุด)`}
+              {`กำลังตรวจสอบข้อมูลล่าสุด · ข้อมูลเมื่อ ${model.readAtText} น.`}
             </Note>
           )}
 
           {model.refreshing && !model.recovering && !model.error && (
-            <Note tone="info">
-              {`กำลังอัปเดตข้อมูล... (กำลังแสดงข้อมูลที่อ่านเมื่อ ${model.readAtText} น.)`}
-            </Note>
+            <Note tone="info">กำลังอัปเดตข้อมูล...</Note>
           )}
 
           {!model.refreshing && !model.recovering && !model.error && model.updatedNotice && (
@@ -153,15 +150,6 @@ export function OverviewPage() {
               </div>
               <RoundHistory {...model.history} onGroup={model.onGroup} />
               <AreaResults {...model.results} onPage={model.onPage} />
-
-              <MoreInfo summary="วิธีอ่านภาพรวม">
-                <span>
-                  ทุกตัวเลขในหน้านี้คำนวณจากเป้าหมายโครงสร้าง ณ ช่วงเวลาที่เลือกและนับจำนวนพื้นที่ (Area) ไม่ซ้ำภายในแต่ละกลุ่ม
-                </span>
-                <span>
-                  ฐานการส่งงานและฐานการตรวจนับจากพื้นที่ที่มีจุดถึงรอบในขณะนั้นเท่านั้น ส่วนเครื่องหมาย “—” แสดงเมื่อข้อมูลประวัติไม่ครบหรือยังไม่เริ่มกะ
-                </span>
-              </MoreInfo>
             </>
           )}
         </>
