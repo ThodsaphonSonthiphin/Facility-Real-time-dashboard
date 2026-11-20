@@ -1,13 +1,13 @@
 namespace JanitorialManagementDashboard.Application.Scheduling;
 
 /// <summary>
-/// Spec §11: the "Scheduling" configuration section. The dated scheduling feature is off unless an owner turns it on, the
-/// first date the stored schedule is history rather than a compatibility projection is configuration rather than a
-/// constant, and the private key the command token is signed with never has a default in product code.
+/// Spec §11: the "Scheduling" configuration section. Scheduling is always enabled as a core feature; the first date the
+/// stored schedule is history rather than a compatibility projection is configuration rather than a constant, and the
+/// private key the command token is signed with never has a default in product code.
 /// <para>
 /// Everything here is read lazily: constructing the settings cannot fail, and the key is only demanded by the getter a
-/// caller actually needs it from. A server with scheduling disabled therefore starts, logs in and serves the legacy
-/// endpoints with no key configured at all.
+/// caller actually needs it from. A server without a command signing key therefore still starts and serves read endpoints,
+/// failing only when a scheduling write command is issued or verified.
 /// </para>
 /// </summary>
 public sealed class SchedulingSettings
@@ -22,9 +22,6 @@ public sealed class SchedulingSettings
     /// <summary>Settings for a server that has to supply a key before any command can be started.</summary>
     public SchedulingSettings(string? commandSigningKey = null) =>
         _commandSigningKey = string.IsNullOrWhiteSpace(commandSigningKey) ? null : commandSigningKey.Trim();
-
-    /// <summary>Enabled by default so Supervisors and Admins can manage schedules; can be set false in configuration to gate routes.</summary>
-    public bool Enabled { get; set; } = true;
 
     /// <summary>
     /// The first date the stored schedule is history. Before it a projection reports "unavailable" rather than inventing

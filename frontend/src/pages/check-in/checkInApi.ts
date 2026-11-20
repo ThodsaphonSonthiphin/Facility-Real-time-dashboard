@@ -15,6 +15,7 @@ export interface RecordAttendanceRequest extends GpsFix {
   lifecycleVersion?: string;
   stateRevision?: string;
   confirmGaps?: AttendanceEvent[];
+  confirmPendingTransfer?: boolean;
 }
 
 const checkInApi = baseApi.injectEndpoints({
@@ -35,7 +36,7 @@ const checkInApi = baseApi.injectEndpoints({
         }
       },
     }),
-    checkSign: build.query<{ canConfirmTransfer: boolean } | null, { token: string; transferId?: number }>({
+    checkSign: build.query<{ canConfirmTransfer: boolean; canShiftOutOrigin?: boolean } | null, { token: string; transferId?: number }>({
       query: ({ token, transferId }) => ({
         url: `/attendance/signs/${encodeURIComponent(token)}`,
         params: transferId === undefined ? undefined : { transferId },

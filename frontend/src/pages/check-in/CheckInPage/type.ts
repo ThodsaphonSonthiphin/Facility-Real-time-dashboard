@@ -3,7 +3,13 @@ import type { AttendanceEvent, AttendanceState, AttendanceTransfer, BlockedScan,
 import type { LocationProblem } from '../../../shared/geo/readLocation';
 
 export type CheckInRetry =
-  | { kind: 'action'; eventType: AttendanceEvent; gaps: AttendanceEvent[]; revision?: string | null }
+  | {
+      kind: 'action';
+      eventType: AttendanceEvent;
+      gaps: AttendanceEvent[];
+      revision?: string | null;
+      confirmPendingTransfer?: boolean;
+    }
   | { kind: 'transfer'; transferId: number; revision: string };
 
 export type CheckInOutcome =
@@ -28,6 +34,7 @@ export interface CheckInPageView {
   outcome: CheckInOutcome | null;
   transfer: AttendanceTransfer | undefined;
   confirmable: boolean;
+  canShiftOutOrigin: boolean;
   transferPending: boolean;
   press: (eventType: AttendanceEvent) => void;
   confirmGaps: () => void;

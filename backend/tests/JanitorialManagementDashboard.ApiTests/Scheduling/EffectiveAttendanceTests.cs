@@ -362,6 +362,72 @@ public class EffectiveAttendanceTests
         Assert.Equal(confirmedAt.UtcDateTime, arrival.OccurredAt);
     }
 
+    [Fact]
+    public async Task A_pending_transfer_allows_confirmed_shift_out_at_origin_sign_without_cancelling_the_transfer()
+    {
+        using var factory = TransferApi.NewFactory();
+        await TestData.AddAreaAsync(factory, "AR03", "A");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", new DateOnly(2026, 10, 1), "AR01");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var destination = await AdminSetupApi.AreaIdAsync(factory, "AR03");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, TransferApi.Thai(7, 5), "ShiftIn");
+
+        var transferId = await TransferApi.InstructForIdAsync(
+            factory, admin, auth.User.Id, origin, destination, TransferApi.Thai(13, 0));
+
+        factory.Clock.SetUtcNow(TransferApi.Thai(13, 1));
+
+        // Sign check tells origin and destination apart for the caller's pending transfer.
+        var originCheck = await cleaner.GetFromJsonAsync<SignTransferCheck>(
+            $"/api/attendance/signs/token-checkin-ar01?transferId={transferId}");
+        var destinationCheck = await cleaner.GetFromJsonAsync<SignTransferCheck>(
+            $"/api/attendance/signs/token-checkin-ar03?transferId={transferId}");
+        Assert.Equal(new SignTransferCheck(false, true), originCheck);
+        Assert.Equal(new SignTransferCheck(true, false), destinationCheck);
+
+        // Unconfirmed ShiftOut at origin, ShiftOut at destination, and BreakOut at origin are all still refused.
+        var unconfirmedOriginOut = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftOut", "token-checkin-ar01");
+        var destinationOut = await EffectiveAttendanceApi.RecordAsync(
+            cleaner, "ShiftOut", "token-checkin-ar03", confirmPendingTransfer: true);
+        var originBreak = await EffectiveAttendanceApi.RecordAsync(
+            cleaner, "BreakOut", "token-checkin-ar01", confirmPendingTransfer: true);
+        Assert.Equal(HttpStatusCode.Conflict, unconfirmedOriginOut.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, destinationOut.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, originBreak.StatusCode);
+        Assert.Equal("transfer-pending", (await unconfirmedOriginOut.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+        Assert.Equal("transfer-pending", (await destinationOut.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+        Assert.Equal("transfer-pending", (await originBreak.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
+
+        // Explicitly confirmed ShiftOut at the origin sign succeeds, records ShiftOut at origin, and leaves the transfer
+        // instruction unconfirmed (not cancelled) with no destination arrival evidence.
+        var confirmedOriginOut = await EffectiveAttendanceApi.RecordAsync(
+            cleaner, "ShiftOut", "token-checkin-ar01", confirmPendingTransfer: true);
+        Assert.Equal(HttpStatusCode.OK, confirmedOriginOut.StatusCode);
+        var stateAfter = await confirmedOriginOut.Content.ReadFromJsonAsync<AttendanceStateAnswer>();
+        Assert.NotNull(stateAfter);
+        Assert.Equal("Recorded", stateAfter!.Outcome);
+        Assert.Equal("instructed", stateAfter.Transfer!.State);
+        Assert.Null(stateAfter.Transfer.ConfirmedAt);
+
+        var facts = await EffectiveAttendanceApi.FactsAsync(factory);
+        Assert.Equal(new[] { AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut }, facts.Select(fact => fact.EventType));
+        Assert.Equal(origin, facts[1].AreaId);
+        Assert.Empty(await TransferApi.ConfirmationsAsync(factory));
+
+        // After final ShiftOut, neither sign offers transfer confirmation or origin ShiftOut.
+        var originAfter = await cleaner.GetFromJsonAsync<SignTransferCheck>(
+            $"/api/attendance/signs/token-checkin-ar01?transferId={transferId}");
+        var destinationAfter = await cleaner.GetFromJsonAsync<SignTransferCheck>(
+            $"/api/attendance/signs/token-checkin-ar03?transferId={transferId}");
+        Assert.Equal(new SignTransferCheck(false, false), originAfter);
+        Assert.Equal(new SignTransferCheck(false, false), destinationAfter);
+    }
+
+    private sealed record SignTransferCheck(bool CanConfirmTransfer, bool CanShiftOutOrigin);
+
     /// <summary>A pending transfer refuses a work submission too: a Service Point submission is never arrival evidence.</summary>
     [Fact]
     public async Task A_pending_transfer_refuses_a_work_submission_in_either_area()
@@ -563,7 +629,8 @@ internal static class EffectiveAttendanceApi
         string qrToken = AttendanceApi.Area1CheckIn,
         string? lifecycleVersion = null,
         string? stateRevision = null,
-        IReadOnlyList<string>? confirmGaps = null) =>
+        IReadOnlyList<string>? confirmGaps = null,
+        bool confirmPendingTransfer = false) =>
         client.PostAsJsonAsync("/api/attendance", new
         {
             qrToken,
@@ -574,6 +641,7 @@ internal static class EffectiveAttendanceApi
             lifecycleVersion,
             stateRevision,
             confirmGaps,
+            confirmPendingTransfer,
         });
 
     public static async Task<AttendanceStateAnswer> StateAsync(HttpClient client)

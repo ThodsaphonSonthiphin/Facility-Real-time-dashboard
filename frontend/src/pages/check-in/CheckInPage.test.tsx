@@ -855,4 +855,72 @@ describe('the transfer arrival (spec §9)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('คำสั่งย้ายพื้นที่นี้ถูกยกเลิกแล้ว');
     await waitFor(() => expect(server.calls.filter((call) => call.path === '/api/my-work')).toHaveLength(3));
   });
+
+  it('offers final ShiftOut at the origin sign with a 2-step pending-transfer warning confirmation and never offers breaks', async () => {
+    fakeGps(nearSign);
+    const originInstructed = {
+      ...instructed,
+      nextActions: [
+        { action: 'Break1In' as const, requiredGaps: [] },
+        { action: 'ShiftOut' as const, requiredGaps: ['Break1In' as const, 'Break2Out' as const, 'Break2In' as const] },
+      ],
+    };
+    const shiftOutEntry = { eventType: 'ShiftOut' as const, occurredAt: '2026-10-15T06:00:00Z', source: 'Scan' as const, withinRadius: true };
+    const afterShiftOut = {
+      ...originInstructed,
+      events: [shiftIn0652, breakOut, shiftOutEntry],
+      nextEvents: [],
+      nextActions: [],
+      outcome: 'Recorded' as const,
+      stateRevision: 'rev-after-out',
+      actions: [
+        act('ShiftIn', 'recorded', shiftIn0652.occurredAt),
+        act('Break1Out', 'recorded', breakOut.occurredAt),
+        act('Break1In', 'skipped'),
+        act('Break2Out', 'skipped'),
+        act('Break2In', 'skipped'),
+        act('ShiftOut', 'recorded', shiftOutEntry.occurredAt),
+      ],
+    };
+    const server = serve(
+      {
+        'GET /api/attendance/signs/token-checkin-ar01': ({ search }: { search: string }) => (
+          search === '?transferId=9'
+            ? { status: 200, body: { canConfirmTransfer: false, canShiftOutOrigin: true } }
+            : { status: 204 }
+        ),
+        'POST /api/attendance': () => ({ status: 200, body: afterShiftOut }),
+      },
+      myWork(originInstructed),
+    );
+    const { user } = await renderApp(SIGN);
+
+    expect(await screen.findByRole('button', { name: 'เลิกงาน' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'กลับจากพัก 1' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ยืนยันเข้าพื้นที่ใหม่' })).not.toBeInTheDocument();
+
+    // First tap opens the 2-step pending-transfer warning confirmation without sending yet.
+    await user.click(screen.getByRole('button', { name: 'เลิกงาน' }));
+    expect(server.calls.filter((call) => call.path === '/api/attendance')).toHaveLength(0);
+    expect(await screen.findByText('ยืนยันเลิกงานโดยไม่ย้ายพื้นที่')).toBeVisible();
+    expect(screen.getByText(/ปิดกะโดยไม่ย้ายพื้นที่/)).toBeVisible();
+    expect(screen.getByText(/กลับจากพัก 1 และ ออกพัก 2 และ กลับจากพัก 2/)).toBeVisible();
+
+    // Second tap sends confirmPendingTransfer + confirmGaps.
+    await user.click(screen.getByRole('button', { name: 'ยืนยันและบันทึก' }));
+    expect(await screen.findByText(/บันทึกเวลาเลิกงานแล้ว/)).toBeVisible();
+    expect(server.calls.find((call) => call.path === '/api/attendance')?.body).toEqual({
+      qrToken: 'token-checkin-ar01',
+      eventType: 'ShiftOut',
+      latitude: 13.7563,
+      longitude: 100.5018,
+      accuracyM: 12,
+      lifecycleVersion: 'Numbered6',
+      stateRevision: '5',
+      confirmGaps: ['Break1In', 'Break2Out', 'Break2In'],
+      confirmPendingTransfer: true,
+    });
+    expect(await screen.findByText('สิ้นสุดกะแล้ว')).toBeVisible();
+    expect(screen.queryByText('มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน')).not.toBeInTheDocument();
+  });
 });

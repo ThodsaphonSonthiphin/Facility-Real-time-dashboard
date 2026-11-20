@@ -17,7 +17,7 @@ import { useCheckInPage } from './useCheckInPage';
 export function CheckInPage() {
   const {
     attendance, ownArea, ownShift, signGone, loadError, loading, choices, gapConfirmation, gapLabel,
-    completionMessage, busy, outcome, transfer, confirmable, transferPending, press, confirmGaps, cancelGaps,
+    completionMessage, busy, outcome, transfer, confirmable, canShiftOutOrigin, transferPending, press, confirmGaps, cancelGaps,
     confirmDestination, retryLocation, retryRead, retryingRead, retryReadStatus,
   } = useCheckInPage();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -109,13 +109,23 @@ export function CheckInPage() {
       {attendance?.isLeave && <Note tone="warn">มีการลาที่บันทึกไว้ในกะนี้</Note>}
       {attendance?.departureLeaveMismatch && <Note tone="warn">{departureLeaveMismatchLabel}</Note>}
       {gapConfirmation && (
-        <Note tone="warn" status title="ยืนยันขั้นตอนที่ข้าม">
-          {`ต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`}
+        <Note
+          tone="warn"
+          status
+          title={gapConfirmation.confirmPendingTransfer ? 'ยืนยันเลิกงานโดยไม่ย้ายพื้นที่' : 'ยืนยันขั้นตอนที่ข้าม'}
+        >
+          {gapConfirmation.confirmPendingTransfer
+            ? gapLabel
+              ? `มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน หากเลิกงานตอนนี้จะปิดกะโดยไม่ย้ายพื้นที่ และต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`
+              : 'มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน หากเลิกงานตอนนี้จะปิดกะโดยไม่ย้ายพื้นที่'
+            : `ต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`}
         </Note>
       )}
-      {transferPending && (
+      {transferPending && !gapConfirmation?.confirmPendingTransfer && (
         <Note tone="warn" title="มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน">
-          ยืนยันที่ป้ายของพื้นที่ปลายทางก่อนลงเวลา
+          {canShiftOutOrigin
+            ? 'ยืนยันที่ป้ายของพื้นที่ปลายทางก่อนลงเวลา หรือกด “เลิกงาน” ด้านล่างหากต้องการปิดกะที่พื้นที่เดิม'
+            : 'ยืนยันที่ป้ายของพื้นที่ปลายทางก่อนลงเวลา'}
         </Note>
       )}
       {transfer?.state === 'instructed' && !transferPending && outcome?.kind !== 'transfer-confirmed' && (

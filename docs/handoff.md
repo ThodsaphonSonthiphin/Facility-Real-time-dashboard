@@ -2,6 +2,12 @@
 
 Updated 2026-11-20 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
 
+**Product Behavior Decisions implemented (`facility-0231`, `facility-0232`, 2026-11-20, Asia/Bangkok):** Resolved and implemented both owner product behavior decisions:
+
+- **Pending transfer vs final `ShiftOut` (`facility-0231`):** `POST /api/attendance` (`AttendanceEndpoints.cs`, `AttendanceDtos.cs`) now accepts `ShiftOut` at the origin Area's Check-In Sign (`FromAreaId`) while a transfer is pending only when `confirmPendingTransfer: true` is sent (all break actions, Service Point scans, destination-sign `ShiftOut`, and unconfirmed origin `ShiftOut` remain `409 transfer-pending`). `GET /api/attendance/signs/{token}?transferId=...` returns `canShiftOutOrigin` alongside `canConfirmTransfer`. `CheckInPage` (`useCheckInPage.ts`, `CheckInPage.tsx`, `checkInApi.ts`) offers `เลิกงาน` on the origin sign with a mandatory 2-step warning confirmation (`ยืนยันเลิกงานโดยไม่ย้ายพื้นที่`, combined with any skipped breaks) and leaves the transfer instruction `instructed` (unconfirmed, never auto-cancelled).
+- **Remove `Scheduling:Enabled` feature flag (`facility-0232`):** Deleted `SchedulingSettings.Enabled`, `ScheduleEndpoints.UseScheduleFeatureGate()`, the `if (!settings.Enabled)` route guard, `Program.cs` `Enabled` binding, `appsettings.json` `Scheduling.Enabled`, and `scripts/e2e.py` `Scheduling__Enabled` toggle so `/api/schedules` is always mapped as a core feature (`CommandSigningKey` and `HistoryStartsAt` remain unchanged).
+- **Verification:** Targeted `ApiTests` (`EffectiveAttendanceTests`, `AreaTransferTests`, `ScheduleWriteTests`, `ScheduleCommandTests`, `ScheduleLiveTests`) passed **112/112, 0 failed, 0 skipped**; `CheckInPage.test.tsx` passed **38/38**; frontend `lint` and `build` verified.
+
 **Deferred Scheduling Edge Cases resolved (`master`, 2026-11-20, Asia/Bangkok):** Closed three deferred Tasks 9–12 backend findings and added API regression coverage:
 
 - **Relief + Leave coexistence (`EffectiveDuty.cs`):** `EffectiveDutyReader.ResolveAsync` now loads `LiveLeaveIntervalAsync` before the relief short-circuit so an agreed leave interval on the same slot still sets `IsLeave`, `LeaveStart`, and `LeaveEnd` alongside the relief `AreaId` and `ReliefSource`.

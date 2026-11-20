@@ -529,7 +529,6 @@ public class ScheduleCommandTests
         using var scope = factory.Services.CreateScope();
 
         var settings = scope.ServiceProvider.GetRequiredService<SchedulingSettings>();
-        Assert.True(settings.Enabled);
         Assert.False(settings.HasCommandSigningKey);
 
         var refused = Assert.Throws<InvalidOperationException>(
@@ -584,7 +583,6 @@ public class ScheduleCommandTests
                 {
                     services.AddSingleton(new SchedulingSettings(TestKey)
                     {
-                        Enabled = true,
                         HistoryStartsAt = new DateOnly(2026, 11, 17),
                     });
                     services.AddSingleton<IScheduleCommandNotifier>(Notifier);

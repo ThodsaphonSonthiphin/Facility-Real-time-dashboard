@@ -108,8 +108,7 @@ def run(args, playwright_args):
         'E2E_BASE_URL': f'http://127.0.0.1:{port}',
         'E2E_RUN_DIR': str(run_dir), 'E2E_DATASET': args.dataset, 'E2E_SEED_TOKEN': token,
     })
-    # Enable scheduling only in the runner-owned acceptance profile. Borrow neither the owner's flag nor their key.
-    env['Scheduling__Enabled'] = str(args.dataset == 'large').lower()
+    # Borrow neither the owner's command signing key nor their history start date.
     env.pop('Scheduling__CommandSigningKey', None)
     env.pop('Scheduling__HistoryStartsAt', None)
     if args.dataset == 'large':

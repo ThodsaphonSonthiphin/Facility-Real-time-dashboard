@@ -89,7 +89,6 @@ try
     var scheduling = builder.Configuration.GetSection(SchedulingSettings.SectionName);
     var schedulingSettings = new SchedulingSettings(scheduling[SchedulingSettings.CommandSigningKeyName])
     {
-        Enabled = scheduling.GetValue("Enabled", true),
         // A stored date format, read with the invariant culture so a machine's calendar never reinterprets it.
         HistoryStartsAt = DateOnly.TryParse(
             scheduling["HistoryStartsAt"], CultureInfo.InvariantCulture, out var historyStartsAt)
@@ -208,8 +207,6 @@ try
         });
     app.UseDefaultFiles();
     app.UseStaticFiles(appFiles);
-    // Spec §11: while scheduling is not activated the whole group is a 404 for every actor, before authentication runs.
-    app.UseScheduleFeatureGate();
     app.UseAuthentication();
     app.UseAuthorization();
     app.Use(async (context, next) =>
@@ -280,7 +277,6 @@ try
     app.MapAdminExportEndpoints();
     app.MapAdminInspectionSummaryEndpoints();
     app.MapAdminOverviewEndpoints();
-    // Spec §11: the scheduling group maps itself last, and maps nothing at all while Scheduling:Enabled is false.
     app.MapScheduleEndpoints();
 
     // 9. Every other page path (/login, /scan/<token>, ...) gets the app, so a printed QR Sign opens it.

@@ -83,21 +83,6 @@ public class ScheduleWriteTests
     }
 
     [Fact]
-    public async Task A_disabled_server_answers_404_for_an_authenticated_admin()
-    {
-        // Controller ruling: the whole group is absent until an owner activates scheduling, for every actor.
-        using var factory = ScheduleWriteApi.NewFactory(enabled: false);
-        var (client, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        ScheduleWriteApi.Today(factory);
-
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/schedules/me?weekStart={ScheduleWriteApi.Iso(Week)}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/schedules?weekStart={ScheduleWriteApi.Iso(Week)}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync("/api/schedules/command-tokens", null)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound,
-            (await client.PostAsJsonAsync("/api/schedules/commands", new { kind = "set-weekly-days-off" })).StatusCode);
-    }
-
-    [Fact]
     public async Task An_admin_reads_the_week_and_gets_a_command_identity()
     {
         using var factory = ScheduleWriteApi.NewFactory();
@@ -1308,11 +1293,10 @@ internal static class ScheduleWriteApi
 
     public static readonly DateOnly Week = new(2026, 11, 16);
 
-    public static JanitorialApiFactory NewFactory(bool enabled = true) => new()
+    public static JanitorialApiFactory NewFactory() => new()
     {
         ConfigureTestServices = services => services.AddSingleton(new SchedulingSettings(TestKey)
         {
-            Enabled = enabled,
             HistoryStartsAt = new DateOnly(2026, 10, 1),
         }),
     };

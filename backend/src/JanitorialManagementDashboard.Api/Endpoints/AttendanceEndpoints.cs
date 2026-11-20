@@ -115,15 +115,21 @@ public static class AttendanceEndpoints
         // nothing, so a relief with no assignment is refused exactly as another Area's sign is refused today.
         var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, new DateTimeOffset(now, TimeSpan.Zero), ct);
 
-        // Spec §9: an instruction that has taken effect with no confirmed arrival leaves no Area to act in at all. Both the
-        // source's sign and the destination's are refused with the same conflict, and nothing is written — not an actual
-        // fact, not a Blocked Scan, not a gap marker: the destination becomes usable only through its own confirmation.
-        if (duty.IsTransferPending)
+        // Spec §9 + pending-transfer final departure override: an unconfirmed transfer blocks every break action and
+        // every other Area's sign, except an explicitly confirmed final ShiftOut at the origin Area's sign. The pending
+        // transfer stays instructed (unconfirmed) for Supervisor visibility and is never auto-cancelled.
+        var confirmedPendingTransferShiftOut = duty.IsTransferPending
+            && eventType == AttendanceEvent.ShiftOut
+            && duty.Transfer is { } pendingTransfer
+            && area.Id == pendingTransfer.FromAreaId
+            && request.ConfirmPendingTransfer;
+
+        if (duty.IsTransferPending && !confirmedPendingTransferShiftOut)
         {
             return TransferPendingRefusal();
         }
 
-        if (area.Id != duty.AreaId)
+        if (!confirmedPendingTransferShiftOut && area.Id != duty.AreaId)
         {
             var blocked = await BlockedScans.BlockAsync(db, user, sign, area, BlockReason.OtherArea, gps, now);
             await transaction.CommitAsync(ct);
@@ -267,15 +273,19 @@ public static class AttendanceEndpoints
 
         var now = clock.GetUtcNow();
         var canConfirmTransfer = false;
+        var canShiftOutOrigin = false;
         if (user.Shift is { } shift && AttendanceCalendar.SlotFor(shift, now.UtcDateTime, settings) is { } slot)
         {
             var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, now, ct);
-            canConfirmTransfer = duty.Transfer is { IsPending: true } transfer
-                && transfer.Id == transferId && transfer.ToAreaId == sign.AreaId
-                && !await TransferCommandService.HasFinalOutAsync(db, user.Id, slot, ct);
+            if (duty.Transfer is { IsPending: true } transfer && transfer.Id == transferId
+                && !await TransferCommandService.HasFinalOutAsync(db, user.Id, slot, ct))
+            {
+                canConfirmTransfer = transfer.ToAreaId == sign.AreaId;
+                canShiftOutOrigin = transfer.FromAreaId == sign.AreaId;
+            }
         }
 
-        return Results.Ok(new { canConfirmTransfer });
+        return Results.Ok(new { canConfirmTransfer, canShiftOutOrigin });
     }
 
     /// <summary>An Area's check-in sign by its QR Token, with its Area, while the Area is active; otherwise null.</summary>

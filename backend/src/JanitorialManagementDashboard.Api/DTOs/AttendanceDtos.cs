@@ -20,7 +20,8 @@ public record RecordAttendanceRequest(
     double? AccuracyM,
     string? LifecycleVersion = null,
     string? StateRevision = null,
-    IReadOnlyList<AttendanceEvent>? ConfirmGaps = null);
+    IReadOnlyList<AttendanceEvent>? ConfirmGaps = null,
+    bool ConfirmPendingTransfer = false);
 
 /// <summary>
 /// One recorded attendance action. <see cref="Source"/> is Scan, AdminAdd or AdminEdit (facility-0051) or SupervisorAdd;

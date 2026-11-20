@@ -32,13 +32,19 @@ export function useCheckInPage(): CheckInPageView {
   const loadError = workQuery.error ?? (signGone ? undefined : signQuery.error);
   const live = signQuery.isSuccess && signQuery.currentData !== undefined
     && !signQuery.isFetching && !workQuery.isFetching && loadError == null ? attendance : undefined;
-  const choices = !live || transferPending || (live.lifecycleVersion === 'Numbered6' && !live.stateRevision)
+  const arrivalJustConfirmed = outcome?.kind === 'transfer-confirmed' && outcome.result.id === transfer?.id;
+  const hasShiftOut = live?.events.some((event) => event.eventType === 'ShiftOut') ?? false;
+  const confirmable = !!live && transferPending && !!transfer && !arrivalJustConfirmed && !hasShiftOut
+    && signQuery.currentData?.canConfirmTransfer === true;
+  const canShiftOutOrigin = !!live && transferPending && !!transfer && !arrivalJustConfirmed && !hasShiftOut
+    && signQuery.currentData?.canShiftOutOrigin === true;
+  const allChoices = !live || (live.lifecycleVersion === 'Numbered6' && !live.stateRevision)
     ? []
     : live.nextActions?.map(({ action, requiredGaps }) => ({ eventType: action, gaps: requiredGaps }))
       ?? live.nextEvents.map((eventType) => ({ eventType, gaps: [] }));
-  const arrivalJustConfirmed = outcome?.kind === 'transfer-confirmed' && outcome.result.id === transfer?.id;
-  const confirmable = !!live && transferPending && !!transfer && !arrivalJustConfirmed
-    && signQuery.currentData?.canConfirmTransfer === true;
+  const choices = transferPending
+    ? (canShiftOutOrigin ? allChoices.filter(({ eventType }) => eventType === 'ShiftOut') : [])
+    : allChoices;
   const revision = live?.lifecycleVersion === 'Numbered6' ? live.stateRevision : undefined;
   const gapConfirmation = proposed && revision === proposed.revision
     && choices.some(({ eventType }) => eventType === proposed.eventType) ? proposed : null;
@@ -92,13 +98,14 @@ export function useCheckInPage(): CheckInPageView {
         return;
       }
 
-      const { eventType, gaps } = request;
+      const { eventType, gaps, confirmPendingTransfer } = request;
       const answer = await record({
         qrToken: token,
         eventType,
         ...reading.fix,
         ...(request.revision ? { lifecycleVersion: 'Numbered6', stateRevision: request.revision } : {}),
         ...(gaps.length ? { confirmGaps: gaps } : {}),
+        ...(confirmPendingTransfer ? { confirmPendingTransfer: true } : {}),
       });
       if (answer.data) {
         setOutcome(attendanceAnswer(eventType, answer.data, reading.fix.accuracyM));
@@ -125,8 +132,14 @@ export function useCheckInPage(): CheckInPageView {
   const press = (eventType: AttendanceEvent) => {
     const choice = choices.find((item) => item.eventType === eventType);
     if (!choice) return;
-    const request = { kind: 'action' as const, ...choice, revision };
-    if (request.gaps.length) {
+    const confirmPendingTransfer = transferPending && canShiftOutOrigin && eventType === 'ShiftOut';
+    const request = {
+      kind: 'action' as const,
+      ...choice,
+      revision,
+      ...(confirmPendingTransfer ? { confirmPendingTransfer: true } : {}),
+    };
+    if (request.gaps.length || confirmPendingTransfer) {
       setProposed(request);
     } else {
       void submit(request);
@@ -160,7 +173,7 @@ export function useCheckInPage(): CheckInPageView {
     setOutcome(null);
   };
 
-  const finished = !!live?.shift && !transferPending && (live.nextActions ?? live.nextEvents).length === 0;
+  const finished = !!live?.shift && (hasShiftOut || (!transferPending && (live.nextActions ?? live.nextEvents).length === 0));
   const incompleteActions = live?.lifecycleVersion === 'Numbered6'
     && live.actions?.some((action) => action.state === 'skipped' || action.state === 'missing');
 
@@ -179,7 +192,8 @@ export function useCheckInPage(): CheckInPageView {
     outcome,
     transfer,
     confirmable,
-    transferPending: transferPending && !arrivalJustConfirmed,
+    canShiftOutOrigin,
+    transferPending: transferPending && !arrivalJustConfirmed && !hasShiftOut,
     press,
     confirmGaps,
     cancelGaps: () => setProposed(null),

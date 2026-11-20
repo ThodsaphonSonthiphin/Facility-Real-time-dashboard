@@ -279,7 +279,6 @@ public class ScheduleLiveTests
         {
             services.AddSingleton(new SchedulingSettings(ScheduleWriteApi.TestKey)
             {
-                Enabled = true,
                 HistoryStartsAt = new DateOnly(2026, 10, 1),
             });
             extra?.Invoke(services);

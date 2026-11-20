@@ -10,6 +10,8 @@
 
 | เรื่อง | ข้อตกลงและจุดเข้าอ่าน |
 |---|---|
+| อนุญาต `ShiftOut` ที่ป้ายต้นทางพร้อมยืนยัน 2 จังหวะเมื่อมีย้ายพื้นที่ค้าง (ไม่ยกเลิกคำสั่งย้ายอัตโนมัติ) | [0231](facility-0231-pending-transfer-allows-confirmed-origin-shift-out.md) |
+| ตัด `Scheduling:Enabled` feature flag ออก ให้ระบบตารางงานเปิดใช้งานเป็นฟีเจอร์หลักเสมอ | [0232](facility-0232-remove-scheduling-enabled-feature-flag.md) |
 | ปรับ UX/UI ทั้งระบบตามกฎ 10 ข้อ (มือถือ 3 แท็บ + บัญชี, เมนูแอดมิน 3 กลุ่ม + Drawer, Toolbar ตารางงาน M2/Option A, หน้าแอดมิน 12 หน้า) | [0230](facility-0230-ux-heuristics-overhaul-and-navigation-redesign.md) |
 | Admin Home เป็นหน้าภาพรวมและกระชับหน้าสถานะจุด | [0224](facility-0224-admin-overview-home-and-slim-live-point-board.md) |
 | รวมการมอบหมายทำแทนฉุกเฉินไว้ที่หน้าตารางงาน และให้หน้าเตือน/เข้างานทำหน้าที่เดียว | [0225](facility-0225-consolidate-cover-assignment-under-schedules.md) |
