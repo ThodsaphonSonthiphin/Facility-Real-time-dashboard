@@ -36,7 +36,7 @@ test('Admin navigation keeps its geometry while alert counts load at phone, narr
       expect(loadedResponse.ok()).toBe(true);
       const alerts = await loadedResponse.json() as { reviewed: boolean }[];
       const count = alerts.filter((alert) => !alert.reviewed).length;
-      const loaded = nav.getByRole('link', { name: count ? `รายการที่ขึ้นเตือน (${count})` : 'รายการที่ขึ้นเตือน', exact: true });
+      const loaded = nav.getByRole('link', { name: count ? `รายการที่ขึ้นเตือน ${count > 999 ? `999+ (${count})` : count}` : 'รายการที่ขึ้นเตือน', exact: true });
       await expect(loaded).toBeVisible();
       if (count) await expect(loaded.getByTitle(String(count))).toHaveText(count > 999 ? '999+' : String(count));
       expect({ nav: await nav.boundingBox(), link: await loaded.boundingBox() }).toEqual(before);

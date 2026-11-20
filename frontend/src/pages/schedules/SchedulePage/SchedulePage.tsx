@@ -464,7 +464,6 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                           <button
                             type="button"
                             aria-pressed={isSelected}
-                            aria-label={`เลือกช่อง ${person.displayName} ${formatWeekday(day.date)} ${formatShiftDate(day.date)}`}
                             onClick={() => view.selectCell(person.userId, day.date)}
                             className={`flex min-h-14 w-full cursor-pointer flex-col items-start gap-1 rounded-lg px-1.5 py-1.5 text-left wrap-anywhere transition-colors ${focusRing} ${
                               isSelected
@@ -472,6 +471,9 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                                 : 'hover:bg-surface-2'
                             }`}
                           >
+                            <span className="sr-only">
+                              {`เลือกช่อง ${person.displayName} ${formatWeekday(day.date)} ${formatShiftDate(day.date)} `}
+                            </span>
                             <Cell day={day} />
                           </button>
                         ) : (
@@ -556,10 +558,10 @@ function Cell({ day }: { day: ScheduleDay }) {
         {cellLabel[day.availability]}
       </span>
       {day.area.value != null && (
-        <span className="text-xs font-medium text-text-2">{`พื้นที่ ${day.area.value}`}</span>
+        <span className="text-xs font-medium text-text-3">{`พื้นที่ ${day.area.value}`}</span>
       )}
       {day.breakGroup.value != null && (
-        <span className="text-xs text-text-2">{`กลุ่ม ${day.breakGroup.value}`}</span>
+        <span className="text-xs text-text-3">{`กลุ่ม ${day.breakGroup.value}`}</span>
       )}
       {day.problems.length > 0 && (
         <span className="text-xs font-semibold text-rework">มีข้อขัดแย้ง</span>

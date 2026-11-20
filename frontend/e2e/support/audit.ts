@@ -25,7 +25,8 @@ export async function expectNoSeriousViolations(page: Page): Promise<void> {
     .filter((violation) => violation.impact === 'critical' || violation.impact === 'serious')
     .map(({ id, impact, nodes }) => ({
       id, impact,
-      elements: nodes.map(({ target, failureSummary }) => ({ target, failureSummary })),
+      affectedElements: nodes.length,
+      examples: nodes.slice(0, 5).map(({ target, failureSummary }) => ({ target, failureSummary })),
     }));
-  expect(blocking, `WCAG violations on ${page.url()}`).toEqual([]);
+  expect.soft(blocking, `WCAG violations on ${page.url()}`).toEqual([]);
 }

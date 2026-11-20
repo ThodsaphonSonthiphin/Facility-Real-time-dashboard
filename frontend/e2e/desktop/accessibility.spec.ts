@@ -3,15 +3,18 @@ import { loginAsAdmin } from '../support/login.ts';
 import { expect, test } from '../support/test.ts';
 
 test('admin login and core admin pages have zero critical or serious WCAG violations', async ({ page }) => {
+  test.setTimeout(180_000); // The large dataset's populated schedule has thousands of cells to audit.
   await page.goto('/login/admin');
   await expect(page.getByRole('heading', { name: 'แอดมินเข้าสู่ระบบ' })).toBeVisible();
   await expectNoSeriousViolations(page);
 
   await loginAsAdmin(page);
   for (const path of ['/admin/overview', '/admin/schedules', '/admin/attendance', '/admin/areas', '/admin/buildings']) {
-    await page.goto(path);
-    await expect(page.getByRole('main')).toBeVisible();
-    await expectNoSeriousViolations(page);
+    await test.step(`Audit ${path}`, async () => {
+      await page.goto(path);
+      await expect(page.getByRole('main')).toBeVisible();
+      await expectNoSeriousViolations(page);
+    });
   }
 });
 
