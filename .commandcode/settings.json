@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(ls -la .superpowers/sdd/ 2>/dev/null; echo '---'; ls docs/superpowers/plans/ 2>/dev/null; echo '---'; ls -la ~/.commandcode/plans/ 2>/dev/null | head -30)",
+      "Shell(dotnet:*)",
+      "Shell(command-code --help 2>&1 | head -40; echo '---'; ls ~/.commandcode/ 2>/dev/null; cat ~/.commandcode/config.json 2>/dev/null | head -50)",
+      "Shell(command-code:*)",
+      "Shell(git:*)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

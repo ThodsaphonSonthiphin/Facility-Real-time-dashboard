@@ -1,6 +1,8 @@
 # Handoff: current status and next steps
 
-Updated 2026-11-20 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
+Updated 2026-11-21 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
+
+**Worktree synchronization and agent skills lock commit (`master`, 2026-11-21, Asia/Bangkok).** Aligned the primary workspace onto merged `master` (`1ea3979`, PR #158), removed the temporary `Janitorial-Management-Dashboard-overview-verification` worktree and merged local branches (`codex/local-wip-before-overview-merge`, `codex/overview-transition-verification`), and committed the remaining untracked agent skill files (`.agents/skills/modern-web-guidance/`, `.commandcode/`, and `skills-lock.json`).
 
 ## Overview transitions and 12-category verification
 
