@@ -139,6 +139,75 @@ public static class OverviewAvailability
         return slots;
     }
 
+    public static (DateOnly? Earliest, DateOnly? Latest) CalculateSupportedBounds(
+        DateTime nowUtc,
+        RetentionSettings settings,
+        TargetRevision[] ordered,
+        DetailCoverage coverage,
+        IReadOnlySet<ShiftSlot>? issueKnownSlots = null)
+    {
+        if (ordered.Length == 0)
+        {
+            return (null, null);
+        }
+
+        var gaps = MergeIntervals(coverage.Gaps.Concat(OverviewTimeline.StructuralGaps(ordered)));
+        var unreadable = MergeIntervals(coverage.UnreadableTargetIntervals);
+        var firstDate = DateOnly.FromDateTime(ThaiTime.FromUtc(settings.RecordCutoffUtc(nowUtc)));
+        var minRevisionDate = DateOnly.FromDateTime(ThaiTime.FromUtc(ordered[0].EffectiveAt)).AddDays(-1);
+        if (minRevisionDate > firstDate)
+        {
+            firstDate = minRevisionDate;
+        }
+
+        var lastDate = DateOnly.FromDateTime(ThaiTime.FromUtc(nowUtc));
+        var shifts = new[] { Shift.Day, Shift.Night };
+        var firstRevision = 0;
+        var afterLastRevision = 0;
+        var firstGap = 0;
+        var firstUnreadable = 0;
+        DateOnly? earliest = null;
+        DateOnly? latest = null;
+
+        for (var date = firstDate; date <= lastDate; date = date.AddDays(1))
+        foreach (var shift in shifts)
+        {
+            var slot = new ShiftSlot(date, shift);
+            var from = FirstPossibleOpen(slot);
+            var to = Earlier(nowUtc, LastPossibleClose(slot));
+            while (firstRevision + 1 < ordered.Length && ordered[firstRevision + 1].EffectiveAt <= from)
+                firstRevision++;
+            while (afterLastRevision < ordered.Length && ordered[afterLastRevision].EffectiveAt <= to)
+                afterLastRevision++;
+
+            if (afterLastRevision == 0)
+                continue;
+
+            var relevant = ordered[firstRevision..afterLastRevision];
+            var moment = OverviewTime.EvaluateOrdered(slot, nowUtc, relevant);
+            var timeline = OverviewTimeline.DescribeCoverage(slot, moment, relevant);
+            var availability = Calculate(slot, moment, timeline, coverage with
+            {
+                ReadAtUtc = nowUtc,
+                IssueStateKnown = issueKnownSlots?.Contains(slot) == true,
+                Gaps = RelevantIntervals(gaps, ref firstGap, ShiftCalendar.StartUtc(slot), to),
+                UnreadableTargetIntervals = RelevantIntervals(unreadable, ref firstUnreadable, from, to),
+            });
+            var supported = availability.Entry.State == "complete"
+                && availability.Work.State == "complete"
+                && availability.Inspection.State == "complete"
+                && availability.History.State == "complete"
+                && availability.Issue.State == "complete";
+            if (supported)
+            {
+                earliest ??= date;
+                latest = date;
+            }
+        }
+
+        return (earliest, latest);
+    }
+
     private static ArraySegment<(DateTime From, DateTime To)> RelevantIntervals(
         (DateTime From, DateTime To)[] intervals, ref int first, DateTime from, DateTime to)
     {

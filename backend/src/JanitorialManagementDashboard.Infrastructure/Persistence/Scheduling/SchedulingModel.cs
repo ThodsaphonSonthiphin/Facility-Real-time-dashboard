@@ -149,16 +149,6 @@ public static class SchedulingModel
             e.HasOne<User>().WithMany().HasForeignKey(x => x.ConfirmedById).OnDelete(DeleteBehavior.Restrict);
         });
 
-        model.Entity<AttendanceSlotLifecycle>(e =>
-        {
-            e.ToTable("attendance_slot_lifecycles");
-            e.Property(x => x.Shift).HasConversion(new UpperSnakeEnumConverter<Shift>()).HasMaxLength(10);
-            e.Property(x => x.Version).HasConversion(new UpperSnakeEnumConverter<AttendanceLifecycleVersion>()).HasMaxLength(20);
-            e.Property(x => x.Reason).HasMaxLength(500);
-            e.HasIndex(x => new { x.ShiftDate, x.Shift }).IsUnique();
-            e.HasOne<User>().WithMany().HasForeignKey(x => x.ActivatedById).OnDelete(DeleteBehavior.Restrict);
-        });
-
         model.Entity<AttendanceGap>(e =>
         {
             e.ToTable("attendance_gaps");

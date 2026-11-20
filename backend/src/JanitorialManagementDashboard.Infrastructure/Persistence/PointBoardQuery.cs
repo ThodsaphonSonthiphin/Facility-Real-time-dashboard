@@ -32,26 +32,105 @@ public static class PointBoardQuery
             query = query.Where(p => onlyAreas.Contains(p.AreaId));
         }
 
-        var points = await query.OrderBy(p => p.Area!.Code).ThenBy(p => p.SortOrder).ToListAsync();
-        var ids = points.Select(p => p.Id).ToList();
-        var facts = await RoundFactsQuery.LoadAsync(db, ids, slot);
-
-        // facility-0046: the issue tag follows the point's latest Scan Record, whatever shift it was in
-        var latestIds = db.ScanRecords
-            .Where(x => ids.Contains(x.ServicePointId))
-            .GroupBy(x => x.ServicePointId)
-            .Select(g => g.Max(x => x.Id));
-        var lastScans = await db.ScanRecords.AsNoTracking()
-            .Include(s => s.User)
-            .Where(s => latestIds.Contains(s.Id))
+        var rawPoints = await query
+            .OrderBy(p => p.Area!.Code)
+            .ThenBy(p => p.SortOrder)
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.AreaId,
+                p.SortOrder,
+                AreaCode = p.Area!.Code,
+                AreaName = p.Area.Name,
+                p.Area.BuildingId,
+                BuildingCode = p.Area.Building!.Code,
+                p.Area.ShiftPattern,
+            })
             .ToListAsync();
+        if (rawPoints.Count == 0)
+        {
+            return [];
+        }
+
+        var buildingCache = new Dictionary<int, Building>();
+        var areaCache = new Dictionary<int, Area>();
+        var points = new List<ServicePoint>(rawPoints.Count);
+        foreach (var p in rawPoints)
+        {
+            if (!buildingCache.TryGetValue(p.BuildingId, out var building))
+            {
+                buildingCache[p.BuildingId] = building = new Building { Id = p.BuildingId, Code = p.BuildingCode };
+            }
+            if (!areaCache.TryGetValue(p.AreaId, out var area))
+            {
+                areaCache[p.AreaId] = area = new Area
+                {
+                    Id = p.AreaId,
+                    Code = p.AreaCode,
+                    Name = p.AreaName,
+                    BuildingId = p.BuildingId,
+                    ShiftPattern = p.ShiftPattern,
+                    IsActive = true,
+                    Building = building,
+                };
+            }
+            points.Add(new ServicePoint
+            {
+                Id = p.Id,
+                Name = p.Name,
+                AreaId = p.AreaId,
+                SortOrder = p.SortOrder,
+                IsActive = true,
+                Area = area,
+            });
+        }
+
+        var allActivePoints = areaIds is null && servicePointId is null;
+        var ids = points.Select(p => p.Id).ToList();
+        var facts = await RoundFactsQuery.LoadAsync(db, ids, slot, filterPointIds: !allActivePoints);
+
+        // facility-0046: the issue tag follows the point's latest Scan Record, whatever shift it was in.
+        // Join against the per-point max scan IDs in a single MySQL primary-key lookup instead of sending 1,200 IDs in SQL IN (...).
+        var maxIdsQuery = allActivePoints
+            ? db.ScanRecords.AsNoTracking().GroupBy(x => x.ServicePointId).Select(g => g.Max(x => x.Id))
+            : db.ScanRecords.AsNoTracking().Where(x => ids.Contains(x.ServicePointId)).GroupBy(x => x.ServicePointId).Select(g => g.Max(x => x.Id));
+        var lastScans = (await db.ScanRecords.AsNoTracking()
+            .Join(
+                maxIdsQuery,
+                s => s.Id,
+                maxId => maxId,
+                (s, _) => new
+                {
+                    s.Id,
+                    s.ServicePointId,
+                    s.SubmittedAt,
+                    s.Placement,
+                    s.Status,
+                    s.IssueTags,
+                    s.Note,
+                    CleanerName = s.User != null ? s.User.DisplayName : string.Empty,
+                })
+            .ToListAsync())
+            .Select(s => new ScanRecord
+            {
+                Id = s.Id,
+                ServicePointId = s.ServicePointId,
+                SubmittedAt = s.SubmittedAt,
+                Placement = s.Placement,
+                Status = s.Status,
+                IssueTags = s.IssueTags,
+                Note = s.Note,
+                User = new User { DisplayName = s.CleanerName },
+            })
+            .ToDictionary(s => s.ServicePointId);
 
         return points.Select(point =>
         {
             var pointFacts = facts[point.Id];
             var status = PointStatusCalculator.Calculate(
                 point.Area!.HasShift(slot.Shift), pointFacts.Windows, pointFacts.Submissions, pointFacts.Inspections, nowUtc);
-            return new PointBoardRow(point, status, lastScans.FirstOrDefault(s => s.ServicePointId == point.Id));
+            return new PointBoardRow(point, status, lastScans.GetValueOrDefault(point.Id));
         }).ToList();
     }
 }

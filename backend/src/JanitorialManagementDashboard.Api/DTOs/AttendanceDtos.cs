@@ -2,23 +2,13 @@ using JanitorialManagementDashboard.Domain.Enums;
 
 namespace JanitorialManagementDashboard.Api.DTOs;
 
-/// <summary>
-/// Spec §8: a scan, with the slot lifecycle marker and the state revision of the page that sent it so a stale or
-/// incompatible page is refused before anything is written. Every new member is optional, so an old page that sends only
-/// the four original fields keeps working exactly as it did.
-/// <para>
-/// <see cref="ConfirmGaps"/> carries the intermediate actions the Cleaner explicitly skips to reach the one being recorded —
-/// skip markers, never guessed times (<c>ส่ง skipped markers ไม่ใช่ guessed times</c>) — and has to equal the choice's
-/// required gaps exactly.
-/// </para>
-/// </summary>
+/// <summary>A scan includes the current state revision and any breaks the Cleaner explicitly confirms skipping.</summary>
 public record RecordAttendanceRequest(
     string QrToken,
     AttendanceEvent? EventType,
     double? Latitude,
     double? Longitude,
     double? AccuracyM,
-    string? LifecycleVersion = null,
     string? StateRevision = null,
     IReadOnlyList<AttendanceEvent>? ConfirmGaps = null,
     bool ConfirmPendingTransfer = false);
@@ -83,34 +73,12 @@ public record AttendanceTransferDto(
     DateTime? ConfirmedAt,
     string Revision);
 
-/// <summary>
-/// ShiftDate and Shift are null, and the lists empty, outside every attendance window of the Cleaner's shift.
-/// <para>
-/// Task 9 extends the read additively (spec §8 and §11): <see cref="LifecycleVersion"/> is the slot's contract marker
-/// ("Legacy4" or "Numbered6"), <see cref="StateRevision"/> the token a write sends back, <see cref="Actions"/> the ordered
-/// lifecycle with each action's state and expected instant, <see cref="Gaps"/> the stored skip markers and their
-/// resolutions, and <see cref="NextActions"/> what may be recorded next. <see cref="Events"/> and
-/// <see cref="NextEvents"/> keep exactly their old meaning so an older page still works.
-/// </para>
-/// <para>
-/// <see cref="DutyAreaId"/>, <see cref="DutyBreakGroup"/> and <see cref="DutySource"/> are the slot's effective duty
-/// (spec §7): the Area the Cleaner is eligible in even on a recorded day off or leave, with <see cref="IsDayOff"/> and
-/// <see cref="IsLeave"/> as the conflict markers shown beside it. <see cref="DepartureLeaveMismatch"/> flags a numbered
-/// slot's early final departure without a recorded leave interval covering that actual time.
-/// </para>
-/// <para>
-/// <see cref="Transfer"/> is the slot's midshift instruction (spec §9), null when the slot has none. While it is pending the
-/// duty Area is null and <see cref="DutySource"/> says "transfer-pending": neither Area accepts an actual action until the
-/// destination confirmation is recorded.
-/// </para>
-/// </summary>
+/// <summary>Six-action attendance state. Shift and revision are unset outside the attendance window.</summary>
 public record AttendanceStateDto(
     DateOnly? ShiftDate,
     Shift? Shift,
     IReadOnlyList<AttendanceEntryDto> Events,
-    IReadOnlyList<AttendanceEvent> NextEvents,
     AttendanceOutcome? Outcome,
-    string? LifecycleVersion = null,
     string? StateRevision = null,
     IReadOnlyList<AttendanceActionDto>? Actions = null,
     IReadOnlyList<AttendanceGapDto>? Gaps = null,
@@ -126,14 +94,9 @@ public record AttendanceStateDto(
     bool? CanCancelTransfer = null,
     bool? DepartureLeaveMismatch = null);
 
-/// <summary>
-/// A refused write (spec §8, §11). <see cref="Code"/> is the machine word a page branches on — "refresh-required",
-/// "action-not-allowed" or "gaps-not-confirmed" — and <see cref="NextEvents"/> keeps the old list of actions that are
-/// allowed now, so a page written before these words existed still shows what it showed.
-/// </summary>
+/// <summary>A refused write, with the breaks that need confirmation when applicable.</summary>
 public record AttendanceRefusedDto(
     string Message,
-    IReadOnlyList<AttendanceEvent> NextEvents,
     string? Code = null,
     IReadOnlyList<AttendanceEvent>? RequiredGaps = null);
 

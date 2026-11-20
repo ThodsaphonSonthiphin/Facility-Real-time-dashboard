@@ -137,6 +137,7 @@ test('large account and Area lists: search, role counts, filters, empty state an
   const dataset = JSON.parse(readFileSync(`${process.env.E2E_RUN_DIR}/dataset.json`, 'utf8')) as { counts: { generatedAreas: number }; roleCounts: { cleaner: number } };
   await loginAsAdmin(page);
   await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'บัญชีผู้ใช้' }).click();
+  await expect(page).toHaveURL(/\/admin\/accounts$/);
   await expect(page.getByRole('row')).toHaveCount(dataset.roleCounts.cleaner + 1);
   const started = performance.now();
   await page.getByLabel('ค้นหา', { exact: true }).fill('7000000');

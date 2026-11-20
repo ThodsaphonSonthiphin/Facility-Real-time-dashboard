@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { adminSession, areaDetail, checkInSign, areaSummary, officeDetail, officeSummary } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
-import { expectBehindMoreInfo, expectInView } from '../../test/moreInfo';
 import { qrPath } from './qr';
 
 const secondBuildingArea = { ...officeSummary, buildingId: 2, buildingCode: 'B' };
@@ -85,7 +84,7 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     const checkIn = screen.getByRole('article', { name: 'ป้าย AR01-IN' });
     expect(within(checkIn).getByText('ป้ายลงเวลา')).toBeInTheDocument();
     expect(within(checkIn).getByRole('heading', { name: 'Area ทดลอง' })).toBeInTheDocument();
-    expect(within(checkIn).getByText('สแกนตอนเข้างาน ออกพัก กลับจากพัก และเลิกงาน')).toBeInTheDocument();
+    expect(within(checkIn).getByText('สแกนตอนเข้างาน ออกพักและกลับจากพักทั้ง 2 รอบ แล้วสแกนเลิกงาน')).toBeInTheDocument();
     expect(
       within(checkIn).getByText(`${window.location.origin}/check-in/9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d`),
     ).toBeInTheDocument();
@@ -115,7 +114,7 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     // The test page is plain http, where a phone at the sign cannot read its location
     expect(screen.getByText(`ที่อยู่บนป้าย: ${window.location.origin}`)).toBeInTheDocument();
     expect(
-      screen.getByText('ให้เปิดหน้าพิมพ์จากลิงก์ HTTPS ของระบบ มือถือจึงจะอ่านตำแหน่งได้เมื่อสแกนป้าย'),
+      screen.getByText('เปิดจากลิงก์ HTTPS เพื่อให้มือถืออ่านตำแหน่งได้'),
     ).toBeInTheDocument();
   });
 
@@ -221,13 +220,12 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
   });
 
-  it('how the QR is made waits behind ℹ; the test scan after hanging stays (owner, 2026-10-27)', async () => {
+  it('omits redundant QR info note', async () => {
     serve();
     await renderApp('/admin/print?area=1');
 
     await screen.findByRole('heading', { level: 1, name: 'พิมพ์ป้าย' });
-    expectBehindMoreInfo('ระบบสร้าง QR ในเครื่องนี้เอง ไม่ส่งรหัสออกไปเว็บภายนอก', 'เกี่ยวกับ QR');
-    expectInView('ติดเสร็จให้สแกนทดสอบ 1 ครั้ง หน้าจอต้องขึ้นชื่อจุดตรงกับป้าย');
+    expect(screen.queryByText('เกี่ยวกับ QR')).not.toBeInTheDocument();
   });
 
 });

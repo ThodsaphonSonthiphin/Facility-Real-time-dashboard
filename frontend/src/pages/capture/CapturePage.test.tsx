@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { adminSession, areaDetail, unlocatedSign } from '../../test/adminFixtures';
 import { fakeGpsTrack } from '../../test/fakeGps';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
-import { expectBehindMoreInfo } from '../../test/moreInfo';
 import { renderApp } from '../../test/renderApp';
 
 afterEach(() => vi.useRealTimers());
@@ -149,7 +148,7 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' }));
     await wait(5_000);
-    fireEvent.click(screen.getByRole('link', { name: 'กลับไปหน้าจัดการพื้นที่และป้าย' }));
+    fireEvent.click(screen.getByRole('link', { name: 'พื้นที่และป้าย' }));
     await waitFor(() => expect(gps.cleared).toBe(2));
   });
 
@@ -229,12 +228,11 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     expect(screen.getByRole('button', { name: 'ใช้ตำแหน่งตรงนี้' })).toBeInTheDocument();
   });
 
-  it('the page note waits behind a phone-size ℹ (owner, 2026-10-27)', async () => {
+  it('omits redundant page note on phone capture screen', async () => {
     serve();
     await openAtSign('/admin/areas/1/capture?sign=102', 'AR01-02 ห้องน้ำหญิง');
 
-    expectBehindMoreInfo('เมื่อบันทึกพิกัดแล้ว ดูรายการย้อนหลังได้ในหน้า “ประวัติการแก้ไขของแอดมิน”', 'เกี่ยวกับหน้านี้');
-    expect(screen.getByText('เกี่ยวกับหน้านี้').closest('summary')).toHaveClass('min-h-12');
+    expect(screen.queryByText('เกี่ยวกับหน้านี้')).not.toBeInTheDocument();
   });
 
   it('retries failed area load on CapturePage (UX-05)', async () => {

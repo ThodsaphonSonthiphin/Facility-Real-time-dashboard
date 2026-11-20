@@ -132,7 +132,9 @@ try
     if (!builder.Environment.IsEnvironment("Testing"))
     {
         var connectionString = DatabaseSettings.ConnectionString(builder.Configuration);
-        builder.Services.AddDbContext<AppDbContext>(options => options.UseMySQL(connectionString));
+        builder.Services.AddDbContextPool<AppDbContext>(
+            options => options.UseMySQL(connectionString),
+            poolSize: 128);
     }
 
     // 2. SignalR with string enum serialization; facility-0107: a ping every 5 s, for the Admin pages' 10 s wait

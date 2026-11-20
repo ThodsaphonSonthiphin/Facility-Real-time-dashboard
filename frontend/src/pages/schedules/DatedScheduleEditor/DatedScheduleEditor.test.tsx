@@ -33,8 +33,8 @@ it('records Thai night-shift leave using UTC instants and the date the shift sta
   await app.user.click(await screen.findByRole('button', { name: /แก้เฉพาะวันที่.*17\/11/ }));
   const drawer = within(await screen.findByRole('dialog', { name: 'แก้ตารางเฉพาะวันที่' }));
   await app.user.selectOptions(drawer.getByLabelText('รายการที่จะแก้'), 'leave');
-  expect(drawer.getByLabelText('เริ่มลา (เวลาไทย)')).toHaveValue('2026-11-17T19:00');
-  expect(drawer.getByLabelText('สิ้นสุดลา (เวลาไทย)')).toHaveValue('2026-11-18T07:00');
+  expect(drawer.getByLabelText('เริ่มลา')).toHaveValue('2026-11-17T19:00');
+  expect(drawer.getByLabelText('สิ้นสุดลา')).toHaveValue('2026-11-18T07:00');
   await app.user.click(drawer.getByRole('button', { name: 'ตรวจสอบ' }));
   await app.user.click(drawer.getByRole('button', { name: 'บันทึก' }));
   expect(await drawer.findByText('บันทึกการเปลี่ยนแปลงแล้ว')).toBeVisible();

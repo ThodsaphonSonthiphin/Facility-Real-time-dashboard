@@ -1,7 +1,6 @@
 import { Eye } from 'lucide-react';
 import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -16,7 +15,6 @@ export function HistoryPage() {
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <AdminPageHeader
         title="ประวัติการแก้ไขของแอดมิน"
-        subtitle="ใคร แก้อะไร เมื่อไร ค่าก่อนและหลัง แก้หรือลบรายการไม่ได้"
         badge={
           <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-idle-bg px-2 py-0.5 text-xs font-semibold text-idle">
             <Eye aria-hidden="true" className="size-4" />อ่านอย่างเดียว
@@ -44,9 +42,6 @@ export function HistoryPage() {
             </div>
           } />
       )}
-      <MoreInfo summary="เกี่ยวกับหน้านี้">
-        <span>ไม่มีใครแก้หรือลบรายการในหน้านี้ได้ · เก็บนานเท่ากับข้อมูลที่ถูกแก้ · เบอร์โทรไม่แสดงทั้งก่อนและหลัง · การเปิดดูหน้านี้ไม่ถูกบันทึก</span>
-      </MoreInfo>
     </main>
   );
 }

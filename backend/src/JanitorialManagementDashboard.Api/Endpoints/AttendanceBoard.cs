@@ -67,13 +67,6 @@ internal static class AttendanceBoard
             .OrderBy(a => a.OccurredAt)
             .ToListAsync();
 
-        // Spec §8: the state word is read against the slot's own lifecycle, so a numbered break out is "OnBreak" and never
-        // "Working". A slot without a lifecycle row keeps the legacy four actions.
-        var version = AttendanceLifecycle.VersionFor(await db.AttendanceSlotLifecycles.AsNoTracking()
-            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift)
-            .Select(row => (AttendanceLifecycleVersion?)row.Version)
-            .FirstOrDefaultAsync());
-
         // Spec §13 and ADR facility-0216 (Task 11): entry comes from actual facts (initial Shift-In or a confirmed transfer
         // arrival), and current responsibility is a separate answer derived from the same transfer chain Task 10 stores.
         var evidence = await store.ReadEntryEvidenceAsync(slot, ct);
@@ -104,7 +97,7 @@ internal static class AttendanceBoard
                         positions[user.Id].LastConfirmedAreaId, positions[user.Id].ConfirmedAt?.UtcDateTime))
                     .ToList();
                 var areaCovers = covers.Where(cover => cover.AreaId == area.Id).ToList();
-                return Row(area, responsible, areaCovers, factsByPerson, version, evidence, enteredAreas,
+                return Row(area, responsible, areaCovers, factsByPerson, evidence, enteredAreas,
                     areaCovers.Count > 0 || assignedHere.Count > 0, responsibilities);
             })
             .OrderBy(r => r.State == AreaAttendanceState.Empty ? 0 : 1)
@@ -120,8 +113,7 @@ internal static class AttendanceBoard
                 rows.Count(r => r.State is AreaAttendanceState.Working or AreaAttendanceState.OnBreak or AreaAttendanceState.Done),
                 rows.Count(r => r.State == AreaAttendanceState.Empty),
                 rows.Count(r => r.State == AreaAttendanceState.Covered)),
-            rows,
-            version);
+            rows);
     }
 
     public static BoardEventDto ToDto(ShiftAttendance a) =>
@@ -146,7 +138,7 @@ internal static class AttendanceBoard
 
     private static BoardRowDto Row(
         Area area, IReadOnlyList<User> cleaners, List<CoverAssignment> covers, ILookup<int, ShiftAttendance> facts,
-        AttendanceLifecycleVersion version, IReadOnlyList<AreaEntryEvidence> evidence,
+        IReadOnlyList<AreaEntryEvidence> evidence,
         IReadOnlySet<int> enteredAreas, bool isAssigned, List<BoardResponsibilityDto> responsibilities)
     {
         var primary = cleaners.FirstOrDefault();
@@ -155,7 +147,7 @@ internal static class AttendanceBoard
             .Select(person => new BoardCleanerAttendanceDto(CleanerDto(person), facts[person.Id].Select(ToDto).ToList()))
             .ToList();
         var states = cleaners.Select(person =>
-            AreaAttendance.StateOf(facts[person.Id].Select(fact => fact.EventType).ToList(), false, version)).ToHashSet();
+            AreaAttendance.StateOf(facts[person.Id].Select(fact => fact.EventType).ToList(), false)).ToHashSet();
         var state = states.Contains(AreaAttendanceState.Working) ? AreaAttendanceState.Working
             : states.Contains(AreaAttendanceState.OnBreak) ? AreaAttendanceState.OnBreak
             : states.Contains(AreaAttendanceState.Done) ? AreaAttendanceState.Done

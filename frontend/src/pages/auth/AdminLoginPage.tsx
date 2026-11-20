@@ -28,7 +28,7 @@ export function AdminLoginPage() {
           onSubmit={page.onSubmit}
           aria-busy={page.isLoading}
         >
-          {page.returnsToPage && <Note tone="info">เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที</Note>}
+          {page.returnsToPage && <Note tone="info">เข้าสู่ระบบเพื่อกลับไปยังหน้าที่เปิดไว้</Note>}
           {page.errorText && <div id={page.errorId}><Note tone="error">{page.errorText}</Note></div>}
           <Field label="ชื่อผู้ใช้">
             <TextInput
@@ -74,7 +74,7 @@ export function AdminLoginPage() {
           </Button>
         </form>
         <footer className="flex flex-col gap-2 text-center text-xs text-text-2">
-          <span>ถ้าลืมรหัสผ่าน ให้แอดมินคนอื่นตั้งรหัสผ่านใหม่ให้ในหน้า “บัญชีผู้ใช้”</span>
+          <span>ลืมรหัสผ่าน ติดต่อแอดมินคนอื่นเพื่อตั้งใหม่</span>
           <Link className={inlineLinkClass} to="/login" state={page.linkState}>
             หน้าเข้าสู่ระบบของพนักงาน
           </Link>

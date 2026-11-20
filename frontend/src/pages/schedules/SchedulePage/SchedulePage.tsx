@@ -12,7 +12,6 @@ import { Button } from '../../../shared/components/Button';
 import { HorizontalScrollArea } from '../../../shared/components/Boxes';
 import { ConnectionBanner } from '../../../shared/components/ConnectionBanner/ConnectionBanner';
 import { Select } from '../../../shared/components/Field';
-import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { Note } from '../../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../../shared/components/PhoneScreen';
@@ -67,7 +66,6 @@ export function OwnSchedulePage() {
           }
         >
           <h1 className="text-xl font-extrabold text-text">ตารางของฉัน</h1>
-          <p className="text-sm text-text-2">ตารางเวรประจำสัปดาห์และกลุ่มพัก</p>
         </PhoneHeader>
       }
     >
@@ -104,11 +102,6 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
     <main className="flex min-w-0 flex-col gap-4 text-base text-text sm:gap-5 sm:text-sm">
       <AdminPageHeader
         title={role === 'admin' ? 'ตารางงาน' : 'จัดตารางงาน'}
-        subtitle={
-          role === 'admin'
-            ? 'ดูและจัดการตารางของทุกตึกและทุกกะ แตะช่องวันเพื่อแก้ไขรายคน'
-            : 'ตารางรวมของตึกและกะที่คุณรับผิดชอบ แตะช่องวันเพื่อจัดการรายคน'
-        }
         actions={
           <Button variant="secondary" size="desk" className="min-h-10 sm:min-h-9" disabled={view.isFetching} onClick={view.refetch}>
             <RefreshCw aria-hidden="true" className="size-4" />
@@ -154,7 +147,6 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
           />
         )}
       </Suspense>
-      <Notes role={role} />
     </main>
   );
 }
@@ -272,7 +264,7 @@ function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typ
             <p>ตึก {duty.destinationBuildingCode} · {duty.areaCode} · กลุ่มพัก {duty.breakGroup ?? 'ยังไม่กำหนด'}</p>
             <p className="text-text-2">ตึกต้นทาง {duty.sourceBuildingCode}{duty.sourceSupervisorName && ` · ${duty.sourceSupervisorName}`}</p>
             {duty.replacedDisplayName && <p>แทน {duty.replacedDisplayName}</p>}
-            {duty.agreementReported && <p className="text-text-2">ผู้บันทึกยืนยันว่าตกลงกับตึกต้นทางนอกเว็บแล้ว</p>}
+            {duty.agreementReported && <p className="text-text-2">ตกลงกับตึกต้นทางแล้ว</p>}
             {!duty.isCancelled && (
               <TeamSlotActions view={view} displayName={duty.displayName}
                 slot={{ userId: duty.userId, shiftDate: duty.shiftDate, shift: duty.shift }} />
@@ -351,7 +343,7 @@ function WeekBody({ view }: { view: ReturnType<typeof useSchedulePage> }) {
       )}
       {week && week.availability !== 'empty' && weekIsUnavailable(week) && (
         <Note tone="warn" title="ไม่มีข้อมูลของสัปดาห์นี้">
-          ช่วงนี้ไม่ได้เก็บข้อมูลไว้นานขนาดย้อนดูได้ จึงไม่ใช่สัปดาห์ที่ไม่มีคนทำงาน
+          ไม่พบข้อมูลย้อนหลังของสัปดาห์นี้
         </Note>
       )}
       {week && week.availability !== 'empty' && !weekIsUnavailable(week) && (
@@ -472,14 +464,16 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                           <button
                             type="button"
                             aria-pressed={isSelected}
-                            aria-label={`เลือกช่อง ${person.displayName} ${formatWeekday(day.date)} ${formatShiftDate(day.date)}`}
                             onClick={() => view.selectCell(person.userId, day.date)}
-                            className={`flex min-h-14 w-full cursor-pointer flex-col items-start gap-1 rounded-lg px-1.5 py-1.5 text-left wrap-anywhere transition-colors ${focusRing} ${
+                            className={`relative flex min-h-14 w-full cursor-pointer flex-col items-start gap-1 rounded-lg px-1.5 py-1.5 text-left wrap-anywhere transition-colors ${focusRing} ${
                               isSelected
                                 ? 'bg-accent-subtle ring-2 ring-accent ring-inset'
                                 : 'hover:bg-surface-2'
                             }`}
                           >
+                            <span className="sr-only">
+                              {`เลือกช่อง ${person.displayName} ${formatWeekday(day.date)} ${formatShiftDate(day.date)} `}
+                            </span>
                             <Cell day={day} />
                           </button>
                         ) : (
@@ -564,10 +558,10 @@ function Cell({ day }: { day: ScheduleDay }) {
         {cellLabel[day.availability]}
       </span>
       {day.area.value != null && (
-        <span className="text-xs font-medium text-text-2">{`พื้นที่ ${day.area.value}`}</span>
+        <span className="text-xs font-medium text-text-3">{`พื้นที่ ${day.area.value}`}</span>
       )}
       {day.breakGroup.value != null && (
-        <span className="text-xs text-text-2">{`กลุ่ม ${day.breakGroup.value}`}</span>
+        <span className="text-xs text-text-3">{`กลุ่ม ${day.breakGroup.value}`}</span>
       )}
       {day.problems.length > 0 && (
         <span className="text-xs font-semibold text-rework">มีข้อขัดแย้ง</span>
@@ -590,19 +584,6 @@ function DayFacts({ day }: { day: ScheduleDay }) {
         <span className="ml-2 text-text-2">{sourceLabel[day.breakGroup.sourceKind]}</span>
       </dd>
     </dl>
-  );
-}
-
-function Notes({ role }: { role: ScheduleRole }) {
-  return (
-    <MoreInfo summary="เกี่ยวกับหน้านี้">
-      <span>
-        {role === 'admin'
-          ? 'แสดงแผนตามวันของแต่ละคน ไม่ใช่เวลาที่สแกนจริง · หน้านี้อัปเดตเองเมื่อมีคนแก้ตาราง'
-          : 'แสดงแผนตามวันของแม่บ้านในตึกและกะที่คุณรับผิดชอบ ไม่ใช่เวลาที่สแกนจริง · หน้านี้อัปเดตเองเมื่อมีคนแก้ตาราง'}
-      </span>
-      <span>วันหยุดและลาทั้งกะไม่ปิดพื้นที่และไม่ลดรอบงาน · “ยังไม่กำหนด” ไม่ใช่คำยืนยันว่ามาทำงาน</span>
-    </MoreInfo>
   );
 }
 

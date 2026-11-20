@@ -8,15 +8,13 @@ import { Button } from '../../shared/components/Button';
 import { Badge, EditedMark } from '../../shared/components/Badge';
 import { PageEmpty } from '../../shared/components/PageState';
 import { buttonClass, tableCell } from '../../shared/components/styles';
-import type { AttendanceLifecycleVersion } from '../../shared/api/types';
-import { entryLabel, eventLabel, lifecycleEvents, transferStateLabel } from '../../shared/utils/labels';
+import { entryLabel, eventLabel, attendanceEvents, transferStateLabel } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
 import { useBuildingNames, buildingText } from '../../shared/api/buildingNames';
 import { areaStateLabel, attendanceTargets, coverDetail, eventOf } from './attendanceRules';
 
 interface AttendanceTableProps {
   rows: BoardRow[];
-  lifecycleVersion?: AttendanceLifecycleVersion;
   /** "เพิ่มเวลา" / "แก้เวลา" on a row with a regular Cleaner (facility-0051). */
   onCorrect?: (row: BoardRow, userId: number) => void;
   /** The bar under the table, inside its box: the count, the [แก้] legend and the pages. */
@@ -36,9 +34,9 @@ const stateChip: Record<AreaAttendanceState, { tone: string; Icon: LucideIcon }>
 const subClass = 'block text-xs font-normal text-text-2';
 
 /** Wireframe D2's table, in the server's order: Areas with nobody first (facility-0050). Names are React text only. */
-export function AttendanceTable({ rows, lifecycleVersion, onCorrect, footer }: AttendanceTableProps) {
+export function AttendanceTable({ rows, onCorrect, footer }: AttendanceTableProps) {
   const names = useBuildingNames();
-  const actions = lifecycleEvents(lifecycleVersion);
+  const actions = attendanceEvents;
   const showActionColumn = Boolean(onCorrect || rows.some((row) => row.state === 'Empty'));
   if (rows.length === 0) {
     return (

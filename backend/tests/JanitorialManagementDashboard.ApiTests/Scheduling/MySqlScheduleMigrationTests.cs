@@ -34,7 +34,7 @@ public class MySqlScheduleMigrationTests
             Assert.False(db.Database.HasPendingModelChanges());
             await DbInitializer.SeedAsync(db, new Pbkdf2PasswordHasher(iterations: 1_000));
 
-            // Legacy attendance still stores the exact four legacy names.
+            // Numbered attendance is the default on a fresh database.
             var person = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
             var row = new ShiftAttendance
             {
@@ -42,7 +42,7 @@ public class MySqlScheduleMigrationTests
                 AreaId = person.AreaId!.Value,
                 ShiftDate = new DateOnly(2026, 11, 17),
                 Shift = Shift.Day,
-                EventType = AttendanceEvent.BreakOut,
+                EventType = AttendanceEvent.Break1Out,
                 Source = AttendanceSource.AdminAdd,
                 OccurredAt = new DateTime(2026, 11, 17, 3, 0, 0, DateTimeKind.Utc),
                 CreatedAt = new DateTime(2026, 11, 17, 3, 0, 0, DateTimeKind.Utc),
@@ -51,7 +51,7 @@ public class MySqlScheduleMigrationTests
             await db.SaveChangesAsync();
             var raw = await db.Database.SqlQueryRaw<string>(
                 "SELECT event_type AS Value FROM shift_attendances WHERE id = {0}", row.Id).SingleAsync();
-            Assert.Equal("BREAK_OUT", raw);
+            Assert.Equal("BREAK1_OUT", raw);
 
             // Weekly choices keep absent, confirmed-empty and selected weeks apart on MySQL dates.
             var week = new DateOnly(2026, 11, 16);
@@ -99,7 +99,7 @@ public class MySqlScheduleMigrationTests
     }
 
     [MySqlFact]
-    public async Task Upgrade_preserves_legacy_attendance_and_creates_no_guessed_history()
+    public async Task Upgrade_converts_existing_breaks_and_creates_no_guessed_history()
     {
         await using var db = new AppDbContext(Options());
         await db.Database.EnsureDeletedAsync();
@@ -116,7 +116,7 @@ public class MySqlScheduleMigrationTests
                 AreaId = areaId,
                 ShiftDate = new DateOnly(2026, 11, 17),
                 Shift = Shift.Day,
-                EventType = AttendanceEvent.BreakIn,
+                EventType = AttendanceEvent.Break1In,
                 Source = AttendanceSource.AdminEdit,
                 OccurredAt = new DateTime(2026, 11, 17, 4, 30, 0, DateTimeKind.Utc),
                 CreatedAt = new DateTime(2026, 11, 17, 4, 31, 0, DateTimeKind.Utc),
@@ -124,15 +124,18 @@ public class MySqlScheduleMigrationTests
             db.ShiftAttendances.Add(row);
             await db.SaveChangesAsync();
 
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE shift_attendances SET event_type = 'BREAK_IN' WHERE id = {row.Id}");
+
             await db.Database.MigrateAsync();
             Assert.False(db.Database.HasPendingModelChanges());
             db.ChangeTracker.Clear();
 
             var raw = await db.Database.SqlQueryRaw<string>(
                 "SELECT event_type AS Value FROM shift_attendances WHERE id = {0}", row.Id).SingleAsync();
-            Assert.Equal("BREAK_IN", raw);
+            Assert.Equal("BREAK1_IN", raw);
             var stored = await db.ShiftAttendances.AsNoTracking().SingleAsync();
-            Assert.Equal(AttendanceEvent.BreakIn, stored.EventType);
+            Assert.Equal(AttendanceEvent.Break1In, stored.EventType);
             Assert.Equal(AttendanceSource.AdminEdit, stored.Source);
             Assert.Equal(areaId, stored.AreaId);
             Assert.Equal(new DateOnly(2026, 11, 17), stored.ShiftDate);
@@ -155,7 +158,7 @@ public class MySqlScheduleMigrationTests
 
             db.ChangeTracker.Clear();
             var afterBackfill = await db.ShiftAttendances.AsNoTracking().SingleAsync();
-            Assert.Equal(AttendanceEvent.BreakIn, afterBackfill.EventType);
+            Assert.Equal(AttendanceEvent.Break1In, afterBackfill.EventType);
             Assert.Equal(areaId, afterBackfill.AreaId);
             Assert.Equal(new DateTime(2026, 11, 17, 4, 30, 0), afterBackfill.OccurredAt);
         }

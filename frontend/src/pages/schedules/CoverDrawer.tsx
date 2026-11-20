@@ -21,7 +21,7 @@ import { coverNotice } from '../../shared/cover/coverText';
 import { useCoverCancellation } from '../../shared/cover/useCoverCancellation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
-import { formatShiftDate, formatTime, formatWeekday } from '../../shared/utils/thaiTime';
+import { formatShiftDate, formatWeekday } from '../../shared/utils/thaiTime';
 
 const tagClass =
   'inline-flex min-h-6 shrink-0 items-center rounded-sm border px-2 text-xs font-semibold whitespace-nowrap';
@@ -179,18 +179,15 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
               <span className="px-2 py-1.5 text-text-2">ไม่พบพื้นที่ที่ค้นหา</span>
             )}
           </div>
-          <span className="text-xs text-text-2">
-            {ahead ? 'กะนี้ยังไม่เริ่ม จึงแสดงทุกพื้นที่ที่ทำกะนี้' : 'พื้นที่ที่ยังไม่มีคนเข้างานขึ้นก่อน'}
-          </span>
         </section>
         <section className="flex flex-col gap-2" aria-labelledby="cover-step-3">
           <h3 id="cover-step-3" className="text-base font-bold">
             3. แม่บ้านที่จะทำแทน
           </h3>
-          {!area && <span className="text-text-2">เลือกพื้นที่ก่อน แล้วรายชื่อแม่บ้านที่ทำแทนได้จะขึ้นที่นี่</span>}
+          {!area && <span className="text-text-2">เลือกพื้นที่ก่อน</span>}
           {area && candidates.isFetching && !candidates.currentData && <PageLoading>กำลังโหลดรายชื่อ...</PageLoading>}
           {area && candidates.error && <Note tone="error">{getErrorMessage(candidates.error)}</Note>}
-          {area && candidates.currentData && list.length === 0 && <Note tone="info">ไม่มีแม่บ้านกะนี้ที่ทำแทนได้</Note>}
+          {area && candidates.currentData && list.length === 0 && <Note tone="info">ไม่มีแม่บ้านที่ทำแทนได้</Note>}
           {area && list.length > 0 && (
             <CandidateChoices
               label="แม่บ้านที่จะทำแทน"
@@ -212,15 +209,10 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
               }}
             />
           )}
-          <span className="text-xs text-text-2">
-            {ahead
-              ? 'แสดงแม่บ้านกะนี้ที่ทำแทนได้ · กะยังไม่เริ่ม จึงเรียงตามรหัสพนักงาน'
-              : 'คนที่สแกนป้ายพื้นที่นี้ล่าสุดในกะที่เลือกจะอยู่บนสุด คนที่ยังไม่ได้สแกนจะเรียงตามเวลาเข้างาน'}
-          </span>
         </section>
         {area && area.covers.length > 0 && (
           <Note tone="warn" title={`${area.areaCode} มีคนทำแทนอยู่แล้ว`}>
-            {`${area.covers.map((cover) => `${cover.displayName} ได้รับมอบหมายตั้งแต่ ${formatTime(cover.assignedAt)}`).join(' · ')} · ถ้ามอบหมายนี้ พื้นที่นี้จะมีคนทำแทน ${area.covers.length + 1} คน ถ้าจะเปลี่ยนคน ให้ยกเลิกของเดิมในรายการด้านล่างก่อน`}
+            {`${area.covers.map((cover) => cover.displayName).join(', ')} ทำแทนอยู่แล้ว · หากต้องการเปลี่ยนคน ให้ยกเลิกของเดิมด้านล่างก่อน`}
           </Note>
         )}
         {area && person && (

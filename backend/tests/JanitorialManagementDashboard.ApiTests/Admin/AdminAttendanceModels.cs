@@ -21,7 +21,7 @@ public record BoardRowModel(
 
 public record BoardSummaryModel(int Required, int Present, int Empty, int Covered);
 
-public record AttendanceBoardModel(DateOnly ShiftDate, string Shift, bool ShiftEnded, BoardSummaryModel Summary, List<BoardRowModel> Rows, string? LifecycleVersion = null);
+public record AttendanceBoardModel(DateOnly ShiftDate, string Shift, bool ShiftEnded, BoardSummaryModel Summary, List<BoardRowModel> Rows);
 
 public record AlertPersonModel(int Id, string EmployeeId, string DisplayName, string Role, string? AreaCode);
 

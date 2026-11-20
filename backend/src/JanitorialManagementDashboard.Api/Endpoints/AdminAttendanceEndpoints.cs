@@ -127,14 +127,9 @@ public static class AdminAttendanceEndpoints
             return Bad("แม่บ้านคนนี้ยังไม่มีพื้นที่");
         }
 
-        var version = AttendanceLifecycle.VersionFor(await db.AttendanceSlotLifecycles.AsNoTracking()
-            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift)
-            .Select(row => (AttendanceLifecycleVersion?)row.Version)
-            .FirstOrDefaultAsync(ct));
-
         var proposed = events.ToDictionary(a => a.EventType, a => a.OccurredAt);
         proposed[eventType] = at;
-        if (AttendanceRules.CheckTimes(version, proposed) is { } orderError)
+        if (AttendanceRules.CheckTimes(proposed) is { } orderError)
         {
             return Bad(orderError);
         }

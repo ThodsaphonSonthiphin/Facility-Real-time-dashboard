@@ -102,16 +102,35 @@ public static class OverviewTimeline
         }
     }
 
-    private static IEnumerable<Candidate> Candidates(ShiftSlot slot, TargetImage image, DateTime intervalStart) =>
-        from window in image.Windows
-        where window.Shift == slot.Shift
-        join point in image.Points.Where(p => p.IsActive) on window.PointId equals point.Id
-        join area in image.Areas.Where(a => a.IsActive) on point.AreaId equals area.Id
-        where slot.Shift == Shift.Day || area.ShiftPattern == ShiftPattern.DayAndNight
-        join building in image.Buildings.Where(b => b.IsActive) on area.BuildingId equals building.Id
-        let start = ShiftCalendar.ToUtc(slot, window.Start)
-        let activation = new[] { intervalStart, building.CreatedAt, area.CreatedAt, point.CreatedAt, window.CreatedAt, start }.Max()
-        select new Candidate(building, area, window, start, activation);
+    private static IEnumerable<Candidate> Candidates(ShiftSlot slot, TargetImage image, DateTime intervalStart)
+    {
+        var buildings = image.Buildings.Where(b => b.IsActive).ToDictionary(b => b.Id);
+        var areas = image.Areas
+            .Where(a => a.IsActive && (slot.Shift == Shift.Day || a.ShiftPattern == ShiftPattern.DayAndNight))
+            .ToDictionary(a => a.Id);
+        var points = image.Points.Where(p => p.IsActive).ToDictionary(p => p.Id);
+        var results = new List<Candidate>();
+        foreach (var window in image.Windows)
+        {
+            if (window.Shift != slot.Shift) continue;
+            if (!points.TryGetValue(window.PointId, out var point)) continue;
+            if (!areas.TryGetValue(point.AreaId, out var area)) continue;
+            if (!buildings.TryGetValue(area.BuildingId, out var building)) continue;
+            var start = ShiftCalendar.ToUtc(slot, window.Start);
+            var activation = MaxUtc(intervalStart, building.CreatedAt, area.CreatedAt, point.CreatedAt, window.CreatedAt, start);
+            results.Add(new Candidate(building, area, window, start, activation));
+        }
+        return results;
+    }
+
+    private static DateTime MaxUtc(DateTime a, DateTime b, DateTime c, DateTime d, DateTime e, DateTime f)
+    {
+        var max = a > b ? a : b;
+        if (c > max) max = c;
+        if (d > max) max = d;
+        if (e > max) max = e;
+        return f > max ? f : max;
+    }
 
     private static bool Matches(RoundObligation round, TargetWindow window) =>
         round.OriginId == window.Id && round.Start == window.Start && round.End == window.End;

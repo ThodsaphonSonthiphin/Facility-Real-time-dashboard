@@ -4,7 +4,6 @@ import type { ManagedBuilding } from '../../shared/api/adminSetupApi';
 import { account, accounts, adminSession, managedBuildings } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
-import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 const [a, b, c] = managedBuildings;
 
@@ -250,15 +249,15 @@ describe('BuildingsPage (facility-0090)', () => {
     expect(screen.queryByText('กำลังโหลดตึก...')).not.toBeInTheDocument();
   });
 
-  it('the page note and the save note wait behind ℹ (owner, 2026-10-27)', async () => {
+  it('omits redundant page and save notes', async () => {
     serve();
     const { user } = await renderApp('/admin/buildings');
 
     await screen.findByRole('heading', { level: 2, name: 'ตึกทั้งหมด (3)' });
-    expectBehindMoreInfo(/^ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติยังอยู่/, 'เกี่ยวกับหน้านี้');
+    expect(screen.queryByText('เกี่ยวกับหน้านี้')).not.toBeInTheDocument();
 
     await openEditor(user, a);
-    expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');
+    expect(screen.queryByText('เกี่ยวกับการบันทึก')).not.toBeInTheDocument();
   });
 
   it('retries failed buildings read without refetching accounts (UX-05)', async () => {

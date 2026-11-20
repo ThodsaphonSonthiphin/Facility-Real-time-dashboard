@@ -21,10 +21,7 @@ export function ExportPage() {
   const page = useExportPage();
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
-      <AdminPageHeader
-        title="ส่งออก Excel"
-        subtitle="เลือกข้อมูล วันที่ และตึกที่ต้องการ แล้วกด “ดาวน์โหลด Excel”"
-      />
+      <AdminPageHeader title="ส่งออก Excel" />
       {/* The approved summary column is 280px; no theme width token matches this page-specific layout. */}
       <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <SurfacePanel className="min-w-0">
@@ -111,9 +108,8 @@ export function ExportPage() {
             <div className="flex items-start gap-3 rounded-md border border-overdue-border bg-overdue-bg p-4">
               <ShieldAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-overdue" />
               <p>
-                <strong>ไฟล์นี้มีข้อมูลส่วนบุคคล</strong><br />
-                ไฟล์มีชื่อ รหัสพนักงาน และเวลาของแม่บ้าน ให้ใช้เฉพาะงานที่เกี่ยวข้องและเก็บในที่ที่คนมีสิทธิ์เท่านั้นเปิดได้.
-                เมื่อไม่ใช้แล้วให้ลบไฟล์ ระบบบันทึกการดาวน์โหลดแต่ละครั้งในประวัติการแก้ไข
+                <strong>ไฟล์มีข้อมูลส่วนบุคคล</strong><br />
+                ใช้เฉพาะงานที่เกี่ยวข้องและลบไฟล์เมื่อเลิกใช้
               </p>
             </div>
             <label className="flex min-h-9 cursor-pointer items-center gap-2">
@@ -123,7 +119,7 @@ export function ExportPage() {
                 checked={page.acknowledged}
                 onChange={(event) => page.setAcknowledged(event.target.checked)}
               />
-              <span>เข้าใจแล้ว และจะเก็บไฟล์ตามข้อกำหนดข้อมูลส่วนบุคคล</span>
+              <span>รับทราบข้อกำหนดข้อมูลส่วนบุคคล</span>
             </label>
             <Button
               className="self-end"
@@ -159,8 +155,6 @@ export function ExportPage() {
             <span className="wrap-anywhere">{page.fileName}</span>
             <span>{page.sets.length} แผ่นงาน · {page.setsSummary}</span>
             {page.sets.map((set) => <span key={set}><strong>{setTitle[set]}: </strong>{setDetail[set]}</span>)}
-            <span>ไฟล์แสดงระยะห่างจากป้ายและผลว่าอยู่ในหรือนอกรัศมี โดยไม่แสดงพิกัดมือถือ</span>
-            <span>เก็บไฟล์ไว้ใช้ภายในบริษัทเท่านั้น คุณต้องลบไฟล์ที่ดาวน์โหลดเองเมื่อเลิกใช้</span>
           </MoreInfo>
         </aside>
       </div>

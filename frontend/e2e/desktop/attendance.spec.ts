@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { test, expect } from '../support/test.ts';
 import { loginAsAdmin } from '../support/login.ts';
-import { holdBack } from '../support/pageWatch.ts';
+import { holdUntilReleased } from '../support/pageWatch.ts';
 import { engine } from '../support/browser.ts';
 
 test.beforeEach(async ({ page }) => {
@@ -74,18 +74,23 @@ test('attendance correction requires a reason and persists its time and audit tr
 });
 
 test('a date picked while another shift is still loading keeps that shift', async ({ page }) => {
-  // The first board is on screen (a shift shows pressed) before the network slows: the shift to pick is read from it
-  await expect(page.getByRole('group', { name: 'กะ', exact: true }).getByRole('button', { pressed: true })).toBeVisible();
-  await holdBack(page, '**/api/admin/attendance*', 1_500); // a slow network: the old board stays on screen meanwhile
-  const pressed = await dayButton(page).getAttribute('aria-pressed');
-  const [pick, other] = pressed === 'true' ? (['Night', /^กะดึก/] as const) : (['Day', /^กะเช้า/] as const);
-  const otherButton = page.getByRole('group', { name: 'กะ', exact: true }).getByRole('button', { name: other });
-  await otherButton.click();
-  await expect(page).toHaveURL(new RegExp(`shift=${pick}`));
-  await expect(otherButton).toHaveAttribute('aria-pressed', 'false'); // still loading
-  await page.getByLabel('วันที่', { exact: true }).fill('2026-10-01');
-  await expect(page).toHaveURL(new RegExp(`date=2026-10-01&shift=${pick}$`));
-  await expect(otherButton).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/admin/attendance?date=2026-10-02&shift=Night');
+  await expect(page.getByRole('group', { name: 'กะ', exact: true })
+    .getByRole('button', { name: /^กะดึก/ })).toHaveAttribute('aria-pressed', 'true');
+  const day = dayButton(page);
+  await expect(day).toBeEnabled();
+  const release = await holdUntilReleased(page, '**/api/admin/attendance?*shift=Day*');
+  try {
+    await day.click();
+    await expect(page).toHaveURL(/shift=Day$/);
+    await expect(day).toHaveAttribute('aria-pressed', 'false');
+    await page.getByLabel('วันที่', { exact: true }).fill('2026-10-01');
+    await expect(page).toHaveURL(/date=2026-10-01&shift=Day$/);
+    await expect(day).toHaveAttribute('aria-pressed', 'false');
+  } finally {
+    release();
+  }
+  await expect(day).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('วันที่', { exact: true })).toHaveValue('2026-10-01');
 });
 

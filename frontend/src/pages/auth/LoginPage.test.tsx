@@ -48,7 +48,7 @@ describe('LoginPage (M0)', () => {
     expect(employeeInput).toHaveAttribute('aria-invalid', 'true');
     expect(phoneInput).toHaveAttribute('aria-invalid', 'true');
     expect(employeeInput).toHaveAccessibleDescription('รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง เลข 7 หลัก');
-    expect(phoneInput).toHaveAccessibleDescription('รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง เบอร์ที่แจ้งแอดมินไว้ตอนสร้างบัญชี');
+    expect(phoneInput).toHaveAccessibleDescription('รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง');
     expect(employeeInput).toHaveValue('650001');
     expect(phoneInput).toHaveValue('0999999999');
   });
@@ -67,7 +67,7 @@ describe('LoginPage (M0)', () => {
     expect(employeeInput).not.toHaveAttribute('aria-invalid');
     expect(phoneInput).not.toHaveAttribute('aria-invalid');
     expect(employeeInput).toHaveAccessibleDescription('เลข 7 หลัก');
-    expect(phoneInput).toHaveAccessibleDescription('เบอร์ที่แจ้งแอดมินไว้ตอนสร้างบัญชี');
+    expect(phoneInput).toHaveAccessibleDescription('');
     expect(employeeInput).toHaveValue('650001');
     expect(phoneInput).toHaveValue('0999999999');
   });
@@ -118,7 +118,7 @@ describe('LoginPage (M0)', () => {
     fakeServer({ ...noSession, 'POST /api/auth/login': () => authAnswer('cleaner') });
     const { user, router } = await renderApp('/my-work?from=sign');
 
-    expect(screen.getByText('เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที')).toBeInTheDocument();
+    expect(screen.getByText('เข้าสู่ระบบเพื่อกลับไปยังหน้าที่เปิดไว้')).toBeInTheDocument();
     await user.type(screen.getByLabelText('รหัสพนักงาน'), '650001');
     await user.type(screen.getByLabelText('เบอร์โทรศัพท์'), '0000000001');
     await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));

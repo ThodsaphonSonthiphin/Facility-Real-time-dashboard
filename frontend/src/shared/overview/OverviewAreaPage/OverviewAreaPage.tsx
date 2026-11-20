@@ -42,19 +42,19 @@ export function OverviewAreaPage({ view, actions }: OverviewAreaPageProps) {
       {model.error && (
         <Note tone={model.detail ? 'warn' : 'error'} onRetry={model.canRetry ? model.retry : undefined}>
           {model.detail
-            ? `ไม่สามารถอัปเดตข้อมูลล่าสุดได้ (${model.error}) · กำลังแสดงข้อมูลที่อ่านเมื่อ ${model.readAtText} น. (ข้อมูลอาจยังไม่ล่าสุด)`
+            ? `อัปเดตข้อมูลไม่ได้ (${model.error}) · แสดงข้อมูลเมื่อ ${model.readAtText} น.`
             : model.error}
         </Note>
       )}
       {model.detail && model.recovering && !model.error && (
         <Note tone="warn" status>
-          {`กำลังตรวจสอบข้อมูลล่าสุด · กำลังแสดงข้อมูลที่อ่านเมื่อ ${model.readAtText} น. (ข้อมูลอาจยังไม่ล่าสุด)`}
+          {`กำลังตรวจสอบข้อมูลล่าสุด · ข้อมูลเมื่อ ${model.readAtText} น.`}
         </Note>
       )}
       {model.detail && model.selection && (
         <>
-          {model.stateChanged && <Note tone="info" status>สถานะพื้นที่เปลี่ยนจากรายการที่เลือกแล้ว</Note>}
-          {model.readOnly && <Note tone="info">ประวัติสำหรับอ่านข้อมูล</Note>}
+          {model.stateChanged && <Note tone="info" status>สถานะพื้นที่เปลี่ยนแล้ว</Note>}
+          {model.readOnly && <Note tone="info">ดูย้อนหลังเท่านั้น</Note>}
           {model.view === 'attendance'
             ? <AreaAttendance detail={model.detail} />
             : <AreaWork detail={model.detail} selection={model.selection} view={model.view} />}

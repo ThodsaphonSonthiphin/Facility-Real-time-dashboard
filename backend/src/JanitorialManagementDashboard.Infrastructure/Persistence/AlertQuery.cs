@@ -5,6 +5,7 @@ using JanitorialManagementDashboard.Application.Inspections;
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
@@ -64,11 +65,51 @@ public static class AlertQuery
             .GroupBy(a => (a.UserId, Slot: new ShiftSlot(a.ShiftDate, a.Shift)))
             .Select(g => (
                 g.Key.UserId,
+                g.Key.Slot,
+                Departure: g.FirstOrDefault(a => a.EventType == AttendanceEvent.ShiftOut),
                 End: ShiftCalendar.EndUtc(g.Key.Slot),
                 ShiftIn: g.FirstOrDefault(a => a.EventType == AttendanceEvent.ShiftIn),
                 Missing: AttendanceRules.MissingAtShiftEnd(g.Select(a => a.EventType).ToList())))
             .Where(s => s.End <= nowUtc && s.End >= fromUtc && s.End < toUtc && s.ShiftIn is not null && s.Missing.Count > 0)
             .ToList();
+
+        var departures = missing.Where(row => row.Departure is not null).Select(row => row.UserId).Distinct().ToArray();
+        if (departures.Length > 0)
+        {
+            var leaves = (await db.ScheduleExceptions.AsNoTracking()
+                .Where(row => row.Kind == ScheduleExceptionKind.Leave && !row.IsCancelled
+                    && departures.Contains(row.UserId) && row.ShiftDate >= firstDate && row.ShiftDate <= lastDate)
+                .ToListAsync())
+                .ToLookup(row => (row.UserId, row.ShiftDate, row.Shift));
+            var store = new ScheduleStore(db);
+            for (var i = missing.Count - 1; i >= 0; i--)
+            {
+                var row = missing[i];
+                if (row.Departure is null) continue;
+                var intervals = leaves[(row.UserId, row.Slot.ShiftDate, row.Slot.Shift)];
+                if (!intervals.Any()) continue;
+
+                int? breakGroup = null;
+                if (row.Missing.Contains(AttendanceEvent.Break1In))
+                {
+                    var relief = await store.LiveReliefAsync(row.UserId, row.Slot.ShiftDate, row.Slot.Shift);
+                    breakGroup = relief?.BreakGroup
+                        ?? (await store.ReadPersonDayAsync(row.UserId, row.Slot.ShiftDate, row.Slot.Shift))?.BreakGroup.Value;
+                }
+                var expected = AttendanceExpectations.ForSlot(row.Slot, breakGroup);
+                var remaining = row.Missing.Where(action => !expected.TryGetValue(action, out var due)
+                    || !intervals.Any(leave => AttendanceApplicability.NotApplicable(due, AsUtc(row.Departure.OccurredAt),
+                        AsUtc(leave.StartsAt!.Value), AsUtc(leave.EndsAt!.Value)))).ToList();
+                if (remaining.Count == 0)
+                {
+                    missing.RemoveAt(i);
+                }
+                else
+                {
+                    missing[i] = row with { Missing = remaining };
+                }
+            }
+        }
 
         // An inspection names its point, not its sign; each point has exactly one sign
         var flaggedPointIds = inspectionFlags.Select(i => i.ServicePointId).Distinct().ToList();
@@ -178,4 +219,6 @@ public static class AlertQuery
 
         return rows.OrderByDescending(r => r.At).ThenByDescending(r => r.RecordId).ToList();
     }
+
+    private static DateTimeOffset AsUtc(DateTime stored) => new(DateTime.SpecifyKind(stored, DateTimeKind.Utc));
 }

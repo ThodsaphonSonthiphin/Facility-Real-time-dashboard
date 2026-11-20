@@ -39,7 +39,7 @@ public class MyWorkEndpointTests
 
         var work = (await cleaner.GetFromJsonAsync<MyWorkModel>("/api/my-work"))!;
 
-        Assert.Equal(new[] { "BreakOut", "ShiftOut" }, work.Attendance.NextEvents);
+        Assert.Equal(new[] { "Break1Out", "Break1In", "Break2Out", "Break2In", "ShiftOut" }, work.Attendance.NextEvents);
         var area = Assert.Single(work.Areas);
         Assert.Equal("AR01", area.AreaCode);
         Assert.False(area.IsCover);

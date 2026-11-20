@@ -98,8 +98,7 @@ public class AttendanceCorrectionEndpointTests
     [InlineData("Day", "ShiftOut", "05:00", "ลืมสแกน")]    // before the window opens at 06:00
     [InlineData("Day", "ShiftOut", "13:00", "ลืมสแกน")]    // still in the future at 12:00
     [InlineData("Night", "ShiftIn", "20:00", "ลืมสแกน")]   // not 1000001's regular shift
-    [InlineData("Day", "BreakIn", "10:00", "ลืมสแกน")]     // no Break-Out before it
-    [InlineData("Day", "BreakOut", "06:30", "ลืมสแกน")]    // before the 06:50 Shift-In
+    [InlineData("Day", "Break1Out", "06:30", "ลืมสแกน")]    // before the 06:50 Shift-In
     [InlineData("Day", "ShiftOut", "7:00", "ลืมสแกน")]     // not HH:mm
     [InlineData("Day", "ShiftOut", "11:00", "   ")]        // no reason
     [InlineData("Day", "ShiftOut", "11:00", null)]
@@ -330,13 +329,13 @@ public class AttendanceCorrectionEndpointTests
     public async Task A_numbered_slot_correction_is_validated_against_the_numbered_actions()
     {
         using var factory = new JanitorialApiFactory();
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Oct8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         factory.Clock.SetUtcNow(ThaiClock.At(8, 19, 0));
         var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
 
         var shiftIn = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "07:00", "ลืมสแกน");
-        // Break-Out is a legacy action and the slot holds the numbered six, so it is not an action this slot knows.
+        // Unnumbered break names are not part of the API.
         var legacyAction = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "BreakOut", "12:00", "ลืมสแกน");
         var numbered = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "Break1Out", "10:00", "ลืมสแกน");
 
@@ -386,28 +385,5 @@ public class AttendanceCorrectionEndpointTests
         Assert.Equal(await AdminSetupApi.AreaIdAsync(factory, "AR02"), stored.AreaId);
         Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.CleanerProfilePeriods
             .Where(profile => profile.UserId == e1003).ToListAsync()));
-    }
-
-    [Fact]
-    public async Task A_numbered_action_is_refused_on_a_legacy_slot()
-    {
-        using var factory = new JanitorialApiFactory();
-        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        factory.Clock.SetUtcNow(ThaiClock.At(8, 12, 0));
-        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
-
-        var shiftIn = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "ShiftIn", "07:00", "ลืมสแกน");
-        // The slot has no lifecycle row, so it is the legacy four and Break1Out is not one of its actions.
-        var numbered = await AdminAttendanceApi.CorrectAsync(admin, e1003, Oct8, "Day", "Break1Out", "10:00", "ลืมสแกน");
-
-        Assert.Equal(HttpStatusCode.OK, shiftIn.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, numbered.StatusCode);
-        Assert.Equal(
-            "เวลาต้องเรียงกัน: เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน",
-            (await numbered.Content.ReadFromJsonAsync<MessageModel>())!.Message);
-        var stored = Assert.Single(await EventsAsync(factory, "1000003"));
-        Assert.Equal(AttendanceEvent.ShiftIn, stored.EventType);
-        // Only the accepted Shift-In was audited; the refused action wrote nothing at all.
-        Assert.Single(await AdminSetupApi.AuditAsync(factory));
     }
 }

@@ -98,8 +98,8 @@ describe('alert rules (wireframe D3)', () => {
       'ป้ายลงเวลา AR01-IN · AR01 Area ทดลอง · ห่าง 85 ม.',
     );
     expect(alertDetail(missingAlert)).toBe('ไม่ได้ลงเวลาเลิกงาน · กะดึก 14/10/2026 · AR01 Area ทดลอง');
-    expect(alertDetail({ ...missingAlert, missingEvents: ['BreakIn', 'ShiftOut'] })).toBe(
-      'ไม่ได้ลงเวลากลับจากพัก และเลิกงาน · กะดึก 14/10/2026 · AR01 Area ทดลอง',
+    expect(alertDetail({ ...missingAlert, missingEvents: ['Break1In', 'ShiftOut'] })).toBe(
+      'ไม่ได้ลงเวลากลับจากพัก 1 และเลิกงาน · กะดึก 14/10/2026 · AR01 Area ทดลอง',
     );
   });
 

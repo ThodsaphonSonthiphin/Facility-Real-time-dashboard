@@ -115,7 +115,7 @@ export function AreaWork({ detail, selection, view }: AreaWorkProps) {
       <section aria-labelledby="overview-area-issues" className={panelClass}>
         <h2 id="overview-area-issues" className="text-lg font-semibold">ปัญหาที่แจ้ง</h2>
         {issueNote && <Note tone="warn">{issueNote}</Note>}
-        {availability.issue.state === 'complete' && issueSubmissions.length === 0 && <p>ไม่มีปัญหาที่แจ้งในข้อมูลล่าสุด</p>}
+        {availability.issue.state === 'complete' && issueSubmissions.length === 0 && <p>ไม่มีปัญหาที่แจ้ง</p>}
         {issueSubmissions.length > 0 && (
           <ul className="list-disc space-y-2 ps-5">
             {issueSubmissions.map((fact) => (

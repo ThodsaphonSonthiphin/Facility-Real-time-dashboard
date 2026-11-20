@@ -7,7 +7,7 @@ import type {
   BoardRow,
 } from '../../shared/api/attendanceBoardApi';
 import type { AttendanceEvent, Shift } from '../../shared/api/types';
-import { attendanceEvents, attendanceLifecycles, eventLabel } from '../../shared/utils/labels';
+import { attendanceEvents, eventLabel } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
 
 /** Wireframe D2's status column (facility-0050). */
@@ -184,5 +184,5 @@ export function readFill(params: URLSearchParams): { userId: number; event?: Att
     return undefined;
   }
   const event = params.get('event');
-  return { userId, event: [...attendanceEvents, ...attendanceLifecycles.Numbered6].find((type) => type === event) };
+  return { userId, event: attendanceEvents.find((type) => type === event) };
 }

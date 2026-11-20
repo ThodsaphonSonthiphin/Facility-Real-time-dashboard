@@ -78,7 +78,7 @@ public class EffectiveAttendanceTests
         var planned = EffectiveAttendanceApi.Thai(8, 7, 1);
         factory.Clock.SetUtcNow(planned);
         var accepted = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn", "token-checkin-ar03");
-        var blocked = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", "token-checkin-ar01");
+        var blocked = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", "token-checkin-ar01");
 
         Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
@@ -165,7 +165,7 @@ public class EffectiveAttendanceTests
         var baselineStart = new DateOnly(2026, 10, 1);
         await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, baselineStart);
         await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", baselineStart, "AR01", breakGroup: 1);
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var checkout = EffectiveAttendanceApi.Thai(8, 13, 0);
         await EffectiveAttendanceApi.AddLeaveAsync(factory, "1000001", Day8, Shift.Day,
             checkout, EffectiveAttendanceApi.Thai(8, 19, 0));
@@ -173,11 +173,11 @@ public class EffectiveAttendanceTests
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 5));
         var before = await EffectiveAttendanceApi.StateAsync(cleaner);
         var entered = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 5),
-            "ShiftIn", lifecycleVersion: before.LifecycleVersion, stateRevision: before.StateRevision);
+            "ShiftIn", stateRevision: before.StateRevision);
         var gaps = entered.NextActions!.Single(choice => choice.Action == "ShiftOut").RequiredGaps;
 
         var departed = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, checkout, "ShiftOut",
-            lifecycleVersion: entered.LifecycleVersion, stateRevision: entered.StateRevision, confirmGaps: gaps);
+            stateRevision: entered.StateRevision, confirmGaps: gaps);
 
         Assert.Equal("skipped", departed.Action("Break1Out").State);
         Assert.Equal("not-applicable", departed.Action("Break2Out").State);
@@ -198,7 +198,7 @@ public class EffectiveAttendanceTests
         var baselineStart = new DateOnly(2026, 10, 1);
         await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000001", baselineStart);
         await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", baselineStart, "AR01", breakGroup: 1);
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var checkout = EffectiveAttendanceApi.Thai(8, 13, 0);
         if (leaveStartsMinutesLater is { } minutes)
         {
@@ -211,10 +211,10 @@ public class EffectiveAttendanceTests
         factory.Clock.SetUtcNow(checkIn);
         var initial = await EffectiveAttendanceApi.StateAsync(cleaner);
         var entered = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, checkIn, "ShiftIn",
-            lifecycleVersion: initial.LifecycleVersion, stateRevision: initial.StateRevision);
+            stateRevision: initial.StateRevision);
         var gaps = entered.NextActions!.Single(choice => choice.Action == "ShiftOut").RequiredGaps;
         var departed = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, checkout, "ShiftOut",
-            lifecycleVersion: entered.LifecycleVersion, stateRevision: entered.StateRevision, confirmGaps: gaps);
+            stateRevision: entered.StateRevision, confirmGaps: gaps);
 
         Assert.Equal(leaveStartsMinutesLater.HasValue, departed.IsLeave);
         Assert.Equal(checkout.UtcDateTime, departed.Action("ShiftOut").OccurredAt);
@@ -323,8 +323,8 @@ public class EffectiveAttendanceTests
 
         // Both Areas refuse an actual action with the pending-transfer conflict itself — not a window or ordering refusal —
         // and neither leaves a fact behind: an instruction alone is never entry evidence at B.
-        var atOriginWhilePending = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", "token-checkin-ar01");
-        var atDestinationWhilePending = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", "token-checkin-ar03");
+        var atOriginWhilePending = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", "token-checkin-ar01");
+        var atDestinationWhilePending = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", "token-checkin-ar03");
         Assert.Equal(HttpStatusCode.Conflict, atOriginWhilePending.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, atDestinationWhilePending.StatusCode);
         Assert.Equal("transfer-pending",
@@ -343,15 +343,15 @@ public class EffectiveAttendanceTests
         Assert.Equal("confirmed", confirmed.Transfer!.State);
         Assert.Equal(confirmedAt.UtcDateTime, confirmed.Transfer.ConfirmedAt);
 
-        var refusedAtOrigin = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", "token-checkin-ar01");
-        var acceptedAtDestination = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", "token-checkin-ar03");
+        var refusedAtOrigin = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", "token-checkin-ar01");
+        var acceptedAtDestination = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", "token-checkin-ar03");
         Assert.Equal(HttpStatusCode.Forbidden, refusedAtOrigin.StatusCode);
         Assert.Equal(HttpStatusCode.OK, acceptedAtDestination.StatusCode);
 
         // ADR facility-0203: the stored facts keep the origin Area and the original minute on the one Shift-In and never add a
         // second one; only the new action is the destination's, and the arrival itself is its own row, not an attendance one.
         var facts = await EffectiveAttendanceApi.FactsAsync(factory);
-        Assert.Equal(new[] { AttendanceEvent.ShiftIn, AttendanceEvent.BreakOut }, facts.Select(fact => fact.EventType));
+        Assert.Equal(new[] { AttendanceEvent.ShiftIn, AttendanceEvent.Break1Out }, facts.Select(fact => fact.EventType));
         Assert.Single(facts, fact => fact.EventType == AttendanceEvent.ShiftIn);
         Assert.Equal(origin, facts[0].AreaId);
         Assert.Equal(TransferApi.Thai(7, 5).UtcDateTime, facts[0].OccurredAt);
@@ -393,7 +393,7 @@ public class EffectiveAttendanceTests
         var destinationOut = await EffectiveAttendanceApi.RecordAsync(
             cleaner, "ShiftOut", "token-checkin-ar03", confirmPendingTransfer: true);
         var originBreak = await EffectiveAttendanceApi.RecordAsync(
-            cleaner, "BreakOut", "token-checkin-ar01", confirmPendingTransfer: true);
+            cleaner, "Break1Out", "token-checkin-ar01", confirmPendingTransfer: true);
         Assert.Equal(HttpStatusCode.Conflict, unconfirmedOriginOut.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, destinationOut.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, originBreak.StatusCode);
@@ -496,20 +496,20 @@ public class EffectiveAttendanceTests
         var baselineStart = new DateOnly(2026, 10, 1);
         await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000001", baselineStart);
         await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", baselineStart, "AR01", breakGroup: 1);
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
 
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 5));
         var initial = await EffectiveAttendanceApi.StateAsync(cleaner);
 
         var first = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 5), "ShiftIn",
-            lifecycleVersion: initial.LifecycleVersion, stateRevision: initial.StateRevision);
+            stateRevision: initial.StateRevision);
         Assert.Equal("Recorded", first.Outcome);
 
         // Replaying the same Numbered6 action with the pre-write revision answers AlreadyRecorded idempotently.
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 6));
         var replay = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn",
-            lifecycleVersion: initial.LifecycleVersion, stateRevision: initial.StateRevision);
+            stateRevision: initial.StateRevision);
         Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
         var replayed = await replay.Content.ReadFromJsonAsync<AttendanceStateAnswer>();
         Assert.NotNull(replayed);
@@ -517,7 +517,7 @@ public class EffectiveAttendanceTests
 
         // A *new* action carrying that same stale revision is still refused with 409 refresh-required.
         var staleNew = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out",
-            lifecycleVersion: initial.LifecycleVersion, stateRevision: initial.StateRevision);
+            stateRevision: initial.StateRevision);
         Assert.Equal(HttpStatusCode.Conflict, staleNew.StatusCode);
         Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
     }
@@ -573,7 +573,7 @@ public class EffectiveAttendanceTests
         var baselineStart = new DateOnly(2026, 10, 1);
         await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000001", baselineStart);
         await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", baselineStart, "AR01", breakGroup: 1);
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
 
         var cleanerId = await AdminSetupApi.ReadAsync(factory, async db => (await db.Users.SingleAsync(u => u.EmployeeId == "1000001")).Id);
         var areaId = await AdminSetupApi.ReadAsync(factory, async db => (await db.Areas.SingleAsync(a => a.Code == "AR01")).Id);
@@ -623,11 +623,30 @@ internal static class EffectiveAttendanceApi
     /// <summary>Asia/Bangkok wall-clock on 8 October 2026, when every Task 9 attendance test happens.</summary>
     public static DateTimeOffset Thai(int day, int hour, int minute) => new(2026, 10, day, hour, minute, 0, TimeSpan.FromHours(7));
 
-    public static Task<HttpResponseMessage> RecordAsync(
+    public static async Task<HttpResponseMessage> RecordAsync(
         HttpClient client,
         string eventType,
         string qrToken = AttendanceApi.Area1CheckIn,
-        string? lifecycleVersion = null,
+        string? stateRevision = null,
+        IReadOnlyList<string>? confirmGaps = null,
+        bool confirmPendingTransfer = false)
+    {
+        if (stateRevision is null && confirmGaps is null)
+        {
+            using var read = await client.GetAsync("/api/attendance/me");
+            var state = read.IsSuccessStatusCode ? await read.Content.ReadFromJsonAsync<AttendanceStateAnswer>() : null;
+            stateRevision = state?.StateRevision;
+            confirmGaps = state?.NextActions?.FirstOrDefault(choice => choice.Action == eventType)?.RequiredGaps;
+        }
+
+        return await RawRecordAsync(client, eventType, qrToken, stateRevision, confirmGaps,
+            confirmPendingTransfer);
+    }
+
+    public static Task<HttpResponseMessage> RawRecordAsync(
+        HttpClient client,
+        string eventType,
+        string qrToken = AttendanceApi.Area1CheckIn,
         string? stateRevision = null,
         IReadOnlyList<string>? confirmGaps = null,
         bool confirmPendingTransfer = false) =>
@@ -638,7 +657,6 @@ internal static class EffectiveAttendanceApi
             latitude = TestGps.NearLatitude,
             longitude = TestGps.NearLongitude,
             accuracyM = 10,
-            lifecycleVersion,
             stateRevision,
             confirmGaps,
             confirmPendingTransfer,
@@ -658,32 +676,15 @@ internal static class EffectiveAttendanceApi
         DateTimeOffset at,
         string eventType,
         string qrToken = AttendanceApi.Area1CheckIn,
-        string? lifecycleVersion = null,
         string? stateRevision = null,
         IReadOnlyList<string>? confirmGaps = null)
     {
         factory.Clock.SetUtcNow(at);
-        var response = await RecordAsync(client, eventType, qrToken, lifecycleVersion, stateRevision, confirmGaps);
+        var response = await RecordAsync(client, eventType, qrToken, stateRevision, confirmGaps);
         var body = await response.Content.ReadAsStringAsync();
         Assert.True(response.StatusCode == HttpStatusCode.OK, body);
         return (await response.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
     }
-
-    /// <summary>An explicit lifecycle row for one dated slot: the slot the operator chose for the numbered contract.</summary>
-    public static Task AddLifecycleAsync(
-        JanitorialApiFactory factory, DateOnly shiftDate, Shift shift, AttendanceLifecycleVersion version) =>
-        factory.WithDbAsync(async db =>
-        {
-            db.AttendanceSlotLifecycles.Add(new AttendanceSlotLifecycle
-            {
-                ShiftDate = shiftDate,
-                Shift = shift,
-                Version = version,
-                ActivatedAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-            });
-            await db.SaveChangesAsync();
-        });
 
     /// <summary>An agreed leave interval of one slot, as the leave command stores it: UTC, half-open.</summary>
     public static Task AddLeaveAsync(
@@ -731,9 +732,7 @@ public record AttendanceStateAnswer(
     DateOnly? ShiftDate,
     string? Shift,
     List<AttendanceEntryModel> Events,
-    List<string> NextEvents,
     string? Outcome,
-    string? LifecycleVersion = null,
     string? StateRevision = null,
     List<ActionAnswer>? Actions = null,
     List<GapAnswer>? Gaps = null,
@@ -748,12 +747,14 @@ public record AttendanceStateAnswer(
     List<string>? FillableActions = null,
     bool DepartureLeaveMismatch = false)
 {
+    public IEnumerable<string> NextEvents => NextActions?.Select(choice => choice.Action) ?? [];
+
     public ActionAnswer Action(string eventType) =>
         Actions!.Single(action => action.EventType == eventType);
 }
 
 /// <summary>A refused write: the machine word plus the old list of actions that are allowed now.</summary>
-public record RefusedAnswer(string Message, List<string> NextEvents, string? Code = null, List<string>? RequiredGaps = null);
+public record RefusedAnswer(string Message, string? Code = null, List<string>? RequiredGaps = null);
 
 /// <summary>A stale-revision refusal, which carries the state the caller has to re-read.</summary>
 public record StateConflictAnswer(string Message, string Code, AttendanceStateAnswer State);

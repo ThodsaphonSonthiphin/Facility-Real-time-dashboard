@@ -1,7 +1,6 @@
 import { Plus } from 'lucide-react';
 import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../shared/components/PageState';
 import { Toast } from '../../shared/components/Toast';
@@ -24,7 +23,6 @@ export function BuildingsPage() {
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <AdminPageHeader
         title="ตึก"
-        subtitle="ตึกที่ปิดใช้งาน จะไม่แสดงในหน้าสถานะจุด และสแกนป้ายในตึกนั้นไม่ได้"
         actions={
           <Button variant="primary" size="desk" onClick={create}>
             <Plus aria-hidden="true" className="size-4" />
@@ -53,12 +51,6 @@ export function BuildingsPage() {
           <BuildingTable buildings={list} supervisors={supervisors} supervisorState={supervisorState} onEdit={edit} />
         )}
       </section>
-      <MoreInfo summary="เกี่ยวกับหน้านี้">
-        <span>
-          ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน เพื่อให้ประวัติยังอยู่ · ปิดตึกได้เมื่อไม่มีพื้นที่ที่เปิดอยู่และไม่มีหัวหน้าที่เปิดใช้งานประจำตึก ·
-          ทุกการแก้ในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน
-        </span>
-      </MoreInfo>
       {open?.kind === 'create' && <BuildingDrawer onClose={close} onDone={done} />}
       {editing && <BuildingDrawer key={editing.id} building={editing} onClose={close} onDone={done} />}
       {notice && <Toast notice={notice} onClose={dismissNotice} />}

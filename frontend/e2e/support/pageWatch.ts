@@ -61,6 +61,22 @@ export async function holdBack(page: Page, url: string, ms: number): Promise<voi
 }
 
 /**
+ * Holds every request matching the glob until the returned function is called, so a test can read the screen while a
+ * request is certainly still in flight instead of racing a fixed delay against a loaded machine.
+ */
+export async function holdUntilReleased(page: Page, url: string | RegExp): Promise<() => void> {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(url, async (route) => {
+    await held;
+    await route.fallback();
+  });
+  return release;
+}
+
+/**
  * CSS pixels the page is wider than the screen; 0 means nothing sticks out sideways. Measured against clientWidth, not
  * innerWidth: in phone emulation the layout viewport grows to fit wide content, so innerWidth would grow with it.
  */

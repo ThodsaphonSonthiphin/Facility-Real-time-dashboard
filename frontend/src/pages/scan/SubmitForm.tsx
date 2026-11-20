@@ -3,7 +3,6 @@ import { useState, type FormEvent } from 'react';
 import type { PointCard } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { ChoiceTile, Field, TextArea, ToggleChip } from '../../shared/components/Field';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
 import { formatTime } from '../../shared/utils/thaiTime';
@@ -125,9 +124,6 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
         {incomplete && <Note tone="error">เลือกปัญหาที่พบอย่างน้อย 1 อย่าง หรือเขียนหมายเหตุ</Note>}
         {errorText && <Note tone="error">{errorText}</Note>}
       </form>
-      <MoreInfo size="phone" summary="เกี่ยวกับการส่งงาน">
-        ถ้าไม่มีสัญญาณ หน้าจอจะขึ้น "ยังไม่ได้บันทึก" พร้อมปุ่มส่งใหม่ เวลาที่บันทึกคือตอนที่ส่งสำเร็จ
-      </MoreInfo>
     </PhoneScreen>
   );
 }

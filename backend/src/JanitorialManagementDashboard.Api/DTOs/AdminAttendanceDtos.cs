@@ -57,7 +57,7 @@ public record BoardRowDto(
 /// <summary>Required = Areas that work this shift; Present = Working, OnBreak or Done. Required = Present + Empty + Covered.</summary>
 public record BoardSummaryDto(int Required, int Present, int Empty, int Covered);
 
-public record AttendanceBoardDto(DateOnly ShiftDate, Shift Shift, bool ShiftEnded, BoardSummaryDto Summary, IReadOnlyList<BoardRowDto> Rows, AttendanceLifecycleVersion LifecycleVersion);
+public record AttendanceBoardDto(DateOnly ShiftDate, Shift Shift, bool ShiftEnded, BoardSummaryDto Summary, IReadOnlyList<BoardRowDto> Rows);
 
 /// <summary>SignalR "AttendanceRecorded" to Admins (facility-0027 rule 5): the page reloads that shift's board.</summary>
 public record AttendanceChangedDto(int AreaId, DateOnly ShiftDate, Shift Shift);

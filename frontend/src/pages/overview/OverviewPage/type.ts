@@ -40,7 +40,7 @@ export interface OverviewPageModel {
   notStartedMessage?: string;
   dateInputValue: string;
   dateMaxValue: string;
-  dateHelpText: string;
+  dateHelpText?: string;
   shiftValue?: Shift;
   shiftOptions: readonly { value: Shift; label: string }[];
   buildingValue: string;

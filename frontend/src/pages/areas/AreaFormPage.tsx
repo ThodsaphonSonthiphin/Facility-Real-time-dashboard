@@ -4,7 +4,6 @@ import { useGetAreaQuery, useGetBuildingsQuery, useGetCleanersQuery } from '../.
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { isNotFound } from '../../shared/api/scanAnswers';
 import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { linkClass } from '../../shared/components/styles';
@@ -43,7 +42,6 @@ export function AreaFormPage() {
           </Link>
         }
         title={title}
-        subtitle="พื้นที่ = งานของแม่บ้าน 1 คนต่อกะ มีป้ายลงเวลา 1 ป้าย และจุดหลายจุด"
       />
       {error && <Note tone="error" onRetry={isNotFound(error) ? undefined : retryError}>{getErrorMessage(error)}</Note>}
       {buildings.data && cleaners.data && (id === undefined || detail) ? (
@@ -52,7 +50,6 @@ export function AreaFormPage() {
         !error && <PageLoading>กำลังโหลด...</PageLoading>
       )}
       {detail && <AreaActiveSection detail={detail} />}
-      <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
     </main>
   );
 }

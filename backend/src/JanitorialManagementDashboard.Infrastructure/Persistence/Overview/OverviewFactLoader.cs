@@ -104,48 +104,142 @@ public static class OverviewFactLoader
 
         var observedSlotPointIds = slotScans.Select(s => s.ServicePointId).ToHashSet();
         var allPointIds = targetPointIds.Union(observedSlotPointIds).ToList();
+        var allPointSet = allPointIds.ToHashSet();
 
-        var latestIssueIds = new List<long>();
-        if (allPointIds.Count > 0)
+        Dictionary<int, DateTime>? precomputedFirstScanAt = null;
+        List<ScanProjection> extraIssueScans = [];
+        if (evaluationUtc == readAtUtc)
+        {
+            var pointBounds = await db.ScanRecords.AsNoTracking()
+                .Where(s => s.SubmittedAt <= readAtUtc)
+                .GroupBy(s => s.ServicePointId)
+                .Select(g => new
+                {
+                    ServicePointId = g.Key,
+                    FirstSubmittedAt = g.Min(s => s.SubmittedAt),
+                    MaxSubmittedAt = g.Max(s => s.SubmittedAt),
+                    MaxId = g.Max(s => s.Id),
+                })
+                .ToListAsync(ct);
+
+            precomputedFirstScanAt = pointBounds.ToDictionary(x => x.ServicePointId, x => Utc(x.FirstSubmittedAt));
+
+            if (allPointSet.Count > 0)
+            {
+                var latestSlotScanByPoint = new Dictionary<int, (DateTime SubmittedAt, long Id)>();
+                foreach (var scan in slotScans)
+                {
+                    var key = (Utc(scan.SubmittedAt), scan.Id);
+                    if (!latestSlotScanByPoint.TryGetValue(scan.ServicePointId, out var existing) || key.CompareTo(existing) > 0)
+                    {
+                        latestSlotScanByPoint[scan.ServicePointId] = key;
+                    }
+                }
+
+                var stalePointIds = new List<int>();
+                foreach (var bound in pointBounds)
+                {
+                    if (!allPointSet.Contains(bound.ServicePointId)) continue;
+                    var maxAt = Utc(bound.MaxSubmittedAt);
+                    // Equal timestamps can cross shift windows. A greater ID makes the global winner uncertain.
+                    if (!latestSlotScanByPoint.TryGetValue(bound.ServicePointId, out var slotScan)
+                        || slotScan.SubmittedAt < maxAt
+                        || (slotScan.SubmittedAt == maxAt && slotScan.Id < bound.MaxId))
+                    {
+                        stalePointIds.Add(bound.ServicePointId);
+                    }
+                }
+
+                if (stalePointIds.Count > 0)
+                {
+                    var latestTimes = stalePointIds.Count <= 64
+                        ? db.ScanRecords.AsNoTracking()
+                            .Where(s => stalePointIds.Contains(s.ServicePointId) && s.SubmittedAt <= evaluationUtc)
+                            .GroupBy(s => s.ServicePointId)
+                            .Select(g => new { ServicePointId = g.Key, MaxSubmittedAt = g.Max(s => s.SubmittedAt) })
+                        : db.ScanRecords.AsNoTracking()
+                            .Where(s => s.SubmittedAt <= evaluationUtc)
+                            .GroupBy(s => s.ServicePointId)
+                            .Select(g => new { ServicePointId = g.Key, MaxSubmittedAt = g.Max(s => s.SubmittedAt) });
+
+                    var staleIds = db.ScanRecords.AsNoTracking()
+                        .Join(
+                            latestTimes,
+                            s => new { s.ServicePointId, s.SubmittedAt },
+                            t => new { t.ServicePointId, SubmittedAt = t.MaxSubmittedAt },
+                            (s, _) => new { s.ServicePointId, s.Id })
+                        .GroupBy(x => x.ServicePointId)
+                        .Select(g => g.Max(x => x.Id));
+
+                    var slotScanIds = slotScans.Select(s => s.Id).ToHashSet();
+                    var staleSet = stalePointIds.ToHashSet();
+                    extraIssueScans = (await db.ScanRecords.AsNoTracking()
+                        .Join(
+                            staleIds,
+                            s => s.Id,
+                            id => id,
+                            (s, _) => new ScanProjection(
+                                s.Id,
+                                s.ServicePointId,
+                                s.ShiftDate,
+                                s.Shift,
+                                s.RoundOriginId,
+                                s.RoundWindowId,
+                                s.RoundStart,
+                                s.RoundEnd,
+                                s.Placement,
+                                s.Status,
+                                s.SubmittedAt,
+                                s.UserId,
+                                s.IssueTags,
+                                s.Note))
+                        .ToListAsync(ct))
+                        .Where(s => staleSet.Contains(s.ServicePointId) && !slotScanIds.Contains(s.Id))
+                        .ToList();
+                }
+            }
+        }
+        else if (allPointIds.Count > 0)
         {
             var latestTimes = db.ScanRecords.AsNoTracking()
                 .Where(s => allPointIds.Contains(s.ServicePointId) && s.SubmittedAt <= evaluationUtc)
                 .GroupBy(s => s.ServicePointId)
                 .Select(g => new { ServicePointId = g.Key, MaxSubmittedAt = g.Max(s => s.SubmittedAt) });
 
-            latestIssueIds = await db.ScanRecords.AsNoTracking()
+            var latestIdsQuery = db.ScanRecords.AsNoTracking()
                 .Join(
                     latestTimes,
                     s => new { s.ServicePointId, s.SubmittedAt },
                     t => new { t.ServicePointId, SubmittedAt = t.MaxSubmittedAt },
                     (s, _) => new { s.ServicePointId, s.Id })
                 .GroupBy(x => x.ServicePointId)
-                .Select(g => g.Max(x => x.Id))
-                .ToListAsync(ct);
-        }
+                .Select(g => g.Max(x => x.Id));
 
-        var slotScanIds = slotScans.Select(s => s.Id).ToHashSet();
-        var missingIssueIds = latestIssueIds.Where(id => !slotScanIds.Contains(id)).ToList();
-        var extraIssueScans = missingIssueIds.Count == 0
-            ? []
-            : await db.ScanRecords.AsNoTracking()
-                .Where(s => missingIssueIds.Contains(s.Id))
-                .Select(s => new ScanProjection(
-                    s.Id,
-                    s.ServicePointId,
-                    s.ShiftDate,
-                    s.Shift,
-                    s.RoundOriginId,
-                    s.RoundWindowId,
-                    s.RoundStart,
-                    s.RoundEnd,
-                    s.Placement,
-                    s.Status,
-                    s.SubmittedAt,
-                    s.UserId,
-                    s.IssueTags,
-                    s.Note))
-                .ToListAsync(ct);
+            var slotScanIds = slotScans.Select(s => s.Id).ToHashSet();
+            extraIssueScans = (await db.ScanRecords.AsNoTracking()
+                .Join(
+                    latestIdsQuery,
+                    s => s.Id,
+                    id => id,
+                    (s, _) => new ScanProjection(
+                        s.Id,
+                        s.ServicePointId,
+                        s.ShiftDate,
+                        s.Shift,
+                        s.RoundOriginId,
+                        s.RoundWindowId,
+                        s.RoundStart,
+                        s.RoundEnd,
+                        s.Placement,
+                        s.Status,
+                        s.SubmittedAt,
+                        s.UserId,
+                        s.IssueTags,
+                        s.Note))
+                .ToListAsync(ct))
+                .Where(s => !slotScanIds.Contains(s.Id))
+                .ToList();
+        }
 
         var submissions = slotScans.Concat(extraIssueScans)
             .Select(s => new OverviewSubmission(
@@ -166,13 +260,27 @@ public static class OverviewFactLoader
             .OrderBy(s => s.SubmittedAt).ThenBy(s => s.Id)
             .ToList();
 
-        var allScanIds = submissions.Select(s => s.Id).Distinct().ToList();
-        var inspectionRows = allScanIds.Count == 0
+        var slotInspectionRows = slotScans.Count == 0
             ? []
             : await db.InspectionRecords.AsNoTracking()
-                .Where(i => allScanIds.Contains(i.ScanRecordId) && i.InspectedAt <= evaluationUtc)
+                .Where(i => i.ScanRecord!.ShiftDate == slot.ShiftDate
+                    && i.ScanRecord.Shift == slot.Shift
+                    && i.InspectedAt <= evaluationUtc
+                    && i.ScanRecord.SubmittedAt <= evaluationUtc)
                 .Select(i => new { i.Id, i.ScanRecordId, i.Result, i.InspectedAt, i.SupervisorId, i.Defect })
                 .ToListAsync(ct);
+
+        var extraScanIds = extraIssueScans.Select(s => s.Id).Distinct().ToList();
+        var extraInspectionRows = extraScanIds.Count == 0
+            ? []
+            : await db.InspectionRecords.AsNoTracking()
+                .Where(i => extraScanIds.Contains(i.ScanRecordId) && i.InspectedAt <= evaluationUtc)
+                .Select(i => new { i.Id, i.ScanRecordId, i.Result, i.InspectedAt, i.SupervisorId, i.Defect })
+                .ToListAsync(ct);
+
+        var inspectionRows = extraInspectionRows.Count == 0
+            ? slotInspectionRows
+            : [.. slotInspectionRows, .. extraInspectionRows];
         var inspections = inspectionRows
             .Select(i => new OverviewInspection(
                 i.Id,
@@ -254,13 +362,29 @@ public static class OverviewFactLoader
             .Distinct()
             .ToList();
 
-        var people = personIds.Count == 0
-            ? []
-            : await db.Users.AsNoTracking()
+        List<OverviewPerson> people;
+        if (personIds.Count == 0)
+        {
+            people = [];
+        }
+        else if (personIds.Count <= 64)
+        {
+            people = await db.Users.AsNoTracking()
                 .Where(u => personIds.Contains(u.Id))
                 .OrderBy(u => u.Id)
                 .Select(u => new OverviewPerson(u.Id, u.DisplayName))
                 .ToListAsync(ct);
+        }
+        else
+        {
+            var personSet = personIds.ToHashSet();
+            people = (await db.Users.AsNoTracking()
+                .OrderBy(u => u.Id)
+                .Select(u => new OverviewPerson(u.Id, u.DisplayName))
+                .ToListAsync(ct))
+                .Where(u => personSet.Contains(u.Id))
+                .ToList();
+        }
 
         var unresolvedOriginPointIds = new HashSet<int>();
         foreach (var scan in slotScans)
@@ -359,12 +483,13 @@ public static class OverviewFactLoader
                 .ToListAsync(ct))
                 .ToDictionary(a => a.AreaId);
 
-        var firstScanAtByPoint = (await db.ScanRecords.AsNoTracking()
-            .Where(s => s.SubmittedAt <= readAtUtc)
-            .GroupBy(s => s.ServicePointId)
-            .Select(g => new { ServicePointId = g.Key, FirstSubmittedAt = g.Min(s => s.SubmittedAt) })
-            .ToListAsync(ct))
-            .ToDictionary(x => x.ServicePointId, x => Utc(x.FirstSubmittedAt));
+        var firstScanAtByPoint = precomputedFirstScanAt
+            ?? (await db.ScanRecords.AsNoTracking()
+                .Where(s => s.SubmittedAt <= readAtUtc)
+                .GroupBy(s => s.ServicePointId)
+                .Select(g => new { ServicePointId = g.Key, FirstSubmittedAt = g.Min(s => s.SubmittedAt) })
+                .ToListAsync(ct))
+                .ToDictionary(x => x.ServicePointId, x => Utc(x.FirstSubmittedAt));
 
         var latestSubmissionAtByPoint = submissions
             .GroupBy(s => s.PointId)
@@ -416,7 +541,35 @@ public static class OverviewFactLoader
             return false;
         }
 
-        var image = timeline.Current;
+        return ComputeIssueStateKnownForImage(
+            slot,
+            moment,
+            timeline.Current,
+            timeline.Rounds,
+            latestSubmissionAtByPoint,
+            annualCutoffUtc,
+            buildingId);
+    }
+
+    internal static bool ComputeIssueStateKnownForImage(
+        ShiftSlot slot,
+        OverviewMoment moment,
+        TargetImage image,
+        IReadOnlyList<RoundObligation> rounds,
+        IReadOnlyDictionary<int, DateTime> latestSubmissionAtByPoint,
+        DateTime annualCutoffUtc,
+        int? buildingId)
+    {
+        if (moment.Phase == "notStarted")
+        {
+            return true;
+        }
+
+        if (!moment.PolicyComplete)
+        {
+            return false;
+        }
+
         var activeBuildings = image.Buildings
             .Where(b => b.IsActive && b.CreatedAt <= moment.EvaluationUtc && (buildingId is null || b.Id == buildingId.Value))
             .Select(b => b.Id)
@@ -443,7 +596,7 @@ public static class OverviewFactLoader
         }
 
         // Historical rounds of points that became inactive or belonged to moved/deactivated areas also carry Issue checks.
-        foreach (var round in timeline.Rounds)
+        foreach (var round in rounds)
         {
             if (buildingId is int scoped && round.BuildingId != scoped)
             {

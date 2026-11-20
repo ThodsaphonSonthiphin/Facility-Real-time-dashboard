@@ -20,12 +20,15 @@ public record AttendanceStateModel(
     DateOnly? ShiftDate,
     string? Shift,
     List<AttendanceEntryModel> Events,
-    List<string> NextEvents,
     string? Outcome,
     int? DutyAreaId = null,
-    string? DutySource = null);
+    string? DutySource = null,
+    List<ChoiceAnswer>? NextActions = null)
+{
+    public IEnumerable<string> NextEvents => NextActions?.Select(choice => choice.Action) ?? [];
+}
 
-public record AttendanceRefusedModel(string Message, List<string> NextEvents);
+public record AttendanceRefusedModel(string Message, string Code);
 
 public record BlockedScanModel(string Message, string AreaCode, string AreaName);
 
@@ -70,7 +73,7 @@ public class AttendanceEndpointTests
         Assert.Equal("Day", state.Shift);
         Assert.Equal("ShiftIn", Assert.Single(state.Events).EventType);
         Assert.True(state.Events[0].WithinRadius);
-        Assert.Equal(new[] { "BreakOut", "ShiftOut" }, state.NextEvents);
+        Assert.Equal(new[] { "Break1Out", "Break1In", "Break2Out", "Break2In", "ShiftOut" }, state.NextEvents);
         var stored = Assert.Single(await AllAsync(factory, db => db.ShiftAttendances));
         Assert.Equal(AttendanceSource.Scan, stored.Source);
         Assert.Equal((short)0, stored.DistanceM);
@@ -138,8 +141,8 @@ public class AttendanceEndpointTests
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 7, 0), "ShiftIn");
 
-        var tooSoon = await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 7, 3), "BreakOut");
-        var later = await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 7, 5), "BreakOut");
+        var tooSoon = await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 7, 3), "Break1Out");
+        var later = await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 7, 5), "Break1Out");
 
         Assert.Equal("TooSoon", tooSoon.Outcome);
         Assert.Single(tooSoon.Events);
@@ -148,18 +151,24 @@ public class AttendanceEndpointTests
     }
 
     [Fact]
-    public async Task Out_of_order_event_is_refused_with_the_next_allowed_ones()
+    public async Task A_scan_cannot_go_back_to_the_first_break_after_an_Admin_records_the_second_break()
     {
         using var factory = new JanitorialApiFactory();
-        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 7, 0), "ShiftIn");
-        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 0));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 16, 15));
+        var correction = await AdminAttendanceApi.CorrectAsync(
+            admin, auth.User.Id, Day8, "Day", "Break2Out", "16:00", "ลืมสแกน");
+        Assert.Equal(HttpStatusCode.OK, correction.StatusCode);
 
-        var response = await AttendanceApi.RecordAsync(cleaner, "BreakIn");
+        var state = await EffectiveAttendanceApi.StateAsync(cleaner);
+        Assert.Equal(new[] { "Break2In", "ShiftOut" }, state.NextEvents);
+        var response = await AttendanceApi.RecordAsync(cleaner, "Break1In");
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         var refused = (await response.Content.ReadFromJsonAsync<AttendanceRefusedModel>())!;
-        Assert.Equal(new[] { "BreakOut", "ShiftOut" }, refused.NextEvents);
+        Assert.Equal("action-not-allowed", refused.Code);
     }
 
     [Fact]
@@ -168,7 +177,7 @@ public class AttendanceEndpointTests
         using var factory = new JanitorialApiFactory();
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 7, 0), "ShiftIn");
-        await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 12, 0), "BreakOut");
+        await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 12, 0), "Break1Out");
 
         var state = await RecordAtAsync(factory, cleaner, ThaiClock.At(8, 19, 0), "ShiftOut");
 
@@ -417,89 +426,46 @@ public class AttendanceEndpointTests
 
     private static readonly DateOnly Day8 = EffectiveAttendanceApi.Day8;
 
-    [Fact]
-    public async Task A_legacy_slot_keeps_the_four_action_flow_and_answers_no_numbered_actions()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Every_shift_records_the_six_actions_in_order(bool night)
     {
         using var factory = new JanitorialApiFactory();
-        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 6, 10));
+
+        var (cleaner, _, _) = night
+            ? await AuthApi.LoggedInAsEmployeeAsync(factory, "1000002", "0810000002")
+            : await AuthApi.LoggedInAsync(factory);
+        DateTimeOffset At(int hour, int minute = 0) =>
+            EffectiveAttendanceApi.Thai(8, hour, minute).AddHours(night ? 12 : 0);
+        factory.Clock.SetUtcNow(At(6, 10));
 
         var before = await EffectiveAttendanceApi.StateAsync(cleaner);
-
-        Assert.Equal("Legacy4", before.LifecycleVersion);
-        Assert.Equal(
-            new[] { "ShiftIn", "BreakOut", "BreakIn", "ShiftOut" },
-            before.Actions!.Select(action => action.EventType));
-        Assert.All(before.Actions!, action => Assert.Equal("pending", action.State));
-        Assert.Empty(before.Gaps!);
-        Assert.Equal("ShiftIn", Assert.Single(before.NextActions!).Action);
-        Assert.Empty(Assert.Single(before.NextActions!).RequiredGaps);
-
-        await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn");
-        var morning = await EffectiveAttendanceApi.RecordAndReadAsync(
-            factory, cleaner, EffectiveAttendanceApi.Thai(8, 12, 0), "BreakOut");
-        var evening = await EffectiveAttendanceApi.RecordAndReadAsync(
-            factory, cleaner, EffectiveAttendanceApi.Thai(8, 19, 0), "ShiftOut");
-
-        Assert.Equal("Recorded", evening.Outcome);
-        Assert.Equal(new[] { "BreakIn", "ShiftOut" }, morning.NextEvents);
-        Assert.Empty(evening.NextEvents);
-        Assert.Equal(3, evening.Events.Count);
-        Assert.Equal("recorded", evening.Action("BreakOut").State);
-        Assert.Empty(await EffectiveAttendanceApi.GapsAsync(factory));
-    }
-
-    [Fact]
-    public async Task A_legacy_slot_refuses_a_page_that_claims_the_numbered_contract()
-    {
-        using var factory = new JanitorialApiFactory();
-        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
-
-        var numbered = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn", lifecycleVersion: "Numbered6");
-        var withGaps = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn", confirmGaps: new[] { "BreakOut" });
-        var staleRevision = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn", stateRevision: "not-the-state");
-
-        Assert.Equal(HttpStatusCode.Conflict, numbered.StatusCode);
-        Assert.Equal("refresh-required", (await numbered.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
-        Assert.Equal(HttpStatusCode.Conflict, withGaps.StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, staleRevision.StatusCode);
-        Assert.Empty(await EffectiveAttendanceApi.FactsAsync(factory));
-    }
-
-    [Fact]
-    public async Task A_numbered_slot_records_the_six_actions_in_order()
-    {
-        using var factory = new JanitorialApiFactory();
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
-        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 6, 10));
-
-        var before = await EffectiveAttendanceApi.StateAsync(cleaner);
-        Assert.Equal("Numbered6", before.LifecycleVersion);
         Assert.Equal(
             new[] { "ShiftIn", "Break1Out", "Break1In", "Break2Out", "Break2In", "ShiftOut" },
             before.Actions!.Select(action => action.EventType));
         // The account has no dated plan, so no first-break group is known and those two instants are not invented.
         Assert.Null(before.Action("Break1Out").ExpectedAt);
-        Assert.Equal(EffectiveAttendanceApi.Thai(8, 16, 0).UtcDateTime, before.Action("Break2Out").ExpectedAt);
+        Assert.Equal(At(16, 0).UtcDateTime, before.Action("Break2Out").ExpectedAt);
         Assert.Matches("^[0-9a-f]{64}$", before.StateRevision);
 
         var state = before;
         foreach (var (at, action) in new[]
                  {
-                     (EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn"),
-                     (EffectiveAttendanceApi.Thai(8, 10, 0), "Break1Out"),
-                     (EffectiveAttendanceApi.Thai(8, 11, 0), "Break1In"),
-                     (EffectiveAttendanceApi.Thai(8, 16, 0), "Break2Out"),
-                     (EffectiveAttendanceApi.Thai(8, 17, 0), "Break2In"),
-                     (EffectiveAttendanceApi.Thai(8, 19, 0), "ShiftOut"),
+                     (At(7, 0), "ShiftIn"),
+                     (At(10, 0), "Break1Out"),
+                     (At(11, 0), "Break1In"),
+                     (At(16, 0), "Break2Out"),
+                     (At(17, 0), "Break2In"),
+                     (At(19, 0), "ShiftOut"),
                  })
         {
             state = await EffectiveAttendanceApi.RecordAndReadAsync(
-                factory, cleaner, at, action, lifecycleVersion: "Numbered6", stateRevision: state.StateRevision);
+                factory, cleaner, at, action, stateRevision: state.StateRevision);
         }
 
+        Assert.Equal(Day8, state.ShiftDate);
+        Assert.Equal(night ? "Night" : "Day", state.Shift);
         Assert.Equal("Recorded", state.Outcome);
         Assert.Equal(6, state.Events.Count);
         Assert.All(state.Actions!, action => Assert.Equal("recorded", action.State));
@@ -514,7 +480,7 @@ public class AttendanceEndpointTests
         using var factory = new JanitorialApiFactory();
         await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, new DateOnly(2026, 10, 1));
         await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", new DateOnly(2026, 10, 1), "AR01", breakGroup: 1);
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         // A half day: in at 07:00, out at 12:00, and the agreed leave 12:00-19:00 covers the rest of the plan.
         await TestData.AddAttendanceAsync(factory, "1000001", Day8, Shift.Day, AttendanceEvent.ShiftIn,
             EffectiveAttendanceApi.Thai(8, 7, 0));
@@ -543,17 +509,14 @@ public class AttendanceEndpointTests
     public async Task A_numbered_slot_refuses_a_stale_page_before_writing_anything()
     {
         using var factory = new JanitorialApiFactory();
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
 
-        var noMarker = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn");
-        var noRevision = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn", lifecycleVersion: "Numbered6");
+        var noRevision = await EffectiveAttendanceApi.RawRecordAsync(cleaner, "ShiftIn");
         var wrongRevision = await EffectiveAttendanceApi.RecordAsync(
-            cleaner, "ShiftIn", lifecycleVersion: "Numbered6", stateRevision: "0" + new string('0', 63));
+            cleaner, "ShiftIn", stateRevision: "0" + new string('0', 63));
 
-        Assert.Equal(HttpStatusCode.Conflict, noMarker.StatusCode);
-        Assert.Equal("refresh-required", (await noMarker.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
         Assert.Equal(HttpStatusCode.Conflict, noRevision.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, wrongRevision.StatusCode);
         Assert.Empty(await EffectiveAttendanceApi.FactsAsync(factory));
@@ -564,13 +527,13 @@ public class AttendanceEndpointTests
     public async Task A_numbered_slot_needs_exactly_the_required_gap_confirmations()
     {
         using var factory = new JanitorialApiFactory();
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
         var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
         var morning = await EffectiveAttendanceApi.RecordAndReadAsync(
             factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn",
-            lifecycleVersion: "Numbered6", stateRevision: empty);
+            stateRevision: empty);
 
         // The revision of the recorded slot is the one the next page must send back.
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 16, 0));
@@ -579,12 +542,12 @@ public class AttendanceEndpointTests
         Assert.NotEqual(empty, revision);
 
         var missing = await EffectiveAttendanceApi.RecordAsync(
-            cleaner, "Break2Out", lifecycleVersion: "Numbered6", stateRevision: revision);
+            cleaner, "Break2Out", stateRevision: revision);
         var extra = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break2Out",
-            lifecycleVersion: "Numbered6", stateRevision: revision,
+            stateRevision: revision,
             confirmGaps: new[] { "Break1Out", "Break1In", "ShiftOut" });
         var notSkippable = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break2Out",
-            lifecycleVersion: "Numbered6", stateRevision: revision, confirmGaps: new[] { "ShiftIn" });
+            stateRevision: revision, confirmGaps: new[] { "ShiftIn" });
 
         var refused = (await missing.Content.ReadFromJsonAsync<RefusedAnswer>())!;
         Assert.Equal(HttpStatusCode.Conflict, missing.StatusCode);
@@ -600,18 +563,18 @@ public class AttendanceEndpointTests
     public async Task A_confirmed_gap_jump_stores_skip_markers_with_no_time_of_their_own()
     {
         using var factory = new JanitorialApiFactory();
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
         var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
         await EffectiveAttendanceApi.RecordAndReadAsync(
             factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn",
-            lifecycleVersion: "Numbered6", stateRevision: empty);
+            stateRevision: empty);
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 16, 5));
         var revision = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
 
         var state = await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, EffectiveAttendanceApi.Thai(8, 16, 5),
-            "Break2Out", lifecycleVersion: "Numbered6", stateRevision: revision,
+            "Break2Out", stateRevision: revision,
             confirmGaps: new[] { "Break1Out", "Break1In" });
 
         Assert.Equal("Recorded", state.Outcome);
@@ -640,20 +603,20 @@ public class AttendanceEndpointTests
     public async Task A_numbered_slot_replays_already_recorded_action_idempotently_with_stale_prewrite_revision()
     {
         using var factory = new JanitorialApiFactory();
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
         var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
 
         var afterShiftIn = await EffectiveAttendanceApi.RecordAndReadAsync(
             factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn",
-            lifecycleVersion: "Numbered6", stateRevision: empty);
+            stateRevision: empty);
         Assert.NotEqual(empty, afterShiftIn.StateRevision);
 
         // Re-submitting ShiftIn with the pre-write revision replays idempotently instead of returning refresh-required.
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 2));
         var replayShiftIn = await EffectiveAttendanceApi.RecordAsync(
-            cleaner, "ShiftIn", lifecycleVersion: "Numbered6", stateRevision: empty);
+            cleaner, "ShiftIn", stateRevision: empty);
         Assert.Equal(HttpStatusCode.OK, replayShiftIn.StatusCode);
         var replayShiftInBody = (await replayShiftIn.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
         Assert.Equal("AlreadyRecorded", replayShiftInBody.Outcome);
@@ -661,24 +624,14 @@ public class AttendanceEndpointTests
         Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
         Assert.Empty(await EffectiveAttendanceApi.GapsAsync(factory));
 
-        // Missing or wrong lifecycleVersion on a repeated submission for an already-recorded action still refuses.
-        var missingMarker = await EffectiveAttendanceApi.RecordAsync(cleaner, "ShiftIn", stateRevision: empty);
-        var wrongMarker = await EffectiveAttendanceApi.RecordAsync(
-            cleaner, "ShiftIn", lifecycleVersion: "Legacy4", stateRevision: empty);
-        Assert.Equal(HttpStatusCode.Conflict, missingMarker.StatusCode);
-        Assert.Equal("refresh-required", (await missingMarker.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
-        Assert.Equal(HttpStatusCode.Conflict, wrongMarker.StatusCode);
-        Assert.Equal("refresh-required", (await wrongMarker.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
-
-        // Same idempotent replay behavior for a gap-confirming action (Break2Out).
         var afterBreak2Out = await EffectiveAttendanceApi.RecordAndReadAsync(
             factory, cleaner, EffectiveAttendanceApi.Thai(8, 16, 0), "Break2Out",
-            lifecycleVersion: "Numbered6", stateRevision: afterShiftIn.StateRevision,
+            stateRevision: afterShiftIn.StateRevision,
             confirmGaps: new[] { "Break1Out", "Break1In" });
         Assert.NotEqual(afterShiftIn.StateRevision, afterBreak2Out.StateRevision);
 
         var replayBreak2Out = await EffectiveAttendanceApi.RecordAsync(
-            cleaner, "Break2Out", lifecycleVersion: "Numbered6", stateRevision: afterShiftIn.StateRevision,
+            cleaner, "Break2Out", stateRevision: afterShiftIn.StateRevision,
             confirmGaps: new[] { "Break1Out", "Break1In" });
         Assert.Equal(HttpStatusCode.OK, replayBreak2Out.StatusCode);
         var replayBreak2OutBody = (await replayBreak2Out.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
@@ -692,18 +645,18 @@ public class AttendanceEndpointTests
     public async Task A_numbered_slot_refuses_new_action_with_stale_prewrite_revision()
     {
         using var factory = new JanitorialApiFactory();
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
         var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
 
         await EffectiveAttendanceApi.RecordAndReadAsync(
             factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn",
-            lifecycleVersion: "Numbered6", stateRevision: empty);
+            stateRevision: empty);
 
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
         var staleNewAction = await EffectiveAttendanceApi.RecordAsync(
-            cleaner, "Break1Out", lifecycleVersion: "Numbered6", stateRevision: empty);
+            cleaner, "Break1Out", stateRevision: empty);
 
         Assert.Equal(HttpStatusCode.Conflict, staleNewAction.StatusCode);
         Assert.Equal("refresh-required", (await staleNewAction.Content.ReadFromJsonAsync<RefusedAnswer>())!.Code);
@@ -719,14 +672,14 @@ public class AttendanceEndpointTests
         {
             ConfigureTestServices = services => services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(race)),
         };
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
         var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
         race.Armed = true;
 
         var response = await EffectiveAttendanceApi.RecordAsync(
-            cleaner, "ShiftIn", lifecycleVersion: "Numbered6", stateRevision: empty);
+            cleaner, "ShiftIn", stateRevision: empty);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = (await response.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
@@ -745,19 +698,19 @@ public class AttendanceEndpointTests
         {
             ConfigureTestServices = services => services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(race)),
         };
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 7, 0));
         var empty = (await EffectiveAttendanceApi.StateAsync(cleaner)).StateRevision;
 
         var afterShiftIn = await EffectiveAttendanceApi.RecordAndReadAsync(
             factory, cleaner, EffectiveAttendanceApi.Thai(8, 7, 0), "ShiftIn",
-            lifecycleVersion: "Numbered6", stateRevision: empty);
+            stateRevision: empty);
 
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 16, 0));
         race.Armed = true;
         var response = await EffectiveAttendanceApi.RecordAsync(
-            cleaner, "Break2Out", lifecycleVersion: "Numbered6", stateRevision: afterShiftIn.StateRevision,
+            cleaner, "Break2Out", stateRevision: afterShiftIn.StateRevision,
             confirmGaps: new[] { "Break1Out", "Break1In" });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);

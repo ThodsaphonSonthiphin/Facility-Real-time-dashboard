@@ -1,7 +1,6 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
 import { LiveBadge } from '../../../shared/components/LiveBadge';
-import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { Note } from '../../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../../shared/components/PageState';
 import { Button } from '../../../shared/components/Button';
@@ -12,10 +11,6 @@ import { Filters } from '../Filters';
 import { PointTile } from '../PointTile';
 import { QUIET_ROWS, type AreaSectionProps } from './type';
 import { useLegacyDashboardPage, useQuietArea } from './useLegacyDashboardPage';
-
-/** Wireframe D1's grey line, word for word. */
-const RULES_NOTE =
-  'ถ้าจบรอบแล้วยังไม่มีงาน จุดจะแสดงว่า “เลยเวลา” ถ้าส่งงานก่อนรอบถัดไปของกะนั้นเริ่ม ระบบจะนับให้รอบเดิมและระบุว่าส่งช้า เมื่อเริ่มรอบใหม่ หน้าจะแสดงสถานะของรอบใหม่ ส่วน “แจ้งปัญหา” คือสิ่งที่แม่บ้านรายงานไว้ เช่น น้ำยาหมด';
 
 /**
  * facility-0058, wireframe D1: every point of every active Area, by Area, as the clock's shift sees it. Pushed cards
@@ -66,7 +61,7 @@ export function LegacyDashboardPage() {
             <h2 id="dashboard-quiet" className="text-lg font-semibold">
               พื้นที่ที่ไม่มีปัญหา
             </h2>
-            <span className="text-text-2">{`${quiet.length} พื้นที่ · ย่อไว้ 1 บรรทัด`}</span>
+            <span className="text-text-2">{`${quiet.length} พื้นที่`}</span>
           </div>
           <ul className="m-0 list-none overflow-hidden rounded-lg border border-border bg-surface p-0">
             {quietShown.map((group) => (
@@ -80,7 +75,6 @@ export function LegacyDashboardPage() {
           )}
         </section>
       )}
-      {!isLoading && <MoreInfo summary="วิธีอ่านการ์ด">{RULES_NOTE}</MoreInfo>}
     </main>
   );
 }

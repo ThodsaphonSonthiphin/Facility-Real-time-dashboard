@@ -2,7 +2,7 @@ using JanitorialManagementDashboard.Domain.Enums;
 
 namespace JanitorialManagementDashboard.Domain.Entities;
 
-/// <summary>CONTEXT.md, Attendance Event: one of a Cleaner's four scans in one shift. Unique per event per shift; the first wins.</summary>
+/// <summary>One attendance action recorded for a Cleaner. Unique per event per shift; the first wins.</summary>
 public class ShiftAttendance : IGpsStamped
 {
     public long Id { get; set; }

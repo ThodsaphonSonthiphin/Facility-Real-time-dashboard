@@ -5,6 +5,7 @@ using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Application.Scheduling;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
@@ -54,6 +55,13 @@ public class ScheduleLiveTests
         var (_, destinationAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000002", "0820000002");
         var (_, nightAuth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000003", "0820000003");
 
+        if (change == "supervisor-add")
+        {
+            var starts = new DateOnly(2026, 10, 1);
+            await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, starts);
+            await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", starts, "AR01", breakGroup: 1);
+        }
+
         await TransferApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
         var id = change == "arrival" ? await TransferApi.InstructForIdAsync(factory, owner, auth.User.Id, origin,
             destination, TransferApi.Thai(13, 0)) : 0;
@@ -72,7 +80,7 @@ public class ScheduleLiveTests
             "arrival" => await TransferApi.ConfirmAsync(factory, cleaner, id, "1"),
             "admin-edit" => await AdminAttendanceApi.CorrectAsync(admin, auth.User.Id, EffectiveAttendanceApi.Day8,
                 "Day", "ShiftIn", "07:10", "corrected time"),
-            _ => await TeamAttendanceApi.AddAsync(owner, auth.User.Id, "BreakOut", "10:05",
+            _ => await TeamAttendanceApi.AddAsync(owner, auth.User.Id, "Break1Out", "10:05",
                 expectedRevision: await TeamAttendanceApi.RevisionAsync(factory, auth.User.Id)),
         };
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

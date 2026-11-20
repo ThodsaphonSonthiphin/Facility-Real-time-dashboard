@@ -4,15 +4,11 @@ import type { ConfirmTransferRequest, TransferResult } from '../../shared/api/sc
 import type { AttendanceEvent, AttendanceState } from '../../shared/api/types';
 import type { GpsFix } from '../../shared/geo/readLocation';
 
-/**
- * RecordAttendanceRequest. The QR Token comes only from the URL the sign opened (facility-0059). Spec §8: a Numbered6
- * slot also carries its contract marker and the state revision the page read, plus the explicit skip markers of any
- * intermediate action it steps over — never a guessed time.
- */
+/** Uses the sign token, scan location and current attendance revision. */
 export interface RecordAttendanceRequest extends GpsFix {
   qrToken: string;
   eventType: AttendanceEvent;
-  lifecycleVersion?: string;
+
   stateRevision?: string;
   confirmGaps?: AttendanceEvent[];
   confirmPendingTransfer?: boolean;

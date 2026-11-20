@@ -48,6 +48,9 @@ public class MissingTeamAttendanceTests
     {
         using var factory = new JanitorialApiFactory();
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var starts = new DateOnly(2026, 10, 1);
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, starts);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", starts, "AR01", breakGroup: 1);
         await TestData.AddAttendanceAsync(factory, "1000001", Day8, Shift.Day, AttendanceEvent.ShiftIn,
             EffectiveAttendanceApi.Thai(8, 7, 0));
         var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
@@ -55,16 +58,16 @@ public class MissingTeamAttendanceTests
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
         var revision = await TeamAttendanceApi.RevisionAsync(factory, person);
 
-        var response = await TeamAttendanceApi.AddAsync(supervisor, person, "BreakOut", "10:05", expectedRevision: revision);
+        var response = await TeamAttendanceApi.AddAsync(supervisor, person, "Break1Out", "10:05", expectedRevision: revision);
 
         var body = await response.Content.ReadAsStringAsync();
         Assert.True(response.StatusCode == HttpStatusCode.OK, body);
         var state = (await response.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
-        Assert.Equal("recorded", state.Action("BreakOut").State);
-        Assert.Equal("SupervisorAdd", state.Action("BreakOut").Source);
-        Assert.Equal(EffectiveAttendanceApi.Thai(8, 10, 5).UtcDateTime, state.Action("BreakOut").OccurredAt);
+        Assert.Equal("recorded", state.Action("Break1Out").State);
+        Assert.Equal("SupervisorAdd", state.Action("Break1Out").Source);
+        Assert.Equal(EffectiveAttendanceApi.Thai(8, 10, 5).UtcDateTime, state.Action("Break1Out").OccurredAt);
 
-        var added = (await EffectiveAttendanceApi.FactsAsync(factory)).Single(fact => fact.EventType == AttendanceEvent.BreakOut);
+        var added = (await EffectiveAttendanceApi.FactsAsync(factory)).Single(fact => fact.EventType == AttendanceEvent.Break1Out);
         Assert.Equal(AttendanceSource.SupervisorAdd, added.Source);
         Assert.Equal(await AdminSetupApi.AreaIdAsync(factory, "AR01"), added.AreaId);
         Assert.Null(added.SignId);
@@ -88,6 +91,9 @@ public class MissingTeamAttendanceTests
         using var factory = new JanitorialApiFactory();
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
         var night = await AdminSetupApi.UserIdAsync(factory, "1000002");
+        var starts = new DateOnly(2026, 10, 1);
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000002", CleanerKind.Regular, Shift.Night, starts);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000002", starts, "AR01", breakGroup: 1);
         await TestData.AddAttendanceAsync(factory, "1000002", Day8, Shift.Night, AttendanceEvent.ShiftIn,
             EffectiveAttendanceApi.Thai(8, 19, 5));
         var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
@@ -96,9 +102,9 @@ public class MissingTeamAttendanceTests
         var revision = await TeamAttendanceApi.RevisionAsync(factory, night, Shift.Night);
 
         // 1000002 works building A's night shift; this Supervisor holds only its day shift.
-        var refused = await TeamAttendanceApi.AddAsync(supervisor, night, "BreakOut", "22:10",
+        var refused = await TeamAttendanceApi.AddAsync(supervisor, night, "Break1Out", "22:10",
             expectedRevision: revision, shift: "Night");
-        var allowed = await TeamAttendanceApi.AddAsync(admin, night, "BreakOut", "22:10",
+        var allowed = await TeamAttendanceApi.AddAsync(admin, night, "Break1Out", "22:10",
             expectedRevision: revision, shift: "Night");
 
         Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
@@ -142,7 +148,7 @@ public class MissingTeamAttendanceTests
         var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
 
-        var response = await TeamAttendanceApi.AddAsync(supervisor, person, "BreakOut", "10:05",
+        var response = await TeamAttendanceApi.AddAsync(supervisor, person, "Break1Out", "10:05",
             expectedRevision: new string('a', 64));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -162,7 +168,7 @@ public class MissingTeamAttendanceTests
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, start);
         await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, start);
         await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", start, "AR01", breakGroup: 1);
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Day8, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         var departure = EffectiveAttendanceApi.Thai(8, 13, 0);
         await TestData.AddAttendanceAsync(factory, "1000001", Day8, Shift.Day, AttendanceEvent.ShiftIn,
             EffectiveAttendanceApi.Thai(8, 7, 0));
@@ -195,12 +201,12 @@ public class MissingTeamAttendanceTests
     }
 
     [Theory]
-    [InlineData("BreakOut", "21:00", "ลืมสแกน")]        // outside the receiving window
-    [InlineData("BreakOut", "20:00", "ลืมสแกน")]        // inside it, but still in the future
-    [InlineData("BreakOut", "06:30", "ลืมสแกน")]        // before the recorded check-in
-    [InlineData("BreakOut", "7:00", "ลืมสแกน")]         // not HH:mm
-    [InlineData("BreakOut", "10:05", "   ")]            // no reason
-    [InlineData("BreakOut", "10:05", null)]
+    [InlineData("Break1Out", "21:00", "ลืมสแกน")]        // outside the receiving window
+    [InlineData("Break1Out", "20:00", "ลืมสแกน")]        // inside it, but still in the future
+    [InlineData("Break1Out", "06:30", "ลืมสแกน")]        // before the recorded check-in
+    [InlineData("Break1Out", "7:00", "ลืมสแกน")]         // not HH:mm
+    [InlineData("Break1Out", "10:05", "   ")]            // no reason
+    [InlineData("Break1Out", "10:05", null)]
     public async Task An_invalid_missing_time_is_refused_and_writes_nothing(string eventType, string time, string? reason)
     {
         using var factory = new JanitorialApiFactory();
@@ -252,7 +258,7 @@ public class MissingTeamAttendanceTests
                 UserId = person,
                 ShiftDate = Day8,
                 Shift = Shift.Day,
-                EventType = AttendanceEvent.BreakOut,
+                EventType = AttendanceEvent.Break1Out,
                 Status = AttendanceGapStatus.Skipped,
                 AreaId = await db.Areas.Where(area => area.Code == "AR01").Select(area => area.Id).SingleAsync(),
                 RecordedById = person,
@@ -266,7 +272,7 @@ public class MissingTeamAttendanceTests
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
         var revision = await TeamAttendanceApi.RevisionAsync(factory, person);
 
-        var response = await TeamAttendanceApi.AddAsync(supervisor, person, "BreakOut", "10:05", expectedRevision: revision);
+        var response = await TeamAttendanceApi.AddAsync(supervisor, person, "Break1Out", "10:05", expectedRevision: revision);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var gap = Assert.Single(await EffectiveAttendanceApi.GapsAsync(factory));
@@ -278,34 +284,13 @@ public class MissingTeamAttendanceTests
     }
 
     [Fact]
-    public async Task A_numbered_action_is_refused_on_a_legacy_slot_and_writes_nothing()
-    {
-        using var factory = new JanitorialApiFactory();
-        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
-        await TestData.AddAttendanceAsync(factory, "1000001", Day8, Shift.Day, AttendanceEvent.ShiftIn,
-            EffectiveAttendanceApi.Thai(8, 7, 0));
-        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
-        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
-        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
-        var revision = await TeamAttendanceApi.RevisionAsync(factory, person);
-
-        // The slot has no lifecycle row, so it is the legacy four: a numbered action is not one of its actions at all.
-        var response = await TeamAttendanceApi.AddAsync(supervisor, person, "Break1Out", "10:05", expectedRevision: revision);
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(
-            "เวลาต้องเรียงกัน: เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน",
-            (await response.Content.ReadFromJsonAsync<MessageModel>())!.Message);
-        var stored = Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
-        Assert.Equal(AttendanceEvent.ShiftIn, stored.EventType);
-        Assert.Empty(await AdminSetupApi.AuditAsync(factory));
-    }
-
-    [Fact]
     public async Task The_scoped_read_answers_the_same_revision_inside_scope_and_nothing_outside_it()
     {
         using var factory = new JanitorialApiFactory();
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var starts = new DateOnly(2026, 10, 1);
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, starts);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", starts, "AR01", breakGroup: 1);
         await TestData.AddAttendanceAsync(factory, "1000001", Day8, Shift.Day, AttendanceEvent.ShiftIn,
             EffectiveAttendanceApi.Thai(8, 7, 0));
         var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
@@ -321,7 +306,7 @@ public class MissingTeamAttendanceTests
         Assert.Equal(await TeamAttendanceApi.RevisionAsync(factory, person), state.StateRevision);
         Assert.Equal("recorded", state.Action("ShiftIn").State);
         Assert.DoesNotContain("ShiftIn", state.FillableActions!);
-        Assert.Contains("BreakOut", state.FillableActions!);
+        Assert.Contains("Break1Out", state.FillableActions!);
         // Outside the Supervisor's dated shift, and for a Cleaner, the answer is the same refusal with no detail.
         Assert.Equal(HttpStatusCode.Forbidden, outside.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await TeamAttendanceApi.StateAsync(cleaner, person)).StatusCode);

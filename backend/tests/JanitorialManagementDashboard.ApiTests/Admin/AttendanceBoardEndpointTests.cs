@@ -95,7 +95,7 @@ public class AttendanceBoardEndpointTests
         Assert.Equal(new BoardSummaryModel(2, 1, 1, 0), working.Summary);
 
         factory.Clock.SetUtcNow(ThaiClock.At(8, 11, 0));
-        Assert.Equal(HttpStatusCode.OK, (await AttendanceApi.RecordAsync(cleaner, "BreakOut")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await AttendanceApi.RecordAsync(cleaner, "Break1Out")).StatusCode);
         Assert.Equal("OnBreak", (await AdminAttendanceApi.BoardAsync(admin)).Rows.Single(r => r.AreaCode == "AR01").State);
 
         factory.Clock.SetUtcNow(ThaiClock.At(8, 19, 5));
@@ -113,7 +113,7 @@ public class AttendanceBoardEndpointTests
         using var factory = new JanitorialApiFactory();
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var day = new DateOnly(2026, 10, 8);
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, day, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         await TestData.AddAttendanceAsync(factory, "1000001", day, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 50));
         await TestData.AddAttendanceAsync(factory, "1000001", day, Shift.Day, AttendanceEvent.Break1Out, ThaiClock.At(8, 10, 5));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 30));
@@ -121,7 +121,6 @@ public class AttendanceBoardEndpointTests
         // Spec §8: a numbered break out without its return is the same "in the Area" answer the legacy Break-Out gives.
         var board = await AdminAttendanceApi.BoardAsync(admin, "?shiftDate=2026-10-08&shift=Day");
 
-        Assert.Equal("Numbered6", board.LifecycleVersion);
         Assert.Equal("OnBreak", board.Rows.Single(r => r.AreaCode == "AR01").State);
     }
 

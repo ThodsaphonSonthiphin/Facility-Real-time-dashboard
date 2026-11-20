@@ -53,7 +53,6 @@ export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerP
           >
             <CheckInSignManagement detail={detail} />
             <MoreInfo summary="การใช้งานพื้นที่และประวัติ"><AreaActiveSection detail={detail} /></MoreInfo>
-            <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
           </AreaForm>
         ) : (
           !error && <PageLoading>กำลังโหลด...</PageLoading>

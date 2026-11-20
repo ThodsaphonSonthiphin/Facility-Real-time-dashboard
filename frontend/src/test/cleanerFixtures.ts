@@ -37,20 +37,25 @@ export function entry(eventType: AttendanceEvent, occurredAt: string, withinRadi
 
 export function attendance(
   events: AttendanceEntry[],
-  nextEvents: AttendanceEvent[],
+  next: AttendanceEvent[],
   outcome: AttendanceState['outcome'] = null,
 ): AttendanceState {
-  return { shiftDate: '2026-10-15', shift: 'Day', events, nextEvents, outcome };
+  return {
+    shiftDate: '2026-10-15', shift: 'Day', events, outcome,
+    nextActions: next.map((action) => ({ action, requiredGaps: [] })),
+    stateRevision: 'test-revision',
+
+  };
 }
 
 export const notCheckedIn = attendance([], ['ShiftIn']);
-export const onDuty = attendance([entry('ShiftIn', '2026-10-14T23:52:00Z')], ['BreakOut', 'ShiftOut']); // in 06:52
+export const onDuty = attendance([entry('ShiftIn', '2026-10-14T23:52:00Z')], ['Break1Out', 'ShiftOut']); // in 06:52
 export const checkedOut = attendance(
   [entry('ShiftIn', '2026-10-14T23:52:00Z'), entry('ShiftOut', '2026-10-15T11:55:00Z')], // 06:52, 18:55
   [],
 );
 /** Outside the attendance window, as the server sends it: it leaves out the null shiftDate, shift and outcome. */
-export const outsideShift: AttendanceState = { events: [], nextEvents: [] };
+export const outsideShift: AttendanceState = { events: [] };
 
 export function area(points: PointCard[] = [point()], overrides: Partial<MyWorkArea> = {}): MyWorkArea {
   return { areaId: 1, areaCode: 'AR01', areaName: 'Area ทดลอง', isCover: false, points, ...overrides };

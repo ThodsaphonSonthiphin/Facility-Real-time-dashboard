@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,6 +43,25 @@ public class AlertEndpointTests
         });
         factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 0));
         return scanId;
+    }
+
+    [Fact]
+    public async Task A_break_return_covered_by_departure_and_leave_does_not_raise_a_missing_alert()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 7, 0));
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.Break2Out, ThaiClock.At(8, 16, 0));
+        var departure = ThaiClock.At(8, 16, 30);
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftOut, departure);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 19, 5));
+
+        var before = await AdminAttendanceApi.AlertsAsync(admin);
+        Assert.Contains(before, row => row.Kind == "MissingAttendance" && row.MissingEvents.Contains("Break2In"));
+
+        await EffectiveAttendanceApi.AddLeaveAsync(factory, "1000001", Oct8, Shift.Day, departure, ThaiClock.At(8, 19, 0));
+        var after = await AdminAttendanceApi.AlertsAsync(admin);
+        Assert.DoesNotContain(after, row => row.Kind == "MissingAttendance");
     }
 
     [Fact]

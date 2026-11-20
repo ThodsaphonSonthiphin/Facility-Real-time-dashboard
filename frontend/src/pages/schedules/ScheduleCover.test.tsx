@@ -53,7 +53,7 @@ describe('Schedules emergency cover consolidation (facility-0225)', () => {
     await user.click(trigger);
 
     const form = await screen.findByRole('dialog', { name: 'มอบหมายทำแทน' });
-    expect(within(form).getByText('เลือกพื้นที่ก่อน แล้วรายชื่อแม่บ้านที่ทำแทนได้จะขึ้นที่นี่')).toBeInTheDocument();
+    expect(within(form).getByText('เลือกพื้นที่ก่อน')).toBeInTheDocument();
     expect(within(form).getByRole('button', { name: 'มอบหมาย' })).toBeDisabled();
 
     const areas = within(form).getByRole('radiogroup', { name: '2. พื้นที่ที่ต้องมีคนทำแทน' });

@@ -57,14 +57,14 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
         <div className="lg:col-span-2"><Note tone="warn">ข้อมูลการเข้างานยังไม่ครบ แสดงเฉพาะรายการที่ยืนยันได้</Note></div>
       )}
       <section aria-labelledby="overview-area-entry" className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
-        <h2 id="overview-area-entry" className="text-lg font-semibold">หลักฐานเข้าพื้นที่</h2>
+        <h2 id="overview-area-entry" className="text-lg font-semibold">การเข้าพื้นที่</h2>
         {evidence.length === 0
-          ? <p className="text-text-2">ไม่พบหลักฐานเข้าพื้นที่ในข้อมูลที่แสดง</p>
+          ? <p className="text-text-2">ยังไม่พบการเข้าพื้นที่</p>
           : (
             <ul className="list-disc space-y-1 ps-5">
               {evidence.map((fact, index) => (
                 <li key={`${fact.kind}:${fact.recordedAt}:${fact.transferId ?? index}`}>
-                  {fact.kind === 'transfer-arrival' ? 'ยืนยันถึงพื้นที่หลังย้าย' : 'ลงเวลาเข้าพื้นที่'}
+                  {fact.kind === 'transfer-arrival' ? 'ยืนยันถึงพื้นที่ใหม่' : 'ลงเวลาเข้าพื้นที่'}
                   {' · '}<time dateTime={fact.recordedAt}>{formatDayTime(fact.recordedAt)}</time>
                   {fact.transferId != null && ` · รายการย้าย #${fact.transferId}`}
                 </li>
@@ -73,21 +73,21 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
           )}
       </section>
       <section aria-labelledby="overview-area-responsibility" className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
-        <h2 id="overview-area-responsibility" className="text-lg font-semibold">ความรับผิดชอบจากการย้ายพื้นที่</h2>
+        <h2 id="overview-area-responsibility" className="text-lg font-semibold">การย้ายพื้นที่</h2>
         {responsibility ? (
           <div className="flex flex-col gap-1">
             <p>{person(responsibility.userId)} · {transferStateLabel[responsibility.state]}</p>
-            {responsibility.lastConfirmedAreaId != null && <p>พื้นที่ล่าสุดที่ยืนยัน #{responsibility.lastConfirmedAreaId}</p>}
+            {responsibility.lastConfirmedAreaId != null && <p>พื้นที่ล่าสุด #{responsibility.lastConfirmedAreaId}</p>}
             {responsibility.confirmedAt && (
               <p>ยืนยันเวลา <time dateTime={responsibility.confirmedAt}>{formatDayTime(responsibility.confirmedAt)}</time></p>
             )}
           </div>
-        ) : <p className="text-text-2">ไม่มีข้อมูลความรับผิดชอบจากการย้ายพื้นที่</p>}
+        ) : <p className="text-text-2">ไม่มีรายการย้ายพื้นที่</p>}
       </section>
       <section aria-labelledby="overview-area-events" className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
-        <h2 id="overview-area-events" className="text-lg font-semibold">เวลาที่บันทึกในพื้นที่</h2>
+        <h2 id="overview-area-events" className="text-lg font-semibold">เวลาที่บันทึก</h2>
         {events.length === 0 && gaps.length === 0
-          && <p className="text-text-2">ไม่พบรายการลงเวลาของพื้นที่นี้</p>}
+          && <p className="text-text-2">ไม่มีรายการลงเวลา</p>}
         {(events.length > 0 || gaps.length > 0) && (
           <ul className="list-disc space-y-2 ps-5">
             {events.map((fact) => (
@@ -129,9 +129,9 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
         </section>
       )}
       <section aria-labelledby="overview-area-covers" className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
-        <h2 id="overview-area-covers" className="text-lg font-semibold">การมอบหมายคนทำแทน</h2>
+        <h2 id="overview-area-covers" className="text-lg font-semibold">คนทำแทน</h2>
         {covers.length === 0
-          ? <p className="text-text-2">ไม่มีรายการมอบหมายในข้อมูลที่แสดง</p>
+          ? <p className="text-text-2">ไม่มีคนทำแทน</p>
           : (
             <ul className="list-disc space-y-1 ps-5">
               {covers.map((cover) => (
@@ -141,8 +141,8 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
                   {cover.cancelledAt
                     ? <> · ยกเลิก <time dateTime={cover.cancelledAt}>{formatDayTime(cover.cancelledAt)}</time></>
                     : <> · {events.some((fact) => fact.userId === cover.userId && fact.event === 'ShiftIn')
-                      ? 'มีเวลาลงเข้างานที่พื้นที่นี้'
-                      : 'ไม่พบเวลาลงเข้างานของผู้ทำแทนที่พื้นที่นี้'}</>}
+                      ? 'ลงเวลาเข้าแล้ว'
+                      : 'ยังไม่ลงเวลาเข้า'}</>}
                 </li>
               ))}
             </ul>

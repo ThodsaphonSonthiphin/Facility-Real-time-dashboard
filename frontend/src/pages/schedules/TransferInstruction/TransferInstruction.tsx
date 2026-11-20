@@ -37,7 +37,7 @@ export function TransferInstruction(props: TransferInstructionProps) {
         </section>
       )}
       {editor.hasState && !editor.cancelling && (
-        <p>พื้นที่ปฏิบัติงานปัจจุบัน · {editor.origin}</p>
+        <p>พื้นที่ปัจจุบัน · {editor.origin}</p>
       )}
       {editor.hasState && !editor.cancelling && editor.cannotInstruct && (
         <Note tone="info">{editor.cannotInstruct}</Note>
@@ -50,7 +50,7 @@ export function TransferInstruction(props: TransferInstructionProps) {
               {editor.destinations.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
             </Select>
           </Field>
-          <Field label="เวลาที่มีผล (เวลาไทย)">
+          <Field label="เวลาที่มีผล">
             <TextInput size={size} type="datetime-local" value={editor.effectiveTime} required
               onChange={(event) => editor.setEffectiveTime(event.currentTarget.value)} />
           </Field>

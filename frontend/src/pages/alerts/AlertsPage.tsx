@@ -4,7 +4,6 @@ import { useGetAlertsQuery } from '../../shared/api/alertListApi';
 import { livePoll } from '../../shared/api/baseApi';
 import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { KpiCard } from '../../shared/components/KpiCard/KpiCard';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { Segmented } from '../../shared/components/Segmented';
@@ -50,10 +49,7 @@ export function AlertsPage() {
 
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
-      <AdminPageHeader
-        title="รายการที่ขึ้นเตือน"
-        subtitle="รายการสแกนที่ต้องติดตาม (สแกนผิดพื้นที่ ไกลป้าย และลืมลงเวลาเลิกงาน)"
-      />
+      <AdminPageHeader title="รายการที่ขึ้นเตือน" />
       <section aria-label="สรุปสถานะและเตือน" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <KpiCard
           label={`เตือนที่ยังไม่ได้คุย (${day === 'today' ? 'วันนี้' : 'เมื่อวาน'})`}
@@ -142,9 +138,6 @@ export function AlertsPage() {
           {alerts.data && <AlertTable alerts={shown} today={today} review={review} onNotice={setNotice} />}
         </div>
       </section>
-      <MoreInfo summary="เกี่ยวกับหน้านี้">
-        <span>ไม่มีเตือนจากเวลาที่สแกน · ไม่คิดสายหรือกลับก่อน · ทุกการกดในหน้านี้เก็บลงประวัติการแก้ไขของแอดมิน</span>
-      </MoreInfo>
     </main>
   );
 }

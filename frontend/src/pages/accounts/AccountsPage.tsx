@@ -3,7 +3,6 @@ import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPa
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
 import { Drawer } from '../../shared/components/Modal';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { Tabs } from '../../shared/components/Tabs';
@@ -27,7 +26,6 @@ export function AccountsPage() {
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <AdminPageHeader
         title="บัญชีผู้ใช้"
-        subtitle="เพิ่มบัญชีให้แม่บ้าน หัวหน้า หรือแอดมินทีละคน"
         actions={
           <Button variant="primary" size="desk" onClick={openCreate}>
             <Plus aria-hidden="true" className="size-4" />
@@ -97,12 +95,6 @@ export function AccountsPage() {
           )}
         </div>
       </section>
-      <MoreInfo summary="เกี่ยวกับการปิดใช้งาน">
-        <span>
-          ปิดใช้งานบัญชีเพื่อหยุดการเข้าใช้และเก็บประวัติการสแกนไว้ คุณปิดได้เฉพาะบัญชีของคนอื่น
-          ถ้าเปลี่ยนเบอร์โทรหรือรหัสผ่าน เจ้าของบัญชีต้องเข้าสู่ระบบใหม่เมื่อระบบขอ การแก้ไขจะอยู่ในหน้า “ประวัติการแก้ไขของแอดมิน”
-        </span>
-      </MoreInfo>
       {panel?.kind === 'create' && (
         <Drawer width="lg" labelledBy="accounts-create-title" onClose={closePanel}>
           <CreateAccountForm

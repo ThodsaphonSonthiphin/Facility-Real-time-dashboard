@@ -228,8 +228,8 @@ describe('OverviewPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'ลงเวลาแล้ว 90 พื้นที่' }));
     await waitFor(() => expect(resolveDelayed).toBeDefined());
-    // Loading state is shown while the newly selected group has no currentData yet
-    expect(screen.getByText('กำลังโหลดภาพรวม...')).toBeVisible();
+    // Charts and previous table remain mounted while AreaResults shows inline updating indicator
+    expect(screen.getByText('กำลังอัปเดต...')).toBeVisible();
 
     await user.selectOptions(screen.getByLabelText('ตึก'), '2');
     expect(await screen.findByText(/AR222/)).toBeVisible();
@@ -342,9 +342,9 @@ describe('OverviewPage', () => {
     await renderApp('/admin/overview?date=2026-10-06&shift=Day&group=entered&page=1');
     const results = await screen.findByRole('region', { name: 'พื้นที่ที่ลงเวลาแล้ว' });
 
-    expect(screen.queryByText(/\b0%/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\(0%\)/)).not.toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/ข้อมูลลงเวลาบางส่วนพ้นช่วงจัดเก็บแล้ว/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/ข้อมูลลงเวลาบางส่วนหมดอายุแล้ว/).length).toBeGreaterThan(0);
     expect(within(results).getByText('รายการที่ยืนยันได้ 1–1 (พบ 1 พื้นที่ · ยอดรวม: —)')).toBeVisible();
     expect(within(results).queryByText(/ทั้งหมด/)).not.toBeInTheDocument();
     expect(within(results).getByText('ข้อมูลจับคู่รอบไม่ครบ')).toBeVisible();
@@ -406,13 +406,13 @@ describe('OverviewPage', () => {
 
     mode = 'partial';
     await first.user.click(screen.getByRole('button', { name: /กะดึก/ }));
-    expect(await screen.findByText('ไม่พบรายการที่ยืนยันได้ (ยอดรวม: —)')).toBeVisible();
-    expect(screen.getByText(/ยังไม่มีประวัติเป้าหมายครบทั้งช่วงกะ/)).toBeVisible();
+    expect(await screen.findByText('ไม่พบรายการ (ยอดรวม: —)')).toBeVisible();
+    expect(screen.getByText(/ข้อมูลกะนี้ยังไม่ครบ/)).toBeVisible();
 
     mode = 'notStarted';
     await first.user.click(screen.getByRole('button', { name: /กะเช้า/ }));
     await waitFor(() => expect(screen.getAllByText('กะนี้ยังไม่เริ่ม').length).toBeGreaterThan(0));
-    expect(screen.queryByText(/\b0%/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\(0%\)/)).not.toBeInTheDocument();
   });
 
   it('uses due-Area denominator for work and inspection, keeps rework distinct from inspected, and removes live wording on closed history', async () => {
@@ -468,8 +468,7 @@ describe('OverviewPage', () => {
     expect(screen.queryByRole('heading', { name: 'รอบที่ผ่านมาในกะนี้' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'พื้นที่ที่ต้องตามตอนนี้' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'รายการที่พบในกะที่เลือก' })).toBeVisible();
-    expect(screen.getByText('รอบที่ไม่ได้แก้ (Rework)')).toBeVisible();
-    expect(screen.getByText('รอบที่ถูกเปลี่ยนหรือยกเลิก')).toBeVisible();
+    expect(screen.queryByText('วิธีอ่านภาพรวม')).not.toBeInTheDocument();
 
     // Clicking rework switches only to rework while keeping inspected count distinct
     await user.click(screen.getByRole('button', { name: 'มีงานต้องแก้ 3 พื้นที่' }));
@@ -542,7 +541,7 @@ describe('OverviewPage', () => {
     expect(firstView).toHaveAttribute('href', expect.stringContaining('view=attendance'));
 
     // Click missedCleaning -> cleaning view + multiple round links (never pick one arbitrarily)
-    await user.click(screen.getByRole('button', { name: /พื้นที่ที่มีรอบไม่ได้ทำ/ }));
+    await user.click(screen.getByRole('button', { name: /มีรอบไม่ได้ทำ/ }));
     const results = await screen.findByRole('region', { name: 'พื้นที่ที่มีรอบไม่ได้ทำ' });
     const areaLink = within(results).getByRole('link', { name: 'ดูพื้นที่ AR77 พื้นที่หลายรอบ' });
     expect(areaLink).toHaveAttribute('href', expect.stringContaining('/dashboard?'));
@@ -555,7 +554,7 @@ describe('OverviewPage', () => {
     expect(round2).toHaveAttribute('href', expect.stringContaining('roundKey=2026-11-04%3ADay%3A77%3A7701%3A13%3A0900-1000'));
 
     // Also verify missedInspection with generic roundKeys ['key-1', 'key-2'] renders distinct per-round links
-    await user.click(screen.getByRole('button', { name: /พื้นที่ที่มีรอบไม่ได้ตรวจ/ }));
+    await user.click(screen.getByRole('button', { name: /มีรอบไม่ได้ตรวจ/ }));
     const inspResults = await screen.findByRole('region', { name: 'พื้นที่ที่มีรอบไม่ได้ตรวจ' });
     const inspAreaLink = within(inspResults).getByRole('link', { name: 'ดูพื้นที่ AR88 พื้นที่ตรวจหลายรอบ' });
     expect(inspAreaLink).toHaveAttribute('href', expect.stringContaining('view=inspection'));
@@ -642,7 +641,7 @@ describe('OverviewPage', () => {
       await act(async () => {
         window.dispatchEvent(new Event('focus'));
       });
-      const warnNote = await screen.findByText(/ข้อมูลอาจยังไม่ล่าสุด/);
+      const warnNote = await screen.findByText(/อัปเดตข้อมูลไม่ได้/);
       expect(warnNote).toBeVisible();
       expect(warnNote).toHaveTextContent(/10:05/);
       expect(screen.getByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' })).toBeVisible();
@@ -690,6 +689,67 @@ describe('OverviewPage', () => {
     await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
     expect(await screen.findByRole('region', { name: 'พื้นที่ที่ลงเวลาแล้ว' })).toBeVisible();
     expect(screen.getByText(/AR202/)).toBeVisible();
+  });
+
+  it('keeps the visible context while revisiting a cached selection and clears it if the request fails', async () => {
+    const base = overviewFixture();
+    const building = base.summary.buildings[1];
+    let pendingReturn: Promise<FakeResponse> | undefined;
+    let resolveReturn!: (response: FakeResponse) => void;
+    const scopedResponse = overviewFixture({
+      summary: { ...base.summary, context: { ...base.summary.context, buildingId: building.id } },
+      rows: [makeAreaRow(202, { buildingId: building.id, buildingCode: building.code, buildingName: building.name })],
+    });
+
+    fakeServer({
+      ...adminSession,
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': (req) => {
+        const scoped = new URLSearchParams(req.search).get('buildingId') === String(building.id);
+        if (scoped && pendingReturn) {
+          return pendingReturn;
+        }
+        return { status: 200, body: scoped ? scopedResponse : base };
+      },
+    });
+
+    const { user } = await renderApp('/admin/overview?date=2026-11-04&shift=Day&group=notEntered&page=1');
+    const results = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' });
+    const picker = screen.getByLabelText('ตึก');
+
+    await user.selectOptions(picker, String(building.id));
+    await within(results).findByRole('link', { name: /AR202/ });
+    await user.selectOptions(picker, '');
+    await within(results).findByText(/ทุกตึก/);
+
+    pendingReturn = new Promise<FakeResponse>((resolve) => { resolveReturn = resolve; });
+    await user.selectOptions(picker, String(building.id));
+    expect(within(results).getByText(/ทุกตึก/)).toBeVisible();
+    expect(within(results).getByText('กำลังอัปเดต...')).toBeVisible();
+    expect(within(results).queryByRole('link', { name: /AR202/ })).not.toBeInTheDocument();
+    expect(within(results).getByRole('button', { name: 'ถัดไป' })).toBeDisabled();
+    expect(screen.queryByText('กำลังอัปเดตข้อมูล...')).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveReturn({ status: 500, body: { message: 'โหลดตึกที่เลือกไม่สำเร็จ' } });
+    });
+
+    expect(await screen.findByText('โหลดตึกที่เลือกไม่สำเร็จ')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'ลองอีกครั้ง' })).toBeVisible();
+    expect(results).not.toBeInTheDocument();
+
+    await user.selectOptions(picker, '');
+    const restored = await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' });
+    expect(within(restored).getByText(/ทุกตึก/)).toBeVisible();
+
+    pendingReturn = new Promise<FakeResponse>((resolve) => { resolveReturn = resolve; });
+    await user.selectOptions(picker, String(building.id));
+    expect(within(restored).getByText('กำลังอัปเดต...')).toBeVisible();
+    expect(screen.queryByText('โหลดตึกที่เลือกไม่สำเร็จ')).not.toBeInTheDocument();
+    await act(async () => {
+      resolveReturn({ status: 200, body: scopedResponse });
+    });
+    expect(await within(restored).findByRole('link', { name: /AR202/ })).toBeVisible();
   });
 
   it.each(['reset to current', 'remount', 'Back and Forward'] as const)('waits for the fresh default slot after %s', async (navigation) => {
@@ -887,8 +947,54 @@ describe('OverviewPage', () => {
 
     const dateInput = screen.getByLabelText('วันที่ของกะ');
     expect(dateInput).toHaveValue('2026-11-04');
-    expect(dateInput).toHaveAccessibleDescription('ข้อมูลครบช่วง 01/10/2026–04/11/2026');
+    expect(dateInput).toHaveAccessibleDescription('มีข้อมูล 01/10/2026–04/11/2026');
     expect(screen.getByRole('group', { name: 'กะ' })).toBeVisible();
     expect(screen.getByLabelText('ตึก')).toBeVisible();
+  });
+
+  it('keeps charts and previous rows mounted while switching groups instead of flashing full-page loading (facility-0233)', async () => {
+    const base = overviewFixture();
+    let resolveEntered!: (res: FakeResponse) => void;
+    const pendingEntered = new Promise<FakeResponse>((resolve) => {
+      resolveEntered = resolve;
+    });
+
+    fakeServer({
+      ...adminSession,
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': (req) => {
+        const params = new URLSearchParams(req.search);
+        if (params.get('group') === 'entered') {
+          return pendingEntered;
+        }
+        return { status: 200, body: base };
+      },
+    });
+
+    const { user } = await renderApp('/admin/overview?date=2026-11-04&shift=Day&group=notEntered&page=1');
+    await screen.findByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' });
+
+    await user.click(screen.getByRole('button', { name: 'ลงเวลาแล้ว 90 พื้นที่' }));
+
+    expect(screen.queryByText('กำลังโหลดภาพรวม...')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'สรุปผลของกะ' })).toBeVisible();
+    const results = screen.getByRole('region', { name: 'พื้นที่ที่ยังไม่ลงเวลา' });
+    expect(within(results).getByText('กำลังอัปเดต...')).toBeVisible();
+    expect(results.querySelector('[aria-busy="true"]')).not.toBeNull();
+
+    await act(async () => {
+      resolveEntered({
+        status: 200,
+        body: overviewFixture({
+          group: 'entered',
+          total: base.summary.groups.entered,
+          rows: [makeAreaRow(301, { code: 'AR301', name: 'พื้นที่สลับกลุ่มสำเร็จ' })],
+        }),
+      });
+    });
+
+    const nextResults = await screen.findByRole('region', { name: 'พื้นที่ที่ลงเวลาแล้ว' });
+    expect(within(nextResults).getByText(/AR301/)).toBeVisible();
+    expect(within(nextResults).getByText('กำลังอัปเดต...')).toHaveAttribute('aria-hidden', 'true');
   });
 });

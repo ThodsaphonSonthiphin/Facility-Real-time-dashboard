@@ -10,8 +10,6 @@ export const shiftLabel: Record<Shift, string> = {
 /** facility-0031, wireframes M1 and M10; spec §8 adds the two numbered breaks. */
 export const eventLabel: Record<AttendanceEvent, string> = {
   ShiftIn: 'เข้างาน',
-  BreakOut: 'ออกพัก',
-  BreakIn: 'กลับจากพัก',
   Break1Out: 'ออกพัก 1',
   Break1In: 'กลับจากพัก 1',
   Break2Out: 'ออกพัก 2',
@@ -19,22 +17,9 @@ export const eventLabel: Record<AttendanceEvent, string> = {
   ShiftOut: 'เลิกงาน',
 };
 
-/** The order the four legacy events are shown in. A numbered slot reads its own order from `attendanceLifecycles`. */
-export const attendanceEvents: readonly AttendanceEvent[] = ['ShiftIn', 'BreakOut', 'BreakIn', 'ShiftOut'];
-
-/**
- * `AttendanceLifecycle.Order` (spec §8): the legacy four and the six-action contract, in the server's order. A page shows
- * the list the slot's own marker names; the stored legacy event names never change.
- */
-export const attendanceLifecycles: Record<'Legacy4' | 'Numbered6', readonly AttendanceEvent[]> = {
-  Legacy4: attendanceEvents,
-  Numbered6: ['ShiftIn', 'Break1Out', 'Break1In', 'Break2Out', 'Break2In', 'ShiftOut'],
-};
-
-/** The ordered actions a slot's marker names, defaulting to the legacy four when the server sent none. */
-export function lifecycleEvents(version?: string | null): readonly AttendanceEvent[] {
-  return version === 'Numbered6' ? attendanceLifecycles.Numbered6 : attendanceLifecycles.Legacy4;
-}
+export const attendanceEvents: readonly AttendanceEvent[] = [
+  'ShiftIn', 'Break1Out', 'Break1In', 'Break2Out', 'Break2In', 'ShiftOut',
+];
 
 /** `AttendanceStateView`'s words on the timeline: no timestamp is ever invented for a kind without a scan (spec §8). */
 export const actionStateLabel: Record<AttendanceActionState, string> = {
@@ -45,20 +30,20 @@ export const actionStateLabel: Record<AttendanceActionState, string> = {
   pending: '–',
 };
 
-export const departureLeaveMismatchLabel = 'เวลาเลิกงานก่อนจบกะไม่ตรงกับช่วงลาที่บันทึกไว้';
+export const departureLeaveMismatchLabel = 'เวลาเลิกงานไม่ตรงกับช่วงลา';
 
 /** Spec §13's three entry categories, as the board shows them beside the state. */
 export const entryLabel: Record<'entered' | 'covered' | 'unassigned', string> = {
-  entered: 'มีหลักฐานเข้าแล้ว',
-  covered: 'มอบหมายแล้ว ยังไม่มีหลักฐานเข้า',
-  unassigned: 'ยังไม่มีคนรับผิดชอบ',
+  entered: 'ลงเวลาแล้ว',
+  covered: 'มอบหมายทำแทน (ยังไม่ลงเวลา)',
+  unassigned: 'ยังไม่มีคน',
 };
 
 /** Spec §9's instruction states, for the board's responsibility line. */
 export const transferStateLabel: Record<'instructed' | 'confirmed' | 'cancelled', string> = {
-  instructed: 'สั่งย้ายแล้ว ยังไม่ยืนยันถึงพื้นที่ใหม่',
-  confirmed: 'ยืนยันถึงพื้นที่ใหม่แล้ว',
-  cancelled: 'ยกเลิกคำสั่งย้ายแล้ว',
+  instructed: 'รอเข้าพื้นที่ใหม่',
+  confirmed: 'ถึงพื้นที่ใหม่แล้ว',
+  cancelled: 'ยกเลิกการย้ายแล้ว',
 };
 
 /** facility-0047 rule 4: the card statuses as everyone sees them. */

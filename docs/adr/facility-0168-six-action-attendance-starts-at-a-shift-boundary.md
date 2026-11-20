@@ -1,5 +1,7 @@
 # Six-action attendance starts at an explicit shift boundary
 
+> Updated 2026-11-20. Every shift uses six attendance actions in development. The previous requirement for a shift-by-shift transition is superseded. See [the current installation guide](../handover.md#210-เตรียมตารางงานและการลงเวลา-6-ขั้น).
+
 ```mermaid
 flowchart TD
     Q{"When does six-action attendance begin?"}

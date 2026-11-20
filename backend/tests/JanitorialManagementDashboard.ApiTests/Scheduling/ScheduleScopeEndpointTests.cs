@@ -644,6 +644,9 @@ public class ScheduleScopeMySqlTests
     public async Task Blocked_scan_cover_slot_reads_dated_multi_building_supervisor_scope()
     {
         using var factory = new JanitorialApiFactory();
+        await TestData.AddBuildingAsync(factory, "B");
+        await TestData.AddAreaAsync(factory, "AR03", "B");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
         factory.Clock.SetUtcNow(new DateTimeOffset(today.Year, today.Month, today.Day, 9, 0, 0, TimeSpan.FromHours(7)));
 
@@ -680,7 +683,6 @@ public class ScheduleScopeMySqlTests
             await db.SaveChangesAsync();
         });
 
-        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
         var alerts = await Admin.AdminAttendanceApi.AlertsAsync(admin);
         var buildingAAlert = alerts.Single(a => a.Kind == "BlockedScan" && a.AreaCode == "AR01");
         var buildingBAlert = alerts.Single(a => a.Kind == "BlockedScan" && a.AreaCode != "AR01");

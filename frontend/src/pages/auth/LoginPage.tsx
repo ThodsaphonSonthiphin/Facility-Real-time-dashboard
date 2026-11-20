@@ -39,9 +39,8 @@ export function LoginPage() {
         <header className="flex flex-col gap-1">
           <ProjectLogo />
           <h1 className="text-2xl font-bold">เข้าสู่ระบบ</h1>
-          <span className="text-text-2">ใช้รหัสพนักงานและเบอร์โทรของคุณ</span>
         </header>
-        {returnsToPage && <Note tone="info">เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที</Note>}
+        {returnsToPage && <Note tone="info">เข้าสู่ระบบเพื่อกลับไปยังหน้าที่เปิดไว้</Note>}
         {errorText && <div id={errorId}><Note tone="error">{errorText}</Note></div>}
         <form id="login-form" className="flex flex-col gap-5" onSubmit={onSubmit} aria-busy={isLoading}>
           <Field label="รหัสพนักงาน" help="เลข 7 หลัก" errorId={credentialInvalid ? errorId : undefined}>
@@ -57,7 +56,7 @@ export function LoginPage() {
               onChange={(event) => setEmployeeId(event.target.value)}
             />
           </Field>
-          <Field label="เบอร์โทรศัพท์" help="เบอร์ที่แจ้งแอดมินไว้ตอนสร้างบัญชี" errorId={credentialInvalid ? errorId : undefined}>
+          <Field label="เบอร์โทรศัพท์" errorId={credentialInvalid ? errorId : undefined}>
             <TextInput
               size="code"
               type="tel"
@@ -72,9 +71,9 @@ export function LoginPage() {
           </Field>
         </form>
         <footer className="flex flex-col gap-1 text-sm text-text-2">
-          <span>ถ้าเปลี่ยนเบอร์โทรหรือต้องการบัญชี ให้แจ้งแอดมิน</span>
+          <span>เปลี่ยนเบอร์โทรหรือต้องการบัญชี ติดต่อแอดมิน</span>
           <span>
-            แอดมินเข้าด้วยชื่อผู้ใช้และรหัสผ่าน ·{' '}
+            แอดมิน ·{' '}
             <Link className={inlineLinkClass} to="/login/admin" state={location.state}>
               หน้าแอดมิน
             </Link>

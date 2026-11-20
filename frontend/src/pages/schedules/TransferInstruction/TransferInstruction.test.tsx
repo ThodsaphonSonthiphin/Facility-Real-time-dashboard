@@ -13,7 +13,7 @@ const checkedIn: AttendanceState = {
   shiftDate: '2026-11-17', shift: 'Day', dutyAreaId: 4, events: [
     { eventType: 'ShiftIn', occurredAt: '2026-11-17T00:03:00Z', source: 'Scan', withinRadius: true },
     { eventType: 'Break1Out', occurredAt: '2026-11-17T04:30:00Z', source: 'Scan', withinRadius: true },
-  ], nextEvents: ['Break1In'],
+  ],
 };
 const confirmed: AttendanceTransfer = {
   id: 18, fromAreaId: 4, toAreaId: 5, effectiveAt: '2026-11-17T04:00:00Z',
@@ -46,7 +46,7 @@ it('reviews a dated move for the scoped person and Area, with a separate Thai ef
   const drawer = await openTransfer(app.user);
   await app.user.selectOptions(await drawer.findByLabelText('พื้นที่ปลายทาง'), '5');
   expect(drawer.queryByRole('option', { name: /AR04|AR08|AR09/ })).not.toBeInTheDocument();
-  fireEvent.change(drawer.getByLabelText('เวลาที่มีผล (เวลาไทย)'), { target: { value: '2026-11-17T13:30' } });
+  fireEvent.change(drawer.getByLabelText('เวลาที่มีผล'), { target: { value: '2026-11-17T13:30' } });
   const review = drawer.getByRole('button', { name: 'ตรวจสอบ' });
   expect(review).toBeDisabled();
   await app.user.type(drawer.getByLabelText('เหตุผลที่ย้ายพื้นที่'), 'ช่วยงานพื้นที่ใหม่');
@@ -76,8 +76,8 @@ it('keeps confirmed arrivals as read-only history and cancels only the active in
     }) },
   });
   const drawer = await openTransfer(app.user);
-  expect(await drawer.findByText('สั่งย้ายแล้ว ยังไม่ยืนยันถึงพื้นที่ใหม่')).toBeVisible();
-  expect(drawer.getByText(/ยืนยันถึงพื้นที่ใหม่แล้ว · .*AR04.*AR05/)).toBeVisible();
+  expect(await drawer.findByText('รอเข้าพื้นที่ใหม่')).toBeVisible();
+  expect(drawer.getByText(/ถึงพื้นที่ใหม่แล้ว · .*AR04.*AR05/)).toBeVisible();
   expect(drawer.getByText(/เวลาที่ถึงจริง · .*11:05/)).toBeVisible();
   expect(drawer.getAllByText(/เวลาที่ถึงจริง/)).toHaveLength(1);
   expect(drawer.queryByLabelText('พื้นที่ปลายทาง')).not.toBeInTheDocument();
@@ -100,7 +100,7 @@ it('offers a forward move from a confirmed destination, without editing that arr
     }) },
   });
   const drawer = await openTransfer(app.user);
-  expect(await drawer.findByText(/พื้นที่ปฏิบัติงานปัจจุบัน · .*AR05/)).toBeVisible();
+  expect(await drawer.findByText(/พื้นที่ปัจจุบัน · .*AR05/)).toBeVisible();
   expect(drawer.getAllByText(/เวลาที่ถึงจริง · .*11:05/)).toHaveLength(1);
   expect(drawer.queryByLabelText('เหตุผลที่ยกเลิกคำสั่ง')).not.toBeInTheDocument();
   expect(within(drawer.getByLabelText('พื้นที่ปลายทาง')).getByRole('option', { name: /AR04/ })).toBeEnabled();
@@ -138,7 +138,7 @@ it('opens a confirmed inbound slot from the destination roster without any origi
     }) },
   });
   const region = within(await screen.findByRole('region', { name: 'การย้ายพื้นที่ที่เกี่ยวข้อง' }));
-  expect(region.getByText(/ยืนยันถึงพื้นที่ใหม่แล้ว.*11:05/)).toBeVisible();
+  expect(region.getByText(/ถึงพื้นที่ใหม่แล้ว.*11:05/)).toBeVisible();
   expect(region.getByRole('button', { name: /เพิ่มเวลาที่ขาด.*แม่บ้านจากตึกต้นทาง/ })).toBeEnabled();
   expect(screen.queryByRole('table', { name: 'ตารางงานรายสัปดาห์' })).not.toBeInTheDocument();
   await app.user.click(region.getByRole('button', { name: /ย้ายพื้นที่ระหว่างกะ.*แม่บ้านจากตึกต้นทาง/ }));

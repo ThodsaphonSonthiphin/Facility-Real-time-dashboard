@@ -17,7 +17,7 @@ internal sealed class SchedulingScenario(DateTime now, AttendanceSettings settin
     private DateTime Start => ShiftCalendar.StartUtc(_slot);
     private DateTime End => ShiftCalendar.EndUtc(_slot);
     private (DateTime Opens, DateTime Closes) Window => AttendanceCalendar.Window(_slot, settings);
-    private DateTime Activated => Window.Opens.AddMinutes(-1);
+    private DateTime FixtureCreatedAt => Window.Opens.AddMinutes(-1);
     private DateOnly WeekStart => _slot.ShiftDate.AddDays(-((int)_slot.ShiftDate.DayOfWeek + 6) % 7);
     private DateOnly HistoryStarts => WeekStart.AddDays(-7);
     private DateTime LeaveStarts => new(Math.Max(Start.Ticks,
@@ -71,7 +71,7 @@ internal sealed class SchedulingScenario(DateTime now, AttendanceSettings settin
         var homeSign = NewSign(home);
         var leaveSign = NewSign(leaveArea);
         var destinationSign = NewSign(destination);
-        var point = new ServicePoint { Area = home, Name = "จุดงานก่อนย้าย", SortOrder = 1, CreatedAt = Activated };
+        var point = new ServicePoint { Area = home, Name = "จุดงานก่อนย้าย", SortOrder = 1, CreatedAt = FixtureCreatedAt };
         var pointSign = NewSign(home, point);
 
         db.Buildings.AddRange(a, b, c);
@@ -86,12 +86,12 @@ internal sealed class SchedulingScenario(DateTime now, AttendanceSettings settin
         db.SupervisorScopePeriods.Add(new SupervisorScopePeriod
         {
             SupervisorId = leadAB.Id, BuildingId = b.Id, Shift = _slot.Shift, EffectiveFrom = HistoryStarts,
-            CreatedAt = Activated, UpdatedAt = Activated, CreatedById = admin.Id,
+            CreatedAt = FixtureCreatedAt, UpdatedAt = FixtureCreatedAt, CreatedById = admin.Id,
         });
         db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
         {
             UserId = relief.Id, Kind = CleanerKind.Relief, HomeBuildingId = c.Id, Shift = _slot.Shift,
-            EffectiveFrom = HistoryStarts, CreatedAt = Activated, UpdatedAt = Activated, CreatedById = admin.Id,
+            EffectiveFrom = HistoryStarts, CreatedAt = FixtureCreatedAt, UpdatedAt = FixtureCreatedAt, CreatedById = admin.Id,
         });
         var leaveBaseline = await db.ScheduleBaselines.Include(baseline => baseline.Days)
             .SingleAsync(baseline => baseline.UserId == leave.Id);
@@ -99,19 +99,6 @@ internal sealed class SchedulingScenario(DateTime now, AttendanceSettings settin
         {
             day.BreakGroup = 1;
         }
-
-        // These are synthetic facts from a slot selected before it opened. The running API is never asked to activate it.
-        var hasFacts = await db.ShiftAttendances.AnyAsync(row => row.ShiftDate == _slot.ShiftDate && row.Shift == _slot.Shift);
-        if (AttendanceLifecycle.CheckActivation(_slot, Activated, settings, hasFacts) is not null
-            || AttendanceCalendar.SlotFor(_slot.Shift, now, settings) != _slot)
-        {
-            throw new InvalidOperationException("The run cannot seed a numbered lifecycle in its real receiving window");
-        }
-        db.AttendanceSlotLifecycles.Add(new AttendanceSlotLifecycle
-        {
-            ShiftDate = _slot.ShiftDate, Shift = _slot.Shift, Version = AttendanceLifecycleVersion.Numbered6,
-            ActivatedAt = Activated, CreatedAt = Activated, Reason = "Synthetic scheduling acceptance",
-        });
 
         var leaveIn = now.AddMinutes(-8);
         // Leave needs an established ShiftIn beyond the normal five-minute repeat guard. When this run starts
@@ -141,22 +128,22 @@ internal sealed class SchedulingScenario(DateTime now, AttendanceSettings settin
         {
             Code = Prefix + value,
             Name = value == "A" ? "อาคารทดสอบการจัดตารางงานหลายพื้นที่สำหรับหน้าจอขนาดเล็ก" : "อาคารตาราง " + value,
-            CreatedAt = Activated,
+            CreatedAt = FixtureCreatedAt,
         };
         Area NewArea(Building building, string suffix, string name) => new()
         {
             Building = building, Code = Prefix + "-" + suffix, Name = name,
-            ShiftPattern = ShiftPattern.DayAndNight, CreatedAt = Activated,
+            ShiftPattern = ShiftPattern.DayAndNight, CreatedAt = FixtureCreatedAt,
         };
         User NewEmployee(int number, string name, UserRole role, Building? building = null, Area? area = null) => new()
         {
             Role = role, DisplayName = name, EmployeeId = EmployeeId(number), SecretHash = hash,
-            Building = building, Area = area, Shift = _slot.Shift, CreatedAt = Activated,
+            Building = building, Area = area, Shift = _slot.Shift, CreatedAt = FixtureCreatedAt,
         };
         Sign NewSign(Area area, ServicePoint? servicePoint = null) => new()
         {
             Code = area.Code + (servicePoint is null ? "-IN" : "-P1"), Area = area, ServicePoint = servicePoint,
-            QrToken = Guid.NewGuid().ToString("N"), QrIssuedAt = Activated, LocatedAt = Activated,
+            QrToken = Guid.NewGuid().ToString("N"), QrIssuedAt = FixtureCreatedAt, LocatedAt = FixtureCreatedAt,
             Latitude = 13.7563m, Longitude = 100.5018m, LocationAccuracyM = 5, LocationSource = LocationSource.Site,
         };
         ShiftAttendance Scan(User person, Area area, Sign sign, AttendanceEvent action, DateTime instant) => new()
@@ -177,10 +164,6 @@ internal sealed class SchedulingScenario(DateTime now, AttendanceSettings settin
         return new
         {
             shiftDate = _slot.ShiftDate, shift = _slot.Shift.ToString(), weekStart = WeekStart, planningWeek = WeekStart.AddDays(7),
-            activation = new
-            {
-                opensAt = Window.Opens, closesAt = Window.Closes, activatedAt = Activated, version = nameof(AttendanceLifecycleVersion.Numbered6),
-            },
             buildingA = Building("A"), buildingB = Building("B"), buildingC = Building("C"),
             supervisorAB = Employee(1), supervisorC = Employee(2), weekly = Employee(3), competing = Employee(4),
             relief = Employee(5), leave = Employee(6), transfer = Employee(7),

@@ -135,8 +135,8 @@ if (existing is null)
             if ((a + day) % 11 == 0) continue; // planned absences: no scans or attendance for this slot
             var start = Utc(shiftDate, shift == Shift.Day ? 7 : 19);
             foreach (var (eventType, offset) in new[] {
-                (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakOut, 240),
-                (AttendanceEvent.BreakIn, 300), (AttendanceEvent.ShiftOut, 710) })
+                (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break1Out, 240),
+                (AttendanceEvent.Break1In, 300), (AttendanceEvent.ShiftOut, 710) })
             {
                 // Some completed historical shifts lack Shift-Out, producing genuine alert inputs.
                 if (eventType == AttendanceEvent.ShiftOut && (a + day) % 13 == 0) continue;

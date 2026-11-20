@@ -25,7 +25,8 @@ const DETAIL = `${LIST}/91`;
 const listUrl = '/admin/overview?date=2026-11-04&shift=Day';
 const detailUrl = '/dashboard?source=overview&date=2026-11-04&shift=Day&group=incomplete&areaId=91&view=cleaning';
 const listArgs: OverviewListArgs = { shiftDate: '2026-11-04', shift: 'Day', group: 'notEntered', page: 1, pageSize: 5 };
-const outdated = /ไม่สามารถอัปเดตข้อมูลล่าสุดได้.*ข้อมูลอาจยังไม่ล่าสุด/;
+const outdated = /อัปเดตข้อมูลไม่ได้.*แสดงข้อมูลเมื่อ/;
+const checking = /กำลังตรวจสอบข้อมูลล่าสุด/;
 
 function serve(routes: FakeRoutes) {
   return fakeServer({ ...adminSession, 'GET /api/admin/alerts': () => ({ status: 200, body: [] }), ...routes });
@@ -225,15 +226,15 @@ it.each(recoveryViews)('keeps the $label snapshot marked stale until a read star
   act(() => connection.reconnecting());
   expect(screen.getByText(/กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด/)).toBeVisible();
   act(() => connection.reconnected());
-  expect(screen.getByText(/ข้อมูลอาจยังไม่ล่าสุด/)).toHaveTextContent('10:00');
+  expect(screen.getByText(checking)).toHaveTextContent('10:00');
   expect(requests()).toHaveLength(3);
 
   await act(async () => beforeReconnect.release(recoveryFixture(path, 1)));
   await waitFor(() => expect(requests()).toHaveLength(4));
-  await waitFor(() => expect(screen.getByText(/ข้อมูลอาจยังไม่ล่าสุด/)).toHaveTextContent('10:01'));
+  await waitFor(() => expect(screen.getByText(checking)).toHaveTextContent('10:01'));
 
   await act(async () => afterReconnect.release(recoveryFixture(path, 2)));
-  await waitFor(() => expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText(checking)).not.toBeInTheDocument());
 });
 
 it.each(recoveryViews)('keeps the $label snapshot marked stale through a failed reconnect recovery and until retry succeeds', async ({ url, path }) => {
@@ -259,7 +260,7 @@ it.each(recoveryViews)('keeps the $label snapshot marked stale through a failed 
   expect(screen.getByText(/กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด/)).toBeVisible();
   act(() => connection.reconnected());
   await waitFor(() => expect(requests()).toHaveLength(3));
-  expect(screen.getByText(/ข้อมูลอาจยังไม่ล่าสุด/)).toHaveTextContent('10:00');
+  expect(screen.getByText(checking)).toHaveTextContent('10:00');
   expect(retained()).toBeVisible();
 
   await act(async () => recovery.release({ status: 500, body: { message: 'เซิร์ฟเวอร์ขัดข้อง' } }));
@@ -273,7 +274,7 @@ it.each(recoveryViews)('keeps the $label snapshot marked stale through a failed 
   expect(warning).toBeVisible();
   expect(retained()).toBeVisible();
   await act(async () => retry.release(recoveryFixture(path, 1)));
-  await waitFor(() => expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText(outdated)).not.toBeInTheDocument());
 });
 
 it('polls before the slot, on a server-defined receiving window and through the inclusive close boundary', async () => {
@@ -299,12 +300,12 @@ it('polls before the slot, on a server-defined receiving window and through the 
     expect(requests()).toHaveLength(2);
     await advance(1_001);
     expect(requests()).toHaveLength(3);
-    expect(screen.getByText(/กำลังทำงาน/)).toBeVisible();
+    expect(screen.getByText(/· อัปเดต /)).toBeVisible();
 
     body = listResponse({ phase: 'receiving', readAtUtc: '2026-11-04T12:59:30Z', closeUtc });
     await act(async () => { window.dispatchEvent(new Event('focus')); });
     expect(requests()).toHaveLength(4);
-    expect(await screen.findByText(/ยังเปิดรับข้อมูลถึง 20:00/)).toBeVisible();
+    expect(await screen.findByText(/รับข้อมูลถึง 20:00/)).toBeVisible();
 
     fail = true;
     await advance(30_001);
@@ -317,7 +318,7 @@ it('polls before the slot, on a server-defined receiving window and through the 
     expect(requests()).toHaveLength(6);
     await listSettled(store);
     expect(screen.queryByText(outdated)).not.toBeInTheDocument();
-    expect(await screen.findByText(/ยังเปิดรับข้อมูลถึง 20:00/)).toBeVisible();
+    expect(await screen.findByText(/รับข้อมูลถึง 20:00/)).toBeVisible();
 
     body = listResponse({ phase: 'closed', isClockCurrent: false, readAtUtc: '2026-11-04T13:00:30Z', evaluationUtc: closeUtc, closeUtc });
     await advance(30_001);
@@ -396,14 +397,14 @@ it('keeps the new selection visible when an event response for the previous slot
     connection.reconnecting();
     connection.reconnected();
   });
-  expect(screen.getByText(/ข้อมูลอาจยังไม่ล่าสุด/)).toBeVisible();
+  expect(screen.getByText(checking)).toBeVisible();
   await act(() => router.navigate(listUrl.replace('Day', 'Night')));
 
   expect(await screen.findByRole('link', { name: 'ดูพื้นที่ AR91 พื้นที่กะดึก' })).toBeVisible();
   await act(async () => resolvePrevious({ status: 200, body: projection(1) }));
 
   expect(screen.getByRole('link', { name: 'ดูพื้นที่ AR91 พื้นที่กะดึก' })).toBeVisible();
-  expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
+  expect(screen.queryByText(checking)).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'ยังไม่ลงเวลา 10 พื้นที่' })).toBeVisible();
   expect(router.state.location.search).toContain('shift=Night');
 });

@@ -25,12 +25,10 @@ internal static class ThaiLabels
     public static string EventName(AttendanceEvent eventType) => eventType switch
     {
         AttendanceEvent.ShiftIn => "เข้างาน",
-        AttendanceEvent.BreakOut => "ออกพัก",
         AttendanceEvent.Break1Out => "ออกพัก 1",
         AttendanceEvent.Break1In => "กลับจากพัก 1",
         AttendanceEvent.Break2Out => "ออกพัก 2",
         AttendanceEvent.Break2In => "กลับจากพัก 2",
-        AttendanceEvent.BreakIn => "กลับจากพัก",
         _ => "เลิกงาน",
     };
 

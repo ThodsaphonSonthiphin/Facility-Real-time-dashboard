@@ -16,15 +16,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
 
-/// <summary>
-/// The Cleaner's own attendance: the scan itself, the state their page reads, and the check a printed sign makes.
-/// <para>
-/// Task 9 makes the scan read the slot's effective duty Area (spec §7) rather than the mutable <c>User.AreaId</c>, and makes
-/// the write speak the slot's lifecycle (spec §8): a Numbered6 slot demands the contract marker and the revision of the page
-/// that sent it, and a gap jump is an explicit set of skip markers. A Legacy4 slot keeps its four actions, its old order
-/// rule and its old response, and a page that sends none of the new fields keeps working.
-/// </para>
-/// </summary>
+/// <summary>Attendance reads and writes for a Cleaner at their area sign.</summary>
 public static class AttendanceEndpoints
 {
     private const string CleanersOnly = "การลงเวลาใช้สำหรับแม่บ้านเท่านั้น";
@@ -143,27 +135,9 @@ public static class AttendanceEndpoints
 
         var state = await AttendanceStateView.LoadAsync(db, user.Id, slot, duty, now, ct);
 
-        // Spec §8 Cutover: a numbered slot only accepts a new write from a page that knows the contract and the slot state
-        // it read. Check the contract marker first, then let an already-recorded action replay idempotently before checking
-        // its revision. The successful first write necessarily changed that revision.
-        if (state.Version == AttendanceLifecycleVersion.Numbered6)
+        if (string.IsNullOrWhiteSpace(request.StateRevision))
         {
-            if (!string.Equals(request.LifecycleVersion, nameof(AttendanceLifecycleVersion.Numbered6), StringComparison.Ordinal))
-            {
-                return Refused(RefreshRequired, RefreshRequiredMessage, state);
-            }
-        }
-        else
-        {
-            // A legacy slot has no skip markers and no numbered contract: a page claiming either is a stale page.
-            var claimsAnotherContract = request.LifecycleVersion is { } claimed
-                && !string.Equals(claimed, nameof(AttendanceLifecycleVersion.Legacy4), StringComparison.Ordinal);
-            if (claimsAnotherContract
-                || request.ConfirmGaps is { Count: > 0 }
-                || (request.StateRevision is { } supplied && !string.Equals(supplied, state.Revision, StringComparison.Ordinal)))
-            {
-                return Refused(RefreshRequired, RefreshRequiredMessage, state);
-            }
+            return Refused(RefreshRequired, RefreshRequiredMessage);
         }
 
         if (state.Events.Any(entry => entry.EventType == eventType))
@@ -171,10 +145,9 @@ public static class AttendanceEndpoints
             return Results.Ok(state.ToDto(duty, AttendanceOutcome.AlreadyRecorded));
         }
 
-        if (state.Version == AttendanceLifecycleVersion.Numbered6
-            && !string.Equals(request.StateRevision, state.Revision, StringComparison.Ordinal))
+        if (!string.Equals(request.StateRevision, state.Revision, StringComparison.Ordinal))
         {
-            return Refused(RefreshRequired, RefreshRequiredMessage, state);
+            return Refused(RefreshRequired, RefreshRequiredMessage);
         }
 
         var latest = state.Events.Count == 0 ? null : state.Events.MaxBy(entry => entry.OccurredAt)!;
@@ -186,7 +159,7 @@ public static class AttendanceEndpoints
         var choice = state.NextActions.FirstOrDefault(candidate => candidate.Action == eventType);
         if (choice is null)
         {
-            return Refused(ActionNotAllowed, "ลงเวลาไม่ตรงลำดับ", state);
+            return Refused(ActionNotAllowed, "ลงเวลาไม่ตรงลำดับ");
         }
 
         var confirmed = (request.ConfirmGaps ?? []).Distinct().ToList();
@@ -194,7 +167,7 @@ public static class AttendanceEndpoints
         {
             return Refused(GapsNotConfirmed,
                 $"ต้องยืนยันรายการที่ข้ามก่อน: {string.Join(", ", choice.RequiredGaps.Select(ThaiLabels.EventName))}",
-                state, choice.RequiredGaps);
+                choice.RequiredGaps);
         }
 
         var entry = new ShiftAttendance
@@ -301,10 +274,22 @@ public static class AttendanceEndpoints
         var slot = user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, nowUtc, settings) : null;
         if (slot is null)
         {
-            return new AttendanceStateDto(null, null, [], [], null);
+            return new AttendanceStateDto(null, null, [], null);
         }
 
         var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, new DateTimeOffset(nowUtc, TimeSpan.Zero), ct);
+        return await StateForDutyAsync(db, user, slot, duty, nowUtc, ct);
+    }
+
+    internal static async Task<AttendanceStateDto> StateForDutyAsync(
+        AppDbContext db, User user, ShiftSlot? slot, EffectiveDuty duty, DateTime nowUtc,
+        CancellationToken ct = default)
+    {
+        if (slot is null)
+        {
+            return new AttendanceStateDto(null, null, [], null);
+        }
+
         return (await AttendanceStateView.LoadAsync(db, user.Id, slot, duty, nowUtc, ct)).ToDto(duty, null);
     }
 
@@ -322,22 +307,14 @@ public static class AttendanceEndpoints
             .OrderBy(a => a.OccurredAt)
             .ToListAsync();
 
-    /// <summary>
-    /// A refused write: 409 with the machine word a page branches on and the actions it may record now, so a page written
-    /// before these words existed still shows the list it always showed.
-    /// </summary>
-    private static IResult Refused(
-        string code, string message, AttendanceSlotState state, IReadOnlyList<AttendanceEvent>? requiredGaps = null) =>
-        Results.Json(
-            new AttendanceRefusedDto(message, state.NextActions.Select(choice => choice.Action).ToList(), code,
-                requiredGaps),
-            statusCode: StatusCodes.Status409Conflict);
+    private static IResult Refused(string code, string message, IReadOnlyList<AttendanceEvent>? requiredGaps = null) =>
+        Results.Json(new AttendanceRefusedDto(message, code, requiredGaps), statusCode: StatusCodes.Status409Conflict);
 
     /// <summary>
     /// Spec §9: a pending transfer refuses every actual action, in either Area, with no allowed next actions — the only way
     /// forward is the destination confirmation, which is its own route.
     /// </summary>
     private static IResult TransferPendingRefusal() =>
-        Results.Json(new AttendanceRefusedDto(TransferPendingMessage, [], TransferPending),
+        Results.Json(new AttendanceRefusedDto(TransferPendingMessage, TransferPending),
             statusCode: StatusCodes.Status409Conflict);
 }

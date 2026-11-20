@@ -36,6 +36,7 @@ export interface AreaResultsProps {
   contextText: string;
   countText: string;
   availabilityWarning?: string;
+  updating?: boolean;
   rows: readonly AreaResultRowView[];
   emptyState?: AreaResultsEmptyState;
   pagination: {

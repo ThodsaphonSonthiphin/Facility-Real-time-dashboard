@@ -3,7 +3,7 @@ import { getValidAccessToken } from '../auth/session';
 import type { AssignedCleaner } from './adminSetupApi';
 import { baseApi } from './baseApi';
 import { ADMIN_HUB_SERVER_TIMEOUT_MS, followScanHub } from './scanHub';
-import type { AttendanceEvent, AttendanceLifecycleVersion, Shift } from './types';
+import type { AttendanceEvent, Shift } from './types';
 
 /**
  * The attendance board (facility-0027, 0050), read by the attendance page (D2) and the alert page's "Areas with nobody"
@@ -90,7 +90,6 @@ export interface AttendanceBoard {
   shiftDate: string;
   shift: Shift;
   shiftEnded: boolean;
-  lifecycleVersion?: AttendanceLifecycleVersion;
   summary: BoardSummary;
   rows: BoardRow[];
 }

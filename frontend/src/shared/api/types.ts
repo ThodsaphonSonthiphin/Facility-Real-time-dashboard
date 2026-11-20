@@ -29,23 +29,13 @@ export type LoginRequest = { employeeId: string; phone: string } | { username: s
 /** facility-0040: Day 07:00–19:00, Night 19:00–07:00 (Asia/Bangkok). */
 export type Shift = 'Day' | 'Night';
 
-/**
- * facility-0031 and spec §8: the attendance actions of a shift. The legacy slot keeps the first four (its stored event
- * names never change); a Numbered6 slot uses the two numbered breaks. A page always reads the slot's own ordered list
- * (`AttendanceState.actions`) rather than assuming which set applies.
- */
 export type AttendanceEvent =
   | 'ShiftIn'
-  | 'BreakOut'
-  | 'BreakIn'
-  | 'ShiftOut'
   | 'Break1Out'
   | 'Break1In'
   | 'Break2Out'
-  | 'Break2In';
-
-/** `AttendanceLifecycleVersion` (Application/Attendance/AttendanceLifecycle.cs): the slot's contract marker (spec §8). */
-export type AttendanceLifecycleVersion = 'Legacy4' | 'Numbered6';
+  | 'Break2In'
+  | 'ShiftOut';
 
 /** AttendanceEntryDto. withinRadius false is a Geofence Flag; null means the sign has no coordinates yet. */
 export interface AttendanceEntry {
@@ -99,22 +89,12 @@ export interface AttendanceTransfer {
   revision: string;
 }
 
-/**
- * AttendanceStateDto. Outside every attendance window of the Cleaner's own shift (facility-0069) shiftDate and shift
- * are left out and the lists are empty. outcome comes only on the answer of POST /api/attendance.
- * <p>
- * Task 9 adds the lifecycle additively (spec §8, §11): `lifecycleVersion` and `stateRevision` are the contract marker and
- * the token a write sends back, `actions` the ordered lifecycle with each action's state, `gaps` the stored skip markers,
- * `nextActions` what may be recorded next with the gaps each choice steps over, and the `duty*`/`isDayOff`/`isLeave`
- * members the slot's effective duty (spec §7). `transfer` is the slot's midshift instruction (spec §9).
- */
+/** The current six-action scan state and the revision used for writes. */
 export interface AttendanceState {
   shiftDate?: string | null;
   shift?: Shift | null;
   events: AttendanceEntry[];
-  nextEvents: AttendanceEvent[];
   outcome?: 'Recorded' | 'AlreadyRecorded' | 'TooSoon' | null;
-  lifecycleVersion?: AttendanceLifecycleVersion | null;
   stateRevision?: string | null;
   actions?: AttendanceAction[];
   gaps?: AttendanceGap[];

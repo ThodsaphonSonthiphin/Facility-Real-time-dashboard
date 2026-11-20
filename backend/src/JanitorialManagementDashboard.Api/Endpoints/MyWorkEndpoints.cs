@@ -35,7 +35,8 @@ public static class MyWorkEndpoints
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
-        var slot = (user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null) ?? ShiftCalendar.SlotAt(now);
+        var ownSlot = user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null;
+        var slot = ownSlot ?? ShiftCalendar.SlotAt(now);
 
         // Spec §7 and §9: the Areas this person works are the slot's effective duty Area — a relief assignment, the dated
         // plan, the compatibility projection, or the destination of a confirmed midshift transfer — plus the live cover
@@ -45,7 +46,7 @@ public static class MyWorkEndpoints
         var coveredAreaIds = await db.CoverAssignments
             .Where(c => c.UserId == user.Id && c.AreaId != null && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
             .Select(c => c.AreaId!.Value)
-            .ToListAsync();
+            .ToListAsync(ct);
         var areaIds = (duty.AreaId is int own ? coveredAreaIds.Prepend(own) : coveredAreaIds).Distinct().ToList();
 
         var rows = await PointBoardQuery.LoadAsync(db, now, slot, areaIds);
@@ -61,7 +62,8 @@ public static class MyWorkEndpoints
             .ToList();
 
         var ownShift = user.Shift is { } regular ? OwnShiftOf(regular, settings) : null;
-        return Results.Ok(new MyWorkDto(await AttendanceEndpoints.StateForAsync(db, store, user, now, settings, ct), areas, ownShift));
+        var attendanceState = await AttendanceEndpoints.StateForDutyAsync(db, user, ownSlot, duty, now, ct);
+        return Results.Ok(new MyWorkDto(attendanceState, areas, ownShift));
     }
 
     private static OwnShiftDto OwnShiftOf(Shift shift, AttendanceSettings settings)

@@ -15,7 +15,7 @@ public static class OverviewTime
             .GroupBy(r => r.EffectiveAt).Select(group => group.MaxBy(r => r.Id)!)
             .OrderBy(r => r.EffectiveAt).ToArray();
 
-    internal static OverviewMoment EvaluateOrdered(ShiftSlot slot, DateTime now, TargetRevision[] ordered)
+    public static OverviewMoment EvaluateOrdered(ShiftSlot slot, DateTime now, TargetRevision[] ordered)
     {
         var start = ShiftCalendar.StartUtc(slot);
         var end = ShiftCalendar.EndUtc(slot);

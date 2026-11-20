@@ -10,12 +10,12 @@ namespace JanitorialManagementDashboard.ApiTests.Scheduling;
 
 /// <summary>
 /// ADRs facility-0215, 0221, 0222: scheduling facts are stored as dated records with explicit provenance, weekly
-/// choices distinguish "not chosen" from "chosen nothing", and the legacy attendance strings stay readable.
+/// choices distinguish "not chosen" from "chosen nothing", and numbered breaks use their canonical storage values.
 /// </summary>
 public class SchedulePersistenceTests
 {
     [Fact]
-    public async Task Schema_keeps_legacy_attendance_values_readable()
+    public async Task Schema_stores_numbered_attendance_values()
     {
         using var factory = new JanitorialApiFactory();
         await factory.WithDbAsync(async db =>
@@ -24,16 +24,16 @@ public class SchedulePersistenceTests
             var row = new ShiftAttendance {
                 UserId = person.Id, AreaId = person.AreaId!.Value,
                 ShiftDate = new DateOnly(2026, 11, 17), Shift = Shift.Day,
-                EventType = AttendanceEvent.BreakOut, Source = AttendanceSource.AdminAdd,
+                EventType = AttendanceEvent.Break1Out, Source = AttendanceSource.AdminAdd,
                 OccurredAt = new DateTime(2026, 11, 17, 3, 0, 0, DateTimeKind.Utc),
                 CreatedAt = new DateTime(2026, 11, 17, 3, 0, 0, DateTimeKind.Utc) };
             db.ShiftAttendances.Add(row);
             await db.SaveChangesAsync();
             var raw = await db.Database.SqlQueryRaw<string>(
                 "SELECT event_type AS Value FROM shift_attendances WHERE id = {0}", row.Id).SingleAsync();
-            Assert.Equal("BREAK_OUT", raw);
+            Assert.Equal("BREAK1_OUT", raw);
             db.ChangeTracker.Clear();
-            Assert.Equal(AttendanceEvent.BreakOut,
+            Assert.Equal(AttendanceEvent.Break1Out,
                 (await db.ShiftAttendances.SingleAsync(x => x.Id == row.Id)).EventType);
         });
     }

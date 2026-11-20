@@ -41,7 +41,7 @@ export function printableSigns(details: AreaDetail[], signId?: number): PrintSig
         name: area.name,
         place,
         code: checkInSign.code,
-        hint: 'สแกนตอนเข้างาน ออกพัก กลับจากพัก และเลิกงาน',
+        hint: 'สแกนตอนเข้างาน ออกพักและกลับจากพักทั้ง 2 รอบ แล้วสแกนเลิกงาน',
         url: signUrl('check-in', checkInSign.qrToken),
         issuedAt: checkInSign.qrIssuedAt,
       };

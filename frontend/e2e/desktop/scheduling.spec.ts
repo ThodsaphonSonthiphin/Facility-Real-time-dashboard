@@ -163,7 +163,7 @@ test.describe('scheduling', () => {
       destinationBuildingId: fixture.buildingB.id, areaId: fixture.destinationArea.id,
       agreementReported: true, isCancelled: false,
     });
-    await expect(page.getByText('ผู้บันทึกยืนยันว่าตกลงกับตึกต้นทางนอกเว็บแล้ว')).toBeVisible();
+    await expect(page.getByText('ตกลงกับตึกต้นทางแล้ว')).toBeVisible();
     await expect(page.getByRole('button', { name: /อนุมัติ/ })).toHaveCount(0);
   });
 });

@@ -4,7 +4,6 @@ import { BuildingSelect } from '../../shared/components/BuildingSelect';
 import { Button } from '../../shared/components/Button';
 import { Select } from '../../shared/components/Field';
 import { KpiCard } from '../../shared/components/KpiCard/KpiCard';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { RangeFields } from '../../shared/components/RangeFields';
@@ -31,10 +30,7 @@ export function InspectionSummaryPage() {
 
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
-      <AdminPageHeader
-        title="สรุปการตรวจ"
-        subtitle="ดูความครอบคลุมการตรวจของหัวหน้าแต่ละคนตามช่วงวันที่เลือก · ระบบไม่ให้คะแนนหรือจัดอันดับ"
-      />
+      <AdminPageHeader title="สรุปการตรวจ" />
       <div className="flex flex-col gap-3">
         <FilterToolbar label="ตัวกรองการตรวจ" align="end">
           <label className="inline-flex max-w-full items-center gap-2">
@@ -75,28 +71,6 @@ export function InspectionSummaryPage() {
       {page.isFetching && !page.summary && <PageLoading lines={3} />}
       {page.error && <Note tone="error" onRetry={() => void page.refetch()}>{getErrorMessage(page.error)}</Note>}
       {page.summary && <SummaryTable key={page.tableKey} rows={page.rows} filteredShift={Boolean(page.shift)} />}
-      <span className="text-xs text-text-2">
-        “ส่งแล้วไม่ได้ตรวจ” คือรอบที่แม่บ้านส่งงานไว้และไม่มีผลตรวจ ส่วน “ตรวจไกลป้าย” คือผลตรวจที่ระบบแจ้งว่าตำแหน่งมือถืออาจอยู่ไกลจากป้ายหรืออ่านได้ไม่แม่น
-      </span>
-      <SummaryNotes />
     </main>
-  );
-}
-
-function SummaryNotes() {
-  return (
-    <MoreInfo summary="วิธีนับตัวเลข">
-      <span>
-        ตัวเลขใช้ดูว่าการตรวจครอบคลุมหรือไม่ ระบบไม่ให้คะแนนหรือจัดอันดับหัวหน้า · ไม่มีขั้นต่ำว่าหัวหน้าต้องตรวจกี่ครั้ง
-      </span>
-      <span>
-        &quot;จุดที่ตรวจแล้ว&quot; นับจุดในตึกและกะของหัวหน้าที่หัวหน้าคนนั้นตรวจอย่างน้อย 1 ครั้งในช่วงที่เลือก
-      </span>
-      <span>
-        &quot;ตรวจ (ครั้ง)&quot; นับทุกครั้งที่หัวหน้าคนนั้นกดบันทึกผลตรวจ งานชิ้นเดียวตรวจซ้ำได้จึงนับหลายครั้ง และรวมตอนตรวจแทนตึกอื่น
-      </span>
-      <span>งานที่แม่บ้านส่งหลังจบกะไม่นับในตัวเลขของหัวหน้า เพราะไม่มีใครตรวจได้แล้ว</span>
-      <span>ถ้าแม่บ้านส่งงานใหม่ก่อนหัวหน้าตรวจในรอบเดียวกัน ระบบนับเฉพาะงานที่ส่งล่าสุด · ดูรายละเอียดรายครั้งได้จากไฟล์ Excel</span>
-    </MoreInfo>
   );
 }

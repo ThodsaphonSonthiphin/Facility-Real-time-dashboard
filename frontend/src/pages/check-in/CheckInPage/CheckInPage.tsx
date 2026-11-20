@@ -4,7 +4,6 @@ import type { OwnShift } from '../../../shared/api/types';
 import { BlockedScanScreen } from '../../../shared/components/BlockedScanScreen';
 import { Button } from '../../../shared/components/Button';
 import { LocationHelp } from '../../../shared/components/LocationHelp';
-import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { Note } from '../../../shared/components/Note';
 import { PageLoading } from '../../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../../shared/components/PhoneScreen';
@@ -148,9 +147,6 @@ export function CheckInPage() {
       )}
       {outcome?.kind === 'failed' && <Note tone="error">{outcome.message}</Note>}
       {completionMessage && <Note tone="success">{completionMessage}</Note>}
-      <MoreInfo size="phone" summary="เกี่ยวกับการลงเวลา">
-        กดตามปุ่มที่ขึ้นบนหน้าจอ เว้นอย่างน้อย 5 นาทีระหว่างการลงเวลาแต่ละครั้ง ระบบนี้ใช้ดูว่าพื้นที่มีคนทำงานแล้วหรือยัง
-      </MoreInfo>
     </PhoneScreen>
   );
 }

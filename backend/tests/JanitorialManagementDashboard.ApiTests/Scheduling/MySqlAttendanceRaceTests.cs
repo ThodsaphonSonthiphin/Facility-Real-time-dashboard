@@ -46,11 +46,11 @@ public class MySqlAttendanceRaceTests
             ConfigureTestServices = services => services.AddScoped(_ => new AppDbContext(options)),
         };
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
-        await EffectiveAttendanceApi.AddLifecycleAsync(factory, Date, Shift.Day, AttendanceLifecycleVersion.Numbered6);
+
         factory.Clock.SetUtcNow(new DateTimeOffset(2026, 11, 17, 7, 5, 0, TimeSpan.FromHours(7)));
         var initial = await EffectiveAttendanceApi.StateAsync(cleaner);
         await EffectiveAttendanceApi.RecordAndReadAsync(factory, cleaner, factory.Clock.GetUtcNow(), "ShiftIn",
-            lifecycleVersion: "Numbered6", stateRevision: initial.StateRevision);
+            stateRevision: initial.StateRevision);
 
         factory.Clock.SetUtcNow(factory.Clock.GetUtcNow().AddHours(5));
         var working = await EffectiveAttendanceApi.StateAsync(cleaner);
@@ -68,7 +68,7 @@ public class MySqlAttendanceRaceTests
         return;
 
         Task<HttpResponseMessage> Scan(string action) => EffectiveAttendanceApi.RecordAsync(cleaner, action,
-            lifecycleVersion: "Numbered6", stateRevision: working.StateRevision,
+            stateRevision: working.StateRevision,
             confirmGaps: working.NextActions!.Single(choice => choice.Action == action).RequiredGaps);
     }
 
@@ -109,14 +109,14 @@ public class MySqlAttendanceRaceTests
 
         Assert.Equal(1, results.Count(result => result.Stored));
         var refused = results.Single(result => !result.Stored);
-        Assert.Contains(refused.Facts, fact => fact.EventType == AttendanceEvent.BreakOut);
+        Assert.Contains(refused.Facts, fact => fact.EventType == AttendanceEvent.Break1Out);
 
         await using var check = new AppDbContext(Options());
         var facts = await check.ShiftAttendances.AsNoTracking()
             .Where(fact => fact.UserId == personId && fact.ShiftDate == Date && fact.Shift == Shift.Day)
             .ToListAsync();
         var stored = Assert.Single(facts);
-        Assert.Equal(AttendanceEvent.BreakOut, stored.EventType);
+        Assert.Equal(AttendanceEvent.Break1Out, stored.EventType);
         Assert.Equal(AttendanceSource.SupervisorAdd, stored.Source);
         Assert.Equal(at, stored.OccurredAt);
         Assert.Empty(await check.AttendanceGaps.ToListAsync());
@@ -129,7 +129,7 @@ public class MySqlAttendanceRaceTests
                 AreaId = areaId,
                 ShiftDate = Date,
                 Shift = Shift.Day,
-                EventType = AttendanceEvent.BreakOut,
+                EventType = AttendanceEvent.Break1Out,
                 OccurredAt = at,
                 Source = AttendanceSource.SupervisorAdd,
                 CreatedAt = at,
