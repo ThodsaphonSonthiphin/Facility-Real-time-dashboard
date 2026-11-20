@@ -2,7 +2,7 @@
 
 Updated 2026-11-21 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
 
-**Worktree synchronization and agent skills lock commit (`master`, 2026-11-21, Asia/Bangkok).** Aligned the primary workspace onto merged `master` (`1ea3979`, PR #158), removed the temporary `Janitorial-Management-Dashboard-overview-verification` worktree and merged local branches (`codex/local-wip-before-overview-merge`, `codex/overview-transition-verification`), and committed the remaining untracked agent skill files (`.agents/skills/modern-web-guidance/`, `.commandcode/`, and `skills-lock.json`).
+**Worktree synchronization and agent skills lock commit (`master`, 2026-11-21, Asia/Bangkok).** Aligned the primary workspace onto merged `master` (`1ea3979`, PR #158), removed the temporary `Janitorial-Management-Dashboard-overview-verification` worktree and merged local branches (`codex/local-wip-before-overview-merge`, `codex/overview-transition-verification`), committed the remaining untracked agent skill files (`.agents/skills/modern-web-guidance/`, `.commandcode/`, and `skills-lock.json`), and added explicit `"strict": true` to `frontend/tsconfig.app.json` and `frontend/tsconfig.node.json` (matching `tsconfig.e2e.json`) so IDE TypeScript 5.x language servers enforce `strictNullChecks` and narrow discriminated unions (`ContextResult`) identically to the CLI TypeScript 6.0 compiler.
 
 ## Overview transitions and 12-category verification
 
