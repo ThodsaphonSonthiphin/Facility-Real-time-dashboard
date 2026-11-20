@@ -10,9 +10,15 @@ export type HubStatus = 'connecting' | 'live' | 'reconnecting';
 
 export interface HubState {
   connections: Record<string, HubStatus>;
+  recoveries: Partial<Record<string, string>>;
 }
 
-const initialState: HubState = { connections: {} };
+interface HubRecovery {
+  key: string;
+  recoveryId: string;
+}
+
+const initialState: HubState = { connections: {}, recoveries: {} };
 
 const hubSlice = createSlice({
   name: 'hub',
@@ -21,17 +27,28 @@ const hubSlice = createSlice({
     hubStatusChanged(state, action: PayloadAction<{ key: string; status: HubStatus }>) {
       state.connections[action.payload.key] = action.payload.status;
     },
+    hubRecoveryStarted(state, { payload: { key, recoveryId } }: PayloadAction<HubRecovery>) {
+      state.recoveries[key] = recoveryId;
+    },
+    hubRecoveryReadSucceeded(state, { payload: { key, recoveryId } }: PayloadAction<HubRecovery>) {
+      if (state.recoveries[key] === recoveryId) delete state.recoveries[key];
+    },
     /** The cache entry went and its connection stopped. */
     hubFollowEnded(state, action: PayloadAction<string>) {
       delete state.connections[action.payload];
+      delete state.recoveries[action.payload];
     },
   },
 });
 
-export const { hubStatusChanged, hubFollowEnded } = hubSlice.actions;
+export const { hubStatusChanged, hubRecoveryStarted, hubRecoveryReadSucceeded, hubFollowEnded } = hubSlice.actions;
 export const hubReducer = hubSlice.reducer;
 
 /** A connection that has no status yet, or has ended, counts as connecting. */
 export function selectHubStatus(key: string) {
   return (state: { hub: HubState }): HubStatus => state.hub.connections[key] ?? 'connecting';
+}
+
+export function selectHubRecovery(state: { hub: HubState }, key: string): string | undefined {
+  return state.hub.recoveries[key];
 }

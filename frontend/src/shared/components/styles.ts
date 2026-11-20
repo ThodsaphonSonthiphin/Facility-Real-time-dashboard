@@ -39,8 +39,8 @@ export type InputSize = 'phone' | 'desk' | 'code';
 export const focusRing = 'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent';
 
 // The design file's button (Enterprise Light, DesignSystem): 6 px corners. Hover is written `not-disabled:`, not
-// `enabled:`, because a Link styled as a button is never :enabled
-const buttonBase = `inline-flex items-center justify-center rounded-md border cursor-pointer ${focusRing} disabled:cursor-not-allowed`;
+// `enabled:`, because a Link styled as a button is never :enabled. Subtle 2% press scale & GPU/color transition per facility-0229.
+const buttonBase = `inline-flex items-center justify-center rounded-md border cursor-pointer transition-[color,background-color,border-color,transform] duration-150 not-disabled:active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 ${focusRing} disabled:cursor-not-allowed`;
 
 /** One that cannot be pressed is a grey box with grey words, not a faded one (the design file's กดไม่ได้). */
 const greyWhenDisabled = 'disabled:border-border disabled:bg-border disabled:text-text-2';
@@ -173,6 +173,7 @@ export const boxClass = 'rounded-lg border border-border bg-surface px-4 py-3.5'
 
 /** The full-page message of StatusScreen and CrashScreen. */
 export const statusScreenClass = {
-  main: 'mx-auto flex max-w-mobile flex-col gap-3 px-5 py-12 text-center text-base',
+  main: 'mx-auto flex min-h-svh max-w-mobile flex-col justify-center gap-3 px-5 py-12 text-center text-base text-text',
+  card: 'flex flex-col gap-4 rounded-lg border border-border bg-surface p-6',
   title: 'text-xl font-bold',
 };

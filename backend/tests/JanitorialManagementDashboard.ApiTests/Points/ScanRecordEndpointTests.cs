@@ -1,9 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Attendance;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.ApiTests.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -165,6 +168,8 @@ public class ScanRecordEndpointTests
         Assert.Equal(new DateOnly(2026, 10, 8), stored.ShiftDate);
         Assert.Equal(Shift.Day, stored.Shift);
         Assert.Equal(new TimeOnly(7, 0), stored.RoundStart);
+        Assert.NotNull(stored.RoundWindowId);
+        Assert.Equal(stored.RoundWindowId, stored.RoundOriginId);
         Assert.Equal(13.756300m, stored.Latitude);
         Assert.Null(stored.CoverAssignmentId);
     }
@@ -191,7 +196,9 @@ public class ScanRecordEndpointTests
         var created = await CheckInAndScanAtAsync(factory, cleaner, ThaiClock.At(8, 9, 40));
 
         Assert.Equal("OffRound", created.Placement);
-        Assert.Null((await StoredAsync(factory, created.ScanRecordId)).RoundWindowId);
+        var stored = await StoredAsync(factory, created.ScanRecordId);
+        Assert.Null(stored.RoundWindowId);
+        Assert.Null(stored.RoundOriginId);
     }
 
     [Fact]
@@ -480,6 +487,76 @@ public class ScanRecordEndpointTests
         var response = await cleaner.PostAsJsonAsync("/api/scan-records", Body());
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    // ---- Task 9: the sign's Area is the slot's effective duty (spec §7) ----------------------------------------------
+
+    private static readonly DateOnly Day8 = EffectiveAttendanceApi.Day8;
+
+    [Fact]
+    public async Task A_relief_cleaner_submits_at_the_point_of_their_live_assignment()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddBuildingAsync(factory, "B");
+        var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
+        await ReliefApi.AddStoredReliefAsync(factory, relief, await AdminSetupApi.AreaIdAsync(factory, "AR02"), Day8, Shift.Day,
+            await AdminSetupApi.BuildingIdAsync(factory, "B"));
+        var (client, auth, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E3001", ReliefApi.Phone("E3001"));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
+        Assert.Equal(HttpStatusCode.OK, (await AttendanceApi.RecordAsync(client, "ShiftIn", "token-checkin-ar02")).StatusCode);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 10));
+
+        var response = await client.PostAsJsonAsync("/api/scan-records", Body(qrToken: MeetingRoomToken));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = (await response.Content.ReadFromJsonAsync<ScanCreatedModel>())!;
+        var stored = await StoredAsync(factory, created.ScanRecordId);
+        Assert.Equal(auth.User.Id, stored.UserId);
+        Assert.Equal(Day8, stored.ShiftDate);
+        Assert.Null(stored.CoverAssignmentId);
+        Assert.Equal("OnTime", created.Placement);
+    }
+
+    [Fact]
+    public async Task A_leave_day_with_an_underlying_area_still_checks_in_and_submits()
+    {
+        using var factory = new JanitorialApiFactory();
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", new DateOnly(2026, 10, 1), "AR01");
+        await EffectiveAttendanceApi.AddLeaveAsync(factory, "1000001", Day8, Shift.Day,
+            new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 8, 12, 0, 0, TimeSpan.Zero));
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+
+        var created = await CheckInAndScanAtAsync(factory, cleaner, ThaiClock.At(8, 8, 10));
+
+        Assert.Equal("OnTime", created.Placement);
+        var stored = await StoredAsync(factory, created.ScanRecordId);
+        Assert.Equal(Day8, stored.ShiftDate);
+        // The leave is a separate record: it neither hides the eligible Area nor adds a submission block of its own.
+        await factory.WithDbAsync(async db => Assert.False((await db.ScheduleExceptions.SingleAsync()).IsCancelled));
+    }
+
+    [Fact]
+    public async Task A_relief_cannot_submit_after_the_final_shift_out()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await TestData.AddBuildingAsync(factory, "B");
+        var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "B", Shift.Day);
+        await ReliefApi.AddStoredReliefAsync(factory, relief, await AdminSetupApi.AreaIdAsync(factory, "AR02"), Day8, Shift.Day,
+            await AdminSetupApi.BuildingIdAsync(factory, "B"));
+        var (client, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E3001", ReliefApi.Phone("E3001"));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 7, 0));
+        Assert.Equal(HttpStatusCode.OK, (await AttendanceApi.RecordAsync(client, "ShiftIn", "token-checkin-ar02")).StatusCode);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 0));
+        Assert.Equal(HttpStatusCode.OK, (await AttendanceApi.RecordAsync(client, "ShiftOut", "token-checkin-ar02")).StatusCode);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 10));
+
+        var response = await client.PostAsJsonAsync("/api/scan-records", Body(qrToken: MeetingRoomToken));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(0, await CountAsync(factory, db => db.ScanRecords));
     }
 
     [Fact]

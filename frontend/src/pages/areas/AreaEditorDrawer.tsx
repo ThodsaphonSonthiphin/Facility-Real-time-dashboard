@@ -1,6 +1,7 @@
 import type { AreaDetail } from '../../shared/api/adminSetupApi';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { DialogHeader, Drawer } from '../../shared/components/Modal';
+import { PageLoading } from '../../shared/components/PageState';
 import { Note } from '../../shared/components/Note';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { AreaActiveSection } from './AreaActiveSection';
@@ -27,7 +28,19 @@ export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerP
     <Drawer width="lg" labelledBy={titleId} onClose={dismissal.close}>
       <div className="flex h-full min-h-0 flex-col">
         <DialogHeader id={titleId} title="แก้ไขพื้นที่" detail={`${detail.area.code} ${detail.area.name} · ตึก ${detail.area.buildingCode}`} closeDisabled={dismissal.pending} onClose={dismissal.close} />
-        {error && <Note tone="error">{getErrorMessage(error)}</Note>}
+        {error && (
+          <div className="mb-4">
+            <Note
+              tone="error"
+              onRetry={() => {
+                if (buildings.error) void buildings.refetch();
+                if (cleaners.error) void cleaners.refetch();
+              }}
+            >
+              {getErrorMessage(error)}
+            </Note>
+          </div>
+        )}
         {buildings.data && cleaners.data ? (
           <AreaForm
             key={detail.area.id}
@@ -43,7 +56,7 @@ export function AreaEditorDrawer({ detail, onClose, onSaved }: AreaEditorDrawerP
             <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
           </AreaForm>
         ) : (
-          !error && <p className="text-text-2">กำลังโหลด...</p>
+          !error && <PageLoading>กำลังโหลด...</PageLoading>
         )}
       </div>
     </Drawer>

@@ -1,13 +1,16 @@
-import { Search, Wrench } from 'lucide-react';
+import { RotateCcw, Search, Wrench } from 'lucide-react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { buildingOptionText } from '../../shared/api/buildingNames';
-import type { PointCard } from '../../shared/api/types';
+import type { PointCard, PointStatus } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
 import { Select, TextInput } from '../../shared/components/Field';
+import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { focusRing, statusIcon, statusText, toggleClass } from '../../shared/components/styles';
 import { pointStatusLabel } from '../../shared/utils/labels';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   buildingChosen,
+  filtersCleared,
   issueOnlyToggled,
   problemFirstToggled,
   searchChanged,
@@ -15,14 +18,24 @@ import {
 } from '../../store/slices/dashboardSlice';
 import { inBuilding, legendOrder, statusCounts } from './boardRules';
 
-/** A status card (the design file's Dashboard): 6 per row, the status's icon and words, the count at 30/700. Pressed = pale blue with a 2 px blue frame. */
+const statusIconCircle: Record<PointStatus, string> = {
+  Rework: 'bg-rework-bg text-rework',
+  Overdue: 'bg-overdue-bg text-overdue',
+  PendingInspection: 'bg-pending-bg text-pending',
+  Passed: 'bg-passed-bg text-passed',
+  NotYetDone: 'bg-idle-bg text-idle',
+  BeforeFirstRound: 'bg-idle-bg text-idle',
+  OffHours: 'bg-idle-bg text-idle',
+};
+
+// The inset ring adds the second pressed stroke without changing the card's size.
 const cardClass =
-  'flex w-full cursor-pointer flex-col items-start gap-1 rounded-lg border border-border bg-surface px-4 py-3 text-left ' +
-  'enabled:hover:border-accent aria-pressed:border-2 aria-pressed:border-accent aria-pressed:bg-accent-subtle ' +
-  'aria-pressed:px-[15px] aria-pressed:py-[11px] ' +
+  'flex h-full w-full cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-2 py-3 text-left shadow-xs ' +
+  'sm:max-xl:gap-2.5 sm:max-xl:px-3 enabled:hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent-subtle ' +
+  'aria-pressed:inset-ring-1 aria-pressed:inset-ring-accent ' +
   focusRing;
 
-/** Wireframe D1's filters: the legend as six status cards with counts, then the building and "มีปัญหาที่แจ้ง" (facility-0024). */
+/** Wireframe D1's filters: the status cards with counts, then the building and "มีปัญหาที่แจ้ง" (facility-0024). */
 export function Filters({ points }: { points: PointCard[] }) {
   const filters = useAppSelector((state) => state.dashboard);
   const dispatch = useAppDispatch();
@@ -30,10 +43,12 @@ export function Filters({ points }: { points: PointCard[] }) {
   const shown = inBuilding(points, filters.buildingCode);
   const counts = statusCounts(shown);
   const issues = shown.filter((point) => point.issue).length;
+  const hasActiveFilters = Boolean(filters.status || filters.buildingCode || filters.issueOnly || filters.search.trim());
 
   return (
     <>
-      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3 p-0" aria-label="สถานะ">
+      {/* Keep two tracks on narrow screens. At xl, the tighter gutters allow a 130 px track without wrapping the Thai labels. */}
+      <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 md:grid-cols-[repeat(auto-fit,minmax(140px,1fr))] xl:grid-cols-[repeat(auto-fit,minmax(130px,1fr))]" aria-label="สถานะ">
         {legendOrder.map((status) => {
           const Icon = statusIcon[status];
           return (
@@ -45,22 +60,24 @@ export function Filters({ points }: { points: PointCard[] }) {
                 aria-pressed={filters.status === status}
                 onClick={() => dispatch(statusToggled(status))}
               >
-                <span className={`flex items-center gap-1.5 text-xs font-semibold ${statusText[status]}`}>
-                  <Icon aria-hidden="true" className="size-4" />
-                  {pointStatusLabel[status]}
-                </span>{' '}
-                <span className="text-3xl leading-tight font-bold tabular-nums">{counts[status]}</span>
+                <span className={`flex size-8 shrink-0 items-center justify-center rounded-full sm:size-9 ${statusIconCircle[status]}`}>
+                  <Icon aria-hidden="true" className="size-4 sm:size-5" strokeWidth={2} />
+                </span>
+                <span className="min-w-0">
+                  <span className={`block text-xs font-semibold ${statusText[status]}`}>{pointStatusLabel[status]}</span>{' '}
+                  <span className="block text-2xl leading-tight font-extrabold text-text tabular-nums">{counts[status]}</span>
+                </span>
               </button>
             </li>
           );
         })}
       </ul>
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
-        <label className="inline-flex min-w-0 items-center gap-2 font-semibold">
+      <FilterToolbar label="ตัวกรองจุด">
+        <label className="inline-flex w-full min-w-0 items-center gap-2 font-semibold sm:w-auto">
           ตึก
           <Select
             size="desk"
-            className="w-85 max-w-full font-normal text-ellipsis"
+            className="min-w-0 flex-1 font-normal text-ellipsis sm:w-56 sm:flex-none"
             value={filters.buildingCode}
             onChange={(event) => dispatch(buildingChosen(event.target.value))}
           >
@@ -82,7 +99,7 @@ export function Filters({ points }: { points: PointCard[] }) {
           <Wrench aria-hidden="true" className="size-4 text-rework" />
           มีปัญหาที่แจ้ง <span className="font-bold tabular-nums">{issues}</span>
         </button>
-        <label className="relative flex min-w-50 flex-1 basis-56 items-center">
+        <label className="relative flex min-w-0 flex-1 basis-56 items-center">
           <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 size-4 text-text-2" />
           <TextInput
             size="desk"
@@ -103,7 +120,13 @@ export function Filters({ points }: { points: PointCard[] }) {
           />
           เรียงพื้นที่ที่มีปัญหาขึ้นก่อน
         </label>
-      </div>
+        {hasActiveFilters && (
+          <Button variant="link" size="desk" onClick={() => dispatch(filtersCleared())}>
+            <RotateCcw aria-hidden="true" className="size-4" />
+            ล้างตัวกรอง
+          </Button>
+        )}
+      </FilterToolbar>
     </>
   );
 }

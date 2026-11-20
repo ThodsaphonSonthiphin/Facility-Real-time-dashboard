@@ -3,12 +3,14 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { PointCard } from '../../shared/api/types';
 import type { AppStore } from '../../store';
+import { searchChanged } from '../../store/slices/dashboardSlice';
 import { adminSession, buildings, managedBuildings } from '../../test/adminFixtures';
 import { point } from '../../test/cleanerFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { hub } from '../../test/fakeSignalR';
 import { apiIdle, boardPoints } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
+import { overviewDetailFixture } from '../../test/overviewFixtures';
 import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 function serve(answer: PointCard[] = boardPoints, routes: FakeRoutes = {}) {
@@ -36,6 +38,52 @@ const tileNames = (region: HTMLElement) =>
     .map((h) => h.textContent);
 
 describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
+  it('keeps the ordinary Dashboard search while visiting a scoped Area', async () => {
+    const overview = overviewDetailFixture();
+    const server = serve(boardPoints, {
+      'GET /api/admin/overview/areas/91': () => ({ status: 200, body: overview }),
+    });
+    const { store, router } = await renderApp('/dashboard');
+    await settled(server, store);
+    act(() => { store.dispatch(searchChanged('สำนักงานเดิม')); });
+    const savedFilters = store.getState().dashboard;
+
+    await act(() => router.navigate('/dashboard?source=overview&date=2026-11-04&shift=Day&areaId=91&view=inspection'));
+    expect(await screen.findByRole('heading', { name: 'AR91 พื้นที่ทดลอง 91' })).toBeVisible();
+    expect(store.getState().dashboard).toEqual(savedFilters);
+    expect(pointGets(server)).toHaveLength(2);
+
+    await act(() => router.navigate(-1));
+    expect(await screen.findByRole('heading', { name: 'สถานะจุดทำความสะอาด' })).toBeVisible();
+    expect(store.getState().dashboard.search).toBe('สำนักงานเดิม');
+  });
+
+  it('keeps the Admin menu behind a keyboard-accessible slide-over drawer on narrow layouts', async () => {
+    serve();
+    const { user } = await renderApp('/dashboard');
+
+    const menuSummary = screen.getByRole('button', { name: 'เมนูแอดมิน' });
+    expect(screen.getByRole('link', { name: 'ข้ามไปเนื้อหาหลัก' })).toHaveAttribute('href', '#main-content');
+    expect(menuSummary).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(menuSummary);
+
+    expect(menuSummary).toHaveAttribute('aria-expanded', 'true');
+    const drawer = screen.getByRole('dialog', { name: 'เมนูแอดมิน' });
+    expect(within(drawer).getAllByRole('link')).toHaveLength(12);
+    expect(within(drawer).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
+    expect(within(drawer).getByRole('button', { name: 'ออกจากระบบ' })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(menuSummary).toHaveAttribute('aria-expanded', 'false');
+    expect(menuSummary).toHaveFocus();
+
+    await user.click(menuSummary);
+    const reopened = screen.getByRole('dialog', { name: 'เมนูแอดมิน' });
+    await user.click(within(reopened).getByRole('link', { name: 'สถานะจุด' }));
+    expect(menuSummary).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('waits for the building names too, then shows the filters, the help and the cards together (layout shift)', async () => {
     let answerBuildings: () => void = () => {};
     const server = serve(boardPoints, {
@@ -239,5 +287,15 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
 
     await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
     expectBehindMoreInfo(/^ถ้าจบรอบแล้วยังไม่มีงาน/, 'วิธีอ่านการ์ด');
+  });
+
+  it('does not render BuildingSummary on slim /dashboard and routes Admin home to /admin/overview (facility-0224)', async () => {
+    serve();
+    await renderApp('/dashboard');
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
+
+    expect(screen.queryByRole('heading', { level: 2, name: 'สถานะพื้นที่ (ตามตึก)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'สถานะพื้นที่ (ตามตึก)' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryAllByRole('link')).toEqual([]);
   });
 });

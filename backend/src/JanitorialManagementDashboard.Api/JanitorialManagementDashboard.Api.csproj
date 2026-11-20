@@ -5,6 +5,14 @@
     <ProjectReference Include="..\JanitorialManagementDashboard.Infrastructure\JanitorialManagementDashboard.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!--
+    The API tests drive the attendance writer directly for the MySQL-only races (two connections filling the same missing
+    action), the same way they already drive the scheduling command engine. Nothing else of this assembly is opened.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="JanitorialManagementDashboard.ApiTests" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />

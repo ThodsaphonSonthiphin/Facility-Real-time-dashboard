@@ -1,4 +1,5 @@
 import { Eye } from 'lucide-react';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
@@ -12,22 +13,22 @@ import { useHistoryPage } from './useHistoryPage';
 export function HistoryPage() {
   const view = useHistoryPage();
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
-      <header className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold">ประวัติการแก้ไขของแอดมิน</h1>
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
+      <AdminPageHeader
+        title="ประวัติการแก้ไขของแอดมิน"
+        subtitle="ใคร แก้อะไร เมื่อไร ค่าก่อนและหลัง แก้หรือลบรายการไม่ได้"
+        badge={
           <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-idle-bg px-2 py-0.5 text-xs font-semibold text-idle">
             <Eye aria-hidden="true" className="size-4" />อ่านอย่างเดียว
           </span>
-        </div>
-        <span className="min-h-5 text-text-2">ใคร แก้อะไร เมื่อไร ค่าก่อนและหลัง แก้หรือลบรายการไม่ได้</span>
-      </header>
+        }
+      />
       <HistoryControls args={view.args} actors={view.actors.data} texts={view.texts} onTexts={view.setTexts}
         onShow={view.show} onArgs={view.go} search={view.search} onSearch={view.setSearch}
         preset={view.preset} onPreset={view.selectPreset} />
       {view.problem && <Note tone="error">{view.problem}</Note>}
       {view.log.isFetching && !view.log.currentData && <PageLoading>กำลังโหลด...</PageLoading>}
-      {view.log.error && <Note tone="error">{getErrorMessage(view.log.error)}</Note>}
+      {view.log.error && <Note tone="error" onRetry={() => void view.log.refetch()}>{getErrorMessage(view.log.error)}</Note>}
       {view.actors.error && <Note tone="error" onRetry={() => void view.actors.refetch()}>{getErrorMessage(view.actors.error)}</Note>}
       {view.log.currentData && (
         <HistoryTable entries={view.entries} emptyText={view.args.q ? 'ไม่พบรายการที่ตรงกับที่ค้นหาในช่วงนี้' : 'ไม่มีประวัติในช่วงนี้'}

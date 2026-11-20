@@ -236,4 +236,110 @@ public class AccountEndpointTests
         Assert.Equal(HttpStatusCode.Forbidden, (await AccountApi.CreateCleanerAsync(cleaner, "E2006", "0000000017", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await factory.CreateApiClient().GetAsync(AccountApi.Path)).StatusCode);
     }
+
+    [Fact]
+    public async Task A_relief_cleaner_is_created_with_a_dated_home_building_from_today()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var buildingB = await TestData.AddBuildingAsync(factory, "B");
+        Scheduling.ScheduleWriteApi.Today(factory);
+
+        var response = await admin.PostAsJsonAsync(AccountApi.Path, new
+        {
+            role = "Cleaner", displayName = "แม่บ้านสแปร์", employeeId = "E3001", phone = "0893001000",
+            shift = "Day", cleanerKind = "Relief", homeBuildingId = buildingB,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await AccountApi.ReadAsync(response);
+        Assert.Equal((null, "Relief", (int?)buildingB, "B"), (
+            created.AreaId, created.CleanerKind, created.HomeBuildingId, created.HomeBuildingCode));
+        var profiles = await AdminSetupApi.ReadAsync(factory, db => db.CleanerProfilePeriods
+            .Where(period => period.UserId == created.Id).ToListAsync());
+        var profile = Assert.Single(profiles);
+        // facility-0137/0194: the home building lives in the dated profile, and today is the first date it applies to.
+        Assert.Equal(("Relief", (int?)buildingB, "Day", new DateOnly(2026, 11, 17)), (
+            profile.Kind.ToString(), profile.HomeBuildingId, profile.Shift.ToString(), profile.EffectiveFrom));
+        Assert.Null(profile.EffectiveUntil);
+        Assert.Equal(1L, profile.Revision);
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal("ACCOUNT_CREATE", entry.Action);
+        Assert.DoesNotContain("0893001000", entry.AfterJson + entry.Summary);
+    }
+
+    [Fact]
+    public async Task A_regular_cleaner_created_without_the_new_fields_writes_a_regular_identity_from_the_area()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var ar03 = await TestData.AddAreaAsync(factory, "AR03");
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory, "A");
+        Scheduling.ScheduleWriteApi.Today(factory);
+
+        // The form every existing caller sends: no cleanerKind, no home building.
+        var response = await AccountApi.CreateCleanerAsync(admin, "E2001", "0000000011", ar03, "Day");
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await AccountApi.ReadAsync(response);
+        Assert.Equal(("AR03", "Cleaner", "Regular", "A"), (
+            created.AreaCode, created.Role, created.CleanerKind, created.HomeBuildingCode));
+        var profile = Assert.Single(await AdminSetupApi.ReadAsync(factory, db => db.CleanerProfilePeriods
+            .Where(period => period.UserId == created.Id).ToListAsync()));
+        Assert.Equal(("Regular", (int?)buildingA, "Day", new DateOnly(2026, 11, 17)), (
+            profile.Kind.ToString(), profile.HomeBuildingId, profile.Shift.ToString(), profile.EffectiveFrom));
+    }
+
+    [Theory]
+    [InlineData("Regular", null, true, false)]     // a regular Cleaner needs an Area to know their building
+    [InlineData("Relief", "AR01", true, false)]    // a relief has no regular Area
+    [InlineData("Relief", null, false, false)]     // a relief needs a home building
+    [InlineData("Relief", null, true, true)]       // the home building must be one that exists
+    [InlineData(5, null, false, false)]            // a number the enum does not define is not a kind to store
+    [InlineData("5", null, false, false)]          // nor is its spelling as a string
+    public async Task A_cleaner_identity_that_cannot_be_stored_is_refused(
+        object? cleanerKind, string? areaCode, bool withHome, bool unknownHome)
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var buildingB = await TestData.AddBuildingAsync(factory, "B");
+        var areaId = areaCode is null ? (int?)null : await AdminSetupApi.AreaIdAsync(factory, areaCode);
+
+        var response = await admin.PostAsJsonAsync(AccountApi.Path, new
+        {
+            role = "Cleaner",
+            displayName = "แม่บ้านทดสอบ",
+            employeeId = "E2007",
+            phone = "0893007000",
+            shift = "Day",
+            areaId,
+            cleanerKind,
+            homeBuildingId = withHome ? (unknownHome ? buildingB + 1000 : buildingB) : (int?)null,
+        });
+
+        Assert.True(response.StatusCode == HttpStatusCode.BadRequest,
+            $"{(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");
+        await factory.WithDbAsync(async db =>
+        {
+            Assert.Empty(await db.Users.Where(user => user.EmployeeId == "E2007").ToListAsync());
+            Assert.Empty(await db.CleanerProfilePeriods.ToListAsync());
+        });
+    }
+
+    [Fact]
+    public async Task A_supervisor_cannot_be_given_a_cleaner_identity()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var buildingB = await TestData.AddBuildingAsync(factory, "B");
+
+        var response = await admin.PostAsJsonAsync(AccountApi.Path, new
+        {
+            role = "Supervisor", displayName = "หัวหน้าใหม่", employeeId = "E2010", phone = "0893010000",
+            buildingId = buildingB, shift = "Day", cleanerKind = "Relief",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await factory.WithDbAsync(async db => Assert.Empty(await db.CleanerProfilePeriods.ToListAsync()));
+    }
 }

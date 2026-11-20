@@ -29,20 +29,84 @@ export type LoginRequest = { employeeId: string; phone: string } | { username: s
 /** facility-0040: Day 07:00–19:00, Night 19:00–07:00 (Asia/Bangkok). */
 export type Shift = 'Day' | 'Night';
 
-/** facility-0031: the four attendance scans of a shift. */
-export type AttendanceEvent = 'ShiftIn' | 'BreakOut' | 'BreakIn' | 'ShiftOut';
+/**
+ * facility-0031 and spec §8: the attendance actions of a shift. The legacy slot keeps the first four (its stored event
+ * names never change); a Numbered6 slot uses the two numbered breaks. A page always reads the slot's own ordered list
+ * (`AttendanceState.actions`) rather than assuming which set applies.
+ */
+export type AttendanceEvent =
+  | 'ShiftIn'
+  | 'BreakOut'
+  | 'BreakIn'
+  | 'ShiftOut'
+  | 'Break1Out'
+  | 'Break1In'
+  | 'Break2Out'
+  | 'Break2In';
+
+/** `AttendanceLifecycleVersion` (Application/Attendance/AttendanceLifecycle.cs): the slot's contract marker (spec §8). */
+export type AttendanceLifecycleVersion = 'Legacy4' | 'Numbered6';
 
 /** AttendanceEntryDto. withinRadius false is a Geofence Flag; null means the sign has no coordinates yet. */
 export interface AttendanceEntry {
   eventType: AttendanceEvent;
   occurredAt: string;
-  source: 'Scan' | 'AdminAdd' | 'AdminEdit';
+  source: 'Scan' | 'AdminAdd' | 'AdminEdit' | 'SupervisorAdd';
   withinRadius: boolean | null;
+  createdAt?: string | null;
+}
+
+/** `AttendanceSource` as the wire word, shared by an entry and an action. */
+export type AttendanceSource = AttendanceEntry['source'];
+
+/** `AttendanceStateView` words (spec §8): what one action of the lifecycle is right now. */
+export type AttendanceActionState = 'recorded' | 'skipped' | 'missing' | 'not-applicable' | 'pending';
+
+/** AttendanceActionDto: one action of the slot's ordered lifecycle and its state (expectedAt is the plan, never a scan). */
+export interface AttendanceAction {
+  eventType: AttendanceEvent;
+  state: AttendanceActionState;
+  occurredAt?: string | null;
+  source?: AttendanceSource | null;
+  expectedAt?: string | null;
+}
+
+/** `AttendanceGapStatus`: a stored skip marker, or the later real time that resolved it. */
+export type AttendanceGapStatus = 'Skipped' | 'Resolved';
+
+/** AttendanceGapDto: one stored gap row with no invented time of its own. */
+export interface AttendanceGap {
+  eventType: AttendanceEvent;
+  status: AttendanceGapStatus;
+  reason?: string | null;
+  recordedAt?: string | null;
+}
+
+/** AttendanceChoiceDto: one action the Cleaner may record next, and the intermediate gaps it steps over. */
+export interface AttendanceChoice {
+  action: AttendanceEvent;
+  requiredGaps: AttendanceEvent[];
+}
+
+/** AttendanceTransferDto (spec §9): the slot's midshift instruction and the revision a confirmation echoes back. */
+export interface AttendanceTransfer {
+  id: number;
+  fromAreaId: number;
+  toAreaId: number;
+  effectiveAt: string;
+  state: 'instructed' | 'confirmed' | 'cancelled';
+  confirmedAt?: string | null;
+  revision: string;
 }
 
 /**
  * AttendanceStateDto. Outside every attendance window of the Cleaner's own shift (facility-0069) shiftDate and shift
  * are left out and the lists are empty. outcome comes only on the answer of POST /api/attendance.
+ * <p>
+ * Task 9 adds the lifecycle additively (spec §8, §11): `lifecycleVersion` and `stateRevision` are the contract marker and
+ * the token a write sends back, `actions` the ordered lifecycle with each action's state, `gaps` the stored skip markers,
+ * `nextActions` what may be recorded next with the gaps each choice steps over, and the `duty*`/`isDayOff`/`isLeave`
+ * members the slot's effective duty (spec §7). `transfer` is the slot's midshift instruction (spec §9).
  */
 export interface AttendanceState {
   shiftDate?: string | null;
@@ -50,6 +114,22 @@ export interface AttendanceState {
   events: AttendanceEntry[];
   nextEvents: AttendanceEvent[];
   outcome?: 'Recorded' | 'AlreadyRecorded' | 'TooSoon' | null;
+  lifecycleVersion?: AttendanceLifecycleVersion | null;
+  stateRevision?: string | null;
+  actions?: AttendanceAction[];
+  gaps?: AttendanceGap[];
+  nextActions?: AttendanceChoice[];
+  dutyAreaId?: number | null;
+  dutyBreakGroup?: number | null;
+  dutySource?: string | null;
+  isDayOff?: boolean;
+  isLeave?: boolean;
+  transfer?: AttendanceTransfer | null;
+  transferHistory?: AttendanceTransfer[];
+  fillableActions?: AttendanceEvent[];
+  canCancelTransfer?: boolean;
+  /** An early final departure without recorded leave covering its actual time. */
+  departureLeaveMismatch?: boolean;
 }
 
 /** facility-0047 rule 4 (PointStatusCalculator). */

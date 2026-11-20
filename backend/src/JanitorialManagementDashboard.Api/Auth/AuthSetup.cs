@@ -11,6 +11,14 @@ public static class AuthSetup
     /// <summary>ADR facility-0010: 401 when not logged in, 403 when logged in without the admin role.</summary>
     public const string AdminOnly = "AdminOnly";
 
+    /// <summary>
+    /// Spec §3 and §11: who may call a scheduling management route at all — an active Admin or an active Supervisor, and
+    /// never a Cleaner. The policy only answers the role question; which building, shift and date a command may touch is
+    /// decided per row by <c>ScheduleAuthority</c> inside the command. It is its own policy so adding scheduling does not
+    /// widen <see cref="AdminOnly"/> or any legacy cover, scan or inspection group.
+    /// </summary>
+    public const string ScheduleManager = "ScheduleManager";
+
     public static IServiceCollection AddFacilityAuth(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<JwtSettings>()
@@ -61,7 +69,9 @@ public static class AuthSetup
             });
 
         services.AddAuthorizationBuilder()
-            .AddPolicy(AdminOnly, policy => policy.RequireAuthenticatedUser().RequireRole("admin"));
+            .AddPolicy(AdminOnly, policy => policy.RequireAuthenticatedUser().RequireRole("admin"))
+            // Spec §3: the scheduling management surface is Admin or Supervisor; a Cleaner only ever reads their own week.
+            .AddPolicy(ScheduleManager, policy => policy.RequireAuthenticatedUser().RequireRole("admin", "supervisor"));
 
         return services;
     }

@@ -322,4 +322,31 @@ describe('AreasPage (D4, facility-0045)', () => {
     expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');
   });
 
+  it('retries only the failed area detail query and keeps invalid route error non-retryable (UX-05)', async () => {
+    let detailAttempts = 0;
+    const server = serve({
+      'GET /api/admin/areas/1': () => ++detailAttempts === 1
+        ? { status: 500, body: { message: 'โหลดรายละเอียดพื้นที่ไม่สำเร็จ' } }
+        : { status: 200, body: areaDetail() },
+    });
+    const { user } = await renderApp('/admin/areas/1');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('โหลดรายละเอียดพื้นที่ไม่สำเร็จ');
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'AR01 Area ทดลอง' })).toBeInTheDocument();
+    expect(server.calls.filter((call) => call.path === '/api/admin/areas/1')).toHaveLength(2);
+    expect(server.calls.filter((call) => call.path === '/api/admin/areas')).toHaveLength(1);
+  });
+
+  it('shows not-found error on 404 area route without a retry button (UX-05)', async () => {
+    serve({
+      'GET /api/admin/areas/999': () => ({ status: 404, body: { message: 'ไม่พบพื้นที่นี้' } }),
+    });
+    await renderApp('/admin/areas/999');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('ไม่พบพื้นที่นี้');
+    expect(screen.queryByRole('button', { name: 'ลองอีกครั้ง' })).not.toBeInTheDocument();
+  });
+
 });

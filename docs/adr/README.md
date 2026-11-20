@@ -4,6 +4,20 @@
 
 อ่าน amendment ที่ใหม่กว่าด้วยเสมอ ADR เก่าเก็บทางเลือกและเหตุผลในวันนั้นไว้ ข้อความเดิมที่ถูกแทนที่ไม่ใช่ backlog ปัจจุบัน หากขัดกับ wireframe/แผนเก่า ให้ยึด ADR และ amendment ที่ยังมีผล
 
+## UX/UI — 19–20 พ.ย. 2026
+
+ปรับหน้าตาของฟังก์ชันเดิมตาม Mockup ตาม [facility-0223](facility-0223-match-the-mockup-for-existing-features.md) และชุดปรับปรุง UX/UI และ Motion ล่าสุด (**facility-0224** ถึง **facility-0230**):
+
+| เรื่อง | ข้อตกลงและจุดเข้าอ่าน |
+|---|---|
+| ปรับ UX/UI ทั้งระบบตามกฎ 10 ข้อ (มือถือ 3 แท็บ + บัญชี, เมนูแอดมิน 3 กลุ่ม + Drawer, Toolbar ตารางงาน M2/Option A, หน้าแอดมิน 12 หน้า) | [0230](facility-0230-ux-heuristics-overhaul-and-navigation-redesign.md) |
+| Admin Home เป็นหน้าภาพรวมและกระชับหน้าสถานะจุด | [0224](facility-0224-admin-overview-home-and-slim-live-point-board.md) |
+| รวมการมอบหมายทำแทนฉุกเฉินไว้ที่หน้าตารางงาน และให้หน้าเตือน/เข้างานทำหน้าที่เดียว | [0225](facility-0225-consolidate-cover-assignment-under-schedules.md) |
+| คงเมนูตั้งค่า 5 เมนูและรายงาน 2 เมนูแยกชัดเจน | [0226](facility-0226-keep-admin-setup-and-report-menus-distinct.md) |
+| ลดแถบเมนูด้านล่างของแม่บ้านเหลือ 2 แท็บจริง (`งานของฉัน`, `ตารางของฉัน`) | [0227](facility-0227-simplify-cleaner-bottom-nav-to-two-real-tabs.md) |
+| เพิ่มตัวสลับ 2 หน้าแบบเดียวกันให้หัวหน้างาน (`ตึกของฉัน`, `จัดตารางงาน`) | [0228](facility-0228-supervisor-consistent-two-page-switcher.md) |
+| ระบบ Subtle & Snappy CSS Motion (150–200ms, CLS = 0, รองรับ reduced-motion) | [0229](facility-0229-subtle-snappy-motion-system.md) |
+
 ## ตารางงานแม่บ้านตาม Requirement ใหม่ — 16–17 พ.ย. 2026
 
 เลขล่าสุดคือ **facility-0222** ข้อตกลงในส่วนนี้เป็นแบบที่ยืนยันระหว่าง `grill-then-plan` **ยังไม่ได้พัฒนา** ดู [ข้อมูลจาก Supervisor และคำถามที่ยังเปิด](../requirements-gathering/2026-11-16-supervisor-scheduling-requirements.md) ผลกระทบต่อแผนหน้าภาพรวมทบทวนแล้วใน [delta review](../superpowers/reviews/2026-11-17-overview-plan-assumption-delta.md)

@@ -1,4 +1,5 @@
 import { combineReducers, configureStore, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
+import { scheduleViewReducer } from '../pages/schedules/scheduleViewSlice';
 import { baseApi } from '../shared/api/baseApi';
 import { authReducer, sessionExpired, signedOut } from './slices/authSlice';
 import { dashboardReducer } from './slices/dashboardSlice';
@@ -8,6 +9,8 @@ const rootReducer = combineReducers({
   auth: authReducer,
   hub: hubReducer,
   dashboard: dashboardReducer,
+  // facility-0218: the week and filters a person just looked at, for this ongoing use only (no storage of any kind)
+  scheduleView: scheduleViewReducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });
 

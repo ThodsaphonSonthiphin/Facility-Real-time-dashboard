@@ -1,6 +1,8 @@
 using System.Globalization;
 using JanitorialManagementDashboard.Api.DTOs;
 using JanitorialManagementDashboard.Api.Hubs;
+using JanitorialManagementDashboard.Api.Scheduling;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
@@ -31,10 +33,8 @@ internal static class PointNotifications
 
             var buildingId = board.Point.Area!.BuildingId;
             var slot = ShiftCalendar.SlotAt(nowUtc);
-            var own = await db.Users
-                .Where(u => u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == buildingId)
-                .Select(u => u.Id)
-                .ToListAsync();
+            // Spec §3: the building's responsible Supervisors of both shifts, read from the dated scope
+            var own = await ScheduleScopeReader.SupervisorsOfAsync(db, buildingId, ScheduleAuthority.BusinessDate(nowUtc));
             var covering = await db.CoverAssignments
                 .Where(c => c.BuildingId == buildingId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
                 .Where(c => db.Users.Any(u => u.Id == c.UserId && u.IsActive && u.Role == UserRole.Supervisor))

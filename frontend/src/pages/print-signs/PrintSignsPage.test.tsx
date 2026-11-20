@@ -150,7 +150,7 @@ describe('PrintSignsPage (D5, facility-0021 item 6)', () => {
     expect(
       screen.getByText('ป้ายลงเวลา 0 + จุดทำความสะอาด 1 = 1 ป้าย · กระดาษ A4 แผ่นละ 6 ป้าย · 1 แผ่น · ตัดตามเส้นประ'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'พิมพ์ทั้งพื้นที่ ›' })).toHaveAttribute('href', '/admin/print?area=1');
+    expect(screen.getByRole('link', { name: 'พิมพ์ทั้งพื้นที่' })).toHaveAttribute('href', '/admin/print?area=1');
   });
 
   it('prints every active Area, leaving out deactivated Areas and points', async () => {

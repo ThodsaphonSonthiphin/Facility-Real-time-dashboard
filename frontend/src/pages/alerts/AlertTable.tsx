@@ -53,7 +53,7 @@ export function AlertTable({ alerts, today, review, onNotice }: AlertTableProps)
   }
 
   return (
-    <Table framed={false} minWidth="min-w-225">
+    <Table label="รายการแจ้งเตือน" framed={false} minWidth="min-w-225">
       <thead>
         <tr>
           <th scope="col" className="w-16">

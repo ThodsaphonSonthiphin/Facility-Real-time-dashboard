@@ -1,6 +1,9 @@
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -11,8 +14,15 @@ internal static class AccountChecks
     public const string EmployeeIdTaken = "รหัสพนักงานนี้มีแล้ว";
     public const string UsernameTaken = "ชื่อผู้ใช้นี้มีแล้ว";
 
-    /// <summary>The place a form asks for, checked against the role. Area and Building are tracked entities or null.</summary>
-    public sealed record AccountPlace(Area? Area, Building? Building, Shift? Shift);
+    /// <summary>
+    /// The place a form asks for, checked against the role. Area and Building are tracked entities or null.
+    /// <see cref="HomeBuildingId"/> is the dated identity a Cleaner's profile will state: a Relief Cleaner's own home
+    /// building, or the building a regular Cleaner's Area belongs to (facility-0137/0143/0194).
+    /// </summary>
+    public sealed record AccountPlace(Area? Area, Building? Building, Shift? Shift, int? HomeBuildingId = null);
+
+    /// <summary>The regular/relief identity of a Cleaner as the stored records state it on a date.</summary>
+    public sealed record CleanerIdentity(CleanerKind Kind, int? HomeBuildingId, Shift? Shift);
 
     /// <summary>What a save claims: its login name and its slot. A new account has UserId 0.</summary>
     public sealed record AccountClaim(int UserId, UserRole Role, string? Username, string? EmployeeId, int? AreaId, int? BuildingId, Shift? Shift);
@@ -30,17 +40,34 @@ internal static class AccountChecks
     /// <summary>
     /// Cleaner: shift required, Area optional, no building. Supervisor: building and shift, no Area. Admin: none of them.
     /// <paramref name="userId"/> is the account being edited (0 for a new one), so it never collides with itself.
+    /// <paramref name="businessDate"/> is the clock's Thai date, the date the dated Supervisor membership is read for.
     /// <paramref name="checkSlot"/> is false for a deactivated account, which holds no slot; activation checks it later.
     /// <paramref name="currentAreaId"/> is the Cleaner's Area now: keeping it is allowed even after the Area was deactivated
     /// (Area deactivation does not unassign Cleaners), but moving to an inactive Area is not.
+    /// <para>
+    /// Controller ruling (a) for Task 7: an absent <paramref name="cleanerKind"/> keeps the behaviour every existing caller
+    /// has (a regular Cleaner, whose Area may be empty), an explicit <see cref="CleanerKind.Regular"/> needs an Area because
+    /// that is where its home building comes from, and a <see cref="CleanerKind.Relief"/> has a home building and no Area —
+    /// a relief's home building is not a Supervisor slot and never occupies <c>users.supervisor_slot</c>. A
+    /// <paramref name="cleanerKind"/> the enum does not define is refused up front, so no stored kind can be a number no
+    /// reader renders (the wire accepts integer enum values).
+    /// </para>
     /// </summary>
     public static async Task<(AccountPlace? Place, IResult? Error)> ReadPlaceAsync(
-        AppDbContext db, UserRole role, int userId, int? areaId, int? buildingId, Shift? shift, bool checkSlot = true,
-        int? currentAreaId = null)
+        AppDbContext db, UserRole role, int userId, int? areaId, int? buildingId, Shift? shift, DateOnly businessDate,
+        bool checkSlot = true, int? currentAreaId = null, CleanerKind? cleanerKind = null, int? homeBuildingId = null)
     {
         if (shift is { } given && !Enum.IsDefined(given))
         {
             return (null, Bad("เลือกกะเช้าหรือกะดึก"));
+        }
+
+        // The wire accepts any number for an enum (JsonStringEnumConverter allows integer values), so a value the enum does
+        // not define must be refused here rather than compared against Regular/Relief, fall through as "neither" and reach
+        // cleaner_profile_periods.kind as a number no reader can render.
+        if (cleanerKind is { } givenKind && !Enum.IsDefined(givenKind))
+        {
+            return (null, Bad("ประเภทแม่บ้านต้องเป็นประจำหรือสแปร์เท่านั้น"));
         }
 
         switch (role)
@@ -62,9 +89,35 @@ internal static class AccountChecks
                     return (null, Bad("ต้องเลือกกะของแม่บ้าน"));
                 }
 
+                if (cleanerKind == CleanerKind.Relief)
+                {
+                    if (areaId is not null)
+                    {
+                        return (null, Bad("สแปร์ไม่มีพื้นที่ประจำ เลือกได้เฉพาะตึกต้นทางกับกะ"));
+                    }
+
+                    if (homeBuildingId is null)
+                    {
+                        return (null, Bad("ต้องเลือกตึกต้นทางของสแปร์"));
+                    }
+
+                    var home = await db.Buildings.FirstOrDefaultAsync(b => b.Id == homeBuildingId && b.IsActive);
+                    return home is null
+                        ? (null, Bad("ต้องเลือกตึกต้นทางที่ใช้งานอยู่"))
+                        // A relief's home building lives in the dated profile, not in the Supervisor building column.
+                        : (new AccountPlace(null, null, cleanerShift, home.Id), null);
+                }
+
+                if (cleanerKind == CleanerKind.Regular && areaId is null)
+                {
+                    return (null, Bad("แม่บ้านประจำต้องเลือกพื้นที่ เพื่อทราบตึกที่สังกัด"));
+                }
+
                 if (areaId is null)
                 {
-                    return (new AccountPlace(null, null, cleanerShift), null);
+                    return homeBuildingId is null
+                        ? (new AccountPlace(null, null, cleanerShift), null)
+                        : (null, Bad("ตึกของแม่บ้านประจำมาจากพื้นที่ เลือกเองไม่ได้"));
                 }
 
                 var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && (a.IsActive || a.Id == currentAreaId));
@@ -79,9 +132,14 @@ internal static class AccountChecks
                     return (null, Bad($"{area.Code} ทำเฉพาะกะเช้า เลือกกะดึกไม่ได้"));
                 }
 
-                return checkSlot && await HolderAsync(db, role, area.Id, null, cleanerShift, userId) is { } holder
+                if (homeBuildingId is int chosen && chosen != area.BuildingId)
+                {
+                    return (null, Bad("ตึกของแม่บ้านประจำมาจากพื้นที่ เลือกเองไม่ได้"));
+                }
+
+                return checkSlot && await HolderAsync(db, role, area.Id, null, cleanerShift, userId, businessDate) is { } holder
                     ? (null, Conflict(SlotTaken(holder)))
-                    : (new AccountPlace(area, null, cleanerShift), null);
+                    : (new AccountPlace(area, null, cleanerShift, area.BuildingId), null);
             }
 
             default:
@@ -102,27 +160,214 @@ internal static class AccountChecks
                     return (null, Bad("ต้องเลือกตึกที่ใช้งานอยู่"));
                 }
 
-                return checkSlot && await HolderAsync(db, role, null, building.Id, supervisorShift, userId) is { } holder
+                return checkSlot && await HolderAsync(db, role, null, building.Id, supervisorShift, userId, businessDate) is { } holder
                     ? (null, Conflict(SlotTaken(holder)))
                     : (new AccountPlace(null, building, supervisorShift), null);
             }
         }
     }
 
-    /// <summary>The other active account in that Area-shift (Cleaner) or building-shift (Supervisor) slot, with its Area or Building loaded.</summary>
-    public static Task<User?> HolderAsync(AppDbContext db, UserRole role, int? areaId, int? buildingId, Shift? shift, int exceptUserId) =>
+    /// <summary>
+    /// The identity a Cleaner's stored records state on <paramref name="businessDate"/>: their dated profile when one covers
+    /// the date, else the account row's own projection — the same compatibility rule the week read applies (spec §14), so the
+    /// form can tell "nothing changed" from "this edit starts a new identity today" without inventing a past.
+    /// </summary>
+    public static async Task<CleanerIdentity> CurrentCleanerIdentityAsync(
+        AppDbContext db, User user, DateOnly businessDate, CancellationToken ct = default)
+    {
+        var period = await CurrentCleanerProfileAsync(db, user.Id, businessDate, ct);
+        if (period is not null)
+        {
+            return new CleanerIdentity(period.Kind, period.HomeBuildingId, period.Shift);
+        }
+
+        // A pre-backfill Cleaner has no dated row at all; their Area is the only statement of which building they belong to.
+        var home = user.AreaId is int areaId
+            ? await db.Areas.AsNoTracking().Where(area => area.Id == areaId)
+                .Select(area => (int?)area.BuildingId).FirstOrDefaultAsync(ct)
+            : null;
+        return new CleanerIdentity(CleanerKind.Regular, home, user.Shift);
+    }
+
+    /// <summary>The dated profile period in force on that date, or null when the person has none covering it.</summary>
+    public static async Task<CleanerProfilePeriod?> CurrentCleanerProfileAsync(
+        AppDbContext db, int userId, DateOnly businessDate, CancellationToken ct = default)
+    {
+        var periods = await db.CleanerProfilePeriods.AsNoTracking()
+            .Where(period => period.UserId == userId)
+            .OrderBy(period => period.EffectiveFrom).ThenBy(period => period.Id)
+            .ToListAsync(ct);
+        return periods.LastOrDefault(period =>
+            ScheduleResolver.Applies(period.EffectiveFrom, period.EffectiveUntil, businessDate));
+    }
+
+    /// <summary>
+    /// Spec §10 and §14 (ADRs facility-0137, 0143, 0194 and 0215) with controller ruling (a): writes the dated Cleaner
+    /// profile the account form's fields describe, from today's Thai business date — never a fabricated past — inside the
+    /// caller's transaction and under the person's own baseline-head anchor. The period being replaced is closed
+    /// end-exclusive at today; a period that has not taken effect yet is corrected in place, so the same start date is never
+    /// stored twice; and a period that already states exactly this identity is left alone, which is what makes "saving the
+    /// same values writes nothing" still true.
+    /// <para>
+    /// A Cleaner with no Area and no dated row at all keeps having none: the account row remains the only projection for the
+    /// pre-backfill accounts of spec §14 rather than this edit inventing a schedule for them.
+    /// </para>
+    /// </summary>
+    public static async Task<IResult?> ApplyCleanerProfileAsync(
+        AppDbContext db, ScheduleStore store, User user, CleanerKind kind, int? homeBuildingId, int? actorId, DateTime now,
+        CancellationToken ct = default)
+    {
+        if (user.Role != UserRole.Cleaner || user.Shift is not Shift shift)
+        {
+            return null;
+        }
+
+        var businessDate = ScheduleAuthority.BusinessDate(now);
+        var periods = await db.CleanerProfilePeriods
+            .Where(period => period.UserId == user.Id)
+            .OrderBy(period => period.EffectiveFrom).ThenBy(period => period.Id)
+            .ToListAsync(ct);
+        var current = periods.LastOrDefault(period =>
+            ScheduleResolver.Applies(period.EffectiveFrom, period.EffectiveUntil, businessDate));
+        if (current is not null
+            && current.Kind == kind && current.HomeBuildingId == homeBuildingId && current.Shift == shift)
+        {
+            return null;
+        }
+
+        if (current is null && periods.Count == 0 && homeBuildingId is null && kind == CleanerKind.Regular)
+        {
+            return null;
+        }
+
+        // The per-person head anchor (Task 5): the profile write serialises with the person's baseline writes instead of
+        // inventing a second lock for the same person.
+        await store.LockBaselineHeadAsync(user.Id, now, ct);
+
+        var pending = periods.FirstOrDefault(period => period.EffectiveFrom >= businessDate);
+        if (pending is not null)
+        {
+            if (periods.Any(period => period.Id != pending.Id && period.Kind == kind
+                && period.EffectiveFrom == pending.EffectiveFrom))
+            {
+                return Conflict("มีข้อมูลตัวตนของคนนี้ซ้ำกันในวันเดียวกัน ต้องตรวจสอบก่อนบันทึก");
+            }
+
+            pending.Kind = kind;
+            pending.HomeBuildingId = homeBuildingId;
+            pending.Shift = shift;
+            pending.Revision += 1;
+            pending.UpdatedAt = now;
+            pending.CreatedById ??= actorId;
+            return null;
+        }
+
+        if (current is not null)
+        {
+            current.EffectiveUntil = businessDate;
+            current.Revision += 1;
+            current.UpdatedAt = now;
+        }
+
+        db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+        {
+            UserId = user.Id,
+            Kind = kind,
+            HomeBuildingId = homeBuildingId,
+            Shift = shift,
+            EffectiveFrom = businessDate,
+            // A version that already starts later owns its dates, so this period stops where that one begins.
+            EffectiveUntil = periods.Where(period => period.EffectiveFrom > businessDate)
+                .Select(period => (DateOnly?)period.EffectiveFrom).Min(),
+            Revision = 1,
+            CreatedById = actorId,
+            CreatedAt = now,
+            UpdatedAt = now,
+        });
+        return null;
+    }
+
+    /// <summary>
+    /// The other active account in that Area-shift (Cleaner) or building-shift (Supervisor) slot on
+    /// <paramref name="businessDate"/>, with its Area or Building loaded so the message can name it.
+    /// </summary>
+    public static async Task<User?> HolderAsync(
+        AppDbContext db, UserRole role, int? areaId, int? buildingId, Shift? shift, int exceptUserId, DateOnly businessDate) =>
         role switch
         {
-            UserRole.Cleaner when areaId is not null && shift is not null => db.Users.AsNoTracking().Include(u => u.Area)
+            UserRole.Cleaner when areaId is not null && shift is not null => await db.Users.AsNoTracking().Include(u => u.Area)
                 .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == areaId && u.Shift == shift),
-            UserRole.Supervisor when buildingId is not null && shift is not null => db.Users.AsNoTracking().Include(u => u.Building)
-                .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == buildingId && u.Shift == shift),
-            _ => Task.FromResult<User?>(null),
+            UserRole.Supervisor when buildingId is not null && shift is not null => await SupervisorHolderAsync(
+                db, buildingId.Value, shift.Value, exceptUserId, businessDate),
+            _ => null,
         };
+
+    /// <summary>
+    /// Spec §3: the active Supervisor whose dated period covers <paramref name="businessDate"/> for that building and
+    /// shift. The dated rows are the authority, so a building and shift the dated rows have freed is free even when the
+    /// account projection still says otherwise. The projection is read only while no dated row exists at all, the
+    /// pre-backfill state of spec §14; once one exists it is the only source, both ways.
+    /// </summary>
+    private static async Task<User?> SupervisorHolderAsync(
+        AppDbContext db, int buildingId, Shift shift, int exceptUserId, DateOnly businessDate)
+    {
+        var holderId = await (
+                from period in db.SupervisorScopePeriods.AsNoTracking()
+                join holder in db.Users.AsNoTracking() on period.SupervisorId equals holder.Id
+                where period.BuildingId == buildingId && period.Shift == shift && period.SupervisorId != exceptUserId
+                    && period.EffectiveFrom <= businessDate
+                    && (period.EffectiveUntil == null || businessDate < period.EffectiveUntil.Value)
+                    && holder.Role == UserRole.Supervisor && holder.IsActive
+                select (int?)period.SupervisorId)
+            .FirstOrDefaultAsync();
+        if (holderId is not null)
+        {
+            return await HeldAsUserAsync(db, holderId.Value, buildingId, shift);
+        }
+
+        if (await db.SupervisorScopePeriods.AsNoTracking().AnyAsync())
+        {
+            // Dated rows exist and none of them gives that building and shift to anyone on that date: it is free
+            return null;
+        }
+
+        return await ProjectionSupervisorAsync(db, buildingId, shift, exceptUserId);
+    }
+
+    /// <summary>
+    /// The Supervisor the account projection alone says holds that building and shift: the pre-backfill membership of
+    /// spec §14. Only <see cref="SupervisorHolderAsync"/> (before any dated row exists) and the post-race explanation may
+    /// read it.
+    /// </summary>
+    private static Task<User?> ProjectionSupervisorAsync(AppDbContext db, int buildingId, Shift shift, int exceptUserId) =>
+        db.Users.AsNoTracking().Include(u => u.Building)
+            .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == buildingId && u.Shift == shift);
+
+    /// <summary>
+    /// The dated holder as the slot message reads it: <see cref="SlotTaken"/> names the holder's Building and Shift, and the
+    /// dated rows may already have replaced that projection (a Supervisor moved from A to B still carries A on the account
+    /// row until the edit lands), so the building and shift the claim is for take their place.
+    /// </summary>
+    private static async Task<User?> HeldAsUserAsync(AppDbContext db, int holderId, int buildingId, Shift shift)
+    {
+        var holder = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == holderId);
+        if (holder is null)
+        {
+            return null;
+        }
+
+        holder.Building = await db.Buildings.AsNoTracking().FirstOrDefaultAsync(b => b.Id == buildingId);
+        holder.Shift = shift;
+        return holder;
+    }
 
     public static string SlotTaken(User holder) => holder.Role == UserRole.Cleaner
         ? $"กะ{ThaiLabels.ShiftName(holder.Shift!.Value)}ของ {holder.Area!.Code} มีแม่บ้านประจำแล้ว ({holder.DisplayName})"
-        : $"กะ{ThaiLabels.ShiftName(holder.Shift!.Value)}ของตึก {holder.Building!.Code} มีหัวหน้าประจำแล้ว ({holder.DisplayName})";
+        : SupervisorSlotTaken(holder.Building!.Code, holder.Shift!.Value, holder.DisplayName);
+
+    /// <summary>The Supervisor slot words, also said for a building and shift a dated period already gives another person.</summary>
+    public static string SupervisorSlotTaken(string buildingCode, Shift shift, string holderName) =>
+        $"กะ{ThaiLabels.ShiftName(shift)}ของตึก {buildingCode} มีหัวหน้าประจำแล้ว ({holderName})";
 
     /// <summary>Unique ignoring case: MySQL's collation already treats "e1001" and "E1001" as one; SQLite would not.</summary>
     public static Task<bool> EmployeeIdTakenAsync(AppDbContext db, string employeeId, int exceptUserId)
@@ -141,7 +386,7 @@ internal static class AccountChecks
     /// After a DbUpdateException: the 409 to give when another save took the login name or the slot first.
     /// Null means the database failed for another reason, and the caller must rethrow.
     /// </summary>
-    public static async Task<IResult?> ExplainRaceAsync(AppDbContext db, AccountClaim claim)
+    public static async Task<IResult?> ExplainRaceAsync(AppDbContext db, AccountClaim claim, DateOnly businessDate)
     {
         db.ChangeTracker.Clear();
         if (claim.Username is { } username && await UsernameTakenAsync(db, username, claim.UserId))
@@ -154,9 +399,19 @@ internal static class AccountChecks
             return Conflict(EmployeeIdTaken);
         }
 
-        return await HolderAsync(db, claim.Role, claim.AreaId, claim.BuildingId, claim.Shift, claim.UserId) is { } holder
-            ? Conflict(SlotTaken(holder))
-            : null;
+        if (await HolderAsync(db, claim.Role, claim.AreaId, claim.BuildingId, claim.Shift, claim.UserId, businessDate) is { } holder)
+        {
+            return Conflict(SlotTaken(holder));
+        }
+
+        // The pre-check already refused every dated holder, so a DbUpdateException reaching here is by definition the
+        // projection: users.supervisor_slot. In the pre-backfill state (spec §14) an active Supervisor with no dated row
+        // at all still holds their account row's building and shift, which the dated lookup cannot see once any dated row
+        // exists elsewhere. Explaining that as the slot conflict keeps it a 409 instead of a 500.
+        return claim is { Role: UserRole.Supervisor, BuildingId: { } buildingId, Shift: { } shift }
+            && await ProjectionSupervisorAsync(db, buildingId, shift, claim.UserId) is { } projected
+                ? Conflict(SlotTaken(projected))
+                : null;
     }
 
     public static IResult Bad(string message) => ApiResults.Message(StatusCodes.Status400BadRequest, message);

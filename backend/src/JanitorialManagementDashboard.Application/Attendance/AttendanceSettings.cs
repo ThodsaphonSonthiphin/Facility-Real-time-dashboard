@@ -4,6 +4,7 @@ namespace JanitorialManagementDashboard.Application.Attendance;
 public sealed class AttendanceSettings
 {
     public const string SectionName = "Attendance";
+    public const int MaxReceivingOffsetMinutes = 360;
 
     public int OpensMinutesBeforeShift { get; set; } = 60;
     public int ClosesMinutesAfterShift { get; set; } = 60;

@@ -54,7 +54,7 @@ export function AccountTable({ accounts, role, me, busy, onAction }: AccountTabl
                   onClick={() => onAction('edit', account)}
                 >
                   <Pencil aria-hidden="true" className="size-4" />
-                  แก้
+                  แก้ไข
                 </Button>
                 {account.isActive ? (
                   account.id !== me && (

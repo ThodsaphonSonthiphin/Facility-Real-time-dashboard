@@ -286,7 +286,6 @@ describe('HistoryPage (D9, facility-0057)', () => {
     const server = serve();
     const { user, router } = await renderApp('/admin/history?category=Cover');
     await screen.findByText('แสดง 1–5 รายการ');
-    await user.click(screen.getByText('ค้นหาประวัติ'));
     const search = screen.getByRole('searchbox', { name: 'ค้นหา' });
 
     await user.type(search, 'แม่บ้านที่อื่น');
@@ -305,13 +304,31 @@ describe('HistoryPage (D9, facility-0057)', () => {
 
   it('a search that finds nothing says so, and the search box follows the address', async () => {
     serve({ 'GET /api/admin/audit-log': () => ({ status: 200, body: { entries: [] } }) });
-    const { router, user } = await renderApp('/admin/history?q=ไม่มีคำนี้');
+    const { router } = await renderApp('/admin/history?q=ไม่มีคำนี้');
 
     expect(await screen.findByText('ไม่พบรายการที่ตรงกับที่ค้นหาในช่วงนี้')).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'ค้นหา' })).toHaveValue('ไม่มีคำนี้');
 
     await router.navigate('/admin/history');
-    await user.click(screen.getByText('ค้นหาประวัติ'));
     await waitFor(() => expect(screen.getByRole('searchbox', { name: 'ค้นหา' })).toHaveValue(''));
+  });
+
+  it('retries failed log read without clearing active filters or refetching actors (UX-05)', async () => {
+    let logAttempts = 0;
+    const server = serve({
+      'GET /api/admin/audit-log': () => ++logAttempts === 1
+        ? { status: 500, body: { message: 'โหลดประวัติไม่สำเร็จ' } }
+        : { status: 200, body: firstPage },
+    });
+    const { user } = await renderApp('/admin/history?category=Cover');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('โหลดประวัติไม่สำเร็จ');
+    expect(screen.getByRole('combobox', { name: 'ประเภท' })).toHaveValue('Cover');
+
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+    expect(await screen.findByText('แสดง 1–5 รายการ')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'ประเภท' })).toHaveValue('Cover');
+    expect(logGets(server)).toHaveLength(2);
+    expect(server.calls.filter((call) => call.path === '/api/admin/audit-log/actors')).toHaveLength(1);
   });
 });

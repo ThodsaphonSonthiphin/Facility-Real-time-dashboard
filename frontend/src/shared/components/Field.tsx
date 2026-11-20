@@ -20,6 +20,8 @@ interface FieldProps {
    * red border, and the message is read after its name (`aria-describedby`), as is the help line.
    */
   error?: ReactNode;
+  /** Optional external error element id to append to `aria-describedby`. */
+  errorId?: string;
   /** One control: a TextInput, Select or TextArea. */
   children: ReactElement<{
     'aria-describedby'?: string;
@@ -32,27 +34,32 @@ interface FieldProps {
  * placeholder-only label); the help line and the error are linked with `aria-describedby`, as today's pages do. The
  * label turns grey when its control cannot be used (the design file's Form).
  */
-export function Field({ label, help, error, children }: FieldProps) {
+export function Field({ label, help, error, errorId, children }: FieldProps) {
   const helpId = useId();
-  const errorId = useId();
-  const describedBy = [children.props['aria-describedby'], error ? errorId : null, help ? helpId : null]
+  const fieldErrorId = useId();
+  const describedBy = [
+    children.props['aria-describedby'],
+    error ? fieldErrorId : null,
+    errorId ?? null,
+    help ? helpId : null,
+  ]
     .filter(Boolean)
     .join(' ');
   const control =
-    help || error
+    help || error || errorId
       ? cloneElement(children, {
           'aria-describedby': describedBy,
           ...(error ? { 'aria-invalid': true } : {}),
         })
       : children;
   return (
-    <div className="flex flex-col gap-1">
-      <label className="flex flex-col gap-1">
+    <div className="flex min-w-0 max-w-full flex-col gap-1">
+      <label className="flex min-w-0 max-w-full flex-col gap-1">
         <span className="font-semibold has-disabled:text-text-2">{label}</span>
         {control}
       </label>
       {error && (
-        <span id={errorId} className="flex items-center gap-1 text-xs font-semibold text-rework">
+        <span id={fieldErrorId} className="flex items-center gap-1 text-xs font-semibold text-rework">
           <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
           {error}
         </span>
@@ -141,8 +148,8 @@ export function ChoiceTile({ children, ...input }: ChoiceProps) {
   return (
     <label
       className={
-        'm-0.5 flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-border-control ' +
-        'bg-surface p-3 text-center text-xl font-bold text-text has-checked:m-0 has-checked:border-3 ' +
+        'm-0.5 flex min-h-28 min-w-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-border-control ' +
+        'bg-surface px-2.5 py-4 text-center text-base font-extrabold wrap-break-word text-text has-checked:m-0 has-checked:border-3 ' +
         'has-checked:border-accent has-checked:bg-accent-subtle has-checked:text-accent-hover ' +
         'has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ' +
         'has-disabled:cursor-not-allowed has-disabled:opacity-50'

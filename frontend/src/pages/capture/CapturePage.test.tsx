@@ -236,4 +236,30 @@ describe('CapturePage (M17, facility-0045 item 2)', () => {
     expectBehindMoreInfo('เมื่อบันทึกพิกัดแล้ว ดูรายการย้อนหลังได้ในหน้า “ประวัติการแก้ไขของแอดมิน”', 'เกี่ยวกับหน้านี้');
     expect(screen.getByText('เกี่ยวกับหน้านี้').closest('summary')).toHaveClass('min-h-12');
   });
+
+  it('retries failed area load on CapturePage (UX-05)', async () => {
+    let attempts = 0;
+    const server = serve({
+      'GET /api/admin/areas/1': () => ++attempts === 1
+        ? { status: 500, body: { message: 'โหลดพื้นที่ไม่สำเร็จ' } }
+        : { status: 200, body: areaDetail() },
+    });
+    const { user } = await renderApp('/admin/areas/1/capture');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('โหลดพื้นที่ไม่สำเร็จ');
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'ป้ายของพื้นที่นี้' })).toBeInTheDocument();
+    expect(server.calls.filter((call) => call.path === '/api/admin/areas/1')).toHaveLength(2);
+  });
+
+  it('renders 404 area error on CapturePage without a retry button (UX-05)', async () => {
+    serve({
+      'GET /api/admin/areas/999': () => ({ status: 404, body: { message: 'ไม่พบพื้นที่นี้' } }),
+    });
+    await renderApp('/admin/areas/999/capture');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('ไม่พบพื้นที่นี้');
+    expect(screen.queryByRole('button', { name: 'ลองอีกครั้ง' })).not.toBeInTheDocument();
+  });
 });

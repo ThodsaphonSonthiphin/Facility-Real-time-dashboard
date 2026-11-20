@@ -1,5 +1,5 @@
 import { LogIn } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
 import { buildCommit } from '../../shared/version/buildInfo';
 import { Button } from '../../shared/components/Button';
@@ -14,7 +14,10 @@ import { useLogin } from './useLogin';
 export function LoginPage() {
   const [employeeId, setEmployeeId] = useState('');
   const [phone, setPhone] = useState('');
-  const { submit, isLoading, errorText, returnsToPage, redirectTo } = useLogin('รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง');
+  const errorId = useId();
+  const { submit, isLoading, errorText, credentialInvalid, returnsToPage, redirectTo } = useLogin(
+    'รหัสพนักงานหรือเบอร์โทรไม่ถูกต้อง',
+  );
   const location = useLocation();
 
   if (redirectTo) {
@@ -23,7 +26,9 @@ export function LoginPage() {
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    void submit({ employeeId: employeeId.trim(), phone });
+    if (!isLoading) {
+      void submit({ employeeId: employeeId.trim(), phone });
+    }
   };
 
   return (
@@ -37,27 +42,30 @@ export function LoginPage() {
           <span className="text-text-2">ใช้รหัสพนักงานและเบอร์โทรของคุณ</span>
         </header>
         {returnsToPage && <Note tone="info">เข้าสู่ระบบก่อน แล้วระบบจะพากลับไปหน้าที่เปิดไว้ทันที</Note>}
-        {errorText && <Note tone="error">{errorText}</Note>}
-        <form id="login-form" className="flex flex-col gap-5" onSubmit={onSubmit}>
-          <Field label="รหัสพนักงาน" help="เลข 7 หลัก">
+        {errorText && <div id={errorId}><Note tone="error">{errorText}</Note></div>}
+        <form id="login-form" className="flex flex-col gap-5" onSubmit={onSubmit} aria-busy={isLoading}>
+          <Field label="รหัสพนักงาน" help="เลข 7 หลัก" errorId={credentialInvalid ? errorId : undefined}>
             <TextInput
               size="code"
               type="text"
               inputMode="numeric"
               autoComplete="username"
               required
+              disabled={isLoading}
+              aria-invalid={credentialInvalid || undefined}
               value={employeeId}
               onChange={(event) => setEmployeeId(event.target.value)}
             />
           </Field>
-          <Field label="เบอร์โทรศัพท์" help="เบอร์ที่แจ้งแอดมินไว้ตอนสร้างบัญชี">
+          <Field label="เบอร์โทรศัพท์" help="เบอร์ที่แจ้งแอดมินไว้ตอนสร้างบัญชี" errorId={credentialInvalid ? errorId : undefined}>
             <TextInput
               size="code"
               type="tel"
               inputMode="tel"
               autoComplete="current-password"
               required
-              aria-invalid={errorText ? true : undefined}
+              disabled={isLoading}
+              aria-invalid={credentialInvalid || undefined}
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
             />

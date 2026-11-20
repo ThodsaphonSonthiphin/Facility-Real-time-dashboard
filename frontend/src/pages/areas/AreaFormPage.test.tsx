@@ -255,4 +255,31 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');
   });
 
+  it('retries only the failed read query on load error (UX-05)', async () => {
+    let cleanerAttempts = 0;
+    const server = serve({
+      'GET /api/admin/cleaners': () => ++cleanerAttempts === 1
+        ? { status: 500, body: { message: 'โหลดรายชื่อแม่บ้านไม่สำเร็จ' } }
+        : { status: 200, body: cleaners },
+    });
+    const { user } = await renderApp('/admin/areas/new');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('โหลดรายชื่อแม่บ้านไม่สำเร็จ');
+    await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByLabelText('รหัสพื้นที่')).toBeInTheDocument();
+    expect(server.calls.filter((call) => call.path === '/api/admin/cleaners')).toHaveLength(2);
+    expect(server.calls.filter((call) => call.path === '/api/admin/buildings')).toHaveLength(1);
+  });
+
+  it('renders 404 area error on edit route without a retry button (UX-05)', async () => {
+    serve({
+      'GET /api/admin/areas/999': () => ({ status: 404, body: { message: 'ไม่พบพื้นที่นี้' } }),
+    });
+    await renderApp('/admin/areas/999/edit');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('ไม่พบพื้นที่นี้');
+    expect(screen.queryByRole('button', { name: 'ลองอีกครั้ง' })).not.toBeInTheDocument();
+  });
+
 });

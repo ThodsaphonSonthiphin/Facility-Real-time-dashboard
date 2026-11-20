@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react';
 import { Link } from 'react-router';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../shared/components/PageState';
@@ -17,26 +18,25 @@ import { useAreasPage } from './useAreasPage';
 export function AreasPage() {
   const {
     areaId, areas, detail, selectedId, names, buildings, filteredAreas, search, setSearch,
-    buildingId, setBuildingId, clearFilters, hasFilters, error,
+    buildingId, setBuildingId, clearFilters, hasFilters, error, retryError,
   } = useAreasPage();
 
   return (
-    <main className="flex flex-col gap-6 text-sm text-text">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">พื้นที่และป้าย</h1>
-          {/* As tall as its words before the answer, so nothing under it moves */}
-          <span className="min-h-5 text-text-2">{areas.data ? areaTotals(areas.data) : '\u00A0'}</span>
-        </div>
-        <Link className={buttonClass('primary', 'desk')} data-tap="" to="/admin/areas/new">
-          <Plus aria-hidden="true" className="size-4" />
-          เพิ่มพื้นที่
-        </Link>
-      </header>
-      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
+      <AdminPageHeader
+        title="พื้นที่และป้าย"
+        subtitle={areas.data ? areaTotals(areas.data) : '\u00A0'}
+        actions={
+          <Link className={buttonClass('primary', 'desk')} data-tap="" to="/admin/areas/new">
+            <Plus aria-hidden="true" className="size-4" />
+            เพิ่มพื้นที่
+          </Link>
+        }
+      />
+      {error && <Note tone="error" onRetry={retryError}>{getErrorMessage(error)}</Note>}
       {areaId !== undefined && selectedId === undefined && <Note tone="error">ไม่พบพื้นที่นี้</Note>}
       {/* the design file's list rail, then the rest; no token describes a two-column track list */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         <AreaList
           areas={filteredAreas} total={areas.data?.length} selectedId={selectedId} loading={areas.isLoading}
           names={names} buildings={buildings} search={search} onSearch={setSearch}

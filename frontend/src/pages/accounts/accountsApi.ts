@@ -2,6 +2,7 @@ import { baseApi } from '../../shared/api/baseApi';
 import type { Shift } from '../../shared/api/types';
 
 /** UserRole as the accounts API sends it (the login answer's role is lower-case; this one is not). */
+export type AccountCleanerKind = 'Regular' | 'Relief';
 export type AccountRole = 'Cleaner' | 'Supervisor' | 'Admin';
 
 /** AccountDto (D6). loginName is the employee ID, or an Admin's username. No phone, password or hash ever comes. */
@@ -12,6 +13,9 @@ export interface Account {
   displayName: string;
   areaId?: number;
   areaCode?: string;
+  cleanerKind?: AccountCleanerKind;
+  homeBuildingId?: number;
+  homeBuildingCode?: string;
   buildingId?: number;
   buildingCode?: string;
   shift?: Shift;
@@ -21,12 +25,14 @@ export interface Account {
 
 /** CreateAccountRequest with only the role's own fields: the server refuses any other with 400 (plan 5 decision 9). */
 export type CreateAccountRequest =
-  | { role: 'Cleaner'; displayName: string; employeeId: string; phone: string; shift: Shift; areaId?: number }
+  | { role: 'Cleaner'; displayName: string; employeeId: string; phone: string; shift: Shift; areaId?: number; cleanerKind?: AccountCleanerKind; homeBuildingId?: number }
   | { role: 'Supervisor'; displayName: string; employeeId: string; phone: string; buildingId: number; shift: Shift }
   | { role: 'Admin'; displayName: string; username: string; password: string };
 
 /** UpdateAccountRequest: the role and login name are fixed; the place fields replace the current ones. */
 export interface UpdateAccountBody {
+  cleanerKind?: AccountCleanerKind;
+  homeBuildingId?: number;
   displayName: string;
   areaId?: number;
   buildingId?: number;
@@ -42,16 +48,16 @@ const accountsApi = baseApi.injectEndpoints({
     }),
     createAccount: build.mutation<Account, CreateAccountRequest>({
       query: (body) => ({ url: '/admin/accounts', method: 'POST', body }),
-      invalidatesTags: ['AdminSetup'],
+      invalidatesTags: ['AdminSetup', 'Schedules'],
     }),
     updateAccount: build.mutation<Account, { id: number; body: UpdateAccountBody }>({
       query: ({ id, body }) => ({ url: `/admin/accounts/${id}`, method: 'PUT', body }),
-      invalidatesTags: ['AdminSetup'],
+      invalidatesTags: ['AdminSetup', 'Schedules'],
     }),
     /** facility-0020: no delete. Deactivation revokes every session and frees a Cleaner's Area (plan 5 decision 3). */
     setAccountActive: build.mutation<Account, { id: number; active: boolean }>({
       query: ({ id, active }) => ({ url: `/admin/accounts/${id}/${active ? 'activate' : 'deactivate'}`, method: 'POST' }),
-      invalidatesTags: ['AdminSetup'],
+      invalidatesTags: ['AdminSetup', 'Schedules'],
     }),
     /** facility-0054 rule 4. 204; every session of the person is revoked. */
     changePhone: build.mutation<void, { id: number; phone: string }>({

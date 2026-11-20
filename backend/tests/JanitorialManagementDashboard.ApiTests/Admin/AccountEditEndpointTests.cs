@@ -291,4 +291,64 @@ public class AccountEditEndpointTests
         Assert.Equal(HttpStatusCode.Forbidden, (await DeactivateAsync(cleaner, auth.User.Id)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await EditAsync(cleaner, auth.User.Id, new { displayName = "ก", shift = "Day" })).StatusCode);
     }
+
+    [Fact]
+    public async Task Moving_a_cleaner_to_relief_closes_the_previous_identity_at_today_and_opens_a_relief_one()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var buildingB = await TestData.AddBuildingAsync(factory, "B");
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        // A dated regular identity that began before today, as the backfill of spec §14 writes it.
+        await Scheduling.ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000001", new DateOnly(2026, 10, 1));
+        Scheduling.ScheduleWriteApi.Today(factory);
+
+        var response = await EditAsync(admin, e1001,
+            new { displayName = "สมชาย ใจดี", shift = "Day", cleanerKind = "Relief", homeBuildingId = buildingB });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var edited = await AccountApi.ReadAsync(response);
+        Assert.Equal((null, "Relief", (int?)buildingB, "B"), (
+            edited.AreaId, edited.CleanerKind, edited.HomeBuildingId, edited.HomeBuildingCode));
+        var profiles = await AdminSetupApi.ReadAsync(factory, db => db.CleanerProfilePeriods
+            .Where(period => period.UserId == e1001).OrderBy(period => period.EffectiveFrom).ToListAsync());
+        Assert.Equal(2, profiles.Count);
+        // No fabricated past: the previous identity keeps its own dates and merely stops where the new one starts.
+        Assert.Equal((new DateOnly(2026, 10, 1), (DateOnly?)new DateOnly(2026, 11, 17)), (
+            profiles[0].EffectiveFrom, profiles[0].EffectiveUntil));
+        Assert.Equal(("Relief", (int?)buildingB, new DateOnly(2026, 11, 17)), (
+            profiles[1].Kind.ToString(), profiles[1].HomeBuildingId, profiles[1].EffectiveFrom));
+        Assert.Null(profiles[1].EffectiveUntil);
+        // The closed identity keeps its history and moves its revision; the new one starts at its own first version.
+        Assert.Equal(2L, profiles[0].Revision);
+        Assert.Equal(1L, profiles[1].Revision);
+        var entry = Assert.Single(await AdminSetupApi.AuditAsync(factory));
+        Assert.Equal("ACCOUNT_UPDATE", entry.Action);
+    }
+
+    [Fact]
+    public async Task Editing_a_relief_without_resending_the_kind_or_building_keeps_their_identity()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var buildingB = await TestData.AddBuildingAsync(factory, "B");
+        Scheduling.ScheduleWriteApi.Today(factory);
+        var created = await admin.PostAsJsonAsync(AccountApi.Path, new
+        {
+            role = "Cleaner", displayName = "แม่บ้านสแปร์", employeeId = "E3001", phone = "0893001000",
+            shift = "Day", cleanerKind = "Relief", homeBuildingId = buildingB,
+        });
+        var relief = await AccountApi.ReadAsync(created);
+
+        // The rename form of a page that does not know about relief identities sends none of the new fields.
+        var response = await EditAsync(admin, relief.Id, new { displayName = "แม่บ้านสแปร์ ทดสอบ", shift = "Day" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var edited = await AccountApi.ReadAsync(response);
+        Assert.Equal(("Relief", (int?)buildingB), (edited.CleanerKind, edited.HomeBuildingId));
+        var profiles = await AdminSetupApi.ReadAsync(factory, db => db.CleanerProfilePeriods
+            .Where(period => period.UserId == relief.Id).ToListAsync());
+        Assert.Equal(("Relief", (int?)buildingB), (Assert.Single(profiles).Kind.ToString(), profiles[0].HomeBuildingId));
+        Assert.Equal(1L, profiles[0].Revision);
+    }
 }

@@ -63,6 +63,7 @@ public sealed class JanitorialApiFactory(string signingKey = JanitorialApiFactor
         var host = base.CreateHost(builder);
         using var scope = host.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // EnsureCreated seeds overview state row 1. Each history fixture chooses its own baseline instant.
         db.Database.EnsureCreated();
         DbInitializer.SeedAsync(db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>()).GetAwaiter().GetResult();
         return host;

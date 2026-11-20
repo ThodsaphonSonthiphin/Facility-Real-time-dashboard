@@ -1,4 +1,4 @@
-import { QrCode } from 'lucide-react';
+import { MapPin, QrCode } from 'lucide-react';
 import { useId } from 'react';
 import type { PointStatus } from '../../shared/api/types';
 import { StatusChip } from '../../shared/components/StatusChip';
@@ -24,21 +24,26 @@ export function NextJob({ item }: { item: WorkItem }) {
   const look = tone[point.status] ?? neutral;
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} className={`overflow-hidden rounded-lg border bg-surface ${look.frame}`}>
-      <div className={`flex items-center justify-between gap-2 px-4 py-2 ${look.band}`}>
+    <section aria-labelledby={headingId} className={`overflow-hidden rounded-xl border bg-surface shadow-xs ${look.frame}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 ${look.band}`}>
         <h2 id={headingId} className={`text-base font-bold ${look.heading}`}>
           ทำอันนี้ก่อน
         </h2>
         <StatusChip status={point.status} size="lg" solid />
       </div>
-      <div className="flex flex-col gap-3 p-4">
-        <div className="flex flex-col">
-          <h3 className="text-2xl font-bold">{point.name}</h3>
-          <span className="text-text-2 tabular-nums">{whereText(item)}</span>
+      <div className="flex flex-col gap-2.5 p-3.5">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-subtle text-accent">
+            <MapPin aria-hidden="true" className="size-5" />
+          </span>
+          <div className="flex min-w-0 flex-col">
+            <h3 className="text-lg font-extrabold wrap-break-word">{point.name}</h3>
+            <span className="text-sm wrap-break-word text-text-2 tabular-nums">{whereText(item)}</span>
+          </div>
         </div>
         <span className="flex gap-3 rounded-md bg-bg p-3 text-text">{detailOf(point)}</span>
         {issue && <span className="text-sm font-semibold text-rework">{issue}</span>}
-        <span className="flex items-center gap-3 border-t border-border pt-3 text-lg font-bold text-text">
+        <span className="flex items-center gap-2.5 border-t border-border pt-2.5 text-base font-bold text-text">
           <QrCode aria-hidden="true" className="size-6 shrink-0" />
           {whatToDo(point.status)}
         </span>

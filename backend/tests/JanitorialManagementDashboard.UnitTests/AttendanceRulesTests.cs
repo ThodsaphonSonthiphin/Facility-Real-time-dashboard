@@ -1,4 +1,5 @@
 using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 
 namespace JanitorialManagementDashboard.UnitTests;
@@ -74,6 +75,85 @@ public class AttendanceRulesTests
     public void Shift_out_must_be_last() =>
         Assert.Contains("เรียงกัน", AttendanceRules.CheckTimes(Times(
             (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakOut, 300), (AttendanceEvent.BreakIn, 360), (AttendanceEvent.ShiftOut, 330))));
+
+    // ---- the same order check for a known lifecycle version ----
+
+    [Fact]
+    public void A_numbered_slot_in_full_lifecycle_order_is_valid() =>
+        Assert.Null(AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break1Out, 120), (AttendanceEvent.Break1In, 180),
+            (AttendanceEvent.Break2Out, 240), (AttendanceEvent.Break2In, 300), (AttendanceEvent.ShiftOut, 720))));
+
+    [Fact]
+    public void An_earlier_ordinal_event_recorded_after_a_later_ordinal_one_is_rejected() =>
+        // Break-1-In sits at ordinal 2 but at minute 300, after Break-2-Out at ordinal 3 and minute 240: out of order.
+        Assert.Contains("เรียงกัน", AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break1Out, 120), (AttendanceEvent.Break1In, 300),
+            (AttendanceEvent.Break2Out, 240), (AttendanceEvent.Break2In, 360), (AttendanceEvent.ShiftOut, 720))));
+
+    [Fact]
+    public void A_numbered_shift_out_before_the_last_break_is_rejected() =>
+        Assert.Contains("เรียงกัน", AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break2In, 300), (AttendanceEvent.ShiftOut, 240))));
+
+    [Fact]
+    public void A_numbered_break_needs_a_shift_in() =>
+        Assert.Contains("เข้างานก่อน", AttendanceRules.CheckTimes(
+            AttendanceLifecycleVersion.Numbered6, Times((AttendanceEvent.Break1Out, 120))));
+
+    [Fact]
+    public void A_legacy_event_is_not_a_numbered_action() =>
+        Assert.Contains("เรียงกัน", AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakOut, 120), (AttendanceEvent.ShiftOut, 720))));
+
+    [Fact]
+    public void A_forgotten_numbered_break_is_an_allowed_explicit_gap() =>
+        // Spec §8: an explicit gap is exactly how a forgotten break is represented, so the missing pair time is never required.
+        Assert.Null(AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+            (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break1In, 180), (AttendanceEvent.Break2Out, 240),
+            (AttendanceEvent.Break2In, 300), (AttendanceEvent.ShiftOut, 720))));
+
+    [Fact]
+    public void No_numbered_events_is_valid() =>
+        Assert.Null(AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times()));
+
+    [Fact]
+    public void A_legacy_slot_answers_the_legacy_check_unchanged()
+    {
+        // Controller ruling: Legacy4 delegates byte-for-byte, so its Thai messages stay exactly what the existing Admin
+        // correction page already shows.
+        foreach (var events in new[]
+        {
+            Times(),
+            Times((AttendanceEvent.ShiftOut, 720)),
+            Times((AttendanceEvent.ShiftIn, 0), (AttendanceEvent.ShiftOut, 0)),
+            Times((AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakIn, 360)),
+            Times((AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakOut, 300), (AttendanceEvent.BreakIn, 360)),
+        })
+        {
+            Assert.Equal(AttendanceRules.CheckTimes(events), AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Legacy4, events));
+        }
+    }
+
+    [Fact]
+    public void A_numbered_action_is_not_a_legacy_action()
+    {
+        // Task 9 review finding 2: the four-key check used to ignore a key outside its four, so a Supervisor could store a
+        // numbered fact on a legacy slot that no legacy surface can read. Both versions now refuse the other's actions.
+        Assert.Equal(
+            "เวลาต้องเรียงกัน: เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน",
+            AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Legacy4, Times(
+                (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.Break1Out, 120), (AttendanceEvent.ShiftOut, 720))));
+        // The refusal does not depend on the order of the keys: a numbered action alone is refused the same way.
+        Assert.Equal(
+            "เวลาต้องเรียงกัน: เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน",
+            AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Legacy4, Times((AttendanceEvent.Break2In, 300))));
+        // And the other way round, a legacy action is still not a numbered one.
+        Assert.Equal(
+            "เวลาต้องเรียงกัน: เข้างาน → ออกพัก 1 → กลับจากพัก 1 → ออกพัก 2 → กลับจากพัก 2 → เลิกงาน",
+            AttendanceRules.CheckTimes(AttendanceLifecycleVersion.Numbered6, Times(
+                (AttendanceEvent.ShiftIn, 0), (AttendanceEvent.BreakOut, 120), (AttendanceEvent.ShiftOut, 720))));
+    }
 
     [Fact]
     public void Missing_events_once_the_shift_is_over()

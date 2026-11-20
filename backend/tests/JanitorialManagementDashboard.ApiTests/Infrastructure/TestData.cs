@@ -42,6 +42,7 @@ public static class TestData
                 ShiftDate = slot.ShiftDate,
                 Shift = slot.Shift,
                 RoundWindowId = round?.Id,
+                RoundOriginId = round?.Id,
                 RoundStart = round?.Start,
                 RoundEnd = round?.End,
                 Placement = round is null ? Placement.OffRound : Placement.OnTime,
@@ -284,6 +285,27 @@ public static class TestData
         });
         return id;
     }
+
+    /// <summary>A Supervisor's dated regular responsibility for a building and shift, written straight to the database.</summary>
+    public static Task AddSupervisorScopeAsync(
+        JanitorialApiFactory factory, string employeeId, string buildingCode, Shift shift, DateOnly from, DateOnly? until = null) =>
+        factory.WithDbAsync(async db =>
+        {
+            var supervisor = await db.Users.SingleAsync(u => u.EmployeeId == employeeId);
+            var building = await db.Buildings.SingleAsync(b => b.Code == buildingCode);
+            db.SupervisorScopePeriods.Add(new Domain.Entities.Scheduling.SupervisorScopePeriod
+            {
+                SupervisorId = supervisor.Id,
+                BuildingId = building.Id,
+                Shift = shift,
+                EffectiveFrom = from,
+                EffectiveUntil = until,
+                Revision = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        });
 
     /// <summary>A Supervisor's Cover Assignment for a building, written straight to the database, assigned by the seeded Admin.</summary>
     public static async Task<int> AddSupervisorCoverAsync(

@@ -1,3 +1,4 @@
+import { attendanceButton } from '../support/attendance.ts';
 import { expect, test } from '../support/test.ts';
 import { loginAsEmployee } from '../support/login.ts';
 import { sidewaysOverflow } from '../support/pageWatch.ts';
@@ -10,7 +11,7 @@ test('the check-in page fits the phone and its buttons can be reached', async ({
   await expect(page).toHaveURL(/\/my-work$/);
   await page.goto(`/check-in/${checkInToken}`);
 
-  const firstEvent = page.getByRole('button', { name: /^(เข้างาน|ออกพัก|กลับจากพัก|เลิกงาน)$/ }).first();
+  const firstEvent = page.getByRole('button', { name: attendanceButton }).first();
   await expect(firstEvent).toBeVisible();
   expect(await sidewaysOverflow(page)).toBe(0);
 

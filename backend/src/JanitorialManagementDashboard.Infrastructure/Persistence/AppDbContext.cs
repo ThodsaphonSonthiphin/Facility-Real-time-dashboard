@@ -1,5 +1,8 @@
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -23,6 +26,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CoverAssignment> CoverAssignments => Set<CoverAssignment>();
     public DbSet<AuditEntry> AuditLog => Set<AuditEntry>();
     public DbSet<AlertReview> AlertReviews => Set<AlertReview>();
+    public DbSet<SupervisorScopePeriod> SupervisorScopePeriods => Set<SupervisorScopePeriod>();
+    public DbSet<CleanerProfilePeriod> CleanerProfilePeriods => Set<CleanerProfilePeriod>();
+    public DbSet<ScheduleBaseline> ScheduleBaselines => Set<ScheduleBaseline>();
+    public DbSet<ScheduleBaselineDay> ScheduleBaselineDays => Set<ScheduleBaselineDay>();
+    public DbSet<WeeklyDayOff> WeeklyDayOffs => Set<WeeklyDayOff>();
+    public DbSet<WeeklyDayOffChoice> WeeklyDayOffChoices => Set<WeeklyDayOffChoice>();
+    public DbSet<ScheduleException> ScheduleExceptions => Set<ScheduleException>();
+    public DbSet<ReliefAssignment> ReliefAssignments => Set<ReliefAssignment>();
+    public DbSet<AreaTransfer> AreaTransfers => Set<AreaTransfer>();
+    public DbSet<AreaTransferConfirmation> AreaTransferConfirmations => Set<AreaTransferConfirmation>();
+    public DbSet<AttendanceSlotLifecycle> AttendanceSlotLifecycles => Set<AttendanceSlotLifecycle>();
+    public DbSet<AttendanceGap> AttendanceGaps => Set<AttendanceGap>();
+    public DbSet<ScheduleAnchor> ScheduleAnchors => Set<ScheduleAnchor>();
+    public DbSet<ScheduleBaselineAnchor> ScheduleBaselineAnchors => Set<ScheduleBaselineAnchor>();
+    public DbSet<ScheduleScopeAnchor> ScheduleScopeAnchors => Set<ScheduleScopeAnchor>();
+    public DbSet<ScheduleCommandReceipt> ScheduleCommandReceipts => Set<ScheduleCommandReceipt>();
+    public DbSet<ScheduleChange> ScheduleChanges => Set<ScheduleChange>();
+    public DbSet<OverviewTargetRevision> OverviewTargetRevisions => Set<OverviewTargetRevision>();
+    public DbSet<OverviewTargetState> OverviewTargetStates => Set<OverviewTargetState>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -237,6 +259,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(x => new { x.ServicePointId, x.Month });
             e.HasOne<ServicePoint>().WithMany().HasForeignKey(x => x.ServicePointId).OnDelete(DeleteBehavior.Restrict);
         });
+
+        // ADR facility-0215: the dated scheduling records live in one grouped mapping file; this context keeps the
+        // per-entity lambda convention for the legacy tables above.
+        SchedulingModel.Configure(modelBuilder);
+        OverviewTargetModel.Configure(modelBuilder);
 
         modelBuilder.UseSnakeCaseColumns();
     }

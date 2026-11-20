@@ -98,6 +98,7 @@ describe('Dashboard filters (D1, facility-0024)', () => {
     expect(tileNames()).toEqual(['ห้องน้ำชาย', 'ห้องน้ำ Office']);
 
     await user.click(screen.getByRole('button', { name: 'ออกจากระบบ' }));
+    await user.click(await screen.findByRole('button', { name: 'ยืนยันออกจากระบบ' }));
     await waitFor(() => expect(store.getState().dashboard).toEqual(startState));
   });
 
@@ -151,7 +152,9 @@ describe('Dashboard filters (D1, facility-0024)', () => {
     await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
     await user.click(legend().getByRole('button', { name: 'ยังไม่ทำ 0' }));
 
-    await user.click(screen.getByRole('button', { name: 'ล้างตัวกรอง' }));
+    const resetButtons = screen.getAllByRole('button', { name: 'ล้างตัวกรอง' });
+    expect(resetButtons.length).toBeGreaterThanOrEqual(1);
+    await user.click(resetButtons[0]);
 
     expect(store.getState().dashboard).toEqual(startState);
     expect(await screen.findByRole('region', { name: 'AR01 Area ทดลอง' })).toBeInTheDocument();

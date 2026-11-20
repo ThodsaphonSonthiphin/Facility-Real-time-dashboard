@@ -10,8 +10,6 @@ function serve(answer: unknown = myBuilding(), routes: FakeRoutes = {}) {
   return fakeServer({ ...supervisorSession, 'GET /api/my-building': () => ({ status: 200, body: answer }), ...routes });
 }
 
-const LIVE = 'หน้านี้อัปเดตเองเมื่อแม่บ้านส่งงานหรือหัวหน้าตรวจ';
-
 /** Wireframe M15's points in the server's card order (not by what waits for the Supervisor). */
 const fourPoints = [
   point({ id: 1, name: 'โถงทางเดิน', status: 'NotYetDone' }),
@@ -47,25 +45,36 @@ const tiles = () =>
   within(screen.getByRole('list', { name: 'สรุปการตรวจ' }))
     .getAllByRole('listitem')
     .map((li) => li.textContent);
+/** Every link inside a point card: facility-0059 says an inspection starts only from the sign's QR. */
+const cardLinks = () => screen.queryAllByRole('link').filter((link) => link.closest('article, li') !== null);
 
 describe('MyBuildingPage (M15, facility-0057)', () => {
-  it('lists what waits for the Supervisor first, with the summary and the clock shift', async () => {
+  it('lists what waits for the Supervisor first, with interactive summary filters and the clock shift', async () => {
     serve(myBuilding([section(fourPoints)]));
-    await renderApp('/my-building');
+    const { user } = await renderApp('/my-building');
 
     const own = await screen.findByRole('region', { name: 'ตึกทดลอง' });
     expect(cardNames(own)).toEqual(['ห้องน้ำชาย', 'ห้องน้ำหญิง', 'จุดทิ้งขยะ', 'โถงทางเดิน']);
     expect(screen.getByRole('heading', { level: 1, name: 'ตึกของฉัน' })).toBeInTheDocument();
-    expect(screen.getByText('ตอนนี้ กะเช้า 07:00–19:00')).toBeInTheDocument();
-    expect(screen.getByText('2 พื้นที่ · 4 จุด')).toBeInTheDocument();
+    expect(screen.getByText('กะเช้า 07:00–19:00 · 2 พื้นที่ · 4 จุด')).toBeInTheDocument();
     expect(tiles()).toEqual(['2 รอตรวจ', '1 รอแม่บ้านแก้', '0 ตรวจผ่าน']);
     expect(screen.getByText('ส่ง 10:05 · แม่บ้านทดสอบ')).toBeInTheDocument();
     expect(screen.getByText('Area ถัดไป · รอบ 09:00–11:00')).toBeInTheDocument();
     expect(screen.getByText('ให้แก้ 09:40: “รอบถังขยะยังมีคราบ” · รอแม่บ้านส่งใหม่')).toBeInTheDocument();
     expect(screen.getByText('ยังไม่ส่ง · ส่งได้ถึง 12:00')).toBeInTheDocument();
     expect(screen.getAllByText('ไปที่จุดนี้แล้วสแกน QR เพื่อตรวจ')).toHaveLength(2);
-    // facility-0059: only the sign's QR opens the inspection
-    expect(within(screen.getByRole('main')).queryAllByRole('link')).toHaveLength(0);
+    // facility-0059: only the sign's QR opens the inspection, so no point card is a link
+    expect(cardLinks()).toHaveLength(0);
+    // Interactive summary card filtering (Heuristics #6 & #7)
+    await user.click(screen.getByRole('button', { name: /รอแม่บ้านแก้/ }));
+    expect(cardNames(screen.getByRole('region', { name: 'ตึกทดลอง' }))).toEqual(['จุดทิ้งขยะ']);
+    await user.click(screen.getByRole('button', { name: 'แสดงทุกสถานะ (4 จุด)' }));
+    expect(cardNames(screen.getByRole('region', { name: 'ตึกทดลอง' }))).toEqual([
+      'ห้องน้ำชาย',
+      'ห้องน้ำหญิง',
+      'จุดทิ้งขยะ',
+      'โถงทางเดิน',
+    ]);
   });
 
   it('outside the own shift it says so and does not send anyone to scan (facility-0048)', async () => {
@@ -92,7 +101,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
 
     const covered = await screen.findByRole('region', { name: 'ตึกข้างเคียง (ตรวจแทนกะนี้)' });
     expect(cardNames(covered)).toEqual(['ห้องประชุม']);
-    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'))).toEqual(['building-1', 'building-2']);
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby')).filter(Boolean)).toEqual(['building-1', 'building-2']);
   });
 
   it('an account with no building says to ask the Admin', async () => {
@@ -113,7 +122,6 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     const server = serve(myBuilding([section(fourPoints)]));
     await renderApp('/my-building');
     const own = await screen.findByRole('region', { name: 'ตึกทดลอง' });
-    expect(await screen.findByText(LIVE)).toBeInTheDocument();
     await settled(server);
     expect(hub.latest().tokens).toEqual(['token-supervisor']);
     expect(hub.latest().serverTimeoutInMilliseconds).toBe(30_000); // a phone keeps the client's own wait (facility-0107)
@@ -151,7 +159,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
       },
     });
     await renderApp('/my-building');
-    await screen.findByText(LIVE);
+    await screen.findByRole('region', { name: 'ตึกทดลอง' });
     await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-building')).toHaveLength(2));
 
     act(() => hub.latest().push('ScanRecorded', pushed));
@@ -162,19 +170,19 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     expect(screen.getByText('ส่ง 10:20 · แม่บ้านทดสอบ')).toBeInTheDocument();
   });
 
-  it('a dropped hub says so, and coming back asks the server again (facility-0064)', async () => {
+  it('a dropped hub shows the top connection banner, and coming back hides it and refetches (facility-0064)', async () => {
     const server = serve();
     await renderApp('/my-building');
-    await screen.findByText(LIVE);
+    await screen.findByRole('region', { name: 'ตึกทดลอง' });
     await settled(server);
 
     act(() => hub.latest().reconnecting());
-    expect(screen.getByText('ข้อมูลอาจยังไม่ล่าสุด กด "อัปเดต" เพื่อลองโหลดใหม่')).toBeInTheDocument();
+    expect(screen.getByText('ข้อมูลอาจยังไม่ล่าสุด การเชื่อมต่อกำลังลองใหม่')).toBeInTheDocument();
 
     act(() => hub.latest().reconnected());
 
     await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-building')).toHaveLength(3));
-    expect(screen.getByText(LIVE)).toBeInTheDocument();
+    expect(screen.queryByText('ข้อมูลอาจยังไม่ล่าสุด การเชื่อมต่อกำลังลองใหม่')).not.toBeInTheDocument();
   });
 
   it('"อัปเดต" asks the server again', async () => {
@@ -188,12 +196,15 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-building')).toHaveLength(3));
   });
 
-  it('logging out closes the live connection', async () => {
+  it('logging out from the Account tab closes the live connection after confirmation', async () => {
     serve(undefined, { 'POST /api/auth/logout': () => ({ status: 204 }) });
     const { user } = await renderApp('/my-building');
-    await screen.findByText(LIVE);
+    await screen.findByRole('region', { name: 'ตึกทดลอง' });
 
-    await user.click(screen.getByRole('button', { name: 'ออกจากระบบ' }));
+    const nav = screen.getByRole('navigation', { name: 'เมนูหลักหัวหน้างาน' });
+    await user.click(within(nav).getByRole('link', { name: 'บัญชี' }));
+    await user.click(await screen.findByRole('button', { name: 'ออกจากระบบ' }));
+    await user.click(await screen.findByRole('button', { name: 'ยืนยันออกจากระบบ' }));
 
     await waitFor(() => expect(hub.latest().stops).toBe(1));
   });
@@ -204,5 +215,31 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่');
     expect(screen.getByRole('heading', { level: 1, name: 'ตึกของฉัน' })).toBeInTheDocument();
+  });
+
+  it('read error offers a retry button that reloads the building', async () => {
+    let attempts = 0;
+    const server = serve(myBuilding([section(fourPoints)]), {
+      'GET /api/my-building': () => {
+        attempts += 1;
+        return attempts === 1 ? { status: 503 } : { status: 200, body: myBuilding([section(fourPoints)]) };
+      },
+    });
+    const { user } = await renderApp('/my-building');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('ระบบขัดข้อง ลองอีกครั้งในอีกสักครู่');
+    await user.click(within(alert).getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByRole('region', { name: 'ตึกทดลอง' })).toBeInTheDocument();
+    expect(server.calls.filter((c) => c.path === '/api/my-building').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('never renders CleanerBottomNav for a Supervisor', async () => {
+    serve(myBuilding([section(fourPoints)]));
+    await renderApp('/my-building');
+
+    await screen.findByRole('region', { name: 'ตึกทดลอง' });
+    expect(screen.queryByRole('navigation', { name: 'เมนูหลักแม่บ้าน' })).not.toBeInTheDocument();
   });
 });

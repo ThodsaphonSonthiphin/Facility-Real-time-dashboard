@@ -1,5 +1,6 @@
 import type { Dispatch } from '@reduxjs/toolkit';
 import { hubFollowEnded, hubStatusChanged, type HubStatus } from '../../store/slices/hubSlice';
+import type { ScheduleInvalidation } from './scheduleTypes';
 import type { AttendanceChanged, PointCard } from './types';
 
 /** facility-0064: the automatic reconnect's waits; after it gives up, a fresh start every 3 s. */
@@ -19,6 +20,13 @@ export const HUB_ONLINE_ASK_MS = 1_000;
 /** ScanHub's point events (facility-0057, 0058): each carries the point's whole card as the clock's shift sees it. */
 const POINT_EVENTS = ['ScanRecorded', 'InspectionRecorded'] as const;
 
+/**
+ * ScheduleHub's invalidation (spec §12, ScheduleNotifications.EventName). The payload is the command's identity only, so a
+ * recipient learns "refetch", never a person or a schedule value it is not entitled to.
+ */
+const SCHEDULE_EVENT = 'ScheduleChanged';
+const OVERVIEW_EVENT = 'OverviewChanged';
+
 export interface ScanHubFollow {
   /** This connection's name in hubSlice (plan 11 decision 4); the page's badge or footer reads the same key. */
   key: string;
@@ -32,15 +40,21 @@ export interface ScanHubFollow {
   onPoint?: (point: PointCard) => void;
   /** AttendanceRecorded, sent to Admins only (facility-0027 rule 5); left out by a page that shows no attendance. */
   onAttendance?: (change: AttendanceChanged) => void;
+  /** ScheduleChanged (spec §12): a committed schedule command touched a slot or building this follower may read. */
+  onSchedule?: (change: ScheduleInvalidation) => void;
+  /** OverviewChanged: a target image was committed, so the Admin may reread their projection. */
+  onOverview?: (change: { revisionId: number }) => void;
   /** Pushes may have been missed while the connection was down: ask the server again (facility-0064 item 2). */
   onMissed: () => void;
+  /** Invoked before a recovering transport goes live so a follower can track its own data recovery. */
+  onResumed?: () => void;
   /** How long to wait to hear from the server before the link counts as lost; left out, the client's own 30 s. */
   serverTimeoutMs?: number;
 }
 
 /**
- * #26 hub-cache-bridge: one connection per cache entry, opened in onCacheEntryAdded, so StrictMode and remounts never
- * open a second one. The hub sends a point's whole card, so the page patches its cache instead of asking again.
+ * #26 hub-cache-bridge: one connection per cache entry, opened in onCacheEntryAdded, so StrictMode and remounts
+ * reuse it. Each follower handles pushes according to the data it reads.
  */
 export async function followScanHub({
   key,
@@ -50,7 +64,10 @@ export async function followScanHub({
   accessToken,
   onPoint,
   onAttendance,
+  onSchedule,
+  onOverview,
   onMissed,
+  onResumed,
   serverTimeoutMs,
 }: ScanHubFollow): Promise<void> {
   // The SignalR client is a third of the main JS and no page needs it before its first answer, so it comes in its own
@@ -91,7 +108,12 @@ export async function followScanHub({
   let removed = false;
   let restartTimer: ReturnType<typeof setTimeout> | undefined;
   let onlineAskTimer: ReturnType<typeof setTimeout> | undefined;
-  const setStatus = (status: HubStatus) => dispatch(hubStatusChanged({ key, status }));
+  let lastStatus: HubStatus = 'connecting';
+  const setStatus = (status: HubStatus) => {
+    if (status === 'live' && lastStatus === 'reconnecting') onResumed?.();
+    lastStatus = status;
+    dispatch(hubStatusChanged({ key, status }));
+  };
 
   const restartLater = () => {
     if (!removed) {
@@ -135,7 +157,15 @@ export async function followScanHub({
       onAttendance(change);
     });
   }
-  // A handler for each event this follower does not take: an Admin gets all three, and the client logs a
+  if (onSchedule) {
+    connection.on(SCHEDULE_EVENT, (change: ScheduleInvalidation) => {
+      onSchedule(change);
+    });
+  }
+  connection.on(OVERVIEW_EVENT, (change: { revisionId: number }) => {
+    onOverview?.(change);
+  });
+  // A handler for each event this follower does not take: an Admin may get each event, and the client logs a
   // warning for every message with no handler
   if (!onPoint) {
     for (const event of POINT_EVENTS) {
@@ -144,6 +174,9 @@ export async function followScanHub({
   }
   if (!onAttendance) {
     connection.on('AttendanceRecorded', () => {});
+  }
+  if (!onSchedule) {
+    connection.on(SCHEDULE_EVENT, () => {});
   }
   connection.onreconnecting(() => setStatus('reconnecting'));
   connection.onreconnected(() => {

@@ -2,17 +2,26 @@ using System.Text.Json;
 
 namespace JanitorialManagementDashboard.ApiTests.Admin;
 
-public record BoardEventModel(long Id, string EventType, DateTime OccurredAt, string Source, bool? WithinRadius, short? DistanceM);
+public record BoardEventModel(long Id, string EventType, DateTime OccurredAt, string Source, bool? WithinRadius, short? DistanceM, int AreaId = 0);
 
 public record BoardCoverModel(int Id, int UserId, string EmployeeId, string DisplayName, string? OwnAreaCode, DateTime AssignedAt, DateTime? ShiftInAt);
 
+public record BoardEntryEvidenceModel(string Kind, DateTime RecordedAt, int? TransferId);
+
+public record BoardResponsibilityModel(
+    int UserId, string EmployeeId, string DisplayName, string State, int? LastConfirmedAreaId, DateTime? ConfirmedAt);
+
+public record BoardCleanerAttendanceModel(AssignedCleanerModel Cleaner, List<BoardEventModel> Events);
+
 public record BoardRowModel(
     int AreaId, string AreaCode, string AreaName, string BuildingCode, AssignedCleanerModel? Cleaner,
-    string State, List<BoardEventModel> Events, List<BoardCoverModel> Covers);
+    string State, List<BoardEventModel> Events, List<BoardCoverModel> Covers,
+    string? Entry = null, List<BoardEntryEvidenceModel>? EntryEvidence = null,
+    BoardResponsibilityModel? Responsibility = null, List<BoardCleanerAttendanceModel>? AdditionalCleaners = null);
 
 public record BoardSummaryModel(int Required, int Present, int Empty, int Covered);
 
-public record AttendanceBoardModel(DateOnly ShiftDate, string Shift, bool ShiftEnded, BoardSummaryModel Summary, List<BoardRowModel> Rows);
+public record AttendanceBoardModel(DateOnly ShiftDate, string Shift, bool ShiftEnded, BoardSummaryModel Summary, List<BoardRowModel> Rows, string? LifecycleVersion = null);
 
 public record AlertPersonModel(int Id, string EmployeeId, string DisplayName, string Role, string? AreaCode);
 

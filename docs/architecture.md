@@ -142,6 +142,14 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 ---
 
+## Dated scheduling and attendance
+
+The scoped week read goes through `ScheduleStore` and the pure `ScheduleResolver`. It loads dated identities, Supervisor building periods, baselines and overrides with the selected week's days. Cleaner reads are scoped to their own account. Supervisor reads use their dated building and shift coverage. The Admin view can select any building and shift.
+
+`ScheduleCommandService` validates a server-issued command identity and locks the relevant anchors in a consistent order. The handler applies its business changes and stores audit facts and the receipt in the same transaction. After commit the server sends scoped invalidation so affected screens can refetch an authorised read. The UI preserves a draft when a revision changes or a result remains uncertain.
+
+Attendance reads the stored lifecycle for the slot and keeps actual timestamps in UTC. The scan, correction and transfer-confirmation paths take the same person-slot lock while checking current facts. `EffectiveDutyReader` resolves the Cleaner's dated assignment, relief or transfer status. The attendance board includes accepted relief assignments and projects historical entry evidence separately from current responsibility. It counts a destination Area as entered only from accepted arrival evidence or an initial check-in. [Code paths](code-map.md#dated-scheduling-and-actual-attendance) · [Cutover and rollback](handover.md#210-เตรียมเปิดใช้ตารางงานและการลงเวลาแบบใหม่)
+
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
 > Note (plan 11): the phone side is plan 8's `pages/scan`; the Admin side is `pages/dashboard`, whose `getServicePoints` cache entry follows the hub with `followScanHub`. Plan 9's Supervisor live updates and plan 11's attendance board are in the section 2 diagram.

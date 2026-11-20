@@ -72,3 +72,90 @@ export function factoryArea(n: number, now: Date = new Date()) {
     cleaner: { employeeId: `7${pad(number, 6)}`, phone: dayCleaner.phone },
   };
 }
+
+interface SchedulingArea {
+  id: number;
+  code: string;
+  checkInToken: string;
+  pointToken?: string;
+}
+
+export interface SchedulingPerson extends Employee {
+  id: number;
+}
+
+interface SchedulingFixture {
+  shiftDate: string;
+  shift: 'Day' | 'Night';
+  weekStart: string;
+  planningWeek: string;
+  activation: { opensAt: string; closesAt: string; activatedAt: string; version: 'Numbered6' };
+  buildingA: { id: number; code: string };
+  buildingB: { id: number; code: string };
+  buildingC: { id: number; code: string };
+  supervisorAB: SchedulingPerson;
+  supervisorC: SchedulingPerson;
+  weekly: SchedulingPerson;
+  competing: SchedulingPerson;
+  relief: SchedulingPerson;
+  leave: SchedulingPerson;
+  transfer: SchedulingPerson;
+  leaveArea: SchedulingArea;
+  homeArea: SchedulingArea;
+  destinationArea: SchedulingArea;
+  leaveStartsAt: string;
+  leaveEndsAt: string;
+  transferEffectiveAt: string;
+}
+
+export function schedulingFixture(): SchedulingFixture {
+  const { scheduling } = JSON.parse(readFileSync(`${process.env.E2E_RUN_DIR}/dataset.json`, 'utf8')) as {
+    scheduling?: FixtureWithoutCredentials;
+  };
+  if (!scheduling) throw new Error('Missing the run-owned scheduling scenario fixtures');
+  const employee = (person: Omit<SchedulingPerson, 'phone'>): SchedulingPerson => ({
+    ...person, phone: dayCleaner.phone,
+  });
+  return {
+    ...scheduling,
+    supervisorAB: employee(scheduling.supervisorAB),
+    supervisorC: employee(scheduling.supervisorC),
+    weekly: employee(scheduling.weekly),
+    competing: employee(scheduling.competing),
+    relief: employee(scheduling.relief),
+    leave: employee(scheduling.leave),
+    transfer: employee(scheduling.transfer),
+  };
+}
+
+type SchedulingEmployeeKey = 'supervisorAB' | 'supervisorC' | 'weekly' | 'competing' | 'relief' | 'leave' | 'transfer';
+type FixtureWithoutCredentials = Omit<SchedulingFixture, SchedulingEmployeeKey> & {
+  [key in SchedulingEmployeeKey]: Omit<SchedulingPerson, 'phone'>;
+};
+
+interface OverviewFixture {
+  revisionId: number;
+  imageHash: string;
+  captureStartedAtUtc: string;
+  firstDate: string;
+  lastDate: string;
+  emptyDate: string;
+  preBaselineDate: string;
+  date: string;
+  shift: 'Night';
+  buildingId: number;
+  entered: number;
+  submitted: number;
+  inspected: number;
+  enteredAreas: { id: number; code: string }[];
+}
+
+export function overviewFixture(): OverviewFixture {
+  const { overview } = JSON.parse(readFileSync(`${process.env.E2E_RUN_DIR}/dataset.json`, 'utf8')) as {
+    overview: OverviewFixture;
+  };
+  const repeat = JSON.parse(readFileSync(`${process.env.E2E_RUN_DIR}/dataset-repeat.json`, 'utf8'));
+  if (!overview || JSON.stringify(overview) !== JSON.stringify(repeat.overview))
+    throw new Error('Missing or changed overview fixture on repeated seed');
+  return overview;
+}

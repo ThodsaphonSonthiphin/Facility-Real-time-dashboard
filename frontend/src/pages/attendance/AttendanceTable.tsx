@@ -1,22 +1,24 @@
 import { ArrowRightLeft, Check, Coffee, MapPin, Minus, Pencil, UserX, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router';
 import type { AreaAttendanceState, BoardEvent, BoardRow } from '../../shared/api/attendanceBoardApi';
+import { AvatarBadge } from '../../shared/components/AvatarBadge/AvatarBadge';
 import { Table } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
 import { Badge, EditedMark } from '../../shared/components/Badge';
 import { PageEmpty } from '../../shared/components/PageState';
-import { tableCell } from '../../shared/components/styles';
-import { attendanceEvents, eventLabel } from '../../shared/utils/labels';
+import { buttonClass, tableCell } from '../../shared/components/styles';
+import type { AttendanceLifecycleVersion } from '../../shared/api/types';
+import { entryLabel, eventLabel, lifecycleEvents, transferStateLabel } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
 import { useBuildingNames, buildingText } from '../../shared/api/buildingNames';
-import { areaStateLabel, coverDetail, eventOf } from './attendanceRules';
+import { areaStateLabel, attendanceTargets, coverDetail, eventOf } from './attendanceRules';
 
 interface AttendanceTableProps {
   rows: BoardRow[];
-  /** "เพิ่มเวลา" / "แก้เวลา" on a row with a regular Cleaner (facility-0051). Without it the table has no action column. */
-  onCorrect?: (row: BoardRow) => void;
-  /** "หาคนทำแทน" on a row with nobody (the design file's D2): the cover form opens beside the table. */
-  onCover?: (row: BoardRow) => void;
+  lifecycleVersion?: AttendanceLifecycleVersion;
+  /** "เพิ่มเวลา" / "แก้เวลา" on a row with a regular Cleaner (facility-0051). */
+  onCorrect?: (row: BoardRow, userId: number) => void;
   /** The bar under the table, inside its box: the count, the [แก้] legend and the pages. */
   footer?: ReactNode;
 }
@@ -34,8 +36,10 @@ const stateChip: Record<AreaAttendanceState, { tone: string; Icon: LucideIcon }>
 const subClass = 'block text-xs font-normal text-text-2';
 
 /** Wireframe D2's table, in the server's order: Areas with nobody first (facility-0050). Names are React text only. */
-export function AttendanceTable({ rows, onCorrect, onCover, footer }: AttendanceTableProps) {
+export function AttendanceTable({ rows, lifecycleVersion, onCorrect, footer }: AttendanceTableProps) {
   const names = useBuildingNames();
+  const actions = lifecycleEvents(lifecycleVersion);
+  const showActionColumn = Boolean(onCorrect || rows.some((row) => row.state === 'Empty'));
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-surface">
@@ -45,7 +49,7 @@ export function AttendanceTable({ rows, onCorrect, onCover, footer }: Attendance
   }
   return (
     <Table label="การเข้างานรายพื้นที่" minWidth="min-w-225" footer={footer}>
-      <thead>
+      <thead className="[&_th]:font-bold">
         <tr>
           <th scope="col" className="min-w-40">
             พื้นที่
@@ -56,12 +60,12 @@ export function AttendanceTable({ rows, onCorrect, onCover, footer }: Attendance
           <th scope="col" className={tableCell.chip}>
             สถานะ
           </th>
-          {attendanceEvents.map((type) => (
+          {actions.map((type) => (
             <th key={type} scope="col" className={`${tableCell.num} whitespace-nowrap`}>
               {eventLabel[type]}
             </th>
           ))}
-          {(onCorrect || onCover) && (
+          {showActionColumn && (
             <th scope="col" className={`relative ${tableCell.actions}`}>
               {/* Contain the absolute sr-only label inside the scrolling table, so it cannot widen the document. */}
               <span className="sr-only">การกระทำ</span>
@@ -82,31 +86,33 @@ export function AttendanceTable({ rows, onCorrect, onCover, footer }: Attendance
             </td>
             <td className={tableCell.chip}>
               <StateChip state={row.state} />
+              <EntryDetails row={row} />
             </td>
-            {attendanceEvents.map((type) => (
+            {actions.map((type) => (
               <td key={type} className={`${tableCell.num} w-26`}>
                 <EventTime event={eventOf(row, type)} />
               </td>
             ))}
-            {(onCorrect || onCover) && (
+            {showActionColumn && (
               <td className={tableCell.actions}>
-                <span className="inline-flex items-center gap-2">
-                  {row.cleaner && onCorrect && (
+                <span className="inline-flex flex-col items-start gap-2">
+                  {onCorrect && attendanceTargets(row).map(({ cleaner }) => (
                     <Button
+                      key={cleaner.id}
                       variant="link"
                       size="desk"
-                      aria-label={`แก้เวลา ${row.cleaner.displayName}`}
-                      onClick={() => onCorrect(row)}
+                      aria-label={`แก้เวลา ${cleaner.displayName}`}
+                      onClick={() => onCorrect(row, cleaner.id)}
                     >
                       <Pencil aria-hidden="true" className="size-4" />
-                      แก้เวลา
+                      {row.additionalCleaners?.length ? `แก้เวลา ${cleaner.displayName}` : 'แก้เวลา'}
                     </Button>
-                  )}
-                  {row.state === 'Empty' && onCover && (
-                    <Button size="desk" aria-label={`หาคนทำแทน ${row.areaCode}`} onClick={() => onCover(row)}>
+                  ))}
+                  {row.state === 'Empty' && (
+                    <Link to="/admin/schedules" data-tap="" className={buttonClass('link', 'desk')}>
                       <ArrowRightLeft aria-hidden="true" className="size-4" />
-                      หาคนทำแทน
-                    </Button>
+                      ไปจัดคนแทนที่ตารางงาน
+                    </Link>
                   )}
                 </span>
               </td>
@@ -130,14 +136,47 @@ function StateChip({ state }: { state: AreaAttendanceState }) {
   );
 }
 
+function EntryDetails({ row }: { row: BoardRow }) {
+  const responsibilities = row.responsibilities ?? (row.responsibility ? [row.responsibility] : []);
+  return (
+    <>
+      {row.entry && <span className={subClass}>{entryLabel[row.entry]}</span>}
+      {row.entryEvidence?.map((evidence, index) => (
+        <span key={index} className={subClass}>
+          {evidence.kind === 'shift-in' ? 'ลงเวลาเข้างาน' : 'ยืนยันเข้าพื้นที่ใหม่'} {formatTime(evidence.recordedAt)}
+        </span>
+      ))}
+      {responsibilities.map((responsibility) => (
+        <span key={responsibility.userId} className={subClass}>
+          {responsibility.displayName} · {transferStateLabel[responsibility.state]}
+        </span>
+      ))}
+    </>
+  );
+}
+
 function Who({ row }: { row: BoardRow }) {
   return (
     <div className="flex flex-col">
-      <span>{row.cleaner ? row.cleaner.displayName : 'ไม่มีแม่บ้านประจำ'}</span>
+      {row.cleaner ? (
+        <span className="flex items-center gap-2">
+          <AvatarBadge name={row.cleaner.displayName} size="sm" tone={row.state === 'Empty' ? 'amber' : 'blue'} />
+          <span>{row.cleaner.displayName}</span>
+        </span>
+      ) : (
+        <span>ไม่มีแม่บ้านประจำ</span>
+      )}
       {row.cleaner && !eventOf(row, 'ShiftIn') && <span className={subClass}>ยังไม่ลงเวลา</span>}
+      {row.additionalCleaners?.map(({ cleaner }) => (
+        <span key={cleaner.id} className="mt-1 flex items-center gap-2">
+          <AvatarBadge name={cleaner.displayName} size="sm" tone="teal" />
+          <span>{cleaner.displayName}</span>
+        </span>
+      ))}
       {row.covers.map((cover) => (
         <span key={cover.id} className="mt-1 flex flex-col">
           <span className="flex flex-wrap items-center gap-1.5">
+            <AvatarBadge name={cover.displayName} size="sm" tone="purple" />
             {cover.displayName}
             <Badge kind="cover">ทำแทน</Badge>
           </span>
@@ -158,7 +197,8 @@ function EventTime({ event }: { event?: BoardEvent }) {
   }
   return (
     <span className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-      {event.source !== 'Scan' && <EditedMark />}
+      {event.source === 'SupervisorAdd' && <span className="text-xs text-text-2">หัวหน้าเติมเวลา</span>}
+      {(event.source === 'AdminAdd' || event.source === 'AdminEdit') && <EditedMark />}
       {formatTime(event.occurredAt)}
       {event.withinRadius === false && (
         <span

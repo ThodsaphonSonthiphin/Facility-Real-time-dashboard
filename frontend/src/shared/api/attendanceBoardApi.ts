@@ -3,7 +3,7 @@ import { getValidAccessToken } from '../auth/session';
 import type { AssignedCleaner } from './adminSetupApi';
 import { baseApi } from './baseApi';
 import { ADMIN_HUB_SERVER_TIMEOUT_MS, followScanHub } from './scanHub';
-import type { AttendanceEvent, Shift } from './types';
+import type { AttendanceEvent, AttendanceLifecycleVersion, Shift } from './types';
 
 /**
  * The attendance board (facility-0027, 0050), read by the attendance page (D2) and the alert page's "Areas with nobody"
@@ -16,9 +16,10 @@ export type AreaAttendanceState = 'Empty' | 'Working' | 'OnBreak' | 'Done' | 'Co
 /** BoardEventDto. source AdminAdd or AdminEdit is the "แก้โดย Admin" badge (facility-0051); withinRadius false is a flag. */
 export interface BoardEvent {
   id: number;
+  areaId?: number;
   eventType: AttendanceEvent;
   occurredAt: string;
-  source: 'Scan' | 'AdminAdd' | 'AdminEdit';
+  source: 'Scan' | 'AdminAdd' | 'AdminEdit' | 'SupervisorAdd';
   withinRadius?: boolean;
   distanceM?: number;
 }
@@ -34,7 +35,32 @@ export interface BoardCover {
   shiftInAt?: string;
 }
 
-/** BoardRowDto. cleaner is the Area's regular Cleaner for the shift (missing when none); events are theirs. */
+/** BoardEntryEvidenceDto (spec §13, ADR facility-0216): one legitimate actual entry fact and its provenance. */
+export interface BoardEntryEvidence {
+  kind: 'shift-in' | 'transfer-arrival';
+  recordedAt: string;
+  transferId?: number;
+}
+
+/** BoardResponsibilityDto: the transfer-derived current responsibility, kept apart from historical entry (spec §13). */
+export interface BoardResponsibility {
+  userId: number;
+  employeeId: string;
+  displayName: string;
+  state: 'instructed' | 'confirmed' | 'cancelled';
+  lastConfirmedAreaId?: number;
+  confirmedAt?: string;
+}
+
+/**
+ * BoardRowDto. cleaner is the Area's regular Cleaner for the shift (missing when none); events are theirs. entry is the
+ * spec §13 category with its evidence and responsibility is the separate current answer.
+ */
+export interface BoardCleanerAttendance {
+  cleaner: AssignedCleaner;
+  events: BoardEvent[];
+}
+
 export interface BoardRow {
   areaId: number;
   areaCode: string;
@@ -44,6 +70,11 @@ export interface BoardRow {
   state: AreaAttendanceState;
   events: BoardEvent[];
   covers: BoardCover[];
+  entry?: 'entered' | 'covered' | 'unassigned';
+  entryEvidence?: BoardEntryEvidence[];
+  responsibility?: BoardResponsibility;
+  additionalCleaners?: BoardCleanerAttendance[];
+  responsibilities?: BoardResponsibility[];
 }
 
 /** BoardSummaryDto: required = present + empty + covered. */
@@ -59,6 +90,7 @@ export interface AttendanceBoard {
   shiftDate: string;
   shift: Shift;
   shiftEnded: boolean;
+  lifecycleVersion?: AttendanceLifecycleVersion;
   summary: BoardSummary;
   rows: BoardRow[];
 }
@@ -80,7 +112,7 @@ export function attendanceHubKey({ shiftDate, shift, buildingId }: BoardArgs): s
   return `attendance-board:${shiftDate ?? 'now'}:${shift ?? ''}:${buildingId ?? 'all'}`;
 }
 
-const attendanceBoardApi = baseApi.injectEndpoints({
+export const attendanceBoardApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getAttendanceBoard: build.query<AttendanceBoard, BoardArgs>({
       query: ({ shiftDate, shift, buildingId }) => ({ url: '/admin/attendance', params: { shiftDate, shift, buildingId } }),
@@ -102,5 +134,22 @@ const attendanceBoardApi = baseApi.injectEndpoints({
     }),
   }),
 });
+
+/** The rows a search keeps: the Area's code or name, its regular/additional Cleaners, or a cover, in any letter case. */
+export function searchBoardRows(rows: readonly BoardRow[], search: string): BoardRow[] {
+  const text = search.trim().toLowerCase();
+  if (text === '') {
+    return [...rows];
+  }
+  return rows.filter((row) =>
+    [
+      row.areaCode,
+      row.areaName,
+      row.cleaner?.displayName,
+      ...(row.additionalCleaners?.map(({ cleaner }) => cleaner.displayName) ?? []),
+      ...row.covers.map((cover) => cover.displayName),
+    ].some((value) => value?.toLowerCase().includes(text)),
+  );
+}
 
 export const { useGetAttendanceBoardQuery } = attendanceBoardApi;

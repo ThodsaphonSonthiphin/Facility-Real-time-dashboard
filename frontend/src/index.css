@@ -175,14 +175,93 @@
   }
 }
 
+/*
+ * Subtle & Snappy motion system (facility-0229): pure CSS GPU-composited transform/opacity keyframes
+ * (150–200ms) with zero layout shift (CLS = 0) and prefers-reduced-motion override.
+ */
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes motion-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes motion-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes motion-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer components {
   .is-tapped {
     animation: tap 300ms ease-out;
   }
 
+  .motion-backdrop::backdrop {
+    animation: motion-fade-in 160ms ease-out;
+  }
+
+  .motion-drawer {
+    animation: motion-drawer-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .motion-modal {
+    animation: motion-modal-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .motion-toast {
+    animation: motion-toast-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .motion-view {
+    animation: motion-fade-in 150ms ease-out;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .is-tapped {
       animation-name: tap-still;
+    }
+
+    .motion-backdrop::backdrop,
+    .motion-drawer,
+    .motion-modal,
+    .motion-toast,
+    .motion-view {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
     }
   }
 }

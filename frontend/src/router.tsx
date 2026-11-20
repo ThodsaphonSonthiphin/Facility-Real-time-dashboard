@@ -1,9 +1,11 @@
 import type { RouteObject } from 'react-router';
+import { AccountPage } from './pages/account';
 import { AdminLoginPage, LoginPage } from './pages/auth';
 import { CheckInPage } from './pages/check-in';
 import { InspectPage } from './pages/inspect';
 import { MyBuildingPage } from './pages/my-building';
 import { MyWorkPage } from './pages/my-work';
+import { OwnSchedulePage, ScheduleManagementPage } from './pages/schedules';
 import { ScanPage } from './pages/scan';
 import { AppLayout } from './shared/components/AppLayout';
 import { Splash } from './shared/components/Boxes';
@@ -18,15 +20,12 @@ import { StatusScreen } from './shared/components/StatusScreen';
  * See docs/adr/facility-0026-frontend-router-shape.md.
  * No loader or action: RTK Query owns data loading (facility-0022).
  *
- * facility-0062 item 3, done before the budget ran out (owner, 2026-10-19): every Admin page is its own file, loaded
- * the first time an Admin opens it (`lazy`), so a phone at a sign never downloads Admin code. Phone pages stay in the
- * main file, so a scanned sign opens without a second download.
+ * Every Admin page is lazily loaded so mobile users never download Admin bundles.
  */
 export const routes: RouteObject[] = [
   {
     path: '/',
     errorElement: <CrashScreen />,
-    // While the first page's file loads. A file that cannot load (a new build replaced it) shows the crash screen
     hydrateFallbackElement: <Splash>กำลังโหลด...</Splash>,
     children: [
       { index: true, element: <HomeRedirect /> },
@@ -39,7 +38,7 @@ export const routes: RouteObject[] = [
             element: <AppLayout />,
             children: [
               { path: 'my-work', element: <MyWorkPage /> },
-              // Printed on each Area's check-in sign (plan 8 decision 1); only the sign carries the token (facility-0059)
+              { path: 'my-schedule', element: <OwnSchedulePage /> },
               { path: 'check-in/:token', element: <CheckInPage /> },
             ],
           },
@@ -51,8 +50,7 @@ export const routes: RouteObject[] = [
           {
             element: <AppLayout />,
             children: [
-              // Printed on each point's sign (docs/adr/facility-0026-frontend-router-shape.md).
-              // The Cleaner submits and the Supervisor inspects (facility-0029).
+              { path: 'my-account', element: <AccountPage /> },
               {
                 path: 'scan/:token',
                 element: <ByRole pages={{ cleaner: <ScanPage />, supervisor: <InspectPage /> }} />,
@@ -63,7 +61,13 @@ export const routes: RouteObject[] = [
       },
       {
         element: <ProtectedRoute roles={['supervisor']} />,
-        children: [{ element: <AppLayout />, children: [{ path: 'my-building', element: <MyBuildingPage /> }] }],
+        children: [
+          { element: <AppLayout />, children: [{ path: 'my-building', element: <MyBuildingPage /> }] },
+          {
+            element: <AppLayout wide />,
+            children: [{ path: 'schedule-management', element: <ScheduleManagementPage /> }],
+          },
+        ],
       },
       {
         element: <ProtectedRoute roles={['admin']} />,
@@ -71,40 +75,34 @@ export const routes: RouteObject[] = [
           {
             element: <AppLayout wide />,
             children: [
+              { path: 'admin/overview', lazy: async () => ({ Component: (await import('./pages/overview')).OverviewPage }) },
               { path: 'dashboard', lazy: async () => ({ Component: (await import('./pages/dashboard')).DashboardPage }) },
-              // facility-0027, 0050, 0051, wireframe D2: ?date=yyyy-MM-dd&shift=Day|Night&building=<id>
               {
                 path: 'admin/attendance',
                 lazy: async () => ({ Component: (await import('./pages/attendance')).AttendancePage }),
               },
-              // facility-0035, 0041, 0048, 0051, wireframe D3
+              {
+                path: 'admin/schedules',
+                lazy: async () => ({ Component: (await import('./pages/schedules/AdminSchedulesPage')).AdminSchedulesPage }),
+              },
               { path: 'admin/alerts', lazy: async () => ({ Component: (await import('./pages/alerts')).AlertsPage }) },
-              // facility-0048 rule 5, wireframe D7: ?from=yyyy-MM-dd&to=yyyy-MM-dd&building=<id>
               {
                 path: 'admin/inspection-summary',
                 lazy: async () => ({ Component: (await import('./pages/inspection-summary')).InspectionSummaryPage }),
               },
-              // facility-0053, wireframe D8: ?from=yyyy-MM-dd&to=yyyy-MM-dd&building=<id> fill the form
               { path: 'admin/export', lazy: async () => ({ Component: (await import('./pages/export')).ExportPage }) },
-              // facility-0045, wireframe D4; without an id the first Area is open
               { path: 'admin/areas/:areaId?', lazy: async () => ({ Component: (await import('./pages/areas')).AreasPage }) },
-              // facility-0045, wireframe D10 ("new" outranks the id above)
               { path: 'admin/areas/new', lazy: async () => ({ Component: (await import('./pages/areas')).AreaFormPage }) },
               {
                 path: 'admin/areas/:areaId/edit',
                 lazy: async () => ({ Component: (await import('./pages/areas')).AreaFormPage }),
               },
-              // facility-0090: the buildings, off ones too; add and edit in the Drawer
               { path: 'admin/buildings', lazy: async () => ({ Component: (await import('./pages/buildings')).BuildingsPage }) },
-              // facility-0021 item 6, wireframe D5: ?area=<id>[&sign=<id>] or ?area=all
               { path: 'admin/print', lazy: async () => ({ Component: (await import('./pages/print-signs')).PrintSignsPage }) },
-              // facility-0020, 0056, wireframe D6
               { path: 'admin/accounts', lazy: async () => ({ Component: (await import('./pages/accounts')).AccountsPage }) },
-              // facility-0057, wireframe D9: ?from&to&actor=<id>&category=<AuditCategory>
               { path: 'admin/history', lazy: async () => ({ Component: (await import('./pages/history')).HistoryPage }) },
             ],
           },
-          // M17: the Admin's phone page at the sign (facility-0045 item 2), in the phone column
           {
             element: <AppLayout />,
             children: [
@@ -118,7 +116,14 @@ export const routes: RouteObject[] = [
       },
       {
         path: '*',
-        element: <StatusScreen title="ไม่พบหน้านี้" detail="ที่อยู่นี้ไม่มีในระบบ" linkTo="/" linkText="กลับหน้าแรก" />,
+        element: (
+          <StatusScreen
+            title="ไม่พบหน้าที่ต้องการ"
+            detail="ลิงก์นี้อาจถูกย้ายหรือพิมพ์ไม่ถูกต้อง กดปุ่มด้านล่างเพื่อกลับไปหน้าหลัก"
+            linkTo="/"
+            linkText="กลับหน้าแรก"
+          />
+        ),
       },
     ],
   },

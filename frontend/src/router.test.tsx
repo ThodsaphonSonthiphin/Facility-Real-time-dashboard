@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { routes } from './router';
 import type { Role } from './shared/api/types';
 import { authAnswer, fakeServer } from './test/fakeServer';
+import { overviewFixture } from './test/overviewFixtures';
 import { renderApp } from './test/renderApp';
 
 const noSession = { 'POST /api/auth/refresh': () => ({ status: 401 }) };
@@ -66,9 +67,11 @@ describe('routing (facility-0026, 0058)', () => {
 
     const menu = screen.getByRole('navigation', { name: 'เมนูแอดมิน' });
     expect(within(menu).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'ภาพรวม',
       'สถานะจุด',
       'การเข้างาน',
       'รายการที่ขึ้นเตือน',
+      'ตารางงาน',
       'สรุปการตรวจ',
       'ส่งออก Excel',
       'พื้นที่และป้าย',
@@ -77,10 +80,11 @@ describe('routing (facility-0026, 0058)', () => {
       'บัญชีผู้ใช้',
       'ประวัติการแก้ไข',
     ]);
-    // Two groups (DESIGN_SPEC §4, #121): following the work, then setting it up
-    expect(within(menu).getAllByRole('list')).toHaveLength(2);
-    expect(within(menu).getByRole('list', { name: 'ติดตามงาน' })).toBeInTheDocument();
-    expect(within(menu).getByRole('list', { name: 'ตั้งค่า' })).toBeInTheDocument();
+    // Three groups (Option A): หน้างานวันนี้, ตารางและรายงาน, ตั้งค่าระบบ
+    expect(within(menu).getAllByRole('list')).toHaveLength(3);
+    expect(within(menu).getByRole('list', { name: 'หน้างานวันนี้' })).toBeInTheDocument();
+    expect(within(menu).getByRole('list', { name: 'ตารางและรายงาน' })).toBeInTheDocument();
+    expect(within(menu).getByRole('list', { name: 'ตั้งค่าระบบ' })).toBeInTheDocument();
     expect(within(menu).getByRole('link', { name: 'สถานะจุด' })).toHaveAttribute('aria-current', 'page');
     expect(within(menu).getByRole('link', { name: 'พื้นที่และป้าย' })).toHaveAttribute('href', '/admin/areas');
     expect(within(menu).getByRole('link', { name: 'พิมพ์ป้าย' })).toHaveAttribute('href', '/admin/print');
@@ -93,12 +97,29 @@ describe('routing (facility-0026, 0058)', () => {
     expect(screen.queryByRole('navigation', { name: 'เมนูแอดมิน' })).not.toBeInTheDocument();
   });
 
+  it("a Supervisor's roster is wide, and the Admin menu is not theirs (facility-0177)", async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('supervisor') });
+    await renderApp('/schedule-management');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'จัดตารางงาน' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'เมนูแอดมิน' })).not.toBeInTheDocument();
+  });
+
+  it('a Cleaner cannot open the management pages (facility-0058)', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('cleaner') });
+    await renderApp('/admin/schedules');
+
+    expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
+  });
+
   it('every Admin page is a lazy route, so a phone never downloads Admin code (facility-0062 item 3)', () => {
     const pages = pagesOf('admin');
 
     expect(pages.map((page) => page.path)).toEqual([
+      'admin/overview',
       'dashboard',
       'admin/attendance',
+      'admin/schedules',
       'admin/alerts',
       'admin/inspection-summary',
       'admin/export',
@@ -112,6 +133,42 @@ describe('routing (facility-0026, 0058)', () => {
       'admin/areas/:areaId/capture',
     ]);
     expect(pages.every((page) => typeof page.lazy === 'function' && page.element === undefined)).toBe(true);
+  });
+
+  it('denies Cleaner and Supervisor access to /admin/overview', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('cleaner') });
+    await renderApp('/admin/overview');
+    expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
+  });
+
+  it('denies Supervisor access to /admin/overview', async () => {
+    fakeServer({ 'POST /api/auth/refresh': () => authAnswer('supervisor') });
+    await renderApp('/admin/overview');
+    expect(screen.getByRole('heading', { name: 'ไม่มีสิทธิ์เปิดหน้านี้' })).toBeInTheDocument();
+  });
+
+  it('sets default Admin home to lazy /admin/overview without eager import (facility-0224)', async () => {
+    fakeServer({
+      'POST /api/auth/refresh': () => authAnswer('admin'),
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': () => ({ status: 200, body: overviewFixture() }),
+    });
+    const { router } = await renderApp('/');
+    expect(router.state.location.pathname).toBe('/admin/overview');
+    const overviewRoute = pagesOf('admin').find((route) => route.path === 'admin/overview');
+    expect(overviewRoute?.lazy).toEqual(expect.any(Function));
+    expect(overviewRoute?.element).toBeUndefined();
+  });
+
+  it('loads lazy /admin/overview for Admin', async () => {
+    fakeServer({
+      'POST /api/auth/refresh': () => authAnswer('admin'),
+      'GET /api/admin/alerts': () => ({ status: 200, body: [] }),
+      'GET /api/admin/overview/areas': () => ({ status: 200, body: overviewFixture() }),
+    });
+    const adminOverview = await renderApp('/admin/overview');
+    expect(adminOverview.router.state.location.pathname).toBe('/admin/overview');
+    expect(await screen.findByRole('heading', { name: 'ภาพรวมการดูแลพื้นที่' })).toBeInTheDocument();
   });
 
   it('phone pages stay in the main file, so a scanned sign opens without a second download', () => {
@@ -134,19 +191,22 @@ describe('routing (facility-0026, 0058)', () => {
     fakeServer(noSession);
     await renderApp('/no-such-page');
 
-    expect(screen.getByRole('heading', { name: 'ไม่พบหน้านี้' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ไม่พบหน้าที่ต้องการ' })).toBeInTheDocument();
   });
 
-  it('logout ends the session on the server and the next login starts at the own home', async () => {
+  it('logout requires confirmation from the Account tab, ends the session on the server, and starts next login at home', async () => {
     const server = fakeServer({
       'POST /api/auth/refresh': () => authAnswer('cleaner'),
       'POST /api/auth/logout': () => ({ status: 204 }),
     });
     const { user, router, store } = await renderApp('/my-work');
-    expect(screen.getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
+    const nav = await screen.findByRole('navigation', { name: 'เมนูหลักแม่บ้าน' });
+    await user.click(within(nav).getByRole('link', { name: 'บัญชี' }));
+    expect(await screen.findByText('แม่บ้านทดสอบ')).toBeInTheDocument();
 
-    // A Cleaner's ออกจากระบบ is at the end of My Work, which shows it once the work has loaded (the design file's Main)
-    await user.click(await screen.findByRole('button', { name: 'ออกจากระบบ' }));
+    await user.click(screen.getByRole('button', { name: 'ออกจากระบบ' }));
+    const confirmDialog = await screen.findByRole('alertdialog', { name: 'ยืนยันออกจากระบบ' });
+    await user.click(within(confirmDialog).getByRole('button', { name: 'ยืนยันออกจากระบบ' }));
 
     expect(router.state.location.pathname).toBe('/login');
     expect(router.state.location.state).toBeNull();

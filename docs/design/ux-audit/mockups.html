@@ -1,0 +1,2577 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Janitorial Management System — UI/UX Redesign Prototype (Lucide Iconography)</title>
+<style>
+  :root {
+    --bg: #F1F5F9;
+    --bg-canvas: #E8EEF7;
+    --surface: #FFFFFF;
+    --surface-2: #F8FAFC;
+    --surface-3: #F1F5F9;
+    --navy-sidebar: #0F172A;
+    --navy-sidebar-2: #1E293B;
+    --text: #0F172A;
+    --text-2: #64748B;
+    --text-3: #334155;
+    --border: #E2E8F0;
+    --border-strong: #CBD5E1;
+
+    --accent: #2457C5;
+    --accent-hover: #1D4AA8;
+    --accent-subtle: #EEF3FC;
+    --accent-border: #BFDBFE;
+    --on-accent: #FFFFFF;
+
+    --passed: #16803C;
+    --passed-bg: #EDF7F0;
+    --passed-border: #B9DFC6;
+
+    --overdue: #B45309;
+    --overdue-bg: #FEF6EC;
+    --overdue-border: #F5D6B0;
+
+    --rework: #B42318;
+    --rework-bg: #FEF3F2;
+    --rework-border: #F6C9C4;
+
+    --pending: #0B6E8A;
+    --pending-bg: #EBF6FA;
+    --pending-border: #B4DCE8;
+
+    --break: #6941C6;
+    --break-bg: #F4F1FB;
+    --break-border: #D9CFF2;
+
+    --idle: #5B6474;
+    --idle-bg: #F2F4F7;
+    --idle-border: #E0E5EB;
+
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+    --shadow-lg: 0 12px 32px -4px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+    --shadow-phone: 0 20px 40px -12px rgba(15, 23, 42, 0.22), 0 0 0 8px #0F172A;
+
+    --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, p, ul, ol, dl, dd { margin: 0; }
+  button, input, select, textarea, summary { font: inherit; color: inherit; }
+  button, summary { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* Standardized Lucide SVG Icon utility */
+  .lucide-icon {
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  /* ==========================================================================
+     TOP STUDIO BAR (Prototype Mode & Role Switcher)
+     ========================================================================== */
+  .studio-bar {
+    position: sticky; top: 0; z-index: 120;
+    background: #0F172A; color: #F8FAFC;
+    border-bottom: 1px solid #1E293B;
+    padding: 10px 20px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .studio-brand {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .studio-logo {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #FFF;
+    box-shadow: 0 2px 8px rgba(36, 87, 197, 0.4);
+  }
+  .studio-title-wrap h1 { font-size: 14px; font-weight: 700; color: #FFFFFF; }
+  .studio-title-wrap p { font-size: 11px; color: #94A3B8; }
+
+  .studio-tabs {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    background: #1E293B; padding: 4px; border-radius: 10px;
+  }
+  .studio-tab {
+    border: 0; background: transparent; color: #CBD5E1;
+    padding: 6px 13px; border-radius: 7px; font-size: 12.5px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: all 0.15s ease;
+  }
+  .studio-tab:hover { color: #FFF; background: rgba(255,255,255,0.06); }
+  .studio-tab.active {
+    background: var(--accent); color: #FFF;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+
+  .studio-controls {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .theme-toggle {
+    display: inline-flex; background: #1E293B; padding: 3px; border-radius: 8px;
+    border: 1px solid #334155;
+  }
+  .theme-btn {
+    border: 0; background: transparent; color: #94A3B8;
+    padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600;
+  }
+  .theme-btn.active { background: #334155; color: #FFF; }
+
+  /* ==========================================================================
+     MAIN STAGE & PRESENTATION BOARD
+     ========================================================================== */
+  .stage {
+    max-width: 1480px; margin: 0 auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 22px;
+  }
+
+  .board-header {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F0F6FF 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 22px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .board-header-left {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .brand-mark-lg {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--accent); color: #FFF;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(36, 87, 197, 0.25);
+  }
+  .board-header-left h2 { font-size: 19px; font-weight: 800; color: var(--text); }
+  .board-header-left p { font-size: 13px; color: var(--text-2); }
+
+  .role-pills {
+    display: flex; flex-wrap: wrap; gap: 10px;
+  }
+  .role-pill-btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-3);
+    padding: 8px 16px;
+    border-radius: 12px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.15s ease;
+  }
+  .role-pill-btn:hover { border-color: var(--accent); }
+  .role-pill-btn.active {
+    background: var(--accent); color: #FFF; border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(36, 87, 197, 0.25);
+  }
+  .role-pill-btn.active .role-sub { color: #DBEAFE; }
+  .role-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--accent-subtle); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .role-pill-btn.active .role-icon { background: rgba(255,255,255,0.2); color: #FFF; }
+  .role-text { text-align: left; line-height: 1.2; }
+  .role-name { font-size: 13px; font-weight: 700; display: block; }
+  .role-sub { font-size: 11px; color: var(--text-2); }
+
+  /* ==========================================================================
+     DESKTOP APP SHELL (Sidebar + Topbar + Content)
+     ========================================================================== */
+  .app-window {
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    display: grid;
+    grid-template-columns: 238px minmax(0, 1fr);
+    min-height: 680px;
+  }
+
+  .app-sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px 12px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    gap: 16px;
+  }
+  .app-window.navy-nav .app-sidebar {
+    background: var(--navy-sidebar);
+    border-right-color: #1E293B;
+    color: #E2E8F0;
+  }
+  .sidebar-brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .app-window.navy-nav .sidebar-brand { border-bottom-color: #1E293B; }
+  .sidebar-brand-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: var(--accent); color: #FFF;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sidebar-brand-title { font-weight: 800; font-size: 14.5px; line-height: 1.15; }
+  .sidebar-brand-sub { font-size: 11px; color: var(--text-2); font-weight: 500; }
+  .app-window.navy-nav .sidebar-brand-sub { color: #94A3B8; }
+
+  .sidebar-group-label {
+    font-size: 11px; font-weight: 700; color: var(--text-2);
+    padding: 10px 10px 4px; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .app-window.navy-nav .sidebar-group-label { color: #64748B; }
+
+  .sidebar-nav { display: flex; flex-direction: column; gap: 3px; }
+  .nav-item {
+    border: 0; background: transparent;
+    color: var(--text-3);
+    padding: 8px 11px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13.5px; font-weight: 600;
+    text-align: left;
+    transition: all 0.12s ease;
+  }
+  .nav-item-left { display: flex; align-items: center; gap: 10px; }
+  .nav-item:hover { background: var(--surface-3); color: var(--text); }
+  .nav-item.active {
+    background: var(--accent-subtle); color: var(--accent); font-weight: 700;
+  }
+  .app-window.navy-nav .nav-item { color: #CBD5E1; }
+  .app-window.navy-nav .nav-item:hover { background: #1E293B; color: #FFF; }
+  .app-window.navy-nav .nav-item.active {
+    background: var(--accent); color: #FFF;
+  }
+  .nav-badge-alert {
+    background: var(--rework); color: #FFF;
+    font-size: 11px; font-weight: 700;
+    padding: 1px 7px; border-radius: 6px;
+  }
+
+  .sidebar-user-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .app-window.navy-nav .sidebar-user-card {
+    background: #1E293B; border-color: #334155;
+  }
+  .sidebar-user-name { font-size: 12.5px; font-weight: 700; }
+  .sidebar-logout {
+    border: 0; background: transparent; color: var(--accent);
+    font-size: 12.5px; font-weight: 600; padding: 0;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .app-window.navy-nav .sidebar-logout { color: #60A5FA; }
+
+  /* Main Content Area inside Desktop Window */
+  .app-main {
+    display: flex; flex-direction: column;
+    background: #F4F7FB;
+    min-width: 0;
+  }
+  .app-topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 22px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .global-search {
+    flex: 1; max-width: 420px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 6px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    color: var(--text-2); font-size: 13px;
+  }
+  .global-search-left {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .kbd-tag {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 5px; padding: 1px 6px; font-size: 11px; font-weight: 600;
+  }
+  .topbar-right {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .notif-btn {
+    position: relative;
+    width: 36px; height: 36px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-3);
+  }
+  .notif-dot {
+    position: absolute; top: 6px; right: 7px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--rework); border: 2px solid #FFF;
+  }
+  .user-chip {
+    display: flex; align-items: center; gap: 9px;
+    padding: 4px 10px 4px 4px;
+    border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .user-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--accent); color: #FFF;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+  }
+  .user-chip-info { line-height: 1.15; text-align: left; }
+  .user-chip-name { font-size: 12.5px; font-weight: 700; display: block; }
+  .user-chip-role { font-size: 11px; color: var(--text-2); }
+
+  .app-body {
+    padding: 20px 24px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+
+  /* Page Title Header */
+  .page-head {
+    display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .page-head h2 { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+  .page-head p { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+  .page-head-actions {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px; position: relative;
+  }
+
+  /* Pill Controls & Buttons */
+  .ctrl-pill {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 9px;
+    padding: 7px 12px;
+    font-size: 13px; font-weight: 600; color: var(--text-3);
+    display: inline-flex; align-items: center; gap: 7px;
+    min-height: 36px;
+  }
+  .btn-primary {
+    background: var(--accent); color: #FFF;
+    border: 1px solid var(--accent);
+    border-radius: 9px;
+    padding: 7px 15px;
+    font-size: 13px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 7px;
+    min-height: 36px;
+    box-shadow: 0 2px 6px rgba(36, 87, 197, 0.22);
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary {
+    background: var(--surface); color: var(--text-3);
+    border: 1px solid var(--border-strong);
+    border-radius: 9px;
+    padding: 7px 13px;
+    font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: 36px;
+  }
+  .btn-secondary:hover { background: var(--surface-3); }
+
+  /* Segmented Shift / Filter Pills */
+  .seg-group {
+    display: inline-flex; background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 9px; padding: 3px; gap: 2px;
+  }
+  .seg-btn {
+    border: 0; background: transparent; color: var(--text-3);
+    padding: 5px 13px; border-radius: 6px;
+    font-size: 12.5px; font-weight: 600;
+  }
+  .seg-btn.active {
+    background: var(--accent); color: #FFF; font-weight: 700;
+  }
+
+  /* ==========================================================================
+     KPI SUMMARY CARDS (24px Lucide Icons with semantic palette)
+     ========================================================================== */
+  .kpi-grid-5 {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px;
+  }
+  .kpi-grid-4 {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 13px 15px;
+    box-shadow: var(--shadow-sm);
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .kpi-card-top {
+    display: flex; align-items: center; gap: 11px;
+  }
+  .kpi-icon-circle {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .kpi-icon-circle.blue { background: var(--accent-subtle); color: var(--accent); }
+  .kpi-icon-circle.green { background: var(--passed-bg); color: var(--passed); }
+  .kpi-icon-circle.amber { background: var(--overdue-bg); color: var(--overdue); }
+  .kpi-icon-circle.red { background: var(--rework-bg); color: var(--rework); }
+  .kpi-icon-circle.purple { background: var(--break-bg); color: var(--break); }
+
+  .kpi-meta { min-width: 0; }
+  .kpi-label { font-size: 12.5px; color: var(--text-2); font-weight: 600; }
+  .kpi-val {
+    font-size: 22px; font-weight: 800; color: var(--text);
+    line-height: 1.2; font-variant-numeric: tabular-nums;
+  }
+  .kpi-val small { font-size: 13px; font-weight: 600; color: var(--text-2); }
+
+  .kpi-progress-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .progress-track {
+    flex: 1; height: 7px; border-radius: 999px;
+    background: var(--surface-3); overflow: hidden;
+  }
+  .progress-fill { height: 100%; border-radius: 999px; }
+  .progress-fill.blue { background: var(--accent); }
+  .progress-fill.green { background: var(--passed); }
+  .progress-fill.amber { background: var(--overdue); }
+  .kpi-pct { font-size: 12px; font-weight: 700; color: var(--text-2); }
+
+  /* ==========================================================================
+     CLEAN SCHEDULE MATRIX
+     ========================================================================== */
+  .filter-toolbar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .filter-toolbar-left, .filter-toolbar-right {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  }
+  .week-stepper {
+    display: inline-flex; align-items: center;
+    background: var(--surface); border: 1px solid var(--border-strong);
+    border-radius: 9px; overflow: hidden;
+  }
+  .week-stepper button {
+    border: 0; background: transparent; padding: 6px 10px;
+    color: var(--text-3); display: inline-flex; align-items: center; justify-content: center;
+  }
+  .week-stepper button:hover { background: var(--surface-3); }
+  .week-stepper span {
+    padding: 6px 12px; font-size: 13px; font-weight: 700;
+    border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+  }
+
+  .card-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .card-panel-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .card-panel-title {
+    font-size: 15.5px; font-weight: 800; color: var(--text);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+
+  .roster-table {
+    width: 100%; border-collapse: collapse; table-layout: fixed;
+  }
+  .roster-table th {
+    background: #F8FAFC;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 8px;
+    font-size: 12px; font-weight: 700; color: var(--text-3);
+    text-align: center;
+  }
+  .roster-table th.col-emp {
+    width: 195px; text-align: left; padding-left: 18px;
+  }
+  .roster-table th.col-more { width: 48px; }
+  .roster-table th.is-today {
+    background: var(--accent-subtle); color: var(--accent);
+  }
+  .roster-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 11px 6px;
+    text-align: center; vertical-align: middle;
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  .roster-table tr:last-child td { border-bottom: 0; }
+  .roster-table tr:hover td { background: #F8FAFC; }
+  .roster-table td.is-today { background: #F0F7FF; }
+  .roster-table td.is-selected {
+    outline: 2px solid var(--accent); outline-offset: -2px;
+    background: var(--accent-subtle) !important;
+  }
+  .roster-table td.col-emp {
+    text-align: left; padding-left: 18px;
+  }
+
+  .emp-cell {
+    display: flex; align-items: center; gap: 11px;
+  }
+  .emp-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; flex-shrink: 0;
+  }
+  .emp-avatar.blue { background: var(--accent-subtle); color: var(--accent); }
+  .emp-avatar.teal { background: var(--pending-bg); color: var(--pending); }
+  .emp-avatar.amber { background: var(--overdue-bg); color: var(--overdue); }
+  .emp-avatar.purple { background: var(--break-bg); color: var(--break); }
+  .emp-name { font-size: 13.5px; font-weight: 700; color: var(--text); display: block; }
+  .emp-role { font-size: 11.5px; color: var(--text-2); }
+
+  .day-status-work {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+  }
+  .day-status-work .st-title {
+    color: var(--passed); font-weight: 700; font-size: 13px;
+  }
+  .day-status-work .st-sub {
+    color: var(--text-2); font-size: 11.5px; font-weight: 500;
+  }
+  .day-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+  }
+  .day-pill.leave { background: var(--overdue-bg); color: var(--overdue); }
+  .day-pill.off { background: var(--idle-bg); color: var(--idle); }
+  .day-pill.missing { background: var(--rework-bg); color: var(--rework); }
+
+  .dots-btn {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid transparent; background: transparent;
+    color: var(--text-2);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .dots-btn:hover { background: var(--surface-3); border-color: var(--border); color: var(--text); }
+
+  /* Top-Right Dropdown Menu */
+  .dropdown-menu {
+    position: absolute; top: 44px; right: 0; z-index: 90;
+    width: 280px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    padding: 6px;
+    display: none;
+  }
+  .dropdown-menu.open { display: block; }
+  .dropdown-group-title {
+    font-size: 11px; font-weight: 700; color: var(--text-2);
+    padding: 6px 10px 3px;
+  }
+  .dropdown-item {
+    width: 100%; border: 0; background: transparent;
+    padding: 8px 10px; border-radius: 8px;
+    display: flex; align-items: flex-start; gap: 10px;
+    text-align: left;
+  }
+  .dropdown-item:hover { background: var(--accent-subtle); }
+  .dropdown-item-icon {
+    width: 30px; height: 30px; border-radius: 7px;
+    background: var(--surface-3); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .dropdown-item-title { font-size: 13px; font-weight: 700; color: var(--text); display: block; }
+  .dropdown-item-sub { font-size: 11px; color: var(--text-2); display: block; }
+
+  /* Contextual Bar */
+  .context-bar {
+    background: var(--accent-subtle);
+    border: 1px solid var(--accent-border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .context-bar-info {
+    display: flex; align-items: center; gap: 10px; font-size: 13px;
+  }
+  .context-bar-actions {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  }
+  .ctx-action-btn {
+    background: var(--surface);
+    border: 1px solid #93C5FD;
+    color: var(--accent);
+    padding: 6px 11px; border-radius: 8px;
+    font-size: 12.5px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .ctx-action-btn:hover { background: #DBEAFE; }
+  .ctx-action-btn.primary {
+    background: var(--accent); color: #FFF; border-color: var(--accent);
+  }
+
+  /* ==========================================================================
+     DASHBOARD CHARTS & ACTION LIST
+     ========================================================================== */
+  .dash-mid-grid {
+    display: grid; grid-template-columns: 1.55fr 1fr; gap: 14px;
+  }
+  .action-list {
+    display: flex; flex-direction: column;
+  }
+  .action-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.12s ease;
+  }
+  .action-row:last-child { border-bottom: 0; }
+  .action-row:hover { background: var(--surface-2); }
+  .action-row-left {
+    display: flex; align-items: center; gap: 11px;
+    font-size: 13.5px; font-weight: 600; color: var(--text);
+  }
+  .action-row-right {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .count-pill {
+    padding: 2px 9px; border-radius: 999px;
+    font-size: 12px; font-weight: 800;
+  }
+  .count-pill.red { background: var(--rework-bg); color: var(--rework); }
+  .count-pill.purple { background: var(--break-bg); color: var(--break); }
+  .count-pill.blue { background: var(--accent-subtle); color: var(--accent); }
+
+  /* Generic Data Table */
+  .data-table {
+    width: 100%; border-collapse: collapse;
+  }
+  .data-table th {
+    background: #F8FAFC;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    text-align: left; font-size: 12px; font-weight: 700; color: var(--text-2);
+  }
+  .data-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    font-size: 13.5px; color: var(--text);
+    vertical-align: middle;
+  }
+  .data-table tr:last-child td { border-bottom: 0; }
+  .data-table tr:hover td { background: #F8FAFC; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+  }
+  .status-pill.ok { background: var(--passed-bg); color: var(--passed); }
+  .status-pill.warn { background: var(--overdue-bg); color: var(--overdue); }
+  .status-pill.err { background: var(--rework-bg); color: var(--rework); }
+  .status-pill.idle { background: var(--idle-bg); color: var(--idle); }
+
+  .icon-action-btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px; font-weight: 600; color: var(--text-3);
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .icon-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .icon-action-btn.primary-soft {
+    background: var(--accent-subtle); border-color: var(--accent-border); color: var(--accent); font-weight: 700;
+  }
+
+  /* ==========================================================================
+     MOBILE PHONE FRAMES & 4-TAB BOTTOM NAVIGATION (Lucide 20px Icons)
+     ========================================================================== */
+  .phones-showcase {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    align-items: start;
+  }
+  .phone-frame {
+    width: 360px;
+    max-width: 100%;
+    margin: 0 auto;
+    background: #F4F7FB;
+    border-radius: 36px;
+    box-shadow: var(--shadow-phone);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    min-height: 700px;
+    position: relative;
+    border: 2px solid #334155;
+  }
+  .phone-statusbar {
+    background: var(--surface);
+    padding: 8px 20px 4px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11.5px; font-weight: 700; color: var(--text);
+  }
+  .phone-topbar {
+    background: var(--surface);
+    padding: 10px 16px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .phone-brand {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .phone-brand-logo {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--accent); color: #FFF;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .phone-brand-text { line-height: 1.1; }
+  .phone-brand-text strong { font-size: 14px; font-weight: 800; display: block; }
+  .phone-brand-text span { font-size: 10px; color: var(--text-2); font-weight: 600; }
+
+  .phone-top-icons {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .phone-circle-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--surface-3); border: 0;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; color: var(--text-3);
+  }
+
+  .phone-body {
+    flex: 1;
+    padding: 16px 16px 86px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
+  .cleaner-greeting h3 { font-size: 22px; font-weight: 800; color: var(--text); }
+  .cleaner-greeting p { font-size: 13.5px; color: var(--text-2); font-weight: 500; }
+
+  .shift-banner-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 13px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+  .shift-banner-left {
+    display: flex; align-items: center; gap: 11px;
+  }
+  .shift-cal-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--accent-subtle); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .shift-banner-title { font-size: 14px; font-weight: 800; color: var(--text); }
+  .shift-banner-sub { font-size: 11.5px; color: var(--text-2); }
+
+  .mini-kpi-4 {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .mini-kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 10px 6px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .mini-kpi-lbl { font-size: 11px; color: var(--text-2); font-weight: 600; }
+  .mini-kpi-num { font-size: 16px; font-weight: 800; color: var(--text); }
+
+  .section-bar {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-bar h4 { font-size: 16px; font-weight: 800; color: var(--text); }
+  .section-bar button {
+    border: 0; background: transparent;
+    color: var(--accent); font-size: 13px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+
+  .next-task-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  .next-task-left {
+    display: flex; align-items: center; gap: 12px; min-width: 0;
+  }
+  .task-fixture-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    background: var(--accent-subtle); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .next-task-title { font-size: 15px; font-weight: 800; color: var(--text); }
+  .next-task-sub { font-size: 12px; color: var(--text-2); margin: 1px 0 5px; }
+  .round-pill {
+    display: inline-block;
+    background: var(--accent-subtle); color: var(--accent);
+    font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 6px;
+  }
+  .scan-cta-btn {
+    background: var(--accent); color: #FFF;
+    border: 0; border-radius: 10px;
+    padding: 10px 13px;
+    font-size: 13px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 6px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(36, 87, 197, 0.25);
+  }
+
+  .quick-nav-list {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .quick-nav-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+  }
+  .quick-nav-card:hover { border-color: var(--accent); }
+  .quick-nav-left {
+    display: flex; align-items: center; gap: 11px;
+    font-size: 14.5px; font-weight: 700; color: var(--text);
+  }
+  .quick-nav-icon { color: var(--accent); display: inline-flex; align-items: center; }
+  .quick-nav-right {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--text-2); font-weight: 600;
+  }
+
+  /* ==========================================================================
+     FIXED 4-TAB MOBILE BOTTOM NAVIGATION BAR (20px Lucide Icons)
+     ========================================================================== */
+  .mobile-bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 66px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    padding-bottom: env(safe-area-inset-bottom, 4px);
+    z-index: 30;
+  }
+  .bnav-item {
+    position: relative;
+    border: 0; background: transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    color: var(--idle);
+    font-size: 11.5px; font-weight: 600;
+    padding-top: 4px;
+  }
+  .bnav-item.active {
+    color: var(--accent);
+    font-weight: 800;
+  }
+  .bnav-item.active::before {
+    content: "";
+    position: absolute; top: 0; left: 16%; right: 16%;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 0 0 4px 4px;
+  }
+
+  .step-card-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .step-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-row:last-child { border-bottom: 0; }
+  .step-row.active-step { background: var(--accent-subtle); }
+  .step-row-left { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 13.5px; }
+  .step-num-badge {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800;
+    background: var(--idle-bg); color: var(--idle);
+  }
+  .step-num-badge.done { background: var(--passed); color: #FFF; }
+  .step-num-badge.current { background: var(--accent); color: #FFF; }
+
+  @media (max-width: 1100px) {
+    .app-window { grid-template-columns: 1fr; }
+    .kpi-grid-5, .kpi-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .dash-mid-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==========================================================================
+     STICKY PROTOTYPE STUDIO SWITCHER (100% Lucide SVG Icons, Zero Emojis)
+     ========================================================================== -->
+<header class="studio-bar">
+  <div class="studio-brand">
+    <div class="studio-logo" id="studio-logo-icon"></div>
+    <div class="studio-title-wrap">
+      <h1>Janitorial Management System — UI/UX Redesign Prototype (Lucide SVG Iconography)</h1>
+      <p>ใช้ไอคอน SVG จาก lucide-react เท่านั้น (16px / 20px / 24px · stroke 1.85px) · ปลอด Emoji 100%</p>
+    </div>
+  </div>
+
+  <nav class="studio-tabs" aria-label="เลือกมุมมองต้นแบบ">
+    <button type="button" class="studio-tab active" data-view="all-overview" onclick="switchStudioView('all-overview')">
+      <span data-lucide="LayoutGrid" data-size="16"></span>
+      <span>1. ภาพรวมทั้งระบบ (All Roles)</span>
+    </button>
+    <button type="button" class="studio-tab" data-view="schedule-redesign" onclick="switchStudioView('schedule-redesign')">
+      <span data-lucide="CalendarDays" data-size="16"></span>
+      <span>2. ตารางงาน (Clean Roster)</span>
+    </button>
+    <button type="button" class="studio-tab" data-view="cleaner-mobile" onclick="switchStudioView('cleaner-mobile')">
+      <span data-lucide="ClipboardList" data-size="16"></span>
+      <span>3. มือถือแม่บ้าน (4-Tab Bottom Nav)</span>
+    </button>
+    <button type="button" class="studio-tab" data-view="admin-suite" onclick="switchStudioView('admin-suite')">
+      <span data-lucide="Settings2" data-size="16"></span>
+      <span>4. หน้าแรก · การเข้างาน · ตั้งค่า</span>
+    </button>
+  </nav>
+
+  <div class="studio-controls">
+    <div class="theme-toggle" role="group" aria-label="รูปแบบแถบเมนูซ้าย">
+      <button type="button" class="theme-btn active" id="btn-sidebar-light" onclick="setSidebarTheme('light')">แถบเมนูสว่าง (Image 1)</button>
+      <button type="button" class="theme-btn" id="btn-sidebar-navy" onclick="setSidebarTheme('navy')">แถบเมนูกรมท่า (Image 3)</button>
+    </div>
+  </div>
+</header>
+
+<main class="stage">
+
+  <!-- Top Role Filter Banner -->
+  <section class="board-header" aria-label="เลือกบทบาทผู้ใช้งาน">
+    <div class="board-header-left">
+      <div class="brand-mark-lg" id="board-brand-icon"></div>
+      <div>
+        <h2>แบบออกแบบ UI/UX ใหม่ – ระบบจัดการงานทำความสะอาด</h2>
+        <p>ใช้ไอคอน Lucide SVG มาตรฐานเดียวทั้งระบบ (16px / 20px / 24px) พร้อมป้ายกำกับภาษาไทยชัดเจน</p>
+      </div>
+    </div>
+    <div class="role-pills">
+      <button type="button" class="role-pill-btn" id="role-btn-cleaner" onclick="switchStudioView('cleaner-mobile')">
+        <span class="role-icon" id="role-icon-cleaner"></span>
+        <span class="role-text">
+          <span class="role-name">Cleaner</span>
+          <span class="role-sub">แม่บ้าน (มือถือ 4 แท็บ)</span>
+        </span>
+      </button>
+      <button type="button" class="role-pill-btn" id="role-btn-supervisor" onclick="switchStudioView('schedule-redesign')">
+        <span class="role-icon" id="role-icon-supervisor"></span>
+        <span class="role-text">
+          <span class="role-name">Supervisor</span>
+          <span class="role-sub">ผู้ตรวจงาน / จัดตาราง</span>
+        </span>
+      </button>
+      <button type="button" class="role-pill-btn active" id="role-btn-admin" onclick="switchStudioView('all-overview')">
+        <span class="role-icon" id="role-icon-admin"></span>
+        <span class="role-text">
+          <span class="role-name">Admin</span>
+          <span class="role-sub">ผู้ดูแลระบบ (ครบทุกหน้า)</span>
+        </span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Dynamic Prototype Viewport -->
+  <div id="prototype-root"></div>
+
+</main>
+
+<script>
+  /* ==========================================================================
+     AUTHENTIC LUCIDE SVG ICON REGISTRY
+     Sizes: 16px (compact controls), 20px (buttons & nav), 24px (prominent KPI/actions)
+     Stroke width: 1.85px (consistent outlined style)
+     ========================================================================== */
+  const LUCIDE_PATHS = {
+    Home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    LayoutGrid: '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+    ClipboardList: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+    ClipboardCheck: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+    CalendarDays: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>',
+    Clock3: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16.5 12"/>',
+    ScanLine: '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/>',
+    Building2: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
+    TriangleAlert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    CircleCheck: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    CircleX: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+    Check: '<path d="M20 6 9 17l-5-5"/>',
+    Settings2: '<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
+    LogOut: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+    Pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    Trash2: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+    Users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    UserCheck: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>',
+    UserX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" x2="22" y1="8" y2="13"/><line x1="22" x2="17" y1="8" y2="13"/>',
+    UserPlus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
+    User: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    ArrowRightLeft: '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
+    ArrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    MapPin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+    Printer: '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
+    Download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+    History: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+    RotateCcw: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+    RefreshCw: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+    Bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+    Search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    ChevronDown: '<path d="m6 9 6 6 6-6"/>',
+    ChevronLeft: '<path d="m15 18-6-6 6-6"/>',
+    ChevronRight: '<path d="m9 18 6-6-6-6"/>',
+    Ellipsis: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    Plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    Power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+    Coffee: '<path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/>',
+    Hourglass: '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
+    Send: '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
+    Info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    Menu: '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>'
+  };
+
+  function lucide(name, size = 20, strokeWidth = 1.85) {
+    const paths = LUCIDE_PATHS[name] || LUCIDE_PATHS.Info;
+    return `<svg class="lucide-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+  }
+
+  const state = {
+    view: 'all-overview',
+    sidebarTheme: 'light',
+    desktopPage: 'dashboard',
+    manageDropdownOpen: false,
+    selectedScheduleCell: { empId: 'emp1', dayIdx: 2, empName: 'สมหญิง ใจดี', role: 'แม่บ้านประจำ', dateLabel: 'พ. 18/11', status: 'ทำงาน', area: 'A1 · กลุ่ม 1' },
+    activeCleanerScreen: 'my-work',
+    checkinStep6Mode: true,
+    skippedGapPrompt: false
+  };
+
+  const ROSTER_DATA = [
+    {
+      id: 'emp1', initial: 'ส', color: 'blue', name: 'สมหญิง ใจดี', role: 'แม่บ้านประจำ', areaCode: 'A1', breakGroup: 'กลุ่ม 1',
+      days: [
+        { type: 'work', label: 'ทำงาน', sub: 'A1 · กลุ่ม 1' },
+        { type: 'work', label: 'ทำงาน', sub: 'A1 · กลุ่ม 1' },
+        { type: 'work', label: 'ทำงาน', sub: 'A1 · กลุ่ม 1' },
+        { type: 'leave', label: 'ลาป่วย', sub: 'ลาเต็มกะ · รอจัดคนแทน' },
+        { type: 'work', label: 'ทำงาน', sub: 'A1 · กลุ่ม 1' },
+        { type: 'work', label: 'ทำงาน', sub: 'A1 · กลุ่ม 1' },
+        { type: 'work', label: 'ทำงาน', sub: 'A1 · กลุ่ม 1' }
+      ]
+    },
+    {
+      id: 'emp2', initial: 'ว', color: 'teal', name: 'วิภา ขยันดี', role: 'แม่บ้านสแปร์', areaCode: 'A2', breakGroup: 'กลุ่ม 2',
+      days: [
+        { type: 'work', label: 'ทำงาน', sub: 'A2 · กลุ่ม 2' },
+        { type: 'work', label: 'ทำงาน', sub: 'A2 · กลุ่ม 2' },
+        { type: 'work', label: 'ทำงาน', sub: 'A2 · กลุ่ม 2' },
+        { type: 'off', label: 'วันหยุด', sub: 'หยุดประจำสัปดาห์' },
+        { type: 'cover', label: 'แทน (สมหญิง)', sub: 'A1 · กลุ่ม 1' },
+        { type: 'work', label: 'ทำงาน', sub: 'A2 · กลุ่ม 2' },
+        { type: 'off', label: 'วันหยุด', sub: 'หยุดประจำสัปดาห์' }
+      ]
+    },
+    {
+      id: 'emp3', initial: 'ม', color: 'amber', name: 'มานี มีสุข', role: 'แม่บ้านประจำ', areaCode: 'A3', breakGroup: 'กลุ่ม 1',
+      days: [
+        { type: 'work', label: 'ทำงาน', sub: 'A3 · กลุ่ม 1' },
+        { type: 'off', label: 'วันหยุด', sub: 'มีสแปร์แทนแล้ว' },
+        { type: 'work', label: 'ทำงาน', sub: 'A3 · กลุ่ม 1' },
+        { type: 'work', label: 'ทำงาน', sub: 'A3 · กลุ่ม 1' },
+        { type: 'work', label: 'ทำงาน', sub: 'A3 · กลุ่ม 1' },
+        { type: 'leave', label: 'ลากิจครึ่งกะ', sub: '13:00–19:00' },
+        { type: 'work', label: 'ทำงาน', sub: 'A3 · กลุ่ม 1' }
+      ]
+    },
+    {
+      id: 'emp4', initial: 'ป', color: 'purple', name: 'ปราณี ศรีสุข', role: 'แม่บ้านประจำ', areaCode: 'B1', breakGroup: 'กลุ่ม 2',
+      days: [
+        { type: 'work', label: 'ทำงาน', sub: 'B1 · กลุ่ม 2' },
+        { type: 'work', label: 'ทำงาน', sub: 'B1 · กลุ่ม 2' },
+        { type: 'work', label: 'ทำงาน', sub: 'B1 ไป A2 (ย้าย)', subHighlight: true },
+        { type: 'work', label: 'ทำงาน', sub: 'B1 · กลุ่ม 2' },
+        { type: 'off', label: 'วันหยุด', sub: 'หยุดประจำสัปดาห์' },
+        { type: 'work', label: 'ทำงาน', sub: 'B1 · กลุ่ม 2' },
+        { type: 'work', label: 'ทำงาน', sub: 'B1 · กลุ่ม 2' }
+      ]
+    }
+  ];
+
+  const DAYS_HEADER = [
+    { idx: 0, d: 'จ.', date: '16/11' },
+    { idx: 1, d: 'อ.', date: '17/11' },
+    { idx: 2, d: 'พ.', date: '18/11', isToday: true },
+    { idx: 3, d: 'พฤ.', date: '19/11' },
+    { idx: 4, d: 'ศ.', date: '20/11' },
+    { idx: 5, d: 'ส.', date: '21/11' },
+    { idx: 6, d: 'อา.', date: '22/11' }
+  ];
+
+  function initStaticHeaderIcons() {
+    document.getElementById('studio-logo-icon').innerHTML = lucide('Building2', 20);
+    document.getElementById('board-brand-icon').innerHTML = lucide('Building2', 24);
+    document.getElementById('role-icon-cleaner').innerHTML = lucide('ClipboardList', 20);
+    document.getElementById('role-icon-supervisor').innerHTML = lucide('Users', 20);
+    document.getElementById('role-icon-admin').innerHTML = lucide('Settings2', 20);
+    document.querySelectorAll('[data-lucide]').forEach(el => {
+      const name = el.getAttribute('data-lucide');
+      const size = Number(el.getAttribute('data-size') || 16);
+      el.innerHTML = lucide(name, size);
+    });
+  }
+
+  function switchStudioView(view) {
+    state.view = view;
+    document.querySelectorAll('.studio-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === view);
+    });
+    document.getElementById('role-btn-cleaner').classList.toggle('active', view === 'cleaner-mobile');
+    document.getElementById('role-btn-supervisor').classList.toggle('active', view === 'schedule-redesign');
+    document.getElementById('role-btn-admin').classList.toggle('active', view === 'all-overview' || view === 'admin-suite');
+    render();
+  }
+
+  function setSidebarTheme(theme) {
+    state.sidebarTheme = theme;
+    document.getElementById('btn-sidebar-light').classList.toggle('active', theme === 'light');
+    document.getElementById('btn-sidebar-navy').classList.toggle('active', theme === 'navy');
+    render();
+  }
+
+  function setDesktopPage(page) {
+    state.desktopPage = page;
+    state.manageDropdownOpen = false;
+    render();
+  }
+
+  function toggleManageDropdown() {
+    state.manageDropdownOpen = !state.manageDropdownOpen;
+    render();
+  }
+
+  function selectScheduleCell(empId, dayIdx) {
+    const emp = ROSTER_DATA.find(e => e.id === empId);
+    const day = emp.days[dayIdx];
+    const hdr = DAYS_HEADER[dayIdx];
+    state.selectedScheduleCell = {
+      empId, dayIdx,
+      empName: emp.name,
+      role: emp.role,
+      dateLabel: `${hdr.d} ${hdr.date}`,
+      status: day.label,
+      area: day.sub
+    };
+    render();
+  }
+
+  function setCleanerTab(tab) {
+    state.activeCleanerScreen = tab;
+    render();
+  }
+
+  /* ==========================================================================
+     SHARED SIDEBAR RENDERER (20px Lucide Navigation Icons)
+     ========================================================================== */
+  function renderSidebar(activeKey) {
+    const navItemsOps = [
+      { key: 'dashboard', icon: 'Home', label: 'หน้าแรก' },
+      { key: 'points', icon: 'LayoutGrid', label: 'สถานะจุด', mapTo: 'dashboard' },
+      { key: 'attendance', icon: 'Users', label: 'การเข้างาน' },
+      { key: 'schedules', icon: 'CalendarDays', label: 'ตารางงาน' },
+      { key: 'alerts', icon: 'TriangleAlert', label: 'รายการที่ขึ้นเตือน', badge: '3', mapTo: 'attendance' },
+      { key: 'summary', icon: 'ClipboardCheck', label: 'สรุปการตรวจ', mapTo: 'dashboard' },
+      { key: 'export', icon: 'Download', label: 'ส่งออก Excel', mapTo: 'dashboard' }
+    ];
+    const navItemsSetup = [
+      { key: 'areas', icon: 'MapPin', label: 'พื้นที่และป้าย' },
+      { key: 'buildings', icon: 'Building2', label: 'ตึก' },
+      { key: 'print', icon: 'Printer', label: 'พิมพ์ป้าย', mapTo: 'areas' },
+      { key: 'accounts', icon: 'User', label: 'บัญชีผู้ใช้' },
+      { key: 'history', icon: 'History', label: 'ประวัติการแก้ไข' }
+    ];
+
+    return `
+      <aside class="app-sidebar" aria-label="เมนูหลัก">
+        <div>
+          <div class="sidebar-brand">
+            <div class="sidebar-brand-icon">${lucide('Building2', 20)}</div>
+            <div>
+              <div class="sidebar-brand-title">Janitorial</div>
+              <div class="sidebar-brand-sub">Management Dashboard</div>
+            </div>
+          </div>
+
+          <div class="sidebar-nav" style="margin-top:10px;">
+            <button type="button" class="nav-item ${activeKey === 'dashboard' ? 'active' : ''}" onclick="setDesktopPage('dashboard')">
+              <span class="nav-item-left">${lucide('Home', 20)}<span>หน้าแรก</span></span>
+            </button>
+          </div>
+
+          <div class="sidebar-group-label">ปฏิบัติงาน</div>
+          <div class="sidebar-nav">
+            ${navItemsOps.slice(1).map(item => `
+              <button type="button" class="nav-item ${activeKey === item.key ? 'active' : ''}" onclick="setDesktopPage('${item.mapTo || item.key}')">
+                <span class="nav-item-left">${lucide(item.icon, 20)}<span>${item.label}</span></span>
+                ${item.badge ? `<span class="nav-badge-alert">${item.badge}</span>` : ''}
+              </button>
+            `).join('')}
+          </div>
+
+          <div class="sidebar-group-label">ตั้งค่า</div>
+          <div class="sidebar-nav">
+            ${navItemsSetup.map(item => `
+              <button type="button" class="nav-item ${activeKey === item.key ? 'active' : ''}" onclick="setDesktopPage('${item.mapTo || item.key}')">
+                <span class="nav-item-left">${lucide(item.icon, 20)}<span>${item.label}</span></span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="sidebar-user-card">
+          <div class="sidebar-user-name">ผู้ใช้ทดสอบ (admin)</div>
+          <button type="button" class="sidebar-logout">${lucide('LogOut', 16)}<span>ออกจากระบบ</span></button>
+        </div>
+      </aside>
+    `;
+  }
+
+  /* ==========================================================================
+     1. ADMIN / SUPERVISOR OVERVIEW DASHBOARD
+     ========================================================================== */
+  function renderDashboardContent() {
+    return `
+      <div class="app-body">
+        <div class="page-head">
+          <div>
+            <h2>หน้าแรก (ภาพรวมระบบ)</h2>
+            <p>สถานะการทำความสะอาด การเข้างาน และรายการที่ต้องดำเนินการวันนี้</p>
+          </div>
+          <div class="page-head-actions">
+            <button type="button" class="ctrl-pill">${lucide('CalendarDays', 16)}<span>พุธ 19 พ.ย. 2569</span>${lucide('ChevronDown', 16)}</button>
+            <button type="button" class="ctrl-pill"><span>กะเช้า (07:00–19:00)</span>${lucide('ChevronDown', 16)}</button>
+            <button type="button" class="notif-btn" aria-label="การแจ้งเตือน">${lucide('Bell', 20)}<span class="notif-dot"></span></button>
+            <div class="user-chip">
+              <div class="user-avatar">A</div>
+              <div class="user-chip-info">
+                <span class="user-chip-name">ผู้ใช้ทดสอบ</span>
+                <span class="user-chip-role">Admin</span>
+              </div>
+              ${lucide('ChevronDown', 16)}
+            </div>
+          </div>
+        </div>
+
+        <!-- 5 KPI Cards Row (24px Lucide Icons) -->
+        <div class="kpi-grid-5">
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle blue">${lucide('Users', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">กำลังปฏิบัติงาน</div>
+                <div class="kpi-val">168 <small>/ 170 คน</small></div>
+              </div>
+            </div>
+            <div class="kpi-progress-row">
+              <div class="progress-track"><div class="progress-fill blue" style="width:99%"></div></div>
+              <span class="kpi-pct" style="color:var(--accent);">99%</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle green">${lucide('CircleCheck', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">จุดที่เรียบร้อย</div>
+                <div class="kpi-val">1,246 <small>จุด</small></div>
+              </div>
+            </div>
+            <div class="kpi-progress-row">
+              <div class="progress-track"><div class="progress-fill green" style="width:87%"></div></div>
+              <span class="kpi-pct" style="color:var(--passed);">87%</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle amber">${lucide('TriangleAlert', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">ยังไม่ส่งงาน</div>
+                <div class="kpi-val">186 <small>จุด</small></div>
+              </div>
+            </div>
+            <div class="kpi-progress-row">
+              <div class="progress-track"><div class="progress-fill amber" style="width:13%"></div></div>
+              <span class="kpi-pct">13%</span>
+            </div>
+          </div>
+
+          <div class="kpi-card" style="justify-content:center;">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle red">${lucide('Clock3', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">ยังไม่เข้าทำงาน</div>
+                <div class="kpi-val">2 <small>คน</small></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-card" style="justify-content:center;">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle purple">${lucide('ArrowRightLeft', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">มีงานมอบหมายแทน</div>
+                <div class="kpi-val">4 <small>รายการ</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle Row: Cleaning Progress Chart + Today's Action Queue -->
+        <div class="dash-mid-grid">
+          <div class="card-panel">
+            <div class="card-panel-head">
+              <span class="card-panel-title">ความคืบหน้าการทำความสะอาด (ทุกตึก)</span>
+              <span class="status-pill ok">${lucide('CircleCheck', 16)}<span>87% สำเร็จ</span></span>
+            </div>
+            <div style="padding:16px 20px;">
+              <svg viewBox="0 0 560 175" style="width:100%;height:175px;display:block;">
+                <defs>
+                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#2457C5" stop-opacity="0.24"/>
+                    <stop offset="100%" stop-color="#2457C5" stop-opacity="0.02"/>
+                  </linearGradient>
+                </defs>
+                <g stroke="#E2E8F0" stroke-width="1">
+                  <line x1="45" y1="20" x2="530" y2="20"/>
+                  <line x1="45" y1="48" x2="530" y2="48"/>
+                  <line x1="45" y1="76" x2="530" y2="76"/>
+                  <line x1="45" y1="104" x2="530" y2="104"/>
+                  <line x1="45" y1="132" x2="530" y2="132"/>
+                  <line x1="45" y1="150" x2="530" y2="150"/>
+                </g>
+                <g fill="#64748B" font-size="11" text-anchor="end">
+                  <text x="38" y="24">100%</text>
+                  <text x="38" y="52">80%</text>
+                  <text x="38" y="80">60%</text>
+                  <text x="38" y="108">40%</text>
+                  <text x="38" y="136">20%</text>
+                  <text x="38" y="153">0%</text>
+                </g>
+                <path d="M 65 122 L 140 104 L 215 86 L 290 72 L 365 59 L 440 48 L 515 37 L 515 150 L 65 150 Z" fill="url(#areaGrad)"/>
+                <path d="M 65 122 L 140 104 L 215 86 L 290 72 L 365 59 L 440 48 L 515 37" fill="none" stroke="#2457C5" stroke-width="2.5"/>
+                <g fill="#FFFFFF" stroke="#2457C5" stroke-width="2.5">
+                  <circle cx="65" cy="122" r="4"/>
+                  <circle cx="140" cy="104" r="4"/>
+                  <circle cx="215" cy="86" r="4"/>
+                  <circle cx="290" cy="72" r="4"/>
+                  <circle cx="365" cy="59" r="4"/>
+                  <circle cx="440" cy="48" r="4"/>
+                  <circle cx="515" cy="37" r="5.5" fill="#2457C5"/>
+                </g>
+                <rect x="492" y="6" width="44" height="22" rx="6" fill="#2457C5"/>
+                <text x="514" y="21" fill="#FFFFFF" font-size="11.5" font-weight="800" text-anchor="middle">87%</text>
+                <g fill="#64748B" font-size="11" text-anchor="middle">
+                  <text x="65" y="168">07:00</text>
+                  <text x="140" y="168">09:00</text>
+                  <text x="215" y="168">11:00</text>
+                  <text x="290" y="168">13:00</text>
+                  <text x="365" y="168">15:00</text>
+                  <text x="440" y="168">17:00</text>
+                  <text x="515" y="168">19:00</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          <div class="card-panel">
+            <div class="card-panel-head">
+              <span class="card-panel-title">รายการที่ต้องดำเนินการวันนี้</span>
+              <button type="button" style="border:0;background:transparent;color:var(--accent);font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:4px;" onclick="setDesktopPage('attendance')">
+                <span>ดูทั้งหมด</span>${lucide('ArrowRight', 16)}
+              </button>
+            </div>
+            <div class="action-list">
+              <div class="action-row" onclick="setDesktopPage('attendance')">
+                <span class="action-row-left"><span style="color:var(--rework);display:inline-flex;">${lucide('TriangleAlert', 20)}</span><span>รายงานปัญหาจากการทำความสะอาด</span></span>
+                <span class="action-row-right"><span class="count-pill red">3</span><span style="color:var(--text-2);display:inline-flex;">${lucide('ChevronRight', 16)}</span></span>
+              </div>
+              <div class="action-row" onclick="setDesktopPage('attendance')">
+                <span class="action-row-left"><span style="color:var(--text-3);display:inline-flex;">${lucide('UserX', 20)}</span><span>ยังไม่เข้าทำงาน</span></span>
+                <span class="action-row-right"><span class="count-pill red">2</span><span style="color:var(--text-2);display:inline-flex;">${lucide('ChevronRight', 16)}</span></span>
+              </div>
+              <div class="action-row" onclick="setDesktopPage('schedules')">
+                <span class="action-row-left"><span style="color:var(--break);display:inline-flex;">${lucide('ArrowRightLeft', 20)}</span><span>งานมอบหมายแทน / ย้ายพื้นที่</span></span>
+                <span class="action-row-right"><span class="count-pill purple">4</span><span style="color:var(--text-2);display:inline-flex;">${lucide('ChevronRight', 16)}</span></span>
+              </div>
+              <div class="action-row">
+                <span class="action-row-left"><span style="color:var(--text-3);display:inline-flex;">${lucide('Clock3', 20)}</span><span>รอการตรวจของหัวหน้า</span></span>
+                <span class="action-row-right"><span class="count-pill blue">12</span><span style="color:var(--text-2);display:inline-flex;">${lucide('ChevronRight', 16)}</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Table Card: สถานะพื้นที่ (ตามตึก) -->
+        <div class="card-panel">
+          <div class="card-panel-head">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <span class="card-panel-title">สถานะพื้นที่ (ตามตึก)</span>
+              <button type="button" class="ctrl-pill"><span>ทุกตึก</span>${lucide('ChevronDown', 16)}</button>
+              <div class="ctrl-pill" style="min-width:220px;color:var(--text-2);font-weight:500;">
+                ${lucide('Search', 16)}<span>ค้นหาตึกหรือพื้นที่</span>
+              </div>
+            </div>
+            <button type="button" class="ctrl-pill"><span>เรียงตาม: พื้นที่ที่ยังไม่ส่งงาน</span>${lucide('ChevronDown', 16)}</button>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ตึก</th>
+                <th>พื้นที่ (จุด)</th>
+                <th>เสร็จแล้ว</th>
+                <th>ยังไม่ส่ง</th>
+                <th style="width:240px;">ความคืบหน้า</th>
+                <th>สถานะ</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>A – ตึกทดลอง</strong></td>
+                <td class="tabular">715</td>
+                <td class="tabular">628</td>
+                <td class="tabular">87</td>
+                <td>
+                  <div class="kpi-progress-row">
+                    <span class="tabular" style="font-weight:700;width:36px;">87%</span>
+                    <div class="progress-track"><div class="progress-fill blue" style="width:87%"></div></div>
+                  </div>
+                </td>
+                <td><span class="status-pill ok">${lucide('Check', 16)}<span>ทำงานปกติ</span></span></td>
+                <td style="color:var(--text-2);">${lucide('ChevronRight', 16)}</td>
+              </tr>
+              <tr>
+                <td><strong>B – ตึกข้างเคียง</strong></td>
+                <td class="tabular">430</td>
+                <td class="tabular">369</td>
+                <td class="tabular">61</td>
+                <td>
+                  <div class="kpi-progress-row">
+                    <span class="tabular" style="font-weight:700;width:36px;">86%</span>
+                    <div class="progress-track"><div class="progress-fill blue" style="width:86%"></div></div>
+                  </div>
+                </td>
+                <td><span class="status-pill ok">${lucide('Check', 16)}<span>ทำงานปกติ</span></span></td>
+                <td style="color:var(--text-2);">${lucide('ChevronRight', 16)}</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-2);"><strong>C – ตึกเก่า (ปิดใช้งาน)</strong></td>
+                <td class="tabular" style="color:var(--text-2);">0</td>
+                <td class="tabular" style="color:var(--text-2);">0</td>
+                <td class="tabular" style="color:var(--text-2);">0</td>
+                <td>
+                  <div class="kpi-progress-row">
+                    <span style="color:var(--text-2);width:36px;">–</span>
+                    <div class="progress-track"></div>
+                  </div>
+                </td>
+                <td><span class="status-pill idle">${lucide('Clock3', 16)}<span>ปิดใช้งาน</span></span></td>
+                <td style="color:var(--text-2);">${lucide('ChevronRight', 16)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ==========================================================================
+     2. SCHEDULE MANAGEMENT (`ตารางงาน`) — Clean Roster with Lucide Icons
+     ========================================================================== */
+  function renderScheduleContent() {
+    const sel = state.selectedScheduleCell;
+    return `
+      <div class="app-topbar">
+        <div class="global-search">
+          <span class="global-search-left">${lucide('Search', 16)}<span>ค้นหาแม่บ้าน พื้นที่ ตึก หรือรหัสป้าย...</span></span>
+          <span class="kbd-tag">⌘K</span>
+        </div>
+        <div class="topbar-right">
+          <button type="button" class="notif-btn" aria-label="การแจ้งเตือน">${lucide('Bell', 20)}<span class="notif-dot"></span></button>
+          <div class="user-chip">
+            <div class="user-avatar">A</div>
+            <div class="user-chip-info">
+              <span class="user-chip-name">ผู้ใช้ทดสอบ</span>
+              <span class="user-chip-role">Admin / Supervisor</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body">
+        <div class="page-head">
+          <div>
+            <h2>ตารางงาน</h2>
+            <p>ภาพรวมตารางของทุกตึกและทุกกะ · คลิกช่องวันหรือปุ่มเมนูรายแถวเพื่อจัดการโดยไม่รกตาราง</p>
+          </div>
+          <div class="page-head-actions">
+            <button type="button" class="btn-secondary" onclick="toggleManageDropdown()">
+              <span>จัดการตาราง</span>${lucide('ChevronDown', 16)}
+            </button>
+            <button type="button" class="btn-primary" onclick="toggleManageDropdown()">
+              ${lucide('UserPlus', 20)}<span>มอบหมายงาน / จัดการตารางงาน</span>${lucide('ChevronDown', 16)}
+            </button>
+
+            <!-- Dropdown Menu consolidating the 4 global editors cleanly -->
+            <div class="dropdown-menu ${state.manageDropdownOpen ? 'open' : ''}" role="menu">
+              <div class="dropdown-group-title">ตั้งค่าและวางแผนตาราง</div>
+              <button type="button" class="dropdown-item" onclick="toggleManageDropdown()">
+                <span class="dropdown-item-icon">${lucide('CalendarDays', 20)}</span>
+                <span>
+                  <span class="dropdown-item-title">จัดตารางรายสัปดาห์</span>
+                  <span class="dropdown-item-sub">กำหนดวันทำงาน วันหยุด และกลุ่มพักเบรก</span>
+                </span>
+              </button>
+              <button type="button" class="dropdown-item" onclick="toggleManageDropdown()">
+                <span class="dropdown-item-icon">${lucide('Building2', 20)}</span>
+                <span>
+                  <span class="dropdown-item-title">ตั้งค่าแม่บ้านประจำพื้นที่</span>
+                  <span class="dropdown-item-sub">ผูกแม่บ้านประจำเข้ากับพื้นที่และกะ</span>
+                </span>
+              </button>
+              <div class="dropdown-group-title" style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px;">การจัดการรายวัน / สแปร์</div>
+              <button type="button" class="dropdown-item" onclick="toggleManageDropdown()">
+                <span class="dropdown-item-icon">${lucide('UserCheck', 20)}</span>
+                <span>
+                  <span class="dropdown-item-title">มอบหมายงานสแปร์ (ทำแทน)</span>
+                  <span class="dropdown-item-sub">จัดสแปร์ในทีม หรือยืมตัวข้ามทีมเมื่อมีคนลา/หยุด</span>
+                </span>
+              </button>
+              <button type="button" class="dropdown-item" onclick="toggleManageDropdown()">
+                <span class="dropdown-item-icon">${lucide('ArrowRightLeft', 20)}</span>
+                <span>
+                  <span class="dropdown-item-title">บันทึกย้ายพื้นที่กลางกะ</span>
+                  <span class="dropdown-item-sub">ย้ายพื้นที่ชั่วคราวพร้อมแจ้งเตือนที่หน้าลงเวลา</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-toolbar">
+          <div class="filter-toolbar-left">
+            <div class="week-stepper">
+              <button type="button" aria-label="สัปดาห์ก่อนหน้า">${lucide('ChevronLeft', 16)}</button>
+              <span class="tabular">16 – 22 พ.ย. 2569</span>
+              <button type="button" aria-label="สัปดาห์ถัดไป">${lucide('ChevronRight', 16)}</button>
+            </div>
+            <button type="button" class="ctrl-pill"><span>ตึก: ทุกตึก</span>${lucide('ChevronDown', 16)}</button>
+            <div class="seg-group" role="group" aria-label="เลือกกะ">
+              <button type="button" class="seg-btn">กะของฉัน</button>
+              <button type="button" class="seg-btn active">กะเช้า</button>
+              <button type="button" class="seg-btn">กะดึก</button>
+            </div>
+          </div>
+          <div class="filter-toolbar-right">
+            <button type="button" class="btn-secondary">${lucide('RefreshCw', 16)}<span>อัปเดต</span></button>
+          </div>
+        </div>
+
+        <!-- 4 KPI Cards Row (24px Lucide Icons) -->
+        <div class="kpi-grid-4">
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle blue">${lucide('Users', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">พนักงานทั้งหมด</div>
+                <div class="kpi-val">12</div>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle green">${lucide('CircleCheck', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">กำลังทำงาน</div>
+                <div class="kpi-val">9</div>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle amber">${lucide('UserX', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">ลา / หยุด</div>
+                <div class="kpi-val">2</div>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle purple">${lucide('ArrowRightLeft', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">มีปัญหา / รอจัดคนแทน</div>
+                <div class="kpi-val">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clean Roster Table -->
+        <div class="card-panel">
+          <table class="roster-table" aria-label="ตารางงานรายสัปดาห์">
+            <thead>
+              <tr>
+                <th class="col-emp">พนักงาน</th>
+                ${DAYS_HEADER.map(h => `
+                  <th class="${h.isToday ? 'is-today' : ''}">
+                    <div>${h.d}</div>
+                    <div class="tabular" style="font-weight:600;opacity:0.85;">${h.date}</div>
+                  </th>
+                `).join('')}
+                <th class="col-more" aria-label="การจัดการ"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ROSTER_DATA.map(emp => `
+                <tr>
+                  <td class="col-emp" onclick="selectScheduleCell('${emp.id}', 2)">
+                    <div class="emp-cell">
+                      <div class="emp-avatar ${emp.color}">${emp.initial}</div>
+                      <div>
+                        <span class="emp-name">${emp.name}</span>
+                        <span class="emp-role">${emp.role}</span>
+                      </div>
+                    </div>
+                  </td>
+                  ${emp.days.map((d, idx) => {
+                    const isToday = DAYS_HEADER[idx].isToday;
+                    const isSelected = sel && sel.empId === emp.id && sel.dayIdx === idx;
+                    let cellHtml = '';
+                    if (d.type === 'work' || d.type === 'cover') {
+                      cellHtml = `
+                        <div class="day-status-work">
+                          <span class="st-title">${d.label}</span>
+                          <span class="st-sub" style="${d.subHighlight ? 'color:var(--accent);font-weight:700;' : ''}">${d.sub}</span>
+                        </div>
+                      `;
+                    } else if (d.type === 'leave') {
+                      cellHtml = `<span class="day-pill leave">${d.label}</span>`;
+                    } else {
+                      cellHtml = `<span class="day-pill off">${d.label}</span>`;
+                    }
+                    return `
+                      <td class="${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''}"
+                          onclick="selectScheduleCell('${emp.id}', ${idx})"
+                          title="คลิกเพื่อจัดการ ${emp.name} (${DAYS_HEADER[idx].d} ${DAYS_HEADER[idx].date})">
+                        ${cellHtml}
+                      </td>
+                    `;
+                  }).join('')}
+                  <td>
+                    <button type="button" class="dots-btn" aria-label="จัดการ ${emp.name}" onclick="selectScheduleCell('${emp.id}', 2)">
+                      ${lucide('Ellipsis', 20)}
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Contextual Action Bar (16px Lucide Icons + Meaningful Thai Labels) -->
+        <div class="context-bar" role="region" aria-label="คำสั่งตามบริบทของช่องที่เลือก">
+          <div class="context-bar-info">
+            <span class="status-pill ok">${lucide('Check', 16)}<span>เลือกอยู่</span></span>
+            <strong>${sel.empName}</strong>
+            <span style="color:var(--text-2);">(${sel.role})</span>
+            <span>·</span>
+            <strong>${sel.dateLabel}</strong>
+            <span>·</span>
+            <span style="color:var(--accent);font-weight:700;">${sel.status} (${sel.area})</span>
+          </div>
+          <div class="context-bar-actions">
+            <button type="button" class="ctx-action-btn primary">${lucide('CalendarDays', 16)}<span>แก้เฉพาะวันที่ / บันทึกลา</span></button>
+            <button type="button" class="ctx-action-btn">${lucide('UserCheck', 16)}<span>มอบหมายงานสแปร์</span></button>
+            <button type="button" class="ctx-action-btn">${lucide('ArrowRightLeft', 16)}<span>ย้ายพื้นที่</span></button>
+            <button type="button" class="ctx-action-btn">${lucide('Clock3', 16)}<span>เพิ่มเวลาที่ขาด</span></button>
+            <button type="button" class="ctx-action-btn">${lucide('RotateCcw', 16)}<span>แก้ไขแผนย้อนหลัง</span></button>
+            <button type="button" class="ctx-action-btn">${lucide('History', 16)}<span>ประวัติการแก้ไขแผน</span></button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ==========================================================================
+     3. ATTENDANCE MANAGEMENT (`การเข้างาน`)
+     ========================================================================== */
+  function renderAttendanceContent() {
+    return `
+      <div class="app-topbar">
+        <div class="global-search">
+          <span class="global-search-left">${lucide('Search', 16)}<span>ค้นหาแม่บ้าน พื้นที่ ตึก หรือรหัสป้าย...</span></span>
+          <span class="kbd-tag">⌘K</span>
+        </div>
+        <div class="topbar-right">
+          <button type="button" class="notif-btn" aria-label="การแจ้งเตือน">${lucide('Bell', 20)}<span class="notif-dot"></span></button>
+          <div class="user-chip">
+            <div class="user-avatar">A</div>
+            <div class="user-chip-info">
+              <span class="user-chip-name">ผู้ใช้ทดสอบ</span>
+              <span class="user-chip-role">Admin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-body">
+        <div class="page-head">
+          <div>
+            <h2>การเข้างาน</h2>
+            <p>ดูว่าพื้นที่ไหนมีแม่บ้านอยู่ และสถานะการเข้าทำงานตามกะ (รองรับทั้ง 4 ขั้นตอนและ 6 ขั้นตอน Numbered6)</p>
+          </div>
+          <div class="page-head-actions">
+            <label class="ctrl-pill" style="cursor:pointer;">
+              <input type="checkbox" ${state.checkinStep6Mode ? 'checked' : ''} onchange="state.checkinStep6Mode=this.checked;render();">
+              <span>แสดงครบ 6 ขั้นตอน (Numbered6)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="filter-toolbar">
+          <div class="filter-toolbar-left">
+            <div class="seg-group">
+              <button type="button" class="seg-btn active">กะเช้า 07:00–19:00</button>
+              <button type="button" class="seg-btn">กะดึก 19:00–07:00</button>
+            </div>
+            <button type="button" class="ctrl-pill">${lucide('CalendarDays', 16)}<span>วันที่: 19/11/2569</span></button>
+            <button type="button" class="ctrl-pill"><span>ตึก: ทุกตึก</span>${lucide('ChevronDown', 16)}</button>
+          </div>
+          <div class="filter-toolbar-right">
+            <div class="ctrl-pill" style="min-width:210px;color:var(--text-2);font-weight:500;">
+              ${lucide('Search', 16)}<span>ค้นหาพื้นที่หรือแม่บ้าน</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5 KPI Cards (24px Lucide Icons) -->
+        <div class="kpi-grid-5">
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle blue">${lucide('MapPin', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">พื้นที่ที่ต้องมีคน</div>
+                <div class="kpi-val">2</div>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle green">${lucide('CircleCheck', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">มีคนแล้ว</div>
+                <div class="kpi-val">1</div>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle amber">${lucide('UserX', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">ยังไม่มีคน</div>
+                <div class="kpi-val">1</div>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle purple">${lucide('ArrowRightLeft', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">มีคนทำแทน</div>
+                <div class="kpi-val">0</div>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-icon-circle blue">${lucide('Coffee', 24)}</div>
+              <div class="kpi-meta">
+                <div class="kpi-label">พักเบรก</div>
+                <div class="kpi-val">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-panel">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>พื้นที่</th>
+                <th>แม่บ้าน</th>
+                <th>สถานะ</th>
+                <th>เข้าทำงาน</th>
+                <th>ออกพัก</th>
+                <th>กลับจากพัก</th>
+                ${state.checkinStep6Mode ? `<th>ออกพักเย็น</th><th>กลับจากพักเย็น</th>` : ''}
+                <th>เลิกงาน</th>
+                <th style="text-align:right;">การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>AR01 ชั้นหนึ่ง</strong>
+                  <div style="font-size:11.5px;color:var(--text-2);">ตึก A</div>
+                </td>
+                <td><strong>สมหญิง ใจดี</strong></td>
+                <td><span class="status-pill ok">${lucide('Check', 16)}<span>กำลังทำงาน</span></span></td>
+                <td class="tabular"><strong>07:05</strong></td>
+                <td class="tabular" style="color:var(--text-2);">–</td>
+                <td class="tabular" style="color:var(--text-2);">–</td>
+                ${state.checkinStep6Mode ? `<td class="tabular" style="color:var(--text-2);">–</td><td class="tabular" style="color:var(--text-2);">–</td>` : ''}
+                <td class="tabular" style="color:var(--text-2);">–</td>
+                <td style="text-align:right;">
+                  <button type="button" class="icon-action-btn">${lucide('Pencil', 16)}<span>แก้ไข</span></button>
+                  <button type="button" class="icon-action-btn" onclick="setDesktopPage('schedules')">${lucide('Clock3', 16)}<span>จัดการกะ</span></button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>AR02 Office ทดลอง</strong>
+                  <div style="font-size:11.5px;color:var(--text-2);">ตึก A</div>
+                </td>
+                <td><strong>วิภา ขยันดี</strong></td>
+                <td>
+                  <span class="status-pill warn">${lucide('TriangleAlert', 16)}<span>ยังไม่มีคน · ยังไม่ลงเวลา</span></span>
+                </td>
+                <td class="tabular" style="color:var(--text-2);">–</td>
+                <td class="tabular" style="color:var(--text-2);">–</td>
+                <td class="tabular" style="color:var(--text-2);">–</td>
+                ${state.checkinStep6Mode ? `<td class="tabular" style="color:var(--text-2);">–</td><td class="tabular" style="color:var(--text-2);">–</td>` : ''}
+                <td class="tabular" style="color:var(--text-2);">–</td>
+                <td style="text-align:right;">
+                  <button type="button" class="icon-action-btn primary-soft">${lucide('UserPlus', 16)}<span>มอบหมาย</span></button>
+                  <button type="button" class="icon-action-btn">${lucide('Pencil', 16)}<span>แก้ไข</span></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="padding:10px 16px;font-size:12px;color:var(--text-2);border-top:1px solid var(--border);">
+            แสดง 1–2 จาก 2 พื้นที่
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ==========================================================================
+     4. ADMIN SETUP PAGES (Areas, Buildings, Accounts, History)
+     ========================================================================== */
+  function renderAdminSetupGrid() {
+    return `
+      <div class="app-body">
+        <div class="page-head">
+          <div>
+            <h2>ตั้งค่าระบบ (พื้นที่และป้าย · ตึก · บัญชีผู้ใช้ · ประวัติการแก้ไข)</h2>
+            <p>ใช้ไอคอน Lucide SVG ขนาด 16px สำหรับปุ่มตาราง และ 20px สำหรับปุ่มหลัก</p>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:16px;">
+          <!-- พื้นที่และป้าย -->
+          <div class="card-panel">
+            <div class="card-panel-head">
+              <div>
+                <div class="card-panel-title">${lucide('MapPin', 20)}<span>พื้นที่และป้าย</span></div>
+                <div style="font-size:12px;color:var(--text-2);">จัดการพื้นที่ ป้ายลงเวลา และจุดทำความสะอาด</div>
+              </div>
+              <button type="button" class="btn-primary">${lucide('Plus', 20)}<span>เพิ่มพื้นที่</span></button>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr><th>รหัส</th><th>ชื่อพื้นที่</th><th>ตึก</th><th>จุด</th><th>สถานะ</th><th></th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="emp-avatar blue" style="width:26px;height:26px;font-size:12px;">A</span></td>
+                  <td><strong>AR01 Area ทดลอง</strong></td>
+                  <td>A</td>
+                  <td class="tabular">2</td>
+                  <td><span class="status-pill ok">${lucide('Check', 16)}<span>ใช้งานอยู่</span></span></td>
+                  <td><button type="button" class="dots-btn" aria-label="จัดการพื้นที่ AR01">${lucide('Ellipsis', 16)}</button></td>
+                </tr>
+                <tr>
+                  <td><span class="emp-avatar idle" style="width:26px;height:26px;font-size:12px;background:#F1F5F9;">3</span></td>
+                  <td><strong>AR02 Office ทดลอง</strong></td>
+                  <td>A</td>
+                  <td class="tabular">0</td>
+                  <td><span class="status-pill ok">${lucide('Check', 16)}<span>ใช้งานอยู่</span></span></td>
+                  <td><button type="button" class="dots-btn" aria-label="จัดการพื้นที่ AR02">${lucide('Ellipsis', 16)}</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="padding:10px 16px;font-size:12px;color:var(--text-2);border-top:1px solid var(--border);">แสดง 1–2 จาก 2 พื้นที่</div>
+          </div>
+
+          <!-- ตึก -->
+          <div class="card-panel">
+            <div class="card-panel-head">
+              <div>
+                <div class="card-panel-title">${lucide('Building2', 20)}<span>ตึก</span></div>
+                <div style="font-size:12px;color:var(--text-2);">จัดการข้อมูลตึกทั้งหมด</div>
+              </div>
+              <button type="button" class="btn-primary">${lucide('Plus', 20)}<span>เพิ่มตึก</span></button>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr><th>รหัส</th><th>ชื่อตึก</th><th>พื้นที่</th><th>สถานะ</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>A</strong></td><td><strong>ตึกทดลอง</strong></td><td class="tabular">2</td><td><span class="status-pill ok">${lucide('Check', 16)}<span>ใช้งาน</span></span></td></tr>
+                <tr><td><strong>B</strong></td><td><strong>ตึกข้างเคียง</strong></td><td class="tabular">0</td><td><span class="status-pill ok">${lucide('Check', 16)}<span>ใช้งาน</span></span></td></tr>
+                <tr><td><strong>C</strong></td><td><strong>ตึกเก่า</strong></td><td class="tabular">0</td><td><span class="status-pill idle"><span>ปิดใช้งาน</span></span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- บัญชีผู้ใช้ -->
+          <div class="card-panel">
+            <div class="card-panel-head">
+              <div>
+                <div class="card-panel-title">${lucide('Users', 20)}<span>บัญชีผู้ใช้</span></div>
+                <div style="font-size:12px;color:var(--text-2);">จัดการบัญชีแม่บ้าน หัวหน้า และแอดมิน</div>
+              </div>
+              <button type="button" class="btn-primary">${lucide('Plus', 20)}<span>สร้างบัญชี</span></button>
+            </div>
+            <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;">
+              <button type="button" class="icon-action-btn primary-soft">แม่บ้าน 2</button>
+              <button type="button" class="icon-action-btn">หัวหน้า 1</button>
+              <button type="button" class="icon-action-btn">แอดมิน 1</button>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr><th>ชื่อ</th><th>รหัสพนักงาน</th><th>พื้นที่ · กะ</th><th>สถานะ</th><th>การจัดการ</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>แม่บ้านทดสอบ</strong></td>
+                  <td class="tabular">650001</td>
+                  <td>AR01 · กะเช้า</td>
+                  <td><span class="status-pill ok">${lucide('Check', 16)}<span>ใช้งานอยู่</span></span></td>
+                  <td>
+                    <button type="button" class="icon-action-btn" aria-label="แก้ไขแม่บ้านทดสอบ">${lucide('Pencil', 16)}<span>แก้</span></button>
+                    <button type="button" class="icon-action-btn" style="color:var(--rework);" aria-label="ปิดใช้งานแม่บ้านทดสอบ">${lucide('Power', 16)}<span>ปิด</span></button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>แม่บ้านกะดึก</strong></td>
+                  <td class="tabular">650002</td>
+                  <td>AR01 · กะดึก</td>
+                  <td><span class="status-pill ok">${lucide('Check', 16)}<span>ใช้งานอยู่</span></span></td>
+                  <td>
+                    <button type="button" class="icon-action-btn" aria-label="แก้ไขแม่บ้านกะดึก">${lucide('Pencil', 16)}<span>แก้</span></button>
+                    <button type="button" class="icon-action-btn" style="color:var(--rework);" aria-label="ปิดใช้งานแม่บ้านกะดึก">${lucide('Power', 16)}<span>ปิด</span></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ประวัติการแก้ไข -->
+          <div class="card-panel">
+            <div class="card-panel-head">
+              <div>
+                <div class="card-panel-title">${lucide('History', 20)}<span>ประวัติการแก้ไข</span></div>
+                <div style="font-size:12px;color:var(--text-2);">ติดตามการเปลี่ยนแปลงข้อมูลในระบบ</div>
+              </div>
+            </div>
+            <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;">
+              <span>ช่วงวัน:</span><button type="button" class="ctrl-pill" style="min-height:30px;padding:3px 9px;"><span>7 วันล่าสุด</span>${lucide('ChevronDown', 16)}</button>
+              <span>ผู้ทำ:</span><button type="button" class="ctrl-pill" style="min-height:30px;padding:3px 9px;"><span>ทุกคน</span>${lucide('ChevronDown', 16)}</button>
+              <span>ประเภท:</span><button type="button" class="ctrl-pill" style="min-height:30px;padding:3px 9px;"><span>ทุกประเภท</span>${lucide('ChevronDown', 16)}</button>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr><th>เวลา</th><th>ผู้ทำ</th><th>แก้อะไร</th><th>ก่อน / หลัง</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="tabular">19/11 10:42</td><td><strong>ผู้ดูแลทดสอบ</strong></td><td>เพิ่มเวลางาน</td><td>–</td></tr>
+                <tr>
+                  <td class="tabular">18/11 14:20</td>
+                  <td><strong>หัวหน้างาน</strong></td>
+                  <td>แก้ไขพื้นที่</td>
+                  <td class="tabular" style="display:flex;align-items:center;gap:6px;">
+                    <span>AR01-02</span>${lucide('ArrowRight', 16)}<span>AR01-03</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ==========================================================================
+     5. CLEANER MOBILE SCREENS + 4-TAB BOTTOM NAV (20px Lucide Icons)
+     ========================================================================== */
+  function renderBottomNav(activeTab) {
+    const tabs = [
+      { key: 'my-work', icon: 'ClipboardList', label: 'งานของฉัน' },
+      { key: 'check-in', icon: 'Clock3', label: 'ลงเวลา' },
+      { key: 'scan-qr', icon: 'ScanLine', label: 'สแกน QR' },
+      { key: 'my-schedule', icon: 'CalendarDays', label: 'ตารางเวร' }
+    ];
+    return `
+      <nav class="mobile-bottom-nav" aria-label="เมนูหลักแม่บ้าน">
+        ${tabs.map(t => `
+          <button type="button" class="bnav-item ${activeTab === t.key ? 'active' : ''}" onclick="setCleanerTab('${t.key}')">
+            ${lucide(t.icon, 20)}
+            <span>${t.label}</span>
+          </button>
+        `).join('')}
+      </nav>
+    `;
+  }
+
+  function renderPhoneMyWork() {
+    return `
+      <div class="phone-frame">
+        <div class="phone-statusbar"><span class="tabular">09:41</span><span>5G 100%</span></div>
+        <div class="phone-topbar">
+          <div class="phone-brand">
+            <div class="phone-brand-logo">${lucide('Building2', 16)}</div>
+            <div class="phone-brand-text">
+              <strong>Janitorial</strong>
+              <span>Management Dashboard</span>
+            </div>
+          </div>
+          <div class="phone-top-icons">
+            <button type="button" class="phone-circle-btn" aria-label="การแจ้งเตือน">${lucide('Bell', 16)}<span class="notif-dot"></span></button>
+            <button type="button" class="phone-circle-btn" aria-label="โปรไฟล์">${lucide('User', 16)}</button>
+          </div>
+        </div>
+
+        <div class="phone-body">
+          <div class="cleaner-greeting">
+            <h3>สวัสดี สมหญิง ใจดี</h3>
+            <p>แม่บ้านประจำ · ตึก A</p>
+          </div>
+
+          <div class="shift-banner-card">
+            <div class="shift-banner-left">
+              <div class="shift-cal-icon">${lucide('CalendarDays', 20)}</div>
+              <div>
+                <div class="shift-banner-title">วันนี้ · พ. 18 พ.ย. 2569</div>
+                <div class="shift-banner-sub tabular">กะเช้า 07:00 – 19:00 · เข้างาน 07:05</div>
+              </div>
+            </div>
+            <span class="status-pill ok">${lucide('CircleCheck', 16)}<span>กำลังปฏิบัติงาน</span></span>
+          </div>
+
+          <div class="mini-kpi-4">
+            <div class="mini-kpi">
+              <span style="color:var(--accent);display:inline-flex;">${lucide('ClipboardList', 20)}</span>
+              <span class="mini-kpi-lbl">งานวันนี้</span>
+              <span class="mini-kpi-num">2 จุด</span>
+            </div>
+            <div class="mini-kpi">
+              <span style="color:var(--passed);display:inline-flex;">${lucide('CircleCheck', 20)}</span>
+              <span class="mini-kpi-lbl">ส่งแล้ว</span>
+              <span class="mini-kpi-num">1 จุด</span>
+            </div>
+            <div class="mini-kpi">
+              <span style="color:var(--pending);display:inline-flex;">${lucide('Hourglass', 20)}</span>
+              <span class="mini-kpi-lbl">คงเหลือ</span>
+              <span class="mini-kpi-num">1 จุด</span>
+            </div>
+            <div class="mini-kpi">
+              <span style="color:var(--overdue);display:inline-flex;">${lucide('TriangleAlert', 20)}</span>
+              <span class="mini-kpi-lbl">พบปัญหา</span>
+              <span class="mini-kpi-num">0 จุด</span>
+            </div>
+          </div>
+
+          <div class="section-bar">
+            <h4>งานถัดไป</h4>
+            <button type="button" onclick="setCleanerTab('scan-qr')"><span>ดูทั้งหมด</span>${lucide('ChevronRight', 16)}</button>
+          </div>
+
+          <div class="next-task-card">
+            <div class="next-task-left">
+              <div class="task-fixture-icon">${lucide('MapPin', 24)}</div>
+              <div>
+                <div class="next-task-title">AR01-02 ห้องน้ำหญิง</div>
+                <div class="next-task-sub">ตึก A · ชั้น 1</div>
+                <span class="round-pill tabular">รอบเช้า 08:00 – 10:00</span>
+              </div>
+            </div>
+            <button type="button" class="scan-cta-btn" onclick="setCleanerTab('scan-qr')">
+              ${lucide('ScanLine', 20)}<span>สแกน QR</span>
+            </button>
+          </div>
+
+          <div class="quick-nav-list">
+            <button type="button" class="quick-nav-card" onclick="setCleanerTab('my-schedule')">
+              <span class="quick-nav-left"><span class="quick-nav-icon">${lucide('CalendarDays', 20)}</span><span>ตารางของฉัน</span></span>
+              <span class="quick-nav-right">${lucide('ChevronRight', 16)}</span>
+            </button>
+            <button type="button" class="quick-nav-card" onclick="setCleanerTab('check-in')">
+              <span class="quick-nav-left"><span class="quick-nav-icon">${lucide('Clock3', 20)}</span><span>ลงเวลา</span></span>
+              <span class="quick-nav-right"><span class="status-pill ok">${lucide('Check', 16)}<span>เข้าทำงาน 07:05</span></span>${lucide('ChevronRight', 16)}</span>
+            </button>
+            <button type="button" class="quick-nav-card">
+              <span class="quick-nav-left"><span class="quick-nav-icon">${lucide('Building2', 20)}</span><span>ตึกของฉัน</span></span>
+              <span class="quick-nav-right"><span>ตึก A</span>${lucide('ChevronRight', 16)}</span>
+            </button>
+            <button type="button" class="quick-nav-card">
+              <span class="quick-nav-left"><span class="quick-nav-icon">${lucide('ArrowRightLeft', 20)}</span><span>งานที่ได้รับมอบหมาย</span></span>
+              <span class="quick-nav-right"><span class="count-pill blue">0</span>${lucide('ChevronRight', 16)}</span>
+            </button>
+          </div>
+        </div>
+
+        ${renderBottomNav('my-work')}
+      </div>
+    `;
+  }
+
+  function renderPhoneSchedule() {
+    return `
+      <div class="phone-frame">
+        <div class="phone-statusbar"><span class="tabular">09:41</span><span>5G 100%</span></div>
+        <div class="phone-topbar">
+          <button type="button" style="border:0;background:transparent;color:var(--accent);font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:4px;" onclick="setCleanerTab('my-work')">
+            ${lucide('ChevronLeft', 16)}<span>งานของฉัน</span>
+          </button>
+          <span style="font-weight:800;font-size:14px;">ตารางของฉัน</span>
+          <span style="width:60px;"></span>
+        </div>
+
+        <div class="phone-body">
+          <div>
+            <h3 style="font-size:20px;font-weight:800;">ตารางของฉัน</h3>
+            <p style="font-size:12.5px;color:var(--text-2);">ตารางเวรประจำสัปดาห์และกลุ่มพักเบรก</p>
+          </div>
+
+          <div class="week-stepper" style="width:100%;justify-content:space-between;">
+            <button type="button" aria-label="สัปดาห์ก่อนหน้า">${lucide('ChevronLeft', 16)}</button>
+            <span class="tabular" style="flex:1;text-align:center;">16 – 22 พ.ย. 2569</span>
+            <button type="button" aria-label="สัปดาห์ถัดไป">${lucide('ChevronRight', 16)}</button>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="shift-banner-card">
+              <div>
+                <div class="shift-banner-title">จ. 16/11</div>
+                <div class="shift-banner-sub">พื้นที่ 1 • กลุ่มที่ 1</div>
+              </div>
+              <span class="status-pill idle">มีแผนทำงาน</span>
+            </div>
+
+            <div class="shift-banner-card">
+              <div>
+                <div class="shift-banner-title">อ. 17/11</div>
+                <div class="shift-banner-sub">พื้นที่ 1 • กลุ่มที่ 1</div>
+              </div>
+              <span class="status-pill idle">มีแผนทำงาน</span>
+            </div>
+
+            <div class="shift-banner-card" style="background:var(--accent-subtle);border-color:var(--accent-border);">
+              <div>
+                <div class="shift-banner-title" style="color:var(--accent);">พ. 18/11 (วันนี้)</div>
+                <div class="shift-banner-sub">พื้นที่ 1 • กลุ่มที่ 1</div>
+              </div>
+              <span class="status-pill ok">${lucide('Check', 16)}<span>กำลังทำงาน</span></span>
+            </div>
+
+            <div class="shift-banner-card">
+              <div>
+                <div class="shift-banner-title">พฤ. 19/11</div>
+                <div class="shift-banner-sub">พื้นที่ 1 • กลุ่มที่ 1</div>
+              </div>
+              <span class="day-pill leave">ลาป่วย</span>
+            </div>
+
+            <div class="shift-banner-card">
+              <div>
+                <div class="shift-banner-title">ศ. 20/11</div>
+                <div class="shift-banner-sub">พื้นที่ 1 • กลุ่มที่ 1</div>
+              </div>
+              <span class="status-pill idle">มีแผนทำงาน</span>
+            </div>
+          </div>
+        </div>
+
+        ${renderBottomNav('my-schedule')}
+      </div>
+    `;
+  }
+
+  function renderPhoneCheckIn() {
+    return `
+      <div class="phone-frame">
+        <div class="phone-statusbar"><span class="tabular">09:41</span><span>5G 100%</span></div>
+        <div class="phone-topbar">
+          <button type="button" style="border:0;background:transparent;color:var(--accent);font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:4px;" onclick="setCleanerTab('my-work')">
+            ${lucide('ChevronLeft', 16)}<span>งานของฉัน</span>
+          </button>
+          <span style="font-weight:800;font-size:14px;">ลงเวลา</span>
+          <span style="font-size:11px;color:var(--passed);font-weight:700;display:inline-flex;align-items:center;gap:3px;">
+            ${lucide('Check', 16)}<span>QR ยืนยัน</span>
+          </span>
+        </div>
+
+        <div class="phone-body">
+          <div>
+            <h3 style="font-size:20px;font-weight:800;">ลงเวลา</h3>
+            <p style="font-size:13px;font-weight:700;color:var(--text-3);">กะเช้า 07:00–19:00</p>
+            <p style="font-size:12px;color:var(--text-2);">พื้นที่ของคุณ: ชั้นหนึ่ง · 2 จุด (กลุ่มพักที่ 1)</p>
+          </div>
+
+          ${state.skippedGapPrompt ? `
+            <div style="background:var(--overdue-bg);border:1px solid var(--overdue-border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;">
+              <div style="font-weight:800;color:var(--overdue);font-size:13px;display:flex;align-items:center;gap:6px;">
+                ${lucide('TriangleAlert', 16)}<span>ต้องยืนยันรายการที่ข้ามก่อน</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-3);">คุณกำลังบันทึก <strong>3. กลับจากพัก</strong> โดยยังไม่ได้บันทึก <strong>2. ออกพัก</strong> ยืนยันหรือไม่?</div>
+              <div style="display:flex;gap:8px;">
+                <button type="button" class="btn-primary" style="flex:1;justify-content:center;background:var(--overdue);border-color:var(--overdue);" onclick="state.skippedGapPrompt=false;render();">ยืนยันข้ามขั้นตอน</button>
+                <button type="button" class="btn-secondary" onclick="state.skippedGapPrompt=false;render();">ยกเลิก</button>
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="step-card-list">
+            <div class="step-row">
+              <span class="step-row-left"><span class="step-num-badge done">${lucide('Check', 16)}</span><span>เข้างาน</span></span>
+              <span class="tabular" style="color:var(--passed);font-weight:800;">07:05</span>
+            </div>
+            <div class="step-row active-step">
+              <span class="step-row-left"><span class="step-num-badge current">2</span><span style="color:var(--accent);">ออกพัก</span></span>
+              <span style="color:var(--text-2);">–</span>
+            </div>
+            <div class="step-row">
+              <span class="step-row-left"><span class="step-num-badge">3</span><span>กลับจากพัก</span></span>
+              <span style="color:var(--text-2);">–</span>
+            </div>
+            <div class="step-row">
+              <span class="step-row-left"><span class="step-num-badge">4</span><span>ออกพักรอบเย็น (Numbered6)</span></span>
+              <span style="color:var(--text-2);">–</span>
+            </div>
+            <div class="step-row">
+              <span class="step-row-left"><span class="step-num-badge">5</span><span>กลับจากพักรอบเย็น</span></span>
+              <span style="color:var(--text-2);">–</span>
+            </div>
+            <div class="step-row">
+              <span class="step-row-left"><span class="step-num-badge">6</span><span>เลิกงาน</span></span>
+              <span style="color:var(--text-2);">–</span>
+            </div>
+          </div>
+
+          <div style="font-size:12px;color:var(--accent);font-weight:600;display:flex;align-items:center;gap:6px;">
+            ${lucide('Info', 16)}<span>เกี่ยวกับการลงเวลา (ต้องสแกนป้าย QR จริงที่จุดลงเวลา)</span>
+          </div>
+
+          <button type="button" class="btn-primary" style="width:100%;justify-content:center;min-height:44px;font-size:14px;">
+            ${lucide('Clock3', 20)}<span>ออกพัก (ขั้นตอนที่ 2)</span>
+          </button>
+          <button type="button" class="btn-secondary" style="width:100%;justify-content:center;min-height:40px;" onclick="state.skippedGapPrompt=true;render();">
+            <span>ข้ามไปบันทึกขั้นตอนอื่น / เลิกงาน</span>
+          </button>
+        </div>
+
+        ${renderBottomNav('check-in')}
+      </div>
+    `;
+  }
+
+  function renderPhoneScanAndSubmit() {
+    return `
+      <div class="phone-frame">
+        <div class="phone-statusbar"><span class="tabular">09:41</span><span>5G 100%</span></div>
+        <div class="phone-topbar">
+          <button type="button" style="border:0;background:transparent;color:var(--accent);font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:4px;" onclick="setCleanerTab('my-work')">
+            ${lucide('ChevronLeft', 16)}<span>งานของฉัน</span>
+          </button>
+          <span style="font-weight:800;font-size:14px;">ส่งงานจุดทำความสะอาด</span>
+          <span style="width:45px;"></span>
+        </div>
+
+        <div class="phone-body">
+          <div>
+            <h3 style="font-size:20px;font-weight:800;">ห้องน้ำชาย</h3>
+            <p style="font-size:13px;color:var(--text-2);">AR01-01 · ตึก A · ชั้นหนึ่ง</p>
+            <div style="margin-top:6px;">สถานะ: <span class="status-pill warn">ยังไม่ส่ง</span></div>
+          </div>
+
+          <!-- Large Touch-Friendly Result Cards (24px Lucide Icons: CircleCheck & TriangleAlert) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="background:var(--accent-subtle);border:2px solid var(--accent);border-radius:14px;padding:18px 12px;text-align:center;cursor:pointer;">
+              <div style="width:42px;height:42px;border-radius:50%;background:#DBEAFE;color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;">
+                ${lucide('CircleCheck', 24)}
+              </div>
+              <div style="font-weight:800;color:var(--accent);font-size:15px;">เรียบร้อย</div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 12px;text-align:center;cursor:pointer;">
+              <div style="width:42px;height:42px;border-radius:50%;background:var(--overdue-bg);color:var(--overdue);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;">
+                ${lucide('TriangleAlert', 24)}
+              </div>
+              <div style="font-weight:700;color:var(--text-3);font-size:15px;">พบปัญหา</div>
+            </div>
+          </div>
+
+          <div class="shift-banner-card" style="background:var(--surface-2);">
+            <div class="shift-banner-left">
+              <div class="shift-cal-icon">${lucide('ScanLine', 20)}</div>
+              <div>
+                <div class="shift-banner-title">สแกน QR ที่จุดนี้เพื่อส่งงาน</div>
+                <div class="shift-banner-sub">0 จาก 2 จุด ส่งแล้ว · ยืนยันพิกัด GPS อัตโนมัติ</div>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="btn-primary" style="width:100%;justify-content:center;min-height:46px;font-size:15px;">
+            ${lucide('Send', 20)}<span>ส่งงาน</span>
+          </button>
+
+          <div style="background:var(--passed-bg);border:1px solid var(--passed-border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="color:var(--passed);display:inline-flex;">${lucide('CircleCheck', 24)}</span>
+              <div>
+                <div style="font-weight:800;font-size:13px;color:var(--passed);">ส่งงานสำเร็จ (08:12 น.)</div>
+                <div style="font-size:11.5px;color:var(--passed);">ผลการทำงาน: เรียบร้อย</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        ${renderBottomNav('scan-qr')}
+      </div>
+    `;
+  }
+
+  /* ==========================================================================
+     MAIN VIEW COMPOSERS
+     ========================================================================== */
+  function renderAllOverviewBoard() {
+    const windowThemeClass = state.sidebarTheme === 'navy' ? 'navy-nav' : '';
+    let desktopMainHtml = '';
+    if (state.desktopPage === 'dashboard') desktopMainHtml = renderDashboardContent();
+    else if (state.desktopPage === 'schedules') desktopMainHtml = renderScheduleContent();
+    else if (state.desktopPage === 'attendance') desktopMainHtml = renderAttendanceContent();
+    else desktopMainHtml = renderAdminSetupGrid();
+
+    return `
+      <div class="app-window ${windowThemeClass}">
+        ${renderSidebar(state.desktopPage)}
+        <div class="app-main">
+          ${desktopMainHtml}
+        </div>
+      </div>
+
+      <div class="card-panel" style="padding:20px;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
+          <div>
+            <h3 style="font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;">
+              ${lucide('ClipboardList', 20)}
+              <span>สำหรับ Cleaner (แม่บ้าน) — ใช้งานผ่านมือถือเป็นหลัก พร้อม Bottom Navigation 4 แท็บ</span>
+            </h3>
+            <p style="font-size:13px;color:var(--text-2);">งานของฉัน (ClipboardList) · ลงเวลา (Clock3) · สแกน QR (ScanLine) · ตารางเวร (CalendarDays)</p>
+          </div>
+          <span class="status-pill ok">${lucide('CircleCheck', 16)}<span>ใช้ไอคอน Lucide SVG 100%</span></span>
+        </div>
+
+        <div class="phones-showcase">
+          ${renderPhoneMyWork()}
+          ${renderPhoneSchedule()}
+          ${renderPhoneCheckIn()}
+          ${renderPhoneScanAndSubmit()}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderScheduleRedesignExploration() {
+    const windowThemeClass = state.sidebarTheme === 'navy' ? 'navy-nav' : '';
+    return `
+      <div class="card-panel" style="padding:18px 22px;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            <h3 style="font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px;">
+              ${lucide('CalendarDays', 20)}
+              <span>การออกแบบหน้า "ตารางงาน" ใหม่ตามแบบอ้างอิง (Clean Roster + Contextual Actions)</span>
+            </h3>
+            <p style="font-size:13px;color:var(--text-2);">ตัดปุ่มซ้ำซ้อนกว่า 200+ ปุ่มออกจากช่องตาราง เหลือเพียงสถานะและพื้นที่/กลุ่มพักที่อ่านง่าย แล้วรวมคำสั่งไว้ที่ปุ่ม <strong>จัดการตารางงาน</strong> มุมขวาบน และเมนูบริบทเมื่อคลิกช่องหรือปุ่ม <strong>Ellipsis</strong></p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <span class="status-pill ok">${lucide('CircleCheck', 16)}<span>รองรับ Desktop & Mobile</span></span>
+            <span class="status-pill ok">${lucide('CircleCheck', 16)}<span>Lucide SVG Icons</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start;">
+        <div class="app-window ${windowThemeClass}" style="min-height:620px;">
+          ${renderSidebar('schedules')}
+          <div class="app-main">
+            ${renderScheduleContent()}
+          </div>
+        </div>
+
+        <!-- Supervisor Mobile Schedule Frame -->
+        <div class="phone-frame" style="min-height:620px;">
+          <div class="phone-statusbar"><span class="tabular">09:41</span><span>5G 100%</span></div>
+          <div class="phone-topbar">
+            <span style="font-weight:800;font-size:15px;display:inline-flex;align-items:center;gap:8px;">
+              ${lucide('Menu', 20)}<span>ตารางงาน (Supervisor)</span>
+            </span>
+            <button type="button" class="phone-circle-btn" aria-label="มอบหมายงาน">${lucide('UserPlus', 16)}</button>
+          </div>
+          <div class="phone-body">
+            <div class="week-stepper" style="width:100%;justify-content:space-between;">
+              <button type="button" aria-label="สัปดาห์ก่อนหน้า">${lucide('ChevronLeft', 16)}</button>
+              <span class="tabular" style="flex:1;text-align:center;">16 – 22 พ.ย. 2569</span>
+              <button type="button" aria-label="สัปดาห์ถัดไป">${lucide('ChevronRight', 16)}</button>
+            </div>
+
+            <div class="seg-group" style="width:100%;display:grid;grid-template-columns:repeat(3,1fr);">
+              <button type="button" class="seg-btn active">ทีมของฉัน</button>
+              <button type="button" class="seg-btn">กะเช้า</button>
+              <button type="button" class="seg-btn">กะดึก</button>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              ${ROSTER_DATA.map(emp => `
+                <div class="shift-banner-card" onclick="selectScheduleCell('${emp.id}', 2)" style="cursor:pointer;">
+                  <div class="emp-cell">
+                    <div class="emp-avatar ${emp.color}">${emp.initial}</div>
+                    <div>
+                      <span class="emp-name">${emp.name}</span>
+                      <span class="emp-role">${emp.areaCode} · ${emp.breakGroup}</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="status-pill ${emp.role.includes('สแปร์') ? 'idle' : 'ok'}">
+                      ${emp.role.includes('สแปร์') ? 'สแปร์' : 'ทำงาน'}
+                    </span>
+                    <span style="color:var(--text-2);display:inline-flex;">${lucide('Ellipsis', 16)}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div style="background:var(--accent-subtle);border:1px solid var(--accent-border);border-radius:12px;padding:12px;font-size:12px;color:var(--accent);display:flex;align-items:flex-start;gap:8px;">
+              ${lucide('Info', 16)}
+              <span><strong>แตะที่การ์ดพนักงาน</strong> เพื่อเปิดถาดจัดการ (แก้เฉพาะวันที่ / บันทึกลา / มอบหมายงานสแปร์ / ย้ายพื้นที่ / เพิ่มเวลาที่ขาด)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCleanerMobileSuite() {
+    return `
+      <div class="card-panel" style="padding:18px 22px;">
+        <h3 style="font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;">
+          ${lucide('ClipboardList', 20)}
+          <span>ต้นแบบหน้าจอมือถือแม่บ้าน (Cleaner Mobile Suite & 4-Tab Bottom Navigation)</span>
+        </h3>
+        <p style="font-size:13px;color:var(--text-2);margin-top:4px;">
+          ใช้ไอคอน Lucide SVG ขนาด 20px บนแถบนำทางด้านล่าง 4 แท็บคงที่: <strong>งานของฉัน</strong> (<code>ClipboardList</code>), <strong>ลงเวลา</strong> (<code>Clock3</code>), <strong>สแกน QR</strong> (<code>ScanLine</code>), <strong>ตารางเวร</strong> (<code>CalendarDays</code>)
+        </p>
+      </div>
+
+      <div class="phones-showcase">
+        ${renderPhoneMyWork()}
+        ${renderPhoneCheckIn()}
+        ${renderPhoneScanAndSubmit()}
+        ${renderPhoneSchedule()}
+      </div>
+    `;
+  }
+
+  function renderAdminSuite() {
+    const windowThemeClass = state.sidebarTheme === 'navy' ? 'navy-nav' : '';
+    return `
+      <div class="app-window ${windowThemeClass}">
+        ${renderSidebar('dashboard')}
+        <div class="app-main">
+          ${renderDashboardContent()}
+        </div>
+      </div>
+
+      <div class="app-window ${windowThemeClass}">
+        ${renderSidebar('attendance')}
+        <div class="app-main">
+          ${renderAttendanceContent()}
+        </div>
+      </div>
+
+      <div class="app-window ${windowThemeClass}" style="min-height:520px;">
+        ${renderSidebar('areas')}
+        <div class="app-main">
+          ${renderAdminSetupGrid()}
+        </div>
+      </div>
+    `;
+  }
+
+  function render() {
+    const root = document.getElementById('prototype-root');
+    if (state.view === 'all-overview') {
+      root.innerHTML = renderAllOverviewBoard();
+    } else if (state.view === 'schedule-redesign') {
+      root.innerHTML = renderScheduleRedesignExploration();
+    } else if (state.view === 'cleaner-mobile') {
+      root.innerHTML = renderCleanerMobileSuite();
+    } else {
+      root.innerHTML = renderAdminSuite();
+    }
+  }
+
+  initStaticHeaderIcons();
+  render();
+</script>
+</body>
+</html>

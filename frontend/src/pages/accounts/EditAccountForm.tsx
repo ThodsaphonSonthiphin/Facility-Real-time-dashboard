@@ -20,7 +20,7 @@ import { useEditAccountForm } from './useEditAccountForm';
 
 /** D6's "แก้ไข": name and place; the role and the login name are fixed (plan 5 decision 2). Keyed by account id. */
 export function EditAccountForm({ account, accounts, areas, buildings, onDone, onCancel }: EditAccountFormProps) {
-  const { names, draft, set, problem, isLoading: profileLoading, areaChoices, blockOf, titleId, chooseArea, chooseBuilding, submit } = useEditAccountForm({ account, accounts, areas, buildings, onDone, onCancel });
+  const { names, draft, set, problem, isLoading: profileLoading, areaChoices, blockOf, titleId, chooseCleanerKind, chooseArea, chooseBuilding, submit } = useEditAccountForm({ account, accounts, areas, buildings, onDone, onCancel });
 
   const [notice, setNotice] = useState<string | null>(null);
   const me = useAppSelector((state) => state.auth.currentUser?.id);
@@ -46,8 +46,30 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
         {/* Reference assignment is 1fr + 160px at 420px and above; no container token fits these widths. */}
         <fieldset hidden={account.role === 'Admin'} className="min-w-0 rounded-lg border border-border p-4">
           <legend className="px-1.5 font-semibold">{account.role === 'Cleaner' ? 'พื้นที่และกะที่รับผิดชอบ' : 'ตึกและกะที่รับผิดชอบ'}</legend>
+          {account.role === 'Cleaner' && (
+            <div className="mb-3">
+              <Field label="ประเภทแม่บ้าน">
+                <Select size="desk" value={draft.cleanerKind ?? 'Regular'} disabled={isLoading}
+                  onChange={(event) => chooseCleanerKind(event.target.value === 'Relief' ? 'Relief' : 'Regular')}>
+                  <option value="Regular">แม่บ้านประจำ</option>
+                  <option value="Relief">แม่บ้านสแปร์</option>
+                </Select>
+              </Field>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-[minmax(0,1fr)_10rem]">
-            {account.role === 'Cleaner' && (
+            {account.role === 'Cleaner' && draft.cleanerKind === 'Relief' && (
+              <Field label="ตึกประจำ">
+                <Select size="desk" value={draft.homeBuildingId ?? ''} disabled={isLoading}
+                  onChange={(event) => set({ homeBuildingId: event.target.value })}>
+                  <option value="">เลือกตึกประจำ</option>
+                  {buildings.map((building) => (
+                    <option key={building.id} value={building.id}>{buildingOptionText(building)}</option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+            {account.role === 'Cleaner' && draft.cleanerKind !== 'Relief' && (
               <Field label="พื้นที่ประจำ" help={account.isActive ? undefined : 'เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่'}>
                 <Select
                   size="desk"

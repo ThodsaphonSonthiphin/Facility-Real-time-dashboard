@@ -2,6 +2,7 @@ using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
 using JanitorialManagementDashboard.Api.Hubs;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Geo;
 using JanitorialManagementDashboard.Application.Rounds;
@@ -9,6 +10,7 @@ using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,10 +31,12 @@ public static class ScanRecordEndpoints
         CreateScanRecordRequest request,
         ClaimsPrincipal principal,
         AppDbContext db,
+        ScheduleStore store,
         IHubContext<ScanHub> hub,
         ILogger<ScanHub> logger,
         TimeProvider clock,
-        AttendanceSettings settings)
+        AttendanceSettings settings,
+        CancellationToken ct)
     {
         // facility-0017: the scanner is the account in the access token, never a field in the body
         var user = await CurrentUser.LoadAsync(principal, db);
@@ -76,15 +80,30 @@ public static class ScanRecordEndpoints
 
         // facility-0069: the Cleaner's own shift, not the shift the clock is in
         var slot = user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null;
-
-        // facility-0041: the sign's QR Token decides the Area; another Area needs a Cover Assignment for this shift
-        CoverAssignment? cover = null;
-        if (point.AreaId != user.AreaId)
+        if (slot is null)
         {
-            cover = slot is null
-                ? null
-                : await db.CoverAssignments.FirstOrDefaultAsync(c =>
-                    c.UserId == user.Id && c.AreaId == point.AreaId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null);
+            return ApiResults.Message(StatusCodes.Status409Conflict, "ตอนนี้ไม่อยู่ในกะของคุณ");
+        }
+
+        // Spec §7 and ruling A: submission keeps its own-Area rule, but "own" is now the slot's effective duty Area — the
+        // live relief assignment's Area, the dated plan's Area, or the compatibility projection for a person with no dated
+        // identity. A day off or leave never removes that underlying eligible Area, so an eligible check-in can still
+        // submit; nothing here adds a leave or day-off block of its own.
+        // facility-0041: another Area still needs a Cover Assignment for this shift, exactly as before.
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, new DateTimeOffset(now, TimeSpan.Zero), ct);
+
+        // Spec §9: while an authorised transfer is in force and unconfirmed there is no Area the work belongs to, so a
+        // submission in either Area is refused and nothing is written. A submission is never evidence of arrival.
+        if (duty.IsTransferPending)
+        {
+            return ApiResults.Message(StatusCodes.Status409Conflict, AttendanceEndpoints.TransferPendingMessage);
+        }
+
+        CoverAssignment? cover = null;
+        if (point.AreaId != duty.AreaId)
+        {
+            cover = await db.CoverAssignments.FirstOrDefaultAsync(c =>
+                c.UserId == user.Id && c.AreaId == point.AreaId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null);
             if (cover is null)
             {
                 return await BlockedScans.BlockAsync(db, user, sign, point.Area!, BlockReason.OtherArea, gps, now);
@@ -93,11 +112,6 @@ public static class ScanRecordEndpoints
 
         // Submit from Shift-In until Shift-Out (owner decision 2026-10-09: breaks do not block).
         // See docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md and facility-0050.
-        if (slot is null)
-        {
-            return ApiResults.Message(StatusCodes.Status409Conflict, "ตอนนี้ไม่อยู่ในกะของคุณ");
-        }
-
         var attendance = (await AttendanceEndpoints.LoadEventsAsync(db, user.Id, slot)).Select(a => a.EventType).ToList();
         if (!AttendanceRules.IsOnDuty(attendance))
         {
@@ -117,6 +131,7 @@ public static class ScanRecordEndpoints
             ShiftDate = slot.ShiftDate,
             Shift = slot.Shift,
             RoundWindowId = placed.Round?.Id,
+            RoundOriginId = placed.Round?.Id,
             RoundStart = placed.Round?.Start,
             RoundEnd = placed.Round?.End,
             Placement = placed.Placement,

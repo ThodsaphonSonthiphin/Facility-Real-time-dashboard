@@ -4,6 +4,8 @@ import type { Shift } from '../../shared/api/types';
 import { shiftShortLabel } from '../../shared/utils/labels';
 import type { Account, AccountRole, CreateAccountRequest, UpdateAccountBody } from './accountsApi';
 
+import type { CleanerKindFields } from './accountFormTypes';
+
 export type AccountActiveFilter = 'all' | 'active' | 'inactive';
 
 export const accountRoles: readonly AccountRole[] = ['Cleaner', 'Supervisor', 'Admin'];
@@ -40,6 +42,10 @@ export function placeText(account: Account, names?: BuildingNames): string {
     return '—';
   }
   const shift = account.shift ? shiftShortLabel[account.shift] : 'ไม่มีกะ';
+  if (account.cleanerKind === 'Relief') {
+    const home = account.homeBuildingCode ? buildingText(account.homeBuildingCode, names) : 'ยังไม่ทราบ';
+    return `แม่บ้านสแปร์ · ตึกประจำ ${home} · ${shift}`;
+  }
   return account.role === 'Supervisor'
     ? `ตึก ${account.buildingCode ? buildingText(account.buildingCode, names) : '-'} · ${shift}`
     : `${account.areaCode ?? 'ยังไม่มีพื้นที่'} · ${shift}`;
@@ -109,7 +115,7 @@ export const MAX_PASSWORD = 100;
 export const PASSWORD_PROBLEM = 'รหัสผ่านชั่วคราวต้องยาว 15–100 ตัวอักษร';
 
 /** The add form as typed; selects hold ids as strings, '' for none. */
-export interface CreateDraft {
+export interface CreateDraft extends CleanerKindFields {
   role: AccountRole;
   displayName: string;
   employeeId: string;
@@ -160,6 +166,8 @@ export function createRequest(draft: CreateDraft): { request: CreateAccountReque
       request: { role: 'Supervisor', displayName, employeeId, phone, buildingId: Number(draft.buildingId), shift: draft.shift },
     };
   }
+  const place = cleanerPlace(draft, draft.areaId);
+  if ('problem' in place) return place;
   return {
     request: {
       role: 'Cleaner',
@@ -167,13 +175,13 @@ export function createRequest(draft: CreateDraft): { request: CreateAccountReque
       employeeId,
       phone,
       shift: draft.shift,
-      ...(draft.areaId ? { areaId: Number(draft.areaId) } : {}),
+      ...place,
     },
   };
 }
 
 /** The edit form as typed. */
-export interface EditDraft {
+export interface EditDraft extends CleanerKindFields {
   displayName: string;
   areaId: string;
   buildingId: string;
@@ -186,6 +194,8 @@ export function editDraftOf(account: Account): EditDraft {
     areaId: account.areaId ? String(account.areaId) : '',
     buildingId: account.buildingId ? String(account.buildingId) : '',
     shift: account.shift ?? '',
+    cleanerKind: account.cleanerKind,
+    homeBuildingId: account.homeBuildingId ? String(account.homeBuildingId) : '',
   };
 }
 
@@ -210,11 +220,27 @@ export function updateRequest(account: Account, draft: EditDraft): { body: Updat
   if (account.role === 'Supervisor') {
     return { body: { displayName, buildingId: Number(draft.buildingId), shift: draft.shift } };
   }
+  const place = cleanerPlace(draft, account.isActive ? draft.areaId : '', account.cleanerKind === 'Relief');
+  if ('problem' in place) return place;
   return {
     body: {
       displayName,
       shift: draft.shift,
-      ...(account.isActive && draft.areaId ? { areaId: Number(draft.areaId) } : {}),
+      ...place,
     },
+  };
+}
+
+function cleanerPlace(draft: CleanerKindFields, areaId: string, wasRelief = false):
+  Pick<UpdateAccountBody, 'areaId' | 'cleanerKind' | 'homeBuildingId'> | { problem: string } {
+  if (draft.cleanerKind === 'Relief') {
+    return draft.homeBuildingId
+      ? { cleanerKind: 'Relief', homeBuildingId: Number(draft.homeBuildingId) }
+      : { problem: 'เลือกตึกประจำก่อน' };
+  }
+  if (wasRelief && !areaId) return { problem: 'เลือกพื้นที่ประจำก่อน' };
+  return {
+    ...(areaId ? { areaId: Number(areaId) } : {}),
+    ...(wasRelief ? { cleanerKind: 'Regular' as const } : {}),
   };
 }

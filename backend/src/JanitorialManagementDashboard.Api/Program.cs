@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json.Serialization;
 using JanitorialManagementDashboard.Api;
@@ -6,13 +7,17 @@ using JanitorialManagementDashboard.Api.Commands;
 using JanitorialManagementDashboard.Api.Endpoints;
 using JanitorialManagementDashboard.Api.Hubs;
 using JanitorialManagementDashboard.Api.Retention;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Retention;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Retention;
 using JanitorialManagementDashboard.Application.Accounts;
 using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Auth;
 using JanitorialManagementDashboard.Infrastructure.Auth;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -61,7 +66,9 @@ try
         builder.Configuration.GetSection(LoginThrottleSettings.SectionName).Get<LoginThrottleSettings>() ?? new LoginThrottleSettings());
     builder.Services.AddSingleton<LoginThrottle>();
     var attendance = builder.Configuration.GetSection(AttendanceSettings.SectionName).Get<AttendanceSettings>() ?? new AttendanceSettings();
-    if (attendance.OpensMinutesBeforeShift is < 0 or > 360 || attendance.ClosesMinutesAfterShift is < 0 or > 360 || attendance.RepeatIgnoreMinutes < 0)
+    if (attendance.OpensMinutesBeforeShift is < 0 or > AttendanceSettings.MaxReceivingOffsetMinutes
+        || attendance.ClosesMinutesAfterShift is < 0 or > AttendanceSettings.MaxReceivingOffsetMinutes
+        || attendance.RepeatIgnoreMinutes < 0)
     {
         throw new InvalidOperationException("Attendance: window minutes must be 0-360 and RepeatIgnoreMinutes 0 or more.");
     }
@@ -70,9 +77,56 @@ try
     retention.Validate();
     builder.Services.AddSingleton(retention);
     builder.Services.AddScoped<IRetentionRunner, RetentionRunner>();
+    // Spec §3: the dated Supervisor scope and its writes are the authority for management, work and inspection
+    builder.Services.AddScoped<ScheduleStore>();
+    builder.Services.AddScoped<ScheduleScopeReader>();
+    builder.Services.AddScoped<SupervisorMembership>();
+
+    // Spec §11: the command engine and its seams. The settings are built without demanding a signing key, and the token
+    // service resolves the key only when a command is actually issued or verified, so a server that leaves scheduling off
+    // still starts, logs in and serves the legacy endpoints with no key configured at all (Task 6 adds the routes and the
+    // real command kinds; Task 12 supplies the scoped live invalidation).
+    var scheduling = builder.Configuration.GetSection(SchedulingSettings.SectionName);
+    var schedulingSettings = new SchedulingSettings(scheduling[SchedulingSettings.CommandSigningKeyName])
+    {
+        Enabled = scheduling.GetValue("Enabled", true),
+        // A stored date format, read with the invariant culture so a machine's calendar never reinterprets it.
+        HistoryStartsAt = DateOnly.TryParse(
+            scheduling["HistoryStartsAt"], CultureInfo.InvariantCulture, out var historyStartsAt)
+            ? historyStartsAt
+            : null,
+    };
+    builder.Services.AddSingleton(schedulingSettings);
+    builder.Services.AddScoped(provider =>
+        new ScheduleCommandTokenService(provider.GetRequiredService<SchedulingSettings>().CommandSigningKey));
+    builder.Services.AddScoped<ScheduleNotifications>();
+    builder.Services.AddScoped<IScheduleCommandNotifier>(provider => provider.GetRequiredService<ScheduleNotifications>());
+    builder.Services.AddScoped<ScheduleCommandService>();
+
+    // Spec §11 and §5: one handler per command kind, resolved by kind through the seam the engine already calls. Each kind
+    // owns which building/shift/person a command may touch; the engine owns the transaction, the locks and the receipt.
+    builder.Services.AddScoped<IScheduleCommandHandler, SetWeeklyDaysOffHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, SetRegularBaselineHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, SetReliefBaselineHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, SetDatedAreaHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, SetDatedBreakHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, RecordLeaveHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, CancelLeaveHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, CorrectPlanHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, AssignReliefHandler>();
+    // Spec §9 (Task 10): the midshift Area transfer — one instruction kind and one cancellation kind, from the same base,
+    // plus the arrival confirmation that is the Cleaner's own actual fact rather than a management command.
+    builder.Services.AddScoped<IScheduleCommandHandler, InstructTransferHandler>();
+    builder.Services.AddScoped<IScheduleCommandHandler, CancelTransferHandler>();
+    builder.Services.AddScoped<TransferCommandService>();
+
     if (!builder.Environment.IsEnvironment("Testing"))
         builder.Services.AddHostedService<RetentionWorker>();
 
+    builder.Services.AddScoped<OverviewTargetRecorder>();
+    builder.Services.AddScoped<OverviewMutation>();
+    builder.Services.AddScoped<OverviewNotifications>();
+    builder.Services.AddScoped<OverviewReadQuery>();
     builder.Services.AddSingleton(attendance);
     builder.Services.AddFacilityAuth(builder.Configuration);
 
@@ -154,8 +208,23 @@ try
         });
     app.UseDefaultFiles();
     app.UseStaticFiles(appFiles);
+    // Spec §11: while scheduling is not activated the whole group is a 404 for every actor, before authentication runs.
+    app.UseScheduleFeatureGate();
     app.UseAuthentication();
     app.UseAuthorization();
+    app.Use(async (context, next) =>
+    {
+        try
+        {
+            await next(context);
+        }
+        catch (OverviewCaptureException ex)
+        {
+            app.Logger.LogError(ex, "Setup history capture failed. Transaction rollback {RollbackStatus}",
+                ex.RollbackConfirmed ? "confirmed" : "unconfirmed");
+            await ApiResults.Message(StatusCodes.Status503ServiceUnavailable, "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง").ExecuteAsync(context);
+        }
+    });
 
     // Swagger UI for trying the API by hand: Development only, never on a server reachable from the internet (facility-0049)
     if (app.Environment.IsDevelopment())
@@ -180,6 +249,8 @@ try
         var firstAdmin = app.Configuration.GetSection(FirstAdminSettings.SectionName).Get<FirstAdminSettings>() ?? new FirstAdminSettings();
         await FirstAdmin.EnsureAsync(
             db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>(), scope.ServiceProvider.GetRequiredService<TimeProvider>(), firstAdmin, app.Logger);
+        await OverviewHistoryBootstrap.EnsureAsync(db, attendance, scope.ServiceProvider.GetRequiredService<TimeProvider>(),
+            app.Lifetime.ApplicationStopping);
     }
 
     // 7. SignalR Hub Mapping
@@ -190,6 +261,7 @@ try
     app.MapAuthEndpoints();
     app.MapMeEndpoints();
     app.MapAttendanceEndpoints();
+    app.MapAreaTransferEndpoints();
     app.MapServicePointEndpoints();
     app.MapScanRecordEndpoints();
     app.MapCoverAssignmentEndpoints();
@@ -201,11 +273,15 @@ try
     app.MapAdminPointEndpoints();
     app.MapAdminSignEndpoints();
     app.MapAdminAttendanceEndpoints();
+    app.MapTeamAttendanceEndpoints();
     app.MapAdminAlertEndpoints();
     app.MapAdminAuditLogEndpoints();
     app.MapAdminAccountEndpoints();
     app.MapAdminExportEndpoints();
     app.MapAdminInspectionSummaryEndpoints();
+    app.MapAdminOverviewEndpoints();
+    // Spec §11: the scheduling group maps itself last, and maps nothing at all while Scheduling:Enabled is false.
+    app.MapScheduleEndpoints();
 
     // 9. Every other page path (/login, /scan/<token>, ...) gets the app, so a printed QR Sign opens it.
     // See docs/adr/facility-0026-frontend-router-shape.md and facility-0067.

@@ -18,10 +18,18 @@ internal static class ThaiLabels
         _ => "แอดมิน",
     };
 
+    /// <summary>
+    /// The six actions of spec §8: the four legacy names keep exactly their old wording, and the numbered breaks are named
+    /// by their cycle so an audit row or a gap message can tell them apart.
+    /// </summary>
     public static string EventName(AttendanceEvent eventType) => eventType switch
     {
         AttendanceEvent.ShiftIn => "เข้างาน",
         AttendanceEvent.BreakOut => "ออกพัก",
+        AttendanceEvent.Break1Out => "ออกพัก 1",
+        AttendanceEvent.Break1In => "กลับจากพัก 1",
+        AttendanceEvent.Break2Out => "ออกพัก 2",
+        AttendanceEvent.Break2In => "กลับจากพัก 2",
         AttendanceEvent.BreakIn => "กลับจากพัก",
         _ => "เลิกงาน",
     };

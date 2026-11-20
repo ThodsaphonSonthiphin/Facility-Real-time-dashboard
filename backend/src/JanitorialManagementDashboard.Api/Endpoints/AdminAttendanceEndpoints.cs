@@ -1,14 +1,15 @@
 using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
-using JanitorialManagementDashboard.Api.Hubs;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Rounds;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
-using Microsoft.AspNetCore.SignalR;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -27,7 +28,8 @@ public static class AdminAttendanceEndpoints
     }
 
     private static async Task<IResult> GetBoardAsync(
-        string? shiftDate, string? shift, int? buildingId, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+        string? shiftDate, string? shift, int? buildingId, ClaimsPrincipal principal, AppDbContext db,
+        ScheduleStore store, TimeProvider clock, CancellationToken ct)
     {
         if (await CurrentUser.LoadAsync(principal, db) is null)
         {
@@ -37,7 +39,7 @@ public static class AdminAttendanceEndpoints
         var now = clock.GetUtcNow().UtcDateTime;
         return AdminQuery.ReadSlot(shiftDate, shift, now, out var slot) is { } error
             ? Bad(error)
-            : Results.Ok(await AttendanceBoard.LoadAsync(db, slot, buildingId, now));
+            : Results.Ok(await AttendanceBoard.LoadAsync(db, store, slot, buildingId, now, ct));
     }
 
     /// <summary>
@@ -48,10 +50,11 @@ public static class AdminAttendanceEndpoints
         CorrectAttendanceRequest request,
         ClaimsPrincipal principal,
         AppDbContext db,
+        ScheduleStore store,
         TimeProvider clock,
         AttendanceSettings settings,
-        IHubContext<ScanHub> hub,
-        ILogger<ScanHub> logger)
+        ScheduleNotifications notifications,
+        CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -107,18 +110,31 @@ public static class AdminAttendanceEndpoints
             return Bad("เวลาที่ใส่ยังมาไม่ถึง");
         }
 
+        await using var transaction = await store.BeginCommandTransactionAsync(ct);
+        await store.LockSlotAsync(cleaner.Id, shiftDate, shift, now, ct);
         var events = await db.ShiftAttendances
             .Where(a => a.UserId == cleaner.Id && a.ShiftDate == slot.ShiftDate && a.Shift == slot.Shift)
-            .ToListAsync();
+            .ToListAsync(ct);
         var existing = events.FirstOrDefault(a => a.EventType == eventType);
-        if (existing is null && cleaner.AreaId is null)
+
+        // Spec §7, §8 and ruling H: the added row's Area is the slot's effective duty Area for that date — a relief
+        // assignment or the dated plan — and today's account Area only answers when no dated identity exists at all. It is
+        // never the historical Area of a day the plan knows about.
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, cleaner, slot,
+            new DateTimeOffset(now, TimeSpan.Zero), ct);
+        if (existing is null && duty.AreaId is null)
         {
             return Bad("แม่บ้านคนนี้ยังไม่มีพื้นที่");
         }
 
+        var version = AttendanceLifecycle.VersionFor(await db.AttendanceSlotLifecycles.AsNoTracking()
+            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift)
+            .Select(row => (AttendanceLifecycleVersion?)row.Version)
+            .FirstOrDefaultAsync(ct));
+
         var proposed = events.ToDictionary(a => a.EventType, a => a.OccurredAt);
         proposed[eventType] = at;
-        if (AttendanceRules.CheckTimes(proposed) is { } orderError)
+        if (AttendanceRules.CheckTimes(version, proposed) is { } orderError)
         {
             return Bad(orderError);
         }
@@ -131,8 +147,11 @@ public static class AdminAttendanceEndpoints
             return Results.Ok(AttendanceBoard.ToDto(existing));
         }
 
+        var areaCode = duty.AreaId is int dutyAreaId
+            ? await db.Areas.Where(area => area.Id == dutyAreaId).Select(area => area.Code).FirstOrDefaultAsync(ct)
+            : null;
         var summary = $"{(existing is null ? "เพิ่ม" : "แก้")}เวลา{ThaiLabels.EventName(eventType)}ของ {cleaner.DisplayName} "
-            + $"{cleaner.Area?.Code} กะ{ThaiLabels.ShiftName(shift)} {ThaiLabels.Date(shiftDate)}: "
+            + $"{areaCode ?? cleaner.Area?.Code} กะ{ThaiLabels.ShiftName(shift)} {ThaiLabels.Date(shiftDate)}: "
             + $"{(existing is null ? "–" : ThaiLabels.Clock(existing.OccurredAt))} → {ThaiLabels.Clock(at)}";
         ShiftAttendance row;
         if (existing is null)
@@ -140,7 +159,7 @@ public static class AdminAttendanceEndpoints
             row = new ShiftAttendance
             {
                 UserId = cleaner.Id,
-                AreaId = cleaner.AreaId!.Value,
+                AreaId = duty.AreaId!.Value,
                 ShiftDate = slot.ShiftDate,
                 Shift = slot.Shift,
                 EventType = eventType,
@@ -148,30 +167,17 @@ public static class AdminAttendanceEndpoints
                 Source = AttendanceSource.AdminAdd,
                 CreatedAt = now,
             };
-            await using var transaction = await db.Database.BeginTransactionAsync();
-            db.ShiftAttendances.Add(row);
-            try
-            {
-                await db.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                // The Cleaner may have scanned the same event first, which the unique index keeps. Re-throw other errors.
-                // See docs/adr/facility-0026-shift-check-in-two-shifts-strict-presence.md.
-                db.ChangeTracker.Clear();
-                var racedScan = await db.ShiftAttendances.AnyAsync(a =>
-                    a.UserId == cleaner.Id && a.ShiftDate == slot.ShiftDate && a.Shift == slot.Shift && a.EventType == eventType);
-                if (!racedScan)
+            var written = await AttendanceWrites.RecordAsync(db, row, [], row.AreaId, admin.Id, now,
+                async saved =>
                 {
-                    throw;
-                }
-
+                    AuditTrail.Add(db, admin.Id, now, "ATTENDANCE_ADD", "shift_attendances", saved.Id, summary,
+                        before: null, after: Snapshot(saved), reason);
+                    await db.SaveChangesAsync(ct);
+                }, ct);
+            if (!written.Stored)
+            {
                 return ApiResults.Message(StatusCodes.Status409Conflict, "มีการลงเวลารายการนี้แล้ว โหลดหน้าใหม่แล้วลองอีกครั้ง");
             }
-
-            AuditTrail.Add(db, admin.Id, now, "ATTENDANCE_ADD", "shift_attendances", row.Id, summary, before: null, after: Snapshot(row), reason);
-            await db.SaveChangesAsync();
-            await transaction.CommitAsync();
         }
         else
         {
@@ -187,7 +193,8 @@ public static class AdminAttendanceEndpoints
             row = existing;
         }
 
-        await AttendanceBoard.NotifyAsync(hub, db, logger, row.AreaId, slot);
+        await transaction.CommitAsync(ct);
+        await notifications.ActualChangedAsync(cleaner.Id, row.AreaId, slot, ct);
         return Results.Ok(AttendanceBoard.ToDto(row));
     }
 

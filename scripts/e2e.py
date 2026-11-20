@@ -108,6 +108,12 @@ def run(args, playwright_args):
         'E2E_BASE_URL': f'http://127.0.0.1:{port}',
         'E2E_RUN_DIR': str(run_dir), 'E2E_DATASET': args.dataset, 'E2E_SEED_TOKEN': token,
     })
+    # Enable scheduling only in the runner-owned acceptance profile. Borrow neither the owner's flag nor their key.
+    env['Scheduling__Enabled'] = str(args.dataset == 'large').lower()
+    env.pop('Scheduling__CommandSigningKey', None)
+    env.pop('Scheduling__HistoryStartsAt', None)
+    if args.dataset == 'large':
+        env['Scheduling__CommandSigningKey'] = secrets.token_urlsafe(64)
     process, owned, exit_code = None, False, 1
     started = time.monotonic()
     try:
@@ -144,14 +150,24 @@ def run(args, playwright_args):
         if not int(sql(f'SELECT COUNT(*) FROM `{database}`.users')):
             raise RuntimeError('Development seed missing from owned database')
         if args.dataset != 'baseline':
-            execute(['dotnet', 'run', '--project', 'backend/tools/JanitorialManagementDashboard.E2ESeed',
-                     '-c', 'Release', '--', args.dataset], env=env)
-            execute(['dotnet', 'run', '--no-build', '--project', 'backend/tools/JanitorialManagementDashboard.E2ESeed',
-                     '-c', 'Release', '--', args.dataset], env=env)
+            # Use this run's immutable seed build for both passes even when another engine builds in the worktree.
+            seed_dir = run_dir / 'seed'
+            execute(['dotnet', 'publish', 'backend/tools/JanitorialManagementDashboard.E2ESeed',
+                     '-c', 'Release', '-o', seed_dir, '--nologo', '-v', 'quiet'], env=env)
+            if args.dataset == 'large':
+                # Both seed passes share the observed wall clock. Neither value changes the live API clock.
+                observed_now = dt.datetime.now(dt.timezone.utc).isoformat()
+                env['E2E_SCENARIO_NOW'] = observed_now
+                env.setdefault('E2E_SEED_NOW', observed_now)
+            seed = ['dotnet', seed_dir / 'JanitorialManagementDashboard.E2ESeed.dll', args.dataset]
+            execute(seed, env=env)
+            execute(seed, env=env)
             first = json.loads((run_dir / 'dataset.json').read_text())
             repeated = json.loads((run_dir / 'dataset-repeat.json').read_text())
             if first['counts'] != repeated['counts'] or not repeated['reused']:
                 raise RuntimeError('Repeated seed changed dataset counts')
+            if args.dataset == 'large' and (not first.get('scheduling') or first['scheduling'] != repeated.get('scheduling')):
+                raise RuntimeError('Repeated seed changed the run-owned scheduling scenario')
         execute(['npx', 'playwright', 'install', browser], cwd=ROOT / 'frontend', env=env)
         result = subprocess.run(['npx', 'playwright', 'test', *playwright_args],
                                 cwd=ROOT / 'frontend', env=env)

@@ -1,11 +1,13 @@
 import { ChevronLeft, LockKeyhole, Printer } from 'lucide-react';
 import { Link } from 'react-router';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
 import { Select } from '../../shared/components/Field';
 import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../shared/components/PageState';
 import { Segmented } from '../../shared/components/Segmented';
+import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { linkClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import type { SignSize } from './printRules';
@@ -20,20 +22,27 @@ export function PrintSignsPage() {
   } = usePrintSignsPage();
 
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text print:gap-0">
-      <header className="flex flex-wrap items-end justify-between gap-4 print:hidden">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-bold">พิมพ์ป้าย</h1>
-          <span className="text-text-2">{summary}</span>
-        </div>
-        <Button variant="primary" size="desk" disabled={disabled} onClick={() => void printNow()}>
-          <Printer aria-hidden="true" className="size-4" />
-          พิมพ์
-        </Button>
-      </header>
-      <section
-        aria-label="ตัวเลือก"
-        className="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border border-border bg-surface px-4 py-3 print:hidden"
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text print:gap-0">
+      <AdminPageHeader
+        className="print:hidden"
+        title="พิมพ์ป้าย"
+        subtitle={summary}
+        actions={
+          <Button variant="primary" size="desk" disabled={disabled} onClick={() => void printNow()}>
+            <Printer aria-hidden="true" className="size-4" />
+            พิมพ์
+          </Button>
+        }
+      />
+      <FilterToolbar
+        label="ตัวเลือก"
+        className="min-w-0 print:hidden"
+        actions={
+          <span className="inline-flex items-center gap-1.5 rounded-sm bg-idle-bg px-2 py-0.5 text-xs text-idle">
+            <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
+            เปลี่ยนขนาดได้ รูปแบบป้ายเหมือนเดิม
+          </span>
+        }
       >
         <label className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-2">
           พื้นที่
@@ -58,11 +67,7 @@ export function PrintSignsPage() {
           <span>ขนาดป้าย</span>
           <Segmented label="ขนาดป้าย" options={sizeOptions} value={size} onChange={setSize} disabled={printing} />
         </div>
-        <span className="ml-auto inline-flex items-center gap-1.5 rounded-sm bg-idle-bg px-2 py-0.5 text-xs text-idle">
-          <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
-          เปลี่ยนขนาดได้ รูปแบบป้ายเหมือนเดิม
-        </span>
-      </section>
+      </FilterToolbar>
       {(areas.isLoading || areas.error || areas.data?.length === 0 || print.isFetching || print.error ||
         which === '' || emptyMessage || (signId !== undefined && singleArea)) && (
         <div className="flex min-w-0 flex-col gap-3 print:hidden">
@@ -75,7 +80,9 @@ export function PrintSignsPage() {
           {emptyMessage && <Note tone="warn">{emptyMessage}</Note>}
           {signId !== undefined && singleArea && (
             <p className="text-text-2">พิมพ์ป้ายเดียว{' '}
-              <Link className={linkClass} to={`/admin/print?area=${which}`}>พิมพ์ทั้งพื้นที่ ›</Link>
+              <Link className={`${linkClass} inline-flex min-h-9 items-center`} to={`/admin/print?area=${which}`}>
+                พิมพ์ทั้งพื้นที่
+              </Link>
             </p>
           )}
         </div>

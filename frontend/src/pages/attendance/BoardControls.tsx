@@ -1,10 +1,13 @@
+import { RotateCcw } from 'lucide-react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import type { AttendanceBoard, BoardArgs } from '../../shared/api/attendanceBoardApi';
 import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
+import { Button } from '../../shared/components/Button';
 import { SearchBox } from '../../shared/components/SearchBox';
 import { Select, TextInput } from '../../shared/components/Field';
 import { Segmented } from '../../shared/components/Segmented';
+import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { shiftLabel } from '../../shared/utils/labels';
 
 const shiftOptions = (['Day', 'Night'] as const).map((shift) => ({ value: shift, label: shiftLabel[shift] }));
@@ -13,24 +16,36 @@ interface BoardControlsProps {
   board?: AttendanceBoard;
   args: BoardArgs;
   search: string;
+  canResetToCurrent?: boolean;
+  onResetToCurrent?: () => void;
   onSearch: (text: string) => void;
   /** Show this shift of this date. */
   onSlot: (shiftDate: string, shift: Shift) => void;
   onBuilding: (buildingId: number | undefined) => void;
 }
 
-/**
- * The design file's D2 filter row: the shift, the date (the browser's calendar, owner 2026-10-29), the building, each
- * with its label beside it, then the search (kept on the owner's word, at the end of the row). A date picked shows that
- * date at once; the shift on the clock is its date and shift. A pick goes with the other half as last asked (the
- * address), not as on screen: the board on screen is the old one until the new one arrives.
- */
-export function BoardControls({ board, args, search, onSearch, onSlot, onBuilding }: BoardControlsProps) {
+export function BoardControls({
+  board, args, search, canResetToCurrent = false, onResetToCurrent, onSearch, onSlot, onBuilding,
+}: BoardControlsProps) {
   const { data: buildings } = useGetBuildingsQuery();
   const date = board?.shiftDate ?? args.shiftDate ?? '';
 
   return (
-    <section aria-label="ตัวกรอง" className="flex flex-wrap items-center gap-3">
+    <FilterToolbar
+      label="ตัวกรอง"
+      className="[&>div:last-child]:ml-auto"
+      actions={
+        <>
+          {canResetToCurrent && onResetToCurrent && (
+            <Button variant="secondary" size="desk" onClick={onResetToCurrent}>
+              <RotateCcw aria-hidden="true" className="size-4" />
+              กลับกะปัจจุบัน
+            </Button>
+          )}
+          <SearchBox label="ค้นหาพื้นที่หรือแม่บ้าน" value={search} onChange={onSearch} className="w-56 max-w-full" />
+        </>
+      }
+    >
       <Segmented
         label="กะ"
         options={shiftOptions}
@@ -53,10 +68,11 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onBuildin
           }}
         />
       </label>
-      <label className="inline-flex items-center gap-2">
+      <label className="inline-flex min-w-0 max-w-full items-center gap-2">
         ตึก
         <Select
           size="desk"
+          className="w-44 min-w-0"
           value={args.buildingId ?? ''}
           onChange={(event) => onBuilding(event.target.value === '' ? undefined : Number(event.target.value))}
         >
@@ -68,7 +84,6 @@ export function BoardControls({ board, args, search, onSearch, onSlot, onBuildin
           ))}
         </Select>
       </label>
-      <SearchBox label="ค้นหาพื้นที่หรือแม่บ้าน" value={search} onChange={onSearch} className="ml-auto w-60" />
-    </section>
+    </FilterToolbar>
   );
 }

@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Rounds;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
@@ -11,7 +13,8 @@ namespace JanitorialManagementDashboard.Api.Endpoints;
 
 /// <summary>
 /// facility-0057 rule 1 (wireframe M15): where a Supervisor should go next. It only points the way: an inspection still
-/// needs the scan at the point. It opens outside the shift too, with CanInspect false (facility-0048).
+/// needs the scan at the point. It opens outside the shift too, with CanInspect false (facility-0048). Spec §3: it shows
+/// every building the dated scope gives the Supervisor, not one building read off the account.
 /// </summary>
 public static class MyBuildingEndpoints
 {
@@ -21,7 +24,8 @@ public static class MyBuildingEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetAsync(ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> GetAsync(
+        ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, ScheduleScopeReader scope, CancellationToken ct)
     {
         var user = await CurrentUser.LoadAsync(principal, db);
         if (user is null)
@@ -36,15 +40,23 @@ public static class MyBuildingEndpoints
 
         var now = clock.GetUtcNow().UtcDateTime;
         var slot = ShiftCalendar.SlotAt(now);
+        // Read once, then answer from the same list: the actor is the token's, never the query's
+        var periods = await scope.ReadAsync(user.Id, ct);
         var coveredIds = await db.CoverAssignments
             .Where(c => c.UserId == user.Id && c.BuildingId != null && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
             .Select(c => c.BuildingId!.Value)
-            .ToListAsync();
-        var buildingIds = (user.BuildingId is int own ? coveredIds.Prepend(own) : coveredIds).Distinct().ToList();
+            .ToListAsync(ct);
+        // A building the Supervisor holds in the other shift still opens the page, with CanInspect false
+        var ownIds = periods
+            .Where(p => p.SupervisorId == user.Id && ScheduleAuthority.Covers(p, slot.ShiftDate))
+            .Select(p => p.BuildingId)
+            .Distinct()
+            .ToList();
+        var buildingIds = ownIds.Concat(coveredIds).Distinct().ToList();
         var buildings = await db.Buildings.AsNoTracking()
             .Where(b => buildingIds.Contains(b.Id) && b.IsActive)
-            .ToDictionaryAsync(b => b.Id);
-        var areaIds = await db.Areas.Where(a => a.IsActive && buildingIds.Contains(a.BuildingId)).Select(a => a.Id).ToListAsync();
+            .ToDictionaryAsync(b => b.Id, ct);
+        var areaIds = await db.Areas.Where(a => a.IsActive && buildingIds.Contains(a.BuildingId)).Select(a => a.Id).ToListAsync(ct);
         var rows = await PointBoardQuery.LoadAsync(db, now, slot, areaIds);
 
         var sections = buildingIds
@@ -54,7 +66,7 @@ public static class MyBuildingEndpoints
                 buildings[id].Code,
                 buildings[id].Name,
                 coveredIds.Contains(id),
-                coveredIds.Contains(id) || (id == user.BuildingId && user.Shift == slot.Shift),
+                coveredIds.Contains(id) || ScheduleAuthority.CanManage(UserRole.Supervisor, user.Id, id, slot.Shift, slot.ShiftDate, periods),
                 Sorted(rows.Where(r => r.Point.Area!.BuildingId == id)).Select(PointDtoMapper.ToDto).ToList()))
             .ToList();
         return Results.Ok(new MyBuildingDto(slot.ShiftDate, slot.Shift, sections));

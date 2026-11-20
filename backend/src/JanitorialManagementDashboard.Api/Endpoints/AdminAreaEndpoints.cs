@@ -7,6 +7,7 @@ using JanitorialManagementDashboard.Application.Signs;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -32,10 +33,12 @@ public static class AdminAreaEndpoints
         });
         admin.MapPost("/areas", CreateAsync);
         admin.MapPut("/areas/{id:int}", UpdateAsync);
-        admin.MapPost("/areas/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
-            SetActiveAsync(id, false, principal, db, clock));
-        admin.MapPost("/areas/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
-            SetActiveAsync(id, true, principal, db, clock));
+        admin.MapPost("/areas/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+            OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct) =>
+            SetActiveAsync(id, false, principal, db, clock, mutation, overview, ct));
+        admin.MapPost("/areas/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+            OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct) =>
+            SetActiveAsync(id, true, principal, db, clock, mutation, overview, ct));
         return app;
     }
 
@@ -65,7 +68,8 @@ public static class AdminAreaEndpoints
     private sealed record AreaSnapshot(
         string Code, string Name, int BuildingId, string ShiftPattern, int? DayCleanerId, int? NightCleanerId, int? RemovedNightWindows = null);
 
-    private static async Task<IResult> CreateAsync(CreateAreaRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> CreateAsync(CreateAreaRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -78,6 +82,7 @@ public static class AdminAreaEndpoints
             return Bad("รหัสพื้นที่ต้องเป็นตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03");
         }
 
+        await using var change = await mutation.BeginAsync(ct);
         var (form, error) = await ReadFormAsync(
             db, areaId: null, request.Name, request.BuildingId, request.ShiftPattern, request.DayCleanerId, request.NightCleanerId);
         if (form is null)
@@ -95,16 +100,15 @@ public static class AdminAreaEndpoints
         // facility-0045: the Area's one check-in sign comes with it
         db.Signs.Add(new Sign { Area = area, Code = SignCodes.CheckIn(code), QrToken = SignCodes.NewQrToken(), QrIssuedAt = now });
 
-        await using var transaction = await db.Database.BeginTransactionAsync();
         try
         {
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(ct);
             await AreaCleaners.ApplyAsync(db, area.Id, form.DayCleaner, form.NightCleaner);
             AuditTrail.Add(
                 db, admin.Id, now, "AREA_CREATE", "areas", area.Id, $"เพิ่มพื้นที่ {code} {form.Name}",
                 before: null, after: Snapshot(area, form.DayCleaner, form.NightCleaner));
-            await db.SaveChangesAsync();
-            await transaction.CommitAsync();
+            await db.SaveChangesAsync(ct);
+            await overview.CommitAsync(change, ct);
         }
         catch (DbUpdateException)
         {
@@ -114,7 +118,8 @@ public static class AdminAreaEndpoints
         return Results.Created($"/api/admin/areas/{area.Id}", await AdminSetupView.LoadAreaAsync(db, area.Id));
     }
 
-    private static async Task<IResult> UpdateAsync(int id, UpdateAreaRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> UpdateAsync(int id, UpdateAreaRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -122,6 +127,7 @@ public static class AdminAreaEndpoints
             return Results.Unauthorized();
         }
 
+        await using var change = await mutation.BeginAsync(ct);
         var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == id);
         if (area is null)
         {
@@ -149,7 +155,6 @@ public static class AdminAreaEndpoints
         area.BuildingId = form.Building.Id;
         area.ShiftPattern = form.Pattern;
         var now = clock.GetUtcNow().UtcDateTime;
-        await using var transaction = await db.Database.BeginTransactionAsync();
         try
         {
             List<PointRoundWindow> nightWindows = form.Pattern == ShiftPattern.DayOnly
@@ -164,10 +169,10 @@ public static class AdminAreaEndpoints
                 AuditTrail.Add(
                     db, admin.Id, now, "AREA_UPDATE", "areas", area.Id, $"แก้พื้นที่ {area.Code} {area.Name}",
                     before, after with { RemovedNightWindows = nightWindows.Count });
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(ct);
             }
 
-            await transaction.CommitAsync();
+            await overview.CommitAsync(change, ct);
         }
         catch (DbUpdateException)
         {
@@ -178,7 +183,8 @@ public static class AdminAreaEndpoints
     }
 
     /// <summary>Wireframe D10: a deactivated Area and its signs leave the Dashboard and cannot be scanned; history stays.</summary>
-    private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -186,6 +192,7 @@ public static class AdminAreaEndpoints
             return Results.Unauthorized();
         }
 
+        await using var change = await mutation.BeginAsync(ct);
         var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == id);
         if (area is null)
         {
@@ -220,9 +227,10 @@ public static class AdminAreaEndpoints
                 db, admin.Id, clock.GetUtcNow().UtcDateTime, active ? "AREA_ACTIVATE" : "AREA_DEACTIVATE", "areas", area.Id,
                 $"{(active ? "เปิด" : "ปิด")}ใช้งานพื้นที่ {area.Code}",
                 before: new { IsActive = !active }, after: new { IsActive = active });
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(ct);
         }
 
+        await overview.CommitAsync(change, ct);
         return Results.Ok(await AdminSetupView.LoadAreaAsync(db, area.Id));
     }
 

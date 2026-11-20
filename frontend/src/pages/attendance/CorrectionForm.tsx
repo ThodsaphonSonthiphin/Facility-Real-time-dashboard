@@ -10,7 +10,7 @@ import { DialogFooter, DialogHeader, Modal } from '../../shared/components/Modal
 import { Note } from '../../shared/components/Note';
 import { Spinner } from '../../shared/components/PageState';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { attendanceEvents, eventLabel, shiftLabel } from '../../shared/utils/labels';
+import { eventLabel, lifecycleEvents, shiftLabel } from '../../shared/utils/labels';
 import { formatShiftDate, formatTime } from '../../shared/utils/thaiTime';
 import { useCorrectAttendanceMutation } from './attendanceApi';
 import {
@@ -34,6 +34,8 @@ interface CorrectionFormProps {
   cleaner: AssignedCleaner;
   /** The time an alert's "เติมเวลา…" link asks for: its row is tinted, so the Admin sees where to type. */
   initialEvent?: AttendanceEvent;
+  unavailableEvents?: ReadonlySet<AttendanceEvent>;
+  beforeWrite?: (event: AttendanceEvent) => Promise<boolean>;
   onDone: (text: string) => void;
   onCancel: () => void;
 }
@@ -44,20 +46,22 @@ type Failure = { message: string; saved: AttendanceEvent[]; left: AttendanceEven
 const labels = (types: readonly AttendanceEvent[]) => types.map((type) => eventLabel[type]).join(' และ');
 
 /**
- * facility-0051, the design file's ฟอร์มแก้เวลา (600 px): the Admin changes any of the four times at once, always with a
+ * facility-0051, the design file's ฟอร์มแก้เวลา (600 px): the Admin changes any of the slot’s times at once, always with a
  * reason. The server takes one time per request, so the form sends each changed time in turn (owner, 2026-10-29); one
  * the server refuses for its order is tried again after the others, since moving two times may need the later one
  * first. Each corrected time then carries "แก้โดย Admin" and the old one stays in the history. The draft lives here
  * only (facility-0024); one save at a time.
  */
-export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCancel }: CorrectionFormProps) {
+export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableEvents, beforeWrite, onDone, onCancel }: CorrectionFormProps) {
+  const order = lifecycleEvents(board.lifecycleVersion);
+  const editable = order.filter((event) => !unavailableEvents?.has(event));
   const recorded = (type: AttendanceEvent) => {
     const event = eventOf(row, type);
     return event ? formatTime(event.occurredAt) : '';
   };
-  const [values, setValues] = useState<Record<AttendanceEvent, string>>(() => {
-    const start = {} as Record<AttendanceEvent, string>;
-    attendanceEvents.forEach((type) => (start[type] = recorded(type)));
+  const [values, setValues] = useState<Partial<Record<AttendanceEvent, string>>>(() => {
+    const start: Partial<Record<AttendanceEvent, string>> = {};
+    order.forEach((type) => (start[type] = recorded(type)));
     return start;
   });
   // The times already saved by a send that stopped half way: the board may not have them yet
@@ -69,15 +73,17 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
   const [busy, setBusy] = useState(false);
   const [correct] = useCorrectAttendanceMutation();
   const headingId = `attendance-correction-${row.areaId}`;
-  const asked = firstEvent(row, initialEvent);
+  const asked = firstEvent(row, initialEvent, editable);
 
-  const times = {} as DraftTimes;
-  attendanceEvents.forEach((type) => (times[type] = { old: saved[type] ?? recorded(type), value: values[type] }));
-  const changed = changedEvents(times);
-  const problems = draftProblems(times, board.shift);
+  const oldTime = (type: AttendanceEvent) => saved[type] ?? recorded(type);
+  const draftTime = (type: AttendanceEvent) => values[type] ?? oldTime(type);
+  const times: DraftTimes = {};
+  order.forEach((type) => (times[type] = { old: oldTime(type), value: draftTime(type) }));
+  const changed = changedEvents(times, editable);
+  const problems = draftProblems(times, board.shift, editable);
   const reasonError = reasonProblem(reason, detail);
   const nothing = changed.length === 0 ? 'ยังไม่ได้แก้เวลาช่องไหน' : null;
-  const messages = [nothing, ...attendanceEvents.map((type) => problems[type]), reasonError].filter(
+  const messages = [nothing, ...order.map((type) => problems[type]), reasonError].filter(
     (message): message is string => !!message,
   );
   const show = tried && messages.length > 0;
@@ -103,12 +109,17 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
           continue;
         }
         try {
+          // A scoped form may have closed or changed Cleaner while the previous request was in flight.
+          if (beforeWrite && !(await beforeWrite(type))) {
+            setBusy(false);
+            return;
+          }
           await correct({
             userId: cleaner.id,
             shiftDate: board.shiftDate,
             shift: board.shift,
             eventType: type,
-            time: values[type].trim(),
+            time: draftTime(type).trim(),
             reason: text,
           }).unwrap();
           done.push(type);
@@ -128,13 +139,13 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
     setBusy(false);
     if (pending.length === 0) {
       onDone(
-        `บันทึกเวลา${labels(attendanceEvents.filter((type) => done.includes(type)))}ของ ${cleaner.displayName} แล้ว`,
+        `บันทึกเวลา${labels(order.filter((type) => done.includes(type)))}ของ ${cleaner.displayName} แล้ว`,
       );
       return;
     }
     setSaved((before) => {
       const next = { ...before };
-      done.forEach((type) => (next[type] = values[type].trim()));
+      done.forEach((type) => (next[type] = draftTime(type).trim()));
       return next;
     });
     setFailure({ message, saved: done, left: pending });
@@ -166,7 +177,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
         )}
         <div className="flex gap-2 rounded-md bg-bg px-3 py-2.5 text-text-3">
           <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-text-2" />
-          <span>เวลาต้องอยู่ในช่วงลงเวลาของกะ และเรียง เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน</span>
+          <span>เวลาต้องอยู่ในช่วงลงเวลาของกะ และเรียงตามจังหวะที่แสดง</span>
         </div>
         <fieldset className="flex flex-col gap-2" disabled={busy}>
           <legend className="mb-2 text-base font-bold">เลือกช่องที่จะแก้</legend>
@@ -187,9 +198,10 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
                 </tr>
               </thead>
               <tbody>
-                {attendanceEvents.map((type) => {
+                {order.map((type) => {
                   const event = eventOf(row, type);
-                  const old = times[type].old;
+                  const unavailable = unavailableEvents?.has(type);
+                  const old = oldTime(type);
                   const isChanged = changed.includes(type);
                   const problem = tried ? problems[type] : undefined;
                   return (
@@ -197,9 +209,10 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
                       <td className="font-semibold">{eventLabel[type]}</td>
                       <td className="text-right whitespace-nowrap tabular-nums">
                         <span className="flex items-center justify-end gap-1.5">
-                          {event && event.source !== 'Scan' && <EditedMark />}
+                          {event?.source === 'SupervisorAdd' && <span className="text-xs text-text-2">หัวหน้าเติมเวลา</span>}
+                          {(event?.source === 'AdminAdd' || event?.source === 'AdminEdit') && <EditedMark />}
                           <span className={isChanged ? 'text-text-2 line-through' : old ? undefined : 'text-text-2'}>
-                            {old || 'ไม่ได้ลง'}
+                            {unavailable ? 'ลงไว้ที่พื้นที่อื่น' : old || 'ไม่ได้ลง'}
                           </span>
                         </span>
                       </td>
@@ -215,7 +228,8 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
                             data-changed={isChanged && !problem ? '' : undefined}
                             aria-invalid={problem ? true : undefined}
                             aria-describedby={problem ? `${headingId}-${type}-error` : undefined}
-                            value={values[type]}
+                            disabled={unavailable}
+                            value={unavailable ? '' : draftTime(type)}
                             placeholder="--:--"
                             inputMode="numeric"
                             maxLength={5}
@@ -313,13 +327,16 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
             </span>
           )}
         </fieldset>
-        <div className="flex flex-col gap-1 rounded-md border border-pending-border bg-accent-subtle px-4 py-3">
-          <strong>สรุปก่อนบันทึก</strong>
+        <div className="flex flex-col gap-1.5 rounded-xl border border-pending-border bg-accent-subtle px-4 py-3.5">
+          <strong className="flex items-center gap-1.5">
+            <Check aria-hidden="true" className="size-4 text-accent" />
+            สรุปก่อนบันทึก
+          </strong>
           <span>
             {changed.length === 0
               ? 'ยังไม่ได้แก้เวลาช่องไหน'
               : `จะแก้ ${changed.length} ช่อง: ${changed
-                  .map((type) => `${eventLabel[type]} ${times[type].old || 'ไม่ได้ลง'} → ${values[type].trim()}`)
+                  .map((type) => `${eventLabel[type]} ${oldTime(type) || 'ไม่ได้ลง'} → ${draftTime(type).trim()}`)
                   .join(' · ')}`}
           </span>
           <span className="text-xs text-text-3">
@@ -333,7 +350,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, onDone, onCa
           ยกเลิก
         </Button>
         <Button variant="primary" size="desk" disabled={busy} onClick={() => void save()}>
-          {busy && <Spinner />}
+          {busy ? <Spinner /> : <Check aria-hidden="true" className="size-4" />}
           {busy ? 'กำลังบันทึก…' : `บันทึกการแก้ไข (${changed.length} ช่อง)`}
         </Button>
       </DialogFooter>

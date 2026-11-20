@@ -119,26 +119,28 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 | | `scanAnswers.ts` | Non-hook helpers: `blockedScanOf` (403 + areaCode = a blocked scan), `isNotSent` (why the send failed). |
 | `shared/auth/` | `session.ts` | Single-flight `refreshSession`, `startSession`, `getValidAccessToken`, `abandonSession`. Raw `fetch` to `/api/auth/refresh` with a 15 s timeout. |
 | | `endSession.ts` | Logout: forget locally → await in-flight refresh → `POST /api/auth/logout`. |
-| | `roles.ts` | `homeOf(role)`: cleaner → `/my-work`, supervisor → `/my-building`, admin → `/dashboard`. |
+| | `roles.ts` | `homeOf(role)`: cleaner → `/my-work`, supervisor → `/my-building`, admin → `/admin/overview` (`facility-0224`). |
 | `shared/geo/` | `readLocation.ts` | Fresh scan reads and permission-retry detection; setup capture separately uses watchPosition. See [Part 8](#part-8--scan-gps-and-real-time-flow). |
-| `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `Drawer`, `Modal`, `ConfirmationDialog`, `LocationHelp` | Shared Tailwind UI, feedback and route/layout components. |
-| `shared/cover/` | `coverApi.ts`, `CandidateChoices.tsx`, `CoverCancellationDialog.tsx`, `useCoverCancellation.ts`, `coverCandidates.ts`, `coverSlots.ts`, `coverText.ts` | Cover Assignment endpoints, UI and helpers shared by Alerts and Attendance. The Alerts form and alert review mutation live in `pages/alerts/`. |
+| `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `Drawer`, `Modal`, `ConfirmationDialog`, `LogoutConfirmDialog`, `AdminPageHeader`, `ConnectionBanner`, `LocationHelp`, `CleanerBottomNav`, `SupervisorNav` | Shared Tailwind UI, CSS motion classes (`facility-0229`), confirmed logout, mobile/admin shell (`facility-0230`). |
+| `shared/cover/` | `coverApi.ts`, `CandidateChoices.tsx`, `CoverCancellationDialog.tsx`, `useCoverCancellation.ts`, `coverCandidates.ts`, `coverSlots.ts`, `coverText.ts` | Emergency cover assignment endpoints, UI and helpers consumed by `pages/schedules/CoverDrawer.tsx` (`facility-0225`). |
 | `shared/utils/` | `thaiTime.ts`, `getErrorMessage.ts` (31), `labels.ts` (26), `dateRange.ts` (11), `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock — every time you see a strange time, look here first. |
 | `shared/version/` | `buildInfo.ts` | The build commit shown on the login pages. |
 
-### pages — 17 feature folders
+### pages — 18 feature folders
 
 | Folder | Purpose | Key files |
 |---|---|---|
+| `account/` | Mobile Account tab + confirmed logout (`/my-account`, `facility-0230`) | `AccountPage.tsx`, `useAccountPage.ts` |
 | `auth/` | Both login screens | `LoginPage.tsx`, `AdminLoginPage.tsx`, `useLogin.ts` (the hook both pages share), `authApi.ts` |
 | `my-work/` | Cleaner's own task list | `MyWorkPage.tsx`, `workRules.ts` (status buckets) |
 | `check-in/` | Shift in/out at the area's check-in sign | `CheckInPage.tsx`, `checkInApi.ts`, `AttendanceTimeline.tsx` |
 | `scan/` | **Cleaner submits cleaning at a sign** | `ScanPage.tsx` (state machine), `SubmitForm.tsx`, `SubmitResult.tsx`, `sendFailed`/`OffDuty`, `scanApi.ts`, `scanRules.ts` |
 | `inspect/` | **Supervisor judges that submission — same URL, different role** | `InspectPage.tsx`, `InspectForm.tsx`, `NothingToInspect.tsx`, `DistanceLine.tsx`, `inspectApi.ts`, `inspectRules.ts` |
 | `my-building/` | Supervisor's queue of what to inspect next | `MyBuildingPage.tsx`, `buildingRules.ts`, `myBuildingApi.ts` (hub follow) |
-| `dashboard/` | Admin live point board (D1) | `DashboardPage.tsx`, `PointTile.tsx`, `boardRules.ts`, `dashboardApi.ts` (hub follow) |
-| `attendance/` | Admin attendance board + corrections (D2) | `AttendancePage.tsx`, `CorrectionForm.tsx`, `attendanceRules.ts` |
-| `alerts/` | Empty areas, covers, alert list (D3) | `AlertsPage.tsx`, `CoversThisShift.tsx`, `alertRules.ts` |
+| `dashboard/` | Admin slim live point board (D1, `facility-0224`) | `DashboardPage.tsx`, `LegacyDashboardPage.tsx`, `PointTile.tsx`, `boardRules.ts`, `dashboardApi.ts` (hub follow) |
+| `attendance/` | Admin attendance board + time corrections (D2, `facility-0225`) | `AttendancePage.tsx`, `LegacyAttendancePage.tsx`, `CorrectionForm.tsx`, `attendanceRules.ts` |
+| `alerts/` | Exception review queue only (D3, `facility-0225`) | `AlertsPage.tsx`, `AlertTable.tsx`, `alertRules.ts` |
+| `schedules/` | Cleaner own week, Supervisor roster, Admin roster + emergency cover (`facility-0225`) | `SchedulePage.tsx`, `CoverDrawer.tsx`, `WeeklyOffEditor/`, `ReliefAssignmentEditor/`, `DatedScheduleEditor/` |
 | `areas/` | Area / point / sign setup (D4, D10) | `AreasPage.tsx`, `PointEditor.tsx`, `SignPanel.tsx`, `signRules.ts` (radius 10–500 m) |
 | `buildings/` | Building setup: add, rename, on/off (facility-0090) | `BuildingsPage.tsx`, `BuildingDrawer.tsx`, `buildingRules.ts` (same counts as the server's `BuildingRules`) |
 | `accounts/` | Account CRUD, no delete (D6) | `AccountsPage.tsx`, `CreateAccountForm.tsx`, `SecretForms.tsx` |
@@ -147,6 +149,7 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 | `inspection-summary/` | Per-supervisor tallies (D7) | `InspectionSummaryPage.tsx`, `summaryRules.ts` |
 | `export/` | Excel export (D8) | `ExportPage.tsx`, `exportRules.ts` (1–31 days), `saveFile.ts` |
 | `history/` | Audit log with previous/next navigation over API cursors (D9) | `HistoryPage.tsx`, `historyRules.ts` (max 92 days) |
+| `overview/` | Admin combined overview dashboard (entry, work, inspection, history, issue, drill-through) | `OverviewPage.tsx`, `useOverviewPage.ts`, `OverviewResults.tsx`, `RoundHistory.tsx` |
 
 ### store
 
@@ -174,10 +177,14 @@ From `frontend/src/router.tsx`. Guards come from `shared/components/ProtectedRou
 | `/login` | `pages/auth/LoginPage.tsx` | public |
 | `/login/admin` | `pages/auth/AdminLoginPage.tsx` | public |
 | `/my-work` | `pages/my-work/MyWorkPage.tsx` | cleaner |
+| `/my-schedule` | `pages/schedules/SchedulePage/SchedulePage.tsx` (`OwnSchedulePage`) | cleaner |
+| `/my-account` | `pages/account/AccountPage.tsx` | cleaner, supervisor |
 | `/check-in/:token` | `pages/check-in/CheckInPage.tsx` | cleaner |
 | `/scan/:token` | `shared/components/ByRole.tsx` → cleaner: `pages/scan/ScanPage.tsx`, supervisor: `pages/inspect/InspectPage.tsx` | cleaner, supervisor |
 | `/my-building` | `pages/my-building/MyBuildingPage.tsx` | supervisor |
+| `/schedule-management` | `pages/schedules/SchedulePage/SchedulePage.tsx` (`ScheduleManagementPage`) | supervisor |
 | `/dashboard` | `pages/dashboard/DashboardPage.tsx` (lazy) | admin |
+| `/admin/overview` | `pages/overview/OverviewPage.tsx` (lazy) | admin |
 | `/admin/attendance` | `pages/attendance/AttendancePage.tsx` (lazy) | admin |
 | `/admin/alerts` | `pages/alerts/AlertsPage.tsx` (lazy) | admin |
 | `/admin/inspection-summary` | `pages/inspection-summary/InspectionSummaryPage.tsx` (lazy) | admin |
@@ -273,7 +280,8 @@ Business rules without database or HTTP dependencies, mostly static; LoginThrott
 |---|---|
 | `Persistence/AppDbContext.cs` | All EF mapping: 15 `DbSet`s, snake_case columns, unique indexes, computed columns, check constraints. |
 | `Persistence/Retention/` | Scoped RetentionRunner: GPS SQL batches, source/dependent cleanup and atomic PointMonthlySummary archives. |
-| `Persistence/*Query.cs` | Reusable read models: `PointBoardQuery`, `RoundFactsQuery`, `AlertQuery`, `AuditLogQuery`, `ExportQuery`, `InspectionHistoryQuery`. |
+| `Persisted / Queries` | `Persistence/*Query.cs`: `PointBoardQuery`, `RoundFactsQuery`, `AlertQuery`, `AuditLogQuery`, `ExportQuery`, `InspectionHistoryQuery`, `OverviewReadQuery`. |
+| `Overview History` | `Persistence/Overview/`: `OverviewMutation`, `OverviewTargetRecorder`, `OverviewHistoryBootstrap`, `OverviewFactLoader` — immutable `overview_target_revisions` + singleton `overview_target_state` lock, `round_origin_id` provenance. |
 | `Auth/Pbkdf2PasswordHasher.cs` | PBKDF2-HMAC-SHA256, 600 000 iterations, `pbkdf2-sha256$…` format. Also used for the phone number-as-secret. |
 | `Export/ExcelWorkbook.cs` | ClosedXML `.xlsx` writer. |
 | `Migrations/` | 6 migrations + model snapshot, applied at startup with `MigrateAsync()`. |
@@ -547,7 +555,7 @@ graph LR
 
 ## Part 9 — API reference
 
-53 HTTP routes. `frontend/src/shared/api/baseApi.ts` adds the `/api` prefix, so the frontend `url` values below are relative to it.
+`frontend/src/shared/api/baseApi.ts` adds the `/api` prefix, so the frontend `url` values below are relative to it.
 
 **How to read the Why column:** it answers *"what business goal does this call serve, what breaks without it?"* — not "what does it fetch". If you are deciding whether an endpoint is essential while changing something, the Why is the row that matters.
 
@@ -568,7 +576,7 @@ graph LR
 | GET | `/api/my-work` | `MyWorkEndpoints.cs` | `shared/api/myWorkApi.ts` | The cleaner's own beat plus covered areas. Without it the phone page has nothing to render. |
 | GET | `/api/attendance/signs/{token}` | `AttendanceEndpoints.cs` | `pages/check-in/checkInApi.ts` | Fails fast on page open when a sign was deactivated, instead of the cleaner discovering it at the end of a shift. |
 | POST | `/api/attendance` | `AttendanceEndpoints.cs` → `RecordAsync` | `pages/check-in/checkInApi.ts` | Records presence in an assigned Area and gates work submission. This is not payroll/timekeeping and does not calculate late/early attendance (0050); GPS gives a flag for Admin review. |
-| GET | `/api/attendance/me` | `AttendanceEndpoints.cs` | **none found** | Current shift and next allowed event. |
+| GET | `/api/attendance/me` | `AttendanceEndpoints.cs` | API clients | Current slot, lifecycle and revision, actions, required gaps and transfer state. The Check-In page reads the same state through `/api/my-work`. |
 | GET | `/api/service-points/by-token/{token}` | `ServicePointEndpoints.cs` | `pages/scan/scanApi.ts` | Resolves a scanned sign to exactly one point, so a photo of a QR cannot leak the facility map. |
 | POST | `/api/scan-records` | `ScanRecordEndpoints.cs` → `CreateAsync` | `pages/scan/scanApi.ts` | **The core work product**: "this point was cleaned, at this time, by this person." Round placement, point status, inspections, exports and alerts are all derived from these rows. |
 
@@ -579,6 +587,18 @@ graph LR
 | POST | `/api/inspections/scan` | `InspectionEndpoints.cs` → `ScanAsync` | `pages/inspect/inspectApi.ts` | Stores nothing — it shows the supervisor the current submission (or a refusal reason). The two-step design exists so a supervisor can only judge what they were actually shown. |
 | POST | `/api/inspections` | `InspectionEndpoints.cs` → `CreateAsync` | `pages/inspect/inspectApi.ts` | Records a voluntary inspection or rework request; an uninspected round remains visible as not inspected. `Rework` sends the cleaner back with the defect text. |
 | GET | `/api/my-building` | `MyBuildingEndpoints.cs` | `pages/my-building/myBuildingApi.ts` | The supervisor's walking queue, pending-inspection first, then rework. |
+
+### Dated scheduling and actual attendance
+
+| Surface | Browser entry | Server entry |
+|---|---|---|
+| Own schedule | `/my-schedule` | `GET /api/schedules/me` in `ScheduleEndpoints.cs` |
+| Manager roster and relief lookup | `/schedule-management` and `/admin/schedules` | `GET /api/schedules` and `/api/schedules/relief-candidates` in `ScheduleEndpoints.cs` |
+| Review, save and recover a result | Schedule review and conflict panels | `POST /api/schedules/command-tokens`, `POST /api/schedules/commands`, `GET /api/schedules/commands/{id}` in `ScheduleEndpoints.cs` |
+| Team attendance and missing-time entry | A dated slot on the Supervisor roster | `GET /api/team-attendance/{userId}`, `POST /api/team-attendance/missing` in `TeamAttendanceEndpoints.cs` |
+| Arrival at the destination sign | Check-In | `POST /api/area-transfers/{id}/confirm` in `AreaTransferEndpoints.cs` |
+
+`ScheduleStore.cs` handles effective-dated reads and `ScheduleResolver.cs` sets field precedence. `ScheduleCommandService.cs` supplies the transaction and receipt flow for schedule commands. `AttendanceStateView.cs` builds the actions and gaps from the stored lifecycle, while `AttendanceBoard.cs` keeps entry evidence distinct from current responsibility. [Acceptance evidence](testing/scheduling.md)
 
 ### Admin setup
 
@@ -638,6 +658,9 @@ graph LR
 | GET | `/api/admin/audit-log/actors` | `AdminAuditLogEndpoints.cs` | Actor filter options. |
 | POST | `/api/admin/export` | `AdminExportEndpoints.cs` → `ExportAsync` | **POST not GET** precisely because downloading personnel data is itself an audited action. The file omits coordinates, phones, QR tokens and passwords. It accepts `buildingId` or multiple `buildingIds` (never both), including inactive buildings (0100). |
 | GET | `/api/admin/inspection-summary` | `AdminInspectionSummaryEndpoints.cs` → `GetAsync` | How much of the beat was actually checked — supervisor coverage evidence, including expandable uninspected points (0100). |
+| GET | `/api/admin/overview/summary` | `AdminOverviewEndpoints.cs` | Combined overview snapshot counts, per-building summaries and section availability for one `(date, shift)`. |
+| GET | `/api/admin/overview/areas` | `AdminOverviewEndpoints.cs` | Paged overview Area list (max 50) filtered by group and building, with drill-through keys. |
+| GET | `/api/admin/overview/areas/{areaId}` | `AdminOverviewEndpoints.cs` | Read-only historical/live detail for one Area in the selected `(date, shift)` and optional `roundKey`. |
 
 ### Non-HTTP routes
 
@@ -652,8 +675,9 @@ graph LR
 |---|---|---|
 | `ScanRecorded`, `InspectionRecorded` (whole PointCard) | Admins, the building's Supervisors, the Area's Cleaners, current scoped covers | Dashboard/My Building patch the point; My Work refetches; attendance follower ignores point messages |
 | `AttendanceRecorded` (Area/date/shift) | Admins | Attendance refetches the affected board; other followers ignore it |
+| `ScheduleChanged` (invalidation ID) | Active affected Cleaners, authorised Supervisors for affected building/shift/date, active Admins | Schedule and My Work refetch scoped reads after a schedule command, transfer arrival or attendance correction. Open schedule editors keep their drafts. |
 
-`PointNotifications.SendAsync` and `AttendanceBoard.NotifyAsync` send after the record is saved and catch/log push failures. `ActiveAdmins.IdsAsync` reads Admin recipients; no group membership cache decides access.
+`PointNotifications.SendAsync` and `AttendanceBoard.NotifyAsync` send after the record is saved and catch/log push failures. `ScheduleNotifications` resolves recipients after commit, and a failed push leaves the command result intact. `ActiveAdmins.IdsAsync` reads Admin recipients; no group membership cache decides access.
 
 ---
 
@@ -716,7 +740,7 @@ Backend paths below are relative to `backend/tests/`; frontend paths are relativ
 | Submission/inspection screens, live Dashboard and date/shift race | `pages/scan/ScanPage.test.tsx`, `pages/inspect/InspectPage.test.tsx`, `pages/dashboard/DashboardPage.test.tsx`, `pages/attendance/AttendancePage.test.tsx` |
 | Route roles and lazy boundaries | `router.test.tsx` |
 
-Retention tests are in `JanitorialManagementDashboard.ApiTests/Retention/` (real relational deletion/rollback, race cases, schedule/lifecycle and MySQL migration/provider) and `JanitorialManagementDashboard.UnitTests/RetentionRulesTests.cs` (settings/calendar/anonymous counts). See [the retention guide](data-retention.md).
+Retention tests are in `JanitorialManagementDashboard.ApiTests/Retention/` (real relational deletion/rollback, race cases, schedule/lifecycle, `OverviewReadRaceTests.cs`, and MySQL migration/provider) and `JanitorialManagementDashboard.UnitTests/RetentionRulesTests.cs` (settings/calendar/anonymous counts). MySQL overview migration and concurrency tests are in `JanitorialManagementDashboard.ApiTests/Persistence/MySqlOverviewTests.cs`, and desktop overview E2E is in `frontend/e2e/desktop/overview.spec.ts`. See [the retention guide](data-retention.md).
 
 The frontend harness is `src/test/`: fake fetch, SignalR, GPS and `renderApp`. Real-API workflows and runner safety checks are described in [testing/e2e.md](testing/e2e.md). Current recorded counts belong in [handoff](handoff.md), not in this file map.
 

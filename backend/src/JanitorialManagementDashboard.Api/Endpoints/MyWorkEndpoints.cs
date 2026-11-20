@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -17,7 +19,9 @@ public static class MyWorkEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetAsync(ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, AttendanceSettings settings)
+    private static async Task<IResult> GetAsync(
+        ClaimsPrincipal principal, AppDbContext db, ScheduleStore store, TimeProvider clock, AttendanceSettings settings,
+        CancellationToken ct)
     {
         var user = await CurrentUser.LoadAsync(principal, db);
         if (user is null)
@@ -33,11 +37,16 @@ public static class MyWorkEndpoints
         var now = clock.GetUtcNow().UtcDateTime;
         var slot = (user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null) ?? ShiftCalendar.SlotAt(now);
 
+        // Spec §7 and §9: the Areas this person works are the slot's effective duty Area — a relief assignment, the dated
+        // plan, the compatibility projection, or the destination of a confirmed midshift transfer — plus the live cover
+        // areas of this shift. The account's own Area is not a separate answer any more: after a transfer the person sees the
+        // destination's points, and while an arrival is still unconfirmed there is no duty Area at all.
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, new DateTimeOffset(now, TimeSpan.Zero), ct);
         var coveredAreaIds = await db.CoverAssignments
             .Where(c => c.UserId == user.Id && c.AreaId != null && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
             .Select(c => c.AreaId!.Value)
             .ToListAsync();
-        var areaIds = (user.AreaId is int own ? coveredAreaIds.Prepend(own) : coveredAreaIds).Distinct().ToList();
+        var areaIds = (duty.AreaId is int own ? coveredAreaIds.Prepend(own) : coveredAreaIds).Distinct().ToList();
 
         var rows = await PointBoardQuery.LoadAsync(db, now, slot, areaIds);
         var areas = areaIds
@@ -46,12 +55,13 @@ public static class MyWorkEndpoints
             .Select(points =>
             {
                 var area = points[0].Point.Area!;
-                return new MyWorkAreaDto(area.Id, area.Code, area.Name, area.Id != user.AreaId, points.Select(PointDtoMapper.ToDto).ToList());
+                return new MyWorkAreaDto(area.Id, area.Code, area.Name, area.Id != duty.AreaId,
+                    points.Select(PointDtoMapper.ToDto).ToList());
             })
             .ToList();
 
         var ownShift = user.Shift is { } regular ? OwnShiftOf(regular, settings) : null;
-        return Results.Ok(new MyWorkDto(await AttendanceEndpoints.StateForAsync(db, user, now, settings), areas, ownShift));
+        return Results.Ok(new MyWorkDto(await AttendanceEndpoints.StateForAsync(db, store, user, now, settings, ct), areas, ownShift));
     }
 
     private static OwnShiftDto OwnShiftOf(Shift shift, AttendanceSettings settings)

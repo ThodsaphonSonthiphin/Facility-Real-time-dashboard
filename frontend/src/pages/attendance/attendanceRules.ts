@@ -2,11 +2,12 @@ import type {
   AreaAttendanceState,
   BoardArgs,
   BoardCover,
+  BoardCleanerAttendance,
   BoardEvent,
   BoardRow,
 } from '../../shared/api/attendanceBoardApi';
 import type { AttendanceEvent, Shift } from '../../shared/api/types';
-import { attendanceEvents, eventLabel } from '../../shared/utils/labels';
+import { attendanceEvents, attendanceLifecycles, eventLabel } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
 
 /** Wireframe D2's status column (facility-0050). */
@@ -59,13 +60,20 @@ export function searchRows(rows: readonly BoardRow[], search: string): BoardRow[
     return [...rows];
   }
   return rows.filter((row) =>
-    [row.areaCode, row.areaName, row.cleaner?.displayName, ...row.covers.map((cover) => cover.displayName)].some((value) =>
+    [row.areaCode, row.areaName, ...attendanceTargets(row).map(({ cleaner }) => cleaner.displayName),
+      ...row.covers.map((cover) => cover.displayName)].some((value) =>
       value?.toLowerCase().includes(text),
     ),
   );
 }
 
-/** The regular Cleaner's scan of that event, if there is one. */
+/** Each person's facts stay together, including when a transfer puts two people in one Area. */
+export function attendanceTargets(row: BoardRow): BoardCleanerAttendance[] {
+  const primary = row.cleaner ? [{ cleaner: row.cleaner, events: row.events }] : [];
+  return [...primary, ...(row.additionalCleaners ?? [])];
+}
+
+/** The selected Cleaner's scan of that event, if there is one. */
 export function eventOf(row: BoardRow, type: AttendanceEvent): BoardEvent | undefined {
   return row.events.find((event) => event.eventType === type);
 }
@@ -109,11 +117,14 @@ export function reasonProblem(choice: CorrectionReason | null, detail: string): 
 const isClock = (text: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(text);
 
 /** One time of the form: the one recorded ('' when none) and the one typed. */
-export type DraftTimes = Record<AttendanceEvent, { old: string; value: string }>;
+export type DraftTimes = Partial<Record<AttendanceEvent, { old: string; value: string }>>;
 
 /** The times the form will send: typed, and not the same as the one recorded. */
-export function changedEvents(times: DraftTimes): AttendanceEvent[] {
-  return attendanceEvents.filter((type) => times[type].value.trim() !== times[type].old);
+export function changedEvents(times: DraftTimes, order = attendanceEvents): AttendanceEvent[] {
+  return order.filter((type) => {
+    const time = times[type];
+    return time && time.value.trim() !== time.old;
+  });
 }
 
 const shiftStart: Record<Shift, number> = { Day: 7 * 60, Night: 19 * 60 };
@@ -126,24 +137,27 @@ function inShift(time: string, shift: Shift): number {
 
 /**
  * What is wrong with each time typed, checked before sending: the form (HH:mm), a recorded time left empty (it cannot
- * be deleted), and the order เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน, said on the time that was changed. The server
+ * be deleted), and the slot’s event order, said on the time that was changed. The server
  * checks the window and the future, and its message is shown as is.
  */
-export function draftProblems(times: DraftTimes, shift: Shift): Partial<Record<AttendanceEvent, string>> {
+export function draftProblems(
+  times: DraftTimes, shift: Shift, order = attendanceEvents,
+): Partial<Record<AttendanceEvent, string>> {
   const problems: Partial<Record<AttendanceEvent, string>> = {};
-  const changed = new Set(changedEvents(times));
+  const changed = new Set(changedEvents(times, order));
   for (const type of changed) {
-    const value = times[type].value.trim();
-    if (value === '') {
+    const value = times[type]?.value.trim();
+    if (!value) {
       problems[type] = 'ลบเวลาไม่ได้ ใส่เวลาใหม่ หรือกดคืนค่า';
     } else if (!isClock(value)) {
       problems[type] = 'เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05';
     }
   }
   let before: { type: AttendanceEvent; time: string } | null = null;
-  for (const type of attendanceEvents) {
-    const time = changed.has(type) && !problems[type] ? times[type].value.trim() : times[type].old;
-    if (time === '' || !isClock(time)) {
+  for (const type of order) {
+    const draft = times[type];
+    const time = changed.has(type) && !problems[type] ? draft?.value.trim() : draft?.old;
+    if (!time || !isClock(time)) {
       continue;
     }
     if (before && inShift(time, shift) <= inShift(before.time, shift)) {
@@ -159,8 +173,8 @@ export function draftProblems(times: DraftTimes, shift: Shift): Partial<Record<A
 }
 
 /** The event the form opens on: the one asked for, else the first one the Cleaner has not scanned, else Shift-In. */
-export function firstEvent(row: BoardRow, asked?: AttendanceEvent): AttendanceEvent {
-  return asked ?? attendanceEvents.find((type) => !eventOf(row, type)) ?? 'ShiftIn';
+export function firstEvent(row: BoardRow, asked?: AttendanceEvent, order = attendanceEvents): AttendanceEvent {
+  return (asked && order.includes(asked) ? asked : order.find((type) => !eventOf(row, type))) ?? 'ShiftIn';
 }
 
 /** From an alert's "เติมเวลา…" link (plan 11 decision 9): ?fill=<Cleaner's account id>&event=<AttendanceEvent>. */
@@ -170,5 +184,5 @@ export function readFill(params: URLSearchParams): { userId: number; event?: Att
     return undefined;
   }
   const event = params.get('event');
-  return { userId, event: attendanceEvents.find((type) => type === event) };
+  return { userId, event: [...attendanceEvents, ...attendanceLifecycles.Numbered6].find((type) => type === event) };
 }

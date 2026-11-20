@@ -1,4 +1,4 @@
-import { Eye, EyeOff, LoaderCircle } from 'lucide-react';
+import { Eye, EyeOff, LoaderCircle, LogIn } from 'lucide-react';
 import { Link, Navigate } from 'react-router';
 import { buildCommit } from '../../shared/version/buildInfo';
 import { Button } from '../../shared/components/Button';
@@ -67,7 +67,9 @@ export function AdminLoginPage() {
             </div>
           </div>
           <Button type="submit" variant="primary" size="desk" className="h-10 w-full" disabled={page.isLoading}>
-            {page.isLoading && <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />}
+            {page.isLoading
+              ? <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
+              : <LogIn aria-hidden="true" className="size-4" />}
             {page.isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
           </Button>
         </form>

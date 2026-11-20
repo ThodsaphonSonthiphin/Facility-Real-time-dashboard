@@ -17,8 +17,7 @@ public static class AttendanceCalendar
         foreach (var date in new[] { thaiDate.AddDays(-1), thaiDate, thaiDate.AddDays(1) })
         {
             var slot = new ShiftSlot(date, regularShift);
-            var opens = ShiftCalendar.StartUtc(slot).AddMinutes(-settings.OpensMinutesBeforeShift);
-            var closes = ShiftCalendar.EndUtc(slot).AddMinutes(settings.ClosesMinutesAfterShift);
+            var (opens, closes) = Window(slot, settings);
             if (nowUtc >= opens && nowUtc <= closes)
             {
                 return slot;
@@ -27,6 +26,16 @@ public static class AttendanceCalendar
 
         return null;
     }
+
+    /// <summary>
+    /// facility-0069 with spec §8 Cutover (ADR facility-0222): the receiving window of <paramref name="slot"/> as UTC
+    /// instants — it opens OpensMinutesBeforeShift before the shift starts and closes ClosesMinutesAfterShift after it ends.
+    /// Both edges are inside the window. One definition, so the scan path, the window clock and the activation precondition
+    /// can never disagree about where the window begins.
+    /// </summary>
+    public static (DateTime Opens, DateTime Closes) Window(ShiftSlot slot, AttendanceSettings settings) =>
+        (ShiftCalendar.StartUtc(slot).AddMinutes(-settings.OpensMinutesBeforeShift),
+            ShiftCalendar.EndUtc(slot).AddMinutes(settings.ClosesMinutesAfterShift));
 
     /// <summary>
     /// facility-0077: the Thai wall-clock times a shift's attendance window opens and closes, as a phone shows them:
@@ -46,8 +55,7 @@ public static class AttendanceCalendar
     /// </summary>
     public static DateTime? PlaceTime(ShiftSlot slot, TimeOnly thaiTime, AttendanceSettings settings)
     {
-        var opens = ShiftCalendar.StartUtc(slot).AddMinutes(-settings.OpensMinutesBeforeShift);
-        var closes = ShiftCalendar.EndUtc(slot).AddMinutes(settings.ClosesMinutesAfterShift);
+        var (opens, closes) = Window(slot, settings);
         foreach (var date in new[] { slot.ShiftDate, slot.ShiftDate.AddDays(1) })
         {
             var utc = ThaiTime.ToUtc(date.ToDateTime(thaiTime));

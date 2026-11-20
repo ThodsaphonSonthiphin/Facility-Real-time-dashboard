@@ -1,7 +1,7 @@
+import { Search } from 'lucide-react';
 import { Button } from '../../shared/components/Button';
-import { Field, Select, TextInput } from '../../shared/components/Field';
+import { Select, TextInput } from '../../shared/components/Field';
 import { RangeFields } from '../../shared/components/RangeFields';
-import { focusRing } from '../../shared/components/styles';
 import type { RangeTexts } from '../../shared/utils/dateRange';
 import type { AuditActor, HistoryArgs } from './historyApi';
 import { auditCategories, categoryLabel, HISTORY_MAX_SEARCH } from './historyRules';
@@ -19,6 +19,9 @@ interface HistoryControlsProps {
   onPreset: (value: string) => void;
 }
 
+/**
+ * Audit history filters with always-visible search box matching Dashboard, Attendance, and Accounts (Heuristics #4, #6, #7).
+ */
 export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, search, onSearch, preset, onPreset }: HistoryControlsProps) {
   return (
     <section aria-label="ตัวกรองประวัติ" className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface px-4 py-3">
@@ -42,6 +45,23 @@ export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, 
             {auditCategories.map((category) => <option key={category} value={category}>{categoryLabel[category]}</option>)}
           </Select>
         </label>
+        <div className="flex min-w-0 flex-1 basis-56 items-center gap-2">
+          <label className="relative flex min-w-0 flex-1 items-center">
+            <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 size-4 text-text-2" />
+            <TextInput
+              size="desk"
+              className="w-full pl-8.5"
+              type="search"
+              aria-label="ค้นหา"
+              value={search}
+              maxLength={HISTORY_MAX_SEARCH}
+              placeholder="ค้นหาชื่อคน จุด หรือรหัส"
+              onChange={(event) => onSearch(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') onShow(); }}
+            />
+          </label>
+          <Button size="desk" onClick={onShow}>ค้นหา</Button>
+        </div>
       </div>
       {preset === 'custom' && (
         <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3">
@@ -49,17 +69,6 @@ export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, 
           <Button size="desk" onClick={onShow}>แสดง</Button>
         </div>
       )}
-      <details open={args.q ? true : undefined}>
-        <summary className={`inline-flex min-h-9 cursor-pointer items-center rounded-md text-xs font-semibold text-accent ${focusRing}`}>ค้นหาประวัติ</summary>
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <Field label="ค้นหา">
-            <TextInput size="desk" className="w-60 max-w-full" type="search" value={search} maxLength={HISTORY_MAX_SEARCH}
-              placeholder="ค้นหาชื่อคน จุด หรือรหัส" onChange={(event) => onSearch(event.target.value)}
-              onKeyDown={(event) => { if (event.key === 'Enter') onShow(); }} />
-          </Field>
-          <Button size="desk" onClick={onShow}>ค้นหา</Button>
-        </div>
-      </details>
     </section>
   );
 }

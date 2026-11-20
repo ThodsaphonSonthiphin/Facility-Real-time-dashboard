@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
 import { Field, Select, TextInput } from '../../shared/components/Field';
 import { Drawer } from '../../shared/components/Modal';
@@ -6,6 +7,7 @@ import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { Tabs } from '../../shared/components/Tabs';
+import { Toast } from '../../shared/components/Toast';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { accountRoles, accountRoleLabel } from './accountRules';
 import { AccountTable } from './AccountTable';
@@ -18,33 +20,28 @@ import { useAccountsPage } from './useAccountsPage';
 export function AccountsPage() {
   const {
     accounts, areas, buildings, me, role, setRole, active, changeActive, search, changeSearch,
-    panel, notice, list, shown, counts, error, target, closePanel, done, act, openCreate, busy,
+    panel, notice, clearNotice, list, shown, counts, error, target, closePanel, done, act, openCreate, busy,
   } = useAccountsPage();
 
   return (
-    <main className="flex min-w-0 flex-col gap-6 text-sm text-text">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">บัญชีผู้ใช้</h1>
-          {/* As tall as its words before the answer, so nothing under it moves */}
-          <span className="min-h-5 text-text-2">เพิ่มบัญชีให้แม่บ้าน หัวหน้า หรือแอดมินทีละคน</span>
-        </div>
-        <Button variant="primary" size="desk" onClick={openCreate}>
-          <Plus aria-hidden="true" className="size-4" />
-          สร้างบัญชี
-        </Button>
-      </header>
+    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
+      <AdminPageHeader
+        title="บัญชีผู้ใช้"
+        subtitle="เพิ่มบัญชีให้แม่บ้าน หัวหน้า หรือแอดมินทีละคน"
+        actions={
+          <Button variant="primary" size="desk" onClick={openCreate}>
+            <Plus aria-hidden="true" className="size-4" />
+            สร้างบัญชี
+          </Button>
+        }
+      />
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
-      {notice && (
-        <Note tone={notice.kind === 'ok' ? 'info' : 'error'} status={notice.kind === 'ok'}>
-          {notice.text}
-        </Note>
-      )}
+      {notice && <Toast notice={notice} onClose={clearNotice} />}
       <section
-        className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface"
+        className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface"
         aria-label="รายชื่อบัญชี"
       >
-        <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-4">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-4 pt-1">
           <Tabs
             label="บทบาทบัญชี"
             idPrefix="accounts"
@@ -65,7 +62,7 @@ export function AccountsPage() {
               ),
             }))}
           />
-          <div className="flex w-full flex-wrap gap-3 py-2 sm:w-auto">
+          <div className="flex w-full flex-wrap gap-3 py-3 sm:w-auto">
             <Field label="สถานะบัญชี">
               <Select size="desk" value={active} onChange={changeActive}>
                 <option value="all">ทั้งหมด</option>
@@ -94,7 +91,7 @@ export function AccountsPage() {
           )}
           {accounts.data && <AccountTable accounts={shown} role={role} me={me} busy={busy} onAction={act} />}
           {accounts.data && (
-            <div className="border-t border-border px-4 py-3 text-text-2">
+            <div className="border-t border-border px-4 py-2.5 text-text-2">
               {`แสดง ${shown.length > 0 ? `1–${shown.length}` : '0'} จาก ${counts[role]} บัญชี`}
             </div>
           )}
