@@ -2,6 +2,52 @@
 
 Updated 2026-11-20 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
 
+## Overview transitions and 12-category verification
+
+Completed 2026-11-20 (Asia/Bangkok) on `codex/overview-transition-verification`. See the [implementation plan](superpowers/plans/2026-11-20-overview-smooth-transition-and-12-layer-testing.md). Switching date, shift, building, group, or page keeps the Overview charts and the last successful result visible while the new selection loads. The results are dimmed, expose `aria-busy`, and show `กำลังอัปเดต...`. Row links keep the context of the visible results. Late default reads respect navigation to other Admin pages. A failed selection clears the previous rows and exposes Retry. Same-selection refresh errors retain the prior result with its read time.
+
+| # | Category | Verification |
+|---|---|---|
+| 1 | Unit | 579/579 .NET unit tests passed. Frontend rules are included in Vitest. |
+| 2 | Component | 778/778 Vitest tests passed across 83 files. |
+| 3 | Integration | All 27 MySQL-gated cases passed against a disposable schema, including migration and transaction races. |
+| 4 | API | 1,079/1,079 passed with MySQL enabled. |
+| 5 | Contract | Four API tests passed for login, Overview list and detail, Service Points, My Work, and both attendance sign response modes. Two Vitest contract cases passed. |
+| 6 | E2E | Chromium large dataset passed 46 cases with 10 dataset or clock-window skips and zero failures. |
+| 7 | Regression | All 20 Overview page tests and all seven Overview browser cases passed. Disabling the retained snapshot in an isolated source copy reproduced the loading flash and failed the new regression test. |
+| 8 | Visual regression | Two Playwright cases compared all 11 macOS Chromium baselines at the 1% pixel-diff limit without updating them. |
+| 9 | Accessibility | Three Playwright cases passed on medium and large datasets. Nine screens had zero serious or critical Axe WCAG 2.2 A/AA violations. The drawer audit confirmed Tab stays inside and Escape dismisses it. |
+| 10 | Performance and load | 50 requests per endpoint with 10 concurrent workers and zero errors. p95 was Admin Overview 377.2 ms, Admin Service Points 132.7 ms, Cleaner My Work 21.8 ms, within the 500/200/200 ms budgets. |
+| 11 | Security | 70 API auth and security header cases and all five phone access cases passed. |
+| 12 | Compatibility | Chromium 13 passed. WebKit 12 passed and skipped the Chromium-only layout-shift measurement. |
+
+Frontend lint and TypeScript passed. The main JavaScript bundle was 111.67 kB gzip (budget 200 kB). Verification used synthetic, isolated databases and dropped them after each run.
+
+Rerun the browser gates from the repository root.
+
+```bash
+E2E_HEADLESS=1 E2E_SLOW_MO=0 npm --prefix frontend run e2e -- --dataset large
+E2E_HEADLESS=1 E2E_SLOW_MO=0 npm --prefix frontend run e2e -- --dataset medium accessibility.spec.ts visual-regression.spec.ts
+npm --prefix frontend run e2e:compat
+npm --prefix frontend run test:load
+```
+
+Visual baselines are specific to macOS Chromium. Live point and scheduling data use fixed responses and a fixed browser clock where needed for screenshots. Overview and Attendance visuals use historical rows from the medium seed. Functional and accessibility tests use real API responses. Run the standalone load gate without other verification jobs competing for CPU.
+
+Local evidence is under `.run/e2e/` (`20261120120001_009db1fd`, `20261120115951_cdbe9810`, `20261120120350_f2f2ee8e`, `20261120120432_539f8e8a`, `20261120115801_6489bc46`) and `.run/api-overview-verification.trx`. Suite counts overlap where a test covers several categories.
+
+**App-wide UI copy cleanup (2026-11-20, Asia/Bangkok).** Simplified and shortened Thai UI copy across Admin, Supervisor, and Cleaner screens to remove unnecessary policy/spec text, verbose parentheticals, and technical wording while keeping domain terms from `CONTEXT.md`. Removed redundant `AdminPageHeader` subtitles and informational `MoreInfo` disclaimers (`วิธีอ่านภาพรวม`, `เกี่ยวกับหน้านี้`, `เกี่ยวกับการบันทึก`, `เกี่ยวกับ QR`, `วิธีอ่านการ์ด`, `วิธีนับตัวเลข`, `เกี่ยวกับการปิดใช้งาน`, `เกี่ยวกับการลงเวลา`, `เกี่ยวกับการส่งงาน`) while keeping functional `MoreInfo` sections (sign settings, area activation, export file details, inspection row details). Shortened Overview status/availability/metric text, schedule/cover/transfer/dated-leave labels, alert tab hints, export privacy text, login/account copy, and shared labels (`labels.ts`, `overviewContext.ts`). Updated 22 test files to match the concise copy. Stopped local preview servers (`5001`, `5173`) per owner request. Verified `npm --prefix frontend run lint` (0 errors), full `NODE_ENV=test npm --prefix frontend test` (**82/82 files, 775/775 tests passed**), and `npm --prefix frontend run build` (`index-Dst1zIIj.js` **111.62 kB** gzip `<= 200 kB`, `index-DfXrE5Y3.css` 10.36 kB gzip).
+
+**Overview charts completed and verified (2026-11-20, Asia/Bangkok).** Finished the Admin Overview (`/admin/overview`) chart upgrade started before Codex hit its limit: `CoveragePanel` renders donut rings (`conic-gradient`) for the three shift summary metrics (`พื้นที่ที่ลงเวลาเข้าแล้ว`, `พื้นที่ที่ส่งงานครบ`, `พื้นที่ที่ตรวจครบ`), while `FollowUpGroups` and `BuildingComparison` render horizontal bar charts (`ChartBar`) with `0`–`{max} พื้นที่` and `0%`–`100%` scales respectively. Added `[0, 100]` percent clamping in `ChartBar` and `CoveragePanel`. Verified `npm --prefix frontend run lint` (0 errors), full `NODE_ENV=test npm --prefix frontend test` (**82/82 files, 775/775 tests passed**), `npm --prefix frontend run build` (`index-CnlgsJ88.js` 112.49 kB gzip <= 200 kB, `index-DfXrE5Y3.css` 10.36 kB gzip), and prior Chromium E2E `overview.spec.ts` (**6/6 passed**, `.run/e2e/20261120065113_7b9703a3`). Restarted the local Development API on `http://localhost:5001` alongside the running Vite dev server on `http://localhost:5173`.
+
+**Local page links (2026-11-20, Asia/Bangkok).** Listed the current routes by role from `frontend/src/router.tsx` and Admin navigation. Confirmed API health through Vite on port 5173, and verified that the AR01 example and both public development seed signs are present in the local database.
+
+**Six-action attendance by default (2026-11-20, Asia/Bangkok).** The owner clarified that the project is still in development and should use all six attendance actions on every shift. Removed the activation command and version table. The API, scans, corrections, Admin board and Excel use first and second numbered breaks directly. Migration normalizes existing development break rows into first-break rows. See [installation](handover.md#210-เตรียมตารางงานและการลงเวลา-6-ขั้น).
+
+The Development API was restarted on localhost:5001. It applied `20261120061316_UseSixAttendanceActions` to the confirmed local `facility_dashboard` database. The removed table was empty, the existing attendance row was retained, and API health and the Vite check-in route passed. The test of the full six-action flow uses synthetic accounts in isolated databases.
+
+Final verification passed all 579 backend unit tests, all 1,075 API tests with MySQL enabled, and all 775 frontend tests, plus frontend lint and build. The full Chromium run passed 40 cases with 6 skipped and had three desktop SignalR failures. The one-worker rerun passed all 9 selected attendance, offline and dashboard cases, including each of the three earlier failures. Evidence is in `.run/e2e/20261120062047_1de7ccdc` and `.run/e2e/20261120063915_9d07446a`. Both browser runs used isolated synthetic databases. Synthetic Cleaner credentials were rejected on the existing local development database. The local smoke check verified availability, and the authenticated attendance workflow was verified on the isolated test accounts.
+
 **Owner-requested local preview (2026-11-20, Asia/Bangkok).** Started the Development API at `http://localhost:5001` and Vite at `http://localhost:5173`; the Admin Overview is open at `/admin/overview?date=2026-11-20&shift=Day&group=notEntered&page=1` using the Development seed Admin. API startup reported the database schema is already current; it applied no migrations and did not reset the existing `facility_dashboard` data. The servers are running in the current session. To restart them, run these in separate terminals (the API uses existing private user-secrets):
 
 ```bash
