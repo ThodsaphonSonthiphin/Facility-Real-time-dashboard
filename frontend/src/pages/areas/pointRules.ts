@@ -1,4 +1,5 @@
 import type { Shift } from '../../shared/api/types';
+import { sortedCopy } from '../../shared/utils/sortedCopy';
 
 /** One Round Window as the form holds it and the server takes it: Thai wall-clock "HH:mm" (facility-0047). */
 export interface WindowDraft {
@@ -37,7 +38,7 @@ export function minutesIntoShift(shift: Shift, clock: string): number {
 
 /** Day before Night, then the order the shift meets them (a night 03:00 after 20:00), as the server lists them. */
 export function sortWindows(windows: readonly WindowDraft[]): WindowDraft[] {
-  return [...windows].sort((a, b) =>
+  return sortedCopy(windows, (a, b) =>
     a.shift === b.shift
       ? minutesIntoShift(a.shift, a.start) - minutesIntoShift(b.shift, b.start)
       : a.shift === 'Day'

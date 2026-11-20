@@ -1,44 +1,50 @@
-import { Button } from '../../../shared/components/Button';
+import { ChevronRight, ClipboardCheck, Clock3, TriangleAlert } from 'lucide-react';
+import { focusRing } from '../../../shared/components/styles';
 import type { FollowUpGroupsProps } from './type';
 
-const dotToneClass: Record<FollowUpGroupsProps['items'][number]['tone'], string> = {
-  overdue: 'bg-overdue',
-  pending: 'bg-pending',
-  rework: 'bg-rework',
-};
+const statusLooks = {
+  overdue: { Icon: Clock3, className: 'bg-overdue-bg text-overdue' },
+  pending: { Icon: ClipboardCheck, className: 'bg-pending-bg text-pending' },
+  rework: { Icon: TriangleAlert, className: 'bg-rework-bg text-rework' },
+} as const;
 
-/** Separate clickable buttons for overlapping follow-up groups so shared Areas are never merged into one pie. */
+/** Action rows for the follow-up groups. An Area may appear in more than one group. */
 export function FollowUpGroups({ title, subtitle, items, onGroup }: FollowUpGroupsProps) {
   return (
     <section
       aria-labelledby="overview-followup-heading"
-      className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-4"
+      className="flex min-w-0 flex-col gap-3"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="overview-followup-heading" className="text-lg font-semibold">
+      <div className="flex flex-col gap-0.5">
+        <h2 id="overview-followup-heading" className="text-lg font-bold">
           {title}
         </h2>
         <span className="text-xs text-text-2">{subtitle}</span>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {items.map((item) => (
-          <Button
-            key={item.key}
-            size="desk"
-            variant={item.selected ? 'primary' : 'secondary'}
-            aria-pressed={item.selected}
-            onClick={() => onGroup(item.key)}
-          >
-            <span
-              aria-hidden="true"
-              className={`size-2.5 shrink-0 rounded-full border border-surface ${dotToneClass[item.tone]}`}
-            />
-            <span>
-              {item.label} {item.text} พื้นที่
-            </span>
-          </Button>
-        ))}
-      </div>
+      <ul className="list-none divide-y divide-border rounded-lg border border-border bg-surface px-3">
+        {items.map((item) => {
+          const { Icon, className } = statusLooks[item.tone];
+          return (
+            <li key={item.key}>
+              <button
+                type="button"
+                data-tap=""
+                aria-label={`${item.label} ${item.text} พื้นที่`}
+                aria-pressed={item.selected}
+                onClick={() => onGroup(item.key)}
+                className={`flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-md px-1 py-2 text-left transition-colors hover:bg-surface-2 aria-pressed:bg-accent-subtle aria-pressed:inset-ring-2 aria-pressed:inset-ring-accent ${focusRing}`}
+              >
+                <span className={`inline-grid size-8 shrink-0 place-items-center rounded-md ${className}`}>
+                  <Icon aria-hidden="true" className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1 font-semibold wrap-break-word">{item.label}</span>
+                <span className="shrink-0 text-text-3 tabular-nums">{item.text} พื้นที่</span>
+                <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-accent" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

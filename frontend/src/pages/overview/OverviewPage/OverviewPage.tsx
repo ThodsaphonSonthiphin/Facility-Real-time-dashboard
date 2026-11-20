@@ -22,9 +22,10 @@ export function OverviewPage() {
   const model = useOverviewPage();
 
   return (
-    <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
+    <main className="motion-view flex min-w-0 flex-col gap-5 text-sm text-text sm:gap-6">
       <AdminPageHeader
         title="ภาพรวมการดูแลพื้นที่"
+        titleSize="prominent"
         subtitle={model.periodText}
         actions={model.hubKey ? <LiveBadge hubKey={model.hubKey} /> : undefined}
       />
@@ -47,6 +48,7 @@ export function OverviewPage() {
           <FilterToolbar
             label="ตัวกรองภาพรวม"
             align="start"
+            appearance="plain"
             actions={
               model.canResetToCurrent ? (
                 <Button size="desk" variant="secondary" onClick={model.onResetToCurrent}>
@@ -136,18 +138,20 @@ export function OverviewPage() {
 
           {model.response && (
             <>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                {model.panels.map((panel) => (
-                  <CoveragePanel key={panel.title} {...panel} onGroup={model.onGroup} />
-                ))}
+              <section aria-labelledby="overview-shift-summary" className="rounded-lg border border-border bg-surface">
+                <h2 id="overview-shift-summary" className="px-4 pt-4 text-lg font-bold">สรุปผลของกะ</h2>
+                <div className="grid min-w-0 grid-cols-1 divide-y divide-border lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+                  {model.panels.map((panel) => (
+                    <CoveragePanel key={panel.title} {...panel} onGroup={model.onGroup} />
+                  ))}
+                </div>
+              </section>
+
+              <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] xl:gap-6">
+                <FollowUpGroups {...model.followUp} onGroup={model.onGroup} />
+                <BuildingComparison {...model.buildings} onSelect={model.onBuildingGroup} />
               </div>
-
-              <FollowUpGroups {...model.followUp} onGroup={model.onGroup} />
-
-              <BuildingComparison {...model.buildings} onSelect={model.onBuildingGroup} />
-
               <RoundHistory {...model.history} onGroup={model.onGroup} />
-
               <AreaResults {...model.results} onPage={model.onPage} />
 
               <MoreInfo summary="วิธีอ่านภาพรวม">

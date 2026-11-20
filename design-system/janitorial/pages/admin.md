@@ -28,3 +28,8 @@ An Admin at a desk with a mouse and keyboard, on a computer screen, watching man
 Mockups: branch `prototype/tailwind-look`, `docs/design/tailwind-look-prototype.html`.
 
 - **Dashboard D1:** Enterprise Light keeps cards grouped by Area, building/status/Issue filters and adds search and problem-first ordering/folding as approved for #127. Values/counts come from API data. The building picker does not show an invented problem-count field.
+
+## Overview
+
+- Use one shift-summary surface for Entry, Submission and Inspection. Show the ratio as text with a thin progress bar when the base is known and greater than zero. Keep the metric explanations and group controls with their numbers.
+- Use flat filters above the summary. Follow-up and building comparisons share a row when space allows and stack on narrower screens. Keep the round filters before the Area results in reading and keyboard order.

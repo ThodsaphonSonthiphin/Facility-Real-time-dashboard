@@ -1,20 +1,16 @@
 import { ArrowRightLeft, Check, CircleCheck, Clock, Moon, RefreshCw } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { freshOnOpen } from '../../shared/api/baseApi';
-import { MY_WORK_HUB, useGetMyWorkQuery } from '../../shared/api/myWorkApi';
 import type { AttendanceState, MyWork, OwnShift } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { ConnectionBanner } from '../../shared/components/ConnectionBanner/ConnectionBanner';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
-import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
 import { formatClock, formatTime } from '../../shared/utils/thaiTime';
-import { useAppSelector } from '../../store/hooks';
-import { selectHubStatus } from '../../store/slices/hubSlice';
 import { NextJob } from './NextJob';
 import { WorkGroup } from './WorkGroup';
+import { useMyWorkPage } from './useMyWorkPage';
 import { byUrgency, laterStatuses, sentStatuses, toDo } from './workRules';
 
 /**
@@ -23,14 +19,7 @@ import { byUrgency, laterStatuses, sentStatuses, toDo } from './workRules';
  * account/logout strictly in the 3-tab bottom bar (Heuristics #1, #4, #8).
  */
 export function MyWorkPage() {
-  const { data, error, isLoading, isFetching, refetch } = useGetMyWorkQuery(undefined, freshOnOpen);
-  const shift = data?.attendance.shift;
-  const hubStatus = useAppSelector(selectHubStatus(MY_WORK_HUB));
-  const user = useAppSelector((state) => state.auth.currentUser);
-  const own = data?.areas.find((one) => !one.isCover);
-  const where = own
-    ? `${own.areaCode} ${own.areaName}${own.points[0] ? ` · ตึก ${own.points[0].buildingCode}` : ''}`
-    : (user?.fullName ?? '');
+  const { data, errorMessage, isLoading, isFetching, refetch, hubStatus, where } = useMyWorkPage();
 
   const header = (
     <PhoneHeader
@@ -41,7 +30,7 @@ export function MyWorkPage() {
         </Button>
       }
     >
-      <h1 className="text-xl font-extrabold text-text">งานของฉัน</h1>
+      <h1 className="text-2xl font-extrabold text-text">งานของฉัน</h1>
       <span className="min-h-5 min-w-0 text-sm wrap-break-word text-text-2">{where}</span>
     </PhoneHeader>
   );
@@ -50,7 +39,7 @@ export function MyWorkPage() {
     <PhoneScreen
       header={header}
       bottom={
-        error ? (
+        errorMessage ? (
           <Button variant="primary" size="main" disabled={isFetching} onClick={() => void refetch()}>
             <RefreshCw aria-hidden="true" className="size-6" />
             {isFetching ? 'กำลังโหลด...' : 'ลองอีกครั้ง'}
@@ -60,8 +49,8 @@ export function MyWorkPage() {
     >
       <ConnectionBanner status={hubStatus} refreshing={isFetching} onRetry={() => void refetch()} />
       {isLoading && <PageLoading lines={3}>กำลังโหลดงาน...</PageLoading>}
-      {error && <Note tone="error">{getErrorMessage(error)}</Note>}
-      {data && (shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
+      {errorMessage && <Note tone="error">{errorMessage}</Note>}
+      {data && (data.attendance.shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}
     </PhoneScreen>
   );
 }
@@ -180,11 +169,11 @@ function ShiftSummaryCard({
   return (
     <section
       aria-label="สถานะกะและความคืบหน้า"
-      className="flex flex-col gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-3"
+      className="flex flex-col gap-2.5 border-b border-border pb-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 flex-col">
-          <span className="text-sm font-extrabold text-text tabular-nums">{shiftLabel[attendance.shift]}</span>
+          <span className="font-bold text-text tabular-nums">{shiftLabel[attendance.shift]}</span>
           <span className="text-sm text-text-2 tabular-nums">
             {shiftIn ? `เข้างาน ${formatTime(shiftIn.occurredAt)}` : 'ยังไม่ได้ลงเวลาเข้างาน'}
             {shiftOut ? ` · เลิกงาน ${formatTime(shiftOut.occurredAt)}` : ''}
@@ -196,7 +185,7 @@ function ShiftSummaryCard({
         </span>
       </div>
 
-      <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
+      <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm tabular-nums">
           <span className="font-semibold text-text">{`ส่งแล้ว ${sent} จาก ${total} จุด`}</span>
           <span className="text-text-2">
@@ -209,16 +198,18 @@ function ShiftSummaryCard({
             )}
           </span>
         </div>
-        <div
-          role="progressbar"
-          aria-label="ความคืบหน้า"
-          aria-valuemin={0}
-          aria-valuemax={total}
-          aria-valuenow={sent}
-          className="h-2 overflow-hidden rounded-sm bg-border"
-        >
-          <div className="h-full rounded-sm bg-text" style={{ width: `${total > 0 ? (100 * sent) / total : 0}%` }} />
-        </div>
+        {total > 0 && (
+          <div
+            role="progressbar"
+            aria-label="ความคืบหน้า"
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={sent}
+            className="h-1.5 overflow-hidden rounded-sm bg-skeleton"
+          >
+            <div className="h-full rounded-sm bg-passed" style={{ width: `${(100 * sent) / total}%` }} />
+          </div>
+        )}
       </div>
     </section>
   );

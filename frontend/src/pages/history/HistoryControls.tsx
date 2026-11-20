@@ -57,7 +57,13 @@ export function HistoryControls({ args, actors, texts, onTexts, onShow, onArgs, 
               maxLength={HISTORY_MAX_SEARCH}
               placeholder="ค้นหาชื่อคน จุด หรือรหัส"
               onChange={(event) => onSearch(event.target.value)}
-              onKeyDown={(event) => { if (event.key === 'Enter') onShow(); }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) {
+                  return;
+                }
+                event.preventDefault();
+                onShow();
+              }}
             />
           </label>
           <Button size="desk" onClick={onShow}>ค้นหา</Button>

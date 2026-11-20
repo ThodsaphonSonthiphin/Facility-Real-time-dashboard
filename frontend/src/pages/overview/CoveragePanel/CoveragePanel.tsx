@@ -1,11 +1,5 @@
-import { Button } from '../../../shared/components/Button';
-import type { CoveragePanelProps, RingTone, SwatchTone } from './type';
-
-const ringStroke: Record<RingTone, string> = {
-  passed: 'var(--color-passed)',
-  pending: 'var(--color-pending)',
-  overdue: 'var(--color-overdue)',
-};
+import { focusRing } from '../../../shared/components/styles';
+import type { CoveragePanelProps, SwatchTone } from './type';
 
 const swatchToneClass: Record<SwatchTone, string> = {
   passed: 'bg-passed',
@@ -15,61 +9,44 @@ const swatchToneClass: Record<SwatchTone, string> = {
   idle: 'bg-idle',
 };
 
-/** One summary progress panel with an accessible number, decorative ring, explanation, and category buttons. */
+/** A coverage metric and its drill-through groups within the shared shift summary. */
 export function CoveragePanel({ title, metric, groups, onGroup }: CoveragePanelProps) {
-  const segments = metric.segments ?? [];
   return (
-    <section className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-4">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex size-24 shrink-0 items-center justify-center">
-          <svg aria-hidden="true" viewBox="0 0 120 120" className="size-24 -rotate-90">
-            <circle cx="60" cy="60" r="48" fill="none" stroke="var(--color-skeleton)" strokeWidth="12" />
-            {segments.map((segment) => (
-              <circle
-                key={segment.key}
-                cx="60"
-                cy="60"
-                r="48"
-                fill="none"
-                stroke={ringStroke[segment.tone]}
-                strokeWidth="12"
-                strokeDasharray={segment.dashArray}
-                strokeDashoffset={segment.dashOffset}
-              />
-            ))}
-          </svg>
-          {metric.ringValueText !== undefined && (
-            <span aria-hidden="true" className="absolute text-base font-bold tabular-nums text-text">
-              {metric.ringValueText}
-            </span>
-          )}
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <p className="text-3xl font-bold tabular-nums">{metric.text}</p>
-          {metric.denominatorText && <p className="text-xs text-text-2">{metric.denominatorText}</p>}
-        </div>
+    <section className="flex min-w-0 flex-col gap-2 p-4">
+      <h3 className="text-base font-semibold text-text-2">{title}</h3>
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="text-3xl font-extrabold tabular-nums">{metric.text}</p>
+        {metric.denominatorText && <p className="text-xs text-text-2">{metric.denominatorText}</p>}
       </div>
-      <p className="text-text-2">{metric.explanation}</p>
-      <div className="mt-auto flex flex-wrap gap-2">
+      {metric.percent !== null && (
+        <span aria-hidden="true" className="block h-1.5 overflow-hidden rounded-sm bg-skeleton">
+          <span
+            className={`block h-full rounded-sm ${swatchToneClass[metric.tone]}`}
+            style={{ width: `${metric.percent}%` }}
+          />
+        </span>
+      )}
+      <p className="text-xs text-text-2">{metric.explanation}</p>
+      <div className="mt-auto flex flex-wrap gap-1">
         {groups.map((group) => (
-          <Button
+          <button
             key={group.key}
-            size="desk"
-            variant={group.selected ? 'primary' : 'secondary'}
+            type="button"
+            data-tap=""
             aria-pressed={group.selected}
             onClick={() => onGroup(group.key)}
+            className={`inline-flex min-h-12 max-w-full cursor-pointer items-center gap-1.5 rounded-md px-2 text-left text-sm font-semibold text-accent transition-colors hover:bg-surface-2 aria-pressed:bg-accent-subtle aria-pressed:inset-ring-2 aria-pressed:inset-ring-accent lg:min-h-9 ${focusRing}`}
           >
             {group.tone && (
               <span
                 aria-hidden="true"
-                className={`size-2.5 shrink-0 rounded-full border border-surface ${swatchToneClass[group.tone]}`}
+                className={`size-2 shrink-0 rounded-full ${swatchToneClass[group.tone]}`}
               />
             )}
             <span>
               {group.label} {group.text} พื้นที่
             </span>
-          </Button>
+          </button>
         ))}
       </div>
     </section>

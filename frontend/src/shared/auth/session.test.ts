@@ -55,28 +55,28 @@ describe('startSession', () => {
     expect(store.getState().auth.isBootstrapping).toBe(false);
   });
 
-  it('a refresh that never answers gives up after 15 s and ends bootstrapping', async () => {
-    vi.useFakeTimers();
-    try {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(
-          (_input: RequestInfo | URL, init?: RequestInit) =>
-            new Promise<Response>((_resolve, reject) => {
-              init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
-            }),
-        ),
-      );
-      const store = makeStore();
+  it('requests a 15 s refresh deadline and ends bootstrapping when it expires', async () => {
+    // Vitest's fake timers cannot advance Node's native AbortSignal.timeout.
+    const deadline = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValueOnce(deadline.signal);
+    const fetchRefresh = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal;
+          signal?.addEventListener('abort', () => reject(signal.reason));
+        }),
+    );
+    vi.stubGlobal('fetch', fetchRefresh);
+    const store = makeStore();
 
-      const started = startSession(store.dispatch);
-      await vi.advanceTimersByTimeAsync(15_000);
-      await started;
+    const started = startSession(store.dispatch);
+    expect(timeout).toHaveBeenCalledWith(15_000);
+    expect(fetchRefresh).toHaveBeenCalledWith('/api/auth/refresh', expect.objectContaining({ signal: deadline.signal }));
+    expect(store.getState().auth.isBootstrapping).toBe(true);
 
-      expect(store.getState().auth.isBootstrapping).toBe(false);
-    } finally {
-      vi.useRealTimers();
-    }
+    deadline.abort(new DOMException('The operation timed out.', 'TimeoutError'));
+    await started;
+    expect(store.getState().auth.isBootstrapping).toBe(false);
   });
 });
 

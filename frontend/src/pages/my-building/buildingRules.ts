@@ -1,4 +1,5 @@
 import type { PointCard, PointStatus } from '../../shared/api/types';
+import { sortedCopy } from '../../shared/utils/sortedCopy';
 import type { MyBuilding } from './myBuildingApi';
 
 /** A pushed card replaces the same point where it is; a point that is not on this page is ignored (plan 9 decision 8). */
@@ -38,7 +39,7 @@ function ordinal(a: string, b: string): number {
  * is stable, so within an Area the rest keep the order they came in.
  */
 export function inspectionOrder(points: readonly PointCard[]): PointCard[] {
-  return [...points].sort((a, b) => {
+  return sortedCopy(points, (a, b) => {
     const group = groupOf(a.status) - groupOf(b.status);
     if (group !== 0) {
       return group;

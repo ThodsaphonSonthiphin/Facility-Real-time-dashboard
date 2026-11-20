@@ -34,6 +34,7 @@ export interface FilterToolbarProps {
   children: ReactNode;
   actions?: ReactNode;
   align?: 'start' | 'center' | 'end';
+  appearance?: 'framed' | 'plain';
   className?: string;
 }
 
@@ -46,13 +47,16 @@ const toolbarAlign = {
 /**
  * Responsive flex/wrap toolbar wrapper for Admin filter controls and secondary actions.
  */
-export function FilterToolbar({ label, children, actions, align = 'center', className }: FilterToolbarProps) {
+export function FilterToolbar({
+  label, children, actions, align = 'center', appearance = 'framed', className,
+}: FilterToolbarProps) {
   const alignClass = toolbarAlign[align];
+  const frame = appearance === 'framed' ? 'rounded-lg border border-border bg-surface px-4 py-3' : '';
   return (
     <div
       role="region"
       aria-label={label}
-      className={`flex flex-wrap ${alignClass} ${actions ? 'justify-between' : 'justify-start'} gap-3 rounded-lg border border-border bg-surface px-4 py-3${className ? ` ${className}` : ''}`}
+      className={`flex flex-wrap ${alignClass} ${actions ? 'justify-between' : 'justify-start'} gap-3 ${frame}${className ? ` ${className}` : ''}`}
     >
       {actions ? (
         <>

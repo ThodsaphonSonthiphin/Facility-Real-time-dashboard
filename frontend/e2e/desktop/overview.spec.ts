@@ -15,6 +15,24 @@ function resultLinks(page: Page) {
   return page.getByRole('link', { name: /^ดูพื้นที่ / });
 }
 
+test('overview fits a narrow screen and respects the system motion preference', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 812 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await loginAsAdmin(page);
+  await page.goto(overviewUrl());
+
+  const overview = page.getByRole('main');
+  await expect(overview.getByRole('heading', { name: 'สรุปผลของกะ' })).toBeVisible();
+  await expect(overview).toHaveCSS('animation-name', 'motion-view-in');
+  await expect(overview).toHaveCSS('opacity', '1');
+  expect(await sidewaysOverflow(page)).toBe(0);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(overview).toHaveCSS('animation-name', 'none');
+  await expect(overview).toHaveCSS('transform', 'none');
+  await expect(overview.getByRole('heading', { name: 'สรุปผลของกะ' })).toBeVisible();
+});
+
 for (const [width, height] of [[1280, 900], [375, 812]]) {
   test(`overview Night attendance keeps all five page-two Areas through detail and refresh at ${width}px`, async ({ page }, info) => {
     const fixture = overviewFixture();

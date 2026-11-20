@@ -35,7 +35,7 @@ Each colour has one meaning: **blue (accent) only for what can be pressed**; red
 
 ### Status colours (facility-0047)
 
-A status is **always shown with its words** (never colour alone). Each has a text colour, a light background, a border and an icon. `StatusChip` uses the light face by default; `solid` is the filled variant for the phone's urgent-work card.
+A status is **always shown with its words** (never colour alone). Each `StatusChip` has a text colour, a light background, a border and an icon.
 
 | Point Status | Words | Tokens | Text / background / border |
 |---|---|---|---|
@@ -119,7 +119,7 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 | `Button` (`variant` primary / secondary / danger / link / add, `size` phone / main / desk) | Every button. A `link` button has no side padding, so its words line up with the text above it (owner, #78). `main` is the phone page's one 56 px full-width action; `danger` is red text and border on white; contextual stopping-use/QR confirmations use the solid red action in `ConfirmationDialog` (0101), and `add` is dashed accent for adding a round |
 | `buttonClass(variant, size)` + `data-tap` | A react-router `Link` that looks like a button |
 | `Note` (`tone` info / success / warn / error, `title`, `icon`, `alert`, `status`) | A message in a box, in the status colours (see Notes); an error is `role="alert"` unless `alert={false}` (a red box that is part of the page from the start, such as the Supervisor's defect); `status` makes it `role="status"`, for the answer to a press (the recorded time on the check-in page). `noteClass(tone)` for a box that must be a `<section>` with its own heading |
-| `StatusChip` (`size` md / lg, `solid`, `fixed`) | A Point Status, always with its words |
+| `StatusChip` (`size` md / lg, `fixed`) | A Point Status, always with its words |
 | `Toast` (`notice`, `onClose`; with its `Notice` type) | The answer to an Admin's action (D2, D3), floating at the top centre so nothing under it moves (owner, #78). `ok` (done): info (pending) colours, a check icon, `role="status"`, gone by itself after 5 s (held while the pointer or keyboard is on it). `warn` (something the Admin did not ask for, such as their form closing): warn colours, `role="status"`. `error`: error colours, `role="alert"`. warn and error stay until ✕ (named ปิดข้อความ), which closes any of them at once |
 | `toggleClass` (`styles.ts`) + `data-tap` | An Admin on/off button with `aria-pressed` (D1 filters, D2 shift, D3 tabs): 36 px, a blue frame when on |
 | `tabClass` + `tabListClass` (`styles.ts`) + `data-tap` | An Admin view switcher, a real tablist (`role="tab"`, `aria-selected`, arrows and Home/End, one keyboard stop): a 2 px line under the words, never a box, so a switch is not mistaken for a button that does something beside it (D4, owner 2026-10-23) |

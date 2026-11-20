@@ -22,12 +22,12 @@ export function WorkGroup({ title, items }: { title: string; items: readonly Wor
         </h2>
         <span className="text-sm text-text-2">{items.length}</span>
       </div>
-      <ul className="m-0 list-none divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface p-0">
+      <ul className="m-0 list-none divide-y divide-border border-t border-border p-0">
         {items.map((item) => {
           const issue = issueText(item.point);
           return (
-            <li key={item.point.id} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
-              <div className="flex min-w-0 flex-col">
+            <li key={item.point.id} className="flex min-h-14 flex-wrap items-center justify-between gap-2 py-3">
+              <div className="flex min-w-0 flex-1 basis-32 flex-col wrap-break-word">
                 <h3 className="text-base font-semibold">{item.point.name}</h3>
                 <span className="text-sm text-text-2 tabular-nums">{whereText(item)}</span>
                 {/* A ต้องแก้ไข row also says what to fix (owner, 2026-10-22), as the large card does */}

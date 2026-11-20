@@ -35,15 +35,13 @@ export function refreshSession(dispatch: Dispatch): Promise<RefreshOutcome> {
 
 async function runRefresh(dispatch: Dispatch): Promise<RefreshOutcome> {
   const epoch = sessionEpoch;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
   let response: Response;
   let answer: AuthResponse | null = null;
   try {
     response = await fetch('/api/auth/refresh', {
       method: 'POST',
       credentials: 'same-origin',
-      signal: controller.signal,
+      signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS),
     });
     if (response.ok) {
       try {
@@ -54,8 +52,6 @@ async function runRefresh(dispatch: Dispatch): Promise<RefreshOutcome> {
     }
   } catch {
     return 'offline'; // no network, a timeout or a server fault: keep the session, a phone losing signal must not log the person out
-  } finally {
-    clearTimeout(timer);
   }
   if (epoch !== sessionEpoch) {
     return 'rejected'; // the session was ended on purpose while this refresh ran: do not touch the store

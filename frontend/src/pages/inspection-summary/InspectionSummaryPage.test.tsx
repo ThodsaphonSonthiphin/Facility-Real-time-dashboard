@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { addDays } from '../../shared/utils/dateRange';
 import { formatShiftDate, thaiToday } from '../../shared/utils/thaiTime';
@@ -89,7 +89,14 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     await user.clear(fromField());
     await user.type(fromField(), '01/10/2026');
     await user.clear(toField());
-    await user.type(toField(), '07/10/2026{Enter}');
+    await user.type(toField(), '07/10/2026');
+    const previousSearch = router.state.location.search;
+
+    fireEvent.keyDown(toField(), { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(toField(), { key: 'Enter', keyCode: 229 });
+    expect(router.state.location.search).toBe(previousSearch);
+
+    await user.keyboard('{Enter}');
 
     await waitFor(() => expect(router.state.location.search).toBe('?from=2026-10-01&to=2026-10-07'));
     await screen.findByRole('option', { name: 'B · ตึกข้างเคียง' });

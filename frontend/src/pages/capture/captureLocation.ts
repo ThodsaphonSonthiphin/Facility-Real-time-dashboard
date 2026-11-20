@@ -1,4 +1,5 @@
 import type { GpsFix, LocationProblem } from '../../shared/geo/readLocation';
+import { sortedCopy } from '../../shared/utils/sortedCopy';
 
 /** facility-0045 item 2: read for 30 s standing still at the sign. */
 export const CAPTURE_MS = 30_000;
@@ -21,7 +22,7 @@ export type CaptureResult =
 const PERMISSION_DENIED = 1; // GeolocationPositionError.PERMISSION_DENIED
 
 function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = sortedCopy(values, (a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 }

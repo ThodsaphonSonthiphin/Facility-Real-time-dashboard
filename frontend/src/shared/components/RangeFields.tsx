@@ -17,9 +17,11 @@ interface RangeFieldsProps {
  */
 export function RangeFields({ value, onChange, onEnter }: RangeFieldsProps) {
   const enter = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      onEnter?.();
+    if (!onEnter || event.key !== 'Enter' || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) {
+      return;
     }
+    event.preventDefault();
+    onEnter();
   };
   const today = thaiToday();
   return (

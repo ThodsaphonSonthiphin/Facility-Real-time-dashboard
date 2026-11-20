@@ -23,12 +23,11 @@ import { shiftLabel, shiftShortLabel } from '../../../shared/utils/labels';
 import { formatDate, formatShiftDate, formatTime, thaiToday } from '../../../shared/utils/thaiTime';
 import type { AreaResultBadge, AreaResultsProps } from '../AreaResults/type';
 import type { BuildingComparisonProps } from '../BuildingComparison/type';
-import type { CoveragePanelProps, CoverageRingSegment } from '../CoveragePanel/type';
+import type { CoveragePanelProps } from '../CoveragePanel/type';
 import type { FollowUpGroupsProps } from '../FollowUpGroups/type';
 import type { RoundHistoryProps } from '../RoundHistory/type';
 import type { BuildingOption, OverviewPageModel } from './type';
 
-const RING_CIRCUMFERENCE = 2 * Math.PI * 48;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const SHIFT_OPTIONS: readonly { value: Shift; label: string }[] = [
@@ -103,49 +102,18 @@ function formatCountValue(count: OverviewCount): string {
   return count.value === null ? '—' : String(count.value);
 }
 
-function formatMetricRatio(metric: OverviewMetric): { text: string; ringValueText: string; percent: number | null } {
+function formatMetricRatio(metric: OverviewMetric): { text: string; percent: number | null } {
   if (metric.numerator.value === null || metric.denominator.value === null) {
-    return { text: '—', ringValueText: '—', percent: null };
+    return { text: '—', percent: null };
   }
   if (metric.denominator.value === 0) {
-    return { text: '0/0', ringValueText: '0/0', percent: null };
+    return { text: '0/0', percent: null };
   }
   const pct = Math.round((metric.numerator.value / metric.denominator.value) * 100);
   return {
     text: `${metric.numerator.value}/${metric.denominator.value} (${pct}%)`,
-    ringValueText: `${pct}%`,
     percent: pct,
   };
-}
-
-function buildRingSegments(
-  denominator: OverviewCount,
-  slices: readonly { key: string; count: OverviewCount; tone: CoverageRingSegment['tone'] }[],
-): CoverageRingSegment[] {
-  if (denominator.value === null || denominator.value <= 0) {
-    return [];
-  }
-  if (slices.some((slice) => slice.count.value === null)) {
-    return [];
-  }
-  const denom = denominator.value;
-  let offset = 0;
-  const segments: CoverageRingSegment[] = [];
-  for (const slice of slices) {
-    const value = slice.count.value ?? 0;
-    if (value <= 0) {
-      continue;
-    }
-    const length = (value / denom) * RING_CIRCUMFERENCE;
-    segments.push({
-      key: slice.key,
-      dashArray: `${length.toFixed(2)} ${RING_CIRCUMFERENCE.toFixed(2)}`,
-      dashOffset: Number((-offset).toFixed(2)),
-      tone: slice.tone,
-    });
-    offset += length;
-  }
-  return segments;
 }
 
 function formatRoundTimeLabel(roundKey: string, index: number): string {
@@ -263,15 +231,10 @@ function buildPanels(summary: OverviewSummary, selectedGroup: OverviewGroup): Co
     {
       title: 'พื้นที่ที่ลงเวลาเข้าแล้ว',
       metric: {
-        text: entryRatio.text,
-        ringValueText: entryRatio.ringValueText,
+        ...entryRatio,
+        tone: 'passed',
         denominatorText: entryDenomText,
         explanation: entryExplanation,
-        segments: buildRingSegments(entry.denominator, [
-          { key: 'entered', count: groups.entered, tone: 'passed' },
-          { key: 'covered', count: groups.covered, tone: 'pending' },
-          { key: 'unassigned', count: groups.unassigned, tone: 'overdue' },
-        ]),
       },
       groups: [
         { key: 'entered', label: 'ลงเวลาแล้ว', text: formatCountValue(groups.entered), selected: selectedGroup === 'entered', tone: 'passed' },
@@ -283,13 +246,10 @@ function buildPanels(summary: OverviewSummary, selectedGroup: OverviewGroup): Co
     {
       title: 'พื้นที่ที่ส่งงานครบ',
       metric: {
-        text: workRatio.text,
-        ringValueText: workRatio.ringValueText,
+        ...workRatio,
+        tone: 'passed',
         denominatorText: workDenomText,
         explanation: workExplanation,
-        segments: buildRingSegments(submission.denominator, [
-          { key: 'submitted', count: submission.numerator, tone: 'passed' },
-        ]),
       },
       groups: [
         { key: 'submitted', label: 'ส่งงานครบ', text: formatCountValue(groups.submitted), selected: selectedGroup === 'submitted', tone: 'passed' },
@@ -302,13 +262,10 @@ function buildPanels(summary: OverviewSummary, selectedGroup: OverviewGroup): Co
     {
       title: 'พื้นที่ที่ตรวจครบ',
       metric: {
-        text: inspRatio.text,
-        ringValueText: inspRatio.ringValueText,
+        ...inspRatio,
+        tone: 'pending',
         denominatorText: inspDenomText,
         explanation: inspExplanation,
-        segments: buildRingSegments(inspection.denominator, [
-          { key: 'inspected', count: inspection.numerator, tone: 'pending' },
-        ]),
       },
       groups: [
         { key: 'inspected', label: 'ตรวจครบแล้ว', text: formatCountValue(groups.inspected), selected: selectedGroup === 'inspected', tone: 'pending' },

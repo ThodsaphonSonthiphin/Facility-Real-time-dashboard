@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { addDays } from '../../shared/utils/dateRange';
 import { thaiToday } from '../../shared/utils/thaiTime';
@@ -290,6 +290,12 @@ describe('HistoryPage (D9, facility-0057)', () => {
 
     await user.type(search, 'แม่บ้านที่อื่น');
     expect(logGets(server)).toHaveLength(1); // typing alone asks nothing
+
+    fireEvent.keyDown(search, { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(search, { key: 'Enter', keyCode: 229 });
+    expect(query(router.state.location.search).q).toBeUndefined();
+    expect(logGets(server)).toHaveLength(1);
+
     await user.keyboard('{Enter}');
 
     await waitFor(() => expect(query(logGets(server).at(-1)!.search)).toMatchObject({ category: 'Cover', q: 'แม่บ้านที่อื่น' }));
