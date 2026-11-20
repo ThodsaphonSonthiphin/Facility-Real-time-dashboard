@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "e2e": "bash ../scripts/e2e.sh run",
+    "test:load": "E2E_HEADLESS=1 E2E_SLOW_MO=0 bash ../scripts/e2e.sh run --dataset large performance.spec.ts",
     "e2e:clean": "bash ../scripts/e2e.sh clean",
     "prepare": "cd .. && husky frontend/.husky"
   },
