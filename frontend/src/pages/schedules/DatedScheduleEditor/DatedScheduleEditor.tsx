@@ -13,9 +13,9 @@ export function DatedScheduleEditor(props: DatedScheduleEditorProps) {
     <ScheduleReview title={editor.correction ? 'แก้ไขแผนย้อนหลัง' : 'แก้ตารางเฉพาะวันที่'}
       editor={editor} latest={editor.latest} onCompare={props.onCompare} onUseLatest={editor.useLatest}>
       <p className="font-semibold">{props.person.displayName} · {editor.dateLabel}</p>
-      <Note tone="info">{editor.correction
-        ? 'บันทึกเหตุผลและเก็บประวัติแผนเดิม เวลาสแกนจริงยังเป็นตามที่บันทึกไว้'
-        : 'การเปลี่ยนแปลงใช้กับกะของวันที่เลือกเท่านั้น'}</Note>
+      {editor.correction && (
+        <Note tone="info">เก็บประวัติเดิมไว้ เวลาสแกนจริงไม่เปลี่ยน</Note>
+      )}
       <Field label="รายการที่จะแก้">
         <Select size={size} value={action} onChange={(event) => editor.setAction(event.currentTarget.value as DatedAction)}>
           {editor.choices.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
@@ -40,15 +40,14 @@ export function DatedScheduleEditor(props: DatedScheduleEditorProps) {
       )}
       {action === 'leave' && (
         <>
-          <Field label="เริ่มลา (เวลาไทย)">
+          <Field label="เริ่มลา">
             <TextInput type="datetime-local" size={size} value={editor.draft.startsAt}
               onChange={(event) => editor.setField('startsAt', event.currentTarget.value)} />
           </Field>
-          <Field label="สิ้นสุดลา (เวลาไทย)">
+          <Field label="สิ้นสุดลา">
             <TextInput type="datetime-local" size={size} value={editor.draft.endsAt}
               onChange={(event) => editor.setField('endsAt', event.currentTarget.value)} />
           </Field>
-          <Note tone="info">บันทึกลาได้ก่อนจัดคนทำแทน</Note>
         </>
       )}
       <Field label={editor.reasonRequired ? 'เหตุผลที่แก้ไขแผนย้อนหลัง' : 'เหตุผล (ถ้ามี)'}>

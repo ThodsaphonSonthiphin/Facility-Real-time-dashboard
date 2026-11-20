@@ -41,31 +41,23 @@ internal static class AttendanceStateView
             .Where(gap => gap.UserId == userId && gap.ShiftDate == slot.ShiftDate && gap.Shift == slot.Shift)
             .OrderBy(gap => gap.Id)
             .ToListAsync(ct);
-        var stored = await db.AttendanceSlotLifecycles.AsNoTracking()
-            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift)
-            .Select(row => (AttendanceLifecycleVersion?)row.Version)
-            .FirstOrDefaultAsync(ct);
-
-        var version = AttendanceLifecycle.VersionFor(stored);
         var recorded = facts.Select(fact => fact.EventType).ToList();
         var skipped = gaps.Where(gap => gap.Status == AttendanceGapStatus.Skipped)
             .Select(gap => gap.EventType)
             .ToHashSet();
-        var choices = AttendanceLifecycle.NextActions(version, recorded, skipped);
+        var choices = AttendanceLifecycle.NextActions(recorded, skipped);
         var departure = facts.FirstOrDefault(fact => fact.EventType == AttendanceEvent.ShiftOut) is { } final
             ? UtcOffset(final.OccurredAt)
             : (DateTimeOffset?)null;
-        var departureLeaveMismatch = version == AttendanceLifecycleVersion.Numbered6
-            && departure is { } actual && actual.UtcDateTime < ShiftCalendar.EndUtc(slot)
+        var departureLeaveMismatch = departure is { } actual && actual.UtcDateTime < ShiftCalendar.EndUtc(slot)
             && (duty.LeaveStart is not { } start || duty.LeaveEnd is not { } end || actual < start || actual >= end);
 
         return new AttendanceSlotState(
             slot,
-            version,
             AttendanceStateRevision.Of(userId, slot, facts),
             facts.Select(fact => new AttendanceEntryDto(fact.EventType, Utc(fact.OccurredAt), fact.Source,
                 fact.WithinRadius, Utc(fact.CreatedAt))).ToList(),
-            Describe(version, slot, duty, facts, skipped, nowUtc, departure),
+            Describe(slot, duty, facts, skipped, nowUtc, departure),
             gaps.Select(gap => new AttendanceGapDto(gap.EventType, gap.Status.ToString(), gap.Reason,
                 gap.RecordedAt is { } at ? Utc(at) : null)).ToList(),
             choices.Select(choice => new AttendanceChoiceDto(choice.Action, choice.RequiredGaps)).ToList(),
@@ -78,7 +70,6 @@ internal static class AttendanceStateView
     /// take precedence over the expected-time state.
     /// </summary>
     private static List<AttendanceActionDto> Describe(
-        AttendanceLifecycleVersion version,
         ShiftSlot slot,
         EffectiveDuty duty,
         IReadOnlyList<ShiftAttendance> facts,
@@ -86,7 +77,7 @@ internal static class AttendanceStateView
         DateTime nowUtc,
         DateTimeOffset? departure)
     {
-        var order = AttendanceLifecycle.Order(version);
+        var order = AttendanceLifecycle.Order;
         var byAction = facts.GroupBy(fact => fact.EventType).ToDictionary(group => group.Key, group => group.First());
         var expected = AttendanceExpectations.ForSlot(slot, duty.BreakGroup);
         var now = UtcOffset(nowUtc);
@@ -101,7 +92,7 @@ internal static class AttendanceStateView
                 continue;
             }
 
-            var state = version == AttendanceLifecycleVersion.Numbered6 && expectedAt is { } due
+            var state = expectedAt is { } due
                 ? Word(AttendanceApplicability.Classify(UtcOffset(due), now, departure, duty.LeaveStart, duty.LeaveEnd))
                 : Pending;
             if (state != NotApplicable && skipped.Contains(action))
@@ -131,7 +122,6 @@ internal static class AttendanceStateView
 /// <summary>One loaded slot: everything a screen shows and everything a write needs to check, read once.</summary>
 internal sealed record AttendanceSlotState(
     ShiftSlot Slot,
-    AttendanceLifecycleVersion Version,
     string Revision,
     IReadOnlyList<AttendanceEntryDto> Events,
     IReadOnlyList<AttendanceActionDto> Actions,
@@ -144,9 +134,7 @@ internal sealed record AttendanceSlotState(
         Slot.ShiftDate,
         Slot.Shift,
         Events,
-        NextActions.Select(choice => choice.Action).ToList(),
         outcome,
-        Version.ToString(),
         Revision,
         Actions,
         Gaps,

@@ -106,7 +106,7 @@ test('Excel download requires acknowledgement and produces a real XLSX file @dat
   await enterDatasetDates(page);
   const downloadButton = page.getByRole('button', { name: /ดาวน์โหลด Excel/ });
   await expect(downloadButton).toBeDisabled();
-  await page.getByRole('checkbox', { name: /เข้าใจแล้ว/ }).check();
+  await page.getByRole('checkbox', { name: /รับทราบข้อกำหนดข้อมูลส่วนบุคคล/ }).check();
   await expect(downloadButton).toBeEnabled();
   const download = page.waitForEvent('download');
   await downloadButton.click();

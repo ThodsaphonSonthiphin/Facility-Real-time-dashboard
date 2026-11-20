@@ -54,47 +54,188 @@ public static class OverviewProjection
         ArgumentNullException.ThrowIfNull(facts);
         ArgumentNullException.ThrowIfNull(availability);
 
-        var origins = ResolveOrigins(facts.Submissions, slot, targets.Rounds);
-        var scans = origins.Resolved;
-        var current = CurrentPoints(slot, moment, targets.Rounds, scans, facts.Inspections);
-        var history = History(slot, targets.Rounds, scans, facts.Inspections, origins.Ambiguous);
-        var image = targets.Current;
-        var entered = ScheduleEntryEvidence.EnteredAreas(
-            new ScheduleSlot(slot.ShiftDate, slot.Shift), facts.EntryEvidence);
-        var nextRoundAreas = AreasWithNextRound(image, slot, moment.EvaluationUtc);
-        var currentPointIds = current.Select(c => c.Round.PointId).ToHashSet();
-        // Ambiguity is scoped to the ownership view that owns a candidate round, so a moved Area can mark the affected
-        // historical row without claiming the current owner's row is unproven.
-        var ambiguousViews = origins.Ambiguous
-            .SelectMany(a => a.Rounds).Select(r => (r.AreaId, r.BuildingId)).ToHashSet();
+        var prepared = Prepare(slot, moment, targets, facts);
+        var views = prepared.Views;
+        var areas = buildingId is null
+            ? ProjectWholeFactory(views, prepared.Entered, prepared.Assigned, prepared.NextRoundAreas, prepared.AmbiguousViews)
+            : ProjectForBuilding(views, buildingId.Value, prepared.Entered, prepared.Assigned, prepared.NextRoundAreas, prepared.AmbiguousViews);
 
-        var views = Views(targets, image, current, history, currentPointIds, slot, moment.EvaluationUtc);
+        return new(slot, moment, targets, availability, areas);
+    }
 
-        var areas = new List<OverviewArea>();
-        if (buildingId is null)
+    public static (OverviewSnapshot Whole, IReadOnlyDictionary<int, IReadOnlyList<OverviewArea>> ByBuilding) ProjectAll(
+        ShiftSlot slot,
+        OverviewMoment moment,
+        TargetTimeline targets,
+        OverviewFacts facts,
+        SectionAvailability wholeAvailability)
+    {
+        var prepared = Prepare(slot, moment, targets, facts);
+        var byBuilding = new Dictionary<int, List<OverviewArea>>();
+        var groupedByArea = prepared.Views.GroupBy(v => v.AreaId);
+        var wholeAreas = new List<OverviewArea>();
+
+        foreach (var group in groupedByArea)
         {
-            foreach (var group in views.GroupBy(v => v.AreaId))
+            View? single = null;
+            List<View>? many = null;
+            foreach (var v in group)
             {
-                var all = group.ToArray();
+                if (single is null && many is null)
+                {
+                    single = v;
+                }
+                else
+                {
+                    if (many is null)
+                    {
+                        many = [single!, v];
+                        single = null;
+                    }
+                    else
+                    {
+                        many.Add(v);
+                    }
+                }
+            }
+
+            if (single is not null)
+            {
+                var row = Row(
+                    single,
+                    single.History.Count <= 1 ? single.History : [.. single.History.OrderBy(h => h.Round.ActiveFromUtc).ThenBy(h => h.Round.PointId)],
+                    prepared.Entered,
+                    prepared.Assigned,
+                    prepared.NextRoundAreas,
+                    single.IsCurrentOwner,
+                    prepared.AmbiguousViews.Contains((single.AreaId, single.BuildingId)));
+                wholeAreas.Add(row);
+                AddBuildingArea(byBuilding, single.BuildingId, row);
+            }
+            else
+            {
+                var all = many!.ToArray();
                 var primary = all.FirstOrDefault(v => v.Points.Count > 0)
                     ?? all.FirstOrDefault(v => v.IsCurrentOwner)
                     ?? all.OrderByDescending(v => v.Activity).ThenByDescending(v => v.Revision).First();
                 var merged = all.SelectMany(v => v.History)
                     .OrderBy(h => h.Round.ActiveFromUtc).ThenBy(h => h.Round.PointId).ToArray();
-                areas.Add(Row(primary, merged, entered, facts.AssignedAreas, nextRoundAreas,
+                wholeAreas.Add(Row(primary, merged, prepared.Entered, prepared.Assigned, prepared.NextRoundAreas,
                     includeStructure: all.Any(v => v.IsCurrentOwner),
-                    originsIncomplete: all.Any(v => ambiguousViews.Contains((v.AreaId, v.BuildingId)))));
+                    originsIncomplete: all.Any(v => prepared.AmbiguousViews.Contains((v.AreaId, v.BuildingId)))));
+
+                foreach (var view in all)
+                {
+                    var row = Row(
+                        view,
+                        view.History.Count <= 1 ? view.History : [.. view.History.OrderBy(h => h.Round.ActiveFromUtc).ThenBy(h => h.Round.PointId)],
+                        prepared.Entered,
+                        prepared.Assigned,
+                        prepared.NextRoundAreas,
+                        view.IsCurrentOwner,
+                        prepared.AmbiguousViews.Contains((view.AreaId, view.BuildingId)));
+                    AddBuildingArea(byBuilding, view.BuildingId, row);
+                }
             }
         }
-        else
+
+        SortAreas(wholeAreas);
+        var sortedByBuilding = new Dictionary<int, IReadOnlyList<OverviewArea>>(byBuilding.Count);
+        foreach (var (bId, bAreas) in byBuilding)
         {
-            foreach (var view in views.Where(v => v.BuildingId == buildingId.Value))
-                areas.Add(Row(view, view.History
-                    .OrderBy(h => h.Round.ActiveFromUtc).ThenBy(h => h.Round.PointId).ToArray(),
-                    entered, facts.AssignedAreas, nextRoundAreas, view.IsCurrentOwner,
-                    ambiguousViews.Contains((view.AreaId, view.BuildingId))));
+            SortAreas(bAreas);
+            sortedByBuilding[bId] = bAreas;
         }
 
+        return (new(slot, moment, targets, wholeAvailability, wholeAreas), sortedByBuilding);
+    }
+
+    private static void AddBuildingArea(Dictionary<int, List<OverviewArea>> byBuilding, int buildingId, OverviewArea row)
+    {
+        if (!byBuilding.TryGetValue(buildingId, out var list))
+        {
+            byBuilding[buildingId] = list = [];
+        }
+        list.Add(row);
+    }
+
+    private sealed record PreparedProjection(
+        List<View> Views,
+        IReadOnlySet<int> Entered,
+        IReadOnlySet<int> Assigned,
+        HashSet<int> NextRoundAreas,
+        HashSet<(int AreaId, int BuildingId)> AmbiguousViews);
+
+    private static PreparedProjection Prepare(
+        ShiftSlot slot, OverviewMoment moment, TargetTimeline targets, OverviewFacts facts)
+    {
+        var origins = ResolveOrigins(facts.Submissions, slot, targets.Rounds);
+        var scansByPoint = origins.Resolved.ToLookup(s => s.PointId);
+        var inspectionsBySubmission = facts.Inspections.ToLookup(i => i.SubmissionId);
+
+        var current = CurrentPoints(slot, moment, targets.Rounds, scansByPoint, inspectionsBySubmission);
+        var history = History(slot, targets.Rounds, scansByPoint, inspectionsBySubmission, origins.Ambiguous);
+        var image = targets.Current;
+        var entered = ScheduleEntryEvidence.EnteredAreas(
+            new ScheduleSlot(slot.ShiftDate, slot.Shift), facts.EntryEvidence);
+        var (nextRoundAreas, upcomingWithPoints) = UpcomingData(image, slot, moment.EvaluationUtc);
+        var currentPointIds = current.Select(c => c.Round.PointId).ToHashSet();
+        var ambiguousViews = origins.Ambiguous
+            .SelectMany(a => a.Rounds).Select(r => (r.AreaId, r.BuildingId)).ToHashSet();
+
+        var views = Views(targets, image, current, history, currentPointIds, upcomingWithPoints, slot, moment.EvaluationUtc);
+        return new(views, entered, facts.AssignedAreas, nextRoundAreas, ambiguousViews);
+    }
+
+    private static List<OverviewArea> ProjectWholeFactory(
+        List<View> views,
+        IReadOnlySet<int> entered,
+        IReadOnlySet<int> assigned,
+        HashSet<int> nextRoundAreas,
+        HashSet<(int AreaId, int BuildingId)> ambiguousViews)
+    {
+        var areas = new List<OverviewArea>();
+        foreach (var group in views.GroupBy(v => v.AreaId))
+        {
+            var all = group.ToArray();
+            var primary = all.FirstOrDefault(v => v.Points.Count > 0)
+                ?? all.FirstOrDefault(v => v.IsCurrentOwner)
+                ?? all.OrderByDescending(v => v.Activity).ThenByDescending(v => v.Revision).First();
+            var merged = all.SelectMany(v => v.History)
+                .OrderBy(h => h.Round.ActiveFromUtc).ThenBy(h => h.Round.PointId).ToArray();
+            areas.Add(Row(primary, merged, entered, assigned, nextRoundAreas,
+                includeStructure: all.Any(v => v.IsCurrentOwner),
+                originsIncomplete: all.Any(v => ambiguousViews.Contains((v.AreaId, v.BuildingId)))));
+        }
+
+        SortAreas(areas);
+        return areas;
+    }
+
+    private static List<OverviewArea> ProjectForBuilding(
+        List<View> views,
+        int buildingId,
+        IReadOnlySet<int> entered,
+        IReadOnlySet<int> assigned,
+        HashSet<int> nextRoundAreas,
+        HashSet<(int AreaId, int BuildingId)> ambiguousViews)
+    {
+        var areas = new List<OverviewArea>();
+        foreach (var view in views)
+        {
+            if (view.BuildingId != buildingId) continue;
+            areas.Add(Row(view, view.History
+                .OrderBy(h => h.Round.ActiveFromUtc).ThenBy(h => h.Round.PointId).ToArray(),
+                entered, assigned, nextRoundAreas, view.IsCurrentOwner,
+                ambiguousViews.Contains((view.AreaId, view.BuildingId))));
+        }
+
+        SortAreas(areas);
+        return areas;
+    }
+
+    private static void SortAreas(List<OverviewArea> areas)
+    {
         areas.Sort((left, right) =>
         {
             var building = string.CompareOrdinal(left.BuildingCode, right.BuildingCode);
@@ -102,8 +243,6 @@ public static class OverviewProjection
             var code = string.CompareOrdinal(left.Code, right.Code);
             return code != 0 ? code : left.Id.CompareTo(right.Id);
         });
-
-        return new(slot, moment, targets, availability, areas);
     }
 
     /// <summary>
@@ -149,6 +288,7 @@ public static class OverviewProjection
     private static List<View> Views(TargetTimeline targets, TargetImage? image,
         IReadOnlyList<(RoundObligation Round, OverviewPoint Point)> current,
         IReadOnlyList<OverviewRoundResult> history, IReadOnlySet<int> currentPointIds,
+        IReadOnlyList<(TargetWindow Window, TargetPoint Point, TargetArea Area)> upcomingWithPoints,
         ShiftSlot slot, DateTime at)
     {
         var views = new Dictionary<(int AreaId, int BuildingId), View>();
@@ -185,16 +325,11 @@ public static class OverviewProjection
         foreach (var result in history)
             Get(result.Round.AreaId, result.Round.BuildingId).History.Add(result);
 
-        if (image is not null)
+        foreach (var (window, point, area) in upcomingWithPoints)
         {
-            foreach (var window in UpcomingWindows(image, slot, at))
-            {
-                if (currentPointIds.Contains(window.PointId)) continue;
-                var point = image.Points.First(p => p.Id == window.PointId);
-                var area = image.Areas.First(a => a.Id == point.AreaId);
-                Get(area.Id, area.BuildingId).Points.Add((window.Start, point.Id,
-                    new OverviewPoint(point.Id, false, false, false, false, false, false, true, null, null)));
-            }
+            if (currentPointIds.Contains(window.PointId)) continue;
+            Get(area.Id, area.BuildingId).Points.Add((window.Start, point.Id,
+                new OverviewPoint(point.Id, false, false, false, false, false, false, true, null, null)));
         }
 
         return [.. views.Values];
@@ -250,28 +385,47 @@ public static class OverviewProjection
     /// </summary>
     private static List<(RoundObligation Round, OverviewPoint Point)> CurrentPoints(ShiftSlot slot,
         OverviewMoment moment, IReadOnlyList<RoundObligation> rounds,
-        IReadOnlyList<OverviewSubmission> scans, IReadOnlyList<OverviewInspection> inspections)
+        ILookup<int, OverviewSubmission> scansByPoint, ILookup<long, OverviewInspection> inspectionsBySubmission)
     {
         var current = rounds
             .Where(r => r.FinalizedAtUtc is null || r.FinalizedReason == "slotClosed")
             .GroupBy(r => r.PointId)
             .Select(g => g.OrderBy(r => r.ActiveFromUtc).ThenBy(r => r.ActivationRevisionId).Last());
         return [.. current.Select(round => (round,
-            OverviewRules.Latest(slot, round, scans, inspections, moment.EvaluationUtc)))];
+            OverviewRules.LatestForPoint(
+                slot, round, scansByPoint[round.PointId], id => inspectionsBySubmission[id], moment.EvaluationUtc)))];
     }
 
     private static List<OverviewRoundResult> History(ShiftSlot slot, IReadOnlyList<RoundObligation> rounds,
-        IReadOnlyList<OverviewSubmission> scans, IReadOnlyList<OverviewInspection> inspections,
+        ILookup<int, OverviewSubmission> scansByPoint, ILookup<long, OverviewInspection> inspectionsBySubmission,
         IReadOnlyList<AmbiguousOrigin> ambiguous)
     {
+        Dictionary<RoundObligation, HashSet<OverviewSubmission>>? ambiguousByRound = null;
+        if (ambiguous.Count > 0)
+        {
+            ambiguousByRound = new Dictionary<RoundObligation, HashSet<OverviewSubmission>>();
+            foreach (var entry in ambiguous)
+            {
+                foreach (var candidateRound in entry.Rounds)
+                {
+                    if (!ambiguousByRound.TryGetValue(candidateRound, out var set))
+                    {
+                        ambiguousByRound[candidateRound] = set = [];
+                    }
+                    set.Add(entry.Scan);
+                }
+            }
+        }
+
         var history = new List<OverviewRoundResult>();
         foreach (var round in rounds.Where(r => r.FinalizedAtUtc is not null)
             .OrderBy(r => r.ActiveFromUtc).ThenBy(r => r.PointId))
         {
-            var point = OverviewRules.Latest(slot, round, scans, inspections, round.FinalizedAtUtc!.Value);
-            var unresolved = ambiguous
-                .Where(a => a.Rounds.Contains(round))
-                .Select(a => a.Scan).DistinctBy(s => s.Id).ToArray();
+            var point = OverviewRules.LatestForPoint(
+                slot, round, scansByPoint[round.PointId], id => inspectionsBySubmission[id], round.FinalizedAtUtc!.Value);
+            var unresolved = ambiguousByRound is not null && ambiguousByRound.TryGetValue(round, out var matches)
+                ? matches.OrderBy(s => s.Id).ToArray()
+                : [];
             var outcome = unresolved.Length > 0 && !point.IsSubmitted ? OverviewOutcomes.Unresolved
                 : !point.IsSubmitted ? OverviewOutcomes.NotDone
                 : !point.IsInspected ? OverviewOutcomes.NotInspected
@@ -297,6 +451,8 @@ public static class OverviewProjection
     {
         var resolved = new List<OverviewSubmission>(scans.Count);
         var ambiguous = new List<AmbiguousOrigin>();
+        ILookup<(int PointId, TimeOnly Start, TimeOnly End), RoundObligation>? roundsByKey = null;
+
         foreach (var scan in scans)
         {
             if ((scan.OriginId ?? scan.ExistingWindowId) is not null)
@@ -305,13 +461,18 @@ public static class OverviewProjection
                 continue;
             }
 
-            var candidates = scan.ShiftDate == slot.ShiftDate && scan.Shift == slot.Shift
-                && scan.RoundStart is { } start && scan.RoundEnd is { } end
-                ? rounds.Where(r => r.PointId == scan.PointId && r.Start == start && r.End == end
-                        && r.ActiveFromUtc <= scan.SubmittedAt
-                        && (r.FinalizedAtUtc is null || scan.SubmittedAt <= r.FinalizedAtUtc))
-                    .ToArray()
-                : [];
+            if (scan.ShiftDate != slot.ShiftDate || scan.Shift != slot.Shift
+                || scan.RoundStart is not { } start || scan.RoundEnd is not { } end)
+            {
+                resolved.Add(scan);
+                continue;
+            }
+
+            roundsByKey ??= rounds.ToLookup(r => (r.PointId, r.Start, r.End));
+            var candidates = roundsByKey[(scan.PointId, start, end)]
+                .Where(r => r.ActiveFromUtc <= scan.SubmittedAt
+                    && (r.FinalizedAtUtc is null || scan.SubmittedAt <= r.FinalizedAtUtc))
+                .ToArray();
             var origins = candidates.Select(r => r.OriginId).Distinct().ToArray();
             if (origins.Length == 1)
             {
@@ -325,31 +486,30 @@ public static class OverviewProjection
     }
 
     /// <summary>The eligible windows whose start has not passed: a next configured round for an Area with no due point.</summary>
-    private static HashSet<int> AreasWithNextRound(TargetImage? image, ShiftSlot slot, DateTime at)
+    private static (HashSet<int> Areas, List<(TargetWindow Window, TargetPoint Point, TargetArea Area)> Windows) UpcomingData(
+        TargetImage? image, ShiftSlot slot, DateTime at)
     {
         var areas = new HashSet<int>();
-        foreach (var window in UpcomingWindows(image, slot, at))
-        {
-            if (image!.Points.FirstOrDefault(p => p.Id == window.PointId) is { } point)
-                areas.Add(point.AreaId);
-        }
-        return areas;
-    }
+        var list = new List<(TargetWindow Window, TargetPoint Point, TargetArea Area)>();
+        if (image is null) return (areas, list);
 
-    private static IEnumerable<TargetWindow> UpcomingWindows(TargetImage? image, ShiftSlot slot, DateTime at)
-    {
-        if (image is null) yield break;
         var buildings = image.Buildings.Where(b => b.IsActive && b.CreatedAt <= at).ToDictionary(b => b.Id);
-        var areas = image.Areas.Where(a => a.IsActive && a.CreatedAt <= at).ToDictionary(a => a.Id);
+        var activeAreas = image.Areas.Where(a => a.IsActive && a.CreatedAt <= at).ToDictionary(a => a.Id);
         var points = image.Points.Where(p => p.IsActive && p.CreatedAt <= at).ToDictionary(p => p.Id);
         foreach (var window in image.Windows.Where(w => w.Shift == slot.Shift && w.CreatedAt <= at)
             .OrderBy(w => w.Start).ThenBy(w => w.Id))
         {
             if (!points.TryGetValue(window.PointId, out var point)) continue;
-            if (!areas.TryGetValue(point.AreaId, out var area)) continue;
+            if (!activeAreas.TryGetValue(point.AreaId, out var area)) continue;
             if (!buildings.ContainsKey(area.BuildingId)) continue;
             if (slot.Shift == Shift.Night && area.ShiftPattern != ShiftPattern.DayAndNight) continue;
-            if (ShiftCalendar.ToUtc(slot, window.Start) > at) yield return window;
+            if (ShiftCalendar.ToUtc(slot, window.Start) > at)
+            {
+                areas.Add(area.Id);
+                list.Add((window, point, area));
+            }
         }
+
+        return (areas, list);
     }
 }

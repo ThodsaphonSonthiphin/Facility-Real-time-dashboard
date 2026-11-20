@@ -128,11 +128,7 @@ describe('HistoryPage (D9, facility-0057)', () => {
     ]);
     expect(screen.getByText('แสดง 1–5 รายการ')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'ช่วงวัน' })).toHaveValue('week');
-    expect(
-      screen.getByText(
-        'ไม่มีใครแก้หรือลบรายการในหน้านี้ได้ · เก็บนานเท่ากับข้อมูลที่ถูกแก้ · เบอร์โทรไม่แสดงทั้งก่อนและหลัง · การเปิดดูหน้านี้ไม่ถูกบันทึก',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.queryByText('เกี่ยวกับหน้านี้')).not.toBeInTheDocument();
   });
 
   it('shows one cursor page, then navigates previous/next from cache without another request', async () => {

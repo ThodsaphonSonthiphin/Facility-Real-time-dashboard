@@ -251,7 +251,7 @@ public static class AdminOverviewEndpoints
         SectionAvailability availability,
         bool includeObservedPreBaseline)
     {
-        var enteredCount = GatedMembers(read, snapshot, availability, OverviewGroupKeys.Entered, includeObservedPreBaseline).Count;
+        var enteredCount = CountGatedMembers(read, snapshot, availability, OverviewGroupKeys.Entered, includeObservedPreBaseline);
         var numerator = ToCount(enteredCount, availability.Entry);
 
         var denominatorAvailability = EntryDenominatorAvailability(availability);
@@ -262,13 +262,17 @@ public static class AdminOverviewEndpoints
         }
         else if (snapshot.Targets.Current is not null || snapshot.Targets.Rounds.Count > 0)
         {
-            denominatorObserved = snapshot.Areas
-                .Where(a => a.Groups.Contains(OverviewGroupKeys.Entered)
+            var seen = new HashSet<int>();
+            foreach (var a in snapshot.Areas)
+            {
+                if (a.Groups.Contains(OverviewGroupKeys.Entered)
                     || a.Groups.Contains(OverviewGroupKeys.Covered)
                     || a.Groups.Contains(OverviewGroupKeys.Unassigned))
-                .Select(a => a.Id)
-                .Distinct()
-                .Count();
+                {
+                    seen.Add(a.Id);
+                }
+            }
+            denominatorObserved = seen.Count;
         }
         else
         {
@@ -285,17 +289,27 @@ public static class AdminOverviewEndpoints
         string numeratorGroup,
         Availability numeratorAvailability)
     {
-        var numeratorCount = GatedMembers(null, snapshot, availability, numeratorGroup, includeObservedPreBaseline: false).Count;
+        var numeratorCount = CountGatedMembers(null, snapshot, availability, numeratorGroup, includeObservedPreBaseline: false);
         var numerator = ToCount(numeratorCount, numeratorAvailability);
 
         var denominatorAvailability = WorkDenominatorAvailability(numeratorAvailability);
-        var denominatorObserved = denominatorAvailability.State is "notStarted" or "unavailable"
-            ? 0
-            : snapshot.Areas
-                .Where(a => a.Work.DuePoints > 0)
-                .Select(a => a.Id)
-                .Distinct()
-                .Count();
+        int denominatorObserved;
+        if (denominatorAvailability.State is "notStarted" or "unavailable")
+        {
+            denominatorObserved = 0;
+        }
+        else
+        {
+            var seen = new HashSet<int>();
+            foreach (var a in snapshot.Areas)
+            {
+                if (a.Work.DuePoints > 0)
+                {
+                    seen.Add(a.Id);
+                }
+            }
+            denominatorObserved = seen.Count;
+        }
         var denominator = ToCount(denominatorObserved, denominatorAvailability);
         return new OverviewMetricDto(numerator, denominator);
     }
@@ -340,11 +354,41 @@ public static class AdminOverviewEndpoints
         foreach (var key in OverviewGroupKeys.All)
         {
             var section = SectionForGroup(availability, key);
-            var observed = GatedMembers(read, snapshot, availability, key, includeObservedPreBaseline).Count;
+            var observed = CountGatedMembers(read, snapshot, availability, key, includeObservedPreBaseline);
             counts[key] = ToCount(observed, section);
         }
 
         return counts;
+    }
+
+    private static int CountGatedMembers(
+        OverviewRead? read,
+        OverviewSnapshot snapshot,
+        SectionAvailability availability,
+        string group,
+        bool includeObservedPreBaseline)
+    {
+        var section = SectionForGroup(availability, group);
+        if (section.State is "notStarted" or "unavailable")
+        {
+            return 0;
+        }
+
+        if (includeObservedPreBaseline && read is not null && read.ObservedAreas.Count > 0
+            && snapshot.Targets.Current is null && snapshot.Targets.Rounds.Count == 0)
+        {
+            return read.ObservedAreas.Count(a => a.Groups.Contains(group));
+        }
+
+        var seen = new HashSet<int>();
+        foreach (var area in snapshot.Areas)
+        {
+            if (area.Groups.Contains(group))
+            {
+                seen.Add(area.Id);
+            }
+        }
+        return seen.Count;
     }
 
     private static IReadOnlyList<OverviewArea> GatedMembers(

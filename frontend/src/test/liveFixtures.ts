@@ -165,7 +165,7 @@ export const breakRow: BoardRow = {
   buildingCode: 'A',
   cleaner: { id: 28, employeeId: '650008', displayName: 'แม่บ้านพัก' },
   state: 'OnBreak',
-  events: [boardEvent(1002, 'ShiftIn', '2026-10-14T23:55:00Z'), boardEvent(1003, 'BreakOut', '2026-10-15T02:30:00Z')],
+  events: [boardEvent(1002, 'ShiftIn', '2026-10-14T23:55:00Z'), boardEvent(1003, 'Break1Out', '2026-10-15T02:30:00Z')],
   covers: [],
 };
 

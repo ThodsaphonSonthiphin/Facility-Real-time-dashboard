@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -12,7 +13,14 @@ namespace JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
 public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings settings, TimeProvider clock)
 {
     private const int CurrentSchemaVersion = 1;
+    private const int MaxCachedImages = 128;
     private static readonly JsonSerializerOptions ReadOptions = new() { RespectRequiredConstructorParameters = true };
+    private static readonly ConcurrentDictionary<(long Id, int SchemaVersion, string PayloadHash, string RawHash), TargetImage> VerifiedImageCache = new();
+    private static readonly ConcurrentDictionary<(string DbKey, long Id, DateTime EffectiveAt, int SchemaVersion, string PayloadHash), DecodedRevisionCacheEntry> VerifiedDbRevisionCache = new();
+
+    private sealed record DecodedRevisionCacheEntry(TargetRevision? Winner, DateTime? StructuralGapFromUtc);
+
+    internal sealed record RevisionMetadata(long Id, DateTime EffectiveAt, int SchemaVersion, string PayloadHash);
 
     public async Task<TargetImage> ReadImageAsync(CancellationToken ct)
     {
@@ -116,18 +124,159 @@ public sealed class OverviewTargetRecorder(AppDbContext db, AttendanceSettings s
         return (revisions.ToArray(), unreadable.ToArray(), structuralGaps.ToArray());
     }
 
+    internal static async Task<(TargetRevision[] Revisions, (DateTime From, DateTime To)[] UnreadableIntervals,
+        (DateTime From, DateTime To)[] StructuralGaps)> LoadAndDecodeForReadAsync(
+        AppDbContext db,
+        DateTime? predecessorAt,
+        DateTime readAt,
+        ILogger logger,
+        CancellationToken ct)
+    {
+        var metas = await db.OverviewTargetRevisions.AsNoTracking()
+            .Where(r => (predecessorAt == null || r.EffectiveAt >= predecessorAt.Value) && r.EffectiveAt <= readAt)
+            .OrderBy(r => r.EffectiveAt).ThenBy(r => r.Id)
+            .Select(r => new RevisionMetadata(r.Id, r.EffectiveAt, r.SchemaVersion, r.PayloadHash))
+            .ToListAsync(ct);
+
+        if (metas.Count == 0)
+        {
+            return ([], [], []);
+        }
+
+        // Only bypass re-fetching the large JSON payload on MySQL databases keyed by database name.
+        var isMySql = string.Equals(db.Database.ProviderName, "MySql.EntityFrameworkCore", StringComparison.Ordinal);
+        var dbKey = isMySql ? (db.Database.GetConnectionString() ?? string.Empty) : string.Empty;
+
+        var cachedHits = new Dictionary<long, DecodedRevisionCacheEntry>();
+        var missingIds = new List<long>();
+        if (!isMySql)
+        {
+            missingIds.AddRange(metas.Select(m => m.Id));
+        }
+        else
+        {
+            foreach (var meta in metas)
+            {
+                var key = (dbKey, meta.Id, DateTime.SpecifyKind(meta.EffectiveAt, DateTimeKind.Utc), meta.SchemaVersion, meta.PayloadHash);
+                if (VerifiedDbRevisionCache.TryGetValue(key, out var hit))
+                {
+                    cachedHits[meta.Id] = hit;
+                }
+                else
+                {
+                    missingIds.Add(meta.Id);
+                }
+            }
+        }
+
+        Dictionary<long, OverviewTargetRevision>? fetchedById = null;
+        if (missingIds.Count > 0)
+        {
+            fetchedById = await db.OverviewTargetRevisions.AsNoTracking()
+                .Where(r => missingIds.Contains(r.Id))
+                .ToDictionaryAsync(r => r.Id, ct);
+        }
+
+        var groups = metas.OrderBy(row => row.EffectiveAt).ThenBy(row => row.Id)
+            .GroupBy(row => DateTime.SpecifyKind(row.EffectiveAt, DateTimeKind.Utc)).ToArray();
+        var revisions = new List<TargetRevision>();
+        var unreadable = new List<(DateTime From, DateTime To)>();
+        var structuralGaps = new List<(DateTime From, DateTime To)>();
+
+        for (var i = 0; i < groups.Length; i++)
+        {
+            var effectiveAt = groups[i].Key;
+            TargetRevision? winner = null;
+            foreach (var meta in groups[i])
+            {
+                DecodedRevisionCacheEntry entry;
+                if (cachedHits.TryGetValue(meta.Id, out var cached))
+                {
+                    entry = cached;
+                }
+                else if (fetchedById is not null && fetchedById.TryGetValue(meta.Id, out var row))
+                {
+                    var image = ReadIntegrityChecked(row);
+                    DateTime? gapFrom = image?.CoverageGapFromUtc is { } from && from < effectiveAt ? from : null;
+                    TargetRevision? decoded = null;
+                    if (image == null || !IsReplayable(image, effectiveAt))
+                    {
+                        logger.LogWarning("Could not read overview target revision {RevisionId}", row.Id);
+                    }
+                    else
+                    {
+                        decoded = new(row.Id, effectiveAt, image);
+                    }
+
+                    entry = new DecodedRevisionCacheEntry(decoded, gapFrom);
+                    if (isMySql && decoded is not null)
+                    {
+                        if (VerifiedDbRevisionCache.Count >= MaxCachedImages)
+                        {
+                            VerifiedDbRevisionCache.Clear();
+                        }
+                        VerifiedDbRevisionCache.TryAdd(
+                            (dbKey, meta.Id, effectiveAt, meta.SchemaVersion, meta.PayloadHash),
+                            entry);
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("Could not read overview target revision {RevisionId}", meta.Id);
+                    entry = new DecodedRevisionCacheEntry(null, null);
+                }
+
+                if (entry.StructuralGapFromUtc is { } cachedGap)
+                {
+                    structuralGaps.Add((cachedGap, effectiveAt));
+                }
+
+                if (entry.Winner is null)
+                {
+                    winner = null;
+                    continue;
+                }
+
+                winner = entry.Winner;
+            }
+
+            if (winner != null)
+            {
+                revisions.Add(winner);
+            }
+            else
+            {
+                unreadable.Add((effectiveAt, i + 1 < groups.Length ? groups[i + 1].Key : DateTime.MaxValue));
+            }
+        }
+
+        return (revisions.ToArray(), unreadable.ToArray(), structuralGaps.ToArray());
+    }
+
     private static TargetImage? ReadIntegrityChecked(OverviewTargetRevision row)
     {
         if (row.SchemaVersion != CurrentSchemaVersion)
             return null;
 
+        var rawHash = Hash(row.Payload);
+        var cacheKey = (row.Id, row.SchemaVersion, row.PayloadHash, rawHash);
+        if (VerifiedImageCache.TryGetValue(cacheKey, out var cached))
+            return cached;
+
         try
         {
             var image = JsonSerializer.Deserialize<TargetImage>(row.Payload, ReadOptions);
-            return image != null && image.SchemaVersion == row.SchemaVersion
+            if (image != null && image.SchemaVersion == row.SchemaVersion
                 // MySQL's JSON column may reorder properties and whitespace on storage.
-                && (HashMatches(row, JsonSerializer.Serialize(image)) || HashMatches(row, row.Payload))
-                ? image : null;
+                && (string.Equals(row.PayloadHash, rawHash, StringComparison.OrdinalIgnoreCase)
+                    || HashMatches(row, JsonSerializer.Serialize(image))))
+            {
+                if (VerifiedImageCache.Count >= MaxCachedImages)
+                    VerifiedImageCache.Clear();
+                VerifiedImageCache.TryAdd(cacheKey, image);
+                return image;
+            }
+            return null;
         }
         catch (JsonException)
         {

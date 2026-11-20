@@ -38,14 +38,13 @@ export function useCheckInPage(): CheckInPageView {
     && signQuery.currentData?.canConfirmTransfer === true;
   const canShiftOutOrigin = !!live && transferPending && !!transfer && !arrivalJustConfirmed && !hasShiftOut
     && signQuery.currentData?.canShiftOutOrigin === true;
-  const allChoices = !live || (live.lifecycleVersion === 'Numbered6' && !live.stateRevision)
-    ? []
-    : live.nextActions?.map(({ action, requiredGaps }) => ({ eventType: action, gaps: requiredGaps }))
-      ?? live.nextEvents.map((eventType) => ({ eventType, gaps: [] }));
+  const allChoices = live?.stateRevision
+    ? (live.nextActions ?? []).map(({ action, requiredGaps }) => ({ eventType: action, gaps: requiredGaps }))
+    : [];
   const choices = transferPending
     ? (canShiftOutOrigin ? allChoices.filter(({ eventType }) => eventType === 'ShiftOut') : [])
     : allChoices;
-  const revision = live?.lifecycleVersion === 'Numbered6' ? live.stateRevision : undefined;
+  const revision = live?.stateRevision;
   const gapConfirmation = proposed && revision === proposed.revision
     && choices.some(({ eventType }) => eventType === proposed.eventType) ? proposed : null;
 
@@ -103,7 +102,7 @@ export function useCheckInPage(): CheckInPageView {
         qrToken: token,
         eventType,
         ...reading.fix,
-        ...(request.revision ? { lifecycleVersion: 'Numbered6', stateRevision: request.revision } : {}),
+        ...(request.revision ? { stateRevision: request.revision } : {}),
         ...(gaps.length ? { confirmGaps: gaps } : {}),
         ...(confirmPendingTransfer ? { confirmPendingTransfer: true } : {}),
       });
@@ -173,9 +172,8 @@ export function useCheckInPage(): CheckInPageView {
     setOutcome(null);
   };
 
-  const finished = !!live?.shift && (hasShiftOut || (!transferPending && (live.nextActions ?? live.nextEvents).length === 0));
-  const incompleteActions = live?.lifecycleVersion === 'Numbered6'
-    && live.actions?.some((action) => action.state === 'skipped' || action.state === 'missing');
+  const finished = !!live?.shift && (hasShiftOut || (!transferPending && (live.nextActions ?? []).length === 0));
+  const incompleteActions = live?.actions?.some((action) => action.state === 'skipped' || action.state === 'missing');
 
   return {
     attendance,

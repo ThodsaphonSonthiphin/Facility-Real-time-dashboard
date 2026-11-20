@@ -88,12 +88,8 @@ public sealed class OverviewReadQuery(
             .Select(r => (DateTime?)r.EffectiveAt)
             .FirstOrDefaultAsync(ct);
 
-        var revisionRows = await db.OverviewTargetRevisions.AsNoTracking()
-            .Where(r => (predecessorAt == null || r.EffectiveAt >= predecessorAt.Value) && r.EffectiveAt <= readAt)
-            .OrderBy(r => r.EffectiveAt).ThenBy(r => r.Id)
-            .ToListAsync(ct);
-
-        var (revisions, unreadableIntervals, structuralGaps) = OverviewTargetRecorder.DecodeForRead(revisionRows, logger);
+        var (revisions, unreadableIntervals, structuralGaps) = await OverviewTargetRecorder.LoadAndDecodeForReadAsync(
+            db, predecessorAt, readAt, logger, ct);
         var lastPossibleClose = ShiftCalendar.EndUtc(slot).AddMinutes(AttendanceSettings.MaxReceivingOffsetMinutes);
         var slotRevisions = revisions.Where(r => r.EffectiveAt <= lastPossibleClose).ToArray();
         var moment = OverviewTime.Evaluate(slot, readAt, slotRevisions);
@@ -149,55 +145,82 @@ public sealed class OverviewReadQuery(
         var rangeCoverage = DetailCoverage.FromRetention(
             readAt, retention, targetCaptureFrom, true, structuralGaps)
             with { UnreadableTargetIntervals = unreadableIntervals };
-        var rangeSlots = OverviewAvailability.EvaluateRange(readAt, retention, revisions, rangeCoverage, issueKnownSlots);
-        var completeSlots = rangeSlots.Where(s => s.FullySupported).ToArray();
-        var range = new OverviewRange(
-            completeSlots.Length > 0 ? completeSlots.Min(s => s.Slot.ShiftDate) : null,
-            completeSlots.Length > 0 ? completeSlots.Max(s => s.Slot.ShiftDate) : null,
-            captureStartedAt);
+        var (rangeStart, rangeEnd) = OverviewAvailability.CalculateSupportedBounds(
+            readAt, retention, revisions, rangeCoverage, issueKnownSlots);
+        var range = new OverviewRange(rangeStart, rangeEnd, captureStartedAt);
 
-        var rawSnapshot = OverviewProjection.Build(slot, moment, timeline, loaded.Facts, rawAvailability, buildingId);
-
+        OverviewSnapshot snapshot;
+        SectionAvailability effectiveAvailability;
+        IReadOnlyList<OverviewBuildingMetadata> buildingList;
+        var buildingSnapshots = new Dictionary<int, OverviewSnapshot>();
+        var buildingAvailability = new Dictionary<int, SectionAvailability>();
         var areaBuildings = BuildAreaBuildingLookup(timeline, slotRevisions);
         var unresolvedBuildings = ResolveUnresolvedBuildings(loaded.UnresolvedOriginPointIds, loaded.PointAreaMap, areaBuildings, out var hasUnmappedUnresolved);
 
-        var effectiveAvailability = ApplyReadGating(
-            rawAvailability,
-            hasOriginsIncomplete: rawSnapshot.Areas.Any(a => a.OriginsIncomplete)
-                || (buildingId is null ? loaded.UnresolvedOriginPointIds.Count > 0
-                    : hasUnmappedUnresolved || unresolvedBuildings.Contains(buildingId.Value)),
-            buildingOwnershipProven);
-
-        var snapshot = rawSnapshot with { Availability = effectiveAvailability };
-
-        var buildingList = CollectBuildings(buildingId, hasTargetHistory, preBaselineBuilding, timeline, snapshot);
-        var buildingSnapshots = new Dictionary<int, OverviewSnapshot>(buildingList.Count);
-        var buildingAvailability = new Dictionary<int, SectionAvailability>(buildingList.Count);
-
-        foreach (var b in buildingList)
+        if (buildingId is null)
         {
-            if (buildingId == b.Id)
-            {
-                buildingSnapshots[b.Id] = snapshot;
-                buildingAvailability[b.Id] = effectiveAvailability;
-                continue;
-            }
-
-            var bIssueKnown = hasTargetHistory
-                ? OverviewFactLoader.ComputeIssueStateKnown(
-                    slot, moment, timeline, loaded.LatestSubmissionAtByPoint, annualCutoffUtc, b.Id)
-                : false;
-            var bRawAvailability = OverviewAvailability.Calculate(
-                slot, moment, timeline, slotCoverage with { IssueStateKnown = bIssueKnown });
-            var bRawSnapshot = OverviewProjection.Build(slot, moment, timeline, loaded.Facts, bRawAvailability, b.Id);
-            var bAvailability = ApplyReadGating(
-                bRawAvailability,
-                hasOriginsIncomplete: bRawSnapshot.Areas.Any(a => a.OriginsIncomplete)
-                    || hasUnmappedUnresolved
-                    || unresolvedBuildings.Contains(b.Id),
+            var (rawWhole, areasByBuilding) = OverviewProjection.ProjectAll(slot, moment, timeline, loaded.Facts, rawAvailability);
+            effectiveAvailability = ApplyReadGating(
+                rawAvailability,
+                hasOriginsIncomplete: rawWhole.Areas.Any(a => a.OriginsIncomplete)
+                    || loaded.UnresolvedOriginPointIds.Count > 0,
                 buildingOwnershipProven);
-            buildingSnapshots[b.Id] = bRawSnapshot with { Availability = bAvailability };
-            buildingAvailability[b.Id] = bAvailability;
+            snapshot = rawWhole with { Availability = effectiveAvailability };
+            buildingList = CollectBuildings(buildingId, hasTargetHistory, preBaselineBuilding, timeline, snapshot);
+
+            foreach (var b in buildingList)
+            {
+                var bIssueKnown = hasTargetHistory
+                    && OverviewFactLoader.ComputeIssueStateKnown(
+                        slot, moment, timeline, loaded.LatestSubmissionAtByPoint, annualCutoffUtc, b.Id);
+                var bRawAvailability = OverviewAvailability.Calculate(
+                    slot, moment, timeline, slotCoverage with { IssueStateKnown = bIssueKnown });
+                var bAreas = areasByBuilding.GetValueOrDefault(b.Id) ?? [];
+                var bAvailability = ApplyReadGating(
+                    bRawAvailability,
+                    hasOriginsIncomplete: bAreas.Any(a => a.OriginsIncomplete)
+                        || hasUnmappedUnresolved
+                        || unresolvedBuildings.Contains(b.Id),
+                    buildingOwnershipProven);
+                buildingSnapshots[b.Id] = new OverviewSnapshot(slot, moment, timeline, bAvailability, bAreas);
+                buildingAvailability[b.Id] = bAvailability;
+            }
+        }
+        else
+        {
+            var rawSnapshot = OverviewProjection.Build(slot, moment, timeline, loaded.Facts, rawAvailability, buildingId);
+            effectiveAvailability = ApplyReadGating(
+                rawAvailability,
+                hasOriginsIncomplete: rawSnapshot.Areas.Any(a => a.OriginsIncomplete)
+                    || hasUnmappedUnresolved || unresolvedBuildings.Contains(buildingId.Value),
+                buildingOwnershipProven);
+            snapshot = rawSnapshot with { Availability = effectiveAvailability };
+            buildingList = CollectBuildings(buildingId, hasTargetHistory, preBaselineBuilding, timeline, snapshot);
+
+            foreach (var b in buildingList)
+            {
+                if (buildingId == b.Id)
+                {
+                    buildingSnapshots[b.Id] = snapshot;
+                    buildingAvailability[b.Id] = effectiveAvailability;
+                    continue;
+                }
+
+                var bIssueKnown = hasTargetHistory
+                    && OverviewFactLoader.ComputeIssueStateKnown(
+                        slot, moment, timeline, loaded.LatestSubmissionAtByPoint, annualCutoffUtc, b.Id);
+                var bRawAvailability = OverviewAvailability.Calculate(
+                    slot, moment, timeline, slotCoverage with { IssueStateKnown = bIssueKnown });
+                var bRawSnapshot = OverviewProjection.Build(slot, moment, timeline, loaded.Facts, bRawAvailability, b.Id);
+                var bAvailability = ApplyReadGating(
+                    bRawAvailability,
+                    hasOriginsIncomplete: bRawSnapshot.Areas.Any(a => a.OriginsIncomplete)
+                        || hasUnmappedUnresolved
+                        || unresolvedBuildings.Contains(b.Id),
+                    buildingOwnershipProven);
+                buildingSnapshots[b.Id] = bRawSnapshot with { Availability = bAvailability };
+                buildingAvailability[b.Id] = bAvailability;
+            }
         }
 
         var observedAreas = BuildObservedAreas(
@@ -311,10 +334,6 @@ public sealed class OverviewReadQuery(
         if (leaves.Count == 0) return [];
 
         var effects = new List<OverviewAttendanceLeaveEffect>();
-        var version = AttendanceLifecycle.VersionFor(await db.AttendanceSlotLifecycles.AsNoTracking()
-            .Where(row => row.ShiftDate == slot.ShiftDate && row.Shift == slot.Shift)
-            .Select(row => (AttendanceLifecycleVersion?)row.Version)
-            .FirstOrDefaultAsync(ct));
         var eventsByPerson = areaEvents.ToLookup(row => row.UserId);
         var recorded = slotEvents.Select(a => (a.UserId, a.Event)).ToHashSet();
         foreach (var intervals in leaves.GroupBy(row => row.UserId))
@@ -328,14 +347,14 @@ public sealed class OverviewReadQuery(
             }
 
             var departure = events.FirstOrDefault(row => row.Event == AttendanceEvent.ShiftOut);
-            if (version != AttendanceLifecycleVersion.Numbered6 || departure is null
+            if (departure is null
                 || !intervals.Any(l => l.EndsAt > departure.OccurredAt)) continue;
 
             var relief = await store.LiveReliefAsync(personId, slot.ShiftDate, slot.Shift, ct);
             var breakGroup = relief?.BreakGroup
                 ?? (await store.ReadPersonDayAsync(personId, slot.ShiftDate, slot.Shift, ct))?.BreakGroup.Value;
             var expectations = AttendanceExpectations.ForSlot(slot, breakGroup);
-            foreach (var action in AttendanceLifecycle.Order(version).Where(AttendanceLifecycle.IsSkippable))
+            foreach (var action in AttendanceLifecycle.Order.Where(AttendanceLifecycle.IsSkippable))
             {
                 if (recorded.Contains((personId, action)) || !expectations.TryGetValue(action, out var expected)) continue;
                 if (intervals.Any(l => AttendanceApplicability.NotApplicable(expected, departure.OccurredAt, l.StartsAt, l.EndsAt)))
@@ -387,7 +406,18 @@ public sealed class OverviewReadQuery(
         DateTime annualCutoffUtc)
     {
         var known = new HashSet<ShiftSlot>();
+        if (revisions.Length == 0)
+        {
+            return known;
+        }
+
         var lastDate = DateOnly.FromDateTime(ThaiTime.FromUtc(readAt));
+        var startDate = DateOnly.FromDateTime(ThaiTime.FromUtc(revisions[0].EffectiveAt)).AddDays(-1);
+        if (startDate > firstDate)
+        {
+            firstDate = startDate;
+        }
+
         var shifts = new[] { Shift.Day, Shift.Night };
         var firstRevision = 0;
         var afterLastRevision = 0;
@@ -405,10 +435,25 @@ public sealed class OverviewReadQuery(
                 afterLastRevision++;
 
             var relevant = revisions[firstRevision..afterLastRevision];
-            var moment = OverviewTime.Evaluate(slot, readAt, relevant);
+            var moment = OverviewTime.EvaluateOrdered(slot, readAt, relevant);
             if (moment.Phase == "notStarted")
             {
                 known.Add(slot);
+                continue;
+            }
+
+            if (relevant.Length == 0 || !moment.PolicyComplete)
+            {
+                continue;
+            }
+
+            if (relevant.Length == 1)
+            {
+                if (OverviewFactLoader.ComputeIssueStateKnownForImage(
+                    slot, moment, relevant[0].Image, [], firstScanAtByPoint, annualCutoffUtc, null))
+                {
+                    known.Add(slot);
+                }
                 continue;
             }
 

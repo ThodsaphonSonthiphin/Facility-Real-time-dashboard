@@ -1,33 +1,16 @@
-using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 
 namespace JanitorialManagementDashboard.Application.Attendance;
 
-/// <summary>facility-0031: the four events in order. facility-0051: a forgotten Break-In stays empty, so Shift-Out may follow Break-Out.</summary>
 public static class AttendanceRules
 {
-    public static IReadOnlyList<AttendanceEvent> NextAllowed(IReadOnlyCollection<AttendanceEvent> recorded) =>
-        recorded.Contains(AttendanceEvent.ShiftOut) ? []
-        : recorded.Contains(AttendanceEvent.BreakIn) ? [AttendanceEvent.ShiftOut]
-        : recorded.Contains(AttendanceEvent.BreakOut) ? [AttendanceEvent.BreakIn, AttendanceEvent.ShiftOut]
-        : recorded.Contains(AttendanceEvent.ShiftIn) ? [AttendanceEvent.BreakOut, AttendanceEvent.ShiftOut]
-        : [AttendanceEvent.ShiftIn];
-
     /// <summary>Owner decision 2026-10-09: a Cleaner may submit from Shift-In until Shift-Out; a break does not stop it.</summary>
     public static bool IsOnDuty(IReadOnlyCollection<AttendanceEvent> recorded) =>
         recorded.Contains(AttendanceEvent.ShiftIn) && !recorded.Contains(AttendanceEvent.ShiftOut);
 
-    private static readonly AttendanceEvent[] InOrder =
-        [AttendanceEvent.ShiftIn, AttendanceEvent.BreakOut, AttendanceEvent.BreakIn, AttendanceEvent.ShiftOut];
+    private const string NumberedOrderMessage =
+        "เวลาต้องเรียงกัน: เข้างาน → ออกพัก 1 → กลับจากพัก 1 → ออกพัก 2 → กลับจากพัก 2 → เลิกงาน";
 
-    /// <summary>facility-0051: the Thai order message the legacy correction page has always shown.</summary>
-    private const string LegacyOrderMessage = "เวลาต้องเรียงกัน: เข้างาน → ออกพัก → กลับจากพัก → เลิกงาน";
-
-    /// <summary>
-    /// facility-0051: what an Admin's correction may leave. Break-Out and Shift-Out need a Shift-In, a Break-In needs a
-    /// Break-Out, and the times run Shift-In, Break-Out, Break-In, Shift-Out, each strictly later. Null when valid,
-    /// otherwise the Thai message the Admin page shows.
-    /// </summary>
     public static string? CheckTimes(IReadOnlyDictionary<AttendanceEvent, DateTime> events)
     {
         if (events.Count > 0 && !events.ContainsKey(AttendanceEvent.ShiftIn))
@@ -35,59 +18,15 @@ public static class AttendanceRules
             return "ต้องมีเวลาเข้างานก่อน";
         }
 
-        if (events.ContainsKey(AttendanceEvent.BreakIn) && !events.ContainsKey(AttendanceEvent.BreakOut))
+        if (events.Keys.Any(action => !AttendanceLifecycle.Order.Contains(action)))
         {
-            return "ต้องมีเวลาออกพักก่อนกลับจากพัก";
+            return NumberedOrderMessage;
         }
 
-        var times = InOrder.Where(e => events.ContainsKey(e)).Select(e => events[e]).ToList();
-        return times.Zip(times.Skip(1)).Any(pair => pair.Second <= pair.First)
-            ? LegacyOrderMessage
-            : null;
-    }
-
-    private const string NumberedOrderMessage =
-        "เวลาต้องเรียงกัน: เข้างาน → ออกพัก 1 → กลับจากพัก 1 → ออกพัก 2 → กลับจากพัก 2 → เลิกงาน";
-
-    /// <summary>
-    /// Spec §8 (ADR facility-0222): <c>Actual recorded times ต้องเรียงตาม ordinal ของ lifecycle</c>. A Legacy4 slot is
-    /// checked exactly as before — same rule, same Thai message — so an old correction keeps its meaning; a Numbered6 slot
-    /// is checked against <see cref="AttendanceLifecycle.Order(AttendanceLifecycleVersion.Numbered6)"/>. A missing pair is
-    /// allowed, because an explicit gap is exactly how a forgotten break is recorded: a Break-1-In needs no Break-1-Out.
-    /// <para>
-    /// Either way only the slot's own actions may appear: a numbered action has no ordinal a legacy slot could place and a
-    /// legacy action has none in a numbered one, so both are refused with that version's order message instead of the four
-    /// legacy keys silently ignoring the extra one — otherwise a correction would store a fact no surface of that slot can
-    /// interpret.
-    /// </para>
-    /// </summary>
-    public static string? CheckTimes(AttendanceLifecycleVersion version, IReadOnlyDictionary<AttendanceEvent, DateTime> events)
-    {
-        if (events.Keys.Any(action => !AttendanceLifecycle.Order(version).Contains(action)))
-        {
-            return version == AttendanceLifecycleVersion.Legacy4 ? LegacyOrderMessage : NumberedOrderMessage;
-        }
-
-        return version == AttendanceLifecycleVersion.Legacy4 ? CheckTimes(events) : CheckNumberedTimes(events);
-    }
-
-    /// <summary>
-    /// The numbered six in lifecycle order: a Shift-In comes first and each later-ordinal action is strictly later than the
-    /// earlier-ordinal ones present. A non-numbered key has already been refused by the version overload.
-    /// </summary>
-    private static string? CheckNumberedTimes(IReadOnlyDictionary<AttendanceEvent, DateTime> events)
-    {
-        if (events.Count > 0 && !events.ContainsKey(AttendanceEvent.ShiftIn))
-        {
-            return "ต้องมีเวลาเข้างานก่อน";
-        }
-
-        var order = AttendanceLifecycle.Order(AttendanceLifecycleVersion.Numbered6);
-        var times = order.Where(events.ContainsKey).Select(action => events[action]).ToList();
+        var times = AttendanceLifecycle.Order.Where(events.ContainsKey).Select(action => events[action]).ToList();
         return times.Zip(times.Skip(1)).Any(pair => pair.Second <= pair.First) ? NumberedOrderMessage : null;
     }
 
-    /// <summary>facility-0051 rule 2: what a Cleaner who came forgot to scan, once the shift is over. Nothing for one who never checked in.</summary>
     public static IReadOnlyList<AttendanceEvent> MissingAtShiftEnd(IReadOnlyCollection<AttendanceEvent> recorded)
     {
         if (!recorded.Contains(AttendanceEvent.ShiftIn))
@@ -96,9 +35,14 @@ public static class AttendanceRules
         }
 
         var missing = new List<AttendanceEvent>();
-        if (recorded.Contains(AttendanceEvent.BreakOut) && !recorded.Contains(AttendanceEvent.BreakIn))
+        if (recorded.Contains(AttendanceEvent.Break1Out) && !recorded.Contains(AttendanceEvent.Break1In))
         {
-            missing.Add(AttendanceEvent.BreakIn);
+            missing.Add(AttendanceEvent.Break1In);
+        }
+
+        if (recorded.Contains(AttendanceEvent.Break2Out) && !recorded.Contains(AttendanceEvent.Break2In))
+        {
+            missing.Add(AttendanceEvent.Break2In);
         }
 
         if (!recorded.Contains(AttendanceEvent.ShiftOut))

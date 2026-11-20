@@ -25,7 +25,6 @@ export function AccountPage() {
       header={
         <PhoneHeader>
           <h1 className="text-xl font-extrabold text-text">บัญชีของฉัน</h1>
-          <p className="text-sm text-text-2">ข้อมูลผู้ใช้งานและการออกจากระบบ</p>
         </PhoneHeader>
       }
     >

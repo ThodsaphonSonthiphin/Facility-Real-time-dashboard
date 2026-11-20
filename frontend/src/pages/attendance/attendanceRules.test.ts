@@ -48,22 +48,22 @@ describe('attendance rules (wireframe D2)', () => {
   });
 
   it('checks a correction before sending: each changed time "HH:mm" and in order, and a reason (facility-0051)', () => {
-    const times = (values: Partial<Record<'ShiftIn' | 'BreakOut' | 'BreakIn' | 'ShiftOut', [string, string?]>>) => ({
+    const times = (values: Partial<Record<'ShiftIn' | 'Break1Out' | 'Break1In' | 'ShiftOut', [string, string?]>>) => ({
       ShiftIn: { old: values.ShiftIn?.[0] ?? '', value: values.ShiftIn?.[1] ?? values.ShiftIn?.[0] ?? '' },
-      BreakOut: { old: values.BreakOut?.[0] ?? '', value: values.BreakOut?.[1] ?? values.BreakOut?.[0] ?? '' },
-      BreakIn: { old: values.BreakIn?.[0] ?? '', value: values.BreakIn?.[1] ?? values.BreakIn?.[0] ?? '' },
+      Break1Out: { old: values.Break1Out?.[0] ?? '', value: values.Break1Out?.[1] ?? values.Break1Out?.[0] ?? '' },
+      Break1In: { old: values.Break1In?.[0] ?? '', value: values.Break1In?.[1] ?? values.Break1In?.[0] ?? '' },
       ShiftOut: { old: values.ShiftOut?.[0] ?? '', value: values.ShiftOut?.[1] ?? values.ShiftOut?.[0] ?? '' },
     });
-    const ok = times({ ShiftIn: ['06:58'], BreakOut: ['09:45', '09:30'], BreakIn: ['', ' 10:00 '] });
-    expect(changedEvents(ok)).toEqual(['BreakOut', 'BreakIn']);
+    const ok = times({ ShiftIn: ['06:58'], Break1Out: ['09:45', '09:30'], Break1In: ['', ' 10:00 '] });
+    expect(changedEvents(ok)).toEqual(['Break1Out', 'Break1In']);
     expect(draftProblems(ok, 'Day')).toEqual({});
-    expect(draftProblems(times({ BreakOut: ['', '7:05'] }), 'Day')).toEqual({ BreakOut: 'เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05' });
+    expect(draftProblems(times({ Break1Out: ['', '7:05'] }), 'Day')).toEqual({ Break1Out: 'เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05' });
     expect(draftProblems(times({ ShiftIn: ['06:58', ''] }), 'Day')).toEqual({ ShiftIn: 'ลบเวลาไม่ได้ ใส่เวลาใหม่ หรือกดคืนค่า' });
-    expect(draftProblems(times({ BreakOut: ['09:30'], BreakIn: ['', '09:20'] }), 'Day')).toEqual({
-      BreakIn: 'ต้องหลังเวลาออกพัก (09:30)',
+    expect(draftProblems(times({ Break1Out: ['09:30'], Break1In: ['', '09:20'] }), 'Day')).toEqual({
+      Break1In: 'ต้องหลังเวลาออกพัก 1 (09:30)',
     });
-    expect(draftProblems(times({ BreakOut: ['', '10:30'], BreakIn: ['10:00'] }), 'Day')).toEqual({
-      BreakOut: 'ต้องก่อนเวลากลับจากพัก (10:00)',
+    expect(draftProblems(times({ Break1Out: ['', '10:30'], Break1In: ['10:00'] }), 'Day')).toEqual({
+      Break1Out: 'ต้องก่อนเวลากลับจากพัก 1 (10:00)',
     });
     // A Night shift runs past midnight: 06:55 comes after 18:55
     expect(draftProblems(times({ ShiftIn: ['18:55'], ShiftOut: ['', '06:55'] }), 'Night')).toEqual({});
@@ -81,8 +81,8 @@ describe('attendance rules (wireframe D2)', () => {
 
   it('the form opens on the event asked for, else the first one not scanned', () => {
     expect(firstEvent(emptyRow)).toBe('ShiftIn');
-    expect(firstEvent(workingRow)).toBe('BreakOut');
-    expect(firstEvent(breakRow)).toBe('BreakIn');
+    expect(firstEvent(workingRow)).toBe('Break1Out');
+    expect(firstEvent(breakRow)).toBe('Break1In');
     expect(firstEvent(workingRow, 'ShiftIn')).toBe('ShiftIn');
   });
 

@@ -36,7 +36,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ReliefAssignment> ReliefAssignments => Set<ReliefAssignment>();
     public DbSet<AreaTransfer> AreaTransfers => Set<AreaTransfer>();
     public DbSet<AreaTransferConfirmation> AreaTransferConfirmations => Set<AreaTransferConfirmation>();
-    public DbSet<AttendanceSlotLifecycle> AttendanceSlotLifecycles => Set<AttendanceSlotLifecycle>();
     public DbSet<AttendanceGap> AttendanceGaps => Set<AttendanceGap>();
     public DbSet<ScheduleAnchor> ScheduleAnchors => Set<ScheduleAnchor>();
     public DbSet<ScheduleBaselineAnchor> ScheduleBaselineAnchors => Set<ScheduleBaselineAnchor>();
@@ -161,6 +160,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             MapGps(e);
             e.HasOne(x => x.CoverAssignment).WithMany().HasForeignKey(x => x.CoverAssignmentId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.ServicePointId, x.ShiftDate, x.Shift });
+            e.HasIndex(x => new { x.ShiftDate, x.Shift, x.SubmittedAt });
+            e.HasIndex(x => new { x.ServicePointId, x.SubmittedAt });
+            e.HasIndex(x => new { x.ServicePointId, x.Id });
             e.HasIndex(x => new { x.UserId, x.SubmittedAt });
             e.HasIndex(x => x.SubmittedAt);
             e.HasOne(x => x.ServicePoint).WithMany().HasForeignKey(x => x.ServicePointId).OnDelete(DeleteBehavior.Restrict);

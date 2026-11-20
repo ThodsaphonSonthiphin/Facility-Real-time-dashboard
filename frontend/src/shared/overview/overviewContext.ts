@@ -67,18 +67,18 @@ function fail(message: string): ContextResult {
 export function readOverviewContext(params: URLSearchParams, destination = false): ContextResult {
   for (const key of params.keys()) {
     if (FORBIDDEN_REDIRECT_KEYS.has(key.toLowerCase())) {
-      return fail('พารามิเตอร์เปลี่ยนเส้นทางไม่ได้รับอนุญาต');
+      return fail('ลิงก์ไม่ถูกต้อง');
     }
   }
 
   for (const key of KNOWN_KEYS) {
     if (params.getAll(key).length > 1) {
-      return fail('พารามิเตอร์ซ้ำกัน');
+      return fail('ลิงก์ไม่ถูกต้อง');
     }
   }
 
   if (params.has('source') && params.get('source') !== 'overview') {
-    return fail('ค่า source ไม่ถูกต้อง');
+    return fail('ลิงก์ไม่ถูกต้อง');
   }
 
   const hasDate = params.has('date');
@@ -154,7 +154,7 @@ export function readOverviewContext(params: URLSearchParams, destination = false
   }
 
   if (destination && (!date || !shift || areaId === undefined || view === undefined)) {
-    return fail('บริบทปลายทางไม่ครบถ้วน');
+    return fail('ข้อมูลลิงก์ไม่ครบ');
   }
 
   const context: OverviewSelection = { group, page };

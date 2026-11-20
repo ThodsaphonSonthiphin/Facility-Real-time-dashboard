@@ -18,10 +18,9 @@ export const alertTabLabel: Record<AlertTab, string> = {
 
 /** The line under the tabs: what the kind means and what the Admin does about it (the design file's words). */
 export const alertTabHint: Record<AlertTab, string> = {
-  blocked:
-    'ระบบไม่รับลงเวลา ส่งงาน หรือตรวจงานเมื่อสแกนผิดพื้นที่ ผิดตึก หรือนอกกะ ถ้ารายการมีปุ่มให้ทำแทน แอดมินกดเพื่อมอบหมายได้',
-  far: 'ระบบบันทึกรายการแล้ว แต่ตำแหน่งมือถืออาจอยู่ไกลจากป้ายหรืออ่านได้ไม่แม่น ให้สอบถามผู้สแกนก่อนปิดเตือน',
-  missing: 'เติมเวลาที่ขาดในหน้า “การเข้างาน” เมื่อเวลาครบ ระบบจะปิดเตือนให้',
+  blocked: 'ไม่บันทึกรายการเมื่อสแกนผิดพื้นที่ ผิดตึก หรือนอกกะ',
+  far: 'บันทึกแล้ว แต่ตำแหน่งมือถืออยู่ไกลป้าย ควรสอบถามก่อนปิดเตือน',
+  missing: 'เติมเวลาที่ขาดในหน้า “การเข้างาน”',
 };
 
 const tabOf: Record<AlertKind, AlertTab> = {

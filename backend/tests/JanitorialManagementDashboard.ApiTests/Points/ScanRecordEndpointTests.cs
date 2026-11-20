@@ -145,7 +145,7 @@ public class ScanRecordEndpointTests
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 7, 0));
         factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 0));
-        Assert.Equal(HttpStatusCode.OK, (await AttendanceApi.RecordAsync(cleaner, "BreakOut")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await AttendanceApi.RecordAsync(cleaner, "Break1Out")).StatusCode);
 
         var created = await CheckInAndScanAtAsync(factory, cleaner, ThaiClock.At(8, 8, 10));
 

@@ -11,7 +11,6 @@ import { hub } from '../../test/fakeSignalR';
 import { apiIdle, boardPoints } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
 import { overviewDetailFixture } from '../../test/overviewFixtures';
-import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 function serve(answer: PointCard[] = boardPoints, routes: FakeRoutes = {}) {
   return fakeServer({
@@ -102,7 +101,6 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
 
     act(() => answerBuildings());
     await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
-    expect(screen.getByText('วิธีอ่านการ์ด')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'ตึก' })).toBeInTheDocument();
   });
 
@@ -281,12 +279,12 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     expect(within(menu).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('href', '/admin/export');
   });
 
-  it('the notes on reading a card wait behind ℹ (owner, 2026-10-27)', async () => {
+  it('omits redundant card-reading note', async () => {
     serve();
     await renderApp('/dashboard');
 
     await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
-    expectBehindMoreInfo(/^ถ้าจบรอบแล้วยังไม่มีงาน/, 'วิธีอ่านการ์ด');
+    expect(screen.queryByText('วิธีอ่านการ์ด')).not.toBeInTheDocument();
   });
 
   it('does not render BuildingSummary on slim /dashboard and routes Admin home to /admin/overview (facility-0224)', async () => {

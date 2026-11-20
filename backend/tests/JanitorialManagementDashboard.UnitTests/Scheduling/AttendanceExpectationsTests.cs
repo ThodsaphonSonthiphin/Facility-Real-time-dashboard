@@ -91,7 +91,7 @@ public class AttendanceExpectationsTests
         Assert.False(expected.ContainsKey(AttendanceEvent.Break1Out));
         Assert.False(expected.ContainsKey(AttendanceEvent.Break1In));
         Assert.Equal(
-            new[] { AttendanceEvent.ShiftIn, AttendanceEvent.ShiftOut, AttendanceEvent.Break2Out, AttendanceEvent.Break2In },
+            new[] { AttendanceEvent.ShiftIn, AttendanceEvent.Break2Out, AttendanceEvent.Break2In, AttendanceEvent.ShiftOut },
             expected.Keys.OrderBy(action => (int)action).ToArray());
     }
 

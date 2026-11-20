@@ -1,5 +1,7 @@
 # Preserve legacy four-action attendance history when six-action shifts begin
 
+> Updated 2026-11-20. Every shift uses six attendance actions in development. The previous requirement for a shift-by-shift transition is superseded. See [the current installation guide](../handover.md#210-เตรียมตารางงานและการลงเวลา-6-ขั้น).
+
 ```mermaid
 flowchart TD
     Q{"How should attendance history from the old four-action flow be treated?"}

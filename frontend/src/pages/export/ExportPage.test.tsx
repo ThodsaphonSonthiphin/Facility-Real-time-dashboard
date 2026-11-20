@@ -30,7 +30,7 @@ function serve(routes: FakeRoutes = {}) {
 const exportPosts = (server: ReturnType<typeof serve>) => server.calls.filter((call) => call.path === '/api/admin/export');
 const download = () => screen.getByRole('button', { name: 'ดาวน์โหลด Excel' });
 const acknowledge = async (user: Awaited<ReturnType<typeof renderApp>>['user']) => {
-  await user.click(screen.getByRole('checkbox', { name: /เข้าใจแล้ว/ }));
+  await user.click(screen.getByRole('checkbox', { name: /รับทราบข้อกำหนดข้อมูลส่วนบุคคล/ }));
   await waitFor(() => expect(download()).toBeEnabled());
 };
 const building = (code: string) => screen.getByRole('checkbox', { name: new RegExp(`^${code} `) });
@@ -288,7 +288,7 @@ describe('ExportPage (D8, facility-0053)', () => {
     });
     const { user } = await renderApp('/admin/export');
     await screen.findByText('กำลังโหลดตึก...');
-    await user.click(screen.getByRole('checkbox', { name: /เข้าใจแล้ว/ }));
+    await user.click(screen.getByRole('checkbox', { name: /รับทราบข้อกำหนดข้อมูลส่วนบุคคล/ }));
     expect(download()).toBeDisabled();
     await act(async () => answer({ status: 500, body: { message: 'unavailable' } }));
     expect(await screen.findByRole('alert')).toHaveTextContent('โหลดรายชื่อตึกไม่สำเร็จ');
@@ -304,7 +304,7 @@ describe('ExportPage (D8, facility-0053)', () => {
     const server = serve();
     const { user } = await renderApp('/admin/export?building=999');
     await screen.findByRole('checkbox', { name: /^A / });
-    await user.click(screen.getByRole('checkbox', { name: /เข้าใจแล้ว/ }));
+    await user.click(screen.getByRole('checkbox', { name: /รับทราบข้อกำหนดข้อมูลส่วนบุคคล/ }));
     expect(download()).toBeDisabled();
     expect(screen.getByRole('alert')).toHaveTextContent('ไม่พบตึกที่เลือก');
     expect(exportPosts(server)).toHaveLength(0);

@@ -1,9 +1,8 @@
-import { ChevronLeft, LockKeyhole, Printer } from 'lucide-react';
+import { ChevronLeft, Printer } from 'lucide-react';
 import { Link } from 'react-router';
 import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
 import { Select } from '../../shared/components/Field';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../shared/components/PageState';
 import { Segmented } from '../../shared/components/Segmented';
@@ -37,12 +36,6 @@ export function PrintSignsPage() {
       <FilterToolbar
         label="ตัวเลือก"
         className="min-w-0 print:hidden"
-        actions={
-          <span className="inline-flex items-center gap-1.5 rounded-sm bg-idle-bg px-2 py-0.5 text-xs text-idle">
-            <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
-            เปลี่ยนขนาดได้ รูปแบบป้ายเหมือนเดิม
-          </span>
-        }
       >
         <label className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-2">
           พื้นที่
@@ -103,11 +96,9 @@ export function PrintSignsPage() {
         </div>
       )}
       <div className="flex flex-col gap-1.5 print:hidden">
-        <p className="text-text-2">ติดเสร็จให้สแกนทดสอบ 1 ครั้ง หน้าจอต้องขึ้นชื่อจุดตรงกับป้าย</p>
-        <MoreInfo summary="เกี่ยวกับ QR">ระบบสร้าง QR ในเครื่องนี้เอง ไม่ส่งรหัสออกไปเว็บภายนอก</MoreInfo>
         <p className="text-text-2">{`ที่อยู่บนป้าย: ${window.location.origin}`}</p>
         {window.location.protocol !== 'https:' && (
-          <Note tone="warn">ให้เปิดหน้าพิมพ์จากลิงก์ HTTPS ของระบบ มือถือจึงจะอ่านตำแหน่งได้เมื่อสแกนป้าย</Note>
+          <Note tone="warn">เปิดจากลิงก์ HTTPS เพื่อให้มือถืออ่านตำแหน่งได้</Note>
         )}
         <Link className={`${linkClass} inline-flex min-h-9 items-center gap-1 self-start font-semibold`}
           to={singleArea ? `/admin/areas/${which}` : '/admin/areas'}>

@@ -10,7 +10,7 @@ import { DialogFooter, DialogHeader, Modal } from '../../shared/components/Modal
 import { Note } from '../../shared/components/Note';
 import { Spinner } from '../../shared/components/PageState';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { eventLabel, lifecycleEvents, shiftLabel } from '../../shared/utils/labels';
+import { eventLabel, attendanceEvents, shiftLabel } from '../../shared/utils/labels';
 import { formatShiftDate, formatTime } from '../../shared/utils/thaiTime';
 import { useCorrectAttendanceMutation } from './attendanceApi';
 import {
@@ -53,7 +53,7 @@ const labels = (types: readonly AttendanceEvent[]) => types.map((type) => eventL
  * only (facility-0024); one save at a time.
  */
 export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableEvents, beforeWrite, onDone, onCancel }: CorrectionFormProps) {
-  const order = lifecycleEvents(board.lifecycleVersion);
+  const order = attendanceEvents;
   const editable = order.filter((event) => !unavailableEvents?.has(event));
   const recorded = (type: AttendanceEvent) => {
     const event = eventOf(row, type);

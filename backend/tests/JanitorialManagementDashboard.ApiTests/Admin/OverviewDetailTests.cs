@@ -728,10 +728,8 @@ public class OverviewDetailTests
         Assert.Empty(detail.GetProperty("entryEvidence").EnumerateArray());
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Scoped_leave_reports_a_check_in_conflict_and_exempts_missing_numbered_breaks_after_departure(bool numbered)
+    [Fact]
+    public async Task Scoped_leave_reports_a_check_in_conflict_and_exempts_missing_numbered_breaks_after_departure()
     {
         using var factory = new JanitorialApiFactory();
         var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
@@ -761,14 +759,6 @@ public class OverviewDetailTests
                 Recorded(userId, AttendanceEvent.ShiftOut, At(12, 15)),
                 Recorded(otherCleaner, AttendanceEvent.ShiftIn, At(7, 30)));
             db.ScheduleExceptions.AddRange(Leave(userId, At(12), At(19)), Leave(otherCleaner, At(7), At(9)));
-            if (numbered)
-            {
-                db.AttendanceSlotLifecycles.Add(new AttendanceSlotLifecycle
-                {
-                    ShiftDate = date, Shift = Shift.Day, Version = AttendanceLifecycleVersion.Numbered6,
-                    ActivatedAt = At(1), CreatedAt = At(1),
-                });
-            }
 
             await db.SaveChangesAsync();
         });
@@ -782,7 +772,7 @@ public class OverviewDetailTests
         Assert.Equal(otherCleaner, conflict.GetProperty("userId").GetInt32());
         Assert.Equal("ShiftIn", conflict.GetProperty("event").GetString());
         var exempt = effects.Where(e => e.GetProperty("kind").GetString() == "exempt").ToArray();
-        Assert.Equal(numbered ? ["Break2Out", "Break2In"] : Array.Empty<string>(),
+        Assert.Equal(new[] { "Break2Out", "Break2In" },
             exempt.Select(e => e.GetProperty("event").GetString()).ToArray());
         Assert.All(exempt, e =>
         {

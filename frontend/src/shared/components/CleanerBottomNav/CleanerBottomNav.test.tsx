@@ -24,7 +24,7 @@ function serveCleaner(routes: Record<string, () => { status: number; body?: unkn
     'GET /api/attendance/signs/token-checkin': () => ({ status: 204 }),
     'GET /api/attendance/me': () => ({
       status: 200,
-      body: { shift: 'Day', events: [], allowed: ['ShiftIn'], lifecycleVersion: 'Numbered6' },
+      body: { shift: 'Day', events: [], allowed: ['ShiftIn'],  },
     }),
     'GET /api/service-points/by-token/token-point': () => ({ status: 200, body: point() }),
     ...routes,

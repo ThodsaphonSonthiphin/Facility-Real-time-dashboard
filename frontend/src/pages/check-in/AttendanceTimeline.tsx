@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 import type { AttendanceAction, AttendanceEvent, AttendanceState } from '../../shared/api/types';
-import { actionStateLabel, eventLabel, lifecycleEvents } from '../../shared/utils/labels';
+import { actionStateLabel, eventLabel, attendanceEvents } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
 
 /** One drawn action: what it is, and the actual time only when the server says there is one. */
@@ -21,7 +21,7 @@ function timelineRows(attendance: AttendanceState): TimelineRow[] {
       withinRadius: attendance.events.find((event) => event.eventType === action.eventType)?.withinRadius ?? undefined,
     }));
   }
-  return lifecycleEvents(attendance.lifecycleVersion).map((eventType) => {
+  return attendanceEvents.map((eventType) => {
     const event = attendance.events.find((entry) => entry.eventType === eventType);
     return {
       eventType,

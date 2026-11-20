@@ -222,7 +222,7 @@ public class AreaTransferTests
         Assert.Equal(destination, facts[1].AreaId);
         Assert.Single(facts, fact => fact.EventType == AttendanceEvent.ShiftIn);
         Assert.Single(facts, fact => fact.EventType == AttendanceEvent.ShiftOut);
-        Assert.Empty(await EffectiveAttendanceApi.GapsAsync(factory));
+        Assert.Equal(4, (await EffectiveAttendanceApi.GapsAsync(factory)).Count);
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -425,7 +425,7 @@ public class AreaTransferTests
         var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
         await TransferApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
         factory.Clock.SetUtcNow(TransferApi.Thai(10, 5));
-        Assert.Equal(HttpStatusCode.OK, (await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out")).StatusCode);
         var transferId = await TransferApi.InstructForIdAsync(
             factory, admin, auth.User.Id, origin, destination, TransferApi.Thai(13, 0));
 
@@ -434,14 +434,14 @@ public class AreaTransferTests
         // ADR facility-0212: the arrival is not a Break-In, so the break the person is in stays open on the old facts and
         // the next actions are still the return from break and the end of the shift.
         var state = await EffectiveAttendanceApi.StateAsync(cleaner);
-        var breakOut = state.Action("BreakOut");
+        var breakOut = state.Action("Break1Out");
         Assert.Equal("recorded", breakOut.State);
         Assert.Equal(TransferApi.Thai(10, 5).UtcDateTime, breakOut.OccurredAt!.Value);
         Assert.DoesNotContain(state.Events,
-            entry => entry.EventType is "BreakIn" or "ShiftOut");
-        Assert.Contains("BreakIn", state.NextEvents);
+            entry => entry.EventType is "Break1In" or "ShiftOut");
+        Assert.Contains("Break1In", state.NextEvents);
         var facts = await EffectiveAttendanceApi.FactsAsync(factory);
-        Assert.Equal(origin, Assert.Single(facts, fact => fact.EventType == AttendanceEvent.BreakOut).AreaId);
+        Assert.Equal(origin, Assert.Single(facts, fact => fact.EventType == AttendanceEvent.Break1Out).AreaId);
         // The break's own plan and progress are untouched: no return-from-break was fabricated by the arrival.
         Assert.Equal(destination, state.DutyAreaId);
     }
@@ -492,7 +492,7 @@ public class AreaTransferTests
         // One minute after the arrival the next actual action is still accepted: the confirmation is not an attendance
         // event and never makes a correct press look like a repeat (spec §9).
         factory.Clock.SetUtcNow(TransferApi.Thai(13, 6));
-        var next = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", TransferApi.Destination);
+        var next = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", TransferApi.Destination);
 
         Assert.Equal(HttpStatusCode.OK, next.StatusCode);
         var state = (await next.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
@@ -518,14 +518,13 @@ public class AreaTransferTests
 
         // Past the effective time with no confirmation: neither Area may record an actual action, and nothing is written.
         factory.Clock.SetUtcNow(TransferApi.Thai(13, 1));
-        var atOrigin = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", TransferApi.Origin);
-        var atDestination = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", TransferApi.Destination);
+        var atOrigin = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", TransferApi.Origin);
+        var atDestination = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", TransferApi.Destination);
 
         Assert.Equal(HttpStatusCode.Conflict, atOrigin.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, atDestination.StatusCode);
         var refusal = (await atOrigin.Content.ReadFromJsonAsync<RefusedAnswer>())!;
         Assert.Equal("transfer-pending", refusal.Code);
-        Assert.Empty(refusal.NextEvents);
         Assert.Single(await EffectiveAttendanceApi.FactsAsync(factory));
         Assert.Empty(await EffectiveAttendanceApi.BlockedAsync(factory));
         Assert.Empty(await EffectiveAttendanceApi.GapsAsync(factory));
@@ -540,7 +539,7 @@ public class AreaTransferTests
         await TransferApi.ConfirmAsync(factory, cleaner, transferId, "1", at: TransferApi.Thai(13, 5));
         factory.Clock.SetUtcNow(TransferApi.Thai(13, 6));
         Assert.Equal(HttpStatusCode.OK,
-            (await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", TransferApi.Destination)).StatusCode);
+            (await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", TransferApi.Destination)).StatusCode);
     }
 
     [Fact]
@@ -557,7 +556,7 @@ public class AreaTransferTests
         await TransferApi.ConfirmAsync(factory, cleaner, transferId, "1", at: TransferApi.Thai(13, 5));
 
         factory.Clock.SetUtcNow(TransferApi.Thai(13, 6));
-        var refused = await EffectiveAttendanceApi.RecordAsync(cleaner, "BreakOut", TransferApi.Origin);
+        var refused = await EffectiveAttendanceApi.RecordAsync(cleaner, "Break1Out", TransferApi.Origin);
 
         // Spec §9: no actual action at the source once responsibility has left it. The sign is reported as the Blocked Scan
         // policy always reports another Area's sign, and no actual fact is written.

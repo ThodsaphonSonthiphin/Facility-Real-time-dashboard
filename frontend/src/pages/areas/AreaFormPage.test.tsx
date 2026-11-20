@@ -11,7 +11,6 @@ import {
 } from '../../test/adminFixtures';
 import { fakeServer, type FakeRoutes } from '../../test/fakeServer';
 import { renderApp } from '../../test/renderApp';
-import { expectBehindMoreInfo } from '../../test/moreInfo';
 
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
@@ -247,12 +246,12 @@ describe('AreaFormPage (D10, facility-0045)', () => {
     expect(areaPosts()).toHaveLength(1);
   });
 
-  it('the save note waits behind ℹ (owner, 2026-10-27)', async () => {
+  it('omits redundant save audit note', async () => {
     serve();
     await renderApp('/admin/areas/1/edit');
 
     await screen.findByLabelText('ชื่อพื้นที่');
-    expectBehindMoreInfo('การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน', 'เกี่ยวกับการบันทึก');
+    expect(screen.queryByText('เกี่ยวกับการบันทึก')).not.toBeInTheDocument();
   });
 
   it('retries only the failed read query on load error (UX-05)', async () => {

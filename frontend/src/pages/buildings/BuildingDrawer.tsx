@@ -3,7 +3,6 @@ import { ConfirmationDialog } from '../../shared/components/ConfirmationDialog';
 import type { ManagedBuilding } from '../../shared/api/adminSetupApi';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { DialogHeader, Drawer } from '../../shared/components/Modal';
 import { Note } from '../../shared/components/Note';
 
@@ -27,7 +26,6 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
       <DialogHeader
         id={titleId}
         title={building ? `แก้ไขตึก · ${building.code} ${building.name}` : 'เพิ่มตึก'}
-        detail="ตึกเก็บพื้นที่และบัญชีหัวหน้า · ไม่มีปุ่มลบ ใช้ปิดใช้งานแทน"
         onClose={dismissal.close}
         closeDisabled={sending}
       />
@@ -83,7 +81,7 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
             )}
             {building.isActive && !left && (
               <p className="text-text-2">
-                ตึกหายจากฟอร์มและหน้าข้อมูลสด ยังเลือกได้ในสรุปการตรวจและส่งออก Excel ประวัติยังอยู่ เปิดกลับได้ ไม่มีปุ่มลบ
+                ตึกจะไม่แสดงในรายการใช้งาน แต่ประวัติยังอยู่และเปิดกลับได้
               </p>
             )}
             {switchProblem && <Note tone="error">{switchProblem}</Note>}
@@ -105,7 +103,6 @@ export function BuildingDrawer({ building, onClose, onDone }: BuildingDrawerProp
           onCancel={confirmation.cancel}
           onConfirm={confirmation.confirm}
         />}
-        <MoreInfo summary="เกี่ยวกับการบันทึก">การบันทึกทุกครั้งเก็บลงประวัติการแก้ไขของแอดมิน</MoreInfo>
       </div>
     </Drawer>
   );

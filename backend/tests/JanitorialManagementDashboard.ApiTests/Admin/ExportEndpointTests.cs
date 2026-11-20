@@ -50,6 +50,8 @@ public class ExportEndpointTests
         using var _ = factory;
         await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 6, 58));
         await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.ShiftOut, ThaiClock.At(8, 19, 2), AttendanceSource.AdminAdd);
+        await TestData.AddAttendanceAsync(factory, "1000001", Oct8, Shift.Day, AttendanceEvent.Break2Out,
+            ThaiClock.At(8, 16, 0), AttendanceSource.SupervisorAdd);
         await TestData.AddAttendanceAsync(factory, "1000003", Oct8, Shift.Day, AttendanceEvent.ShiftIn, ThaiClock.At(8, 7, 5), distanceM: 900, withinRadius: false);
 
         using var workbook = await WorkbookAsync(await ExportAsync(admin, "2026-10-08", "2026-10-08", ["Attendance"]));
@@ -57,13 +59,13 @@ public class ExportEndpointTests
         var sheet = Assert.Single(workbook.Worksheets);
         Assert.Equal("การลงเวลา", sheet.Name);
         Assert.Equal(
-            new[] { "วันที่กะ", "กะ", "ตึก", "พื้นที่", "รหัสพนักงาน", "ชื่อ", "เข้างาน", "ออกพัก", "กลับจากพัก", "เลิกงาน", "ที่มา", "ตำแหน่ง" },
+            new[] { "วันที่กะ", "กะ", "ตึก", "พื้นที่", "รหัสพนักงาน", "ชื่อ", "เข้างาน", "ออกพัก 1", "กลับจากพัก 1", "ออกพัก 2", "กลับจากพัก 2", "เลิกงาน", "ที่มา", "ตำแหน่ง" },
             sheet.Row(1).CellsUsed().Select(c => c.GetString()));
         var rows = Rows(sheet);
         Assert.Equal(
-            new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "1000001", "สมชาย ใจดี", "06:58", "", "", "19:02", "แก้โดยแอดมิน: เลิกงาน", "ในรัศมี" },
+            new[] { "2026-10-08", "เช้า", "A · ตึก A", "AR01", "1000001", "สมชาย ใจดี", "06:58", "", "", "16:00", "", "19:02", "เพิ่มโดยหัวหน้างาน: ออกพัก 2 · แก้โดยแอดมิน: เลิกงาน", "ในรัศมี" },
             rows[0]);
-        Assert.Equal(new[] { "AR02", "1000003", "07:05", "สแกนเอง", "นอกรัศมี: เข้างาน 900 ม." }, new[] { rows[1][3], rows[1][4], rows[1][6], rows[1][10], rows[1][11] });
+        Assert.Equal(new[] { "AR02", "1000003", "07:05", "สแกนเอง", "นอกรัศมี: เข้างาน 900 ม." }, new[] { rows[1][3], rows[1][4], rows[1][6], rows[1][12], rows[1][13] });
         Assert.Equal(2, rows.Count);
     }
 

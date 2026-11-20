@@ -109,7 +109,7 @@ public static class TeamAttendanceEndpoints
 
         var state = canReadAttendance
             ? (await AttendanceStateView.LoadAsync(db, person.Id, slot, duty, now.UtcDateTime, ct)).ToDto(duty, null)
-            : new AttendanceStateDto(date, slotShift, [], [], null, Transfer: current is { } transfer && canReadCurrent
+            : new AttendanceStateDto(date, slotShift, [], null, Transfer: current is { } transfer && canReadCurrent
                 ? AttendanceSlotState.TransferDto(transfer)
                 : null);
 
@@ -117,21 +117,15 @@ public static class TeamAttendanceEndpoints
         {
             Transfer = canReadCurrent ? state.Transfer : null,
             TransferHistory = history,
-            FillableActions = FillableActions(state, slot, now.UtcDateTime, settings),
+            FillableActions = FillableActions(state),
             CanCancelTransfer = current is { State: TransferStates.Instructed } && CanReadArea(current.FromAreaId),
         });
     }
 
-    private static IReadOnlyList<AttendanceEvent> FillableActions(
-        AttendanceStateDto state, ShiftSlot slot, DateTime nowUtc, AttendanceSettings settings)
-    {
-        var canFillLegacy = state.LifecycleVersion == nameof(AttendanceLifecycleVersion.Legacy4)
-            && nowUtc >= AttendanceCalendar.Window(slot, settings).Opens;
-        return state.Actions?
-            .Where(action => action.State is AttendanceStateView.Missing or AttendanceStateView.Skipped
-                || (canFillLegacy && action.State == AttendanceStateView.Pending))
+    private static IReadOnlyList<AttendanceEvent> FillableActions(AttendanceStateDto state) =>
+        state.Actions?
+            .Where(action => action.State is AttendanceStateView.Missing or AttendanceStateView.Skipped)
             .Select(action => action.EventType).ToList() ?? [];
-    }
 
     private static async Task<List<AttendanceTransferDto>> ReadTransferHistoryAsync(
         AppDbContext db, int personId, ShiftSlot slot, Func<int, bool> canReadBuilding, CancellationToken ct)
@@ -271,14 +265,14 @@ public static class TeamAttendanceEndpoints
 
         var proposed = state.Events.ToDictionary(fact => fact.EventType, fact => fact.OccurredAt);
         proposed[eventType] = at;
-        if (AttendanceRules.CheckTimes(state.Version, proposed) is { } orderError)
+        if (AttendanceRules.CheckTimes(proposed) is { } orderError)
         {
             return Bad(orderError);
         }
 
         // Actual revisions survive plan changes. Recheck eligibility against the current plan before adding a fact.
         var current = state.ToDto(duty, null);
-        var fillable = FillableActions(current, slot, now, settings);
+        var fillable = FillableActions(current);
         if (!string.Equals(expected, state.Revision, StringComparison.Ordinal) || !fillable.Contains(eventType))
         {
             return Results.Json(

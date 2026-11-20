@@ -17,7 +17,6 @@ import {
 import { browserPage } from '../../shared/utils/reloadPage';
 import { fakeGps, farFromSign, nearSign, permissionsSay } from '../../test/fakeGps';
 import { fakeServer, type FakeResponse, type FakeRoutes } from '../../test/fakeServer';
-import { expectBehindMoreInfo } from '../../test/moreInfo';
 import { renderApp } from '../../test/renderApp';
 
 const SIGN = '/check-in/token-checkin-ar01';
@@ -32,7 +31,7 @@ function serve(routes: FakeRoutes, work = myWork(notCheckedIn)) {
   });
 }
 
-/** The four tiles of "วันนี้", as a person reads them. */
+/** The six tiles of "วันนี้", as a person reads them. */
 function steps() {
   return within(screen.getByRole('list', { name: 'วันนี้' }))
     .getAllByRole('listitem')
@@ -136,13 +135,13 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(screen.getByRole('heading', { name: 'ลงเวลา' })).toBeInTheDocument();
     expect(screen.getByText('กะเช้า 07:00–19:00')).toBeInTheDocument();
     expect(screen.getByText('พื้นที่ของคุณ: Area ทดลอง · 1 จุด')).toBeInTheDocument();
-    expect(steps()).toEqual(['เข้างาน –', 'ออกพัก –', 'กลับจากพัก –', 'เลิกงาน –']);
+    expect(steps()).toEqual(['เข้างาน –', 'ออกพัก 1 –', 'กลับจากพัก 1 –', 'ออกพัก 2 –', 'กลับจากพัก 2 –', 'เลิกงาน –']);
   });
 
   it('เข้างาน sends the sign token, the event and the GPS, shows the time and offers the next events (M10)', async () => {
     fakeGps(nearSign);
     const server = serve({
-      'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['BreakOut', 'ShiftOut'], 'Recorded') }),
+      'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['Break1Out', 'ShiftOut'], 'Recorded') }),
     });
     const { user } = await renderApp(SIGN);
     await screen.findByRole('button', { name: 'เข้างาน' });
@@ -157,11 +156,12 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
       latitude: 13.7563,
       longitude: 100.5018,
       accuracyM: 12,
+      stateRevision: 'test-revision',
     });
     // facility-0078: two events may come next, and only the buttons say so
-    expect(steps()).toEqual(['เข้างาน 06:52', 'ออกพัก –', 'กลับจากพัก –', 'เลิกงาน –']);
+    expect(steps()).toEqual(['เข้างาน 06:52', 'ออกพัก 1 –', 'กลับจากพัก 1 –', 'ออกพัก 2 –', 'กลับจากพัก 2 –', 'เลิกงาน –']);
     expect(screen.queryByText('ถัดไป')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ออกพัก' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ออกพัก 1' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'เลิกงาน' })).toBeInTheDocument();
     // the answer updated My Work's cached copy; nothing was asked again after the hub's catch-up
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2);
@@ -172,7 +172,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     serve({
       'POST /api/attendance': () => ({
         status: 200,
-        body: attendance([entry('ShiftIn', '2026-10-14T23:52:00Z', false)], ['BreakOut', 'ShiftOut'], 'Recorded'),
+        body: attendance([entry('ShiftIn', '2026-10-14T23:52:00Z', false)], ['Break1Out', 'ShiftOut'], 'Recorded'),
       }),
     });
     const { user } = await renderApp(SIGN);
@@ -184,10 +184,11 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(steps()[0]).toBe('เข้างาน 06:52 ไกลป้าย');
   });
 
-  it('after the break only เลิกงาน is offered, and then the shift is complete (M10)', async () => {
+  it('after both breaks only เลิกงาน is offered, and then the shift is complete (M10)', async () => {
     fakeGps(nearSign);
     const afterBreak = attendance(
-      [shiftIn0652, entry('BreakOut', '2026-10-15T05:01:00Z'), entry('BreakIn', '2026-10-15T05:58:00Z')], // 12:01, 12:58
+      [shiftIn0652, entry('Break1Out', '2026-10-15T05:01:00Z'), entry('Break1In', '2026-10-15T05:58:00Z'),
+        entry('Break2Out', '2026-10-15T09:00:00Z'), entry('Break2In', '2026-10-15T10:00:00Z')],
       ['ShiftOut'],
     );
     serve(
@@ -204,7 +205,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     await user.click(await screen.findByRole('button', { name: 'เลิกงาน' }));
 
     expect(await screen.findByText('บันทึกเวลาเลิกงานแล้ว 18:55')).toBeInTheDocument();
-    expect(steps()).toEqual(['เข้างาน 06:52', 'ออกพัก 12:01', 'กลับจากพัก 12:58', 'เลิกงาน 18:55']);
+    expect(steps()).toEqual(['เข้างาน 06:52', 'ออกพัก 1 12:01', 'กลับจากพัก 1 12:58', 'ออกพัก 2 16:00', 'กลับจากพัก 2 17:00', 'เลิกงาน 18:55']);
     expect(screen.getByText('ลงเวลาครบแล้วสำหรับกะนี้')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'เลิกงาน' })).not.toBeInTheDocument();
   });
@@ -212,15 +213,15 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
   it('a press within 5 minutes of the last one is not counted (facility-0031)', async () => {
     fakeGps(nearSign);
     serve(
-      { 'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['BreakOut', 'ShiftOut'], 'TooSoon') }) },
+      { 'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['Break1Out', 'ShiftOut'], 'TooSoon') }) },
       myWork(onDuty),
     );
     const { user } = await renderApp(SIGN);
 
-    await user.click(await screen.findByRole('button', { name: 'ออกพัก' }));
+    await user.click(await screen.findByRole('button', { name: 'ออกพัก 1' }));
 
     expect(
-      await screen.findByText('ยังไม่ได้ลงเวลาออกพัก รอให้ครบ 5 นาทีจากครั้งก่อน แล้วกด “ออกพัก” อีกครั้ง'),
+      await screen.findByText('ยังไม่ได้ลงเวลาออกพัก 1 รอให้ครบ 5 นาทีจากครั้งก่อน แล้วกด “ออกพัก 1” อีกครั้ง'),
     ).toBeInTheDocument();
   });
 
@@ -230,7 +231,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     serve({
       'POST /api/attendance': () => ({
         status: 200,
-        body: attendance([shiftIn0652], ['BreakOut', 'ShiftOut'], 'AlreadyRecorded'),
+        body: attendance([shiftIn0652], ['Break1Out', 'ShiftOut'], 'AlreadyRecorded'),
       }),
     });
     const { user } = await renderApp(SIGN);
@@ -243,7 +244,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
   it('Location off shows how to turn it on, and "เปิดแล้ว ลองอีกครั้ง" records (M2, facility-0036)', async () => {
     const gps = fakeGps('denied', nearSign);
     const server = serve({
-      'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['BreakOut', 'ShiftOut'], 'Recorded') }),
+      'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['Break1Out', 'ShiftOut'], 'Recorded') }),
     });
     const { user } = await renderApp(SIGN);
 
@@ -330,17 +331,17 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
   it('an out-of-order press shows the server message and asks for the allowed buttons again', async () => {
     fakeGps(nearSign);
     const server = serve(
-      { 'POST /api/attendance': () => ({ status: 409, body: { message: 'ลงเวลาไม่ตรงลำดับ', nextEvents: ['ShiftOut'] } }) },
+      { 'POST /api/attendance': () => ({ status: 409, body: { message: 'ลงเวลาไม่ตรงลำดับ' } }) },
       myWork(onDuty),
     );
     const { user } = await renderApp(SIGN);
-    await screen.findByRole('button', { name: 'ออกพัก' });
+    await screen.findByRole('button', { name: 'ออกพัก 1' });
     await hubCatchUp(server);
 
-    await user.click(screen.getByRole('button', { name: 'ออกพัก' }));
+    await user.click(screen.getByRole('button', { name: 'ออกพัก 1' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('ลงเวลาไม่ตรงลำดับ');
-    await screen.findByRole('button', { name: 'ออกพัก' });
+    await screen.findByRole('button', { name: 'ออกพัก 1' });
     // the first answer, the hub's catch-up, and the ask after the refused press
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3);
   });
@@ -398,7 +399,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
   it('no fix from the phone says so and "ลองอีกครั้ง" records (M2, facility-0036)', async () => {
     fakeGps('unavailable', nearSign);
     serve({
-      'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['BreakOut', 'ShiftOut'], 'Recorded') }),
+      'POST /api/attendance': () => ({ status: 200, body: attendance([shiftIn0652], ['Break1Out', 'ShiftOut'], 'Recorded') }),
     });
     const { user } = await renderApp(SIGN);
 
@@ -415,7 +416,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     const server = serve({}, myWork(onDuty));
     const { user } = await renderApp(SIGN);
 
-    await user.click(await screen.findByRole('button', { name: 'ออกพัก' }));
+    await user.click(await screen.findByRole('button', { name: 'ออกพัก 1' }));
 
     expect(await screen.findByRole('button', { name: 'กำลังบันทึก...' })).toBeDisabled();
     const other = screen.getByRole('button', { name: 'เลิกงาน' });
@@ -486,13 +487,12 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(screen.queryByRole('button', { name: 'เข้างาน' })).not.toBeInTheDocument();
   });
 
-  it('how the buttons work waits behind a phone-size ℹ (owner, 2026-10-27)', async () => {
+  it('omits redundant check-in info note', async () => {
     serve({});
     await renderApp(SIGN);
 
     await screen.findByRole('button', { name: 'เข้างาน' });
-    expectBehindMoreInfo('กดตามปุ่มที่ขึ้นบนหน้าจอ เว้นอย่างน้อย 5 นาทีระหว่างการลงเวลาแต่ละครั้ง ระบบนี้ใช้ดูว่าพื้นที่มีคนทำงานแล้วหรือยัง', 'เกี่ยวกับการลงเวลา');
-    expect(screen.getByText('เกี่ยวกับการลงเวลา').closest('summary')).toHaveClass('min-h-12');
+    expect(screen.queryByText('เกี่ยวกับการลงเวลา')).not.toBeInTheDocument();
   });
 });
 
@@ -511,8 +511,8 @@ function slot(rows: AttendanceAction[], overrides: Partial<AttendanceState> = {}
     shiftDate: '2026-10-15',
     shift: 'Day',
     events: [],
-    nextEvents: [],
-    lifecycleVersion: 'Numbered6',
+
+
     stateRevision: '5',
     actions: rows,
     gaps: [],
@@ -535,32 +535,13 @@ const sixPending = [
 ];
 
 describe('the six-action lifecycle (spec §8)', () => {
-  it('a legacy slot keeps its stored four rows, from the server action list, and never shows a numbered second break', async () => {
-    const legacy = slot(
-      [
-        act('ShiftIn', 'recorded', '2026-10-14T23:52:00Z'),
-        act('BreakOut', 'pending'),
-        act('BreakIn', 'pending'),
-        act('ShiftOut', 'pending'),
-      ],
-      { lifecycleVersion: 'Legacy4', stateRevision: '2', nextActions: [{ action: 'BreakOut', requiredGaps: [] }] },
-    );
-    serve({}, myWork(legacy));
-    await renderApp(SIGN);
-
-    expect(await screen.findByRole('button', { name: 'ออกพัก' })).toBeInTheDocument();
-    expect(steps()).toEqual(['เข้างาน 06:52', 'ออกพัก –', 'กลับจากพัก –', 'เลิกงาน –']);
-    expect(screen.queryByText(/กลับจากพัก 2/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'ออกพัก 1' })).not.toBeInTheDocument();
-  });
-
-  it('a numbered slot shows all six actions and sends the contract and the revision it read', async () => {
+  it('a numbered slot shows all six actions and sends the revision it read', async () => {
     fakeGps(nearSign);
     const answered = slot(
       [act('ShiftIn', 'recorded', '2026-10-14T23:52:00Z'), ...sixPending.slice(1)],
       {
         events: [shiftIn0652],
-        nextEvents: ['Break1Out', 'ShiftOut'],
+
         nextActions: [
           { action: 'Break1Out', requiredGaps: [] },
           { action: 'ShiftOut', requiredGaps: ['Break1Out', 'Break1In', 'Break2Out', 'Break2In'] },
@@ -594,7 +575,7 @@ describe('the six-action lifecycle (spec §8)', () => {
       latitude: 13.7563,
       longitude: 100.5018,
       accuracyM: 12,
-      lifecycleVersion: 'Numbered6',
+
       stateRevision: '5',
     });
     expect(steps()).toEqual([
@@ -614,7 +595,7 @@ describe('the six-action lifecycle (spec §8)', () => {
       [act('ShiftIn', 'recorded', '2026-10-14T23:52:00Z'), ...sixPending.slice(1)],
       {
         events: [shiftIn0652],
-        nextEvents: ['Break2Out', 'ShiftOut'],
+
         nextActions: [
           { action: 'Break2Out', requiredGaps: ['Break1Out', 'Break1In'] },
           { action: 'ShiftOut', requiredGaps: ['Break1Out', 'Break1In', 'Break2Out', 'Break2In'] },
@@ -632,7 +613,7 @@ describe('the six-action lifecycle (spec §8)', () => {
       ],
       {
         events: [shiftIn0652, entry('Break2Out', '2026-10-15T07:00:00Z')],
-        nextEvents: ['Break2In', 'ShiftOut'],
+
         nextActions: [
           { action: 'Break2In', requiredGaps: [] },
           { action: 'ShiftOut', requiredGaps: ['Break2In'] },
@@ -657,7 +638,7 @@ describe('the six-action lifecycle (spec §8)', () => {
     expect(server.calls.find((call) => call.path === '/api/attendance')?.body).toMatchObject({
       eventType: 'Break2Out',
       confirmGaps: ['Break1Out', 'Break1In'],
-      lifecycleVersion: 'Numbered6',
+
       stateRevision: '5',
     });
     expect(steps()).toEqual([
@@ -705,7 +686,7 @@ describe('the six-action lifecycle (spec §8)', () => {
     )));
     await renderApp(SIGN);
 
-    expect(await screen.findByText('เวลาเลิกงานก่อนจบกะไม่ตรงกับช่วงลาที่บันทึกไว้')).toBeVisible();
+    expect(await screen.findByText('เวลาเลิกงานไม่ตรงกับช่วงลา')).toBeVisible();
     expect(steps().at(-1)).toBe('เลิกงาน 13:00');
   });
 
@@ -733,7 +714,7 @@ describe('the six-action lifecycle (spec §8)', () => {
           status: 409,
           body: {
             message: 'หน้านี้ไม่ตรงกับการลงเวลาล่าสุด โหลดหน้าใหม่แล้วลองอีกครั้ง',
-            nextEvents: [],
+
             code: 'refresh-required',
           },
         }),
@@ -869,7 +850,7 @@ describe('the transfer arrival (spec §9)', () => {
     const afterShiftOut = {
       ...originInstructed,
       events: [shiftIn0652, breakOut, shiftOutEntry],
-      nextEvents: [],
+
       nextActions: [],
       outcome: 'Recorded' as const,
       stateRevision: 'rev-after-out',
@@ -915,7 +896,7 @@ describe('the transfer arrival (spec §9)', () => {
       latitude: 13.7563,
       longitude: 100.5018,
       accuracyM: 12,
-      lifecycleVersion: 'Numbered6',
+
       stateRevision: '5',
       confirmGaps: ['Break1In', 'Break2Out', 'Break2In'],
       confirmPendingTransfer: true,

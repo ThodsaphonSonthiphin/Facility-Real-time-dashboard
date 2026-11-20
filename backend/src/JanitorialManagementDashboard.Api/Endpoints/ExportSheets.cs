@@ -1,3 +1,4 @@
+using JanitorialManagementDashboard.Application.Attendance;
 using JanitorialManagementDashboard.Application.Export;
 using JanitorialManagementDashboard.Application.Inspections;
 using JanitorialManagementDashboard.Application.Rounds;
@@ -15,8 +16,7 @@ internal static class ExportSheets
     public const string SubmissionsName = "การส่งงาน";
     public const string InspectionsName = "การตรวจงาน";
 
-    private static readonly AttendanceEvent[] Events =
-        [AttendanceEvent.ShiftIn, AttendanceEvent.BreakOut, AttendanceEvent.BreakIn, AttendanceEvent.ShiftOut];
+    private static readonly IReadOnlyList<AttendanceEvent> Events = AttendanceLifecycle.Order;
 
     private sealed record SortedRow(DateOnly ShiftDate, Shift Shift, DateTime SortUtc, string Tie, IReadOnlyList<string> Cells);
 
@@ -24,7 +24,7 @@ internal static class ExportSheets
     private static string Building(string code, IReadOnlyDictionary<string, string> names) =>
         names.TryGetValue(code, out var name) ? $"{code} · {name}" : code;
 
-    /// <summary>One row per Cleaner per shift: the four times, who recorded them, and the GPS verdicts.</summary>
+    /// <summary>One row per Cleaner per shift: the six times, who recorded them, and the GPS verdicts.</summary>
     public static ExcelSheet Attendance(IReadOnlyList<AttendanceExportRow> events, IReadOnlyDictionary<string, string> buildingNames)
     {
         var rows = events
@@ -34,7 +34,10 @@ internal static class ExportSheets
                 var first = group.MinBy(e => e.OccurredAtUtc)!;
                 // shift_attendances is unique per event per shift, so each event appears at most once
                 var byEvent = group.ToDictionary(e => e.EventType);
-                var edited = Events.Where(t => byEvent.TryGetValue(t, out var e) && e.Source != AttendanceSource.Scan).ToList();
+                var edited = Events.Where(t => byEvent.TryGetValue(t, out var e) && e.Source != AttendanceSource.Scan)
+                    .GroupBy(t => byEvent[t].Source == AttendanceSource.SupervisorAdd ? "เพิ่มโดยหัวหน้างาน" : "แก้โดยแอดมิน")
+                    .Select(source => $"{source.Key}: {string.Join(", ", source.Select(ThaiLabels.EventName))}")
+                    .ToList();
                 var outside = Events.Where(t => byEvent.TryGetValue(t, out var e) && e.WithinRadius == false).ToList();
                 IReadOnlyList<string> cells =
                 [
@@ -45,7 +48,7 @@ internal static class ExportSheets
                     first.EmployeeId,
                     first.DisplayName,
                     .. Events.Select(t => byEvent.TryGetValue(t, out var e) ? ThaiLabels.Clock(e.OccurredAtUtc) : string.Empty),
-                    edited.Count == 0 ? "สแกนเอง" : "แก้โดยแอดมิน: " + string.Join(", ", edited.Select(ThaiLabels.EventName)),
+                    edited.Count == 0 ? "สแกนเอง" : string.Join(" · ", edited),
                     outside.Count > 0
                         ? "นอกรัศมี: " + string.Join(", ", outside.Select(t => $"{ThaiLabels.EventName(t)} {byEvent[t].DistanceM} ม."))
                         : group.Any(e => e.WithinRadius == true) ? "ในรัศมี" : "-",
@@ -55,7 +58,7 @@ internal static class ExportSheets
 
         return new ExcelSheet(
             AttendanceName,
-            ["วันที่กะ", "กะ", "ตึก", "พื้นที่", "รหัสพนักงาน", "ชื่อ", "เข้างาน", "ออกพัก", "กลับจากพัก", "เลิกงาน", "ที่มา", "ตำแหน่ง"],
+            ["วันที่กะ", "กะ", "ตึก", "พื้นที่", "รหัสพนักงาน", "ชื่อ", .. Events.Select(ThaiLabels.EventName), "ที่มา", "ตำแหน่ง"],
             Sort(rows));
     }
 

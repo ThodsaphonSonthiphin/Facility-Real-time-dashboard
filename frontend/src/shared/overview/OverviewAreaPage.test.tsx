@@ -88,13 +88,13 @@ describe('Overview Area destinations', () => {
     const { user, router } = await renderApp(cleaningUrl.replace('group=incomplete', 'group=missedCleaning'));
 
     expect(await screen.findByText(/ตึกเดิม/)).toBeVisible();
-    expect(screen.getByText('สถานะพื้นที่เปลี่ยนจากรายการที่เลือกแล้ว')).toBeVisible();
+    expect(screen.getByText('สถานะพื้นที่เปลี่ยนแล้ว')).toBeVisible();
     const history = screen.getByRole('region', { name: 'ประวัติรอบของพื้นที่' });
     expect(within(history).getAllByRole('link')).toHaveLength(2);
     await user.click(within(history).getByRole('link', { name: /08:00–09:00/ }));
     expect(await screen.findByRole('heading', { name: 'รอบที่เลือก 08:00–09:00' })).toBeVisible();
     expect(screen.getByText('เหตุผลที่สรุปรอบ ยกเลิกรอบเมื่อการตั้งค่าเปลี่ยน')).toBeVisible();
-    expect(screen.getByText('ประวัติสำหรับอ่านข้อมูล')).toBeVisible();
+    expect(screen.getByText('ดูย้อนหลังเท่านั้น')).toBeVisible();
     expect(screen.getByText('งานที่ส่ง #701')).toBeVisible();
     expect(new URLSearchParams(router.state.location.search).get('page')).toBe('2');
     const detailCalls = calls.filter((call) => call.path === '/api/admin/overview/areas/91');

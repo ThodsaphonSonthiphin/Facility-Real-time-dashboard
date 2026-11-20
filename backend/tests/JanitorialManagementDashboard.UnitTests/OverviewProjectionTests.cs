@@ -93,7 +93,7 @@ public class OverviewProjectionTests
             [
                 new(1, 96, 5, AttendanceEvent.ShiftIn, At(7), false),
                 new(2, 10, 5, AttendanceEvent.ShiftOut, At(18), false),
-                new(3, 10, 5, AttendanceEvent.BreakOut, At(10), false),
+                new(3, 10, 5, AttendanceEvent.Break1Out, At(10), false),
             ],
             covers:
             [

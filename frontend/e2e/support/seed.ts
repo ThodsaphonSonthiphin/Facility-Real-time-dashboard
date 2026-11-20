@@ -89,7 +89,6 @@ interface SchedulingFixture {
   shift: 'Day' | 'Night';
   weekStart: string;
   planningWeek: string;
-  activation: { opensAt: string; closesAt: string; activatedAt: string; version: 'Numbered6' };
   buildingA: { id: number; code: string };
   buildingB: { id: number; code: string };
   buildingC: { id: number; code: string };

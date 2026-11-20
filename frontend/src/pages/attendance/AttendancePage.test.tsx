@@ -6,7 +6,6 @@ import { hub } from '../../test/fakeSignalR';
 import { apiIdle, attendanceBoard, emptyRow, workingRow } from '../../test/liveFixtures';
 import { renderApp } from '../../test/renderApp';
 import { overviewDetailFixture } from '../../test/overviewFixtures';
-import { expectBehindMoreInfo, expectInView } from '../../test/moreInfo';
 
 function serve(routes: FakeRoutes = {}) {
   return fakeServer({
@@ -81,9 +80,9 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     });
     await renderApp('/admin/attendance?source=overview&date=2026-11-04&shift=Day&building=1&group=entered&page=2&areaId=91&view=attendance');
 
-    const evidence = await screen.findByRole('region', { name: 'หลักฐานเข้าพื้นที่' });
-    expect(within(evidence).getByText(/ยืนยันถึงพื้นที่หลังย้าย/)).toHaveTextContent('รายการย้าย #77');
-    const actions = screen.getByRole('region', { name: 'เวลาที่บันทึกในพื้นที่' });
+    const evidence = await screen.findByRole('region', { name: 'การเข้าพื้นที่' });
+    expect(within(evidence).getByText(/ยืนยันถึงพื้นที่ใหม่/)).toHaveTextContent('รายการย้าย #77');
+    const actions = screen.getByRole('region', { name: 'เวลาที่บันทึก' });
     expect(within(actions).getByText(/กลับจากพัก 1/)).toBeVisible();
     const addition = within(actions).getByText(/หัวหน้างานเติมเวลา/);
     expect(addition).toHaveTextContent('สแกนไม่ติด');
@@ -98,9 +97,9 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     expect(exempt.querySelector('time')).toBeNull();
     expect(leave.getByText(/แม่บ้านอีกคน · เข้างาน · ลงเวลาในช่วงลาที่บันทึก/)).toBeVisible();
     expect(within(actions).queryByText(/ไม่ต้องลงเวลาเนื่องจากลา/)).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'ความรับผิดชอบจากการย้ายพื้นที่' })).toHaveTextContent('แม่บ้านทดลอง 91');
-    expect(screen.getByRole('region', { name: 'การมอบหมายคนทำแทน' })).toHaveTextContent('มอบหมาย');
-    expect(screen.getByText('ประวัติสำหรับอ่านข้อมูล')).toBeVisible();
+    expect(screen.getByRole('region', { name: 'การย้ายพื้นที่' })).toHaveTextContent('แม่บ้านทดลอง 91');
+    expect(screen.getByRole('region', { name: 'คนทำแทน' })).toHaveTextContent('มอบหมาย');
+    expect(screen.getByText('ดูย้อนหลังเท่านั้น')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'มอบหมายทำแทน' })).not.toBeInTheDocument();
     expect(boardCalls(server)).toHaveLength(0);
   });
@@ -115,7 +114,7 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     });
     await renderApp('/admin/attendance?source=overview&date=2026-11-04&shift=Day&areaId=91&view=attendance');
 
-    expect(await screen.findByText('ประวัติสำหรับอ่านข้อมูล')).toBeVisible();
+    expect(await screen.findByText('ดูย้อนหลังเท่านั้น')).toBeVisible();
     expect(screen.getByText(/ยังรับข้อมูลถึง/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'มอบหมายทำแทน' })).not.toBeInTheDocument();
     expect(boardCalls(server)).toHaveLength(0);
@@ -324,13 +323,11 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     expect(within(menu).getByRole('link', { name: 'ส่งออก Excel' })).toHaveAttribute('href', '/admin/export');
   });
 
-  it('the one-line note is in view; the longer notes wait behind ℹ (the design file)', async () => {
+  it('keeps page header concise without redundant MoreInfo notes', async () => {
     serve();
     await renderApp('/admin/attendance');
 
     await loaded();
-    expectInView(/ไม่ใช่ระบบคิดสายหรือลงเวลาทำงาน/);
-    expectBehindMoreInfo(/^เรียงพื้นที่ที่ยังไม่มีคนขึ้นก่อน/, 'เกี่ยวกับหน้านี้');
-    expectBehindMoreInfo(/^ลืมลงเวลาเลิกงาน/, 'เกี่ยวกับหน้านี้');
+    expect(screen.queryByText('เกี่ยวกับหน้านี้')).not.toBeInTheDocument();
   });
 });

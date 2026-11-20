@@ -47,7 +47,7 @@ describe('InspectionSummaryPage (D7, facility-0048 rule 5)', () => {
     await screen.findByText('หัวหน้าทดสอบ');
     expect(query(summaryGets(server)[0].search)).toEqual({});
     expect(screen.getByRole('heading', { name: 'สรุปการตรวจ' })).toBeInTheDocument();
-    expect(screen.getByText('ดูความครอบคลุมการตรวจของหัวหน้าแต่ละคนตามช่วงวันที่เลือก · ระบบไม่ให้คะแนนหรือจัดอันดับ')).toBeVisible();
+    expect(screen.queryByText('วิธีนับตัวเลข')).not.toBeInTheDocument();
     expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
       'หัวหน้า', 'ตึก · กะ', 'ตรวจ (ครั้ง)', 'ส่งแล้วไม่ได้ตรวจ', 'ให้แก้', 'ตรวจไกลป้าย', 'จุดที่ไม่ได้ตรวจเลย', 'รายละเอียด',
     ]);

@@ -6,7 +6,6 @@ import { Button } from '../../../shared/components/Button';
 import { EditedMark } from '../../../shared/components/Badge';
 import { KpiCard } from '../../../shared/components/KpiCard/KpiCard';
 import { LiveBadge } from '../../../shared/components/LiveBadge';
-import { MoreInfo } from '../../../shared/components/MoreInfo';
 import { linkClass } from '../../../shared/components/styles';
 import { Note } from '../../../shared/components/Note';
 import { PageLoading } from '../../../shared/components/PageState';
@@ -35,7 +34,6 @@ export function LegacyAttendancePage() {
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <AdminPageHeader
         title="การเข้างาน"
-        subtitle="ดูว่าพื้นที่ไหนมีคนดูแลอยู่และแก้เวลาที่ลงผิด · ไม่ใช่ระบบคิดสายหรือลงเวลาทำงาน"
         actions={<LiveBadge hubKey={attendanceHubKey(args)} />}
       />
       <BoardControls
@@ -73,14 +71,12 @@ export function LegacyAttendancePage() {
             />
           )}
           <AttendanceTable
-            lifecycleVersion={board.lifecycleVersion}
             rows={shown.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)}
             footer={shown.length > 0 && <TableFooter page={page} total={shown.length} onPage={setPage} />}
             onCorrect={openCorrection}
           />
         </>
       )}
-      <BoardNotes />
     </main>
   );
 }
@@ -95,7 +91,7 @@ function TableFooter({ page, total, onPage }: { page: number; total: number; onP
         <span>{`แสดง ${first}–${last} จาก ${total} พื้นที่`}</span>
         <span className="inline-flex items-center gap-1.5">
           <EditedMark />
-          {'= แก้โดยแอดมิน ดูเหตุผลใน '}
+          {'= แก้โดยแอดมิน · '}
           <Link className={linkClass} to="/admin/history">
             ประวัติการแก้ไข
           </Link>
@@ -132,26 +128,5 @@ function Tiles({ summary, onBreak }: { summary: BoardSummary; onBreak: number })
         <KpiCard key={label} as="li" label={label} value={count} icon={Icon} tone={tone} />
       ))}
     </ul>
-  );
-}
-
-/** Wireframe D2's notes under the table, shut until asked (owner, 2026-10-27). */
-function BoardNotes() {
-  return (
-    <MoreInfo summary="เกี่ยวกับหน้านี้">
-      <span>
-        เรียงพื้นที่ที่ยังไม่มีคนขึ้นก่อน · พื้นที่ที่ทำเฉพาะกะเช้าไม่นับเป็น "ต้องมีคน" ในกะดึก · มอบหมายคนทำแทนได้ที่{' '}
-        <Link className={linkClass} to="/admin/schedules">
-          ตารางงาน
-        </Link>
-      </span>
-      <span>
-        ลืมลงเวลาเลิกงาน: ช่องเลิกงานว่างไว้ หมดกะแล้วขึ้นใน{' '}
-        <Link className={linkClass} to="/admin/alerts">
-          รายการที่ขึ้นเตือน
-        </Link>{' '}
-        ให้แอดมินเติม
-      </span>
-    </MoreInfo>
   );
 }

@@ -10,7 +10,6 @@ import {
 import { freshOnOpen } from '../../shared/api/baseApi';
 import { isNotFound } from '../../shared/api/scanAnswers';
 import { Button } from '../../shared/components/Button';
-import { MoreInfo } from '../../shared/components/MoreInfo';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
@@ -64,7 +63,7 @@ export function CapturePage() {
     <PhoneScreen
       navMode="none"
       header={
-        <PhoneHeader back={{ to: `/admin/areas/${areaId}`, label: 'กลับไปหน้าจัดการพื้นที่และป้าย' }}>
+        <PhoneHeader back={{ to: `/admin/areas/${areaId}`, label: 'พื้นที่และป้าย' }}>
           {detail && (
             <span className="text-sm text-text-2">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>
           )}
@@ -90,9 +89,6 @@ export function CapturePage() {
           onChoose={(signId) => setParams({ sign: String(signId) })}
         />
       )}
-      <MoreInfo size="phone" summary="เกี่ยวกับหน้านี้">
-        เมื่อบันทึกพิกัดแล้ว ดูรายการย้อนหลังได้ในหน้า “ประวัติการแก้ไขของแอดมิน”
-      </MoreInfo>
     </PhoneScreen>
   );
 }

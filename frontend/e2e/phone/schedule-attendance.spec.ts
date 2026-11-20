@@ -39,8 +39,8 @@ test.describe('scheduling attendance', () => {
       await manager.getByRole('button', { name: new RegExp(`^(แก้เฉพาะวันที่|แก้ไขแผนย้อนหลัง) ${fixture.leave.name} ${date}$`) }).click();
       const dialog = manager.getByRole('dialog');
       await dialog.getByLabel('รายการที่จะแก้').selectOption('leave');
-      await dialog.getByLabel('เริ่มลา (เวลาไทย)').fill(thaiInput(fixture.leaveStartsAt));
-      await dialog.getByLabel('สิ้นสุดลา (เวลาไทย)').fill(thaiInput(fixture.leaveEndsAt));
+      await dialog.getByLabel('เริ่มลา').fill(thaiInput(fixture.leaveStartsAt));
+      await dialog.getByLabel('สิ้นสุดลา').fill(thaiInput(fixture.leaveEndsAt));
       await dialog.getByRole('button', { name: 'ตรวจสอบ', exact: true }).click();
       await saveReviewedSchedule(manager);
     } finally {
@@ -53,7 +53,7 @@ test.describe('scheduling attendance', () => {
     await page.goto(`/check-in/${fixture.leaveArea.checkInToken}`);
     await expect(page.getByText('มีการลาที่บันทึกไว้ในกะนี้')).toBeVisible();
     const before = await authenticatedRead<AttendanceState>(page.request, `${attendancePath}/me`, token);
-    expect(before).toMatchObject({ shiftDate: fixture.shiftDate, shift: fixture.shift, lifecycleVersion: 'Numbered6', isLeave: true });
+    expect(before).toMatchObject({ shiftDate: fixture.shiftDate, shift: fixture.shift, isLeave: true });
     expect(before.events.map(({ eventType }) => eventType)).toEqual(['ShiftIn']);
     await expect(page.getByRole('list', { name: 'วันนี้' }).getByRole('listitem')).toHaveCount(6);
 
@@ -69,7 +69,7 @@ test.describe('scheduling attendance', () => {
     const after = await authenticatedRead<AttendanceState>(page.request, `${attendancePath}/me`, token);
     expect(after.events.map(({ eventType }) => eventType)).toEqual(['ShiftIn', 'ShiftOut']);
     expect(after.events[0]).toEqual(before.events[0]);
-    expect(after.nextEvents).toEqual([]);
+    expect(after.nextActions).toEqual([]);
     const departure = Date.parse(after.events[1].occurredAt);
     expect(departure).toBeGreaterThanOrEqual(pressedAt - 1000);
     expect(departure).toBeLessThanOrEqual(Date.now());
@@ -86,7 +86,7 @@ test.describe('scheduling attendance', () => {
     const completed = page.getByText(/^(สิ้นสุดกะแล้ว|ลงเวลาครบแล้วสำหรับกะนี้)$/);
     await expect(completed).toBeVisible();
     await expect(page.getByRole('button', { name: 'เลิกงาน', exact: true })).toHaveCount(0);
-    await expect(page.getByText('เวลาเลิกงานก่อนจบกะไม่ตรงกับช่วงลาที่บันทึกไว้')).toHaveCount(0);
+    await expect(page.getByText('เวลาเลิกงานไม่ตรงกับช่วงลา')).toHaveCount(0);
     await captureSchedule(page, info, 'attendance', completed);
     await page.setViewportSize({ width: 320, height: 720 });
     await captureSchedule(page, info, 'attendance', completed);
@@ -114,7 +114,7 @@ test.describe('scheduling attendance', () => {
       const mine = () => authenticatedRead<AttendanceState>(page.request, `${attendancePath}/me`, token);
       const before = await mine();
       expect(before).toMatchObject({
-        shiftDate: fixture.shiftDate, shift: fixture.shift, lifecycleVersion: 'Numbered6',
+        shiftDate: fixture.shiftDate, shift: fixture.shift,
         transfer: { state: 'instructed', fromAreaId: fixture.homeArea.id, toAreaId: fixture.destinationArea.id },
       });
       expect(before.transfer?.confirmedAt).toBeUndefined();

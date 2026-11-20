@@ -695,9 +695,15 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
 
                     b.HasIndex("SubmittedAt");
 
+                    b.HasIndex("ServicePointId", "Id");
+
+                    b.HasIndex("ServicePointId", "SubmittedAt");
+
                     b.HasIndex("UserId", "SubmittedAt");
 
                     b.HasIndex("ServicePointId", "ShiftDate", "Shift");
+
+                    b.HasIndex("ShiftDate", "Shift", "SubmittedAt");
 
                     b.ToTable("scan_records", (string)null);
                 });
@@ -933,56 +939,6 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("attendance_gaps", (string)null);
-                });
-
-            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AttendanceSlotLifecycle", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("ActivatedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("activated_at");
-
-                    b.Property<int?>("ActivatedById")
-                        .HasColumnType("int")
-                        .HasColumnName("activated_by_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("reason");
-
-                    b.Property<string>("Shift")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("varchar(10)")
-                        .HasColumnName("shift");
-
-                    b.Property<DateTime>("ShiftDate")
-                        .HasColumnType("date")
-                        .HasColumnName("shift_date");
-
-                    b.Property<string>("Version")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)")
-                        .HasColumnName("version");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ActivatedById");
-
-                    b.HasIndex("ShiftDate", "Shift")
-                        .IsUnique();
-
-                    b.ToTable("attendance_slot_lifecycles", (string)null);
                 });
 
             modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.CleanerProfilePeriod", b =>
@@ -2256,14 +2212,6 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.AttendanceSlotLifecycle", b =>
-                {
-                    b.HasOne("JanitorialManagementDashboard.Domain.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("ActivatedById")
-                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("JanitorialManagementDashboard.Domain.Entities.Scheduling.CleanerProfilePeriod", b =>

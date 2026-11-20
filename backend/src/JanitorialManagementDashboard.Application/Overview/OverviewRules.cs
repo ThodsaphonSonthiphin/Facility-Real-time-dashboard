@@ -51,23 +51,56 @@ public static class OverviewRules
         ArgumentNullException.ThrowIfNull(scans);
         ArgumentNullException.ThrowIfNull(inspections);
 
-        var latest = scans
-            .Where(s => s.PointId == round.PointId
-                && s.ShiftDate == slot.ShiftDate && s.Shift == slot.Shift
-                && s.Placement != Placement.OffRound && s.SubmittedAt <= at
-                && (s.OriginId ?? s.ExistingWindowId) == round.OriginId
-                && s.RoundStart == round.Start && s.RoundEnd == round.End)
-            .OrderByDescending(s => s.SubmittedAt).ThenByDescending(s => s.Id)
-            .FirstOrDefault();
-        var inspection = latest is null ? null : inspections
-            .Where(i => i.SubmissionId == latest.Id && i.InspectedAt <= at)
-            .OrderByDescending(i => i.InspectedAt).ThenByDescending(i => i.Id)
-            .FirstOrDefault();
-        // Issue is a point card tag, not round progress: it follows the point's newest scan in any slot or placement.
-        var issue = scans
-            .Where(s => s.PointId == round.PointId && s.SubmittedAt <= at)
-            .OrderByDescending(s => s.SubmittedAt).ThenByDescending(s => s.Id)
-            .FirstOrDefault();
+        return LatestForPoint(
+            slot,
+            round,
+            scans.Where(s => s.PointId == round.PointId),
+            id => inspections.Where(i => i.SubmissionId == id),
+            at);
+    }
+
+    internal static OverviewPoint LatestForPoint(
+        ShiftSlot slot,
+        RoundObligation round,
+        IEnumerable<OverviewSubmission> pointScans,
+        Func<long, IEnumerable<OverviewInspection>> inspectionsForSubmission,
+        DateTime at)
+    {
+        OverviewSubmission? latest = null;
+        OverviewSubmission? issue = null;
+        foreach (var scan in pointScans)
+        {
+            if (scan.SubmittedAt > at) continue;
+
+            if (issue is null || scan.SubmittedAt > issue.SubmittedAt || (scan.SubmittedAt == issue.SubmittedAt && scan.Id > issue.Id))
+            {
+                issue = scan;
+            }
+
+            if (scan.ShiftDate == slot.ShiftDate && scan.Shift == slot.Shift
+                && scan.Placement != Placement.OffRound
+                && (scan.OriginId ?? scan.ExistingWindowId) == round.OriginId
+                && scan.RoundStart == round.Start && scan.RoundEnd == round.End
+                && (latest is null || scan.SubmittedAt > latest.SubmittedAt || (scan.SubmittedAt == latest.SubmittedAt && scan.Id > latest.Id)))
+            {
+                latest = scan;
+            }
+        }
+
+        OverviewInspection? inspection = null;
+        if (latest is not null)
+        {
+            foreach (var candidate in inspectionsForSubmission(latest.Id))
+            {
+                if (candidate.InspectedAt <= at
+                    && (inspection is null || candidate.InspectedAt > inspection.InspectedAt
+                        || (candidate.InspectedAt == inspection.InspectedAt && candidate.Id > inspection.Id)))
+                {
+                    inspection = candidate;
+                }
+            }
+        }
+
         var windowEnd = ShiftCalendar.ToUtc(slot, round.End);
 
         return new(round.PointId, true,

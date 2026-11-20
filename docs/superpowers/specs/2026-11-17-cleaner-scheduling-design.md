@@ -1,5 +1,7 @@
 # แบบออกแบบตารางงานแม่บ้านและการลงเวลา
 
+> Updated 2026-11-20. Six attendance actions apply to every shift. The cutover and legacy lifecycle provisions below are superseded. Writes use the current attendance revision and explicit gap confirmation.
+
 ```mermaid
 flowchart TD
     S["Supervisor / Admin จัดแผนตามสิทธิ์"] --> R["ตารางประจำ + วันหยุดรายสัปดาห์ + ข้อยกเว้นวันที่"]

@@ -10,12 +10,12 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 const initial: AttendanceState = {
-  shiftDate: '2026-11-17', shift: 'Day', lifecycleVersion: 'Numbered6', stateRevision: 'attendance-1',
+  shiftDate: '2026-11-17', shift: 'Day', stateRevision: 'attendance-1',
   events: [
     { eventType: 'ShiftIn', occurredAt: '2026-11-17T00:03:00Z', source: 'Scan', withinRadius: true },
     { eventType: 'ShiftOut', occurredAt: '2026-11-17T06:00:00Z', source: 'Scan', withinRadius: true },
   ],
-  nextEvents: [],
+
   actions: [
     { eventType: 'ShiftIn', state: 'recorded', occurredAt: '2026-11-17T00:03:00Z' },
     { eventType: 'Break1Out', state: 'missing' },
@@ -78,7 +78,7 @@ it('shows the stored departure and leave mismatch in the scoped slot', async () 
   });
 
   const drawer = await openMissingTime(app.user);
-  expect(drawer.getByText('เวลาเลิกงานก่อนจบกะไม่ตรงกับช่วงลาที่บันทึกไว้')).toBeVisible();
+  expect(drawer.getByText('เวลาเลิกงานไม่ตรงกับช่วงลา')).toBeVisible();
   expect(drawer.getByRole('option', { name: 'เลิกงาน · ลงเวลาแล้ว 13:00' })).toBeDisabled();
 });
 
