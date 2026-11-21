@@ -222,5 +222,15 @@ public class MyWorkEndpointTests
         Assert.Equal("AR03", Assert.Single(work.Areas).AreaCode);
 
         await AttendanceApi.CheckInAsync(factory, cleaner, new DateTime(2026, 11, 18, 1, 5, 0, DateTimeKind.Utc), "token-checkin-ar03");
+
+        var scan = await cleaner.PostAsJsonAsync("/api/scan-records", new
+        {
+            qrToken = "token-ar03-point",
+            status = "Normal",
+            latitude = TestGps.NearLatitude,
+            longitude = TestGps.NearLongitude,
+            accuracyM = 10,
+        });
+        Assert.Equal(HttpStatusCode.Created, scan.StatusCode);
     }
 }

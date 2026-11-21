@@ -76,7 +76,8 @@ public static class CoverAssignmentEndpoints
             return Bad("พื้นที่นี้เป็นพื้นที่ประจำของแม่บ้านคนนี้อยู่แล้ว");
         }
 
-        if (slot.Shift != cleaner.Shift)
+        var effectiveShift = await CleanerShiftResolver.ResolveShiftAsync(db, cleaner, slot.ShiftDate);
+        if (slot.Shift != effectiveShift)
         {
             return Bad("ทำแทนได้เฉพาะกะประจำของแม่บ้านคนนี้");
         }
