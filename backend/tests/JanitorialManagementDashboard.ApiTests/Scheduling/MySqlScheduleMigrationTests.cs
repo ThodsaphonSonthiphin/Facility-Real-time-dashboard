@@ -91,6 +91,39 @@ public class MySqlScheduleMigrationTests
                 "WHERE table_schema = DATABASE() AND table_name = 'schedule_command_receipts' " +
                 "AND column_name = 'scope_json'").ToListAsync();
             Assert.Single(scopeColumn);
+
+            // Regular Cleaners created before Supervisor shift assignment store a nullable shift on MySQL.
+            var building = await db.Buildings.SingleAsync(b => b.Code == "A");
+            var unassignedCleaner = new User
+            {
+                Role = UserRole.Cleaner,
+                EmployeeId = "E9901",
+                DisplayName = "แม่บ้านรอจัดกะ",
+                SecretHash = "hash",
+                Shift = null,
+                AreaId = null,
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Users.Add(unassignedCleaner);
+            await db.SaveChangesAsync();
+
+            db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+            {
+                UserId = unassignedCleaner.Id,
+                Kind = CleanerKind.Regular,
+                HomeBuildingId = building.Id,
+                Shift = null,
+                EffectiveFrom = new DateOnly(2026, 11, 21),
+                Revision = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+
+            var storedProfile = await db.CleanerProfilePeriods.SingleAsync(p => p.UserId == unassignedCleaner.Id);
+            Assert.Null(storedProfile.Shift);
+            Assert.Equal(building.Id, storedProfile.HomeBuildingId);
         }
         finally
         {

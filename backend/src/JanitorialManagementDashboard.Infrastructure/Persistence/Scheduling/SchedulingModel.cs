@@ -31,7 +31,7 @@ public static class SchedulingModel
             e.ToTable("cleaner_profile_periods", t => t.HasCheckConstraint(
                 "ck_cleaner_profile_periods_effective_range", EffectiveRangeShape));
             e.Property(x => x.Kind).HasConversion(new UpperSnakeEnumConverter<CleanerKind>()).HasMaxLength(10);
-            e.Property(x => x.Shift).HasConversion(new UpperSnakeEnumConverter<Shift>()).HasMaxLength(10);
+            e.Property(x => x.Shift).HasConversion(new UpperSnakeEnumConverter<Shift>()).HasMaxLength(10).IsRequired(false);
             e.HasIndex(x => new { x.UserId, x.Kind, x.EffectiveFrom }).IsUnique();
             e.HasIndex(x => x.HomeBuildingId);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);

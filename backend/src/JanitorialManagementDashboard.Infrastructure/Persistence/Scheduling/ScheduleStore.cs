@@ -683,7 +683,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
         var conflicts = await ReliefConflictsAsync(person.Id, date, shift, ct);
         return new ReliefCandidateFacts(person.Id, person.EmployeeId!, person.DisplayName, sourceBuildingId, code,
-            profile.Shift, conflicts.Count == 0, conflicts.Count == 0 ? ReliefEligible : ReliefConflict, conflicts);
+            shift, conflicts.Count == 0, conflicts.Count == 0 ? ReliefEligible : ReliefConflict, conflicts);
     }
 
     private async Task<ScheduleProjection> ReadSnapshotAsync(
@@ -1214,9 +1214,10 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                      .Where(profile => OverlapsWeek(profile.EffectiveFrom, profile.EffectiveUntil, monday, weekEnd))
                      .OrderBy(profile => profile.EffectiveFrom).ThenBy(profile => profile.Id))
         {
-            if ((profile.HomeBuildingId ?? BaselineBuilding(baselines, profile, areaBuildings)) is int building)
+            if ((profile.HomeBuildingId ?? BaselineBuilding(baselines, profile, areaBuildings)) is int building
+                && profile.Shift is Shift profileShift)
             {
-                slots.Add(new ScopePeriod(person.Id, building, profile.Shift,
+                slots.Add(new ScopePeriod(person.Id, building, profileShift,
                     profile.EffectiveFrom, profile.EffectiveUntil));
             }
         }

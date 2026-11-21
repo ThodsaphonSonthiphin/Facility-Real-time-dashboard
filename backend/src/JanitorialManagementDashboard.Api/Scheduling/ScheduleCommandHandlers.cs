@@ -181,8 +181,10 @@ public abstract class ScheduleCommandHandler(TimeProvider clock) : IScheduleComm
             ScheduleResolver.Applies(entry.EffectiveFrom, entry.EffectiveUntil, date));
         if (profile is not null)
         {
-            return new PersonTarget(person, profile.Shift,
-                profile.HomeBuildingId ?? await BaselineBuildingAsync(db, person.Id, date, ct), profile.Kind);
+            return profile.Shift is Shift profileShift
+                ? new PersonTarget(person, profileShift,
+                    profile.HomeBuildingId ?? await BaselineBuildingAsync(db, person.Id, date, ct), profile.Kind)
+                : null;
         }
 
         if (profiles.Count > 0 || person.Shift is not Shift shift)

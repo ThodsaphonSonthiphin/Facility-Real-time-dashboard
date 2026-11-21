@@ -513,4 +513,44 @@ public class SchedulePersistenceTests
         ResultJson = "{}",
         CommittedAt = DateTime.UtcNow,
     };
+
+    [Fact]
+    public async Task Regular_cleaner_profile_period_allows_null_shift_when_unassigned()
+    {
+        using var factory = new JanitorialApiFactory();
+        await factory.WithDbAsync(async db =>
+        {
+            var building = await db.Buildings.SingleAsync(b => b.Code == "A");
+            var cleaner = new User
+            {
+                Role = UserRole.Cleaner,
+                EmployeeId = "E9901",
+                DisplayName = "แม่บ้านรอจัดกะ",
+                SecretHash = "hash",
+                Shift = null,
+                AreaId = null,
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Users.Add(cleaner);
+            await db.SaveChangesAsync();
+
+            db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+            {
+                UserId = cleaner.Id,
+                Kind = CleanerKind.Regular,
+                HomeBuildingId = building.Id,
+                Shift = null,
+                EffectiveFrom = new DateOnly(2026, 11, 21),
+                Revision = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+
+            var stored = await db.CleanerProfilePeriods.SingleAsync(p => p.UserId == cleaner.Id);
+            Assert.Null(stored.Shift);
+            Assert.Equal(building.Id, stored.HomeBuildingId);
+        });
+    }
 }
