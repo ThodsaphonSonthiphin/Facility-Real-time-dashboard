@@ -17,16 +17,15 @@ function areasFor(
   shift: Shift | '',
   homeBuildingId: number | null | undefined,
 ) {
-  if (shift && targetWeek?.destinations?.length) {
-    const matched = targetWeek.destinations.filter(
-      (dest) =>
-        dest.date === effectiveFrom &&
-        dest.shift === shift &&
-        (homeBuildingId == null || dest.buildingId === homeBuildingId),
-    );
-    if (matched.length > 0) {
-      return matched.flatMap((dest) => dest.areas);
-    }
+  if (shift && targetWeek?.destinations) {
+    return targetWeek.destinations
+      .filter(
+        (dest) =>
+          dest.date === effectiveFrom &&
+          dest.shift === shift &&
+          (homeBuildingId == null || dest.buildingId === homeBuildingId),
+      )
+      .flatMap((dest) => dest.areas);
   }
   return current?.edit?.areas ?? [];
 }
@@ -48,12 +47,15 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
   const [reviewed, setReviewed] = useState<SchedulePerson | undefined>();
   const { effectiveFrom, shift, areaId, breakGroup } = draft;
   const targetMonday = effectiveFrom && offsetDate(effectiveFrom, -((weekdays.indexOf(weekdayOf(effectiveFrom)) + 6) % 7));
-  const target = useGetManagedScheduleQuery(targetMonday && targetMonday !== props.week.weekStart
-    ? { ...props.selection, weekStart: targetMonday } : skipToken, schedulePoll);
+  const needsTargetFetch = Boolean(targetMonday && (targetMonday !== props.week.weekStart || props.selection.shift));
+  const target = useGetManagedScheduleQuery(
+    needsTargetFetch ? { weekStart: targetMonday, buildingId: props.selection.buildingId } : skipToken,
+    schedulePoll,
+  );
   const following = useGetManagedScheduleQuery(targetMonday && weekdayOf(effectiveFrom) !== 'Monday'
-    ? { ...props.selection, weekStart: offsetDate(targetMonday, 7) } : skipToken, schedulePoll);
+    ? { weekStart: offsetDate(targetMonday, 7), buildingId: props.selection.buildingId } : skipToken, schedulePoll);
   const live = props.latest?.rows.find((row) => row.userId === props.person.userId);
-  const targetWeek = targetMonday === props.week.weekStart
+  const targetWeek = !needsTargetFetch
     ? props.latest : target.isSuccess && !target.isFetching ? target.currentData : undefined;
   const effectiveRow = targetWeek?.rows.find((row) => row.userId === props.person.userId);
   const current = effectiveRow?.days.find((day) => day.date === effectiveFrom);
@@ -97,7 +99,7 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
   const editor = useScheduleReview({
     command, dirty: edited, problems, beforeAfter, phone: props.phone, onClose: props.onClose, changing: changes || !current?.edit?.canChange,
     verifyRetryScope: async () => {
-      const week = targetMonday === props.week.weekStart
+      const week = !needsTargetFetch
         ? await props.reloadEditorWeek() : await target.refetch().unwrap();
       const person = week.rows.find((row) => row.userId === props.person.userId);
       return person?.regularBaselineRevision === version
@@ -134,7 +136,7 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
     },
     compare: () => {
       props.onCompare();
-      if (targetMonday && targetMonday !== props.week.weekStart) void target.refetch();
+      if (needsTargetFetch) void target.refetch();
     },
     useLatest: () => {
       if (!incoming || !live) return;

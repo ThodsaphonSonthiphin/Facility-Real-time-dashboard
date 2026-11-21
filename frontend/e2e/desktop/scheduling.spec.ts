@@ -288,7 +288,7 @@ test.describe('scheduling', () => {
         const mine = await openSchedule(cleanerPage, '/my-schedule', fixture.planningWeek);
         expect(mine.rows[0].days.filter((day) => day.isDayOff).map((day) => day.date)).toEqual([cleaner.dayOff]);
         expect(mine.rows[0].days.every((day) => day.area?.value === cleaner.area.id)).toBe(true);
-        await expect(cleanerPage.getByRole('definition').filter({ hasText: String(cleaner.area.id) }).first()).toBeVisible();
+        await expect(cleanerPage.locator('dt:text-is("พื้นที่") + dd', { hasText: new RegExp(`^${cleaner.area.id}\\b`) }).first()).toBeVisible();
         await expect(cleanerPage.getByRole('article').filter({ hasText: weekDayLabel(cleaner.dayOff) })
           .getByText('วันหยุด', { exact: true })).toBeVisible();
       } finally {

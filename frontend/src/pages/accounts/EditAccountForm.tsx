@@ -111,7 +111,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
                 value={draft.shift}
                 blockOf={blockOf}
                 disabled={isLoading}
-                allowEmpty={account.role === 'Cleaner' && draft.cleanerKind !== 'Relief' && draft.areaId === ''}
+                allowEmpty={account.role === 'Cleaner' && draft.cleanerKind !== 'Relief' && Boolean(draft.homeBuildingId) && draft.areaId === ''}
                 onChange={(shift) => set({ shift })}
               />
             )}

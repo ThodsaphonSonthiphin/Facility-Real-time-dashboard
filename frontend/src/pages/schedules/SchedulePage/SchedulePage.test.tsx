@@ -523,6 +523,10 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     const table = await screen.findByRole('table', { name: 'ตารางงานรายสัปดาห์' });
     expect(within(table).getByText('ยังไม่จัดกะ')).toBeInTheDocument();
 
+    const contextBar = await screen.findByRole('region', { name: 'จัดการวันที่เลือก' });
+    expect(within(contextBar).queryByRole('button', { name: /แก้เฉพาะวันที่/ })).not.toBeInTheDocument();
+    expect(within(contextBar).queryByRole('button', { name: /แก้ไขแผนย้อนหลัง/ })).not.toBeInTheDocument();
+
     const setupButton = await screen.findByRole('button', { name: 'ตั้งตารางประจำ' });
     await user.click(setupButton);
     expect(await screen.findByRole('dialog', { name: 'ตั้งตารางประจำ' })).toBeInTheDocument();

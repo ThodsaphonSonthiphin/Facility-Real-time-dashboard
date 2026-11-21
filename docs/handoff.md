@@ -14,11 +14,11 @@ Resolved the Production scheduling blocker (root cause introduced in `f9c3644`, 
 - **Production configuration reminder:** Before deploying, verify that the Production environment defines `Scheduling__CommandSigningKey` (>= 32 bytes) so `/api/schedules/command-tokens` and `/api/schedules/commands` succeed on save.
 - **Verification (directly observed):**
   - `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`: **588 passed, 0 failed, 0 skipped** (588 total).
-  - `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests`: **1,068 passed, 0 failed, 30 skipped** (1,098 total; 30 MySQL-gated cases skipped without `FACILITY_MYSQL_TEST`).
+  - `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests`: **1,074 passed, 0 failed, 30 skipped** (1,104 total; 30 MySQL-gated cases skipped without `FACILITY_MYSQL_TEST`).
   - `npm --prefix frontend run lint`: **0 errors**.
-  - `NODE_ENV=test npm --prefix frontend test`: **83/83 files, 785/785 tests passed**.
-  - `npm --prefix frontend run build`: `index-D3w2tRg6.js` **390.66 kB** (**111.83 kB** gzip `<= 200 kB`), `index-DzIlufKt.css` **54.66 kB** (**10.36 kB** gzip).
-  - `E2E_HEADLESS=1 E2E_SLOW_MO=0 npm --prefix frontend run e2e -- --dataset large scheduling.spec.ts admin-workflows.spec.ts`: **9 passed, 0 failed** (53.2s; evidence in `.run/e2e/20261121194044_c5530a6a`).
+  - `NODE_ENV=test npm --prefix frontend test`: **83/83 files, 786/786 tests passed**.
+  - `npm --prefix frontend run build`: `index-CPw3ehVV.js` **390.67 kB** (**111.83 kB** gzip `<= 200 kB`), `index-DzIlufKt.css` **54.66 kB** (**10.36 kB** gzip).
+  - `E2E_HEADLESS=1 E2E_SLOW_MO=0 npm --prefix frontend run e2e -- --dataset large scheduling.spec.ts admin-workflows.spec.ts`: **9 passed, 0 failed** (37.2s; evidence in `.run/e2e/20261121200927_b6b788ac`).
 
 ## Overview Entry availability fix (2026-11-21, Asia/Bangkok)
 
