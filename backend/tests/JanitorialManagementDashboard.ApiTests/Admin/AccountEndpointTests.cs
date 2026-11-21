@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -291,7 +292,7 @@ public class AccountEndpointTests
     }
 
     [Theory]
-    [InlineData("Regular", null, true, false)]     // a regular Cleaner needs an Area to know their building
+    [InlineData("Regular", null, false, false)]    // a regular Cleaner needs a home building or an Area
     [InlineData("Relief", "AR01", true, false)]    // a relief has no regular Area
     [InlineData("Relief", null, false, false)]     // a relief needs a home building
     [InlineData("Relief", null, true, true)]       // the home building must be one that exists
@@ -324,6 +325,35 @@ public class AccountEndpointTests
             Assert.Empty(await db.Users.Where(user => user.EmployeeId == "E2007").ToListAsync());
             Assert.Empty(await db.CleanerProfilePeriods.ToListAsync());
         });
+    }
+
+    [Fact]
+    public async Task A_regular_cleaner_can_be_created_with_home_building_only_and_null_shift()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory, "A");
+        Scheduling.ScheduleWriteApi.Today(factory);
+
+        var response = await admin.PostAsJsonAsync(AccountApi.Path, new
+        {
+            role = "Cleaner",
+            displayName = "แม่บ้านใหม่ ยังไม่จัดกะ",
+            employeeId = "E3099",
+            phone = "0893099000",
+            cleanerKind = "Regular",
+            homeBuildingId = buildingA,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await AccountApi.ReadAsync(response);
+        Assert.Equal((null, (string?)null, "Regular", (int?)buildingA, "A"),
+            (created.AreaId, created.Shift, created.CleanerKind, created.HomeBuildingId, created.HomeBuildingCode));
+
+        var profile = await AdminSetupApi.ReadAsync(factory, db =>
+            db.CleanerProfilePeriods.SingleAsync(p => p.UserId == created.Id));
+        Assert.Equal((CleanerKind.Regular, (int?)buildingA, (Shift?)null, new DateOnly(2026, 11, 17)),
+            (profile.Kind, profile.HomeBuildingId, profile.Shift, profile.EffectiveFrom));
     }
 
     [Fact]

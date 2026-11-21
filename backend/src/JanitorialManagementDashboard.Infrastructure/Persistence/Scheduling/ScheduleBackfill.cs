@@ -26,18 +26,19 @@ public static class ScheduleBackfill
 
         var cleaners = await db.Users.AsNoTracking()
             .Include(u => u.Area)
-            .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId != null && u.Shift != null)
+            .Where(u => u.Role == UserRole.Cleaner && u.IsActive && (u.AreaId != null || u.BuildingId != null))
             .ToListAsync(ct);
         foreach (var cleaner in cleaners)
         {
-            if (!profiled.Contains(cleaner.Id))
+            var homeBuildingId = cleaner.Area?.BuildingId ?? cleaner.BuildingId;
+            if (!profiled.Contains(cleaner.Id) && homeBuildingId is int homeId)
             {
                 db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
                 {
                     UserId = cleaner.Id,
                     Kind = CleanerKind.Regular,
-                    HomeBuildingId = cleaner.Area!.BuildingId,
-                    Shift = cleaner.Shift!.Value,
+                    HomeBuildingId = homeId,
+                    Shift = cleaner.Shift,
                     EffectiveFrom = historyStartsAt,
                     Revision = 1,
                     CreatedAt = now,
@@ -45,7 +46,7 @@ public static class ScheduleBackfill
                 });
             }
 
-            if (!baselined.Contains(cleaner.Id))
+            if (!baselined.Contains(cleaner.Id) && cleaner.AreaId is int areaId)
             {
                 var baseline = new ScheduleBaseline
                 {
@@ -61,7 +62,7 @@ public static class ScheduleBackfill
                     baseline.Days.Add(new ScheduleBaselineDay
                     {
                         Weekday = weekday,
-                        AreaId = cleaner.AreaId,
+                        AreaId = areaId,
                         BreakGroup = null,
                         IsDayOff = false,
                     });

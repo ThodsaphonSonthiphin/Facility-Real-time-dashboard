@@ -250,6 +250,9 @@ try
             db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>(), scope.ServiceProvider.GetRequiredService<TimeProvider>(), firstAdmin, app.Logger);
         await OverviewHistoryBootstrap.EnsureAsync(db, attendance, scope.ServiceProvider.GetRequiredService<TimeProvider>(),
             app.Lifetime.ApplicationStopping);
+        var historyStart = schedulingSettings.HistoryStartsAt
+            ?? ScheduleAuthority.BusinessDate(scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime);
+        await ScheduleBackfill.EnsureAsync(db, historyStart, app.Lifetime.ApplicationStopping);
     }
 
     // 7. SignalR Hub Mapping

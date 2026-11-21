@@ -29,10 +29,10 @@ public static class AdminAccountEndpoints
             await CurrentUser.LoadAsync(principal, db) is null ? Results.Unauthorized() : Results.Ok(await AccountView.LoadAsync(db, clock)));
         accounts.MapPost("", CreateAsync);
         accounts.MapPut("/{id:int}", UpdateAsync);
-        accounts.MapPost("/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership) =>
-            SetActiveAsync(id, false, principal, db, clock, membership));
-        accounts.MapPost("/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership) =>
-            SetActiveAsync(id, true, principal, db, clock, membership));
+        accounts.MapPost("/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership, ScheduleStore store) =>
+            SetActiveAsync(id, false, principal, db, clock, membership, store));
+        accounts.MapPost("/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership, ScheduleStore store) =>
+            SetActiveAsync(id, true, principal, db, clock, membership, store));
         accounts.MapPut("/{id:int}/phone", ChangePhoneAsync);
         accounts.MapPut("/{id:int}/password", ResetPasswordAsync);
         return app;
@@ -156,13 +156,14 @@ public static class AdminAccountEndpoints
                 await db.SaveChangesAsync();
                 if (role == UserRole.Cleaner)
                 {
-                    // Spec §10 and controller ruling (a): the dated identity starts today, in this very transaction and
-                    // under this very audit row — never a fabricated history. A Cleaner with no Area and no kind keeps
-                    // having no dated row, exactly as before this task.
-                    await ApplyCleanerProfileAsync(db, store, user,
-                        request.CleanerKind ?? CleanerKind.Regular, place.HomeBuildingId, admin.Id,
-                        clock.GetUtcNow().UtcDateTime);
-                    await db.SaveChangesAsync();
+                    var kind = request.CleanerKind ?? CleanerKind.Regular;
+                    if (kind == CleanerKind.Relief || place.HomeBuildingId is not null)
+                    {
+                        await ScheduleSync.SyncCleanerAsync(
+                            db, store, user, place.HomeBuildingId, kind, admin.Id,
+                            BusinessDate(clock), clock.GetUtcNow().UtcDateTime);
+                        await db.SaveChangesAsync();
+                    }
                 }
             },
             beforeSave: role == UserRole.Supervisor
@@ -215,9 +216,10 @@ public static class AdminAccountEndpoints
             ? await CurrentCleanerProfileAsync(db, user.Id, businessDate)
             : null;
         var kind = request.CleanerKind ?? profileNow?.Kind ?? CleanerKind.Regular;
-        var homeBuildingId = kind == CleanerKind.Relief
-            ? request.HomeBuildingId ?? profileNow?.HomeBuildingId
-            : request.HomeBuildingId;
+        var homeBuildingId = request.HomeBuildingId
+            ?? (kind == CleanerKind.Relief || (request.AreaId is null && request.CleanerKind is null)
+                ? profileNow?.HomeBuildingId
+                : null);
 
         // Only an explicitly requested regular identity needs an Area: the defaulted one keeps the pre-existing behaviour
         // where a Cleaner may be left without one, and a relief is recognised whichever way its kind was decided.
@@ -280,12 +282,14 @@ public static class AdminAccountEndpoints
                         return outcome.Refusal;
                     }
 
-                    if (user.Role == UserRole.Cleaner && identityChanged)
+                    if (user.Role == UserRole.Cleaner
+                        && (identityChanged || before.AreaId != after.AreaId)
+                        && (kind == CleanerKind.Relief || place.HomeBuildingId is not null || beforeIdentity is not null))
                     {
-                        // Spec §10 and controller ruling (a): today's date starts the new identity; the period it replaces is
-                        // closed at today in this transaction, beside the audit row that records the change.
-                        return await ApplyCleanerProfileAsync(db, store, user, kind, place.HomeBuildingId, admin.Id,
-                            clock.GetUtcNow().UtcDateTime);
+                        await ScheduleSync.SyncCleanerAsync(
+                            db, store, user, place.HomeBuildingId, kind, admin.Id,
+                            businessDate, clock.GetUtcNow().UtcDateTime);
+                        return null;
                     }
 
                     return null;
@@ -328,7 +332,8 @@ public static class AdminAccountEndpoints
     /// (facility-0014), so its devices drop within 5 minutes. History keeps its name.
     /// </summary>
     private static async Task<IResult> SetActiveAsync(
-        int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership)
+        int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        SupervisorMembership membership, ScheduleStore store)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -381,14 +386,36 @@ public static class AdminAccountEndpoints
         Func<Task>? revokeSessions = active ? null : () => db.RevokeUserSessionsAsync(user.Id, now);
         // Spec §3: a deactivated account holds no scope, so its membership is closed on the business date; activating
         // opens the period again once the building/shift anchor shows the slot is free.
+        var businessDate = BusinessDate(clock);
         var conflict = await SaveAsync(
             db,
             ClaimOf(user),
-            BusinessDate(clock),
+            businessDate,
             revokeSessions,
-            beforeSave: user.Role == UserRole.Supervisor
-                ? async () => (await membership.ApplyAsync(user, open: active, admin.Id)).Refusal
-                : null);
+            beforeSave: async () =>
+            {
+                if (user.Role == UserRole.Supervisor)
+                {
+                    return (await membership.ApplyAsync(user, open: active, admin.Id)).Refusal;
+                }
+
+                if (user.Role == UserRole.Cleaner)
+                {
+                    var profileNow = await CurrentCleanerProfileAsync(db, user.Id, businessDate);
+                    var kind = profileNow?.Kind ?? CleanerKind.Regular;
+                    var homeBuildingId = profileNow?.HomeBuildingId
+                        ?? (user.AreaId is int areaId
+                            ? await db.Areas.AsNoTracking().Where(a => a.Id == areaId)
+                                .Select(a => (int?)a.BuildingId).FirstOrDefaultAsync()
+                            : null);
+                    if (kind == CleanerKind.Relief || homeBuildingId is not null)
+                    {
+                        await ScheduleSync.SyncCleanerAsync(db, store, user, homeBuildingId, kind, admin.Id, businessDate, now);
+                    }
+                }
+
+                return null;
+            });
         if (conflict is not null)
         {
             return conflict;

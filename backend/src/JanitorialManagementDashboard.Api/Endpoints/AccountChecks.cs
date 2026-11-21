@@ -84,13 +84,13 @@ internal static class AccountChecks
                     return (null, Bad("แม่บ้านประจำพื้นที่ ไม่ได้ประจำตึก"));
                 }
 
-                if (shift is not { } cleanerShift)
-                {
-                    return (null, Bad("ต้องเลือกกะของแม่บ้าน"));
-                }
-
                 if (cleanerKind == CleanerKind.Relief)
                 {
+                    if (shift is not { } cleanerShift)
+                    {
+                        return (null, Bad("ต้องเลือกกะของแม่บ้าน"));
+                    }
+
                     if (areaId is not null)
                     {
                         return (null, Bad("สแปร์ไม่มีพื้นที่ประจำ เลือกได้เฉพาะตึกต้นทางกับกะ"));
@@ -108,38 +108,54 @@ internal static class AccountChecks
                         : (new AccountPlace(null, null, cleanerShift, home.Id), null);
                 }
 
-                if (cleanerKind == CleanerKind.Regular && areaId is null)
+                if (areaId is int chosenAreaId)
                 {
-                    return (null, Bad("แม่บ้านประจำต้องเลือกพื้นที่ เพื่อทราบตึกที่สังกัด"));
+                    if (shift is not { } cleanerShift)
+                    {
+                        return (null, Bad("ต้องเลือกกะของแม่บ้าน"));
+                    }
+
+                    var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == chosenAreaId && (a.IsActive || a.Id == currentAreaId));
+                    if (area is null)
+                    {
+                        return (null, Bad("ต้องเลือกพื้นที่ที่ใช้งานอยู่"));
+                    }
+
+                    // Not HasShift: it is false for an inactive Area, and a kept inactive Area must still pass when the shift fits
+                    if (cleanerShift == Shift.Night && area.ShiftPattern != ShiftPattern.DayAndNight)
+                    {
+                        return (null, Bad($"{area.Code} ทำเฉพาะกะเช้า เลือกกะดึกไม่ได้"));
+                    }
+
+                    if (homeBuildingId is int chosen && chosen != area.BuildingId)
+                    {
+                        return (null, Bad("ตึกของแม่บ้านประจำมาจากพื้นที่ เลือกเองไม่ได้"));
+                    }
+
+                    return checkSlot && await HolderAsync(db, role, area.Id, null, cleanerShift, userId, businessDate) is { } holder
+                        ? (null, Conflict(SlotTaken(holder)))
+                        : (new AccountPlace(area, null, cleanerShift, area.BuildingId), null);
                 }
 
-                if (areaId is null)
+                if (cleanerKind == CleanerKind.Regular && homeBuildingId is null)
                 {
-                    return homeBuildingId is null
-                        ? (new AccountPlace(null, null, cleanerShift), null)
-                        : (null, Bad("ตึกของแม่บ้านประจำมาจากพื้นที่ เลือกเองไม่ได้"));
+                    return (null, Bad("แม่บ้านประจำต้องเลือกตึกประจำหรือพื้นที่ประจำ"));
                 }
 
-                var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && (a.IsActive || a.Id == currentAreaId));
-                if (area is null)
+                if (homeBuildingId is int chosenBuildingId)
                 {
-                    return (null, Bad("ต้องเลือกพื้นที่ที่ใช้งานอยู่"));
+                    var home = await db.Buildings.FirstOrDefaultAsync(b => b.Id == chosenBuildingId && b.IsActive);
+                    return home is null
+                        ? (null, Bad("ต้องเลือกตึกประจำที่ใช้งานอยู่"))
+                        : (new AccountPlace(null, null, shift, home.Id), null);
                 }
 
-                // Not HasShift: it is false for an inactive Area, and a kept inactive Area must still pass when the shift fits
-                if (cleanerShift == Shift.Night && area.ShiftPattern != ShiftPattern.DayAndNight)
+                if (shift is null)
                 {
-                    return (null, Bad($"{area.Code} ทำเฉพาะกะเช้า เลือกกะดึกไม่ได้"));
+                    return (null, Bad("ต้องเลือกกะของแม่บ้าน"));
                 }
 
-                if (homeBuildingId is int chosen && chosen != area.BuildingId)
-                {
-                    return (null, Bad("ตึกของแม่บ้านประจำมาจากพื้นที่ เลือกเองไม่ได้"));
-                }
-
-                return checkSlot && await HolderAsync(db, role, area.Id, null, cleanerShift, userId, businessDate) is { } holder
-                    ? (null, Conflict(SlotTaken(holder)))
-                    : (new AccountPlace(area, null, cleanerShift, area.BuildingId), null);
+                return (new AccountPlace(null, null, shift), null);
             }
 
             default:
@@ -199,92 +215,6 @@ internal static class AccountChecks
             .ToListAsync(ct);
         return periods.LastOrDefault(period =>
             ScheduleResolver.Applies(period.EffectiveFrom, period.EffectiveUntil, businessDate));
-    }
-
-    /// <summary>
-    /// Spec §10 and §14 (ADRs facility-0137, 0143, 0194 and 0215) with controller ruling (a): writes the dated Cleaner
-    /// profile the account form's fields describe, from today's Thai business date — never a fabricated past — inside the
-    /// caller's transaction and under the person's own baseline-head anchor. The period being replaced is closed
-    /// end-exclusive at today; a period that has not taken effect yet is corrected in place, so the same start date is never
-    /// stored twice; and a period that already states exactly this identity is left alone, which is what makes "saving the
-    /// same values writes nothing" still true.
-    /// <para>
-    /// A Cleaner with no Area and no dated row at all keeps having none: the account row remains the only projection for the
-    /// pre-backfill accounts of spec §14 rather than this edit inventing a schedule for them.
-    /// </para>
-    /// </summary>
-    public static async Task<IResult?> ApplyCleanerProfileAsync(
-        AppDbContext db, ScheduleStore store, User user, CleanerKind kind, int? homeBuildingId, int? actorId, DateTime now,
-        CancellationToken ct = default)
-    {
-        if (user.Role != UserRole.Cleaner || user.Shift is not Shift shift)
-        {
-            return null;
-        }
-
-        var businessDate = ScheduleAuthority.BusinessDate(now);
-        var periods = await db.CleanerProfilePeriods
-            .Where(period => period.UserId == user.Id)
-            .OrderBy(period => period.EffectiveFrom).ThenBy(period => period.Id)
-            .ToListAsync(ct);
-        var current = periods.LastOrDefault(period =>
-            ScheduleResolver.Applies(period.EffectiveFrom, period.EffectiveUntil, businessDate));
-        if (current is not null
-            && current.Kind == kind && current.HomeBuildingId == homeBuildingId && current.Shift == shift)
-        {
-            return null;
-        }
-
-        if (current is null && periods.Count == 0 && homeBuildingId is null && kind == CleanerKind.Regular)
-        {
-            return null;
-        }
-
-        // The per-person head anchor (Task 5): the profile write serialises with the person's baseline writes instead of
-        // inventing a second lock for the same person.
-        await store.LockBaselineHeadAsync(user.Id, now, ct);
-
-        var pending = periods.FirstOrDefault(period => period.EffectiveFrom >= businessDate);
-        if (pending is not null)
-        {
-            if (periods.Any(period => period.Id != pending.Id && period.Kind == kind
-                && period.EffectiveFrom == pending.EffectiveFrom))
-            {
-                return Conflict("มีข้อมูลตัวตนของคนนี้ซ้ำกันในวันเดียวกัน ต้องตรวจสอบก่อนบันทึก");
-            }
-
-            pending.Kind = kind;
-            pending.HomeBuildingId = homeBuildingId;
-            pending.Shift = shift;
-            pending.Revision += 1;
-            pending.UpdatedAt = now;
-            pending.CreatedById ??= actorId;
-            return null;
-        }
-
-        if (current is not null)
-        {
-            current.EffectiveUntil = businessDate;
-            current.Revision += 1;
-            current.UpdatedAt = now;
-        }
-
-        db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
-        {
-            UserId = user.Id,
-            Kind = kind,
-            HomeBuildingId = homeBuildingId,
-            Shift = shift,
-            EffectiveFrom = businessDate,
-            // A version that already starts later owns its dates, so this period stops where that one begins.
-            EffectiveUntil = periods.Where(period => period.EffectiveFrom > businessDate)
-                .Select(period => (DateOnly?)period.EffectiveFrom).Min(),
-            Revision = 1,
-            CreatedById = actorId,
-            CreatedAt = now,
-            UpdatedAt = now,
-        });
-        return null;
     }
 
     /// <summary>

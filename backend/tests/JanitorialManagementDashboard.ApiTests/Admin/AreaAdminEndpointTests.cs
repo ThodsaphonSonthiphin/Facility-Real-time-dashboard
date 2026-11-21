@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -546,5 +547,34 @@ public class AreaAdminEndpointTests
         var response = await supervisor.PostAsJsonAsync(Areas, new { code = "AR03", name = "Lobby", buildingId = 1, shiftPattern = "DayOnly" });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Assigning_cleaner_on_area_page_syncs_schedule_profile_and_baseline()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory, "A");
+        var cleanerId = await TestData.AddCleanerAsync(factory, "E4001", Shift.Day, phone: "0894001000");
+
+        var create = await admin.PostAsJsonAsync(Areas, new
+        {
+            code = "AR09",
+            name = "โซนใหม่",
+            buildingId = buildingA,
+            shiftPattern = "DayAndNight",
+            dayCleanerId = cleanerId,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var areaId = (await create.Content.ReadFromJsonAsync<AreaDetailModel>())!.Area.Id;
+        await factory.WithDbAsync(async db =>
+        {
+            var profile = await db.CleanerProfilePeriods.SingleAsync(p => p.UserId == cleanerId);
+            Assert.Equal((CleanerKind.Regular, (int?)buildingA, (Shift?)Shift.Day), (profile.Kind, profile.HomeBuildingId, profile.Shift));
+            var baseline = await db.ScheduleBaselines.Include(b => b.Days).SingleAsync(b => b.UserId == cleanerId);
+            Assert.Equal(7, baseline.Days.Count);
+            Assert.All(baseline.Days, d => Assert.Equal(areaId, d.AreaId));
+        });
     }
 }

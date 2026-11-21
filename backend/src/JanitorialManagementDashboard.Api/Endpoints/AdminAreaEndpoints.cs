@@ -1,13 +1,16 @@
 using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Areas;
 using JanitorialManagementDashboard.Application.Buildings;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Signs;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -69,7 +72,8 @@ public static class AdminAreaEndpoints
         string Code, string Name, int BuildingId, string ShiftPattern, int? DayCleanerId, int? NightCleanerId, int? RemovedNightWindows = null);
 
     private static async Task<IResult> CreateAsync(CreateAreaRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
+        OverviewMutation mutation, OverviewNotifications overview, ScheduleStore store, ScheduleNotifications notifications,
+        CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -96,14 +100,17 @@ public static class AdminAreaEndpoints
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
+        var businessDate = ScheduleAuthority.BusinessDate(now);
         var area = new Area { BuildingId = form.Building.Id, Code = code, Name = form.Name, ShiftPattern = form.Pattern, CreatedAt = now };
         // facility-0045: the Area's one check-in sign comes with it
         db.Signs.Add(new Sign { Area = area, Code = SignCodes.CheckIn(code), QrToken = SignCodes.NewQrToken(), QrIssuedAt = now });
 
+        IReadOnlyList<int> affectedCleaners;
         try
         {
             await db.SaveChangesAsync(ct);
-            await AreaCleaners.ApplyAsync(db, area.Id, form.DayCleaner, form.NightCleaner);
+            affectedCleaners = await AreaCleaners.ApplyAsync(
+                db, store, area.Id, area.BuildingId, form.DayCleaner, form.NightCleaner, admin.Id, businessDate, now, ct);
             AuditTrail.Add(
                 db, admin.Id, now, "AREA_CREATE", "areas", area.Id, $"เพิ่มพื้นที่ {code} {form.Name}",
                 before: null, after: Snapshot(area, form.DayCleaner, form.NightCleaner));
@@ -115,11 +122,22 @@ public static class AdminAreaEndpoints
             return Conflict("มีการบันทึกซ้อนกัน ลองใหม่อีกครั้ง");
         }
 
+        if (affectedCleaners.Count > 0)
+        {
+            var scopes = new[]
+            {
+                form.DayCleaner is not null ? new ScheduleScopeKey(area.BuildingId, Shift.Day) : null,
+                form.NightCleaner is not null ? new ScheduleScopeKey(area.BuildingId, Shift.Night) : null,
+            }.OfType<ScheduleScopeKey>().ToList();
+            await notifications.ChangedAsync(Guid.NewGuid(), new ScheduleChangeScope([], scopes, affectedCleaners), ct);
+        }
+
         return Results.Created($"/api/admin/areas/{area.Id}", await AdminSetupView.LoadAreaAsync(db, area.Id));
     }
 
     private static async Task<IResult> UpdateAsync(int id, UpdateAreaRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
+        OverviewMutation mutation, OverviewNotifications overview, ScheduleStore store, ScheduleNotifications notifications,
+        CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -150,11 +168,14 @@ public static class AdminAreaEndpoints
         }
 
         var before = Snapshot(area, current.FirstOrDefault(u => u.Shift == Shift.Day), current.FirstOrDefault(u => u.Shift == Shift.Night));
+        var beforeBuildingId = area.BuildingId;
 
         area.Name = form.Name;
         area.BuildingId = form.Building.Id;
         area.ShiftPattern = form.Pattern;
         var now = clock.GetUtcNow().UtcDateTime;
+        var businessDate = ScheduleAuthority.BusinessDate(now);
+        IReadOnlyList<int> affectedCleaners;
         try
         {
             List<PointRoundWindow> nightWindows = form.Pattern == ShiftPattern.DayOnly
@@ -162,7 +183,8 @@ public static class AdminAreaEndpoints
                 : [];
             // Wireframe D10: a day-only Area has no night rounds
             await RoundWindowRemoval.RemoveAsync(db, nightWindows);
-            await AreaCleaners.ApplyAsync(db, area.Id, form.DayCleaner, form.NightCleaner);
+            affectedCleaners = await AreaCleaners.ApplyAsync(
+                db, store, area.Id, area.BuildingId, form.DayCleaner, form.NightCleaner, admin.Id, businessDate, now, ct);
             var after = Snapshot(area, form.DayCleaner, form.NightCleaner);
             if (after != before || nightWindows.Count > 0)
             {
@@ -177,6 +199,15 @@ public static class AdminAreaEndpoints
         catch (DbUpdateException)
         {
             return Conflict("มีการบันทึกซ้อนกัน ลองใหม่อีกครั้ง");
+        }
+
+        if (affectedCleaners.Count > 0)
+        {
+            var scopes = new[] { beforeBuildingId, area.BuildingId }
+                .Distinct()
+                .SelectMany(b => new[] { new ScheduleScopeKey(b, Shift.Day), new ScheduleScopeKey(b, Shift.Night) })
+                .ToList();
+            await notifications.ChangedAsync(Guid.NewGuid(), new ScheduleChangeScope([], scopes, affectedCleaners), ct);
         }
 
         return Results.Ok(await AdminSetupView.LoadAreaAsync(db, area.Id));

@@ -36,6 +36,7 @@ internal static class AccountView
                 .ToListAsync();
         var homeIds = profiles.Where(period => period.HomeBuildingId != null)
             .Select(period => period.HomeBuildingId!.Value)
+            .Concat(users.Where(u => u.Role == UserRole.Cleaner && u.Area != null).Select(u => u.Area!.BuildingId))
             .Distinct()
             .ToList();
         var codes = homeIds.Count == 0
@@ -82,7 +83,7 @@ internal static class AccountView
         var kind = user.Role != UserRole.Cleaner
             ? (CleanerKind?)null
             : profile?.Kind ?? (user.AreaId is not null ? CleanerKind.Regular : null);
-        var home = profile?.HomeBuildingId;
+        var home = profile?.HomeBuildingId ?? (user.Role == UserRole.Cleaner ? user.Area?.BuildingId : null);
         return new AccountDto(
             user.Id,
             user.Role,

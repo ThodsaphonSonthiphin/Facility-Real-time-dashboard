@@ -50,10 +50,20 @@ public class MySqlAreaCleanerTests
 
             await using (var write = new AppDbContext(options))
             {
+                var area = await write.Areas.SingleAsync(a => a.Id == area1Id);
                 var newcomer = await write.Users.SingleAsync(u => u.EmployeeId == "E1009");
                 var night = await write.Users.SingleAsync(u => u.EmployeeId == "1000002");
                 await using var transaction = await write.Database.BeginTransactionAsync();
-                await AreaCleaners.ApplyAsync(write, area1Id, newcomer, night);
+                await AreaCleaners.ApplyAsync(
+                    write,
+                    new JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling.ScheduleStore(write),
+                    area1Id,
+                    area.BuildingId,
+                    newcomer,
+                    night,
+                    actorId: null,
+                    new DateOnly(2026, 11, 17),
+                    DateTime.UtcNow);
                 await transaction.CommitAsync();
             }
 
