@@ -2,6 +2,17 @@
 
 Updated 2026-11-21 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
 
+## Overview Entry availability fix (2026-11-21, Asia/Bangkok)
+
+Investigated production Overview check-in chart showing `—`, `พบ 1 พื้นที่`, and `ยังไม่ทราบเวลาปิดรับข้อมูล` when a fresh environment starts mid-shift and a Cleaner checks in (`AR02 Canteen` at `09:40`). Confirmed root cause in [OverviewAvailability.cs](../backend/src/JanitorialManagementDashboard.Application/Overview/OverviewAvailability.cs): `OverviewAvailability.Calculate` gated `Entry` on `openingKnown` (`CaptureStartedAtUtc <= StartUtc - 360 min` / `01:00` or `13:00`) via `receivingKnown`. Recorded owner-confirmed design decision (Option A) in [facility-0237](adr/facility-0237-overview-entry-decoupled-from-preshift-opening-policy.md), wrote the [design spec](superpowers/specs/2026-11-21-overview-entry-availability-fix-design.md), and wrote the [implementation plan](superpowers/plans/2026-11-21-overview-entry-availability-fix.md).
+
+**Implemented on branch `fix/overview-entry-availability` (`e3ebfa1`, `eeb1e05`, plus `test(overview): add mid-shift deployment entry availability regression test`):**
+- `OverviewAvailability.Calculate` now decouples `Entry` availability from pre-shift `openingKnown` (`FirstPossibleOpen`), keeping `History` independent (`StartUtc`) and preserving the `firstPossibleOpen` fallback for `attendancePartlyExpired`.
+- Added unit tests in `OverviewAvailabilityTests.cs` (`e3ebfa1`, `eeb1e05`) and API regression test `Mid_shift_first_deployment_reports_complete_entry_while_keeping_history_partial` in [OverviewEndpointTests.cs](../backend/tests/JanitorialManagementDashboard.ApiTests/Admin/OverviewEndpointTests.cs) verifying that a mid-shift first deployment (`09:00` Thai on a `07:00-19:00` Day shift) reports `entry: complete` with empty reasons while keeping `history: partial` (`targetCoverageMissing`, without `receivingPolicyUnknown`), and that an earlier pre-deployment shift still reports `entry: partial` (`receivingPolicyUnknown`).
+- **Verification (directly observed):**
+  - `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests --filter "FullyQualifiedName~Overview"` (covers `OverviewEndpointTests`, `OverviewRetentionTests`, and all other Overview API tests): **88 passed, 0 failed, 7 skipped** (95 total; the 7 skipped tests are the MySQL-gated cases in `MySqlOverviewTests` and `OverviewReadRaceTests`).
+  - `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`: **586 passed, 0 failed, 0 skipped** (586 total).
+
 ## RetentionWorker on TiDB (2026-11-21, Asia/Bangkok)
 
 TiDB v8.5.6 reproduced MySQL error 8048 after the app migrations succeeded. TiDB rejects `SERIALIZABLE`. A fresh schema failed in `DeleteAttendanceAsync` before its first query, and the populated retention fixture failed at the transaction start in `ArchiveAsync`. Blocked-scan and cover cleanup request the same isolation. The Render warning only exposed the exception class, so the exact production stage still needs confirmation.
