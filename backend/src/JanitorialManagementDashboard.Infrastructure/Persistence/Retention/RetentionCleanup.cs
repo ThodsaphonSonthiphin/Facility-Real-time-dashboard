@@ -12,14 +12,15 @@ public sealed partial class RetentionRunner
         while (true)
         {
             ct.ThrowIfCancellationRequested();
-            await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+            await using var transaction = await BeginRetentionTransactionAsync(ct);
             var ids = await db.ShiftAttendances.Where(x => x.OccurredAt <= cutoff).OrderBy(x => x.Id)
                 .Select(x => x.Id).Take(settings.BatchSize).ToListAsync(ct);
             if (ids.Count == 0) return total;
             var rows = db.ShiftAttendances.Where(x => ids.Contains(x.Id) && x.OccurredAt <= cutoff);
             await DeleteDependentsAsync(rows.Select(x => x.Id), AlertType.AttendanceGps, "shift_attendances", ct);
-            total += await rows.ExecuteDeleteAsync(ct);
+            var deleted = CheckDeletedCount(await rows.ExecuteDeleteAsync(ct), ids.Count);
             await transaction.CommitAsync(ct);
+            total += deleted;
         }
     }
 
@@ -29,14 +30,15 @@ public sealed partial class RetentionRunner
         while (true)
         {
             ct.ThrowIfCancellationRequested();
-            await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+            await using var transaction = await BeginRetentionTransactionAsync(ct);
             var ids = await db.BlockedScans.Where(x => x.ScannedAt <= cutoff).OrderBy(x => x.Id)
                 .Select(x => x.Id).Take(settings.BatchSize).ToListAsync(ct);
             if (ids.Count == 0) return total;
             var rows = db.BlockedScans.Where(x => ids.Contains(x.Id) && x.ScannedAt <= cutoff);
             await DeleteDependentsAsync(rows.Select(x => x.Id), AlertType.BlockedScan, "blocked_scans", ct);
-            total += await rows.ExecuteDeleteAsync(ct);
+            var deleted = CheckDeletedCount(await rows.ExecuteDeleteAsync(ct), ids.Count);
             await transaction.CommitAsync(ct);
+            total += deleted;
         }
     }
 
@@ -50,16 +52,17 @@ public sealed partial class RetentionRunner
         while (true)
         {
             ct.ThrowIfCancellationRequested();
-            await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
-            var ids = await db.CoverAssignments.Where(c => ((c.Shift == Shift.Day && c.ShiftDate <= lastDay) || (c.Shift == Shift.Night && c.ShiftDate <= lastNight))
+            await using var transaction = await BeginRetentionTransactionAsync(ct);
+            var eligible = db.CoverAssignments.Where(c => ((c.Shift == Shift.Day && c.ShiftDate <= lastDay) || (c.Shift == Shift.Night && c.ShiftDate <= lastNight))
                 && c.AssignedAt <= cutoff
-                && !db.ScanRecords.Any(s => s.CoverAssignmentId == c.Id) && !db.InspectionRecords.Any(i => i.CoverAssignmentId == c.Id))
-                .OrderBy(c => c.Id).Select(c => c.Id).Take(settings.BatchSize).ToListAsync(ct);
+                && !db.ScanRecords.Any(s => s.CoverAssignmentId == c.Id) && !db.InspectionRecords.Any(i => i.CoverAssignmentId == c.Id));
+            var ids = await eligible.OrderBy(c => c.Id).Select(c => c.Id).Take(settings.BatchSize).ToListAsync(ct);
             if (ids.Count == 0) return total;
             var auditIds = ids.Select(id => (long)id).ToList();
             await db.AuditLog.Where(a => a.EntityType == "cover_assignments" && a.EntityId != null && auditIds.Contains(a.EntityId.Value)).ExecuteDeleteAsync(ct);
-            total += await db.CoverAssignments.Where(c => ids.Contains(c.Id)).ExecuteDeleteAsync(ct);
+            var deleted = CheckDeletedCount(await eligible.Where(c => ids.Contains(c.Id)).ExecuteDeleteAsync(ct), ids.Count);
             await transaction.CommitAsync(ct);
+            total += deleted;
         }
     }
 

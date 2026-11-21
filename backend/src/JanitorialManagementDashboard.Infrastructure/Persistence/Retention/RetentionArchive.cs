@@ -2,6 +2,7 @@ using JanitorialManagementDashboard.Application.Common;
 using JanitorialManagementDashboard.Application.Retention;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Enums;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Infrastructure.Persistence.Retention;
@@ -30,7 +31,15 @@ public sealed partial class RetentionRunner
             for (var month = new DateOnly(first.Year, first.Month, 1); month < before; month = month.AddMonths(1))
             {
                 ct.ThrowIfCancellationRequested();
-                await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+                await using var transaction = await BeginRetentionTransactionAsync(ct);
+                // Inserts into either source table check their Service Point foreign key and lock this row.
+                // Take the lock before checking the marker and reading facts, including for an empty month.
+                if (!OverviewMutation.IsSqlite(db))
+                {
+                    var locked = await db.Database.SqlQuery<int>(
+                        $"SELECT id AS Value FROM service_points WHERE id = {point.Id} FOR UPDATE").ToListAsync(ct);
+                    if (locked.Count == 0) break;
+                }
                 if (await db.PointMonthlySummaries.AnyAsync(s => s.ServicePointId == point.Id && s.Month == month, ct))
                     continue;
                 var end = month.AddMonths(1);
@@ -42,7 +51,10 @@ public sealed partial class RetentionRunner
                 var submissions = await sources.AsNoTracking().Select(s => new RetentionSubmission(s.Id, s.ShiftDate, s.Shift,
                     s.RoundStart, s.RoundEnd, s.SubmittedAt, s.Placement, s.Status)).ToListAsync(ct);
                 if (!point.Counted && submissions.Count == 0) continue;
-                var verdicts = await inspections.AsNoTracking().Select(i => new RetentionInspection(i.ScanRecordId, i.Result, i.InspectedAt)).ToListAsync(ct);
+                var verdicts = await inspections.AsNoTracking()
+                    .Select(i => new { i.Id, Fact = new RetentionInspection(i.ScanRecordId, i.Result, i.InspectedAt) }).ToListAsync(ct);
+                if (submissions.Any(s => s.SubmittedAt > annual) || verdicts.Any(i => i.Fact.InspectedAt > annual))
+                    continue;
                 var expected = new List<RetentionRound>();
                 if (point.Counted)
                 {
@@ -55,28 +67,45 @@ public sealed partial class RetentionRunner
                             expected.Add(new(date, window.Shift, window.StartTime, window.EndTime));
                     }
                 }
-                var summary = MonthlySummaryRules.Build(point.Id, month, submissions, verdicts, expected);
+                var summary = MonthlySummaryRules.Build(point.Id, month, submissions, verdicts.Select(i => i.Fact).ToArray(), expected);
                 db.PointMonthlySummaries.Add(summary);
                 try
                 {
                     await db.SaveChangesAsync(ct);
-                    await DeleteDependentsAsync(sources.Select(s => s.Id), AlertType.SubmissionGps, "scan_records", ct);
-                    await DeleteDependentsAsync(inspections.Select(i => i.Id), AlertType.InspectionGps, "inspections", ct);
-                    var removed = await inspections.ExecuteDeleteAsync(ct) + await sources.ExecuteDeleteAsync(ct);
+                    var removed = await DeleteArchivedFactsAsync(inspections.Where(i => i.InspectedAt <= annual),
+                        verdicts.Select(i => i.Id), AlertType.InspectionGps, "inspections", ct);
+                    removed += await DeleteArchivedFactsAsync(sources.Where(s => s.SubmittedAt <= annual),
+                        submissions.Select(s => s.Id), AlertType.SubmissionGps, "scan_records", ct);
+                    // A writer outside the normal lock protocol must not leave a summary over a partial month.
+                    if (await sources.AnyAsync(ct))
+                        throw new DbUpdateConcurrencyException("Retention found new sources in the archived month.");
+
                     await transaction.CommitAsync(ct);
                     summaries++;
                     deleted += removed;
-                    db.Entry(summary).State = EntityState.Detached;
                 }
-                catch
+                finally
                 {
-                    // SaveChanges may have accepted the marker before a later statement failed; never keep a rolled-back marker tracked.
+                    // SaveChanges may have accepted a marker whose transaction did not commit.
                     db.Entry(summary).State = EntityState.Detached;
-                    throw;
                 }
             }
         }
         return (summaries, deleted);
+    }
+
+    private async Task<int> DeleteArchivedFactsAsync<T>(IQueryable<T> eligible, IEnumerable<long> capturedIds,
+        AlertType type, string entityType, CancellationToken ct) where T : class
+    {
+        var deleted = 0;
+        foreach (var batch in capturedIds.Chunk(settings.BatchSize))
+        {
+            var rows = eligible.Where(row => batch.Contains(EF.Property<long>(row, "Id")));
+            await DeleteDependentsAsync(rows.Select(row => EF.Property<long>(row, "Id")), type, entityType, ct);
+            deleted += CheckDeletedCount(await rows.ExecuteDeleteAsync(ct), batch.Length);
+        }
+
+        return deleted;
     }
 
     private async Task DeleteDependentsAsync(IQueryable<long> ids, AlertType type, string entityType, CancellationToken ct)

@@ -36,6 +36,12 @@ public class MySqlRetentionTests
             db.ScanRecords.Add(source); db.InspectionRecords.Add(inspection);
             var retained = new ScanRecord { ServicePointId = point.Id, SignId = sign.Id, UserId = user.Id, ShiftDate = new(2026, 8, 1),
                 SubmittedAt = clock.GetUtcNow().UtcDateTime.AddDays(-90), Latitude = 1, Longitude = 2, AccuracyM = 10, DistanceM = 5, WithinRadius = false };
+            var unusedCover = new CoverAssignment { UserId = user.Id, AreaId = sign.AreaId, AssignedById = supervisor.Id,
+                ShiftDate = new(2025, 10, 1), AssignedAt = source.SubmittedAt };
+            var referencedCover = new CoverAssignment { UserId = user.Id, AreaId = sign.AreaId, AssignedById = supervisor.Id,
+                ShiftDate = new(2025, 10, 2), AssignedAt = source.SubmittedAt };
+            db.CoverAssignments.AddRange(unusedCover, referencedCover);
+            retained.CoverAssignment = referencedCover;
             db.ScanRecords.Add(retained);
             db.ShiftAttendances.Add(new() { UserId = user.Id, AreaId = sign.AreaId, ShiftDate = new(2025, 10, 1), OccurredAt = source.SubmittedAt, Latitude = 1 });
             db.BlockedScans.Add(new() { UserId = user.Id, SignId = sign.Id, ScannedAt = source.SubmittedAt, Latitude = 1 });
@@ -43,6 +49,7 @@ public class MySqlRetentionTests
             db.AlertReviews.Add(new() { AlertType = AlertType.SubmissionGps, RecordId = source.Id, ReviewedById = supervisor.Id });
             db.AlertReviews.Add(new() { AlertType = AlertType.InspectionGps, RecordId = inspection.Id, ReviewedById = supervisor.Id });
             db.AuditLog.Add(new() { EntityType = "scan_records", EntityId = source.Id, Action = "TEST", Summary = "synthetic" });
+            db.AuditLog.Add(new() { EntityType = "cover_assignments", EntityId = unusedCover.Id, Action = "TEST", Summary = "synthetic" });
             await db.SaveChangesAsync();
             var result = await new RetentionRunner(db, clock, new() { BatchSize = 1 }).RunAsync(default);
             Assert.Equal(5, result.GpsCleared); Assert.Equal(1, result.SummariesCreated);
@@ -50,6 +57,7 @@ public class MySqlRetentionTests
             var row = Assert.Single(await db.ScanRecords.ToListAsync());
             Assert.Equal(retained.Id, row.Id); Assert.Null(row.Latitude); Assert.Null(row.Longitude); Assert.Null(row.AccuracyM);
             Assert.Equal(((short?)5, (bool?)false), (row.DistanceM, row.WithinRadius));
+            Assert.Equal(referencedCover.Id, (await db.CoverAssignments.SingleAsync()).Id);
             Assert.Empty(await db.InspectionRecords.ToListAsync()); Assert.Empty(await db.ShiftAttendances.ToListAsync());
             Assert.Empty(await db.BlockedScans.ToListAsync()); Assert.Empty(await db.AlertReviews.ToListAsync()); Assert.Empty(await db.AuditLog.ToListAsync());
             var summary = await db.PointMonthlySummaries.SingleAsync(); Assert.Equal(1, summary.SubmittedOnTime); Assert.Equal(1, summary.InspectedPass);
@@ -60,7 +68,7 @@ public class MySqlRetentionTests
             db.AuditLog.AddRange(
                 new AuditEntry { EntityType = "inspections", EntityId = retained.Id, Action = "TEST", Summary = "late orphan" },
                 new AuditEntry { EntityType = "scan_records", EntityId = retained.Id, Action = "TEST", Summary = "live source" },
-                new AuditEntry { EntityType = "cover_assignments", EntityId = retained.Id, Action = "TEST", Summary = "late cover orphan" },
+                new AuditEntry { EntityType = "cover_assignments", EntityId = unusedCover.Id, Action = "TEST", Summary = "late cover orphan" },
                 new AuditEntry { EntityType = "scan_records", EntityId = null, Action = "TEST", Summary = "null identity" },
                 new AuditEntry { EntityType = "users", EntityId = retained.Id, Action = "TEST", Summary = "setup" });
             await db.SaveChangesAsync();

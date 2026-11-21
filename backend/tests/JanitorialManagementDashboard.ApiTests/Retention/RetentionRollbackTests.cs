@@ -1,10 +1,11 @@
-using Microsoft.Extensions.DependencyInjection;
-
 using System.Data.Common;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Retention;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog.Events;
 
 namespace JanitorialManagementDashboard.ApiTests.Retention;
 
@@ -13,7 +14,8 @@ public class RetentionRollbackTests
     [Fact]
     public async Task Failure_after_summary_insert_rolls_back_marker_dependents_and_sources_and_fresh_scope_retry_succeeds()
     {
-        var failure = new FailSourceDelete();
+        const string privateDetail = "Synthetic private database detail";
+        var failure = new FailSourceDelete(privateDetail);
         using var factory = new JanitorialApiFactory
         {
             ConfigureTestServices = services => services.AddDbContext<JanitorialManagementDashboard.Infrastructure.Persistence.AppDbContext>(o => o.AddInterceptors(failure)),
@@ -27,7 +29,14 @@ public class RetentionRollbackTests
             db.AuditLog.Add(new() { EntityType = "scan_records", EntityId = scan.Id, Action = "TEST", Summary = "synthetic" });
             await db.SaveChangesAsync();
             failure.Enabled = true;
-            await Assert.ThrowsAsync<InvalidOperationException>(() => new RetentionRunner(db, factory.Clock, new()).RunAsync(default));
+            var logger = factory.Services.GetRequiredService<ILogger<RetentionRunner>>();
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                new RetentionRunner(db, factory.Clock, new(), logger).RunAsync(default));
+            var diagnostic = Assert.Single(factory.Logs.Lines, line => line.Category == typeof(RetentionRunner).FullName);
+            Assert.Equal(LogEventLevel.Warning, diagnostic.Level);
+            Assert.Contains("ArchiveMonthlyWork", diagnostic.Message);
+            Assert.Contains(nameof(InvalidOperationException), diagnostic.Message);
+            Assert.DoesNotContain(privateDetail, diagnostic.ConsoleText);
         });
         await factory.WithDbAsync(async db =>
         {
@@ -42,14 +51,14 @@ public class RetentionRollbackTests
         });
     }
 
-    private sealed class FailSourceDelete : DbCommandInterceptor
+    private sealed class FailSourceDelete(string privateDetail) : DbCommandInterceptor
     {
         public bool Enabled { get; set; }
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
             if (Enabled && command.CommandText.StartsWith("DELETE FROM \"scan_records\"", StringComparison.Ordinal))
-                throw new InvalidOperationException("Synthetic source deletion failure");
+                throw new InvalidOperationException(privateDetail);
             return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
         }
     }
