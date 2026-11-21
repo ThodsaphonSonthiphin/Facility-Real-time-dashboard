@@ -49,7 +49,7 @@ internal static class OverviewSeed
         return new {
             revisionId = head.Id, imageHash = head.PayloadHash, captureStartedAtUtc = head.EffectiveAt,
             firstDate = anchor.AddDays(-days), lastDate = anchor.AddDays(-2),
-            emptyDate = anchor.AddDays(-days - 1), preBaselineDate = anchor.AddDays(-days - 2),
+            emptyDate = anchor.AddDays(-days - 1), preBaselineDate = anchor.AddDays(-days - 3),
             date = anchor.AddDays(-day), shift = "Night", buildingId = building.Id,
             entered = entered.Length, submitted = submitted.Length, inspected = inspected.Length,
             enteredAreas = entered.Select(a => new { id = a.Id, code = a.Code })
