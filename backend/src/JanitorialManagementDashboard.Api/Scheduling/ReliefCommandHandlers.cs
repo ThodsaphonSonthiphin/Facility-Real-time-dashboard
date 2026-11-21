@@ -90,7 +90,7 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
             return Refused(revisions, key, $"พื้นที่ {area.Code} ไม่มีกะ{ThaiLabels.ShiftName(relief.Shift)}");
         }
 
-        if (!actor.CanChange(area.BuildingId, relief.Shift, relief.ShiftDate))
+        if (!actor.CanChange(area.BuildingId, relief.ShiftDate))
         {
             return Refused(revisions, key,
                 $"ไม่มีสิทธิ์จัดคนในพื้นที่ {area.Code} วันที่ {Iso(relief.ShiftDate)}");

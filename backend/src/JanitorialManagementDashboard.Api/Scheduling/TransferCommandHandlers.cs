@@ -96,7 +96,7 @@ public sealed class InstructTransferHandler(TimeProvider clock, ScheduleStore st
             return Refused(revisions, key, "ไม่พบพื้นที่ต้นทางของกะนี้");
         }
 
-        if (!actor.CanManage(fromArea.BuildingId, transfer.Shift, transfer.ShiftDate))
+        if (!actor.CanManage(fromArea.BuildingId, transfer.ShiftDate))
         {
             return Refused(revisions, key, $"ไม่มีสิทธิ์สั่งย้ายคนในพื้นที่ {fromArea.Code} วันที่ {Iso(transfer.ShiftDate)}");
         }
@@ -259,7 +259,7 @@ public sealed class CancelTransferHandler(TimeProvider clock) : ScheduleCommandH
 
         // The same from-Area authority the instruction needed: the team that holds the Area cancels the move out of it.
         var fromArea = await db.Areas.AsNoTracking().FirstOrDefaultAsync(area => area.Id == instruction.FromAreaId, ct);
-        if (fromArea is null || !actor.CanManage(fromArea.BuildingId, instruction.Shift, instruction.ShiftDate))
+        if (fromArea is null || !actor.CanManage(fromArea.BuildingId, instruction.ShiftDate))
         {
             return Refused(revisions, key,
                 $"ไม่มีสิทธิ์ยกเลิกคำสั่งย้ายในพื้นที่ {fromArea?.Code} วันที่ {Iso(instruction.ShiftDate)}");

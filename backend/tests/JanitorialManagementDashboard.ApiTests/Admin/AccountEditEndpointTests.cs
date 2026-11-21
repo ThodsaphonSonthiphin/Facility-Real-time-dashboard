@@ -427,4 +427,28 @@ public class AccountEditEndpointTests
             Assert.All(baselines[1].Days.Where(d => d.Weekday != DayOfWeek.Sunday), d => Assert.False(d.IsDayOff));
         });
     }
+
+    [Fact]
+    public async Task Deactivating_compatibility_cleaner_without_profile_period_still_syncs_schedule_from_original_area()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        var buildingA = await AdminSetupApi.ReadAsync(factory, db => db.Buildings.Where(b => b.Code == "A").Select(b => b.Id).SingleAsync());
+        Scheduling.ScheduleWriteApi.Today(factory);
+
+        var response = await DeactivateAsync(admin, e1001);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await factory.WithDbAsync(async db =>
+        {
+            var user = await db.Users.SingleAsync(u => u.Id == e1001);
+            Assert.False(user.IsActive);
+            Assert.Null(user.AreaId);
+
+            var profile = await db.CleanerProfilePeriods.SingleAsync(p => p.UserId == e1001);
+            Assert.Equal(buildingA, profile.HomeBuildingId);
+            Assert.Equal(new DateOnly(2026, 11, 17), profile.EffectiveFrom);
+        });
+    }
 }

@@ -371,6 +371,7 @@ public static class AdminAccountEndpoints
         }
 
         var before = Snapshot(user);
+        var originalAreaId = user.AreaId;
         user.IsActive = active;
         if (!active && user.Role == UserRole.Cleaner)
         {
@@ -404,7 +405,7 @@ public static class AdminAccountEndpoints
                     var profileNow = await CurrentCleanerProfileAsync(db, user.Id, businessDate);
                     var kind = profileNow?.Kind ?? CleanerKind.Regular;
                     var homeBuildingId = profileNow?.HomeBuildingId
-                        ?? (user.AreaId is int areaId
+                        ?? (originalAreaId is int areaId
                             ? await db.Areas.AsNoTracking().Where(a => a.Id == areaId)
                                 .Select(a => (int?)a.BuildingId).FirstOrDefaultAsync()
                             : null);

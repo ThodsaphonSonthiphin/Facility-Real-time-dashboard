@@ -112,7 +112,7 @@ public static class ScheduleRevisionKeys
 /// Spec §11: what every kind in <c>ScheduleCommandHandlers</c> shares — the actor's dated authority, the target roster
 /// check, the revision comparison and the audit row. A handler never saves and never commits (the engine owns the one
 /// transaction), never writes a second copy of the scope predicate (it asks
-/// <see cref="ScheduleAuthority.CanManage"/>/<see cref="ScheduleAuthority.CanCorrectHistory"/>) and answers every refusal a
+/// <see cref="ScheduleAuthority.CanManageSchedule"/>/<see cref="ScheduleAuthority.CanCorrectScheduleHistory"/>) and answers every refusal a
 /// person can fix as a <see cref="RowProblem"/> instead of an exception.
 /// </summary>
 public abstract class ScheduleCommandHandler(TimeProvider clock) : IScheduleCommandHandler
@@ -319,21 +319,13 @@ public abstract class ScheduleCommandHandler(TimeProvider clock) : IScheduleComm
     /// </summary>
     internal sealed record Actor(int Id, UserRole Role, DateOnly BusinessDate, IReadOnlyList<ScopePeriod> Periods)
     {
-        public bool CanManage(int buildingId, Shift shift, DateOnly date) =>
+        public bool CanManage(int buildingId, DateOnly date) =>
             ScheduleAuthority.CanManageSchedule(Role, Id, buildingId, date, Periods);
 
-        public bool CanChange(int buildingId, Shift shift, DateOnly date) =>
+        public bool CanChange(int buildingId, DateOnly date) =>
             date < BusinessDate
                 ? ScheduleAuthority.CanCorrectScheduleHistory(Role, Id, buildingId, date, BusinessDate, Periods)
-                : CanManageBuilding(buildingId, date);
-
-        public bool CanManageBuilding(int buildingId, DateOnly date) =>
-            ScheduleAuthority.CanManageSchedule(Role, Id, buildingId, date, Periods);
-
-        public bool CanChangeBuilding(int buildingId, DateOnly date) =>
-            date < BusinessDate
-                ? ScheduleAuthority.CanCorrectScheduleHistory(Role, Id, buildingId, date, BusinessDate, Periods)
-                : CanManageBuilding(buildingId, date);
+                : CanManage(buildingId, date);
     }
 
     /// <summary>The target person and the shift/building their dated identity gives them on the edited date.</summary>
@@ -456,7 +448,7 @@ public sealed class SetWeeklyDaysOffHandler(TimeProvider clock) : ScheduleComman
                 return $"ยังไม่ทราบตึกของคนนี้ในวันที่ {Iso(date)} จึงยืนยันสิทธิ์ไม่ได้";
             }
 
-            return actor.CanChangeBuilding(buildingId, date)
+            return actor.CanChange(buildingId, date)
                 ? null
                 : $"ไม่มีสิทธิ์แก้ตารางของคนนี้ในวันที่ {Iso(date)}";
         }
@@ -728,7 +720,7 @@ public sealed class RecordLeaveHandler(TimeProvider clock) : ScheduleCommandHand
             return Refused(new Dictionary<string, string>(), key, "กะที่ส่งมาไม่ตรงกับกะของคนนี้ในวันนั้น");
         }
 
-        if (target.BuildingId is not int buildingId || !actor.CanChange(buildingId, target.Shift, leave.Date))
+        if (target.BuildingId is not int buildingId || !actor.CanChange(buildingId, leave.Date))
         {
             return Refused(new Dictionary<string, string>(), key, $"ไม่มีสิทธิ์บันทึกการลาของคนนี้ในวันที่ {Iso(leave.Date)}");
         }
@@ -840,7 +832,7 @@ public sealed class CancelLeaveHandler(TimeProvider clock) : ScheduleCommandHand
             return Refused(new Dictionary<string, string>(), key, "กะที่ส่งมาไม่ตรงกับกะของคนนี้ในวันนั้น");
         }
 
-        if (target.BuildingId is not int buildingId || !actor.CanChange(buildingId, target.Shift, slotPayload.Date))
+        if (target.BuildingId is not int buildingId || !actor.CanChange(buildingId, slotPayload.Date))
         {
             return Refused(new Dictionary<string, string>(), key,
                 $"ไม่มีสิทธิ์ยกเลิกการลาของคนนี้ในวันที่ {Iso(slotPayload.Date)}");
@@ -1026,14 +1018,24 @@ internal static class ScheduleBaselineWrite
         }
 
         if (kind == BaselineKind.Relief && (target.Kind != CleanerKind.Relief || target.BuildingId is not int sourceBuilding
-            || effectiveShift is not Shift reliefShift
-            || !actor.CanManage(sourceBuilding, reliefShift, payload.EffectiveFrom)))
+            || effectiveShift is not Shift
+            || !actor.CanManage(sourceBuilding, payload.EffectiveFrom)))
         {
             return ScheduleCommandHandler.Refused(revisions, key, "ไม่มีสิทธิ์จัดตารางประจำของสแปร์คนนี้");
         }
 
+        if (kind == BaselineKind.Regular && target.Kind == CleanerKind.Relief)
+        {
+            return ScheduleCommandHandler.Refused(revisions, key, "สแปร์ใช้คำสั่งตั้งตารางประจำของคนประจำไม่ได้");
+        }
+
+        if (kind == BaselineKind.Regular && target.BuildingId is null)
+        {
+            return ScheduleCommandHandler.Refused(revisions, key, "ไม่พบตึกประจำของแม่บ้านคนนี้");
+        }
+
         if (kind == BaselineKind.Regular && target.BuildingId is int homeBuilding
-            && !actor.CanManage(homeBuilding, effectiveShift!.Value, payload.EffectiveFrom))
+            && !actor.CanManage(homeBuilding, payload.EffectiveFrom))
         {
             return ScheduleCommandHandler.Refused(revisions, key, "ไม่มีสิทธิ์จัดตารางประจำของคนนี้");
         }
@@ -1109,8 +1111,7 @@ internal static class ScheduleBaselineWrite
                     $"Area {areaId} อยู่นอกตึกของคนนี้; การย้ายตึกต้องใช้คำสั่งย้าย");
             }
 
-            var checkShift = effectiveShift ?? Shift.Day;
-            if (!actor.CanManage(area.BuildingId, checkShift, payload.EffectiveFrom))
+            if (!actor.CanManage(area.BuildingId, payload.EffectiveFrom))
             {
                 return ScheduleCommandHandler.Refused(revisions, key,
                     $"ไม่มีสิทธิ์จัดตาราง Area {areaId} ในตึกนั้น");
@@ -1131,18 +1132,73 @@ internal static class ScheduleBaselineWrite
                 [ScheduleCommandHandler.Stale(key, expected, current)]);
         }
 
-        // A second submission of the same pattern is a no-op rather than a second version; a different pattern at a date
-        // that already has a version is a correction (ADR facility-0214), not an ordinary baseline edit.
+        // A second submission of the same pattern is a no-op; a different pattern at EffectiveFrom < BusinessDate is a
+        // correction (ADR facility-0214), whereas at EffectiveFrom >= BusinessDate we update the version in place.
         if (versions.FirstOrDefault(version => version.EffectiveFrom == payload.EffectiveFrom) is { } existing)
         {
             var same = target.Shift == effectiveShift && cells.All(cell =>
                 existing.Days.FirstOrDefault(day => day.Weekday == cell.Key) is { } stored
                 && stored.AreaId == cell.Value.AreaId && stored.BreakGroup == cell.Value.BreakGroup
                 && stored.IsDayOff == cell.Value.IsDayOff);
-            return same
-                ? new ScheduleCommandApplication(revisions, [])
-                : ScheduleCommandHandler.Refused(revisions, key,
+            if (same)
+            {
+                return new ScheduleCommandApplication(revisions, []);
+            }
+
+            if (payload.EffectiveFrom < actor.BusinessDate)
+            {
+                return ScheduleCommandHandler.Refused(revisions, key,
                     "มีตารางประจำรุ่นที่เริ่มวันนี้อยู่แล้ว ถ้าต้องแก้ย้อนหลังให้ใช้คำสั่งแก้ไขแผนพร้อมเหตุผล");
+            }
+
+            var nextAfterExisting = versions.FirstOrDefault(version => version.EffectiveFrom > payload.EffectiveFrom);
+            var updatedDays = BuildDays(cells, existing.Days);
+
+            if (kind == BaselineKind.Regular)
+            {
+                if (await ValidateRegularDaysAsync(db, payload, effectiveShift!.Value, nextAfterExisting?.EffectiveFrom,
+                    actor.BusinessDate, loadedAreas, updatedDays, revisions, key, ct) is { } regularRefusal)
+                {
+                    return regularRefusal;
+                }
+            }
+
+            var existingConflicts = await DatedConflictsAsync(
+                db, payload.UserId, payload.EffectiveFrom, nextAfterExisting?.EffectiveFrom, updatedDays, ct);
+            if (existingConflicts.Count > 0)
+            {
+                return new ScheduleCommandApplication(revisions, existingConflicts);
+            }
+
+            var beforeExisting = VersionJson(existing);
+            db.Set<ScheduleBaselineDay>().RemoveRange(existing.Days);
+            existing.Days.Clear();
+            foreach (var day in updatedDays)
+            {
+                existing.Days.Add(day);
+            }
+
+            existing.Revision += 1;
+            existing.UpdatedAt = request.Now.UtcDateTime;
+            db.ScheduleChanges.Add(ScheduleCommandHandler.Change(request, receipt, "ScheduleBaseline", existing.Id,
+                "update", beforeExisting, VersionJson(existing)));
+
+            if (kind == BaselineKind.Regular && target.Shift != effectiveShift)
+            {
+                await UpdateProfileShiftAsync(db, request, receipt, payload.UserId, target,
+                    payload.EffectiveFrom, effectiveShift!.Value, ct);
+            }
+
+            if (kind == BaselineKind.Regular && payload.EffectiveFrom == actor.BusinessDate)
+            {
+                await SyncUserProjectionAsync(db, payload.UserId, effectiveShift!.Value, existing.Days,
+                    actor.BusinessDate, ct);
+            }
+
+            timeline.Revision += 1;
+            timeline.UpdatedAt = request.Now.UtcDateTime;
+            revisions[key] = ScheduleCommandHandler.Revision(timeline.Revision);
+            return new ScheduleCommandApplication(revisions, []);
         }
 
         var previous = versions.LastOrDefault(version => version.EffectiveFrom < payload.EffectiveFrom);
@@ -1159,58 +1215,17 @@ internal static class ScheduleBaselineWrite
         };
 
         // The weekdays the client did not submit keep the cells they already had, so a one-day edit never clears the week.
-        var inherited = previous?.Days.ToDictionary(day => day.Weekday) ?? [];
-        foreach (var weekday in Enum.GetValues<DayOfWeek>())
+        foreach (var day in BuildDays(cells, previous?.Days))
         {
-            if (cells.TryGetValue(weekday, out var cell))
-            {
-                created.Days.Add(new ScheduleBaselineDay
-                {
-                    Weekday = weekday, AreaId = cell.AreaId, BreakGroup = cell.BreakGroup, IsDayOff = cell.IsDayOff,
-                });
-            }
-            else if (inherited.TryGetValue(weekday, out var stored))
-            {
-                created.Days.Add(new ScheduleBaselineDay
-                {
-                    Weekday = weekday, AreaId = stored.AreaId, BreakGroup = stored.BreakGroup, IsDayOff = stored.IsDayOff,
-                });
-            }
+            created.Days.Add(day);
         }
 
         if (kind == BaselineKind.Regular)
         {
-            var missingAreaIds = created.Days
-                .Where(d => !d.IsDayOff && d.AreaId is int aId && !loadedAreas.ContainsKey(aId))
-                .Select(d => d.AreaId!.Value)
-                .Distinct()
-                .ToList();
-            if (missingAreaIds.Count > 0)
+            if (await ValidateRegularDaysAsync(db, payload, effectiveShift!.Value, next?.EffectiveFrom,
+                actor.BusinessDate, loadedAreas, created.Days, revisions, key, ct) is { } regularRefusal)
             {
-                var extraAreas = await db.Areas.AsNoTracking()
-                    .Where(a => missingAreaIds.Contains(a.Id))
-                    .ToListAsync(ct);
-                foreach (var a in extraAreas)
-                {
-                    loadedAreas[a.Id] = a;
-                }
-            }
-
-            foreach (var cell in created.Days)
-            {
-                if (!cell.IsDayOff && cell.AreaId is int areaId
-                    && loadedAreas.TryGetValue(areaId, out var area)
-                    && !area.HasShift(effectiveShift!.Value))
-                {
-                    return ScheduleCommandHandler.Refused(revisions, key,
-                        $"พื้นที่ {area.Code} ทำเฉพาะกะ{ThaiLabels.ShiftName(Shift.Day)} เลือกกะ{ThaiLabels.ShiftName(effectiveShift.Value)}ไม่ได้");
-                }
-            }
-
-            if (await CheckAreaShiftOverlapAsync(db, payload, effectiveShift!.Value, next?.EffectiveFrom,
-                actor.BusinessDate, loadedAreas, created, ct) is { } overlapProblem)
-            {
-                return ScheduleCommandHandler.Refused(revisions, key, overlapProblem);
+                return regularRefusal;
             }
         }
 
@@ -1219,7 +1234,7 @@ internal static class ScheduleBaselineWrite
         // override it cannot honour stays behind it — an override on a cell this version makes a day off, or a first-break
         // override on a cell with no Area. Only the stored dated rows from the new effective date onwards are examined (no
         // projected date horizon), and a date a later version already owns is that version's business.
-        var conflicts = await DatedConflictsAsync(db, payload.UserId, payload.EffectiveFrom, next?.EffectiveFrom, created, ct);
+        var conflicts = await DatedConflictsAsync(db, payload.UserId, payload.EffectiveFrom, next?.EffectiveFrom, created.Days, ct);
         if (conflicts.Count > 0)
         {
             return new ScheduleCommandApplication(revisions, conflicts);
@@ -1249,12 +1264,8 @@ internal static class ScheduleBaselineWrite
 
         if (kind == BaselineKind.Regular && payload.EffectiveFrom == actor.BusinessDate)
         {
-            var user = await db.Users.SingleAsync(u => u.Id == payload.UserId, ct);
-            user.Shift = effectiveShift;
-            var todayCell = created.Days.FirstOrDefault(d => d.Weekday == payload.EffectiveFrom.DayOfWeek);
-            user.AreaId = todayCell is { IsDayOff: false, AreaId: int a }
-                ? a
-                : created.Days.FirstOrDefault(d => !d.IsDayOff && d.AreaId != null)?.AreaId;
+            await SyncUserProjectionAsync(db, payload.UserId, effectiveShift!.Value, created.Days,
+                actor.BusinessDate, ct);
         }
 
         timeline.Revision += 1;
@@ -1263,11 +1274,134 @@ internal static class ScheduleBaselineWrite
         return new ScheduleCommandApplication(revisions, []);
     }
 
+    private static List<ScheduleBaselineDay> BuildDays(
+        IReadOnlyDictionary<DayOfWeek, SchedulePayload.BaselineCell> cells,
+        IEnumerable<ScheduleBaselineDay>? inheritedDays)
+    {
+        var inherited = inheritedDays?.ToDictionary(day => day.Weekday) ?? [];
+        var result = new List<ScheduleBaselineDay>(7);
+        foreach (var weekday in Enum.GetValues<DayOfWeek>())
+        {
+            if (cells.TryGetValue(weekday, out var cell))
+            {
+                result.Add(new ScheduleBaselineDay
+                {
+                    Weekday = weekday, AreaId = cell.AreaId, BreakGroup = cell.BreakGroup, IsDayOff = cell.IsDayOff,
+                });
+            }
+            else if (inherited.TryGetValue(weekday, out var stored))
+            {
+                result.Add(new ScheduleBaselineDay
+                {
+                    Weekday = weekday, AreaId = stored.AreaId, BreakGroup = stored.BreakGroup, IsDayOff = stored.IsDayOff,
+                });
+            }
+        }
+
+        return result;
+    }
+
+    private static async Task<ScheduleCommandApplication?> ValidateRegularDaysAsync(
+        AppDbContext db, SchedulePayload.BaselineRequest payload, Shift effectiveShift, DateOnly? nextFrom,
+        DateOnly businessDate, Dictionary<int, Area> loadedAreas, IReadOnlyCollection<ScheduleBaselineDay> days,
+        IReadOnlyDictionary<string, string> revisions, string key, CancellationToken ct)
+    {
+        var missingAreaIds = days
+            .Where(d => !d.IsDayOff && d.AreaId is int aId && !loadedAreas.ContainsKey(aId))
+            .Select(d => d.AreaId!.Value)
+            .Distinct()
+            .ToList();
+        if (missingAreaIds.Count > 0)
+        {
+            var extraAreas = await db.Areas.AsNoTracking()
+                .Where(a => missingAreaIds.Contains(a.Id))
+                .ToListAsync(ct);
+            foreach (var a in extraAreas)
+            {
+                loadedAreas[a.Id] = a;
+            }
+        }
+
+        foreach (var cell in days)
+        {
+            if (!cell.IsDayOff && cell.AreaId is int areaId
+                && loadedAreas.TryGetValue(areaId, out var area)
+                && !area.HasShift(effectiveShift))
+            {
+                return ScheduleCommandHandler.Refused(revisions, key,
+                    $"พื้นที่ {area.Code} ทำไม่ได้ในกะ{ThaiLabels.ShiftName(effectiveShift)}");
+            }
+        }
+
+        if (await CheckAreaShiftOverlapAsync(db, payload, effectiveShift, nextFrom,
+            businessDate, loadedAreas, days, ct) is { } overlapProblem)
+        {
+            return ScheduleCommandHandler.Refused(revisions, key, overlapProblem);
+        }
+
+        return null;
+    }
+
+    private static async Task SyncUserProjectionAsync(
+        AppDbContext db, int userId, Shift effectiveShift, IReadOnlyCollection<ScheduleBaselineDay> days,
+        DateOnly businessDate, CancellationToken ct)
+    {
+        var user = await db.Users.SingleAsync(u => u.Id == userId, ct);
+        var todayCell = days.FirstOrDefault(d => d.Weekday == businessDate.DayOfWeek);
+        var targetAreaId = todayCell is { IsDayOff: false, AreaId: int a }
+            ? a
+            : days.FirstOrDefault(d => !d.IsDayOff && d.AreaId != null)?.AreaId;
+
+        if (targetAreaId is int incomingAreaId)
+        {
+            var holder = await db.Users
+                .FirstOrDefaultAsync(u => u.Id != userId && u.IsActive && u.Role == UserRole.Cleaner
+                    && u.AreaId == incomingAreaId && u.Shift == effectiveShift, ct);
+
+            if (holder is not null)
+            {
+                var holderProfile = await db.CleanerProfilePeriods.AsNoTracking()
+                    .Where(p => p.UserId == holder.Id
+                        && p.EffectiveFrom <= businessDate
+                        && (p.EffectiveUntil == null || businessDate < p.EffectiveUntil.Value))
+                    .OrderBy(p => p.EffectiveFrom).ThenBy(p => p.Id)
+                    .LastOrDefaultAsync(ct);
+
+                var holderBaseline = await db.ScheduleBaselines.AsNoTracking()
+                    .Include(b => b.Days)
+                    .Where(b => b.UserId == holder.Id
+                        && b.Kind == BaselineKind.Regular
+                        && b.EffectiveFrom <= businessDate
+                        && (b.EffectiveUntil == null || businessDate < b.EffectiveUntil.Value))
+                    .OrderBy(b => b.EffectiveFrom).ThenBy(b => b.Id)
+                    .LastOrDefaultAsync(ct);
+
+                var holderStillHolds = holderProfile is null or { Kind: CleanerKind.Regular }
+                    && (holderProfile?.Shift ?? holder.Shift) == effectiveShift
+                    && (holderBaseline is null || holderBaseline.Days.Any(d => !d.IsDayOff && d.AreaId == incomingAreaId));
+
+                if (holderStillHolds)
+                {
+                    targetAreaId = null;
+                }
+                else
+                {
+                    holder.AreaId = null;
+                    await db.SaveChangesAsync(ct);
+                }
+            }
+        }
+
+        user.Shift = effectiveShift;
+        user.AreaId = targetAreaId;
+    }
+
     private static async Task<string?> CheckAreaShiftOverlapAsync(
         AppDbContext db, SchedulePayload.BaselineRequest payload, Shift effectiveShift, DateOnly? nextFrom,
-        DateOnly businessDate, IReadOnlyDictionary<int, Area> loadedAreas, ScheduleBaseline created, CancellationToken ct)
+        DateOnly businessDate, IReadOnlyDictionary<int, Area> loadedAreas, IReadOnlyCollection<ScheduleBaselineDay> days,
+        CancellationToken ct)
     {
-        var workingDays = created.Days.Where(d => !d.IsDayOff && d.AreaId is not null).ToList();
+        var workingDays = days.Where(d => !d.IsDayOff && d.AreaId is not null).ToList();
         if (workingDays.Count == 0)
         {
             return null;
@@ -1310,9 +1444,23 @@ internal static class ScheduleBaselineWrite
                 foreach (var b in baselines)
                 {
                     var overlapStart = b.EffectiveFrom > payload.EffectiveFrom ? b.EffectiveFrom : payload.EffectiveFrom;
+                    var overlapEnd = (b.EffectiveUntil, nextFrom) switch
+                    {
+                        (DateOnly be, DateOnly nf) => be < nf ? be : nf,
+                        (DateOnly be, null) => be,
+                        (null, DateOnly nf) => nf,
+                        (null, null) => (DateOnly?)null,
+                    };
+                    if (overlapEnd is DateOnly end && overlapStart >= end)
+                    {
+                        continue;
+                    }
+
                     var isRegularSameShift = periods is { Count: > 0 }
-                        ? periods.LastOrDefault(p => ScheduleResolver.Applies(p.EffectiveFrom, p.EffectiveUntil, overlapStart))
-                            is { Kind: CleanerKind.Regular } matched && matched.Shift == effectiveShift
+                        ? periods.Any(p => p.EffectiveFrom < (overlapEnd ?? DateOnly.MaxValue)
+                            && (p.EffectiveUntil == null || p.EffectiveUntil.Value > overlapStart)
+                            && p.Kind == CleanerKind.Regular
+                            && p.Shift == effectiveShift)
                         : other.Shift == effectiveShift;
                     if (!isRegularSameShift)
                     {
@@ -1330,17 +1478,17 @@ internal static class ScheduleBaselineWrite
                 }
             }
 
-            if (payload.EffectiveFrom == businessDate
+            if (payload.EffectiveFrom >= businessDate
                 && other.AreaId is int userAreaId
                 && other.Shift == effectiveShift
                 && workingDays.Any(d => d.AreaId == userAreaId))
             {
-                var isRegularToday = periods is not { Count: > 0 }
-                    || periods.LastOrDefault(p => ScheduleResolver.Applies(p.EffectiveFrom, p.EffectiveUntil, businessDate))
-                        is { Kind: CleanerKind.Regular };
-                var hasBaselineToday = baselines is not null
-                    && baselines.Any(b => ScheduleResolver.Applies(b.EffectiveFrom, b.EffectiveUntil, businessDate));
-                if (isRegularToday && !hasBaselineToday && loadedAreas.TryGetValue(userAreaId, out var area))
+                var isRegularInRange = periods is not { Count: > 0 }
+                    || periods.Any(p => p.EffectiveFrom < (nextFrom ?? DateOnly.MaxValue)
+                        && (p.EffectiveUntil == null || p.EffectiveUntil.Value > payload.EffectiveFrom)
+                        && p.Kind == CleanerKind.Regular);
+                var hasBaselineInRange = baselines is { Count: > 0 };
+                if (isRegularInRange && !hasBaselineInRange && loadedAreas.TryGetValue(userAreaId, out var area))
                 {
                     return $"พื้นที่ {area.Code} กะ{ThaiLabels.ShiftName(effectiveShift)} มีแม่บ้านประจำอยู่แล้ว ({other.DisplayName})";
                 }
@@ -1425,7 +1573,7 @@ internal static class ScheduleBaselineWrite
     /// <paramref name="nextFrom"/> belongs to the version that starts there.
     /// </summary>
     private static async Task<List<RowProblem>> DatedConflictsAsync(
-        AppDbContext db, int userId, DateOnly effectiveFrom, DateOnly? nextFrom, ScheduleBaseline created,
+        AppDbContext db, int userId, DateOnly effectiveFrom, DateOnly? nextFrom, IReadOnlyCollection<ScheduleBaselineDay> days,
         CancellationToken ct)
     {
         var dated = await db.ScheduleExceptions.AsNoTracking()
@@ -1442,7 +1590,7 @@ internal static class ScheduleBaselineWrite
                 continue; // a later version owns this date and was validated with the cells it stores
             }
 
-            var cell = created.Days.FirstOrDefault(day => day.Weekday == row.ShiftDate.DayOfWeek);
+            var cell = days.FirstOrDefault(day => day.Weekday == row.ShiftDate.DayOfWeek);
             var key = ScheduleRevisionKeys.DatedOverride(row.UserId, row.ShiftDate, row.Shift, row.Kind);
             if (cell?.IsDayOff == true)
             {
@@ -1572,7 +1720,7 @@ internal static class ScheduleDatedWrite
             return ScheduleCommandHandler.Refused(revisions, key, "กะที่ส่งมาไม่ตรงกับกะของคนนี้ในวันนั้น");
         }
 
-        if (target.BuildingId is not int buildingId || !actor.CanChange(buildingId, target.Shift, slot.Date))
+        if (target.BuildingId is not int buildingId || !actor.CanChange(buildingId, slot.Date))
         {
             return ScheduleCommandHandler.Refused(revisions, key,
                 $"ไม่มีสิทธิ์แก้ตารางของคนนี้ในวันที่ {ScheduleCommandHandler.Iso(slot.Date)}");

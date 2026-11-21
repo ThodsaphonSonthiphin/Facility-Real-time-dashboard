@@ -173,4 +173,54 @@ public class MyWorkEndpointTests
         Assert.Equal(destination, work.Attendance.DutyAreaId);
         Assert.Equal("transfer", work.Attendance.DutySource);
     }
+
+    [Fact]
+    public async Task Cleaner_with_null_user_shift_scheduled_for_tomorrow_sees_my_work_and_checks_in_tomorrow()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var ar03 = await TestData.AddAreaAsync(factory, "AR03", "A", ShiftPattern.DayAndNight);
+        await TestData.AddPointAsync(factory, "AR03", "AR03-01", "token-ar03-point");
+        var buildingA = await AdminSetupApi.ReadAsync(factory, db => db.Buildings.Where(b => b.Code == "A").Select(b => b.Id).SingleAsync());
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory); // 2026-11-17
+
+        var created = await admin.PostAsJsonAsync(AccountApi.Path, new
+        {
+            role = "Cleaner",
+            displayName = "แม่บ้าน กะเริ่มพรุ่งนี้",
+            employeeId = "E4020",
+            phone = "0894020000",
+            cleanerKind = "Regular",
+            homeBuildingId = buildingA,
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var newcomer = await AccountApi.ReadAsync(created);
+        Assert.Null(newcomer.Shift);
+
+        var scheduled = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetRegularBaseline, new
+        {
+            userId = newcomer.Id,
+            effectiveFrom = "2026-11-18",
+            shift = "Day",
+            days = new[]
+            {
+                new { weekday = "Wednesday", areaId = (int?)ar03, breakGroup = (int?)1, isDayOff = false },
+            },
+        });
+        Assert.Equal(HttpStatusCode.OK, scheduled.Response.StatusCode);
+
+        // Log in while Clock is wall-clock UtcNow so JWT exp is valid, then set Clock to tomorrow 2026-11-18 08:05 Thai time.
+        factory.Clock.SetUtcNow(DateTimeOffset.UtcNow);
+        var (cleaner, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E4020", "0894020000");
+        factory.Clock.SetUtcNow(new DateTime(2026, 11, 18, 1, 5, 0, DateTimeKind.Utc));
+
+        var work = (await cleaner.GetFromJsonAsync<MyWorkModel>("/api/my-work"))!;
+        Assert.NotNull(work.OwnShift);
+        Assert.Equal("Day", work.OwnShift!.Shift);
+        Assert.Equal("AR03", Assert.Single(work.Areas).AreaCode);
+
+        await AttendanceApi.CheckInAsync(factory, cleaner, new DateTime(2026, 11, 18, 1, 5, 0, DateTimeKind.Utc), "token-checkin-ar03");
+    }
 }

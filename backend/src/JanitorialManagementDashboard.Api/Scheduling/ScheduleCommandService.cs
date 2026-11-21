@@ -375,7 +375,7 @@ public sealed class ScheduleCommandService(
     /// command ran. Admin holds it while the account is active, a Supervisor only while one of its dated periods covers
     /// today's business date, and a Cleaner never holds it. Everything that has to decide "may this actor do a management
     /// thing at all" asks this one method, and whether a recorded building/shift is inside it is
-    /// <see cref="ActorAuthority.HoldsScope"/>, which asks <see cref="ScheduleAuthority.CanManage"/> — the same predicate
+    /// <see cref="ActorAuthority.HoldsScope"/>, which asks <see cref="ScheduleAuthority.CanManageSchedule"/> — the same predicate
     /// every other management path uses.
     /// </summary>
     private async Task<ActorAuthority?> ReadAuthorityAsync(int actorId, CancellationToken ct)
@@ -459,7 +459,7 @@ public sealed class ScheduleCommandService(
     /// <summary>
     /// The authority an actor holds right now (spec §11). <see cref="HoldsScope"/> answers whether the building/shift keys a
     /// command applied to are all still inside it: an Admin holds every building, and a Supervisor holds only the keys one
-    /// of today's dated periods names — through <see cref="ScheduleAuthority.CanManage"/>, never a second copy of the rule.
+    /// of today's dated periods names — through <see cref="ScheduleAuthority.CanManageSchedule"/>, never a second copy of the rule.
     /// </summary>
     private sealed record ActorAuthority(
         int ActorId, UserRole Role, DateOnly BusinessDate, IReadOnlyList<ScopePeriod> Periods)
