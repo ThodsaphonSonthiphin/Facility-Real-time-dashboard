@@ -1,6 +1,24 @@
 # Handoff: current status and next steps
 
-Updated 2026-11-21 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
+Updated 2026-11-22 (Asia/Bangkok). Read this first every session and update it after every task (owner's rule). This repository is public; keep secrets and real personnel data outside it.
+
+## Supervisor full scheduling and Production onboarding fix (2026-11-22, Asia/Bangkok)
+
+Resolved the Production scheduling blocker (root cause introduced in `f9c3644`, where legacy/pre-scheduling `users` and `areas` lacked `CleanerProfilePeriods`, `SupervisorScopePeriods`, and `ScheduleBaselines`, and Account/Area mutations did not keep schedule records synchronized) and implemented Supervisor full scheduling across both shifts on branch `feat/supervisor-full-scheduling`:
+
+- **Startup backfill and Account/Area sync (`facility-0238`):** Added startup `ScheduleBackfill.EnsureAsync` and `ScheduleSync.SyncCleanerAsync` so existing and newly created/updated Cleaner accounts, Supervisor scopes, and Areas stay synchronized with `CleanerProfilePeriods`, `SupervisorScopePeriods`, and `ScheduleBaselines`.
+- **Nullable `CleanerProfilePeriod.Shift` (`facility-0239`):** Added EF Core migration `MakeCleanerProfileShiftNullable` so Regular Cleaners can be created with `HomeBuildingId` (`ตึกประจำ`) while leaving `Shift` and `AreaId` unassigned (`— ยังไม่กำหนดพื้นที่ —` / `ยังไม่จัดกะและพื้นที่`) for the Supervisor to configure later.
+- **Supervisor both-shift scheduling (`facility-0240`):** Updated `ScheduleAuthority.CanManageSchedule` and `CanCorrectScheduleHistory` plus the `/schedule-management` shift filter (`ทุกกะ` / `กะเช้า` / `กะดึก`) so Supervisors can plan and manage both Day and Night shifts in their assigned buildings while keeping `/my-building` and QR inspection scoped to their own shift.
+- **Same-day regular baseline setup (`facility-0241`):** Updated `set-regular-baseline` (`ScheduleWriteTests`, `RegularBaselineEditor`) to support `EffectiveFrom >= businessDate` (same-day setup), explicit `Shift`, optional `BreakGroup`, `(AreaId, Shift)` uniqueness + `Area.HasShift` (`DayOnly`) validation across all 7 weekdays, and `users` sync.
+- **Playwright E2E onboarding flow (`scheduling.spec.ts`):** Added end-to-end test verifying Admin creating 2 Regular Cleaners with only `ตึกประจำ` (no shift or Area), Supervisor assigning `ตั้งตารางประจำ` (`วันเริ่มใช้ = today`, `กะ = กะเช้า`, 2 distinct active Areas) and `จัดวันหยุดรายสัปดาห์` (Sunday for Cleaner 1, Saturday for Cleaner 2), and both Cleaners seeing their assigned Area and day off on `/my-schedule`. Also updated the cross-Supervisor relief loan test to select `กะปลายทาง` (`fixture.shift`) now that `/schedule-management` defaults to `ทุกกะ`.
+- **Production configuration reminder:** Before deploying, verify that the Production environment defines `Scheduling__CommandSigningKey` (>= 32 bytes) so `/api/schedules/command-tokens` and `/api/schedules/commands` succeed on save.
+- **Verification (directly observed):**
+  - `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`: **588 passed, 0 failed, 0 skipped** (588 total).
+  - `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests`: **1,062 passed, 6 failed, 30 skipped** (1,098 total; 30 MySQL-gated cases skipped without `FACILITY_MYSQL_TEST`; the 6 failures are 4 `ScheduleLiveTests` cases expecting `TimeoutException` on cross-shift SignalR isolation and 2 `command-not-authorised` cases in `AttendanceBoardEndpointTests.A_standalone_loan_is_assigned_before_entry_and_entered_only_after_the_destination_scan` and `OverviewDetailTests.Cancelled_transfer_and_relief_assignment_keep_entry_and_assignment_distinct`).
+  - `npm --prefix frontend run lint`: **0 errors**.
+  - `NODE_ENV=test npm --prefix frontend test`: **83/83 files, 785/785 tests passed**.
+  - `npm --prefix frontend run build`: `index-D3w2tRg6.js` **390.66 kB** (**111.83 kB** gzip `<= 200 kB`), `index-DzIlufKt.css` **54.66 kB** (**10.36 kB** gzip).
+  - `E2E_HEADLESS=1 E2E_SLOW_MO=0 npm --prefix frontend run e2e -- --dataset large scheduling.spec.ts admin-workflows.spec.ts`: **9 passed, 0 failed** (53.2s; evidence in `.run/e2e/20261121194044_c5530a6a`).
 
 ## Overview Entry availability fix (2026-11-21, Asia/Bangkok)
 
