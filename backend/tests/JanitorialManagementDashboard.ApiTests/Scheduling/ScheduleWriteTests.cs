@@ -1509,6 +1509,35 @@ public class ScheduleWriteTests
             Assert.Equal([new DateOnly(2026, 11, 22)], off);
         });
     }
+
+    [Fact]
+    public async Task Partial_regular_baseline_change_to_night_rejects_inherited_day_only_area()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayProfileAsync(factory, "1000003", new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000003", new DateOnly(2026, 10, 1), "AR02", breakGroup: 1);
+        var ar03 = await TestData.AddAreaAsync(factory, "AR03", "A", ShiftPattern.DayAndNight);
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000003");
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        ScheduleWriteApi.Today(factory);
+
+        // Only Tuesday is submitted with DayAndNight AR03, while Monday/Wednesday/Thursday/Friday inherit DayOnly AR02.
+        var answer = await ScheduleWriteApi.ExecuteAsync(supervisor, ScheduleWriteApi.SetRegularBaseline, new
+        {
+            userId = person,
+            effectiveFrom = "2026-11-17",
+            shift = "Night",
+            days = new[]
+            {
+                new { weekday = "Tuesday", areaId = (int?)ar03, breakGroup = (int?)null, isDayOff = false },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, answer.Response.StatusCode);
+        Assert.Equal(ScheduleCommandOutcome.Rejected, answer.Answer!.Outcome);
+        Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(answer.Answer.Problems).Code);
+    }
 }
 
 /// <summary>

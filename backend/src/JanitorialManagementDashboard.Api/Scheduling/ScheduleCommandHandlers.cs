@@ -1115,12 +1115,6 @@ internal static class ScheduleBaselineWrite
                 return ScheduleCommandHandler.Refused(revisions, key,
                     $"ไม่มีสิทธิ์จัดตาราง Area {areaId} ในตึกนั้น");
             }
-
-            if (kind == BaselineKind.Regular && !area.HasShift(effectiveShift!.Value))
-            {
-                return ScheduleCommandHandler.Refused(revisions, key,
-                    $"พื้นที่ {area.Code} ทำเฉพาะกะ{ThaiLabels.ShiftName(Shift.Day)} เลือกกะ{ThaiLabels.ShiftName(effectiveShift.Value)}ไม่ได้");
-            }
         }
 
         var versions = await db.ScheduleBaselines.Include(baseline => baseline.Days)
@@ -1199,6 +1193,17 @@ internal static class ScheduleBaselineWrite
                 foreach (var a in extraAreas)
                 {
                     loadedAreas[a.Id] = a;
+                }
+            }
+
+            foreach (var cell in created.Days)
+            {
+                if (!cell.IsDayOff && cell.AreaId is int areaId
+                    && loadedAreas.TryGetValue(areaId, out var area)
+                    && !area.HasShift(effectiveShift!.Value))
+                {
+                    return ScheduleCommandHandler.Refused(revisions, key,
+                        $"พื้นที่ {area.Code} ทำเฉพาะกะ{ThaiLabels.ShiftName(Shift.Day)} เลือกกะ{ThaiLabels.ShiftName(effectiveShift.Value)}ไม่ได้");
                 }
             }
 
