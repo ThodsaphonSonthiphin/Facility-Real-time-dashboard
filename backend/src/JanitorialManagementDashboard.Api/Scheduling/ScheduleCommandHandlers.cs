@@ -281,12 +281,20 @@ public abstract class ScheduleCommandHandler(TimeProvider clock) : IScheduleComm
     internal sealed record Actor(int Id, UserRole Role, DateOnly BusinessDate, IReadOnlyList<ScopePeriod> Periods)
     {
         public bool CanManage(int buildingId, Shift shift, DateOnly date) =>
-            ScheduleAuthority.CanManage(Role, Id, buildingId, shift, date, Periods);
+            ScheduleAuthority.CanManageSchedule(Role, Id, buildingId, date, Periods);
 
         public bool CanChange(int buildingId, Shift shift, DateOnly date) =>
             date < BusinessDate
-                ? ScheduleAuthority.CanCorrectHistory(Role, Id, buildingId, shift, date, BusinessDate, Periods)
-                : CanManage(buildingId, shift, date);
+                ? ScheduleAuthority.CanCorrectScheduleHistory(Role, Id, buildingId, date, BusinessDate, Periods)
+                : CanManageBuilding(buildingId, date);
+
+        public bool CanManageBuilding(int buildingId, DateOnly date) =>
+            ScheduleAuthority.CanManageSchedule(Role, Id, buildingId, date, Periods);
+
+        public bool CanChangeBuilding(int buildingId, DateOnly date) =>
+            date < BusinessDate
+                ? ScheduleAuthority.CanCorrectScheduleHistory(Role, Id, buildingId, date, BusinessDate, Periods)
+                : CanManageBuilding(buildingId, date);
     }
 
     /// <summary>The target person and the shift/building their dated identity gives them on the edited date.</summary>

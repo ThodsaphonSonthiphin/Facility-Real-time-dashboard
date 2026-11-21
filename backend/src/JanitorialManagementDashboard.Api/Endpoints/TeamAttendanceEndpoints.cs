@@ -155,8 +155,8 @@ public static class TeamAttendanceEndpoints
     {
         var today = ScheduleAuthority.BusinessDate(nowUtc);
         return slot.ShiftDate < today
-            ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, buildingId, slot.Shift, slot.ShiftDate, today, periods)
-            : ScheduleAuthority.CanManage(actor.Role, actor.Id, buildingId, slot.Shift, slot.ShiftDate, periods);
+            ? ScheduleAuthority.CanCorrectScheduleHistory(actor.Role, actor.Id, buildingId, slot.ShiftDate, today, periods)
+            : ScheduleAuthority.CanManageSchedule(actor.Role, actor.Id, buildingId, slot.ShiftDate, periods);
     }
 
     private static IResult UnavailablePerson(User actor) => actor.Role == UserRole.Admin

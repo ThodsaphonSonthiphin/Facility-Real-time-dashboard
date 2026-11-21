@@ -465,8 +465,8 @@ public sealed class ScheduleCommandService(
         int ActorId, UserRole Role, DateOnly BusinessDate, IReadOnlyList<ScopePeriod> Periods)
     {
         public bool HoldsScope(IReadOnlyList<ScheduleScopeKey> scope) =>
-            scope.All(key => ScheduleAuthority.CanManage(
-                Role, ActorId, key.BuildingId, key.Shift, BusinessDate, Periods));
+            scope.All(key => ScheduleAuthority.CanManageSchedule(
+                Role, ActorId, key.BuildingId, BusinessDate, Periods));
     }
 
     /// <summary>A failed push is logged and swallowed: the facts are already committed, so the command did not fail.</summary>

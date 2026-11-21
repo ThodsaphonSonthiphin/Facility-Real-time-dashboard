@@ -72,8 +72,7 @@ public class ScheduleReadTests
 
         var projection = await ReadAsync(factory, supervisor, Week);
 
-        Assert.Equal(new[] { dayA, dayA2 }.OrderBy(x => x), projection.Rows.Select(r => r.UserId).OrderBy(x => x));
-        Assert.DoesNotContain(projection.Rows, row => row.UserId == nightA);
+        Assert.Equal(new[] { dayA, nightA, dayA2 }.OrderBy(x => x), projection.Rows.Select(r => r.UserId).OrderBy(x => x));
         Assert.DoesNotContain(projection.Rows, row => row.UserId == dayB);
     }
 
@@ -84,11 +83,62 @@ public class ScheduleReadTests
         var buildingB = await TestData.AddBuildingAsync(factory, "B");
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
         var supervisor = await AdminSetupApi.UserIdAsync(factory, "2000001");
+        var nightA = await AdminSetupApi.UserIdAsync(factory, "1000002");
 
-        // The forged building and the other shift are both narrower than the assigned scope, never a wider read.
+        // A forged building outside the assigned scope still returns nothing; within the assigned building both Day and Night shifts are readable.
         Assert.Empty((await ReadAsync(factory, supervisor, Week, buildingId: buildingB)).Rows);
-        Assert.Empty((await ReadAsync(factory, supervisor, Week, shift: Shift.Night)).Rows);
+        var nightOnly = await ReadAsync(factory, supervisor, Week, shift: Shift.Night);
+        Assert.Equal(nightA, Assert.Single(nightOnly.Rows).UserId);
         Assert.Equal(2, (await ReadAsync(factory, supervisor, Week, shift: Shift.Day)).Rows.Count);
+    }
+
+    [Fact]
+    public async Task A_supervisor_reads_unassigned_shift_regular_cleaners_in_their_building()
+    {
+        using var factory = new JanitorialApiFactory();
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var supervisor = await AdminSetupApi.UserIdAsync(factory, "2000001");
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory, "A");
+        var unassignedId = 0;
+        await factory.WithDbAsync(async db =>
+        {
+            var admin = await db.Users.SingleAsync(u => u.Username == "admin");
+            var cleaner = new User
+            {
+                Role = UserRole.Cleaner,
+                EmployeeId = "1000010",
+                DisplayName = "แม่บ้านยังไม่กำหนดกะ",
+                SecretHash = "not-a-hash",
+                BuildingId = buildingA,
+                AreaId = null,
+                Shift = null,
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Users.Add(cleaner);
+            await db.SaveChangesAsync();
+            db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+            {
+                UserId = cleaner.Id,
+                Kind = CleanerKind.Regular,
+                HomeBuildingId = buildingA,
+                Shift = null,
+                EffectiveFrom = new DateOnly(2026, 10, 1),
+                Revision = 1,
+                CreatedById = admin.Id,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+            unassignedId = cleaner.Id;
+        });
+
+        var projection = await ReadAsync(factory, supervisor, Week);
+        var row = Assert.Single(projection.Rows, r => r.UserId == unassignedId);
+        var day = row.Days[0];
+
+        Assert.True(day.Edit.CanChange);
+        Assert.Null(day.Shift);
+        Assert.Equal("unset", day.Availability);
     }
 
     [Fact]
@@ -323,7 +373,7 @@ public class ScheduleReadTests
         var projection = await ReadAsync(factory, supervisor, Week);
 
         var covered = new[] { Week.AddDays(3), Week.AddDays(4), Week.AddDays(5), Week.AddDays(6) };
-        Assert.Equal(2, projection.Rows.Count);
+        Assert.Equal(3, projection.Rows.Count);
         Assert.All(projection.Rows, row => Assert.Equal(covered, row.Days.Select(day => day.Date)));
         Assert.DoesNotContain(projection.Rows, row => row.UserId == departed);
     }
@@ -340,7 +390,7 @@ public class ScheduleReadTests
         var projection = await ReadAsync(factory, supervisor, Week);
 
         var covered = new[] { Week, Week.AddDays(1), Week.AddDays(2) };
-        Assert.Equal(2, projection.Rows.Count);
+        Assert.Equal(3, projection.Rows.Count);
         Assert.All(projection.Rows, row => Assert.Equal(covered, row.Days.Select(day => day.Date)));
         Assert.Empty((await ReadAsync(factory, supervisor, NextWeek)).Rows);
     }

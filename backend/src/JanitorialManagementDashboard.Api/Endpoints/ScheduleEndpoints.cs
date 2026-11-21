@@ -99,8 +99,8 @@ public static class ScheduleEndpoints
         var periods = await SupervisorScopes.ReadAsync(db, actor, clock, ct);
         var today = ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
         bool CanChange(int building) => shiftDate < today
-            ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, building, parsedShift, shiftDate, today, periods)
-            : ScheduleAuthority.CanManage(actor.Role, actor.Id, building, parsedShift, shiftDate, periods);
+            ? ScheduleAuthority.CanCorrectScheduleHistory(actor.Role, actor.Id, building, shiftDate, today, periods)
+            : ScheduleAuthority.CanManageSchedule(actor.Role, actor.Id, building, shiftDate, periods);
 
         var destinations = db.Areas.AsNoTracking().Where(area => area.IsActive
             && (parsedShift == Shift.Day || area.ShiftPattern != ShiftPattern.DayOnly));
