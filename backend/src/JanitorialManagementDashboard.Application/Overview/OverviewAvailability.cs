@@ -48,15 +48,17 @@ public static class OverviewAvailability
         var start = ShiftCalendar.StartUtc(slot);
         var evaluation = moment.EvaluationUtc;
         var firstPossibleOpen = FirstPossibleOpen(slot);
-        var policyUnreadable = Intersects(coverage.UnreadableTargetIntervals, firstPossibleOpen, evaluation);
+        var openingUnreadable = Intersects(coverage.UnreadableTargetIntervals, firstPossibleOpen, start);
+        var historyUnreadable = Intersects(coverage.UnreadableTargetIntervals, start, evaluation);
         var earliestAttendance = EarliestAttendance(start, evaluation, timeline.ReceivingHistory);
         var openingKnown = earliestAttendance.HasValue && timeline.ReceivingHistory[0].EffectiveAt <= firstPossibleOpen
-            && coverage.TargetCaptureFromUtc.GetValueOrDefault() <= firstPossibleOpen;
-        var receivingKnown = moment.PolicyComplete && openingKnown && !policyUnreadable;
+            && coverage.TargetCaptureFromUtc.GetValueOrDefault() <= firstPossibleOpen
+            && !openingUnreadable;
         var gaps = coverage.Gaps.Concat(timeline.StructuralGaps);
         var currentGap = Intersects(gaps, evaluation, evaluation);
         var currentUnreadable = Intersects(coverage.UnreadableTargetIntervals,
             moment.Phase == "running" ? evaluation : ShiftCalendar.EndUtc(slot), evaluation);
+        var closingKnown = moment.PolicyComplete && !(moment.Phase != "running" && currentUnreadable);
         var current = new List<string>();
         if (!timeline.CurrentComplete || coverage.TargetCaptureFromUtc > evaluation)
             current.Add("targetCoverageMissing");
@@ -64,8 +66,8 @@ public static class OverviewAvailability
         if (currentUnreadable) current.Add("targetRevisionUnreadable");
 
         var entryReasons = new List<string>(current);
-        if (!receivingKnown) entryReasons.Add("receivingPolicyUnknown");
-        if ((openingKnown && !policyUnreadable ? earliestAttendance : firstPossibleOpen) <= coverage.AttendanceAfterUtc)
+        if (!closingKnown) entryReasons.Add("receivingPolicyUnknown");
+        if ((openingKnown ? earliestAttendance : firstPossibleOpen) <= coverage.AttendanceAfterUtc)
             entryReasons.Add("attendancePartlyExpired");
         // An unreadable policy could have kept receiving open after the provisional evaluation time.
         var readAt = coverage.ReadAtUtc ?? (moment.Phase == "closed" ? DateTime.MaxValue : evaluation);
@@ -80,9 +82,9 @@ public static class OverviewAvailability
 
         var historyReasons = new List<string>();
         if (!timeline.HistoryComplete || coverage.TargetCaptureFromUtc > start) historyReasons.Add("targetCoverageMissing");
-        if (!receivingKnown) historyReasons.Add("receivingPolicyUnknown");
+        if (!closingKnown) historyReasons.Add("receivingPolicyUnknown");
         if (Intersects(gaps, start, evaluation)) historyReasons.Add("targetCoverageGap");
-        if (policyUnreadable) historyReasons.Add("targetRevisionUnreadable");
+        if (historyUnreadable) historyReasons.Add("targetRevisionUnreadable");
         var history = workRetained ? FromReasons(historyReasons) : work;
 
         var issueReasons = new List<string>(current);

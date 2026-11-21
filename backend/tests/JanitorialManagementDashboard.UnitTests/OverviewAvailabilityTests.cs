@@ -23,8 +23,64 @@ public class OverviewAvailabilityTests
         var coverage = new DetailCoverage(start.AddYears(-1), new(2025, 12, 1),
             start.AddHours(3), true, []);
         var result = OverviewAvailability.Calculate(slot, moment, target, coverage);
+        Assert.Equal("complete", result.Entry.State);
+        Assert.Empty(result.Entry.Reasons);
         Assert.Equal("complete", result.Work.State);
         Assert.Equal("partial", result.History.State);
+        Assert.Contains("targetCoverageMissing", result.History.Reasons);
+        Assert.DoesNotContain("receivingPolicyUnknown", result.History.Reasons);
+    }
+
+    [Fact]
+    public void Pre_shift_capture_after_first_possible_open_completes_entry_and_history()
+    {
+        var preShift = Start.AddMinutes(-30);
+        var revisions = new[] { Revision(1, preShift) };
+        var coverage = Retained with { TargetCaptureFromUtc = preShift };
+
+        var result = Calculate(revisions, coverage);
+
+        Assert.All(Sections(result), section =>
+        {
+            Assert.Equal("complete", section.State);
+            Assert.Empty(section.Reasons);
+        });
+    }
+
+    [Fact]
+    public void Unknown_closing_policy_after_shift_end_marks_entry_and_history_partial()
+    {
+        var end = ShiftCalendar.EndUtc(Slot);
+        var postShiftStart = end.AddMinutes(10);
+        var readAt = end.AddMinutes(20);
+        var revisions = new[] { Revision(1, postShiftStart) };
+        var coverage = Retained with { TargetCaptureFromUtc = postShiftStart, ReadAtUtc = readAt };
+
+        var result = Calculate(revisions, coverage, readAt);
+
+        Assert.Equal("partial", result.Entry.State);
+        Assert.Contains("receivingPolicyUnknown", result.Entry.Reasons);
+        Assert.Equal("partial", result.History.State);
+        Assert.Contains("receivingPolicyUnknown", result.History.Reasons);
+    }
+
+    [Fact]
+    public void Unknown_preshift_opening_policy_falls_back_to_first_possible_open_for_retention_expiry()
+    {
+        var preShift = Start.AddMinutes(-30);
+        var firstPossibleOpen = Start.AddMinutes(-360);
+        var revisions = new[] { Revision(1, preShift) };
+        var coverage = Retained with
+        {
+            TargetCaptureFromUtc = preShift,
+            AttendanceAfterUtc = firstPossibleOpen,
+        };
+
+        var result = Calculate(revisions, coverage);
+
+        Assert.Equal("partial", result.Entry.State);
+        Assert.Contains("attendancePartlyExpired", result.Entry.Reasons);
+        Assert.DoesNotContain("receivingPolicyUnknown", result.Entry.Reasons);
     }
 
     [Fact]
