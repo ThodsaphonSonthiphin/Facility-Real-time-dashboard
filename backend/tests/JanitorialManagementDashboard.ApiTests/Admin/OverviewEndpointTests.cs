@@ -621,6 +621,66 @@ public class OverviewEndpointTests
         Assert.Equal("2027-10-05", range.GetProperty("completeThrough").GetString());
     }
 
+    [Fact]
+    public async Task Mid_shift_first_deployment_reports_complete_entry_while_keeping_history_partial()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var cleanerId = await TestData.AddCleanerAsync(factory, "1000099", Shift.Day, phone: "0810000099");
+        var (cleaner, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "1000099", "0810000099");
+
+        // First deployment starts mid-shift at 09:00 Thai on 2026-10-08 (Day shift 07:00-19:00).
+        await OverviewTestData.StartHistoryAsync(factory, ThaiClock.At(8, 9, 0));
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory, "A");
+
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 10));
+        var createArea = await admin.PostAsJsonAsync("/api/admin/areas", new
+        {
+            code = "AR03",
+            name = "Canteen",
+            buildingId = buildingA,
+            shiftPattern = "DayOnly",
+            dayCleanerId = cleanerId,
+        });
+        Assert.Equal(HttpStatusCode.Created, createArea.StatusCode);
+        var createdJson = await createArea.Content.ReadFromJsonAsync<JsonElement>();
+        var qrToken = createdJson.GetProperty("checkInSign").GetProperty("qrToken").GetString()!;
+
+        await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 9, 40), qrToken);
+
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 9, 41));
+        var summary = await admin.GetFromJsonAsync<JsonElement>("/api/admin/overview?shiftDate=2026-10-08&shift=Day");
+        var avail = summary.GetProperty("availability");
+
+        Assert.Equal("complete", avail.GetProperty("entry").GetProperty("state").GetString());
+        Assert.Empty(avail.GetProperty("entry").GetProperty("reasons").EnumerateArray());
+        Assert.Equal("partial", avail.GetProperty("history").GetProperty("state").GetString());
+        var historyReasons = avail.GetProperty("history").GetProperty("reasons").EnumerateArray()
+            .Select(r => r.GetString()).ToArray();
+        Assert.Contains("targetCoverageMissing", historyReasons);
+        Assert.DoesNotContain("receivingPolicyUnknown", historyReasons);
+
+        Assert.Equal(1, summary.GetProperty("entry").GetProperty("numerator").GetProperty("value").GetInt32());
+        Assert.Equal(3, summary.GetProperty("entry").GetProperty("denominator").GetProperty("value").GetInt32());
+        Assert.Equal(1, summary.GetProperty("groups").GetProperty("entered").GetProperty("value").GetInt32());
+        Assert.Equal(2, summary.GetProperty("groups").GetProperty("notEntered").GetProperty("value").GetInt32());
+
+        var list = await admin.GetFromJsonAsync<JsonElement>(
+            "/api/admin/overview/areas?shiftDate=2026-10-08&shift=Day&group=entered");
+        Assert.Equal(1, list.GetProperty("total").GetProperty("value").GetInt32());
+        var row = Assert.Single(list.GetProperty("rows").EnumerateArray());
+        Assert.Equal("AR03", row.GetProperty("code").GetString());
+
+        // A shift that ended before first deployment still reports partial entry with unknown closing policy.
+        var previousShift = await admin.GetFromJsonAsync<JsonElement>("/api/admin/overview?shiftDate=2026-10-07&shift=Day");
+        var prevEntryAvail = previousShift.GetProperty("availability").GetProperty("entry");
+        Assert.Equal("partial", prevEntryAvail.GetProperty("state").GetString());
+        Assert.Contains("receivingPolicyUnknown",
+            prevEntryAvail.GetProperty("reasons").EnumerateArray().Select(r => r.GetString()));
+        Assert.Equal(JsonValueKind.Null,
+            previousShift.GetProperty("entry").GetProperty("numerator").GetProperty("value").ValueKind);
+    }
+
     private static async Task<int> AddPointAsync(
         JanitorialApiFactory factory, string areaCode, string signCode, string qrToken, int startHour, int endHour)
     {
