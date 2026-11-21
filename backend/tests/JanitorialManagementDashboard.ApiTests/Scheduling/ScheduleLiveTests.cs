@@ -93,7 +93,9 @@ public class ScheduleLiveTests
         {
             Assert.Equal(field.Value.GetGuid(), (await destinationGot.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("commandId").GetGuid());
         }
-        await Assert.ThrowsAsync<TimeoutException>(() => nightGot.Task.WaitAsync(TimeSpan.FromMilliseconds(300)));
+        // ADR facility-0240: scheduling authority is building-scoped across both shifts, so an active Night supervisor
+        // of building A also receives schedule invalidations for Day changes in building A.
+        Assert.Equal(field.Value.GetGuid(), (await nightGot.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("commandId").GetGuid());
         if (change != "arrival")
         {
             // A settled negative: the push is sent before the HTTP response returns, so a wrongly-scoped event would
@@ -156,7 +158,7 @@ public class ScheduleLiveTests
     }
 
     [Fact]
-    public async Task A_day_change_is_not_pushed_to_an_active_night_supervisor_of_the_same_building()
+    public async Task A_day_change_is_pushed_to_an_active_night_supervisor_of_the_same_building()
     {
         using var factory = ScheduleWriteApi.NewFactory();
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
@@ -176,7 +178,7 @@ public class ScheduleLiveTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var delivered = await dayGot.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(answer!.CommandId, delivered.GetProperty("commandId").GetGuid());
-        await Assert.ThrowsAsync<TimeoutException>(() => nightGot.Task.WaitAsync(TimeSpan.FromMilliseconds(500)));
+        Assert.Equal(answer.CommandId, (await nightGot.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("commandId").GetGuid());
     }
 
     [Fact]

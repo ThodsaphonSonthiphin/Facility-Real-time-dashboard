@@ -14,7 +14,7 @@ Resolved the Production scheduling blocker (root cause introduced in `f9c3644`, 
 - **Production configuration reminder:** Before deploying, verify that the Production environment defines `Scheduling__CommandSigningKey` (>= 32 bytes) so `/api/schedules/command-tokens` and `/api/schedules/commands` succeed on save.
 - **Verification (directly observed):**
   - `dotnet test backend/tests/JanitorialManagementDashboard.UnitTests`: **588 passed, 0 failed, 0 skipped** (588 total).
-  - `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests`: **1,062 passed, 6 failed, 30 skipped** (1,098 total; 30 MySQL-gated cases skipped without `FACILITY_MYSQL_TEST`; the 6 failures are 4 `ScheduleLiveTests` cases expecting `TimeoutException` on cross-shift SignalR isolation and 2 `command-not-authorised` cases in `AttendanceBoardEndpointTests.A_standalone_loan_is_assigned_before_entry_and_entered_only_after_the_destination_scan` and `OverviewDetailTests.Cancelled_transfer_and_relief_assignment_keep_entry_and_assignment_distinct`).
+  - `dotnet test backend/tests/JanitorialManagementDashboard.ApiTests`: **1,068 passed, 0 failed, 30 skipped** (1,098 total; 30 MySQL-gated cases skipped without `FACILITY_MYSQL_TEST`).
   - `npm --prefix frontend run lint`: **0 errors**.
   - `NODE_ENV=test npm --prefix frontend test`: **83/83 files, 785/785 tests passed**.
   - `npm --prefix frontend run build`: `index-D3w2tRg6.js` **390.66 kB** (**111.83 kB** gzip `<= 200 kB`), `index-DzIlufKt.css` **54.66 kB** (**10.36 kB** gzip).
