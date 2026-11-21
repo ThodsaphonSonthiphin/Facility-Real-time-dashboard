@@ -42,8 +42,9 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     expect(within(tabs).getByRole('tab', { name: 'แม่บ้าน 4' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel', { name: 'แม่บ้าน 4' })).toContainElement(table);
     expect(names()).toEqual(['แม่บ้านทดสอบ', 'แม่บ้านกะดึก', 'แม่บ้านว่าง', 'แม่บ้านที่ลาออก']);
+    expect(await screen.findByText('ตึก A · ตึกทดลอง · ยังไม่มีพื้นที่ · กะเช้า')).toBeInTheDocument();
     expect(cellsOf('แม่บ้านทดสอบ')).toEqual(['650001', 'AR01 · กะเช้า', 'ใช้งานอยู่']);
-    expect(cellsOf('แม่บ้านว่าง')).toEqual(['650003', 'ยังไม่มีพื้นที่ · กะเช้า', 'ใช้งานอยู่']);
+    expect(cellsOf('แม่บ้านว่าง')).toEqual(['650003', 'ตึก A · ตึกทดลอง · ยังไม่มีพื้นที่ · กะเช้า', 'ใช้งานอยู่']);
     expect(cellsOf('แม่บ้านที่ลาออก')).toEqual(['650006', 'ยังไม่มีพื้นที่ · กะเช้า', 'ปิดใช้งาน']);
     expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
       'ชื่อ', 'รหัสพนักงาน', 'พื้นที่ · กะ', 'สถานะ', 'การกระทำ',
@@ -269,10 +270,15 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     expect(within(form).getByRole('alert')).toHaveTextContent('เบอร์โทรต้องเป็นเลข 10 หลัก ขึ้นต้นด้วย 0');
     await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0810000009');
     await send();
+    expect(within(form).getByRole('alert')).toHaveTextContent('เลือกตึกประจำหรือพื้นที่ประจำก่อน');
+    expect(created(server)).toBeUndefined();
+
+    // Choosing an Area still requires picking a shift
+    await user.selectOptions(await within(form).findByLabelText('พื้นที่ประจำ'), '2');
+    await send();
     expect(within(form).getByRole('alert')).toHaveTextContent('เลือกกะก่อน');
     expect(created(server)).toBeUndefined();
 
-    // No Area yet is allowed: the Admin chooses it later with "แก้ไข"
     await user.click(within(form).getByRole('radio', { name: /^กะเช้า/ }));
     await send();
     expect(await within(form).findByRole('alert')).toHaveTextContent('รหัสพนักงานนี้มีแล้ว');
@@ -292,6 +298,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านใหม่');
     await user.type(within(form).getByLabelText('รหัสพนักงาน'), '650010');
     await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0810000009');
+    await user.selectOptions(await within(form).findByLabelText('ตึกประจำ'), '1');
     await user.click(within(form).getByRole('radio', { name: /^กะเช้า/ }));
     await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
 
@@ -361,6 +368,7 @@ describe('AccountsPage (D6, facility-0020, 0056)', () => {
     await user.type(within(form).getByLabelText('ชื่อที่แสดง'), 'แม่บ้านใหม่');
     await user.type(within(form).getByLabelText('รหัสพนักงาน'), '650010');
     await user.type(within(form).getByLabelText('เบอร์โทรศัพท์'), '0810000009');
+    await user.selectOptions(await within(form).findByLabelText('ตึกประจำ'), '1');
     await user.click(within(form).getByRole('radio', { name: /^กะเช้า/ }));
     await user.click(within(form).getByRole('button', { name: 'สร้างบัญชี' }));
 
@@ -392,4 +400,58 @@ it('creates a relief profile with a home building and clears the previously sele
     role: 'Cleaner', displayName: 'สแปร์ใหม่', employeeId: '650042', phone: '0810000042',
     cleanerKind: 'Relief', homeBuildingId: 2, shift: 'Night',
   });
+});
+
+it('allows creating a Regular Cleaner with only home building so the Supervisor schedules shift and Area', async () => {
+  const server = serve({
+    'POST /api/admin/accounts': () => ({
+      status: 201,
+      body: account({
+        id: 43,
+        loginName: '650043',
+        displayName: 'แม่บ้านรอจัดตาราง',
+        areaId: undefined,
+        areaCode: undefined,
+        shift: undefined,
+        cleanerKind: 'Regular',
+        homeBuildingId: 1,
+        homeBuildingCode: 'A',
+      }),
+    }),
+  });
+  const { user } = await renderApp('/admin/accounts');
+  const form = within(await openCreate(user));
+  await user.type(form.getByLabelText('ชื่อที่แสดง'), 'แม่บ้านรอจัดตาราง');
+  await user.type(form.getByLabelText('รหัสพนักงาน'), '650043');
+  await user.type(form.getByLabelText('เบอร์โทรศัพท์'), '0810000043');
+  await user.selectOptions(await form.findByLabelText('ตึกประจำ'), '1');
+  expect(form.getByLabelText('พื้นที่ประจำ')).toHaveValue('');
+  expect(form.getByRole('radio', { name: 'ยังไม่ระบุกะ (ให้หัวหน้าจัด)' })).toBeChecked();
+  await user.click(form.getByRole('button', { name: 'สร้างบัญชี' }));
+  expect(await form.findByText('สร้างบัญชี แม่บ้านรอจัดตาราง แล้ว')).toBeVisible();
+  expect(created(server)).toEqual({
+    role: 'Cleaner',
+    cleanerKind: 'Regular',
+    homeBuildingId: 1,
+    displayName: 'แม่บ้านรอจัดตาราง',
+    employeeId: '650043',
+    phone: '0810000043',
+  });
+});
+
+it('auto-sets home building when picking an Area and filters or clears Area when changing home building', async () => {
+  serve();
+  const { user } = await renderApp('/admin/accounts');
+  const form = within(await openCreate(user));
+  const areaSelect = await form.findByLabelText('พื้นที่ประจำ');
+  await within(areaSelect).findByRole('option', { name: /^AR02/ });
+
+  await user.selectOptions(areaSelect, '2');
+  expect(form.getByLabelText('ตึกประจำ')).toHaveValue('1');
+
+  await user.selectOptions(form.getByLabelText('ตึกประจำ'), '2');
+  expect(form.getByLabelText('พื้นที่ประจำ')).toHaveValue('');
+  expect(within(areaSelect).getAllByRole('option').map((option) => option.textContent)).toEqual([
+    '— ยังไม่กำหนดพื้นที่ —',
+  ]);
 });

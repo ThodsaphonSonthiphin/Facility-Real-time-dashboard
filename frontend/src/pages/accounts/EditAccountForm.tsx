@@ -1,6 +1,3 @@
-import { useState } from 'react';
-import { useAppSelector } from '../../store/hooks';
-import { baseApi } from '../../shared/api/baseApi';
 import { PasswordForm, PhoneForm } from './SecretForms';
 import { buildingOptionText } from '../../shared/api/buildingNames';
 import { Button } from '../../shared/components/Button';
@@ -20,11 +17,10 @@ import { useEditAccountForm } from './useEditAccountForm';
 
 /** D6's "แก้ไข": name and place; the role and the login name are fixed (plan 5 decision 2). Keyed by account id. */
 export function EditAccountForm({ account, accounts, areas, buildings, onDone, onCancel }: EditAccountFormProps) {
-  const { names, draft, set, problem, isLoading: profileLoading, areaChoices, blockOf, titleId, chooseCleanerKind, chooseArea, chooseBuilding, submit } = useEditAccountForm({ account, accounts, areas, buildings, onDone, onCancel });
-
-  const [notice, setNotice] = useState<string | null>(null);
-  const me = useAppSelector((state) => state.auth.currentUser?.id);
-  const isLoading = useAppSelector((state) => Object.values(state[baseApi.reducerPath].mutations).some((m) => m?.status === 'pending' && ['updateAccount', 'changePhone', 'resetPassword'].includes(m.endpointName ?? '')));
+  const {
+    names, draft, set, problem, notice, setNotice, me, profileLoading, isLoading,
+    visibleAreaChoices, blockOf, titleId, chooseCleanerKind, chooseHomeBuilding, chooseArea, chooseBuilding, submit,
+  } = useEditAccountForm({ account, accounts, areas, buildings, onDone, onCancel });
   const profileId = `${titleId}-profile`;
 
   return (
@@ -58,33 +54,39 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
             </div>
           )}
           <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-[minmax(0,1fr)_10rem]">
-            {account.role === 'Cleaner' && draft.cleanerKind === 'Relief' && (
-              <Field label="ตึกประจำ">
-                <Select size="desk" value={draft.homeBuildingId ?? ''} disabled={isLoading}
-                  onChange={(event) => set({ homeBuildingId: event.target.value })}>
-                  <option value="">เลือกตึกประจำ</option>
-                  {buildings.map((building) => (
-                    <option key={building.id} value={building.id}>{buildingOptionText(building)}</option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-            {account.role === 'Cleaner' && draft.cleanerKind !== 'Relief' && (
-              <Field label="พื้นที่ประจำ" help={account.isActive ? undefined : 'เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่'}>
-                <Select
-                  size="desk"
-                  value={draft.areaId}
-                  disabled={isLoading || !account.isActive}
-                  onChange={(event) => chooseArea(event.target.value)}
-                >
-                  <option value="">— ยังไม่กำหนดพื้นที่ —</option>
-                  {areaChoices.map((option) => (
-                    <option key={option.id} value={String(option.id)}>
-                      {areaOptionLabel(option, account.id, names)}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+            {account.role === 'Cleaner' && (
+              <div className="flex flex-col gap-3">
+                <Field label="ตึกประจำ">
+                  <Select
+                    size="desk"
+                    value={draft.homeBuildingId ?? ''}
+                    disabled={isLoading}
+                    onChange={(event) => chooseHomeBuilding(event.target.value)}
+                  >
+                    <option value="">เลือกตึกประจำ</option>
+                    {buildings.map((building) => (
+                      <option key={building.id} value={String(building.id)}>{buildingOptionText(building)}</option>
+                    ))}
+                  </Select>
+                </Field>
+                {draft.cleanerKind !== 'Relief' && (
+                  <Field label="พื้นที่ประจำ" help={account.isActive ? undefined : 'เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่'}>
+                    <Select
+                      size="desk"
+                      value={draft.areaId}
+                      disabled={isLoading || !account.isActive}
+                      onChange={(event) => chooseArea(event.target.value)}
+                    >
+                      <option value="">— ยังไม่กำหนดพื้นที่ —</option>
+                      {visibleAreaChoices.map((option) => (
+                        <option key={option.id} value={String(option.id)}>
+                          {areaOptionLabel(option, account.id, names)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                )}
+              </div>
             )}
             {account.role === 'Supervisor' && (
               <Field label="ตึกที่ประจำ">
@@ -109,6 +111,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
                 value={draft.shift}
                 blockOf={blockOf}
                 disabled={isLoading}
+                allowEmpty={account.role === 'Cleaner' && draft.cleanerKind !== 'Relief' && draft.areaId === ''}
                 onChange={(shift) => set({ shift })}
               />
             )}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { account } from '../../test/adminFixtures';
+import { account, areaSummary } from '../../test/adminFixtures';
 import { createRequest, editDraftOf, emptyDraft, normalizePhone, placeText, updateRequest } from './accountRules';
 
 describe('account rules (facility-0020, 0054)', () => {
@@ -17,8 +17,14 @@ describe('account rules (facility-0020, 0054)', () => {
     expect(createRequest({ ...typed, role: 'Cleaner' })).toEqual({
       request: { role: 'Cleaner', displayName: 'แม่บ้านใหม่', employeeId: '650010', phone: '0810000009', shift: 'Day', areaId: 2 },
     });
-    expect(createRequest({ ...typed, role: 'Cleaner', areaId: '' })).toEqual({
-      request: { role: 'Cleaner', displayName: 'แม่บ้านใหม่', employeeId: '650010', phone: '0810000009', shift: 'Day' },
+    expect(createRequest({ ...typed, role: 'Cleaner', areaId: '', homeBuildingId: '' })).toEqual({
+      problem: 'เลือกตึกประจำหรือพื้นที่ประจำก่อน',
+    });
+    expect(createRequest({ ...typed, role: 'Cleaner', areaId: '', homeBuildingId: '1', shift: '' })).toEqual({
+      request: { role: 'Cleaner', cleanerKind: 'Regular', homeBuildingId: 1, displayName: 'แม่บ้านใหม่', employeeId: '650010', phone: '0810000009' },
+    });
+    expect(createRequest({ ...typed, role: 'Cleaner', areaId: '2', shift: '' })).toEqual({
+      problem: 'เลือกกะก่อน',
     });
     expect(createRequest({ ...typed, role: 'Supervisor' })).toEqual({
       request: { role: 'Supervisor', displayName: 'แม่บ้านใหม่', employeeId: '650010', phone: '0810000009', buildingId: 1, shift: 'Day' },
@@ -41,6 +47,12 @@ describe('account rules (facility-0020, 0054)', () => {
   it('writes where each role works', () => {
     expect(placeText(account())).toBe('AR01 · กะเช้า');
     expect(placeText(account({ areaId: undefined, areaCode: undefined, shift: 'Night' }))).toBe('ยังไม่มีพื้นที่ · กะดึก');
+    expect(placeText(account({ homeBuildingCode: 'A', areaId: undefined, areaCode: undefined, shift: undefined }))).toBe(
+      'ตึก A · ยังไม่จัดกะและพื้นที่',
+    );
+    expect(placeText(account({ homeBuildingCode: 'A', areaId: undefined, areaCode: undefined, shift: 'Day' }))).toBe(
+      'ตึก A · ยังไม่มีพื้นที่ · กะเช้า',
+    );
     expect(placeText(account({ role: 'Supervisor', areaCode: undefined, buildingCode: 'B', shift: 'Night' }))).toBe(
       'ตึก B · กะดึก',
     );
@@ -51,6 +63,10 @@ describe('account rules (facility-0020, 0054)', () => {
     const cleaner = account();
     expect(updateRequest(cleaner, editDraftOf(cleaner))).toEqual({
       body: { displayName: 'แม่บ้านทดสอบ', shift: 'Day', areaId: 1 },
+    });
+    expect(editDraftOf(cleaner, [areaSummary()]).homeBuildingId).toBe('1');
+    expect(updateRequest(cleaner, { ...editDraftOf(cleaner, [areaSummary()]), areaId: '', shift: '' })).toEqual({
+      body: { displayName: 'แม่บ้านทดสอบ', cleanerKind: 'Regular', homeBuildingId: 1 },
     });
     const away = account({ isActive: false, areaId: undefined, areaCode: undefined });
     expect(updateRequest(away, { ...editDraftOf(away), areaId: '2' })).toEqual({

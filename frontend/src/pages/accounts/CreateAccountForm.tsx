@@ -19,7 +19,7 @@ import { useCreateAccountForm } from './useCreateAccountForm';
  * in this form's state until it is sent, then it is cleared.
  */
 export function CreateAccountForm({ accounts, areas, buildings, onCancel }: CreateAccountFormProps) {
-  const { names, draft, chooseRole, set, problem, notice, isLoading, activeAreas, blockOf, chooseCleanerKind, chooseArea, chooseBuilding, submit } = useCreateAccountForm({ accounts, areas, buildings, onCancel });
+  const { names, draft, chooseRole, set, problem, notice, isLoading, visibleAreas, blockOf, chooseCleanerKind, chooseHomeBuilding, chooseArea, chooseBuilding, submit } = useCreateAccountForm({ accounts, areas, buildings, onCancel });
 
   return (
     <form className={formClass} aria-labelledby="accounts-create-title" onSubmit={(event) => void submit(event)}>
@@ -123,33 +123,39 @@ export function CreateAccountForm({ accounts, areas, buildings, onCancel }: Crea
                 </div>
               )}
               <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-[minmax(0,1fr)_10rem]">
-                {draft.role === 'Cleaner' && draft.cleanerKind === 'Relief' && (
-                  <Field label="ตึกประจำ">
-                    <Select size="desk" value={draft.homeBuildingId ?? ''} disabled={isLoading}
-                      onChange={(event) => set({ homeBuildingId: event.target.value })}>
-                      <option value="">เลือกตึกประจำ</option>
-                      {buildings.map((building) => (
-                        <option key={building.id} value={building.id}>{buildingOptionText(building)}</option>
-                      ))}
-                    </Select>
-                  </Field>
-                )}
-                {draft.role === 'Cleaner' && draft.cleanerKind !== 'Relief' && (
-                  <Field label="พื้นที่ประจำ">
-                    <Select
-                      size="desk"
-                      value={draft.areaId}
-                      disabled={isLoading}
-                      onChange={(event) => chooseArea(event.target.value)}
-                    >
-                      <option value="">— ยังไม่กำหนดพื้นที่ —</option>
-                      {activeAreas.map((option) => (
-                        <option key={option.id} value={String(option.id)}>
-                          {areaOptionLabel(option, undefined, names)}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
+                {draft.role === 'Cleaner' && (
+                  <div className="flex flex-col gap-3">
+                    <Field label="ตึกประจำ">
+                      <Select
+                        size="desk"
+                        value={draft.homeBuildingId ?? ''}
+                        disabled={isLoading}
+                        onChange={(event) => chooseHomeBuilding(event.target.value)}
+                      >
+                        <option value="">เลือกตึกประจำ</option>
+                        {buildings.map((building) => (
+                          <option key={building.id} value={String(building.id)}>{buildingOptionText(building)}</option>
+                        ))}
+                      </Select>
+                    </Field>
+                    {draft.cleanerKind !== 'Relief' && (
+                      <Field label="พื้นที่ประจำ">
+                        <Select
+                          size="desk"
+                          value={draft.areaId}
+                          disabled={isLoading}
+                          onChange={(event) => chooseArea(event.target.value)}
+                        >
+                          <option value="">— ยังไม่กำหนดพื้นที่ —</option>
+                          {visibleAreas.map((option) => (
+                            <option key={option.id} value={String(option.id)}>
+                              {areaOptionLabel(option, undefined, names)}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                    )}
+                  </div>
                 )}
                 {draft.role === 'Supervisor' && (
                   <Field label="ตึกที่ประจำ">
@@ -173,6 +179,7 @@ export function CreateAccountForm({ accounts, areas, buildings, onCancel }: Crea
                   value={draft.shift}
                   blockOf={blockOf}
                   disabled={isLoading}
+                  allowEmpty={draft.role === 'Cleaner' && draft.cleanerKind !== 'Relief' && draft.areaId === ''}
                   onChange={(shift) => set({ shift })}
                 />
               </div>
@@ -180,7 +187,7 @@ export function CreateAccountForm({ accounts, areas, buildings, onCancel }: Crea
                 {draft.cleanerKind === 'Relief'
                   ? 'เลือกตึกประจำและกะ แล้วจัดพื้นที่ตามวันในหน้าตารางงาน'
                   : draft.role === 'Cleaner'
-                  ? 'แต่ละพื้นที่มีแม่บ้านประจำได้กะละ 1 คน เลือกได้เฉพาะกะที่พื้นที่เปิดและยังไม่มีคนประจำ หรือเว้นพื้นที่ไว้แล้วกด “แก้” ในหน้าบัญชีผู้ใช้ภายหลัง'
+                  ? 'เลือกตึกประจำ แล้วเลือกพื้นที่ประจำและกะ หรือเว้นพื้นที่และกะไว้ให้หัวหน้าจัดในหน้าตารางงาน'
                   : 'แต่ละตึกมีหัวหน้าได้กะละ 1 คน หัวหน้าตรวจงานในกะของตัวเองได้เลยโดยไม่ต้องลงเวลา'}
               </p>
             </fieldset>

@@ -1,8 +1,12 @@
 import { useState, type FormEvent } from 'react';
+import { baseApi } from '../../shared/api/baseApi';
 import { useBuildingNames } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
+import { useAppSelector } from '../../store/hooks';
 import {
+  areaMatchesBuilding,
+  areasForCleaner,
   cleanerShiftBlock,
   editDraftOf,
   supervisorShiftBlock,
@@ -15,12 +19,22 @@ import type { EditAccountFormProps } from './accountFormTypes';
 
 export function useEditAccountForm({ account, accounts, areas, onDone }: EditAccountFormProps) {
   const names = useBuildingNames();
-  const [draft, setDraft] = useState<EditDraft>(() => editDraftOf(account));
+  const [draft, setDraft] = useState<EditDraft>(() => editDraftOf(account, areas));
   const [problem, setProblem] = useState<string | null>(null);
-  const [updateAccount, { isLoading }] = useUpdateAccountMutation();
+  const [notice, setNotice] = useState<string | null>(null);
+  const [updateAccount, { isLoading: profileLoading }] = useUpdateAccountMutation();
+  const me = useAppSelector((state) => state.auth.currentUser?.id);
+  const isLoading = useAppSelector((state) =>
+    Object.values(state[baseApi.reducerPath].mutations).some(
+      (m) => m?.status === 'pending' && ['updateAccount', 'changePhone', 'resetPassword'].includes(m.endpointName ?? ''),
+    ),
+  );
   const set = (patch: Partial<EditDraft>) => setDraft((current) => ({ ...current, ...patch }));
   // The current Area stays on offer even if it was deactivated since (plan 5 final-review F3)
   const areaChoices = areas.filter((area) => area.isActive || area.id === account.areaId);
+  const visibleAreaChoices = account.role === 'Cleaner'
+    ? areasForCleaner(areaChoices, draft.cleanerKind, draft.homeBuildingId)
+    : areaChoices;
   const area = areaChoices.find((option) => String(option.id) === draft.areaId);
   const buildingId = draft.buildingId ? Number(draft.buildingId) : undefined;
   const blockOf = (shift: Shift) =>
@@ -32,11 +46,19 @@ export function useEditAccountForm({ account, accounts, areas, onDone }: EditAcc
   const chooseCleanerKind = (kind: 'Regular' | 'Relief') => {
     setDraft((current) => ({ ...current, cleanerKind: kind, areaId: '', homeBuildingId: '' }));
   };
+  const chooseHomeBuilding = (value: string) => {
+    setDraft((current) => ({
+      ...current,
+      homeBuildingId: value,
+      areaId: current.cleanerKind !== 'Relief' && !areaMatchesBuilding(areaChoices, current.areaId, value) ? '' : current.areaId,
+    }));
+  };
   const chooseArea = (areaId: string) => {
     const next = areaChoices.find((option) => String(option.id) === areaId);
     setDraft((current) => ({
       ...current,
       areaId,
+      homeBuildingId: next ? String(next.buildingId) : current.homeBuildingId,
       shift: current.shift && cleanerShiftBlock(next, current.shift, account.id) ? '' : current.shift,
     }));
   };
@@ -65,5 +87,8 @@ export function useEditAccountForm({ account, accounts, areas, onDone }: EditAcc
     }
   };
 
-  return { names, draft, set, problem, isLoading, areaChoices, blockOf, titleId, chooseCleanerKind, chooseArea, chooseBuilding, submit };
+  return {
+    names, draft, set, problem, notice, setNotice, me, profileLoading, isLoading,
+    visibleAreaChoices, blockOf, titleId, chooseCleanerKind, chooseHomeBuilding, chooseArea, chooseBuilding, submit,
+  };
 }
