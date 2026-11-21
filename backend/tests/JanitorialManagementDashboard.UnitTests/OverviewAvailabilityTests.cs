@@ -84,6 +84,79 @@ public class OverviewAvailabilityTests
     }
 
     [Fact]
+    public void Preshift_unreadable_interval_falls_back_to_first_possible_open_without_affecting_history()
+    {
+        var firstPossibleOpen = Start.AddMinutes(-360);
+        var coverage = Retained with
+        {
+            AttendanceAfterUtc = firstPossibleOpen,
+            UnreadableTargetIntervals = [(firstPossibleOpen, Start.AddMinutes(-300))],
+        };
+
+        var result = Calculate([Revision(1, Baseline)], coverage);
+
+        Assert.Equal("partial", result.Entry.State);
+        Assert.Contains("attendancePartlyExpired", result.Entry.Reasons);
+        Assert.DoesNotContain("receivingPolicyUnknown", result.Entry.Reasons);
+        Assert.Equal("complete", result.History.State);
+        Assert.Empty(result.History.Reasons);
+    }
+
+    [Fact]
+    public void Recovered_midshift_unreadable_interval_marks_history_partial_without_affecting_entry()
+    {
+        var coverage = Retained with
+        {
+            AttendanceAfterUtc = Start.AddMinutes(-360),
+            UnreadableTargetIntervals = [(Start.AddHours(1), Start.AddHours(2))],
+        };
+
+        var result = Calculate([Revision(1, Baseline)], coverage);
+
+        Assert.Equal("complete", result.Entry.State);
+        Assert.Empty(result.Entry.Reasons);
+        Assert.Equal("partial", result.History.State);
+        Assert.Contains("targetRevisionUnreadable", result.History.Reasons);
+        Assert.DoesNotContain("receivingPolicyUnknown", result.History.Reasons);
+    }
+
+    [Fact]
+    public void Current_unreadable_interval_after_shift_end_marks_closing_policy_unknown()
+    {
+        var end = ShiftCalendar.EndUtc(Slot);
+        var readAt = end.AddHours(2);
+        var coverage = Retained with
+        {
+            ReadAtUtc = readAt,
+            UnreadableTargetIntervals = [(end.AddMinutes(-10), end.AddHours(2))],
+        };
+
+        var result = Calculate([Revision(1, Baseline, closes: 0)], coverage, readAt);
+
+        Assert.Equal("partial", result.Entry.State);
+        Assert.Contains("receivingPolicyUnknown", result.Entry.Reasons);
+        Assert.Contains("targetRevisionUnreadable", result.Entry.Reasons);
+        Assert.Equal("partial", result.History.State);
+        Assert.Contains("receivingPolicyUnknown", result.History.Reasons);
+        Assert.Contains("targetRevisionUnreadable", result.History.Reasons);
+    }
+
+    [Fact]
+    public void Current_unreadable_interval_while_running_keeps_closing_policy_known()
+    {
+        var coverage = Retained with
+        {
+            UnreadableTargetIntervals = [(Start.AddHours(3), Start.AddHours(5))],
+        };
+
+        var result = Calculate([Revision(1, Baseline)], coverage);
+
+        Assert.Equal("partial", result.Entry.State);
+        Assert.Contains("targetRevisionUnreadable", result.Entry.Reasons);
+        Assert.DoesNotContain("receivingPolicyUnknown", result.Entry.Reasons);
+    }
+
+    [Fact]
     public void No_events_with_complete_evidence_permits_a_true_zero()
     {
         var result = Calculate([Revision(1, Baseline)], Retained);
