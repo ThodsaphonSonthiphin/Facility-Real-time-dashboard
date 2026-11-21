@@ -62,21 +62,21 @@ public static class ScheduleSync
     {
         var current = periods.LastOrDefault(p =>
             ScheduleResolver.Applies(p.EffectiveFrom, p.EffectiveUntil, effectiveFrom));
-        var pending = periods.FirstOrDefault(p => p.EffectiveFrom >= effectiveFrom);
+        var sameDay = periods.FirstOrDefault(p => p.EffectiveFrom == effectiveFrom);
 
-        if (pending is not null)
+        if (sameDay is not null)
         {
-            if (pending.Kind == kind && pending.HomeBuildingId == homeBuildingId && pending.Shift == cleaner.Shift)
+            if (sameDay.Kind == kind && sameDay.HomeBuildingId == homeBuildingId && sameDay.Shift == cleaner.Shift)
             {
                 return;
             }
 
-            pending.Kind = kind;
-            pending.HomeBuildingId = homeBuildingId;
-            pending.Shift = cleaner.Shift;
-            pending.Revision += 1;
-            pending.UpdatedAt = nowUtc;
-            pending.CreatedById ??= actorId;
+            sameDay.Kind = kind;
+            sameDay.HomeBuildingId = homeBuildingId;
+            sameDay.Shift = cleaner.Shift;
+            sameDay.Revision += 1;
+            sameDay.UpdatedAt = nowUtc;
+            sameDay.CreatedById ??= actorId;
             return;
         }
 
@@ -88,7 +88,7 @@ public static class ScheduleSync
             return;
         }
 
-        if (current is not null)
+        if (current is not null && (current.EffectiveUntil is null || current.EffectiveUntil > effectiveFrom))
         {
             current.EffectiveUntil = effectiveFrom;
             current.Revision += 1;

@@ -351,4 +351,80 @@ public class AccountEditEndpointTests
         Assert.Equal(("Relief", (int?)buildingB), (Assert.Single(profiles).Kind.ToString(), profiles[0].HomeBuildingId));
         Assert.Equal(1L, profiles[0].Revision);
     }
+
+    [Fact]
+    public async Task Updating_cleaner_area_within_same_building_updates_schedule_baseline_from_business_date()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var ar03 = await TestData.AddAreaAsync(factory, "AR03", "A");
+        var past = new DateOnly(2026, 10, 1);
+        var today = new DateOnly(2026, 11, 17);
+        Scheduling.ScheduleWriteApi.Today(factory);
+
+        await factory.WithDbAsync(async db =>
+        {
+            await JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling.ScheduleBackfill.EnsureAsync(db, past, CancellationToken.None);
+        });
+
+        var response = await EditAsync(admin, e1001, new { displayName = "สมชาย ใจดี", areaId = ar03, shift = "Day" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await factory.WithDbAsync(async db =>
+        {
+            var baselines = await db.ScheduleBaselines
+                .Include(b => b.Days)
+                .Where(b => b.UserId == e1001)
+                .OrderBy(b => b.EffectiveFrom)
+                .ToListAsync();
+            Assert.Equal(2, baselines.Count);
+            Assert.Equal((past, (DateOnly?)today), (baselines[0].EffectiveFrom, baselines[0].EffectiveUntil));
+            Assert.All(baselines[0].Days, d => Assert.Equal(ar01, d.AreaId));
+            Assert.Equal((today, (DateOnly?)null), (baselines[1].EffectiveFrom, baselines[1].EffectiveUntil));
+            Assert.All(baselines[1].Days, d => Assert.Equal(ar03, d.AreaId));
+        });
+    }
+
+    [Fact]
+    public async Task Deactivating_cleaner_clears_working_area_on_baseline_from_business_date_while_preserving_day_off_and_history()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var past = new DateOnly(2026, 10, 1);
+        var today = new DateOnly(2026, 11, 17);
+        Scheduling.ScheduleWriteApi.Today(factory);
+
+        await factory.WithDbAsync(async db =>
+        {
+            await JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling.ScheduleBackfill.EnsureAsync(db, past, CancellationToken.None);
+            var initial = await db.ScheduleBaselines.Include(b => b.Days).SingleAsync(b => b.UserId == e1001);
+            var sunday = initial.Days.Single(d => d.Weekday == DayOfWeek.Sunday);
+            sunday.IsDayOff = true;
+            sunday.AreaId = null;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await DeactivateAsync(admin, e1001);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await factory.WithDbAsync(async db =>
+        {
+            var baselines = await db.ScheduleBaselines
+                .Include(b => b.Days)
+                .Where(b => b.UserId == e1001)
+                .OrderBy(b => b.EffectiveFrom)
+                .ToListAsync();
+            Assert.Equal(2, baselines.Count);
+            Assert.Equal((past, (DateOnly?)today), (baselines[0].EffectiveFrom, baselines[0].EffectiveUntil));
+            Assert.All(baselines[0].Days.Where(d => !d.IsDayOff), d => Assert.Equal(ar01, d.AreaId));
+            Assert.Equal((today, (DateOnly?)null), (baselines[1].EffectiveFrom, baselines[1].EffectiveUntil));
+            Assert.All(baselines[1].Days, d => Assert.Null(d.AreaId));
+            Assert.True(baselines[1].Days.Single(d => d.Weekday == DayOfWeek.Sunday).IsDayOff);
+            Assert.All(baselines[1].Days.Where(d => d.Weekday != DayOfWeek.Sunday), d => Assert.False(d.IsDayOff));
+        });
+    }
 }

@@ -601,4 +601,67 @@ public class SchedulePersistenceTests
             Assert.Equal(1, await db.ScheduleBaselines.CountAsync(b => b.UserId == c1.Id));
         });
     }
+
+    [Fact]
+    public async Task ScheduleSync_splits_current_profile_without_mutating_future_period()
+    {
+        using var factory = new JanitorialApiFactory();
+        var buildingB = await TestData.AddBuildingAsync(factory, "B");
+        await factory.WithDbAsync(async db =>
+        {
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
+            var buildingA = await db.Buildings.SingleAsync(b => b.Code == "A");
+            var past = new DateOnly(2026, 10, 1);
+            var today = new DateOnly(2026, 11, 17);
+            var future = new DateOnly(2026, 12, 1);
+            var now = DateTime.UtcNow;
+
+            db.CleanerProfilePeriods.AddRange(
+                new CleanerProfilePeriod
+                {
+                    UserId = cleaner.Id,
+                    Kind = CleanerKind.Regular,
+                    HomeBuildingId = buildingA.Id,
+                    Shift = Shift.Day,
+                    EffectiveFrom = past,
+                    EffectiveUntil = future,
+                    Revision = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new CleanerProfilePeriod
+                {
+                    UserId = cleaner.Id,
+                    Kind = CleanerKind.Relief,
+                    HomeBuildingId = buildingA.Id,
+                    Shift = Shift.Day,
+                    EffectiveFrom = future,
+                    EffectiveUntil = null,
+                    Revision = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            await db.SaveChangesAsync();
+
+            var store = new ScheduleStore(db);
+            await using var tx = await db.Database.BeginTransactionAsync();
+            await ScheduleSync.SyncCleanerAsync(
+                db, store, cleaner, buildingB, CleanerKind.Regular, actorId: null, today, now);
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+            db.ChangeTracker.Clear();
+
+            var periods = await db.CleanerProfilePeriods
+                .Where(p => p.UserId == cleaner.Id)
+                .OrderBy(p => p.EffectiveFrom)
+                .ToListAsync();
+            Assert.Equal(3, periods.Count);
+            Assert.Equal((past, (DateOnly?)today, buildingA.Id, CleanerKind.Regular),
+                (periods[0].EffectiveFrom, periods[0].EffectiveUntil, periods[0].HomeBuildingId, periods[0].Kind));
+            Assert.Equal((today, (DateOnly?)future, buildingB, CleanerKind.Regular),
+                (periods[1].EffectiveFrom, periods[1].EffectiveUntil, periods[1].HomeBuildingId, periods[1].Kind));
+            Assert.Equal((future, (DateOnly?)null, buildingA.Id, CleanerKind.Relief, 1L),
+                (periods[2].EffectiveFrom, periods[2].EffectiveUntil, periods[2].HomeBuildingId, periods[2].Kind, periods[2].Revision));
+        });
+    }
 }
