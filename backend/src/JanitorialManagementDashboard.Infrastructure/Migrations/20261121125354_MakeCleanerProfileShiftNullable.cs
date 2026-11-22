@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -24,13 +24,16 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(
+                "UPDATE cleaner_profile_periods SET shift = 'DAY' WHERE shift IS NULL;");
+
             migrationBuilder.AlterColumn<string>(
                 name: "shift",
                 table: "cleaner_profile_periods",
                 type: "varchar(10)",
                 maxLength: 10,
                 nullable: false,
-                defaultValue: "",
+                defaultValue: "DAY",
                 oldClrType: typeof(string),
                 oldType: "varchar(10)",
                 oldMaxLength: 10,

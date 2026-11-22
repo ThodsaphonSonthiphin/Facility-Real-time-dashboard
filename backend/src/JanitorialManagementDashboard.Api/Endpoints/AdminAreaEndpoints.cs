@@ -7,6 +7,7 @@ using JanitorialManagementDashboard.Application.Buildings;
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Signs;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
 using JanitorialManagementDashboard.Infrastructure.Persistence.Overview;
@@ -23,16 +24,19 @@ public static class AdminAreaEndpoints
         var admin = app.MapGroup("/api/admin").RequireAuthorization(AuthSetup.AdminOnly);
         admin.MapGet("/buildings", ListBuildingsAsync);
         admin.MapGet("/cleaners", ListCleanersAsync);
-        admin.MapGet("/areas", async (ClaimsPrincipal principal, AppDbContext db) =>
-            await CurrentUser.LoadAsync(principal, db) is null ? Results.Unauthorized() : Results.Ok(await AdminSetupView.LoadAreasAsync(db)));
-        admin.MapGet("/areas/{id:int}", async (int id, ClaimsPrincipal principal, AppDbContext db) =>
+        admin.MapGet("/areas", async (ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
+            await CurrentUser.LoadAsync(principal, db) is null
+                ? Results.Unauthorized()
+                : Results.Ok(await AdminSetupView.LoadAreasAsync(db, businessDate: ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime))));
+        admin.MapGet("/areas/{id:int}", async (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
         {
             if (await CurrentUser.LoadAsync(principal, db) is null)
             {
                 return Results.Unauthorized();
             }
 
-            return await AdminSetupView.LoadAreaAsync(db, id) is { } area ? Results.Ok(area) : AreaNotFound();
+            var businessDate = ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
+            return await AdminSetupView.LoadAreaAsync(db, id, businessDate) is { } area ? Results.Ok(area) : AreaNotFound();
         });
         admin.MapPost("/areas", CreateAsync);
         admin.MapPut("/areas/{id:int}", UpdateAsync);
@@ -54,16 +58,46 @@ public static class AdminAreaEndpoints
                 .Select(b => new BuildingDto(b.Id, b.Code, b.Name))
                 .ToListAsync());
 
-    /// <summary>Every active Cleaner with their regular shift and current Area; the form offers those without an Area.</summary>
-    private static async Task<IResult> ListCleanersAsync(ClaimsPrincipal principal, AppDbContext db) =>
-        await CurrentUser.LoadAsync(principal, db) is null
-            ? Results.Unauthorized()
-            : Results.Ok(await db.Users.AsNoTracking()
+    /// <summary>Every active Regular Cleaner with their effective shift and current Area; Relief Cleaners are excluded.</summary>
+    private static async Task<IResult> ListCleanersAsync(ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, CancellationToken ct)
+    {
+        if (await CurrentUser.LoadAsync(principal, db) is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var businessDate = ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
+        var cleaners = await db.Users.AsNoTracking()
+            .Include(u => u.Area)
             .Where(u => u.Role == UserRole.Cleaner && u.IsActive)
             .OrderBy(u => u.EmployeeId)
-            .Select(u => new CleanerOptionDto(
-                u.Id, u.EmployeeId ?? string.Empty, u.DisplayName, u.Shift, u.AreaId, u.Area == null ? null : u.Area.Code))
-            .ToListAsync());
+            .ToListAsync(ct);
+        var effectiveByUser = await CleanerEffectiveAssignment.ResolveForDateAsync(
+            db, cleaners, businessDate, useFallbackWeekdayArea: true, ct: ct);
+        var areaIds = effectiveByUser.Values
+            .Where(s => s.AreaId != null)
+            .Select(s => s.AreaId!.Value)
+            .Distinct()
+            .ToList();
+        var areaCodes = areaIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await db.Areas.AsNoTracking()
+                .Where(a => areaIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => a.Code, ct);
+
+        var options = cleaners
+            .Where(u => effectiveByUser.GetValueOrDefault(u.Id)?.Kind != CleanerKind.Relief)
+            .Select(u =>
+            {
+                var state = effectiveByUser.GetValueOrDefault(u.Id);
+                var areaId = state?.AreaId;
+                var areaCode = areaId is int aId ? areaCodes.GetValueOrDefault(aId) ?? u.Area?.Code : null;
+                return new CleanerOptionDto(
+                    u.Id, u.EmployeeId ?? string.Empty, u.DisplayName, state?.Shift, areaId, areaCode);
+            })
+            .ToList();
+        return Results.Ok(options);
+    }
 
     private sealed record AreaForm(string Name, Building Building, ShiftPattern Pattern, User? DayCleaner, User? NightCleaner);
 
@@ -86,21 +120,21 @@ public static class AdminAreaEndpoints
             return Bad("รหัสพื้นที่ต้องเป็นตัวอักษรอังกฤษหรือตัวเลข 2–20 ตัว เช่น AR03");
         }
 
+        var now = clock.GetUtcNow().UtcDateTime;
+        var businessDate = ScheduleAuthority.BusinessDate(now);
         await using var change = await mutation.BeginAsync(ct);
         var (form, error) = await ReadFormAsync(
-            db, areaId: null, request.Name, request.BuildingId, request.ShiftPattern, request.DayCleanerId, request.NightCleanerId);
+            db, areaId: null, businessDate, request.Name, request.BuildingId, request.ShiftPattern, request.DayCleanerId, request.NightCleanerId, ct);
         if (form is null)
         {
             return error!;
         }
 
-        if (await db.Areas.AnyAsync(a => a.Code == code))
+        if (await db.Areas.AnyAsync(a => a.Code == code, ct))
         {
             return Conflict("รหัสพื้นที่นี้มีแล้ว");
         }
 
-        var now = clock.GetUtcNow().UtcDateTime;
-        var businessDate = ScheduleAuthority.BusinessDate(now);
         var area = new Area { BuildingId = form.Building.Id, Code = code, Name = form.Name, ShiftPattern = form.Pattern, CreatedAt = now };
         // facility-0045: the Area's one check-in sign comes with it
         db.Signs.Add(new Sign { Area = area, Code = SignCodes.CheckIn(code), QrToken = SignCodes.NewQrToken(), QrIssuedAt = now });
@@ -109,8 +143,14 @@ public static class AdminAreaEndpoints
         try
         {
             await db.SaveChangesAsync(ct);
-            affectedCleaners = await AreaCleaners.ApplyAsync(
+            var apply = await AreaCleaners.ApplyAsync(
                 db, store, area.Id, area.BuildingId, form.DayCleaner, form.NightCleaner, admin.Id, businessDate, now, ct);
+            if (apply.Conflict is { } overlap)
+            {
+                return Conflict($"กะ{ThaiLabels.ShiftName(overlap.Shift)}ของ {overlap.AreaCode} มีแม่บ้านประจำแล้ว ({overlap.HolderName})");
+            }
+
+            affectedCleaners = apply.AffectedCleaners;
             AuditTrail.Add(
                 db, admin.Id, now, "AREA_CREATE", "areas", area.Id, $"เพิ่มพื้นที่ {code} {form.Name}",
                 before: null, after: Snapshot(area, form.DayCleaner, form.NightCleaner));
@@ -132,7 +172,7 @@ public static class AdminAreaEndpoints
             await notifications.ChangedAsync(Guid.NewGuid(), new ScheduleChangeScope([], scopes, affectedCleaners), ct);
         }
 
-        return Results.Created($"/api/admin/areas/{area.Id}", await AdminSetupView.LoadAreaAsync(db, area.Id));
+        return Results.Created($"/api/admin/areas/{area.Id}", await AdminSetupView.LoadAreaAsync(db, area.Id, businessDate));
     }
 
     private static async Task<IResult> UpdateAsync(int id, UpdateAreaRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
@@ -145,46 +185,62 @@ public static class AdminAreaEndpoints
             return Results.Unauthorized();
         }
 
+        var now = clock.GetUtcNow().UtcDateTime;
+        var businessDate = ScheduleAuthority.BusinessDate(now);
         await using var change = await mutation.BeginAsync(ct);
-        var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == id);
+        var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == id, ct);
         if (area is null)
         {
             return AreaNotFound();
         }
 
         var (form, error) = await ReadFormAsync(
-            db, area.Id, request.Name, request.BuildingId, request.ShiftPattern, request.DayCleanerId, request.NightCleanerId);
+            db, area.Id, businessDate, request.Name, request.BuildingId, request.ShiftPattern, request.DayCleanerId, request.NightCleanerId, ct);
         if (form is null)
         {
             return error!;
         }
 
-        var current = await db.Users.Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == area.Id).ToListAsync();
+        var allActiveCleaners = await db.Users.Where(u => u.Role == UserRole.Cleaner && u.IsActive).ToListAsync(ct);
+        var effectiveByUser = await CleanerEffectiveAssignment.ResolveForDateAsync(
+            db, allActiveCleaners, businessDate, useFallbackWeekdayArea: true, ct: ct);
+        var current = allActiveCleaners
+            .Where(u => effectiveByUser.TryGetValue(u.Id, out var state) && state.AreaId == area.Id)
+            .ToList();
+        var currentIds = current.Select(u => u.Id).ToHashSet();
+
         // facility-0091 decision 2: an Area that is off takes no new Cleaner; one who already holds it may stay, and a shift may be emptied
         if (!area.IsActive
-            && new[] { form.DayCleaner, form.NightCleaner }.Any(c => c is not null && c.AreaId != area.Id))
+            && new[] { form.DayCleaner, form.NightCleaner }.Any(c => c is not null && !currentIds.Contains(c.Id)))
         {
             return Bad(AreaRules.OffAreaTakesNoNewCleaner);
         }
 
-        var before = Snapshot(area, current.FirstOrDefault(u => u.Shift == Shift.Day), current.FirstOrDefault(u => u.Shift == Shift.Night));
+        var before = Snapshot(
+            area,
+            current.FirstOrDefault(u => effectiveByUser[u.Id].Shift == Shift.Day),
+            current.FirstOrDefault(u => effectiveByUser[u.Id].Shift == Shift.Night));
         var beforeBuildingId = area.BuildingId;
 
         area.Name = form.Name;
         area.BuildingId = form.Building.Id;
         area.ShiftPattern = form.Pattern;
-        var now = clock.GetUtcNow().UtcDateTime;
-        var businessDate = ScheduleAuthority.BusinessDate(now);
         IReadOnlyList<int> affectedCleaners;
         try
         {
             List<PointRoundWindow> nightWindows = form.Pattern == ShiftPattern.DayOnly
-                ? await db.PointRoundWindows.Where(w => w.Shift == Shift.Night && w.ServicePoint!.AreaId == area.Id).ToListAsync()
+                ? await db.PointRoundWindows.Where(w => w.Shift == Shift.Night && w.ServicePoint!.AreaId == area.Id).ToListAsync(ct)
                 : [];
             // Wireframe D10: a day-only Area has no night rounds
             await RoundWindowRemoval.RemoveAsync(db, nightWindows);
-            affectedCleaners = await AreaCleaners.ApplyAsync(
+            var apply = await AreaCleaners.ApplyAsync(
                 db, store, area.Id, area.BuildingId, form.DayCleaner, form.NightCleaner, admin.Id, businessDate, now, ct);
+            if (apply.Conflict is { } overlap)
+            {
+                return Conflict($"กะ{ThaiLabels.ShiftName(overlap.Shift)}ของ {overlap.AreaCode} มีแม่บ้านประจำแล้ว ({overlap.HolderName})");
+            }
+
+            affectedCleaners = apply.AffectedCleaners;
             var after = Snapshot(area, form.DayCleaner, form.NightCleaner);
             if (after != before || nightWindows.Count > 0)
             {
@@ -210,7 +266,7 @@ public static class AdminAreaEndpoints
             await notifications.ChangedAsync(Guid.NewGuid(), new ScheduleChangeScope([], scopes, affectedCleaners), ct);
         }
 
-        return Results.Ok(await AdminSetupView.LoadAreaAsync(db, area.Id));
+        return Results.Ok(await AdminSetupView.LoadAreaAsync(db, area.Id, businessDate));
     }
 
     /// <summary>Wireframe D10: a deactivated Area and its signs leave the Dashboard and cannot be scanned; history stays.</summary>
@@ -223,8 +279,10 @@ public static class AdminAreaEndpoints
             return Results.Unauthorized();
         }
 
+        var now = clock.GetUtcNow().UtcDateTime;
+        var businessDate = ScheduleAuthority.BusinessDate(now);
         await using var change = await mutation.BeginAsync(ct);
-        var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == id);
+        var area = await db.Areas.FirstOrDefaultAsync(a => a.Id == id, ct);
         if (area is null)
         {
             return AreaNotFound();
@@ -232,19 +290,15 @@ public static class AdminAreaEndpoints
 
         // facility-0090 decision 4: an Area of a building that is off stays off
         if (active && !area.IsActive
-            && await db.Buildings.Where(b => b.Id == area.BuildingId && !b.IsActive).Select(b => b.Code).FirstOrDefaultAsync() is { } offCode)
+            && await db.Buildings.Where(b => b.Id == area.BuildingId && !b.IsActive).Select(b => b.Code).FirstOrDefaultAsync(ct) is { } offCode)
         {
             return Conflict(BuildingRules.OffForArea(offCode));
         }
 
-        // facility-0091 decision 2: an Area is turned off only once no active Cleaner holds it
+        // facility-0091 decision 2: an Area is turned off only once no active Cleaner holds it (including dated/future baselines)
         if (!active && area.IsActive)
         {
-            var holders = await db.Users
-                .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == area.Id)
-                .OrderBy(u => u.Shift)
-                .Select(u => u.DisplayName)
-                .ToListAsync();
+            var holders = await RegularBaselineOverlap.ActiveAreaHoldersAsync(db, area.Id, businessDate, ct);
             if (AreaRules.DeactivateProblem(area.Code, holders) is { } problem)
             {
                 return Conflict(problem);
@@ -255,19 +309,20 @@ public static class AdminAreaEndpoints
         {
             area.IsActive = active;
             AuditTrail.Add(
-                db, admin.Id, clock.GetUtcNow().UtcDateTime, active ? "AREA_ACTIVATE" : "AREA_DEACTIVATE", "areas", area.Id,
+                db, admin.Id, now, active ? "AREA_ACTIVATE" : "AREA_DEACTIVATE", "areas", area.Id,
                 $"{(active ? "เปิด" : "ปิด")}ใช้งานพื้นที่ {area.Code}",
                 before: new { IsActive = !active }, after: new { IsActive = active });
             await db.SaveChangesAsync(ct);
         }
 
         await overview.CommitAsync(change, ct);
-        return Results.Ok(await AdminSetupView.LoadAreaAsync(db, area.Id));
+        return Results.Ok(await AdminSetupView.LoadAreaAsync(db, area.Id, businessDate));
     }
 
     /// <summary>The fields Create and Update share; returns the form, or the answer to give instead.</summary>
     private static async Task<(AreaForm? Form, IResult? Error)> ReadFormAsync(
-        AppDbContext db, int? areaId, string? name, int buildingId, ShiftPattern? pattern, int? dayCleanerId, int? nightCleanerId)
+        AppDbContext db, int? areaId, DateOnly businessDate, string? name, int buildingId, ShiftPattern? pattern,
+        int? dayCleanerId, int? nightCleanerId, CancellationToken ct)
     {
         var trimmed = name?.Trim() ?? string.Empty;
         if (trimmed.Length is 0 or > 150)
@@ -280,7 +335,7 @@ public static class AdminAreaEndpoints
             return (null, Bad("ต้องเลือกรูปแบบกะ"));
         }
 
-        var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == buildingId);
+        var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == buildingId, ct);
         if (building is null)
         {
             return (null, Bad("ไม่พบตึกนี้"));
@@ -306,21 +361,33 @@ public static class AdminAreaEndpoints
             }
 
             var cleaner = await db.Users.Include(u => u.Area)
-                .FirstOrDefaultAsync(u => u.Id == cleanerId && u.Role == UserRole.Cleaner && u.IsActive);
+                .FirstOrDefaultAsync(u => u.Id == cleanerId && u.Role == UserRole.Cleaner && u.IsActive, ct);
             if (cleaner is null)
             {
                 return (null, Bad("ต้องเลือกแม่บ้านที่ใช้งานอยู่"));
             }
 
-            if (cleaner.Shift != shift)
+            var effective = await CleanerEffectiveAssignment.ResolveOneAsync(
+                db, cleaner, businessDate, useFallbackWeekdayArea: true, ct: ct);
+
+            if (effective.Kind == CleanerKind.Relief)
             {
-                return (null, Bad($"{cleaner.DisplayName} ประจำกะ{ShiftName(cleaner.Shift)} ใส่ในช่องกะ{ShiftName(shift)}ไม่ได้"));
+                return (null, Bad("สแปร์ไม่มีพื้นที่ประจำ กำหนดในหน้าพื้นที่ไม่ได้"));
+            }
+
+            if (effective.Shift != shift)
+            {
+                return (null, Bad($"{cleaner.DisplayName} ประจำกะ{ShiftName(effective.Shift)} ใส่ในช่องกะ{ShiftName(shift)}ไม่ได้"));
             }
 
             // Wireframe D10: the picker offers only Cleaners without an Area in that shift
-            if (cleaner.AreaId is { } otherAreaId && otherAreaId != areaId)
+            if (effective.AreaId is { } otherAreaId && otherAreaId != areaId)
             {
-                return (null, Conflict($"{cleaner.DisplayName} ประจำ {cleaner.Area!.Code} อยู่แล้ว ย้ายออกจากพื้นที่นั้นก่อน"));
+                var otherAreaCode = await db.Areas.AsNoTracking()
+                    .Where(a => a.Id == otherAreaId)
+                    .Select(a => a.Code)
+                    .FirstOrDefaultAsync(ct) ?? cleaner.Area?.Code ?? $"#{otherAreaId}";
+                return (null, Conflict($"{cleaner.DisplayName} ประจำ {otherAreaCode} อยู่แล้ว ย้ายออกจากพื้นที่นั้นก่อน"));
             }
 
             if (shift == Shift.Day)

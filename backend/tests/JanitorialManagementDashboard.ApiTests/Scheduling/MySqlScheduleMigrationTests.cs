@@ -124,6 +124,43 @@ public class MySqlScheduleMigrationTests
             var storedProfile = await db.CleanerProfilePeriods.SingleAsync(p => p.UserId == unassignedCleaner.Id);
             Assert.Null(storedProfile.Shift);
             Assert.Equal(building.Id, storedProfile.HomeBuildingId);
+
+            // Migration Down() must succeed even when a NULL shift row exists and normalize it to 'DAY' (never empty string),
+            // then migrate cleanly back Up() to the latest migration.
+            await db.Database.GetService<IMigrator>().MigrateAsync("20261120061316_UseSixAttendanceActions");
+            var downgradedShift = await db.Database.SqlQueryRaw<string>(
+                "SELECT shift AS Value FROM cleaner_profile_periods WHERE user_id = {0}", unassignedCleaner.Id).SingleAsync();
+            Assert.Equal("DAY", downgradedShift);
+
+            await db.Database.MigrateAsync();
+            Assert.False(db.Database.HasPendingModelChanges());
+
+            // In-place update of ScheduleBaselineDay rows via RemoveRange + Add on MySQL (unique index on baseline_id + weekday).
+            var existingBaseline = await db.ScheduleBaselines.Include(b => b.Days)
+                .FirstAsync(b => b.UserId == person.Id && b.Kind == BaselineKind.Regular);
+            var targetAreaId = existingBaseline.Days.First(d => d.AreaId != null).AreaId!.Value;
+            db.ScheduleBaselineDays.RemoveRange(existingBaseline.Days.ToList());
+            existingBaseline.Days.Clear();
+            foreach (var weekday in Enum.GetValues<DayOfWeek>())
+            {
+                existingBaseline.Days.Add(new ScheduleBaselineDay
+                {
+                    Weekday = weekday,
+                    AreaId = weekday == DayOfWeek.Sunday ? null : targetAreaId,
+                    BreakGroup = weekday == DayOfWeek.Sunday ? null : 2,
+                    IsDayOff = weekday == DayOfWeek.Sunday,
+                });
+            }
+            existingBaseline.Revision += 1;
+            existingBaseline.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+
+            var reloadedBaseline = await db.ScheduleBaselines.Include(b => b.Days)
+                .SingleAsync(b => b.Id == existingBaseline.Id);
+            Assert.Equal(7, reloadedBaseline.Days.Count);
+            Assert.True(reloadedBaseline.Days.Single(d => d.Weekday == DayOfWeek.Sunday).IsDayOff);
+            Assert.Equal(2, reloadedBaseline.Days.Single(d => d.Weekday == DayOfWeek.Monday).BreakGroup);
         }
         finally
         {

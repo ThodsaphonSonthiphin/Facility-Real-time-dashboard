@@ -22,7 +22,7 @@ public sealed class ScheduleCommandTokenService
     private const string Purpose = "schedule-command";
 
     /// <summary>HMAC-SHA256 needs a key at least as long as its own digest; a shorter configured key is a setup error.</summary>
-    private const int MinimumKeyBytes = 32;
+    private const int MinimumKeyBytes = SchedulingSettings.MinimumCommandSigningKeyBytes;
 
     /// <summary>How long an identity may start a new command after it was issued (spec §11).</summary>
     private static readonly TimeSpan StartWindow = TimeSpan.FromHours(24);

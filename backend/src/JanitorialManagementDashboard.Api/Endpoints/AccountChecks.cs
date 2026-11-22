@@ -225,12 +225,36 @@ internal static class AccountChecks
         AppDbContext db, UserRole role, int? areaId, int? buildingId, Shift? shift, int exceptUserId, DateOnly businessDate) =>
         role switch
         {
-            UserRole.Cleaner when areaId is not null && shift is not null => await db.Users.AsNoTracking().Include(u => u.Area)
-                .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == areaId && u.Shift == shift),
+            UserRole.Cleaner when areaId is not null && shift is not null => await CleanerHolderAsync(
+                db, areaId.Value, shift.Value, exceptUserId, businessDate),
             UserRole.Supervisor when buildingId is not null && shift is not null => await SupervisorHolderAsync(
                 db, buildingId.Value, shift.Value, exceptUserId, businessDate),
             _ => null,
         };
+
+    private static async Task<User?> CleanerHolderAsync(
+        AppDbContext db, int areaId, Shift shift, int exceptUserId, DateOnly businessDate)
+    {
+        var conflict = await RegularBaselineOverlap.FindSlotConflictAsync(db, exceptUserId, areaId, shift, businessDate);
+        if (conflict is null)
+        {
+            return null;
+        }
+
+        var holder = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == conflict.HolderUserId);
+        if (holder is null)
+        {
+            return null;
+        }
+
+        holder.Area = await db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == conflict.AreaId);
+        holder.Shift = conflict.Shift;
+        return holder;
+    }
+
+    private static Task<User?> ProjectionCleanerAsync(AppDbContext db, int areaId, Shift shift, int exceptUserId) =>
+        db.Users.AsNoTracking().Include(u => u.Area)
+            .FirstOrDefaultAsync(u => u.Id != exceptUserId && u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == areaId && u.Shift == shift);
 
     /// <summary>
     /// Spec §3: the active Supervisor whose dated period covers <paramref name="businessDate"/> for that building and
@@ -338,6 +362,12 @@ internal static class AccountChecks
         // projection: users.supervisor_slot. In the pre-backfill state (spec §14) an active Supervisor with no dated row
         // at all still holds their account row's building and shift, which the dated lookup cannot see once any dated row
         // exists elsewhere. Explaining that as the slot conflict keeps it a 409 instead of a 500.
+        if (claim is { Role: UserRole.Cleaner, AreaId: { } cleanerAreaId, Shift: { } cleanerShift }
+            && await ProjectionCleanerAsync(db, cleanerAreaId, cleanerShift, claim.UserId) is { } projectedCleaner)
+        {
+            return Conflict(SlotTaken(projectedCleaner));
+        }
+
         return claim is { Role: UserRole.Supervisor, BuildingId: { } buildingId, Shift: { } shift }
             && await ProjectionSupervisorAsync(db, buildingId, shift, claim.UserId) is { } projected
                 ? Conflict(SlotTaken(projected))

@@ -22,7 +22,9 @@ public static class ScheduleSync
         int? actorId,
         DateOnly effectiveFrom,
         DateTime nowUtc,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        int? clearFutureAreaId = null,
+        bool preserveExistingShift = false)
     {
         if (cleaner.Role != UserRole.Cleaner)
         {
@@ -42,11 +44,18 @@ public static class ScheduleSync
             return;
         }
 
-        SyncProfile(db, periods, cleaner, homeBuildingId, kind, actorId, effectiveFrom, nowUtc);
+        SyncProfile(db, periods, cleaner, homeBuildingId, kind, actorId, effectiveFrom, nowUtc, preserveExistingShift);
 
         if (kind == CleanerKind.Regular)
         {
-            await SyncRegularBaselineAsync(db, anchor, cleaner, actorId, effectiveFrom, nowUtc, ct);
+            await SyncRegularBaselineAsync(db, anchor, cleaner, actorId, effectiveFrom, nowUtc, clearFutureAreaId, ct);
+        }
+        else if (kind == CleanerKind.Relief)
+        {
+            // Switching a Cleaner to Relief from effectiveFrom onwards must also clear any future regular baselines so
+            // they cannot keep blocking Area deactivation or resurrect an Area if switched back to Regular later.
+            await ClearRegularBaselinesAsync(db, anchor, cleaner, actorId, effectiveFrom, nowUtc,
+                clearAllFuture: true, clearFutureAreaId: null, ct: ct);
         }
     }
 
@@ -58,22 +67,26 @@ public static class ScheduleSync
         CleanerKind kind,
         int? actorId,
         DateOnly effectiveFrom,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        bool preserveExistingShift)
     {
         var current = periods.LastOrDefault(p =>
             ScheduleResolver.Applies(p.EffectiveFrom, p.EffectiveUntil, effectiveFrom));
         var sameDay = periods.FirstOrDefault(p => p.EffectiveFrom == effectiveFrom);
+        var targetShift = preserveExistingShift
+            ? sameDay?.Shift ?? current?.Shift ?? cleaner.Shift
+            : cleaner.Shift;
 
         if (sameDay is not null)
         {
-            if (sameDay.Kind == kind && sameDay.HomeBuildingId == homeBuildingId && sameDay.Shift == cleaner.Shift)
+            if (sameDay.Kind == kind && sameDay.HomeBuildingId == homeBuildingId && sameDay.Shift == targetShift)
             {
                 return;
             }
 
             sameDay.Kind = kind;
             sameDay.HomeBuildingId = homeBuildingId;
-            sameDay.Shift = cleaner.Shift;
+            sameDay.Shift = targetShift;
             sameDay.Revision += 1;
             sameDay.UpdatedAt = nowUtc;
             sameDay.CreatedById ??= actorId;
@@ -83,7 +96,7 @@ public static class ScheduleSync
         if (current is not null
             && current.Kind == kind
             && current.HomeBuildingId == homeBuildingId
-            && current.Shift == cleaner.Shift)
+            && current.Shift == targetShift)
         {
             return;
         }
@@ -100,7 +113,7 @@ public static class ScheduleSync
             UserId = cleaner.Id,
             Kind = kind,
             HomeBuildingId = homeBuildingId,
-            Shift = cleaner.Shift,
+            Shift = targetShift,
             EffectiveFrom = effectiveFrom,
             EffectiveUntil = periods.Where(p => p.EffectiveFrom > effectiveFrom)
                 .Select(p => (DateOnly?)p.EffectiveFrom)
@@ -119,6 +132,7 @@ public static class ScheduleSync
         int? actorId,
         DateOnly effectiveFrom,
         DateTime nowUtc,
+        int? clearFutureAreaId,
         CancellationToken ct)
     {
         var baselines = await db.ScheduleBaselines
@@ -200,6 +214,39 @@ public static class ScheduleSync
         }
 
         // Cleaner is inactive or has no regular Area: clear working AreaId/BreakGroup while keeping IsDayOff intact.
+        // When deactivated, also clear all future regular baselines; when removed from a specific Area, clear only days
+        // pointing to that Area in future baselines so an Area replacement cannot leave two active owners.
+        await ClearRegularBaselinesAsync(db, anchor, cleaner, actorId, effectiveFrom, nowUtc,
+            clearAllFuture: !cleaner.IsActive, clearFutureAreaId: clearFutureAreaId, ct: ct,
+            loadedBaselines: baselines, currentBaseline: currentBaseline, sameDayBaseline: sameDayBaseline);
+    }
+
+    private static async Task ClearRegularBaselinesAsync(
+        AppDbContext db,
+        ScheduleBaselineAnchor anchor,
+        User cleaner,
+        int? actorId,
+        DateOnly effectiveFrom,
+        DateTime nowUtc,
+        bool clearAllFuture,
+        int? clearFutureAreaId,
+        CancellationToken ct,
+        List<ScheduleBaseline>? loadedBaselines = null,
+        ScheduleBaseline? currentBaseline = null,
+        ScheduleBaseline? sameDayBaseline = null)
+    {
+        var baselines = loadedBaselines ?? await db.ScheduleBaselines
+            .Include(b => b.Days)
+            .Where(b => b.UserId == cleaner.Id && b.Kind == BaselineKind.Regular)
+            .OrderBy(b => b.EffectiveFrom)
+            .ThenBy(b => b.Id)
+            .ToListAsync(ct);
+
+        currentBaseline ??= baselines.LastOrDefault(b =>
+            ScheduleResolver.Applies(b.EffectiveFrom, b.EffectiveUntil, effectiveFrom));
+        sameDayBaseline ??= baselines.FirstOrDefault(b => b.EffectiveFrom == effectiveFrom);
+
+        var anchorDirty = false;
         if (sameDayBaseline is not null)
         {
             var changed = false;
@@ -214,14 +261,10 @@ public static class ScheduleSync
             {
                 sameDayBaseline.Revision += 1;
                 sameDayBaseline.UpdatedAt = nowUtc;
-                anchor.Revision += 1;
-                anchor.UpdatedAt = nowUtc;
+                anchorDirty = true;
             }
-
-            return;
         }
-
-        if (currentBaseline is not null && currentBaseline.Days.Any(d => !d.IsDayOff && d.AreaId != null))
+        else if (currentBaseline is not null && currentBaseline.Days.Any(d => !d.IsDayOff && d.AreaId != null))
         {
             if (currentBaseline.EffectiveUntil is null || currentBaseline.EffectiveUntil > effectiveFrom)
             {
@@ -257,6 +300,35 @@ public static class ScheduleSync
             }
 
             db.ScheduleBaselines.Add(cleared);
+            anchorDirty = true;
+        }
+
+        if (clearAllFuture || clearFutureAreaId is not null)
+        {
+            foreach (var future in baselines.Where(b => b.EffectiveFrom > effectiveFrom))
+            {
+                var changed = false;
+                foreach (var day in future.Days.Where(d => !d.IsDayOff
+                    && (clearAllFuture
+                        ? (d.AreaId != null || d.BreakGroup != null)
+                        : d.AreaId == clearFutureAreaId)))
+                {
+                    day.AreaId = null;
+                    day.BreakGroup = null;
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    future.Revision += 1;
+                    future.UpdatedAt = nowUtc;
+                    anchorDirty = true;
+                }
+            }
+        }
+
+        if (anchorDirty)
+        {
             anchor.Revision += 1;
             anchor.UpdatedAt = nowUtc;
         }

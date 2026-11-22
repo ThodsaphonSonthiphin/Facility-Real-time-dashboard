@@ -42,6 +42,7 @@ public static class CleanerShiftResolver
             .OrderBy(p => p.EffectiveFrom).ThenBy(p => p.Id)
             .ToListAsync(ct);
 
+        var matches = new List<ShiftSlot>(2);
         foreach (var date in new[] { windowStart, thaiDate, windowEnd })
         {
             var period = periods.LastOrDefault(p => ScheduleResolver.Applies(p.EffectiveFrom, p.EffectiveUntil, date));
@@ -55,10 +56,20 @@ public static class CleanerShiftResolver
             var (opens, closes) = AttendanceCalendar.Window(slot, settings);
             if (nowUtc >= opens && nowUtc <= closes)
             {
-                return slot;
+                matches.Add(slot);
             }
         }
 
-        return null;
+        if (matches.Count <= 1)
+        {
+            return matches.Count == 1 ? matches[0] : null;
+        }
+
+        // When a Cleaner changes from Night (D-1) to Day (D), the post-shift grace of (D-1, Night) overlaps with
+        // (D, Day). Prefer the slot whose actual 12-hour shift [StartUtc, EndUtc) contains nowUtc so at 06:30 Thai
+        // yesterday's running Night shift still resolves, while at 07:00+ Thai today's active Day shift wins.
+        var active = matches.FirstOrDefault(slot =>
+            nowUtc >= ShiftCalendar.StartUtc(slot) && nowUtc < ShiftCalendar.EndUtc(slot));
+        return active ?? matches[^1];
     }
 }

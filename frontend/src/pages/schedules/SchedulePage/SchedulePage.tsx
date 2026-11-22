@@ -230,7 +230,7 @@ function MobileAdminFilters({ view }: { view: ReturnType<typeof useSchedulePage>
         value={view.selection.shift ?? ''}
         onChange={(event) => view.chooseShift((event.target.value || undefined) as Shift | undefined)}
       >
-        <option value="">กะของฉัน</option>
+        <option value="">ทุกกะ</option>
         <option value="Day">{shiftShortLabel.Day}</option>
         <option value="Night">{shiftShortLabel.Night}</option>
       </Select>
@@ -296,7 +296,7 @@ function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typ
   );
 }
 
-/** Desktop shift filter shared by Admin (`กะของฉัน`) and Supervisor (`ทุกกะ`). */
+/** Desktop shift filter shared by Admin and Supervisor (`ทุกกะ` / `กะเช้า` / `กะดึก`). */
 function ShiftFilter({ view, emptyLabel }: { view: ReturnType<typeof useSchedulePage>; emptyLabel: string }) {
   return (
     <Segmented<'' | Shift>
@@ -319,7 +319,7 @@ function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
       <div className="w-44 max-w-full">
         <BuildingSelect value={view.selection.buildingId} onChange={view.chooseBuilding} />
       </div>
-      <ShiftFilter view={view} emptyLabel="กะของฉัน" />
+      <ShiftFilter view={view} emptyLabel="ทุกกะ" />
     </div>
   );
 }

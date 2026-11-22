@@ -302,7 +302,7 @@ describe('a changed plan and a read that may be old (spec §12)', () => {
 });
 
 describe("a week's filters and the authority behind them (facility-0184, 0185, 0186)", () => {
-  it('an Admin opens on every building in the shift on the clock, and asks for no building', async () => {
+  it('an Admin opens on every building in the shift on the clock, asks for no building, and labels the empty shift option ทุกกะ', async () => {
     pinClock();
     const { reads } = serveWeeks('admin', () => week());
     await renderApp('/admin/schedules');
@@ -311,6 +311,9 @@ describe("a week's filters and the authority behind them (facility-0184, 0185, 0
     // No building filter in the read: every building the shift holds, decided by the server's own scope
     expect(reads()[0].search).not.toContain('buildingId=');
     expect(reads()[0].search).toContain('shift=Day');
+    const shiftGroup = screen.getByRole('group', { name: 'กะ' });
+    expect(within(shiftGroup).getByRole('button', { name: 'ทุกกะ' })).toBeInTheDocument();
+    expect(within(shiftGroup).queryByRole('button', { name: 'กะของฉัน' })).not.toBeInTheDocument();
   });
 
   it("a Supervisor asks for no building either: their read is every assigned building in their own shift", async () => {

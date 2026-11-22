@@ -9,6 +9,7 @@ using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -30,7 +31,7 @@ public static class CoverAssignmentEndpoints
 
     private static async Task<IResult> AssignAsync(
         AssignCoverRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, AttendanceSettings settings,
-        ScheduleScopeReader scope, CancellationToken ct)
+        ScheduleScopeReader scope, ScheduleStore store, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -43,7 +44,7 @@ public static class CoverAssignmentEndpoints
             return Bad("ต้องระบุกะ");
         }
 
-        var person = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId && u.IsActive && u.Role != UserRole.Admin);
+        var person = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId && u.IsActive && u.Role != UserRole.Admin, ct);
         if (person is null)
         {
             return Bad("ต้องเลือกแม่บ้านหรือหัวหน้าที่ใช้งานอยู่");
@@ -53,30 +54,34 @@ public static class CoverAssignmentEndpoints
         var now = clock.GetUtcNow().UtcDateTime;
         return person.Role == UserRole.Supervisor
             ? await AssignBuildingAsync(request, db, admin, person, slot, now, scope, ct)
-            : await AssignAreaAsync(request, db, admin, person, slot, now, settings);
+            : await AssignAreaAsync(request, db, admin, person, slot, now, settings, store, ct);
     }
 
     /// <summary>facility-0041: a Cleaner works another Area, only in their own regular shift (owner decision 2026-10-09).</summary>
     private static async Task<IResult> AssignAreaAsync(
-        AssignCoverRequest request, AppDbContext db, User admin, User cleaner, ShiftSlot slot, DateTime now, AttendanceSettings settings)
+        AssignCoverRequest request, AppDbContext db, User admin, User cleaner, ShiftSlot slot, DateTime now,
+        AttendanceSettings settings, ScheduleStore store, CancellationToken ct)
     {
         if (request.BuildingId is not null)
         {
             return Bad("แม่บ้านทำแทนเป็นพื้นที่ ไม่ต้องระบุตึก");
         }
 
-        var area = request.AreaId is int areaId ? await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive) : null;
+        var area = request.AreaId is int areaId ? await db.Areas.FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive, ct) : null;
         if (area is null)
         {
             return Bad("ไม่พบพื้นที่นี้ หรือปิดใช้งานแล้ว");
         }
 
-        if (area.Id == cleaner.AreaId)
+        var duty = await EffectiveDutyReader.ReadAsync(db, store, cleaner, slot, new DateTimeOffset(now, TimeSpan.Zero), ct);
+        var effectiveState = await CleanerEffectiveAssignment.ResolveOneAsync(
+            db, cleaner, slot.ShiftDate, useFallbackWeekdayArea: false, includeDatedOverrides: true, ct: ct);
+        if (area.Id == duty.AreaId || (effectiveState.Shift == slot.Shift && effectiveState.AreaId == area.Id))
         {
             return Bad("พื้นที่นี้เป็นพื้นที่ประจำของแม่บ้านคนนี้อยู่แล้ว");
         }
 
-        var effectiveShift = await CleanerShiftResolver.ResolveShiftAsync(db, cleaner, slot.ShiftDate);
+        var effectiveShift = await CleanerShiftResolver.ResolveShiftAsync(db, cleaner, slot.ShiftDate, ct);
         if (slot.Shift != effectiveShift)
         {
             return Bad("ทำแทนได้เฉพาะกะประจำของแม่บ้านคนนี้");
@@ -331,10 +336,24 @@ public static class CoverAssignmentEndpoints
         }
 
         var slot = new ShiftSlot(date, parsedShift);
-        var cleaners = await db.Users.AsNoTracking()
+        var allCleaners = await db.Users.AsNoTracking()
             .Include(u => u.Area)
-            .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.Shift == slot.Shift && u.AreaId != null && u.AreaId != area.Id)
+            .Where(u => u.Role == UserRole.Cleaner && u.IsActive)
             .ToListAsync();
+        var effectiveByUser = await CleanerEffectiveAssignment.ResolveForDateAsync(
+            db, allCleaners, slot.ShiftDate, useFallbackWeekdayArea: false, includeDatedOverrides: true);
+        var cleaners = allCleaners
+            .Where(u => effectiveByUser.TryGetValue(u.Id, out var state)
+                && state.Shift == slot.Shift
+                && state.AreaId is int ownAreaId
+                && ownAreaId != area.Id)
+            .ToList();
+        var ownAreaIds = cleaners.Select(u => effectiveByUser[u.Id].AreaId!.Value).Distinct().ToList();
+        var areaCodes = ownAreaIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await db.Areas.AsNoTracking()
+                .Where(a => ownAreaIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => a.Code);
         var ids = cleaners.Select(u => u.Id).ToList();
         var covering = await db.CoverAssignments.AsNoTracking()
             .Where(c => c.AreaId == area.Id && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
@@ -356,7 +375,7 @@ public static class CoverAssignmentEndpoints
                 u.Id,
                 u.EmployeeId ?? string.Empty,
                 u.DisplayName,
-                u.Area!.Code,
+                areaCodes.GetValueOrDefault(effectiveByUser[u.Id].AreaId!.Value, u.Area?.Code ?? string.Empty),
                 shiftIns.Where(a => a.UserId == u.Id).Select(a => (DateTime?)Utc(a.OccurredAt)).FirstOrDefault(),
                 scans.Where(b => b.UserId == u.Id).Select(b => (DateTime?)Utc(b.ScannedAt)).Max()))
             .OrderBy(c => c.ScannedThisAreaAt is null ? 1 : 0)

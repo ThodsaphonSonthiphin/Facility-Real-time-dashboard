@@ -845,7 +845,7 @@ public class ScheduleWriteTests
         // edits. A person's shift can change inside one week, so the read carries it per day.
         using var factory = ScheduleWriteApi.NewFactory();
         var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
-        var area2 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        var area1 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
         await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day,
             new DateOnly(2026, 10, 1), "A", until: Week.AddDays(2));
         await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Night, Week.AddDays(2), "A");
@@ -858,9 +858,9 @@ public class ScheduleWriteTests
         Assert.Equal("Night", days.Single(day => day.Date == Week.AddDays(2)).Shift);
 
         var guessed = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
-            new { userId = person, date = ScheduleWriteApi.Iso(Week.AddDays(2)), shift = "Day", areaId = area2 });
+            new { userId = person, date = ScheduleWriteApi.Iso(Week.AddDays(2)), shift = "Day", areaId = area1 });
         var named = await ScheduleWriteApi.ExecuteAsync(admin, ScheduleWriteApi.SetDatedArea,
-            new { userId = person, date = ScheduleWriteApi.Iso(Week.AddDays(2)), shift = "Night", areaId = area2 });
+            new { userId = person, date = ScheduleWriteApi.Iso(Week.AddDays(2)), shift = "Night", areaId = area1 });
 
         Assert.Equal(HttpStatusCode.Conflict, guessed.Response.StatusCode);
         Assert.Equal(ScheduleCommandErrorCode.RowInvalid, Assert.Single(guessed.Answer!.Problems).Code);

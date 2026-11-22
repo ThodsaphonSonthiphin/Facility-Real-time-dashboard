@@ -759,6 +759,13 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         var optionsByBuilding = areas.Where(area => area.IsActive).GroupBy(area => area.BuildingId)
             .ToDictionary(group => group.Key, group => (IReadOnlyList<ScheduleAreaOption>)group
                 .Select(area => new ScheduleAreaOption(area.Id, $"{area.Code} · {area.Name}")).ToList());
+        var optionsByBuildingAndShift = Enum.GetValues<Shift>()
+            .SelectMany(slotShift => areas
+                .Where(area => area.IsActive && (slotShift == Shift.Day || area.ShiftPattern != ShiftPattern.DayOnly))
+                .GroupBy(area => area.BuildingId)
+                .Select(group => (Key: (group.Key, slotShift), Value: (IReadOnlyList<ScheduleAreaOption>)group
+                    .Select(area => new ScheduleAreaOption(area.Id, $"{area.Code} · {area.Name}")).ToList())))
+            .ToDictionary(entry => entry.Key, entry => entry.Value);
 
         var businessDate = ScheduleAuthority.BusinessDate(readAt.UtcDateTime);
         var buildingCodes = await db.Buildings.AsNoTracking().ToDictionaryAsync(row => row.Id, row => row.Code, ct);
@@ -1034,7 +1041,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                         Revision(live.Find(row => row.Kind == ScheduleExceptionKind.BreakGroup)?.Revision ?? 0),
                         leave is null ? null : new ScheduleLeaveEdit(Revision(leave.Revision),
                             Utc(leave.StartsAt!.Value), Utc(leave.EndsAt!.Value)),
-                        canChange && building is int knownBuilding ? optionsByBuilding.GetValueOrDefault(knownBuilding) ?? [] : [],
+                        canChange && building is int knownBuilding
+                            ? optionsByBuildingAndShift.GetValueOrDefault((knownBuilding, slotShift)) ?? []
+                            : [],
                         corrections),
                 };
             }

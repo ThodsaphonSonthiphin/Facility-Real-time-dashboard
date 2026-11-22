@@ -152,8 +152,15 @@ public static class AlertQuery
             .Select(id => users[id])
             .Where(user => user.Role == UserRole.Supervisor)
             .ToList();
+        var businessDate = ScheduleAuthority.BusinessDate(nowUtc);
         var supervisorPeriods = await SupervisorScopes.ReadManyAsync(
-            db, blockedSupervisors, ScheduleAuthority.BusinessDate(nowUtc));
+            db, blockedSupervisors, businessDate);
+        var blockedCleaners = blockedUserIds
+            .Select(id => users[id])
+            .Where(user => user.Role == UserRole.Cleaner && user.IsActive)
+            .ToList();
+        var cleanerStates = await CleanerEffectiveAssignment.ResolveForDateAsync(
+            db, blockedCleaners, businessDate, useFallbackWeekdayArea: false, includeDatedOverrides: true);
         var activeCovers = await db.CoverAssignments.AsNoTracking()
             .Where(c => c.CancelledAt == null && c.ShiftDate >= firstDate && blockedUserIds.Contains(c.UserId))
             .ToListAsync();
@@ -171,7 +178,14 @@ public static class AlertQuery
         // Not for a Cleaner without an Area (no sign to check in at, decision 10); HasShift is false for a deactivated Area.
         ShiftSlot? CleanerCoverSlot(User user, Area area, BlockedScan scan)
         {
-            if (user is not { Role: UserRole.Cleaner, IsActive: true, Shift: { } shift } || user.AreaId is not int ownAreaId || ownAreaId == area.Id || !area.HasShift(shift))
+            if (user is not { Role: UserRole.Cleaner, IsActive: true })
+            {
+                return null;
+            }
+
+            var resolvedShift = cleanerStates.TryGetValue(user.Id, out var state) ? state.Shift : user.Shift;
+            var resolvedAreaId = state is not null ? state.AreaId : user.AreaId;
+            if (resolvedShift is not { } shift || resolvedAreaId is not int ownAreaId || ownAreaId == area.Id || !area.HasShift(shift))
             {
                 return null;
             }

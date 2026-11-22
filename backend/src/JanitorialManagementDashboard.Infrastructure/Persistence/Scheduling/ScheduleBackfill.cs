@@ -14,12 +14,25 @@ public static class ScheduleBackfill
     /// <summary>
     /// Creates the open regular profile, regular weekday baseline and Supervisor building scope for every active person
     /// whose current Area/Building and Shift are known, effective from <paramref name="historyStartsAt"/>. Safe to run
-    /// more than once: a person who already has any scheduling version is left alone.
+    /// more than once and safe under concurrent startup (rolling deploys): a person who already has any scheduling version
+    /// is left alone, and a duplicate-key race clears tracked state and retries idempotently.
     /// </summary>
     public static async Task EnsureAsync(AppDbContext db, DateOnly historyStartsAt, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
+        try
+        {
+            await EnsureMissingRowsAsync(db, historyStartsAt, now, ct);
+        }
+        catch (DbUpdateException ex) when (ScheduleStore.IsDuplicateKeyViolation(ex))
+        {
+            db.ChangeTracker.Clear();
+            await EnsureMissingRowsAsync(db, historyStartsAt, now, ct);
+        }
+    }
 
+    private static async Task EnsureMissingRowsAsync(AppDbContext db, DateOnly historyStartsAt, DateTime now, CancellationToken ct)
+    {
         var profiled = await db.CleanerProfilePeriods.Select(x => x.UserId).ToHashSetAsync(ct);
         var baselined = await db.ScheduleBaselines.Select(x => x.UserId).ToHashSetAsync(ct);
         var scoped = await db.SupervisorScopePeriods.Select(x => x.SupervisorId).ToHashSetAsync(ct);
