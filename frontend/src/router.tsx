@@ -48,9 +48,12 @@ export const routes: RouteObject[] = [
         element: <ProtectedRoute roles={['cleaner', 'supervisor']} />,
         children: [
           {
+            element: <AppLayout wideForSupervisor />,
+            children: [{ path: 'my-account', element: <AccountPage /> }],
+          },
+          {
             element: <AppLayout />,
             children: [
-              { path: 'my-account', element: <AccountPage /> },
               {
                 path: 'scan/:token',
                 element: <ByRole pages={{ cleaner: <ScanPage />, supervisor: <InspectPage /> }} />,
@@ -62,10 +65,12 @@ export const routes: RouteObject[] = [
       {
         element: <ProtectedRoute roles={['supervisor']} />,
         children: [
-          { element: <AppLayout />, children: [{ path: 'my-building', element: <MyBuildingPage /> }] },
           {
             element: <AppLayout wide />,
-            children: [{ path: 'schedule-management', element: <ScheduleManagementPage /> }],
+            children: [
+              { path: 'my-building', element: <MyBuildingPage /> },
+              { path: 'schedule-management', element: <ScheduleManagementPage /> },
+            ],
           },
         ],
       },

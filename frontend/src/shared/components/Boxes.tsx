@@ -37,6 +37,7 @@ export function Table({
   label,
   framed = true,
   minWidth = 'min-w-180',
+  leadingOverlayWidth = 0,
   footer,
   children,
 }: {
@@ -45,12 +46,14 @@ export function Table({
   framed?: boolean;
   /** Below it the table scrolls sideways: 720 px by default, the design file's D3 tables 560 and 900 px. */
   minWidth?: string;
+  /** Width of a sticky leading column so keyboard scrolling reveals focused cells beside it. */
+  leadingOverlayWidth?: number;
   /** A bar under the table inside its box, which does not scroll with it (D2's count, legend and pages). */
   footer?: ReactNode;
   children: ReactNode;
 }) {
   const table = (
-    <HorizontalScrollArea label={label ?? 'ตารางข้อมูล'}>
+    <HorizontalScrollArea label={label ?? 'ตารางข้อมูล'} leadingOverlayWidth={leadingOverlayWidth}>
       <table
         aria-label={label}
         className={

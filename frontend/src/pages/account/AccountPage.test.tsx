@@ -31,7 +31,8 @@ describe('AccountPage (/my-account) and LogoutConfirmDialog', () => {
     });
     const { user, router } = await renderApp('/my-account');
 
-    expect(await screen.findByText('หัวหน้าทดสอบ')).toBeInTheDocument();
+    const profile = await screen.findByRole('region', { name: 'ข้อมูลผู้ใช้งาน' });
+    expect(within(profile).getByText('หัวหน้าทดสอบ')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'ออกจากระบบ' }));
     const dialog = await screen.findByRole('alertdialog', { name: 'ยืนยันออกจากระบบ' });
     await user.click(within(dialog).getByRole('button', { name: 'ยืนยันออกจากระบบ' }));

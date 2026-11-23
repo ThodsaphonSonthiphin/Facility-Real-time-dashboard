@@ -7,7 +7,6 @@ import { KpiCard } from '../../shared/components/KpiCard/KpiCard';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
 import { RangeFields } from '../../shared/components/RangeFields';
-import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { SummaryTable } from './SummaryTable';
 import { useInspectionSummaryPage } from './useInspectionSummaryPage';
@@ -32,30 +31,36 @@ export function InspectionSummaryPage() {
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <AdminPageHeader title="สรุปการตรวจ" />
       <div className="flex flex-col gap-3">
-        <FilterToolbar label="ตัวกรองการตรวจ" align="end">
-          <Field label="ช่วงวัน">
-            <Select size="desk" className="min-w-0 max-w-full" value={page.preset} onChange={(event) => page.selectPreset(event.target.value)}>
-              <option value="today">วันนี้</option>
-              <option value="week">{page.weekLabel}</option>
-              <option value="month">เดือนนี้</option>
-              <option value="custom">{page.customLabel}</option>
-            </Select>
-          </Field>
-          <Field label="กะ">
-            <Select size="desk" value={page.shift} onChange={(event) => page.setShift(event.target.value as typeof page.shift)}>
-              <option value="">ทั้งสองกะ</option>
-              <option value="Day">กะเช้า</option>
-              <option value="Night">กะดึก</option>
-            </Select>
-          </Field>
-          <BuildingSelect value={page.buildingId} onChange={page.selectBuilding} />
+        <section
+          role="region"
+          aria-label="ตัวกรองการตรวจ"
+          className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4"
+        >
+          <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-3 lg:flex lg:flex-wrap">
+            <Field label="ช่วงวัน">
+              <Select size="adaptive" className="w-full min-w-0 max-w-full lg:w-auto" value={page.preset} onChange={(event) => page.selectPreset(event.target.value)}>
+                <option value="today">วันนี้</option>
+                <option value="week">{page.weekLabel}</option>
+                <option value="month">เดือนนี้</option>
+                <option value="custom">{page.customLabel}</option>
+              </Select>
+            </Field>
+            <Field label="กะ">
+              <Select size="adaptive" className="w-full lg:w-auto" value={page.shift} onChange={(event) => page.setShift(event.target.value as typeof page.shift)}>
+                <option value="">ทั้งสองกะ</option>
+                <option value="Day">กะเช้า</option>
+                <option value="Night">กะดึก</option>
+              </Select>
+            </Field>
+            <BuildingSelect size="adaptive" selectClassName="w-full max-w-full lg:w-auto lg:max-w-72" value={page.buildingId} onChange={page.selectBuilding} />
+          </div>
           {page.preset === 'custom' && (
             <div className="flex w-full flex-wrap items-end gap-2 border-t border-border pt-3">
               <RangeFields value={page.texts} onChange={page.setTexts} onEnter={page.show} />
-              <Button size="desk" onClick={page.show}>แสดง</Button>
+              <Button size="adaptive" className="w-full sm:w-auto" onClick={page.show}>แสดง</Button>
             </div>
           )}
-        </FilterToolbar>
+        </section>
         {page.problem && <Note tone="error">{page.problem}</Note>}
       </div>
       {page.summary && (

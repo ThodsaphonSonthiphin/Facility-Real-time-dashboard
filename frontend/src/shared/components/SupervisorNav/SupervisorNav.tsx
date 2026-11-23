@@ -12,13 +12,13 @@ const bottomTabBase =
   `flex min-h-14 flex-col items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs whitespace-nowrap no-underline transition-colors duration-150 ${focusRing}`;
 
 /**
- * Desktop top switcher for Supervisor surfaces (`/my-building` and `/schedule-management`).
+ * Tablet and Desktop top switcher for Supervisor surfaces (`/my-building`, `/schedule-management`, `/my-account`).
  */
 export function SupervisorNav() {
   return (
     <nav
       aria-label="เมนูหัวหน้างาน"
-      className="flex min-w-0 items-center gap-1 rounded-lg border border-border bg-surface p-1 print:hidden"
+      className="flex min-w-0 items-center gap-1 rounded-lg border border-border bg-surface-2 p-1 print:hidden"
     >
       <NavLink
         to="/my-building"
@@ -35,6 +35,14 @@ export function SupervisorNav() {
       >
         <CalendarDays aria-hidden="true" className="size-5 shrink-0 sm:size-4" />
         <span>จัดตารางงาน</span>
+      </NavLink>
+      <NavLink
+        to="/my-account"
+        data-tap=""
+        className={({ isActive }) => `${itemBase} ${isActive ? itemActive : itemIdle}`}
+      >
+        <User aria-hidden="true" className="size-5 shrink-0 sm:size-4" />
+        <span>บัญชี</span>
       </NavLink>
     </nav>
   );

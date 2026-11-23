@@ -15,7 +15,7 @@ interface BuildingCardProps {
 export function BuildingCard({ point, canInspect }: BuildingCardProps) {
   const issue = issueText(point);
   return (
-    <li className={`flex min-w-0 flex-col gap-1.5 rounded-lg bg-surface px-4 py-3 ${statusFrame[point.status] ?? 'border border-border'}`}>
+    <li className={`flex h-full min-w-0 flex-col gap-1.5 rounded-lg bg-surface px-4 py-3 ${statusFrame[point.status] ?? 'border border-border'}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h3 className="min-w-0 text-base font-bold wrap-break-word">{point.name}</h3>
         <StatusChip status={point.status} />
@@ -23,7 +23,7 @@ export function BuildingCard({ point, canInspect }: BuildingCardProps) {
       <span className="text-sm text-text-2 tabular-nums">{[point.areaName, roundText(point)].filter(Boolean).join(' · ')}</span>
       <span className="text-sm wrap-break-word tabular-nums">{detailOf(point)}</span>
       {canInspect && point.status === 'PendingInspection' && (
-        <span className="mt-0.5 flex items-center gap-2 rounded-md bg-bg px-3 py-2 text-sm font-semibold">
+        <span className="mt-auto flex items-center gap-2 rounded-md bg-bg px-3 py-2 text-sm font-semibold">
           <QrCode aria-hidden="true" className="size-5 shrink-0 text-pending" />
           ไปที่จุดนี้แล้วสแกน QR เพื่อตรวจ
         </span>

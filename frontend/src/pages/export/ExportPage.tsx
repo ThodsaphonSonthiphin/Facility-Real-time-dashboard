@@ -22,8 +22,8 @@ export function ExportPage() {
   return (
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <AdminPageHeader title="ส่งออก Excel" />
-      {/* The approved summary column is 280px; no theme width token matches this page-specific layout. */}
-      <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+      {/* Two-column layout begins at xl (1280px) so iPad portrait/landscape keeps full width for the export form; no theme width token matches 280px. */}
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
         <SurfacePanel className="min-w-0">
           <section className={sectionClass} aria-labelledby="export-sets">
             <h2 id="export-sets" className={titleClass}>1. ชุดข้อมูล</h2>
@@ -64,11 +64,11 @@ export function ExportPage() {
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
               <Field label="ตั้งแต่">
                 <TextInput
-                  size="desk"
-                  className="w-35"
+                  size="adaptive"
+                  className="w-full sm:w-35"
                   value={page.texts.fromText}
                   placeholder="วว/ดด/ปปปป"
                   inputMode="numeric"
@@ -77,8 +77,8 @@ export function ExportPage() {
               </Field>
               <Field label="ถึง">
                 <TextInput
-                  size="desk"
-                  className="w-35"
+                  size="adaptive"
+                  className="w-full sm:w-35"
                   value={page.texts.toText}
                   placeholder="วว/ดด/ปปปป"
                   inputMode="numeric"
@@ -122,9 +122,9 @@ export function ExportPage() {
               <span>รับทราบข้อกำหนดข้อมูลส่วนบุคคล</span>
             </label>
             <Button
-              className="self-end"
+              className="w-full sm:w-auto sm:self-end"
               variant="primary"
-              size="desk"
+              size="adaptive"
               disabled={page.sending || !page.acknowledged || !page.buildingsReady || page.selectedBuildings.length === 0 || page.missingBuilding}
               onClick={() => void page.download()}
             >
@@ -139,7 +139,7 @@ export function ExportPage() {
           </section>
         </SurfacePanel>
         <aside
-          className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:p-6 lg:sticky lg:top-5"
+          className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:p-6 xl:sticky xl:top-5"
           aria-labelledby="export-summary"
         >
           <h2 id="export-summary" className="flex items-center gap-2 text-base font-bold">

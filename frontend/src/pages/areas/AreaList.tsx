@@ -44,7 +44,7 @@ export function AreaList({ areas, total, selectedId, loading, names, buildings, 
           data-tap=""
           aria-expanded={mobileExpanded}
           onClick={() => setMobileExpanded((open) => !open)}
-          className={`flex min-h-12 items-center justify-between gap-2 border-b border-border bg-surface-2 px-3.5 py-2.5 text-left text-sm font-semibold text-text lg:hidden ${focusRing}`}
+          className={`flex min-h-12 items-center justify-between gap-2 border-b border-border bg-surface-2 px-3.5 py-2.5 text-left text-sm font-semibold text-text xl:hidden ${focusRing}`}
         >
           <span className="min-w-0 truncate">{`เลือกพื้นที่: ${selectedArea.code} ${selectedArea.name}`}</span>
           <span className="inline-flex shrink-0 items-center gap-1 text-accent">
@@ -53,7 +53,7 @@ export function AreaList({ areas, total, selectedId, loading, names, buildings, 
           </span>
         </button>
       )}
-      <div className={`${selectedArea && !mobileExpanded ? 'hidden lg:flex' : 'flex'} min-w-0 flex-col`}>
+      <div className={`${selectedArea && !mobileExpanded ? 'hidden xl:flex' : 'flex'} min-w-0 flex-col`}>
         <div className="flex flex-col gap-2 border-b border-border p-3">
           <Field label={<span className="inline-flex items-center gap-2"><Search aria-hidden="true" className="size-4" />ค้นหาพื้นที่</span>}>
             <TextInput size="desk" type="search" placeholder="ค้นหารหัสหรือชื่อพื้นที่" value={search}

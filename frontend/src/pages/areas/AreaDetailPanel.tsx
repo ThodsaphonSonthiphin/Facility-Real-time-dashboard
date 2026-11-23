@@ -33,16 +33,17 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
             <span className="text-text-2">{areaHeadline(detail, names)}</span>
           </div>
           {/* The page's actions sit away from the name, on the right: they are not part of it (owner, 2026-10-23) */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <Button
-              size="desk"
+              size="adaptive"
+              className={area.isActive ? 'w-full sm:w-auto' : 'col-span-2 w-full sm:w-auto'}
               onClick={openArea}
             >
               <Pencil aria-hidden="true" className="size-4" />
               แก้ไขพื้นที่
             </Button>
             {area.isActive && (
-              <Link className={buttonClass('secondary', 'desk')} data-tap="" to={`/admin/print?area=${area.id}`}>
+              <Link className={`${buttonClass('secondary', 'adaptive')} w-full sm:w-auto`} data-tap="" to={`/admin/print?area=${area.id}`}>
                 <Printer aria-hidden="true" className="size-4" />
                 พิมพ์ป้าย
               </Link>
