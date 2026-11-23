@@ -91,9 +91,13 @@ out="$(run_init "$answers" "$work/out/o.env" 2>&1)"
 if [[ "$out" != *"$db_pw"* && "$out" != *"$admin_pw"* ]]; then echo "ok:   init's console output shows no password"
 else echo "FAIL: init's console output shows a password"; failures=$((failures + 1)); fi
 key="$(sed -n 's/^Jwt__SigningKey=//p' "$work/out/o.env")"
-if [ "${#key}" -ge 32 ] && grep -q '^FirstAdmin__Username=first.admin$' "$work/out/o.env" && grep -q '^FirstAdmin__DisplayName=แอดมินคนแรก$' "$work/out/o.env" && grep -qx "FirstAdmin__Password=$admin_pw" "$work/out/o.env"; then
-  echo "ok:   init's file has a signing key and the three FirstAdmin lines"
+cmd_key="$(sed -n 's/^Scheduling__CommandSigningKey=//p' "$work/out/o.env")"
+if [ "${#key}" -ge 32 ] && [ "${#cmd_key}" -ge 32 ] && grep -q '^FirstAdmin__Username=first.admin$' "$work/out/o.env" && grep -q '^FirstAdmin__DisplayName=แอดมินคนแรก$' "$work/out/o.env" && grep -qx "FirstAdmin__Password=$admin_pw" "$work/out/o.env"; then
+  echo "ok:   init's file has signing keys (>=32 bytes) and the three FirstAdmin lines"
 else echo "FAIL: init's file lacks a signing key or a FirstAdmin line"; failures=$((failures + 1)); fi
+
+printf 'ConnectionStrings__DefaultConnection=Server=x;Database=d\nJwt__SigningKey=0123456789abcdef0123456789abcdef\nScheduling__CommandSigningKey=too-short-key\n' > "$work/shortcmd.env"; chmod 600 "$work/shortcmd.env"
+check "a Scheduling__CommandSigningKey shorter than 32 bytes is refused" 2 "อย่างน้อย 32 ไบต์" bash "$script" start "$work/shortcmd.env"
 
 mkdir -p "$work/badbin"; printf '#!/bin/sh\nexit 1\n' > "$work/badbin/openssl"; chmod 755 "$work/badbin/openssl"
 check "init without a signing key is refused" 2 "สร้าง Jwt__SigningKey ไม่ได้" bash -c 'printf "%s" "$1" | PATH="$4:$PATH" bash "$2" init "$3"' _ "$answers" "$script" "$work/nokey/k.env" "$work/badbin"

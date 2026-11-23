@@ -3,6 +3,7 @@ using JanitorialManagementDashboard.Application.Rounds;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -10,7 +11,7 @@ namespace JanitorialManagementDashboard.Api.Endpoints;
 /// <summary>What the Admin's Area, point and sign pages show, deactivated rows included.</summary>
 internal static class AdminSetupView
 {
-    public static async Task<List<AreaSummaryDto>> LoadAreasAsync(AppDbContext db, int? onlyAreaId = null)
+    public static async Task<List<AreaSummaryDto>> LoadAreasAsync(AppDbContext db, int? onlyAreaId = null, DateOnly? businessDate = null)
     {
         var areas = await db.Areas.AsNoTracking()
             .Include(a => a.Building)
@@ -19,9 +20,30 @@ internal static class AdminSetupView
             .ToListAsync();
         var ids = areas.Select(a => a.Id).ToList();
 
-        var cleaners = await db.Users.AsNoTracking()
-            .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId != null && ids.Contains(u.AreaId.Value))
-            .ToListAsync();
+        List<(User User, int AreaId, Shift Shift)> assignedCleaners;
+        if (businessDate is DateOnly date)
+        {
+            var allCleaners = await db.Users.AsNoTracking()
+                .Where(u => u.Role == UserRole.Cleaner && u.IsActive)
+                .ToListAsync();
+            var effective = await CleanerEffectiveAssignment.ResolveForDateAsync(
+                db, allCleaners, date, useFallbackWeekdayArea: true);
+            var idSet = ids.ToHashSet();
+            assignedCleaners = allCleaners
+                .Where(u => effective.TryGetValue(u.Id, out var state)
+                    && state.AreaId is int aId && idSet.Contains(aId)
+                    && state.Shift is Shift)
+                .Select(u => (u, effective[u.Id].AreaId!.Value, effective[u.Id].Shift!.Value))
+                .ToList();
+        }
+        else
+        {
+            var legacy = await db.Users.AsNoTracking()
+                .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId != null && u.Shift != null && ids.Contains(u.AreaId.Value))
+                .ToListAsync();
+            assignedCleaners = legacy.Select(u => (u, u.AreaId!.Value, u.Shift!.Value)).ToList();
+        }
+
         var activePointAreaIds = await db.ServicePoints.AsNoTracking()
             .Where(p => p.IsActive && ids.Contains(p.AreaId))
             .Select(p => p.AreaId)
@@ -39,16 +61,16 @@ internal static class AdminSetupView
                 a.Building!.Code,
                 a.ShiftPattern,
                 a.IsActive,
-                CleanerOf(cleaners, a.Id, Shift.Day),
-                CleanerOf(cleaners, a.Id, Shift.Night),
+                CleanerOf(assignedCleaners, a.Id, Shift.Day),
+                CleanerOf(assignedCleaners, a.Id, Shift.Night),
                 activePointAreaIds.Count(id => id == a.Id),
                 signs.Count(s => s.AreaId == a.Id && s.LocationSource != LocationSource.Site)))
             .ToList();
     }
 
-    public static async Task<AreaDetailDto?> LoadAreaAsync(AppDbContext db, int areaId)
+    public static async Task<AreaDetailDto?> LoadAreaAsync(AppDbContext db, int areaId, DateOnly? businessDate = null)
     {
-        var summary = (await LoadAreasAsync(db, areaId)).SingleOrDefault();
+        var summary = (await LoadAreasAsync(db, areaId, businessDate)).SingleOrDefault();
         if (summary is null)
         {
             return null;
@@ -93,9 +115,9 @@ internal static class AdminSetupView
             .Select(w => new AdminRoundWindowDto(w.Id, w.Shift, RoundWindowRules.Format(w.StartTime), RoundWindowRules.Format(w.EndTime)))
             .ToList());
 
-    private static AssignedCleanerDto? CleanerOf(List<User> cleaners, int areaId, Shift shift) =>
-        cleaners.Where(u => u.AreaId == areaId && u.Shift == shift)
-            .Select(u => new AssignedCleanerDto(u.Id, u.EmployeeId ?? string.Empty, u.DisplayName))
+    private static AssignedCleanerDto? CleanerOf(List<(User User, int AreaId, Shift Shift)> cleaners, int areaId, Shift shift) =>
+        cleaners.Where(c => c.AreaId == areaId && c.Shift == shift)
+            .Select(c => new AssignedCleanerDto(c.User.Id, c.User.EmployeeId ?? string.Empty, c.User.DisplayName))
             .FirstOrDefault();
 
     /// <summary>The database returns Unspecified; marking it UTC makes the JSON end in "Z".</summary>

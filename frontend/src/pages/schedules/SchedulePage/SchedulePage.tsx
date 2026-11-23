@@ -2,7 +2,7 @@ import { ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, RefreshCw, Use
 import { lazy, Suspense } from 'react';
 import { useGetBuildingsQuery } from '../../../shared/api/adminSetupApi';
 import { buildingOptionText } from '../../../shared/api/buildingNames';
-import type { ScheduleAvailability, ScheduleDay, ScheduleWeek } from '../../../shared/api/scheduleTypes';
+import type { ScheduleAvailability, ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
 import type { Shift } from '../../../shared/api/types';
 import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
 import { AvatarBadge } from '../../../shared/components/AvatarBadge/AvatarBadge';
@@ -117,6 +117,7 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
         <div className="flex flex-col gap-2.5">
           <MobileWeekStrip view={view} />
           {role === 'admin' && <MobileAdminFilters view={view} />}
+          {role === 'supervisor' && <MobileSupervisorShiftFilter view={view} />}
           <MobileScheduleActionSheet {...actionProps} />
         </div>
       ) : (
@@ -127,6 +128,7 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
         >
           <WeekControls view={view} />
           {role === 'admin' && <AdminFilters view={view} />}
+          {role === 'supervisor' && <ShiftFilter view={view} emptyLabel="ทุกกะ" />}
         </FilterToolbar>
       )}
 
@@ -185,6 +187,23 @@ function MobileWeekStrip({ view }: { view: ReturnType<typeof useSchedulePage> })
   );
 }
 
+/** Clean mobile Supervisor shift filter (`ทุกกะ` / `กะเช้า` / `กะดึก`). */
+function MobileSupervisorShiftFilter({ view }: { view: ReturnType<typeof useSchedulePage> }) {
+  return (
+    <Select
+      size="phone"
+      aria-label="กะ"
+      className="w-full min-w-0 text-sm"
+      value={view.selection.shift ?? ''}
+      onChange={(event) => view.chooseShift((event.target.value || undefined) as Shift | undefined)}
+    >
+      <option value="">ทุกกะ</option>
+      <option value="Day">{shiftShortLabel.Day}</option>
+      <option value="Night">{shiftShortLabel.Night}</option>
+    </Select>
+  );
+}
+
 /** Clean 2-column equal-width mobile Admin filters (Building + Shift) that never awkwardly wrap. */
 function MobileAdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   const { data: buildings } = useGetBuildingsQuery();
@@ -211,7 +230,7 @@ function MobileAdminFilters({ view }: { view: ReturnType<typeof useSchedulePage>
         value={view.selection.shift ?? ''}
         onChange={(event) => view.chooseShift((event.target.value || undefined) as Shift | undefined)}
       >
-        <option value="">กะของฉัน</option>
+        <option value="">ทุกกะ</option>
         <option value="Day">{shiftShortLabel.Day}</option>
         <option value="Night">{shiftShortLabel.Night}</option>
       </Select>
@@ -277,6 +296,22 @@ function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typ
   );
 }
 
+/** Desktop shift filter shared by Admin and Supervisor (`ทุกกะ` / `กะเช้า` / `กะดึก`). */
+function ShiftFilter({ view, emptyLabel }: { view: ReturnType<typeof useSchedulePage>; emptyLabel: string }) {
+  return (
+    <Segmented<'' | Shift>
+      label="กะ"
+      value={view.selection.shift ?? ''}
+      options={[
+        { value: '', label: emptyLabel },
+        { value: 'Day', label: shiftShortLabel.Day },
+        { value: 'Night', label: shiftShortLabel.Night },
+      ]}
+      onChange={(value) => view.chooseShift(value === '' ? undefined : value)}
+    />
+  );
+}
+
 /** Desktop Admin filters: every building in the shift on the clock, and any shift they choose. */
 function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   return (
@@ -284,16 +319,7 @@ function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
       <div className="w-44 max-w-full">
         <BuildingSelect value={view.selection.buildingId} onChange={view.chooseBuilding} />
       </div>
-      <Segmented<'' | Shift>
-        label="กะ"
-        value={view.selection.shift ?? ''}
-        options={[
-          { value: '', label: 'กะของฉัน' },
-          { value: 'Day', label: shiftShortLabel.Day },
-          { value: 'Night', label: shiftShortLabel.Night },
-        ]}
-        onChange={(value) => view.chooseShift(value === '' ? undefined : value)}
-      />
+      <ShiftFilter view={view} emptyLabel="ทุกกะ" />
     </div>
   );
 }
@@ -442,12 +468,14 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                         {person.cleanerKind === 'Relief' && person.homeBuildingCode && (
                           <span className="block text-xs font-normal text-text-2">ตึกประจำ: {person.homeBuildingCode}</span>
                         )}
-                        {person.cleanerKind === 'Regular' && !person.hasWeeklyChoice
-                          && person.days.some((day) => day.edit) && (
+                        {(() => {
+                          const badge = regularSetupBadge(person);
+                          return badge && (
                             <div className="mt-1 [&>span]:whitespace-normal">
-                              <Badge kind="edited">ยังไม่กำหนดวันหยุด</Badge>
+                              <Badge kind="edited">{badge}</Badge>
                             </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
                   </th>
@@ -585,6 +613,15 @@ function DayFacts({ day }: { day: ScheduleDay }) {
       </dd>
     </dl>
   );
+}
+
+/** Status badge for a Regular cleaner whose shift, area, or weekly days off still need setup. */
+function regularSetupBadge(person: SchedulePerson): string | null {
+  if (person.cleanerKind !== 'Regular') return null;
+  if (!person.days.some((day) => day.shift != null)) return 'ยังไม่จัดกะ';
+  if (person.days.some((day) => day.edit) && person.days.every((day) => day.area.value == null)) return 'ยังไม่จัดพื้นที่';
+  if (!person.hasWeeklyChoice && person.days.some((day) => day.edit)) return 'ยังไม่กำหนดวันหยุด';
+  return null;
 }
 
 function datesOf(week: ScheduleWeek): string[] {

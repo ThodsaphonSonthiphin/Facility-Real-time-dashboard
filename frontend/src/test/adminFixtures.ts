@@ -185,7 +185,16 @@ export const accounts: Account[] = [
   }),
   account(),
   account({ id: 22, loginName: '650002', displayName: 'แม่บ้านกะดึก', shift: 'Night' }),
-  account({ id: 23, loginName: '650003', displayName: 'แม่บ้านว่าง', areaId: undefined, areaCode: undefined }),
+  account({
+    id: 23,
+    loginName: '650003',
+    displayName: 'แม่บ้านว่าง',
+    areaId: undefined,
+    areaCode: undefined,
+    cleanerKind: 'Regular',
+    homeBuildingId: 1,
+    homeBuildingCode: 'A',
+  }),
   account({
     id: 26,
     loginName: '650006',

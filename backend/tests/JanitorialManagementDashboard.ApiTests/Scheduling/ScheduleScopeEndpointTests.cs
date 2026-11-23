@@ -83,6 +83,47 @@ public class ScheduleScopeEndpointTests
     }
 
     [Fact]
+    public async Task A_supervisor_schedules_both_shifts_in_their_building_while_my_building_stays_own_shift()
+    {
+        using var factory = ScheduleWriteApi.NewFactory();
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, Oct1);
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000002", CleanerKind.Regular, Shift.Night, Oct1);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000002", Oct1, "AR01");
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        ScheduleWriteApi.Today(factory);
+        var nightCleanerId = await AdminSetupApi.UserIdAsync(factory, "1000002");
+        var tomorrow = new DateOnly(2026, 11, 18);
+
+        var week = await ScheduleWriteApi.WeekAsync(supervisor, new DateOnly(2026, 11, 16));
+        var nightRow = Assert.Single(week.Rows, r => r.UserId == nightCleanerId);
+        Assert.True(nightRow.Days.First(d => d.Date == tomorrow).Edit!.CanChange);
+
+        var (response, _) = await ScheduleWriteApi.ExecuteAsync(
+            supervisor,
+            ScheduleWriteApi.RecordLeave,
+            new
+            {
+                userId = nightCleanerId,
+                date = "2026-11-18",
+                shift = "Night",
+                startsAt = "2026-11-18T12:00:00Z",
+                endsAt = "2026-11-19T00:00:00Z",
+                reason = "ลาป่วย",
+            },
+            new Dictionary<string, string> { [ScheduleWriteApi.LeaveKey(nightCleanerId, tomorrow, "Night")] = "0" });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // /my-building and QR inspection remain strictly scoped to the Supervisor's own shift (Day):
+        var page = (await supervisor.GetFromJsonAsync<MyBuildingModel>("/api/my-building"))!;
+        Assert.Equal("Day", page.Shift);
+        factory.Clock.SetUtcNow(ThaiClock.At(17, 20, 30));
+        var scanResponse = await InspectionApi.ScanAsync(supervisor, InspectionApi.MenRestroom);
+        Assert.Equal(HttpStatusCode.Forbidden, scanResponse.StatusCode);
+        var blocked = (await scanResponse.Content.ReadFromJsonAsync<BlockedModel>())!;
+        Assert.Equal(nameof(BlockReason.OutsideShift), blocked.Reason);
+    }
+
+    [Fact]
     public async Task An_ended_membership_grants_nothing_on_or_after_its_until_date()
     {
         using var factory = new JanitorialApiFactory();

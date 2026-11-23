@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import type { Locator, Page, TestInfo } from '@playwright/test';
+import { clockSlot } from '../../src/pages/schedules/scheduleRules.ts';
 import { phone } from '../support/devices.ts';
 import { loginAsAdmin, loginAsEmployee } from '../support/login.ts';
 import {
@@ -139,6 +141,7 @@ test.describe('scheduling', () => {
     await page.getByRole('menuitem', { name: 'บันทึกการยืมสแปร์', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'บันทึกการยืมสแปร์' });
     await dialog.getByLabel('วันที่ทำงาน').selectOption(fixture.planningWeek);
+    await dialog.getByLabel('กะปลายทาง').selectOption(fixture.shift);
     await dialog.getByLabel('พื้นที่ปลายทาง').selectOption(String(fixture.destinationArea.id));
     await dialog.getByLabel('ตึกต้นทาง').selectOption(String(fixture.buildingC.id));
     await dialog.getByLabel('รหัสพนักงานสแปร์').fill(fixture.relief.employeeId);
@@ -165,6 +168,133 @@ test.describe('scheduling', () => {
     });
     await expect(page.getByText('ตกลงกับตึกต้นทางแล้ว')).toBeVisible();
     await expect(page.getByRole('button', { name: /อนุมัติ/ })).toHaveCount(0);
+  });
+
+  test('onboards two Regular Cleaners without shift or Area, assigns baseline and weekly days off, and verifies /my-schedule', async ({ page, browser, baseURL }) => {
+    const fixture = schedulingFixture();
+    const tag = randomUUID().replaceAll('-', '').slice(0, 6).toUpperCase();
+    const today = clockSlot(new Date()).startDate;
+    const addDays = (date: string, days: number) => new Date(Date.parse(date) + days * 86_400_000).toISOString().slice(0, 10);
+    const saturday = addDays(fixture.planningWeek, 5);
+    const sunday = addDays(fixture.planningWeek, 6);
+
+    const areas = [
+      { id: 0, code: `OA1${tag.slice(0, 5)}`, name: `พื้นที่ตั้งต้น 1 ${tag}` },
+      { id: 0, code: `OA2${tag.slice(0, 5)}`, name: `พื้นที่ตั้งต้น 2 ${tag}` },
+    ];
+    const cleaners = [
+      {
+        employeeId: `OB1${tag}`,
+        phone: `0881${String(Math.floor(100000 + Math.random() * 899999))}`,
+        name: `แม่บ้านตั้งต้น 1 ${tag}`,
+        area: areas[0],
+        dayOff: sunday,
+      },
+      {
+        employeeId: `OB2${tag}`,
+        phone: `0882${String(Math.floor(100000 + Math.random() * 899999))}`,
+        name: `แม่บ้านตั้งต้น 2 ${tag}`,
+        area: areas[1],
+        dayOff: saturday,
+      },
+    ];
+
+    // 1. Admin creates 2 active Areas in building A and 2 Regular Cleaners with only home building (no shift or Area).
+    await loginAsAdmin(page);
+    for (const area of areas) {
+      await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'พื้นที่และป้าย' }).click();
+      await page.getByRole('link', { name: 'เพิ่มพื้นที่', exact: true }).click();
+      await page.getByLabel('รหัสพื้นที่').fill(area.code);
+      await page.getByLabel('ชื่อพื้นที่').fill(area.name);
+      await page.getByRole('combobox', { name: 'ตึก', exact: true }).selectOption(String(fixture.buildingA.id));
+      await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+      await expect(page).toHaveURL(/\/admin\/areas\/\d+$/);
+      area.id = Number(page.url().split('/').pop());
+    }
+
+    await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'บัญชีผู้ใช้' }).click();
+    await page.getByRole('button', { name: 'สร้างบัญชี' }).click();
+    const accountDrawer = page.getByRole('dialog');
+    for (const cleaner of cleaners) {
+      await accountDrawer.getByLabel('ชื่อที่แสดง').fill(cleaner.name);
+      await accountDrawer.getByLabel('รหัสพนักงาน').fill(cleaner.employeeId);
+      await accountDrawer.getByLabel('เบอร์โทรศัพท์').fill(cleaner.phone);
+      await accountDrawer.getByLabel('ตึกประจำ').selectOption(String(fixture.buildingA.id));
+      await expect(accountDrawer.getByLabel('พื้นที่ประจำ')).toHaveValue('');
+      await accountDrawer.getByRole('button', { name: 'สร้างบัญชี', exact: true }).click();
+      await expect(accountDrawer.getByRole('status')).toContainText(`สร้างบัญชี ${cleaner.name} แล้ว`);
+    }
+    await accountDrawer.getByRole('button', { name: 'ยกเลิก' }).click();
+
+    // 2. Supervisor opens /schedule-management, switches to Day shift, and sets regular baseline for both Cleaners.
+    const supervisorContext = await browser.newContext({ baseURL, viewport: { width: 1280, height: 800 } });
+    await observeAdditionalContext(supervisorContext);
+    try {
+      const supPage = await supervisorContext.newPage();
+      await loginAsEmployee(supPage, fixture.supervisorAB);
+      await expect(supPage).toHaveURL(/\/my-building$/);
+
+      const currentWeekResponse = supPage.waitForResponse((response) => apiAnswer(response, '/api/schedules'));
+      await supPage.getByRole('link', { name: 'จัดตารางงาน', exact: true }).click();
+      await expect(supPage).toHaveURL(/\/schedule-management$/);
+      expect((await currentWeekResponse).ok()).toBe(true);
+
+      const dayShiftButton = supPage.getByRole('group', { name: 'กะ', exact: true }).getByRole('button', { name: 'กะเช้า', exact: true });
+      if (await dayShiftButton.getAttribute('aria-pressed') !== 'true') {
+        const dayRead = supPage.waitForResponse((response) =>
+          apiAnswer(response, '/api/schedules') && new URL(response.url()).searchParams.get('shift') === 'Day');
+        await dayShiftButton.click();
+        expect((await dayRead).ok()).toBe(true);
+      }
+
+      for (const cleaner of cleaners) {
+        const row = supPage.getByRole('row').filter({ has: supPage.getByRole('rowheader', { name: new RegExp(cleaner.name) }) });
+        await expect(row).toBeVisible();
+        await row.getByRole('button').first().click();
+        await supPage.getByRole('button', { name: 'ตั้งตารางประจำ', exact: true }).click();
+        const baselineDialog = supPage.getByRole('dialog', { name: 'ตั้งตารางประจำ' });
+        await baselineDialog.getByLabel('วันเริ่มใช้').fill(today);
+        await baselineDialog.getByRole('combobox', { name: /^กะ/ }).selectOption('Day');
+        await baselineDialog.getByLabel('พื้นที่ประจำ').selectOption({ label: `${cleaner.area.code} · ${cleaner.area.name}` });
+        await baselineDialog.getByRole('button', { name: 'ตรวจสอบ', exact: true }).click();
+        await saveReviewedSchedule(supPage);
+        await baselineDialog.getByRole('button', { name: 'เสร็จสิ้น', exact: true }).click();
+      }
+
+      // 3. Supervisor opens planningWeek and assigns weekly days off (Sunday for Cleaner 1, Saturday for Cleaner 2).
+      await supPage.getByRole('button', { name: 'สัปดาห์ถัดไป' }).click();
+      await expect(supPage.getByRole('columnheader', { name: weekDayLabel(sunday) })).toBeVisible();
+      const weeklyDialog = await openWeeklyEditor(supPage, fixture.planningWeek);
+      for (const cleaner of cleaners) {
+        await weeklyDialog.getByRole('group', { name: cleaner.name })
+          .getByRole('checkbox', { name: weekDayLabel(cleaner.dayOff), exact: true })
+          .check();
+      }
+      await weeklyDialog.getByRole('button', { name: 'ตรวจสอบ', exact: true }).click();
+      await saveReviewedSchedule(supPage);
+      await weeklyDialog.getByRole('button', { name: 'เสร็จสิ้น', exact: true }).click();
+    } finally {
+      await supervisorContext.close();
+    }
+
+    // 4. Cleaner 1 and Cleaner 2 each see their assigned Area and respective day off on /my-schedule.
+    for (const cleaner of cleaners) {
+      const cleanerContext = await browser.newContext({ ...phone, baseURL, viewport: { width: 375, height: 812 } });
+      await observeAdditionalContext(cleanerContext);
+      try {
+        const cleanerPage = await cleanerContext.newPage();
+        await loginAsEmployee(cleanerPage, cleaner);
+        await expect(cleanerPage).toHaveURL(/\/my-work$/);
+        const mine = await openSchedule(cleanerPage, '/my-schedule', fixture.planningWeek);
+        expect(mine.rows[0].days.filter((day) => day.isDayOff).map((day) => day.date)).toEqual([cleaner.dayOff]);
+        expect(mine.rows[0].days.every((day) => day.area?.value === cleaner.area.id)).toBe(true);
+        await expect(cleanerPage.locator('dt:text-is("พื้นที่") + dd', { hasText: new RegExp(`^${cleaner.area.id}\\b`) }).first()).toBeVisible();
+        await expect(cleanerPage.getByRole('article').filter({ hasText: weekDayLabel(cleaner.dayOff) })
+          .getByText('วันหยุด', { exact: true })).toBeVisible();
+      } finally {
+        await cleanerContext.close();
+      }
+    }
   });
 });
 

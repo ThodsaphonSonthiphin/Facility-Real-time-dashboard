@@ -92,8 +92,9 @@ public static class AdminAttendanceEndpoints
             return Bad("ต้องเลือกแม่บ้านที่ใช้งานอยู่");
         }
 
-        // facility-0069: attendance counts for the Cleaner's own regular shift
-        if (cleaner.Shift != shift)
+        // facility-0069: attendance counts for the Cleaner's own regular shift on that date
+        var effectiveShift = await CleanerShiftResolver.ResolveShiftAsync(db, cleaner, shiftDate);
+        if (effectiveShift != shift)
         {
             return Bad("แก้ได้เฉพาะกะประจำของแม่บ้านคนนี้");
         }

@@ -302,7 +302,7 @@ describe('a changed plan and a read that may be old (spec §12)', () => {
 });
 
 describe("a week's filters and the authority behind them (facility-0184, 0185, 0186)", () => {
-  it('an Admin opens on every building in the shift on the clock, and asks for no building', async () => {
+  it('an Admin opens on every building in the shift on the clock, asks for no building, and labels the empty shift option ทุกกะ', async () => {
     pinClock();
     const { reads } = serveWeeks('admin', () => week());
     await renderApp('/admin/schedules');
@@ -311,6 +311,9 @@ describe("a week's filters and the authority behind them (facility-0184, 0185, 0
     // No building filter in the read: every building the shift holds, decided by the server's own scope
     expect(reads()[0].search).not.toContain('buildingId=');
     expect(reads()[0].search).toContain('shift=Day');
+    const shiftGroup = screen.getByRole('group', { name: 'กะ' });
+    expect(within(shiftGroup).getByRole('button', { name: 'ทุกกะ' })).toBeInTheDocument();
+    expect(within(shiftGroup).queryByRole('button', { name: 'กะของฉัน' })).not.toBeInTheDocument();
   });
 
   it("a Supervisor asks for no building either: their read is every assigned building in their own shift", async () => {
@@ -394,6 +397,7 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
       edit: {
         canChange: true,
         weeklyOff: false,
+        baselineAreaId: 4,
         baselineDayOff: false,
         areaRevision: '0',
         breakRevision: '0',
@@ -476,5 +480,58 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     expect(screen.getByText('วันหยุด')).toBeInTheDocument();
     expect(screen.getByText('ลา')).toBeInTheDocument();
     expect(screen.getByText('ยังไม่กำหนด')).toBeInTheDocument();
+  });
+
+  it('shows shift filter (ทุกกะ/กะเช้า/กะดึก) for Supervisor and sends chosen shift to GET /api/schedules', async () => {
+    pinClock();
+    const { reads } = serveWeeks('supervisor', () => week());
+    const { user } = await renderApp('/schedule-management');
+
+    await screen.findByRole('heading', { level: 1, name: 'จัดตารางงาน' });
+    const shiftGroup = screen.getByRole('group', { name: 'กะ' });
+    expect(within(shiftGroup).getByRole('button', { name: 'ทุกกะ' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(within(shiftGroup).getByRole('button', { name: 'กะดึก' }));
+    await waitFor(() => expect(reads().some((call) => call.search.includes('shift=Night'))).toBe(true));
+
+    await user.click(within(shiftGroup).getByRole('button', { name: 'กะเช้า' }));
+    await waitFor(() => expect(reads().some((call) => call.search.includes('shift=Day'))).toBe(true));
+  });
+
+  it('displays unassigned-shift Regular Cleaner badge and allows opening regular baseline setup', async () => {
+    pinClock();
+    const unassignedPerson = person({
+      userId: 9,
+      displayName: 'แม่บ้านรอจัดกะ',
+      hasWeeklyChoice: false,
+      days: [
+        '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20', '2026-11-21', '2026-11-22',
+      ].map((date) => ({
+        ...day(date, 'unset'),
+        shift: undefined,
+        edit: {
+          canChange: true,
+          weeklyOff: false,
+          baselineDayOff: false,
+          areaRevision: '0',
+          breakRevision: '0',
+          areas: [{ id: 4, label: 'AR04' }],
+          corrections: [],
+        },
+      })),
+    });
+    serveWeeks('supervisor', () => week({ rows: [unassignedPerson] }));
+    const { user } = await renderApp('/schedule-management');
+
+    const table = await screen.findByRole('table', { name: 'ตารางงานรายสัปดาห์' });
+    expect(within(table).getByText('ยังไม่จัดกะ')).toBeInTheDocument();
+
+    const contextBar = await screen.findByRole('region', { name: 'จัดการวันที่เลือก' });
+    expect(within(contextBar).queryByRole('button', { name: /แก้เฉพาะวันที่/ })).not.toBeInTheDocument();
+    expect(within(contextBar).queryByRole('button', { name: /แก้ไขแผนย้อนหลัง/ })).not.toBeInTheDocument();
+
+    const setupButton = await screen.findByRole('button', { name: 'ตั้งตารางประจำ' });
+    await user.click(setupButton);
+    expect(await screen.findByRole('dialog', { name: 'ตั้งตารางประจำ' })).toBeInTheDocument();
   });
 });

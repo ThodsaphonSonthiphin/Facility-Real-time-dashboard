@@ -28,7 +28,8 @@ export function ScheduleContextBar({ view }: ScheduleContextBarProps) {
   const dateText = formatShiftDate(day.date);
   const datedActionLabel = view.dateAction(day);
   const isPastDate = day.date < businessDate;
-  const canEditDated = Boolean(latest && day.edit?.canChange);
+  const canEditDated = Boolean(latest && day.edit?.canChange && day.shift);
+  const hasBaseline = person.days.some((one) => one.edit?.baselineAreaId != null);
   const canEditBaseline = Boolean(
     latest && person.cleanerKind === 'Regular' && person.days.some((one) => one.edit?.canChange),
   );
@@ -91,7 +92,7 @@ export function ScheduleContextBar({ view }: ScheduleContextBarProps) {
               onClick={() => view.openBaseline(person)}
             >
               <SlidersHorizontal aria-hidden="true" className="size-4" />
-              <span>แก้ตารางประจำ</span>
+              <span>{hasBaseline ? 'แก้ตารางประจำ' : 'ตั้งตารางประจำ'}</span>
             </Button>
           )}
 

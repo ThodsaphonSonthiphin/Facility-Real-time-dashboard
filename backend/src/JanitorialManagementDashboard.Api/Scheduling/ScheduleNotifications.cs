@@ -89,12 +89,12 @@ public sealed class ScheduleNotifications(IHubContext<ScanHub> hub, AppDbContext
         foreach (var (target, date) in await TargetsAsync(scope, slots, businessDate, ct))
         {
             var affected = await ScheduleScopeReader.SupervisorsOfAsync(
-                db, target.BuildingId, date, target.Shift, includeCompatibility: date >= businessDate, ct);
+                db, target.BuildingId, date, shift: null, includeCompatibility: date >= businessDate, ct);
             if (date < businessDate)
             {
-                // Historical schedule reads also require responsibility for the same building and shift today.
+                // Historical schedule reads also require responsibility for the same building today.
                 var current = await ScheduleScopeReader.SupervisorsOfAsync(
-                    db, target.BuildingId, businessDate, target.Shift, includeCompatibility: true, ct);
+                    db, target.BuildingId, businessDate, shift: null, includeCompatibility: true, ct);
                 ids.UnionWith(affected.Intersect(current));
             }
             else

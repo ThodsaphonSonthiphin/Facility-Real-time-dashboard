@@ -608,6 +608,21 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             return dated;
         }
 
+        var datedAnyShift = await (
+                from period in db.SupervisorScopePeriods.AsNoTracking()
+                join holder in db.Users.AsNoTracking() on period.SupervisorId equals holder.Id
+                where period.BuildingId == buildingId
+                    && period.EffectiveFrom <= date
+                    && (period.EffectiveUntil == null || date < period.EffectiveUntil.Value)
+                    && holder.Role == UserRole.Supervisor && holder.IsActive
+                orderby period.EffectiveFrom
+                select (int?)period.SupervisorId)
+            .FirstOrDefaultAsync(ct);
+        if (datedAnyShift is not null)
+        {
+            return datedAnyShift;
+        }
+
         if (await db.SupervisorScopePeriods.AsNoTracking().AnyAsync(ct))
         {
             return null;
@@ -617,7 +632,12 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             .Where(user => user.Role == UserRole.Supervisor && user.IsActive
                 && user.BuildingId == buildingId && user.Shift == shift)
             .Select(user => (int?)user.Id)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(ct)
+            ?? await db.Users.AsNoTracking()
+                .Where(user => user.Role == UserRole.Supervisor && user.IsActive
+                    && user.BuildingId == buildingId)
+                .Select(user => (int?)user.Id)
+                .FirstOrDefaultAsync(ct);
     }
 
     /// <summary>
@@ -683,7 +703,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
         var conflicts = await ReliefConflictsAsync(person.Id, date, shift, ct);
         return new ReliefCandidateFacts(person.Id, person.EmployeeId!, person.DisplayName, sourceBuildingId, code,
-            profile.Shift, conflicts.Count == 0, conflicts.Count == 0 ? ReliefEligible : ReliefConflict, conflicts);
+            shift, conflicts.Count == 0, conflicts.Count == 0 ? ReliefEligible : ReliefConflict, conflicts);
     }
 
     private async Task<ScheduleProjection> ReadSnapshotAsync(
@@ -718,7 +738,6 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         {
             managementScope = await SupervisorScopes.ReadAsync(db, actor, clock ?? TimeProvider.System, ct);
             authorised = managementScope.Where(period => buildingId is null || period.BuildingId == buildingId)
-                .Where(period => shift is null || period.Shift == shift)
                 .Where(period => dates.Exists(date => ScheduleAuthority.Covers(period, date)))
                 .ToList();
             if (authorised.Count == 0)
@@ -740,6 +759,13 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
         var optionsByBuilding = areas.Where(area => area.IsActive).GroupBy(area => area.BuildingId)
             .ToDictionary(group => group.Key, group => (IReadOnlyList<ScheduleAreaOption>)group
                 .Select(area => new ScheduleAreaOption(area.Id, $"{area.Code} · {area.Name}")).ToList());
+        var optionsByBuildingAndShift = Enum.GetValues<Shift>()
+            .SelectMany(slotShift => areas
+                .Where(area => area.IsActive && (slotShift == Shift.Day || area.ShiftPattern != ShiftPattern.DayOnly))
+                .GroupBy(area => area.BuildingId)
+                .Select(group => (Key: (group.Key, slotShift), Value: (IReadOnlyList<ScheduleAreaOption>)group
+                    .Select(area => new ScheduleAreaOption(area.Id, $"{area.Code} · {area.Name}")).ToList())))
+            .ToDictionary(entry => entry.Key, entry => entry.Value);
 
         var businessDate = ScheduleAuthority.BusinessDate(readAt.UtcDateTime);
         var buildingCodes = await db.Buildings.AsNoTracking().ToDictionaryAsync(row => row.Id, row => row.Code, ct);
@@ -751,9 +777,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             foreach (var building in buildingCodes.Where(row => buildingId is null || row.Key == buildingId))
             {
                 var canChange = date < businessDate
-                    ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, building.Key, slotShift, date, businessDate,
+                    ? ScheduleAuthority.CanCorrectScheduleHistory(actor.Role, actor.Id, building.Key, date, businessDate,
                         managementScope)
-                    : ScheduleAuthority.CanManage(actor.Role, actor.Id, building.Key, slotShift, date, managementScope);
+                    : ScheduleAuthority.CanManageSchedule(actor.Role, actor.Id, building.Key, date, managementScope);
                 if (!canChange) continue;
                 var options = areas.Where(area => area.IsActive && area.BuildingId == building.Key
                     && (slotShift == Shift.Day || area.ShiftPattern != ShiftPattern.DayOnly))
@@ -796,8 +822,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             if (authorised is not null)
             {
                 return dates.Where(date => slots.Any(slot =>
-                        ScheduleAuthority.Covers(slot, date)
-                        && authorised.Any(period => period.BuildingId == slot.BuildingId && period.Shift == slot.Shift
+                        Covers(slot, date)
+                        && (shift is null || slot.Shift is null || slot.Shift == shift)
+                        && authorised.Any(period => period.BuildingId == slot.BuildingId
                             && ScheduleAuthority.Covers(period, date))))
                     .ToList();
             }
@@ -805,7 +832,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             var matchesFilters = slots.Count == 0
                 ? buildingId is null && shift is null
                 : slots.Any(slot => (buildingId is null || slot.BuildingId == buildingId)
-                    && (shift is null || slot.Shift == shift));
+                    && (shift is null || slot.Shift is null || slot.Shift == shift));
             return matchesFilters ? dates : [];
         }
 
@@ -842,9 +869,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 }
 
                 return date < businessDate
-                    ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, building, shiftForDate, date, businessDate,
+                    ? ScheduleAuthority.CanCorrectScheduleHistory(actor.Role, actor.Id, building, date, businessDate,
                         managementScope)
-                    : ScheduleAuthority.CanManage(actor.Role, actor.Id, building, shiftForDate, date, managementScope);
+                    : ScheduleAuthority.CanManageSchedule(actor.Role, actor.Id, building, date, managementScope);
             }
 
             transferSlots = transfers
@@ -951,8 +978,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             ScheduleDay ReadDay(DateOnly date)
             {
                 var day = ScheduleResolver.Resolve(input, date) with { Shift = writtenShiftOn[date] };
-                if (actor.Role == UserRole.Cleaner || day.Shift is not Shift slotShift
-                    || date < historyStartsAt)
+                if (actor.Role == UserRole.Cleaner || date < historyStartsAt)
                 {
                     return day;
                 }
@@ -974,9 +1000,27 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 }
 
                 var canChange = building is int targetBuilding && (date < businessDate
-                    ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, targetBuilding, slotShift, date, businessDate,
+                    ? ScheduleAuthority.CanCorrectScheduleHistory(actor.Role, actor.Id, targetBuilding, date, businessDate,
                         managementScope)
-                    : ScheduleAuthority.CanManage(actor.Role, actor.Id, targetBuilding, slotShift, date, managementScope));
+                    : ScheduleAuthority.CanManageSchedule(actor.Role, actor.Id, targetBuilding, date, managementScope));
+                if (day.Shift is not Shift slotShift)
+                {
+                    return day with
+                    {
+                        Edit = new ScheduleEditFacts(
+                            canChange,
+                            header?.Choices.Any(choice => choice.OffDate == date) == true,
+                            null,
+                            null,
+                            false,
+                            ScheduleResolver.NoRevision,
+                            ScheduleResolver.NoRevision,
+                            null,
+                            canChange && building is int b ? optionsByBuilding.GetValueOrDefault(b) ?? [] : [],
+                            []),
+                    };
+                }
+
                 var baseline = applicable.LastOrDefault(entry => activeProfile?.Kind switch
                 {
                     CleanerKind.Regular => entry.Kind == BaselineKind.Regular,
@@ -997,7 +1041,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                         Revision(live.Find(row => row.Kind == ScheduleExceptionKind.BreakGroup)?.Revision ?? 0),
                         leave is null ? null : new ScheduleLeaveEdit(Revision(leave.Revision),
                             Utc(leave.StartsAt!.Value), Utc(leave.EndsAt!.Value)),
-                        canChange && building is int knownBuilding ? optionsByBuilding.GetValueOrDefault(knownBuilding) ?? [] : [],
+                        canChange && building is int knownBuilding
+                            ? optionsByBuildingAndShift.GetValueOrDefault((knownBuilding, slotShift)) ?? []
+                            : [],
                         corrections),
                 };
             }
@@ -1110,8 +1156,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 }
             }
             else if (authorised is not null && !authorised.Any(period =>
-                period.BuildingId == area.BuildingId && period.Shift == row.Shift
-                && ScheduleAuthority.Covers(period, row.ShiftDate)))
+                period.BuildingId == area.BuildingId && ScheduleAuthority.Covers(period, row.ShiftDate)))
             {
                 continue;
             }
@@ -1205,18 +1250,23 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     /// it still adds no projection membership to a date a profile has taken over.
     /// </para>
     /// </summary>
-    private static List<ScopePeriod> MembershipSlots(
+    private sealed record CleanerMembershipSlot(int BuildingId, Shift? Shift, DateOnly From, DateOnly? Until);
+
+    private static bool Covers(CleanerMembershipSlot slot, DateOnly date) =>
+        slot.From <= date && (slot.Until is null || date < slot.Until.Value);
+
+    private static List<CleanerMembershipSlot> MembershipSlots(
         User person, IReadOnlyList<CleanerProfilePeriod> personProfiles, IReadOnlyList<ScheduleBaseline> baselines,
         IReadOnlyDictionary<int, int> areaBuildings, DateOnly monday, DateOnly weekEnd)
     {
-        var slots = new List<ScopePeriod>();
+        var slots = new List<CleanerMembershipSlot>();
         foreach (var profile in personProfiles
                      .Where(profile => OverlapsWeek(profile.EffectiveFrom, profile.EffectiveUntil, monday, weekEnd))
                      .OrderBy(profile => profile.EffectiveFrom).ThenBy(profile => profile.Id))
         {
             if ((profile.HomeBuildingId ?? BaselineBuilding(baselines, profile, areaBuildings)) is int building)
             {
-                slots.Add(new ScopePeriod(person.Id, building, profile.Shift,
+                slots.Add(new CleanerMembershipSlot(building, profile.Shift,
                     profile.EffectiveFrom, profile.EffectiveUntil));
             }
         }
@@ -1232,9 +1282,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             var building = person.AreaId is int area && areaBuildings.TryGetValue(area, out var fromArea)
                 ? fromArea
                 : person.BuildingId;
-            if (building is int known && person.Shift is Shift shift)
+            if (building is int known)
             {
-                slots.Add(new ScopePeriod(person.Id, known, shift, monday,
+                slots.Add(new CleanerMembershipSlot(known, person.Shift, monday,
                     firstDated is { } start && start < weekEnd ? start : weekEnd));
             }
         }
@@ -1265,7 +1315,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     /// person shows no home building rather than the compatibility projection's current value; a person with no dated
     /// identity at all keeps that projection as its only membership.
     /// </summary>
-    private static int? HomeBuilding(IReadOnlyList<ScopePeriod> slots, bool hasDatedProfile, User person) =>
+    private static int? HomeBuilding(IReadOnlyList<CleanerMembershipSlot> slots, bool hasDatedProfile, User person) =>
         slots.Count > 0 ? slots[0].BuildingId : hasDatedProfile ? null : person.BuildingId;
 
     /// <summary>True when a half-open effective range has a date in the read week — the same boundary as Applies.</summary>

@@ -250,6 +250,24 @@ try
             db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>(), scope.ServiceProvider.GetRequiredService<TimeProvider>(), firstAdmin, app.Logger);
         await OverviewHistoryBootstrap.EnsureAsync(db, attendance, scope.ServiceProvider.GetRequiredService<TimeProvider>(),
             app.Lifetime.ApplicationStopping);
+        var historyStart = schedulingSettings.HistoryStartsAt
+            ?? ScheduleAuthority.BusinessDate(scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime);
+        await ScheduleBackfill.EnsureAsync(db, historyStart, app.Lifetime.ApplicationStopping);
+        if (!schedulingSettings.HasCommandSigningKey)
+        {
+            app.Logger.LogError(
+                "Scheduling:{KeyName} is not configured (minimum {MinBytes} UTF-8 bytes). Schedule reads will work, but all schedule command saves will fail until it is configured.",
+                SchedulingSettings.CommandSigningKeyName,
+                SchedulingSettings.MinimumCommandSigningKeyBytes);
+        }
+        else if (!schedulingSettings.HasValidCommandSigningKey)
+        {
+            app.Logger.LogError(
+                "Scheduling:{KeyName} is shorter than the required {MinBytes} UTF-8 bytes. Schedule reads will work, but all schedule command saves will fail until it is replaced with a key of at least {MinBytes} bytes.",
+                SchedulingSettings.CommandSigningKeyName,
+                SchedulingSettings.MinimumCommandSigningKeyBytes,
+                SchedulingSettings.MinimumCommandSigningKeyBytes);
+        }
     }
 
     // 7. SignalR Hub Mapping

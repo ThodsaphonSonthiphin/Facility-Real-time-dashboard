@@ -14,30 +14,44 @@ public static class ScheduleBackfill
     /// <summary>
     /// Creates the open regular profile, regular weekday baseline and Supervisor building scope for every active person
     /// whose current Area/Building and Shift are known, effective from <paramref name="historyStartsAt"/>. Safe to run
-    /// more than once: a person who already has any scheduling version is left alone.
+    /// more than once and safe under concurrent startup (rolling deploys): a person who already has any scheduling version
+    /// is left alone, and a duplicate-key race clears tracked state and retries idempotently.
     /// </summary>
     public static async Task EnsureAsync(AppDbContext db, DateOnly historyStartsAt, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
+        try
+        {
+            await EnsureMissingRowsAsync(db, historyStartsAt, now, ct);
+        }
+        catch (DbUpdateException ex) when (ScheduleStore.IsDuplicateKeyViolation(ex))
+        {
+            db.ChangeTracker.Clear();
+            await EnsureMissingRowsAsync(db, historyStartsAt, now, ct);
+        }
+    }
 
+    private static async Task EnsureMissingRowsAsync(AppDbContext db, DateOnly historyStartsAt, DateTime now, CancellationToken ct)
+    {
         var profiled = await db.CleanerProfilePeriods.Select(x => x.UserId).ToHashSetAsync(ct);
         var baselined = await db.ScheduleBaselines.Select(x => x.UserId).ToHashSetAsync(ct);
         var scoped = await db.SupervisorScopePeriods.Select(x => x.SupervisorId).ToHashSetAsync(ct);
 
         var cleaners = await db.Users.AsNoTracking()
             .Include(u => u.Area)
-            .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId != null && u.Shift != null)
+            .Where(u => u.Role == UserRole.Cleaner && u.IsActive && (u.AreaId != null || u.BuildingId != null))
             .ToListAsync(ct);
         foreach (var cleaner in cleaners)
         {
-            if (!profiled.Contains(cleaner.Id))
+            var homeBuildingId = cleaner.Area?.BuildingId ?? cleaner.BuildingId;
+            if (!profiled.Contains(cleaner.Id) && homeBuildingId is int homeId)
             {
                 db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
                 {
                     UserId = cleaner.Id,
                     Kind = CleanerKind.Regular,
-                    HomeBuildingId = cleaner.Area!.BuildingId,
-                    Shift = cleaner.Shift!.Value,
+                    HomeBuildingId = homeId,
+                    Shift = cleaner.Shift,
                     EffectiveFrom = historyStartsAt,
                     Revision = 1,
                     CreatedAt = now,
@@ -45,7 +59,7 @@ public static class ScheduleBackfill
                 });
             }
 
-            if (!baselined.Contains(cleaner.Id))
+            if (!baselined.Contains(cleaner.Id) && cleaner.AreaId is int areaId)
             {
                 var baseline = new ScheduleBaseline
                 {
@@ -61,7 +75,7 @@ public static class ScheduleBackfill
                     baseline.Days.Add(new ScheduleBaselineDay
                     {
                         Weekday = weekday,
-                        AreaId = cleaner.AreaId,
+                        AreaId = areaId,
                         BreakGroup = null,
                         IsDayOff = false,
                     });

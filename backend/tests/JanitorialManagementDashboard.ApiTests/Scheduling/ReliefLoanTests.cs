@@ -118,7 +118,7 @@ public class ReliefLoanTests
 
         Assert.Equal(HttpStatusCode.OK, (await actor.GetAsync(Lookup("E3001", ReliefApi.Wednesday, "Day"))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await actor.GetAsync(Lookup("E3002", ReliefApi.Wednesday, "Day"))).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await actor.GetAsync(Lookup("E3002", ReliefApi.Wednesday, "Night"))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await actor.GetAsync(Lookup("E3002", ReliefApi.Wednesday, "Night"))).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await actor.GetAsync(Lookup("E3001", ReliefApi.Wednesday.AddDays(-1), "Day"))).StatusCode);
     }
 

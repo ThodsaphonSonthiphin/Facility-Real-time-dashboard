@@ -93,7 +93,7 @@ public static class AttendanceEndpoints
 
         var now = clock.GetUtcNow().UtcDateTime;
 
-        var slot = user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null;
+        var slot = await CleanerShiftResolver.ResolveSlotAsync(db, user, now, settings, ct);
         if (slot is null)
         {
             return ApiResults.Message(StatusCodes.Status409Conflict, OutsideWindow);
@@ -247,7 +247,7 @@ public static class AttendanceEndpoints
         var now = clock.GetUtcNow();
         var canConfirmTransfer = false;
         var canShiftOutOrigin = false;
-        if (user.Shift is { } shift && AttendanceCalendar.SlotFor(shift, now.UtcDateTime, settings) is { } slot)
+        if (await CleanerShiftResolver.ResolveSlotAsync(db, user, now.UtcDateTime, settings, ct) is { } slot)
         {
             var duty = await EffectiveDutyReader.ReadAsync(db, store, user, slot, now, ct);
             if (duty.Transfer is { IsPending: true } transfer && transfer.Id == transferId
@@ -271,7 +271,7 @@ public static class AttendanceEndpoints
         AppDbContext db, ScheduleStore store, User user, DateTime nowUtc, AttendanceSettings settings,
         CancellationToken ct = default)
     {
-        var slot = user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, nowUtc, settings) : null;
+        var slot = await CleanerShiftResolver.ResolveSlotAsync(db, user, nowUtc, settings, ct);
         if (slot is null)
         {
             return new AttendanceStateDto(null, null, [], null);

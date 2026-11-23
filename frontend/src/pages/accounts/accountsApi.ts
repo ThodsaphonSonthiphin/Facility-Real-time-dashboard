@@ -25,7 +25,7 @@ export interface Account {
 
 /** CreateAccountRequest with only the role's own fields: the server refuses any other with 400 (plan 5 decision 9). */
 export type CreateAccountRequest =
-  | { role: 'Cleaner'; displayName: string; employeeId: string; phone: string; shift: Shift; areaId?: number; cleanerKind?: AccountCleanerKind; homeBuildingId?: number }
+  | { role: 'Cleaner'; displayName: string; employeeId: string; phone: string; shift?: Shift; areaId?: number; cleanerKind?: AccountCleanerKind; homeBuildingId?: number }
   | { role: 'Supervisor'; displayName: string; employeeId: string; phone: string; buildingId: number; shift: Shift }
   | { role: 'Admin'; displayName: string; username: string; password: string };
 

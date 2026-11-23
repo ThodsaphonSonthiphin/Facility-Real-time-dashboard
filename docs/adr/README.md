@@ -6,10 +6,14 @@
 
 ## UX/UI — 19–20 พ.ย. 2026
 
-ปรับหน้าตาของฟังก์ชันเดิมตาม Mockup ตาม [facility-0223](facility-0223-match-the-mockup-for-existing-features.md) และชุดปรับปรุง UX/UI และ Motion ล่าสุด (**facility-0224** ถึง **facility-0230**):
+ปรับหน้าตาของฟังก์ชันเดิมตาม Mockup ตาม [facility-0223](facility-0223-match-the-mockup-for-existing-features.md) และชุดปรับปรุง UX/UI และ Motion ล่าสุด (**facility-0224** ถึง **facility-0230**) รวมถึงข้อตกลงเพิ่มเติม (**facility-0231** ถึง **facility-0241**):
 
 | เรื่อง | ข้อตกลงและจุดเข้าอ่าน |
 |---|---|
+| Backfill ตารางงานตอนเริ่มระบบและซิงก์ Profile + Baseline เมื่อผูก/แก้พื้นที่จากหน้าบัญชีและพื้นที่ | [0238](facility-0238-schedule-backfill-and-area-sync.md) |
+| แม่บ้านประจำระบุตึกประจำ (`HomeBuildingId`) โดยปล่อยกะและพื้นที่ว่างไว้ให้หัวหน้างานจัดเองได้ | [0239](facility-0239-regular-cleaner-home-building-with-optional-shift-and-area.md) |
+| หัวหน้างานจัดตารางงานได้ทั้งกะเช้าและกะดึกในตึกที่รับผิดชอบ (หน้าตึกของฉัน/สแกนตรวจงานยังยึดกะตัวเอง) | [0240](facility-0240-supervisor-schedules-both-shifts-within-assigned-buildings.md) |
+| ตั้งตารางประจำเริ่มวันนี้ได้ กำหนดกะและพื้นที่โดยกลุ่มพักไม่บังคับ และจัดวันหยุดในหน้าจัดวันหยุดรายสัปดาห์ | [0241](facility-0241-regular-baseline-allows-today-start-shift-and-optional-break-group.md) |
 | อนุญาต `ShiftOut` ที่ป้ายต้นทางพร้อมยืนยัน 2 จังหวะเมื่อมีย้ายพื้นที่ค้าง (ไม่ยกเลิกคำสั่งย้ายอัตโนมัติ) | [0231](facility-0231-pending-transfer-allows-confirmed-origin-shift-out.md) |
 | ตัด `Scheduling:Enabled` feature flag ออก ให้ระบบตารางงานเปิดใช้งานเป็นฟีเจอร์หลักเสมอ | [0232](facility-0232-remove-scheduling-enabled-feature-flag.md) |
 | ปรับ UX/UI ทั้งระบบตามกฎ 10 ข้อ (มือถือ 3 แท็บ + บัญชี, เมนูแอดมิน 3 กลุ่ม + Drawer, Toolbar ตารางงาน M2/Option A, หน้าแอดมิน 12 หน้า) | [0230](facility-0230-ux-heuristics-overhaul-and-navigation-redesign.md) |

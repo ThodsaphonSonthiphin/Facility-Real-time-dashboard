@@ -46,9 +46,32 @@ export function placeText(account: Account, names?: BuildingNames): string {
     const home = account.homeBuildingCode ? buildingText(account.homeBuildingCode, names) : 'ยังไม่ทราบ';
     return `แม่บ้านสแปร์ · ตึกประจำ ${home} · ${shift}`;
   }
-  return account.role === 'Supervisor'
-    ? `ตึก ${account.buildingCode ? buildingText(account.buildingCode, names) : '-'} · ${shift}`
-    : `${account.areaCode ?? 'ยังไม่มีพื้นที่'} · ${shift}`;
+  if (account.role === 'Supervisor') {
+    return `ตึก ${account.buildingCode ? buildingText(account.buildingCode, names) : '-'} · ${shift}`;
+  }
+  if (account.areaCode) {
+    return `${account.areaCode} · ${account.shift ? shiftShortLabel[account.shift] : 'ยังไม่จัดกะ'}`;
+  }
+  const home = account.homeBuildingCode ? `ตึก ${buildingText(account.homeBuildingCode, names)} · ` : '';
+  return account.shift
+    ? `${home}ยังไม่มีพื้นที่ · ${shiftShortLabel[account.shift]}`
+    : `${home}ยังไม่จัดกะและพื้นที่`;
+}
+
+export function areasForCleaner(
+  areas: AreaSummary[],
+  cleanerKind: CleanerKindFields['cleanerKind'],
+  homeBuildingId: string | undefined,
+): AreaSummary[] {
+  return cleanerKind !== 'Relief' && homeBuildingId
+    ? areas.filter((option) => String(option.buildingId) === homeBuildingId)
+    : areas;
+}
+
+export function areaMatchesBuilding(areas: AreaSummary[], areaId: string, homeBuildingId: string): boolean {
+  if (homeBuildingId === '' || areaId === '') return true;
+  const current = areas.find((option) => String(option.id) === areaId);
+  return current === undefined || String(current.buildingId) === homeBuildingId;
 }
 
 /** D6's Area option: "AR12 ชื่อ · ตึก B · 2 กะ · กะเช้ามีคนแล้ว (ทองใบ)". The account being edited is not "someone". */
@@ -155,18 +178,18 @@ export function createRequest(draft: CreateDraft): { request: CreateAccountReque
   if (!phone) {
     return { problem: PHONE_PROBLEM };
   }
-  if (draft.role === 'Supervisor' && draft.buildingId === '') {
-    return { problem: 'เลือกตึกก่อน' };
-  }
-  if (draft.shift === '') {
-    return { problem: 'เลือกกะก่อน' };
-  }
   if (draft.role === 'Supervisor') {
+    if (draft.buildingId === '') {
+      return { problem: 'เลือกตึกก่อน' };
+    }
+    if (draft.shift === '') {
+      return { problem: 'เลือกกะก่อน' };
+    }
     return {
       request: { role: 'Supervisor', displayName, employeeId, phone, buildingId: Number(draft.buildingId), shift: draft.shift },
     };
   }
-  const place = cleanerPlace(draft, draft.areaId);
+  const place = cleanerPlace(draft, draft.areaId, draft.shift);
   if ('problem' in place) return place;
   return {
     request: {
@@ -174,7 +197,6 @@ export function createRequest(draft: CreateDraft): { request: CreateAccountReque
       displayName,
       employeeId,
       phone,
-      shift: draft.shift,
       ...place,
     },
   };
@@ -188,14 +210,18 @@ export interface EditDraft extends CleanerKindFields {
   shift: Shift | '';
 }
 
-export function editDraftOf(account: Account): EditDraft {
+export function editDraftOf(account: Account, areas?: AreaSummary[]): EditDraft {
+  const areaBuildingId = !account.homeBuildingId && account.areaId
+    ? areas?.find((option) => option.id === account.areaId)?.buildingId
+    : undefined;
+  const homeBuildingId = account.homeBuildingId ?? areaBuildingId;
   return {
     displayName: account.displayName,
     areaId: account.areaId ? String(account.areaId) : '',
     buildingId: account.buildingId ? String(account.buildingId) : '',
     shift: account.shift ?? '',
     cleanerKind: account.cleanerKind,
-    homeBuildingId: account.homeBuildingId ? String(account.homeBuildingId) : '',
+    homeBuildingId: homeBuildingId ? String(homeBuildingId) : '',
   };
 }
 
@@ -211,36 +237,67 @@ export function updateRequest(account: Account, draft: EditDraft): { body: Updat
   if (account.role === 'Admin') {
     return { body: { displayName } };
   }
-  if (account.role === 'Supervisor' && draft.buildingId === '') {
-    return { problem: 'เลือกตึกก่อน' };
-  }
-  if (draft.shift === '') {
-    return { problem: 'เลือกกะก่อน' };
-  }
   if (account.role === 'Supervisor') {
+    if (draft.buildingId === '') {
+      return { problem: 'เลือกตึกก่อน' };
+    }
+    if (draft.shift === '') {
+      return { problem: 'เลือกกะก่อน' };
+    }
     return { body: { displayName, buildingId: Number(draft.buildingId), shift: draft.shift } };
   }
-  const place = cleanerPlace(draft, account.isActive ? draft.areaId : '', account.cleanerKind === 'Relief');
+  const place = cleanerPlace(draft, account.isActive ? draft.areaId : '', draft.shift, {
+    wasRelief: account.cleanerKind === 'Relief',
+    isActive: account.isActive,
+  });
   if ('problem' in place) return place;
   return {
     body: {
       displayName,
-      shift: draft.shift,
       ...place,
     },
   };
 }
 
-function cleanerPlace(draft: CleanerKindFields, areaId: string, wasRelief = false):
-  Pick<UpdateAccountBody, 'areaId' | 'cleanerKind' | 'homeBuildingId'> | { problem: string } {
+function cleanerPlace(
+  draft: CleanerKindFields,
+  areaId: string,
+  shift: Shift | '',
+  options: { wasRelief?: boolean; isActive?: boolean } = {},
+): Pick<UpdateAccountBody, 'areaId' | 'cleanerKind' | 'homeBuildingId' | 'shift'> | { problem: string } {
+  const { wasRelief = false, isActive = true } = options;
   if (draft.cleanerKind === 'Relief') {
-    return draft.homeBuildingId
-      ? { cleanerKind: 'Relief', homeBuildingId: Number(draft.homeBuildingId) }
-      : { problem: 'เลือกตึกประจำก่อน' };
+    if (!draft.homeBuildingId) {
+      return { problem: 'เลือกตึกประจำก่อน' };
+    }
+    if (shift === '') {
+      return { problem: 'เลือกกะก่อน' };
+    }
+    return { cleanerKind: 'Relief', homeBuildingId: Number(draft.homeBuildingId), shift };
   }
-  if (wasRelief && !areaId) return { problem: 'เลือกพื้นที่ประจำก่อน' };
-  return {
-    ...(areaId ? { areaId: Number(areaId) } : {}),
-    ...(wasRelief ? { cleanerKind: 'Regular' as const } : {}),
-  };
+  if (areaId !== '') {
+    if (shift === '') {
+      return { problem: 'เลือกกะก่อน' };
+    }
+    return {
+      areaId: Number(areaId),
+      shift,
+      ...(wasRelief ? { cleanerKind: 'Regular' as const } : {}),
+    };
+  }
+  if (draft.homeBuildingId) {
+    return {
+      cleanerKind: 'Regular' as const,
+      homeBuildingId: Number(draft.homeBuildingId),
+      ...(shift ? { shift } : {}),
+    };
+  }
+  // A deactivated pre-backfill Cleaner holds no Area and may have no homeBuildingId yet; keep shift-only updates valid.
+  if (!isActive && !wasRelief) {
+    if (shift === '') {
+      return { problem: 'เลือกกะก่อน' };
+    }
+    return { shift };
+  }
+  return { problem: 'เลือกตึกประจำหรือพื้นที่ประจำก่อน' };
 }

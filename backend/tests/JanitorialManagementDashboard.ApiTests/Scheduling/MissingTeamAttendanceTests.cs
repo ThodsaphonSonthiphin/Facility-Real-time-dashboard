@@ -89,28 +89,30 @@ public class MissingTeamAttendanceTests
     public async Task An_admin_may_add_for_any_building_and_a_supervisor_outside_their_scope_may_not()
     {
         using var factory = new JanitorialApiFactory();
+        await TestData.AddBuildingAsync(factory, "B");
+        await TestData.AddAreaAsync(factory, "AR03", "B");
+        var other = await TestData.AddCleanerAsync(factory, "1000009", Shift.Day, areaCode: "AR03");
         await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
-        var night = await AdminSetupApi.UserIdAsync(factory, "1000002");
         var starts = new DateOnly(2026, 10, 1);
-        await ScheduleWriteApi.AddProfileAsync(factory, "1000002", CleanerKind.Regular, Shift.Night, starts);
-        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000002", starts, "AR01", breakGroup: 1);
-        await TestData.AddAttendanceAsync(factory, "1000002", Day8, Shift.Night, AttendanceEvent.ShiftIn,
-            EffectiveAttendanceApi.Thai(8, 19, 5));
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000009", CleanerKind.Regular, Shift.Day, starts);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000009", starts, "AR03", breakGroup: 1);
+        await TestData.AddAttendanceAsync(factory, "1000009", Day8, Shift.Day, AttendanceEvent.ShiftIn,
+            EffectiveAttendanceApi.Thai(8, 7, 0));
         var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
         var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
-        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(9, 9, 0));
-        var revision = await TeamAttendanceApi.RevisionAsync(factory, night, Shift.Night);
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
+        var revision = await TeamAttendanceApi.RevisionAsync(factory, other, Shift.Day);
 
-        // 1000002 works building A's night shift; this Supervisor holds only its day shift.
-        var refused = await TeamAttendanceApi.AddAsync(supervisor, night, "Break1Out", "22:10",
-            expectedRevision: revision, shift: "Night");
-        var allowed = await TeamAttendanceApi.AddAsync(admin, night, "Break1Out", "22:10",
-            expectedRevision: revision, shift: "Night");
+        // 1000009 works in building B; this Supervisor holds only building A.
+        var refused = await TeamAttendanceApi.AddAsync(supervisor, other, "Break1Out", "10:00",
+            expectedRevision: revision, shift: "Day");
+        var allowed = await TeamAttendanceApi.AddAsync(admin, other, "Break1Out", "10:00",
+            expectedRevision: revision, shift: "Day");
 
         Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
         var message = await refused.Content.ReadAsStringAsync();
-        Assert.DoesNotContain("AR01", message);
-        Assert.DoesNotContain("1000002", message);
+        Assert.DoesNotContain("AR03", message);
+        Assert.DoesNotContain("1000009", message);
         Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
         Assert.Equal(2, (await EffectiveAttendanceApi.FactsAsync(factory)).Count);
         // Only the Admin's entry is audited: the refused attempt wrote nothing at all.
@@ -294,12 +296,17 @@ public class MissingTeamAttendanceTests
         await TestData.AddAttendanceAsync(factory, "1000001", Day8, Shift.Day, AttendanceEvent.ShiftIn,
             EffectiveAttendanceApi.Thai(8, 7, 0));
         var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        await TestData.AddBuildingAsync(factory, "B");
+        await TestData.AddAreaAsync(factory, "AR03", "B");
+        var other = await TestData.AddCleanerAsync(factory, "1000009", Shift.Day, areaCode: "AR03");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000009", CleanerKind.Regular, Shift.Day, starts);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000009", starts, "AR03", breakGroup: 1);
         var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
         var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
         factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
 
         var read = await TeamAttendanceApi.StateAsync(supervisor, person);
-        var outside = await TeamAttendanceApi.StateAsync(supervisor, person, shift: "Night");
+        var outside = await TeamAttendanceApi.StateAsync(supervisor, other);
 
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
         var state = (await read.Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
@@ -307,7 +314,7 @@ public class MissingTeamAttendanceTests
         Assert.Equal("recorded", state.Action("ShiftIn").State);
         Assert.DoesNotContain("ShiftIn", state.FillableActions!);
         Assert.Contains("Break1Out", state.FillableActions!);
-        // Outside the Supervisor's dated shift, and for a Cleaner, the answer is the same refusal with no detail.
+        // Outside the Supervisor's dated building, and for a Cleaner, the answer is the same refusal with no detail.
         Assert.Equal(HttpStatusCode.Forbidden, outside.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await TeamAttendanceApi.StateAsync(cleaner, person)).StatusCode);
     }

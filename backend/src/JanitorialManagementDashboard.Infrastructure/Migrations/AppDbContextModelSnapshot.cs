@@ -979,7 +979,6 @@ namespace JanitorialManagementDashboard.Infrastructure.Migrations
                         .HasColumnName("revision");
 
                     b.Property<string>("Shift")
-                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("varchar(10)")
                         .HasColumnName("shift");

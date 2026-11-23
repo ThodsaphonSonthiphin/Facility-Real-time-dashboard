@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace JanitorialManagementDashboard.Application.Scheduling;
 
 /// <summary>
@@ -17,6 +19,9 @@ public sealed class SchedulingSettings
     /// <summary>The setting the private command-signing key is read from; the value itself is never logged or stored.</summary>
     public const string CommandSigningKeyName = "CommandSigningKey";
 
+    /// <summary>HMAC-SHA256 requires a signing key of at least 32 UTF-8 bytes.</summary>
+    public const int MinimumCommandSigningKeyBytes = 32;
+
     private readonly string? _commandSigningKey;
 
     /// <summary>Settings for a server that has to supply a key before any command can be started.</summary>
@@ -31,6 +36,11 @@ public sealed class SchedulingSettings
 
     /// <summary>True when a signing key is configured, which is what the command token needs.</summary>
     public bool HasCommandSigningKey => _commandSigningKey is not null;
+
+    /// <summary>True when the configured signing key meets the 32-byte HMAC-SHA256 minimum.</summary>
+    public bool HasValidCommandSigningKey =>
+        _commandSigningKey is not null
+        && Encoding.UTF8.GetByteCount(_commandSigningKey) >= MinimumCommandSigningKeyBytes;
 
     /// <summary>
     /// The private key itself. It is never a writable property, so it cannot be bound from an untrusted source or printed

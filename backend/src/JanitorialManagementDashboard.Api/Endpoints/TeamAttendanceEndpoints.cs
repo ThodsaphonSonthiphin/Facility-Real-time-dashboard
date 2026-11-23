@@ -84,6 +84,8 @@ public static class TeamAttendanceEndpoints
         var slot = new ShiftSlot(date, slotShift);
         var now = clock.GetUtcNow();
         var duty = await EffectiveDutyReader.ReadAsync(db, store, person, slot, now, ct);
+        var effectiveShift = await CleanerShiftResolver.ResolveShiftAsync(db, person, slot.ShiftDate, ct);
+        var shiftMatches = duty.Source == EffectiveDuty.ReliefSource || effectiveShift == slot.Shift;
         var periods = actor.Role == UserRole.Admin ? [] : await scopes.ReadAsync(actor.Id, ct);
         bool CanReadBuilding(int building) =>
             InScope(actor, building, slot, now.UtcDateTime, periods);
@@ -91,14 +93,17 @@ public static class TeamAttendanceEndpoints
         var current = duty.Transfer;
         var areaIds = new[] { duty.AreaId, current?.FromAreaId, current?.ToAreaId }
             .OfType<int>().Distinct().ToList();
-        var buildings = await db.Areas.AsNoTracking().Where(area => areaIds.Contains(area.Id))
-            .ToDictionaryAsync(area => area.Id, area => area.BuildingId, ct);
-        bool CanReadArea(int? areaId) => areaId is { } id && buildings.TryGetValue(id, out var building)
-            && CanReadBuilding(building);
+        var areas = await db.Areas.AsNoTracking().Where(area => areaIds.Contains(area.Id))
+            .ToDictionaryAsync(area => area.Id, ct);
+        bool CanReadArea(int? areaId) => areaId is { } id && areas.TryGetValue(id, out var area)
+            && CanReadBuilding(area.BuildingId);
+        var today = ScheduleAuthority.BusinessDate(now.UtcDateTime);
+        bool DutyAreaHasShift(int? areaId) => areaId is { } id && areas.TryGetValue(id, out var area)
+            && AreaSupportsShift(area, slot, today);
 
         // A pending move has no writable duty Area. Its origin can still see and cancel the instruction, and a former
         // team can read the transfer facts that concern it without gaining access to the person's later attendance.
-        var canReadAttendance = CanReadArea(duty.AreaId);
+        var canReadAttendance = shiftMatches && DutyAreaHasShift(duty.AreaId) && CanReadArea(duty.AreaId);
         var canReadCurrent = current is not null &&
             (CanReadArea(current.FromAreaId) || CanReadArea(current.ToAreaId));
         var history = await ReadTransferHistoryAsync(db, person.Id, slot, CanReadBuilding, ct);
@@ -150,13 +155,18 @@ public static class TeamAttendanceEndpoints
             .ToList();
     }
 
+    private static bool AreaSupportsShift(Area area, ShiftSlot slot, DateOnly today) =>
+        slot.ShiftDate < today
+            ? slot.Shift == Shift.Day || area.ShiftPattern == ShiftPattern.DayAndNight
+            : area.HasShift(slot.Shift);
+
     private static bool InScope(User actor, int buildingId, ShiftSlot slot, DateTime nowUtc,
         IReadOnlyCollection<ScopePeriod> periods)
     {
         var today = ScheduleAuthority.BusinessDate(nowUtc);
         return slot.ShiftDate < today
-            ? ScheduleAuthority.CanCorrectHistory(actor.Role, actor.Id, buildingId, slot.Shift, slot.ShiftDate, today, periods)
-            : ScheduleAuthority.CanManage(actor.Role, actor.Id, buildingId, slot.Shift, slot.ShiftDate, periods);
+            ? ScheduleAuthority.CanCorrectScheduleHistory(actor.Role, actor.Id, buildingId, slot.ShiftDate, today, periods)
+            : ScheduleAuthority.CanManageSchedule(actor.Role, actor.Id, buildingId, slot.ShiftDate, periods);
     }
 
     private static IResult UnavailablePerson(User actor) => actor.Role == UserRole.Admin
@@ -232,16 +242,30 @@ public static class TeamAttendanceEndpoints
             return NoDutyAccess(actor);
         }
 
+        var dutyArea = await db.Areas.AsNoTracking().FirstOrDefaultAsync(area => area.Id == areaId, ct);
+        if (dutyArea is null)
+        {
+            return NoDutyAccess(actor);
+        }
+
         if (actor.Role != UserRole.Admin)
         {
-            var buildingId = await db.Areas.Where(area => area.Id == areaId)
-                .Select(area => (int?)area.BuildingId)
-                .FirstOrDefaultAsync(ct);
             var periods = await scopes.ReadAsync(actor.Id, ct);
-            if (buildingId is not { } building || !InScope(actor, building, slot, nowOffset.UtcDateTime, periods))
+            if (!InScope(actor, dutyArea.BuildingId, slot, nowOffset.UtcDateTime, periods))
             {
                 return NoDutyAccess(actor);
             }
+        }
+
+        // facility-0069: missing attendance may only be added for the Cleaner's effective shift on that date
+        // (or a live relief assignment in that slot), and only when the Area supports that shift (past slots allow an
+        // Area deactivated after the shift while still blocking DayOnly Areas on Night shift).
+        var today = ScheduleAuthority.BusinessDate(nowOffset.UtcDateTime);
+        var effectiveShift = await CleanerShiftResolver.ResolveShiftAsync(db, person, slot.ShiftDate, ct);
+        if ((duty.Source != EffectiveDuty.ReliefSource && effectiveShift != slot.Shift)
+            || !AreaSupportsShift(dutyArea, slot, today))
+        {
+            return NoDutyAccess(actor);
         }
 
         var now = nowOffset.UtcDateTime;

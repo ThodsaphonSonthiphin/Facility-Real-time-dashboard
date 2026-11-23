@@ -20,10 +20,11 @@ public class CleanerProfilePeriod
     public int UserId { get; set; }
     public CleanerKind Kind { get; set; }
 
-    /// <summary>The relief Cleaner's home building (facility-0194); known for a regular Cleaner through their Area.</summary>
+    /// <summary>The Cleaner's home building (facility-0194, facility-0240); set for both Relief and Regular Cleaners.</summary>
     public int? HomeBuildingId { get; set; }
 
-    public Shift Shift { get; set; }
+    /// <summary>The Cleaner's shift, or null when a Regular Cleaner awaits Supervisor shift assignment.</summary>
+    public Shift? Shift { get; set; }
 
     /// <summary>The first date the profile applies to (inclusive).</summary>
     public DateOnly EffectiveFrom { get; set; }

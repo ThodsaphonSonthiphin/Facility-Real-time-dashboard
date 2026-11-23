@@ -25,7 +25,7 @@ load_env() {
 
   # Only the file's settings count: drop anything an earlier `export` left in this shell
   for key in $(compgen -e); do
-    case "$key" in ConnectionStrings__*|Jwt__*|FirstAdmin__*|ASPNETCORE_*|FACILITY_*) unset "$key" ;; esac
+    case "$key" in ConnectionStrings__*|Jwt__*|FirstAdmin__*|Scheduling__*|ASPNETCORE_*|FACILITY_*) unset "$key" ;; esac
   done
 
   while IFS= read -r line || [ -n "$line" ]; do
@@ -44,6 +44,11 @@ load_env() {
   for key in $required; do
     [ -n "${!key:-}" ] || fail "$file ไม่มีค่า $key"
   done
+  if [ -n "${Scheduling__CommandSigningKey:-}" ]; then
+    local cmd_key_bytes
+    cmd_key_bytes="$(LC_ALL=C printf '%s' "$Scheduling__CommandSigningKey" | wc -c | tr -d ' ')"
+    [ "$cmd_key_bytes" -ge 32 ] || fail "$file ค่า Scheduling__CommandSigningKey ต้องยาวอย่างน้อย 32 ไบต์"
+  fi
   export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Production}"
 }
 
@@ -83,7 +88,7 @@ check_value() { # label, value, "conn" if it goes into the connection string
 }
 
 init_env() {
-  local file="$1" host port database user password dll admin name admin_password again key
+  local file="$1" host port database user password dll admin name admin_password again key cmd_key
   [ ! -e "$file" ] || fail "$file มีอยู่แล้ว แก้ไฟล์นั้น หรือใช้ชื่ออื่น"
   echo "รหัสผ่านพิมพ์แบบไม่แสดงบนจอ ตรวจว่าแป้นพิมพ์เป็นภาษาอังกฤษก่อนพิมพ์" >&2
   host="$(ask "MySQL server [localhost]: " localhost)"; check_value "MySQL server" "$host" conn
@@ -103,6 +108,8 @@ init_env() {
   [ "$admin_password" = "$again" ] || fail "รหัสผ่านแอดมินสองครั้งไม่ตรงกัน ไม่ได้เขียนอะไร"
   key="$(openssl rand -base64 48)" || fail "สร้าง Jwt__SigningKey ไม่ได้ (ต้องมี openssl) ไม่ได้เขียนอะไร"
   [ -n "$key" ] || fail "สร้าง Jwt__SigningKey ไม่ได้ (ต้องมี openssl) ไม่ได้เขียนอะไร"
+  cmd_key="$(openssl rand -base64 48)" || fail "สร้าง Scheduling__CommandSigningKey ไม่ได้ (ต้องมี openssl) ไม่ได้เขียนอะไร"
+  [ -n "$cmd_key" ] || fail "สร้าง Scheduling__CommandSigningKey ไม่ได้ (ต้องมี openssl) ไม่ได้เขียนอะไร"
 
   mkdir -p "$(dirname "$file")"
   tmp="$(umask 077; mktemp "$(dirname "$file")/.facility-env.XXXXXX")"
@@ -115,6 +122,7 @@ init_env() {
     echo "ConnectionStrings__DefaultConnection=Server=$host;Port=$port;Database=$database;Uid=$user;Pwd=$password;CharSet=utf8mb4;"
     echo "Jwt__SigningKey=$key"
     echo "Jwt__RefreshCookieSecure=true"
+    echo "Scheduling__CommandSigningKey=$cmd_key"
     echo "FirstAdmin__Username=$admin"
     echo "FirstAdmin__DisplayName=$name"
     printf 'FirstAdmin__Password=%s\n' "$admin_password"

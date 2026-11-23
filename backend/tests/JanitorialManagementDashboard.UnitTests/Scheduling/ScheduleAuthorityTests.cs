@@ -22,6 +22,27 @@ public class ScheduleAuthorityTests
     }
 
     [Fact]
+    public void CanManageSchedule_authorizes_supervisor_across_both_shifts_in_assigned_buildings_only()
+    {
+        ScopePeriod[] scope = [new(10, 1, Shift.Day, Day, null)];
+
+        Assert.True(ScheduleAuthority.CanManageSchedule(UserRole.Supervisor, 10, 1, Day, scope));
+        Assert.False(ScheduleAuthority.CanManageSchedule(UserRole.Supervisor, 10, 2, Day, scope));
+        // Inspection/MyBuilding authority remains single-shift:
+        Assert.True(ScheduleAuthority.CanManage(UserRole.Supervisor, 10, 1, Shift.Day, Day, scope));
+        Assert.False(ScheduleAuthority.CanManage(UserRole.Supervisor, 10, 1, Shift.Night, Day, scope));
+    }
+
+    [Fact]
+    public void CanCorrectScheduleHistory_requires_building_scope_on_both_edited_and_business_dates()
+    {
+        ScopePeriod[] scope = [new(10, 1, Shift.Night, Day.AddDays(-7), Day), new(10, 2, Shift.Day, Day, null)];
+
+        Assert.False(ScheduleAuthority.CanCorrectScheduleHistory(UserRole.Supervisor, 10, 1, Day.AddDays(-2), Day, scope));
+        Assert.True(ScheduleAuthority.CanCorrectScheduleHistory(UserRole.Supervisor, 10, 2, Day, Day, scope));
+    }
+
+    [Fact]
     public void A_building_outside_the_assigned_scope_is_refused()
     {
         ScopePeriod[] scope = [new(10, 1, Shift.Day, Day, null), new(10, 2, Shift.Day, Day, null)];

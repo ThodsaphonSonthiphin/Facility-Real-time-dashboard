@@ -78,8 +78,8 @@ public static class ScanRecordEndpoints
 
         var now = clock.GetUtcNow().UtcDateTime;
 
-        // facility-0069: the Cleaner's own shift, not the shift the clock is in
-        var slot = user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null;
+        // facility-0069: the Cleaner's own shift, resolved from dated profile periods before legacy users.Shift
+        var slot = await CleanerShiftResolver.ResolveSlotAsync(db, user, now, settings, ct);
         if (slot is null)
         {
             return ApiResults.Message(StatusCodes.Status409Conflict, "ตอนนี้ไม่อยู่ในกะของคุณ");

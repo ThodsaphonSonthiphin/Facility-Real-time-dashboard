@@ -9,11 +9,12 @@ interface ShiftChoiceProps {
   /** Why a shift cannot be picked here, or null. */
   blockOf: (shift: Shift) => string | null;
   disabled: boolean;
-  onChange: (shift: Shift) => void;
+  allowEmpty?: boolean;
+  onChange: (shift: Shift | '') => void;
 }
 
 /** D6's "กะ": a held slot or a night in a day-only Area cannot be picked, and the page says why. */
-export function ShiftChoice({ name, value, blockOf, disabled, onChange }: ShiftChoiceProps) {
+export function ShiftChoice({ name, value, blockOf, disabled, allowEmpty = false, onChange }: ShiftChoiceProps) {
   return (
     <fieldset className="min-w-0 border-0 p-0" disabled={disabled}>
       <legend className="mb-1 font-semibold">กะ</legend>
@@ -36,6 +37,18 @@ export function ShiftChoice({ name, value, blockOf, disabled, onChange }: ShiftC
           </label>
         );
       })}
+      {allowEmpty && (
+        <label className={radioLabelClass}>
+          <input
+            type="radio"
+            className={radioClass}
+            name={name}
+            checked={value === ''}
+            onChange={() => onChange('')}
+          />
+          <span>ยังไม่ระบุกะ (ให้หัวหน้าจัด)</span>
+        </label>
+      )}
     </fieldset>
   );
 }

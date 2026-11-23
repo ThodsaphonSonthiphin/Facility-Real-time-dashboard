@@ -3,6 +3,8 @@ import { useBuildingNames } from '../../shared/api/buildingNames';
 import type { Shift } from '../../shared/api/types';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import {
+  areaMatchesBuilding,
+  areasForCleaner,
   cleanerShiftBlock,
   createRequest,
   emptyDraft,
@@ -25,6 +27,9 @@ export function useCreateAccountForm({ accounts, areas }: CreateAccountFormProps
     displayName: current.displayName,
   }));
   const activeAreas = areas.filter((area) => area.isActive);
+  const visibleAreas = draft.role === 'Cleaner'
+    ? areasForCleaner(activeAreas, draft.cleanerKind, draft.homeBuildingId)
+    : activeAreas;
   const area = activeAreas.find((option) => String(option.id) === draft.areaId);
   const buildingId = draft.buildingId ? Number(draft.buildingId) : undefined;
   const blockOf = (shift: Shift) =>
@@ -34,11 +39,19 @@ export function useCreateAccountForm({ accounts, areas }: CreateAccountFormProps
   const chooseCleanerKind = (kind: 'Regular' | 'Relief') => {
     setDraft((current) => ({ ...current, cleanerKind: kind, areaId: '', homeBuildingId: '' }));
   };
+  const chooseHomeBuilding = (value: string) => {
+    setDraft((current) => ({
+      ...current,
+      homeBuildingId: value,
+      areaId: current.cleanerKind !== 'Relief' && !areaMatchesBuilding(activeAreas, current.areaId, value) ? '' : current.areaId,
+    }));
+  };
   const chooseArea = (areaId: string) => {
     const next = activeAreas.find((option) => String(option.id) === areaId);
     setDraft((current) => ({
       ...current,
       areaId,
+      homeBuildingId: next ? String(next.buildingId) : current.homeBuildingId,
       shift: current.shift && cleanerShiftBlock(next, current.shift) ? '' : current.shift,
     }));
   };
@@ -69,5 +82,5 @@ export function useCreateAccountForm({ accounts, areas }: CreateAccountFormProps
     }
   };
 
-  return { names, draft, chooseRole, set, problem, notice, isLoading, activeAreas, blockOf, chooseCleanerKind, chooseArea, chooseBuilding, submit };
+  return { names, draft, chooseRole, set, problem, notice, isLoading, visibleAreas, blockOf, chooseCleanerKind, chooseHomeBuilding, chooseArea, chooseBuilding, submit };
 }

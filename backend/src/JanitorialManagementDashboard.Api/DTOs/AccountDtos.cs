@@ -32,9 +32,9 @@ public record AccountDto(
 /// Cleaner: EmployeeId, Phone, Shift, optional AreaId. Supervisor: EmployeeId, Phone, BuildingId, Shift.
 /// Admin: Username and a temporary Password. Leave out (null) every field the role does not use.
 /// <para>
-/// Task 7 adds two optional Cleaner fields, both absent for every existing caller: <see cref="CleanerKind"/> says whether
-/// this is a regular Cleaner (the default when absent, exactly as before) or a Relief Cleaner, and
-/// <see cref="HomeBuildingId"/> is a relief's dated home building. A regular Cleaner derives its building from its Area.
+/// Task 7 + full-scheduling: <see cref="CleanerKind"/> says whether this is a regular Cleaner (the default when absent)
+/// or a Relief Cleaner, and <see cref="HomeBuildingId"/> is the Cleaner's home building (derived from <see cref="AreaId"/>
+/// when an Area is chosen, or set directly for a Relief Cleaner or a Regular Cleaner without an Area yet).
 /// </para>
 /// </summary>
 public record CreateAccountRequest(

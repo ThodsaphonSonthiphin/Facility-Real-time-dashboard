@@ -11,7 +11,7 @@ type ScheduleRoute = keyof typeof scheduleLinks;
 
 export interface ScheduleWeek {
   weekStart: string;
-  rows: { userId: number; weeklyRevision: string; days: { date: string; isDayOff: boolean; edit?: { weeklyOff: boolean } }[] }[];
+  rows: { userId: number; weeklyRevision: string; days: { date: string; isDayOff: boolean; area?: { value: number | null }; edit?: { weeklyOff: boolean } }[] }[];
   relief: { userId: number }[];
 }
 

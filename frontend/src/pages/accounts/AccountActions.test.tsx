@@ -317,3 +317,26 @@ it('converts an active regular account into relief without sending its old Area'
     displayName: 'แม่บ้านทดสอบ', shift: 'Day', cleanerKind: 'Relief', homeBuildingId: 2,
   });
 });
+
+it('edits a Regular Cleaner to clear Area and leave shift unassigned while keeping home building', async () => {
+  const server = serve({
+    'PUT /api/admin/accounts/21': () => ({
+      status: 200,
+      body: account({ areaId: undefined, areaCode: undefined, shift: undefined, cleanerKind: 'Regular', homeBuildingId: 1, homeBuildingCode: 'A' }),
+    }),
+  });
+  const { user } = await openAndPress('แก้ไข แม่บ้านทดสอบ', 'Cleaner');
+  const dialog = within(screen.getByRole('dialog'));
+  await within(dialog.getByLabelText('ตึกประจำ')).findByRole('option', { name: 'A · ตึกทดลอง' });
+  expect(dialog.getByLabelText('ตึกประจำ')).toHaveValue('1');
+  await user.selectOptions(dialog.getByLabelText('พื้นที่ประจำ'), '');
+  await user.click(dialog.getByRole('radio', { name: 'ยังไม่ระบุกะ (ให้หัวหน้าจัด)' }));
+  await user.click(dialog.getByRole('button', { name: 'บันทึก' }));
+
+  expect(await screen.findByText('บันทึกบัญชี แม่บ้านทดสอบ แล้ว')).toBeVisible();
+  expect(sent(server, 'PUT', '/api/admin/accounts/21')).toEqual({
+    displayName: 'แม่บ้านทดสอบ',
+    cleanerKind: 'Regular',
+    homeBuildingId: 1,
+  });
+});

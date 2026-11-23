@@ -109,14 +109,14 @@ export interface ScheduleSelection {
   weekStart: string;
   /** Missing is every building the actor may read (0186 for a Supervisor, 0184 for an Admin). */
   buildingId?: number;
-  /** Missing is the actor's own shift; only an Admin sends one, since a Supervisor's read stays inside their own shift. */
+  /** Missing reads all shifts the actor may view (both shifts for a Supervisor per facility-0240, or all shifts for an Admin when unfiltered). */
   shift?: Shift;
 }
 
 /**
- * The filters a schedule first opens with (0180–0186). A Cleaner has none. A Supervisor opens on every building assigned
- * to them in their own shift, which is exactly the read with no building and no shift. An Admin opens on every building
- * in the shift on the clock.
+ * The filters a schedule first opens with (0180–0186, 0240). A Cleaner has none. A Supervisor opens on every building
+ * assigned to them across both shifts (facility-0240), which is the read with no building and no shift. An Admin opens on
+ * every building in the shift on the clock.
  */
 export function initialScheduleSelection(role: ScheduleRole, clock: ClockSlot): ScheduleSelection {
   const weekStart = initialScheduleWeek(clock.today, clock.shift, clock.startDate);

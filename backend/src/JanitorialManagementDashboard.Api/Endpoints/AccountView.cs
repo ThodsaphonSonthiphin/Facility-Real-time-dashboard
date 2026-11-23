@@ -1,9 +1,9 @@
 using JanitorialManagementDashboard.Api.DTOs;
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities;
-using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace JanitorialManagementDashboard.Api.Endpoints;
@@ -13,9 +13,9 @@ internal static class AccountView
 {
     /// <summary>
     /// Admins, then Supervisors, then Cleaners, each by login name. About 180 rows: the page filters them itself
-    /// (facility-0056). Each Cleaner also carries the dated identity in force on the clock's business date (Task 7) — the
-    /// regular/relief kind and the home building the screen shows and the form edits — read from the same rule the week read
-    /// uses, so the page never claims a history the stored rows do not have.
+    /// (facility-0056). Each Cleaner carries the effective dated identity, shift, and regular Area in force on the
+    /// clock's business date, resolved from <see cref="CleanerEffectiveAssignment"/> so editing an account never sees
+    /// stale <c>users.AreaId</c>/<c>users.Shift</c> projections.
     /// </summary>
     public static async Task<List<AccountDto>> LoadAsync(
         AppDbContext db, TimeProvider clock, int? onlyUserId = null)
@@ -27,45 +27,42 @@ internal static class AccountView
             .ToListAsync();
 
         var businessDate = ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime);
-        var cleanerIds = users.Where(u => u.Role == UserRole.Cleaner).Select(u => u.Id).ToList();
-        var profiles = cleanerIds.Count == 0
-            ? []
-            : await db.CleanerProfilePeriods.AsNoTracking()
-                .Where(period => cleanerIds.Contains(period.UserId))
-                .OrderBy(period => period.EffectiveFrom).ThenBy(period => period.Id)
-                .ToListAsync();
-        var homeIds = profiles.Where(period => period.HomeBuildingId != null)
-            .Select(period => period.HomeBuildingId!.Value)
+        var effectiveByUser = await CleanerEffectiveAssignment.ResolveForDateAsync(
+            db, users, businessDate, useFallbackWeekdayArea: true);
+
+        var homeIds = effectiveByUser.Values
+            .Where(state => state.HomeBuildingId != null)
+            .Select(state => state.HomeBuildingId!.Value)
             .Distinct()
             .ToList();
-        var codes = homeIds.Count == 0
-            ? []
+        var buildingCodes = homeIds.Count == 0
+            ? new Dictionary<int, string>()
             : await db.Buildings.AsNoTracking()
                 .Where(building => homeIds.Contains(building.Id))
                 .Select(building => new { building.Id, building.Code })
                 .ToDictionaryAsync(building => building.Id, building => building.Code);
 
+        var effectiveAreaIds = effectiveByUser.Values
+            .Where(state => state.AreaId != null)
+            .Select(state => state.AreaId!.Value)
+            .Distinct()
+            .ToList();
+        var areaCodes = effectiveAreaIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await db.Areas.AsNoTracking()
+                .Where(area => effectiveAreaIds.Contains(area.Id))
+                .Select(area => new { area.Id, area.Code })
+                .ToDictionaryAsync(area => area.Id, area => area.Code);
+
         return users
             .OrderBy(u => RoleOrder(u.Role))
             .ThenBy(u => u.LoginName, StringComparer.Ordinal)
-            .Select(user => ToDto(user, Identity(user, profiles, businessDate), codes))
+            .Select(user => ToDto(user, effectiveByUser.GetValueOrDefault(user.Id), buildingCodes, areaCodes))
             .ToList();
     }
 
     public static async Task<AccountDto> LoadOneAsync(AppDbContext db, TimeProvider clock, int userId) =>
         (await LoadAsync(db, clock, userId)).Single();
-
-    /// <summary>
-    /// The identity in force on the business date: the dated profile that covers it, else — only for a Cleaner with no dated
-    /// profile at all — the account row's own projection (spec §14). A profile that ended before today lends nothing, so the
-    /// page never shows a current-looking identity the stored rows do not state.
-    /// </summary>
-    private static CleanerProfilePeriod? Identity(
-        User user, IReadOnlyList<CleanerProfilePeriod> profiles, DateOnly businessDate) =>
-        user.Role != UserRole.Cleaner
-            ? null
-            : profiles.Where(period => period.UserId == user.Id)
-                .LastOrDefault(period => ScheduleResolver.Applies(period.EffectiveFrom, period.EffectiveUntil, businessDate));
 
     private static int RoleOrder(UserRole role) => role switch
     {
@@ -75,28 +72,47 @@ internal static class AccountView
     };
 
     private static AccountDto ToDto(
-        User user, CleanerProfilePeriod? profile, IReadOnlyDictionary<int, string> codes)
+        User user,
+        CleanerEffectiveState? effective,
+        IReadOnlyDictionary<int, string> buildingCodes,
+        IReadOnlyDictionary<int, string> areaCodes)
     {
-        // A Cleaner whose dated identity is not stored yet is a regular one when their account row names an Area (the
-        // pre-backfill projection of spec §14); with no Area and no profile there is nothing to show rather than a guess.
-        var kind = user.Role != UserRole.Cleaner
-            ? (CleanerKind?)null
-            : profile?.Kind ?? (user.AreaId is not null ? CleanerKind.Regular : null);
-        var home = profile?.HomeBuildingId;
+        if (user.Role != UserRole.Cleaner || effective is null)
+        {
+            return new AccountDto(
+                user.Id,
+                user.Role,
+                user.LoginName,
+                user.DisplayName,
+                user.AreaId,
+                user.Area?.Code,
+                user.BuildingId,
+                user.Building?.Code,
+                user.Shift,
+                user.IsActive,
+                DateTime.SpecifyKind(user.CreatedAt, DateTimeKind.Utc),
+                null,
+                null,
+                null);
+        }
+
+        var areaId = effective.AreaId;
+        var areaCode = areaId is int aId ? areaCodes.GetValueOrDefault(aId) ?? user.Area?.Code : null;
+        var home = effective.HomeBuildingId;
         return new AccountDto(
             user.Id,
             user.Role,
             user.LoginName,
             user.DisplayName,
-            user.AreaId,
-            user.Area?.Code,
+            areaId,
+            areaCode,
             user.BuildingId,
             user.Building?.Code,
-            user.Shift,
+            effective.Shift,
             user.IsActive,
             DateTime.SpecifyKind(user.CreatedAt, DateTimeKind.Utc),
-            kind,
+            effective.Kind,
             home,
-            home is int id ? codes.GetValueOrDefault(id) : null);
+            home is int bId ? buildingCodes.GetValueOrDefault(bId) : null);
     }
 }

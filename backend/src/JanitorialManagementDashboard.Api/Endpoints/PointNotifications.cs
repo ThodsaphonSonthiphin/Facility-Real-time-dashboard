@@ -6,6 +6,7 @@ using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
+using JanitorialManagementDashboard.Infrastructure.Persistence.Scheduling;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,10 +42,15 @@ internal static class PointNotifications
                 .Select(c => c.UserId)
                 .ToListAsync();
             var areaId = board.Point.AreaId;
-            var cleaners = await db.Users
-                .Where(u => u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == areaId)
-                .Select(u => u.Id)
+            var allActiveCleaners = await db.Users.AsNoTracking()
+                .Where(u => u.Role == UserRole.Cleaner && u.IsActive)
                 .ToListAsync();
+            var effective = await CleanerEffectiveAssignment.ResolveForDateAsync(
+                db, allActiveCleaners, slot.ShiftDate, useFallbackWeekdayArea: true, includeDatedOverrides: true);
+            var cleaners = effective
+                .Where(pair => pair.Value.AreaId == areaId)
+                .Select(pair => pair.Key)
+                .ToList();
             var coveringCleaners = await db.CoverAssignments
                 .Where(c => c.AreaId == areaId && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
                 .Where(c => db.Users.Any(u => u.Id == c.UserId && u.IsActive && u.Role == UserRole.Cleaner))

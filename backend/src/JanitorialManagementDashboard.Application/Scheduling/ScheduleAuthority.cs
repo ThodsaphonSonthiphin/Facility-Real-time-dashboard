@@ -41,6 +41,31 @@ public static class ScheduleAuthority
         CanManage(role, actorId, buildingId, shift, editedDate, periods) &&
         CanManage(role, actorId, buildingId, shift, businessDate, periods);
 
+    /// <summary>
+    /// ADR facility-0240: scheduling authority covers both Day and Night shifts within the Supervisor's dated building(s).
+    /// Inspection and /my-building continue to use <see cref="CanManage"/>.
+    /// </summary>
+    public static bool CanManageSchedule(
+        UserRole role,
+        int actorId,
+        int buildingId,
+        DateOnly date,
+        IReadOnlyCollection<ScopePeriod> periods) =>
+        role == UserRole.Admin ||
+        (role == UserRole.Supervisor && periods.Any(p =>
+            p.SupervisorId == actorId && p.BuildingId == buildingId &&
+            p.From <= date && (p.Until is null || date < p.Until.Value)));
+
+    public static bool CanCorrectScheduleHistory(
+        UserRole role,
+        int actorId,
+        int buildingId,
+        DateOnly editedDate,
+        DateOnly businessDate,
+        IReadOnlyCollection<ScopePeriod> periods) =>
+        CanManageSchedule(role, actorId, buildingId, editedDate, periods) &&
+        CanManageSchedule(role, actorId, buildingId, businessDate, periods);
+
     /// <summary>The period's own range: the first date included, the until date excluded (null stays open).</summary>
     public static bool Covers(ScopePeriod period, DateOnly date) =>
         period.From <= date && (period.Until is null || date < period.Until.Value);

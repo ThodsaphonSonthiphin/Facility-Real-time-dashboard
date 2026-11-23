@@ -8,15 +8,23 @@ export function RegularBaselineEditor(props: RegularBaselineEditorProps) {
   const editor = useRegularBaselineEditor(props);
   const size = props.phone ? 'phone' : 'desk';
   return (
-    <ScheduleReview title="แก้ตารางประจำ" editor={editor} latest={editor.latest}
+    <ScheduleReview title={editor.hasBaseline ? 'แก้ตารางประจำ' : 'ตั้งตารางประจำ'} editor={editor} latest={editor.latest}
       onCompare={editor.compare} onUseLatest={editor.useLatest}>
       <p className="font-semibold">{props.person.displayName}</p>
       <Note tone="info">พื้นที่และกลุ่มพักจะใช้ซ้ำทุกวันตั้งแต่วันที่เลือก วันหยุดยังจัดแยกเป็นรายสัปดาห์</Note>
       <Field label="วันเริ่มใช้">
-        <TextInput type="date" size={size} value={editor.draft.effectiveFrom} min={editor.tomorrow}
+        <TextInput type="date" size={size} value={editor.draft.effectiveFrom} min={editor.today}
           onChange={(event) => editor.setField('effectiveFrom', event.currentTarget.value)} />
       </Field>
       {editor.loading && <p role="status">กำลังโหลดตารางของวันที่เลือก...</p>}
+      <Field label="กะ">
+        <Select size={size} value={editor.draft.shift}
+          onChange={(event) => editor.setField('shift', event.currentTarget.value)}>
+          <option value="">เลือกกะ</option>
+          <option value="Day">กะเช้า</option>
+          <option value="Night">กะดึก</option>
+        </Select>
+      </Field>
       <Field label="พื้นที่ประจำ">
         <Select size={size} value={editor.draft.areaId}
           onChange={(event) => editor.setField('areaId', event.currentTarget.value)}>
@@ -27,7 +35,7 @@ export function RegularBaselineEditor(props: RegularBaselineEditorProps) {
       <Field label="กลุ่มพักประจำ">
         <Select size={size} value={editor.draft.breakGroup}
           onChange={(event) => editor.setField('breakGroup', event.currentTarget.value)}>
-          <option value="">เลือกกลุ่มพัก</option>
+          <option value="">— ยังไม่กำหนด —</option>
           <option value="1">กลุ่ม 1</option>
           <option value="2">กลุ่ม 2</option>
         </Select>

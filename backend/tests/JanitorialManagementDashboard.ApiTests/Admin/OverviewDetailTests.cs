@@ -102,8 +102,8 @@ public class OverviewDetailTests
 
         var date = DateOnly.FromDateTime(factory.Clock.GetUtcNow().ToOffset(TimeSpan.FromHours(7)).DateTime).AddDays(1);
         var dateString = ReliefApi.Iso(date);
-        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, date.AddDays(-1));
-        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, date.AddDays(-1));
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, date.AddDays(-2));
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "B", Shift.Day, date.AddDays(-2));
         var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
 
         var assign = await ReliefApi.AssignAsync(supervisor, ReliefApi.Assignment(reliefUserId, ar04, date, sourceB, breakGroup: 1));

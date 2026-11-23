@@ -29,10 +29,12 @@ public static class AdminAccountEndpoints
             await CurrentUser.LoadAsync(principal, db) is null ? Results.Unauthorized() : Results.Ok(await AccountView.LoadAsync(db, clock)));
         accounts.MapPost("", CreateAsync);
         accounts.MapPut("/{id:int}", UpdateAsync);
-        accounts.MapPost("/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership) =>
-            SetActiveAsync(id, false, principal, db, clock, membership));
-        accounts.MapPost("/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership) =>
-            SetActiveAsync(id, true, principal, db, clock, membership));
+        accounts.MapPost("/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+            SupervisorMembership membership, ScheduleStore store, ScheduleNotifications notifications, CancellationToken ct) =>
+            SetActiveAsync(id, false, principal, db, clock, membership, store, notifications, ct));
+        accounts.MapPost("/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+            SupervisorMembership membership, ScheduleStore store, ScheduleNotifications notifications, CancellationToken ct) =>
+            SetActiveAsync(id, true, principal, db, clock, membership, store, notifications, ct));
         accounts.MapPut("/{id:int}/phone", ChangePhoneAsync);
         accounts.MapPut("/{id:int}/password", ResetPasswordAsync);
         return app;
@@ -46,7 +48,7 @@ public static class AdminAccountEndpoints
 
     private static async Task<IResult> CreateAsync(
         CreateAccountRequest request, ClaimsPrincipal principal, AppDbContext db, IPasswordHasher hasher, TimeProvider clock,
-        SupervisorMembership membership, ScheduleStore store)
+        SupervisorMembership membership, ScheduleStore store, ScheduleNotifications notifications, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -124,8 +126,10 @@ public static class AdminAccountEndpoints
             secret = phone;
         }
 
+        var now = clock.GetUtcNow().UtcDateTime;
+        var businessDate = ScheduleAuthority.BusinessDate(now);
         var (place, error) = await ReadPlaceAsync(
-            db, role, userId: 0, request.AreaId, request.BuildingId, request.Shift, BusinessDate(clock),
+            db, role, userId: 0, request.AreaId, request.BuildingId, request.Shift, businessDate,
             cleanerKind: request.CleanerKind, homeBuildingId: request.HomeBuildingId);
         if (place is null)
         {
@@ -137,15 +141,19 @@ public static class AdminAccountEndpoints
         user.Shift = place.Shift;
         // facility-0054: the phone is stored only as a PBKDF2 hash, like a password
         user.SecretHash = hasher.Hash(secret);
-        db.Users.Add(user);
+        if (role != UserRole.Cleaner)
+        {
+            db.Users.Add(user);
+        }
 
         var claim = ClaimOf(user);
+        var cleanerKind = request.CleanerKind ?? CleanerKind.Regular;
         // Spec §3: the new Supervisor's building and shift is a dated membership from the business date, written inside
         // the same transaction and only once the building/shift anchor says nobody else holds it.
         var conflict = await SaveAsync(
             db,
             claim,
-            BusinessDate(clock),
+            businessDate,
             async () =>
             {
                 // The audit row needs the new id, so it is a second save inside the same transaction
@@ -153,24 +161,51 @@ public static class AdminAccountEndpoints
                     db, admin.Id, user.CreatedAt, "ACCOUNT_CREATE", "users", user.Id,
                     $"เพิ่มบัญชี{ThaiLabels.RoleName(role)} {user.LoginName} {user.DisplayName}",
                     before: null, after: Snapshot(user));
-                await db.SaveChangesAsync();
-                if (role == UserRole.Cleaner)
+                await db.SaveChangesAsync(ct);
+                if (role == UserRole.Cleaner && (cleanerKind == CleanerKind.Relief || place.HomeBuildingId is not null))
                 {
-                    // Spec §10 and controller ruling (a): the dated identity starts today, in this very transaction and
-                    // under this very audit row — never a fabricated history. A Cleaner with no Area and no kind keeps
-                    // having no dated row, exactly as before this task.
-                    await ApplyCleanerProfileAsync(db, store, user,
-                        request.CleanerKind ?? CleanerKind.Regular, place.HomeBuildingId, admin.Id,
-                        clock.GetUtcNow().UtcDateTime);
-                    await db.SaveChangesAsync();
+                    await ScheduleSync.SyncCleanerAsync(
+                        db, store, user, place.HomeBuildingId, cleanerKind, admin.Id,
+                        businessDate, now, ct);
+                    await db.SaveChangesAsync(ct);
                 }
             },
-            beforeSave: role == UserRole.Supervisor
-                ? async () => (await membership.ApplyAsync(user, open: true, admin.Id)).Refusal
-                : null);
+            beforeSave: async () =>
+            {
+                if (role == UserRole.Supervisor)
+                {
+                    return (await membership.ApplyAsync(user, open: true, admin.Id)).Refusal;
+                }
+
+                if (role == UserRole.Cleaner)
+                {
+                    if (place.Area is not null && place.Shift is Shift cleanerShift)
+                    {
+                        await store.LockRegularScopeAsync(place.Area.BuildingId, cleanerShift, now, ct);
+                        var overlap = await RegularBaselineOverlap.FindSlotConflictAsync(
+                            db, excludeUserId: 0, place.Area.Id, cleanerShift, businessDate, ct: ct);
+                        if (overlap is not null)
+                        {
+                            return Conflict($"กะ{ThaiLabels.ShiftName(overlap.Shift)}ของ {overlap.AreaCode} มีแม่บ้านประจำแล้ว ({overlap.HolderName})");
+                        }
+
+                        await ClearStaleCleanerProjectionAsync(db, place.Area.Id, cleanerShift, exceptUserId: 0, ct);
+                    }
+
+                    // Add the new Cleaner only after scope locking and overlap checks finish so anchor creation never flushes user early.
+                    db.Users.Add(user);
+                }
+
+                return null;
+            });
         if (conflict is not null)
         {
             return conflict;
+        }
+
+        if (role == UserRole.Cleaner && (cleanerKind == CleanerKind.Relief || place.HomeBuildingId is not null))
+        {
+            await NotifyCleanerScopesAsync(notifications, [place.HomeBuildingId], [place.Shift], user.Id, ct);
         }
 
         return Results.Created($"/api/admin/accounts/{user.Id}", await AccountView.LoadOneAsync(db, clock, user.Id));
@@ -178,7 +213,7 @@ public static class AdminAccountEndpoints
 
     private static async Task<IResult> UpdateAsync(
         int id, UpdateAccountRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        SupervisorMembership membership, ScheduleStore store)
+        SupervisorMembership membership, ScheduleStore store, ScheduleNotifications notifications, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -186,7 +221,7 @@ public static class AdminAccountEndpoints
             return Results.Unauthorized();
         }
 
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
         if (user is null)
         {
             return NotFound();
@@ -208,16 +243,19 @@ public static class AdminAccountEndpoints
             return Bad("เปิดใช้งานบัญชีก่อน แล้วค่อยเลือกพื้นที่");
         }
 
+        var now = clock.GetUtcNow().UtcDateTime;
+        var businessDate = ScheduleAuthority.BusinessDate(now);
+        var beforeEffective = user.Role == UserRole.Cleaner
+            ? await CleanerEffectiveAssignment.ResolveOneAsync(db, user, businessDate, useFallbackWeekdayArea: true, ct: ct)
+            : null;
+
         // Task 7: an absent CleanerKind keeps the identity the person already has, so a form that predates this task changes
         // nothing about the kind. A relief being edited keeps their dated home building when the form does not resend it.
-        var businessDate = BusinessDate(clock);
-        var profileNow = user.Role == UserRole.Cleaner
-            ? await CurrentCleanerProfileAsync(db, user.Id, businessDate)
-            : null;
-        var kind = request.CleanerKind ?? profileNow?.Kind ?? CleanerKind.Regular;
-        var homeBuildingId = kind == CleanerKind.Relief
-            ? request.HomeBuildingId ?? profileNow?.HomeBuildingId
-            : request.HomeBuildingId;
+        var kind = request.CleanerKind ?? beforeEffective?.Kind ?? CleanerKind.Regular;
+        var homeBuildingId = request.HomeBuildingId
+            ?? (kind == CleanerKind.Relief || (request.AreaId is null && request.CleanerKind is null)
+                ? beforeEffective?.HomeBuildingId
+                : null);
 
         // Only an explicitly requested regular identity needs an Area: the defaulted one keeps the pre-existing behaviour
         // where a Cleaner may be left without one, and a relief is recognised whichever way its kind was decided.
@@ -225,7 +263,7 @@ public static class AdminAccountEndpoints
 
         var (place, error) = await ReadPlaceAsync(
             db, user.Role, user.Id, request.AreaId, request.BuildingId, request.Shift, businessDate,
-            checkSlot: user.IsActive, currentAreaId: user.AreaId, cleanerKind: placeKind,
+            checkSlot: user.IsActive, currentAreaId: beforeEffective?.AreaId ?? user.AreaId, cleanerKind: placeKind,
             homeBuildingId: homeBuildingId);
         if (place is null)
         {
@@ -233,43 +271,59 @@ public static class AdminAccountEndpoints
         }
 
         var before = Snapshot(user);
-        // The identity the stored records state, before this edit: the account row's own projection when the person has no
-        // dated profile, so "saving the same values" still writes nothing (spec §14).
-        var beforeIdentity = user.Role == UserRole.Cleaner
-            ? await CurrentCleanerIdentityAsync(db, user, businessDate)
-            : null;
-        var identityChanged = beforeIdentity is not null
-            && beforeIdentity != new CleanerIdentity(kind, place.HomeBuildingId, place.Shift);
+        var beforeKind = beforeEffective?.Kind ?? CleanerKind.Regular;
+        var scheduleChanged = user.Role == UserRole.Cleaner && beforeEffective is not null
+            && (beforeKind != kind
+                || beforeEffective.HomeBuildingId != place.HomeBuildingId
+                || beforeEffective.Shift != place.Shift
+                || beforeEffective.AreaId != place.Area?.Id);
+
         // The building and shift the form replaces: only that pair's membership ends, so another building the same
         // Supervisor also holds stays theirs (spec §3: several buildings per Supervisor is the normal case).
         var replaced = user.BuildingId is int beforeBuilding && user.Shift is Shift beforeShift
             ? (BuildingId: beforeBuilding, Shift: beforeShift)
             : ((int BuildingId, Shift Shift)?)null;
-        user.DisplayName = displayName;
-        user.AreaId = place.Area?.Id;
-        user.BuildingId = place.Building?.Id;
-        user.Shift = place.Shift;
-        var after = Snapshot(user);
-        if (after == before && !identityChanged)
+
+        var deferCleanerMutation = user.Role == UserRole.Cleaner && scheduleChanged;
+        if (!deferCleanerMutation)
+        {
+            user.DisplayName = displayName;
+            if (user.Role != UserRole.Cleaner)
+            {
+                user.AreaId = place.Area?.Id;
+                user.BuildingId = place.Building?.Id;
+                user.Shift = place.Shift;
+            }
+        }
+
+        var after = deferCleanerMutation
+            ? new AccountSnapshot(user.Role.ToString(), user.LoginName, displayName, place.Area?.Id, place.Building?.Id, place.Shift?.ToString(), user.IsActive)
+            : Snapshot(user);
+        if (after == before && !scheduleChanged)
         {
             return Results.Ok(await AccountView.LoadOneAsync(db, clock, user.Id));
         }
+
+        var claim = deferCleanerMutation
+            ? new AccountClaim(user.Id, user.Role, user.Username, user.EmployeeId, user.IsActive ? place.Area?.Id : null, null, place.Shift)
+            : ClaimOf(user);
 
         // Only a real building/shift change is a membership write: renaming a Supervisor must not end a building
         // they also hold (a dated write ends the pair it replaces).
         var moved = (before.BuildingId, before.Shift) != (after.BuildingId, after.Shift);
         var ended = new List<EndedScope>();
+        var syncedCleaner = false;
         if (await SaveAsync(
                 db,
-                ClaimOf(user),
+                claim,
                 businessDate,
                 async () =>
                 {
                     // The period rows say only the dates, so the audit line names the buildings and shifts this edit ended
                     AuditTrail.Add(
-                        db, admin.Id, clock.GetUtcNow().UtcDateTime, "ACCOUNT_UPDATE", "users", user.Id,
+                        db, admin.Id, now, "ACCOUNT_UPDATE", "users", user.Id,
                         await UpdateSummaryAsync(db, user, ended), before, after);
-                    await db.SaveChangesAsync();
+                    await db.SaveChangesAsync(ct);
                 },
                 beforeSave: async () =>
                 {
@@ -280,18 +334,72 @@ public static class AdminAccountEndpoints
                         return outcome.Refusal;
                     }
 
-                    if (user.Role == UserRole.Cleaner && identityChanged)
+                    if (deferCleanerMutation)
                     {
-                        // Spec §10 and controller ruling (a): today's date starts the new identity; the period it replaces is
-                        // closed at today in this transaction, beside the audit row that records the change.
-                        return await ApplyCleanerProfileAsync(db, store, user, kind, place.HomeBuildingId, admin.Id,
-                            clock.GetUtcNow().UtcDateTime);
+                        var shouldSync = kind == CleanerKind.Relief
+                            || place.HomeBuildingId is not null
+                            || beforeEffective?.HasDatedIdentity == true;
+                        if (shouldSync)
+                        {
+                            // Global lock order: baseline head before scope anchors (matches ScheduleCommandService & AreaCleaners).
+                            await store.LockBaselineHeadAsync(user.Id, now, ct, advanceRevision: false);
+                            var scopeLocks = new List<(int BuildingId, Shift Shift)>();
+                            if (beforeEffective?.HomeBuildingId is int oldB && beforeEffective.Shift is Shift oldS)
+                            {
+                                scopeLocks.Add((oldB, oldS));
+                            }
+                            if (place.Area is not null && place.Shift is Shift newS)
+                            {
+                                scopeLocks.Add((place.Area.BuildingId, newS));
+                            }
+                            foreach (var scope in scopeLocks.Distinct().OrderBy(s => s.BuildingId).ThenBy(s => s.Shift))
+                            {
+                                await store.LockRegularScopeAsync(scope.BuildingId, scope.Shift, now, ct);
+                            }
+
+                            if (user.IsActive && place.Area is not null && place.Shift is Shift targetShift)
+                            {
+                                var overlap = await RegularBaselineOverlap.FindSlotConflictAsync(
+                                    db, user.Id, place.Area.Id, targetShift, businessDate, ct: ct);
+                                if (overlap is not null)
+                                {
+                                    return Conflict($"กะ{ThaiLabels.ShiftName(overlap.Shift)}ของ {overlap.AreaCode} มีแม่บ้านประจำแล้ว ({overlap.HolderName})");
+                                }
+
+                                await ClearStaleCleanerProjectionAsync(db, place.Area.Id, targetShift, user.Id, ct);
+                            }
+                        }
+
+                        user.DisplayName = displayName;
+                        user.AreaId = place.Area?.Id;
+                        user.BuildingId = place.Building?.Id;
+                        user.Shift = place.Shift;
+
+                        if (shouldSync)
+                        {
+                            await ScheduleSync.SyncCleanerAsync(
+                                db, store, user, place.HomeBuildingId, kind, admin.Id,
+                                businessDate, now, ct);
+                            syncedCleaner = true;
+                        }
+
+                        return null;
                     }
 
                     return null;
                 }) is { } conflict)
         {
             return conflict;
+        }
+
+        if (syncedCleaner)
+        {
+            await NotifyCleanerScopesAsync(
+                notifications,
+                [beforeEffective?.HomeBuildingId, place.HomeBuildingId],
+                [beforeEffective?.Shift, place.Shift],
+                user.Id,
+                ct);
         }
 
         return Results.Ok(await AccountView.LoadOneAsync(db, clock, user.Id));
@@ -328,7 +436,8 @@ public static class AdminAccountEndpoints
     /// (facility-0014), so its devices drop within 5 minutes. History keeps its name.
     /// </summary>
     private static async Task<IResult> SetActiveAsync(
-        int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock, SupervisorMembership membership)
+        int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
+        SupervisorMembership membership, ScheduleStore store, ScheduleNotifications notifications, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -336,7 +445,7 @@ public static class AdminAccountEndpoints
             return Results.Unauthorized();
         }
 
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
         if (user is null)
         {
             return NotFound();
@@ -355,17 +464,23 @@ public static class AdminAccountEndpoints
 
         // facility-0090 decision 4: a Supervisor of a building that is off stays off
         if (active && user.Role == UserRole.Supervisor && user.BuildingId is int buildingId
-            && await db.Buildings.Where(b => b.Id == buildingId && !b.IsActive).Select(b => b.Code).FirstOrDefaultAsync() is { } offCode)
+            && await db.Buildings.Where(b => b.Id == buildingId && !b.IsActive).Select(b => b.Code).FirstOrDefaultAsync(ct) is { } offCode)
         {
             return Conflict(BuildingRules.OffForSupervisor(offCode));
         }
 
-        if (active && await HolderAsync(db, user.Role, user.AreaId, user.BuildingId, user.Shift, user.Id, BusinessDate(clock)) is { } holder)
+        var now = clock.GetUtcNow().UtcDateTime;
+        var businessDate = ScheduleAuthority.BusinessDate(now);
+        if (active && await HolderAsync(db, user.Role, user.AreaId, user.BuildingId, user.Shift, user.Id, businessDate) is { } holder)
         {
             return Conflict(SlotTaken(holder));
         }
 
         var before = Snapshot(user);
+        var originalAreaId = user.AreaId;
+        var beforeEffective = user.Role == UserRole.Cleaner
+            ? await CleanerEffectiveAssignment.ResolveOneAsync(db, user, businessDate, useFallbackWeekdayArea: true, ct: ct)
+            : null;
         user.IsActive = active;
         if (!active && user.Role == UserRole.Cleaner)
         {
@@ -373,7 +488,6 @@ public static class AdminAccountEndpoints
             user.AreaId = null;
         }
 
-        var now = clock.GetUtcNow().UtcDateTime;
         AuditTrail.Add(
             db, admin.Id, now, active ? "ACCOUNT_ACTIVATE" : "ACCOUNT_DEACTIVATE", "users", user.Id,
             $"{(active ? "เปิด" : "ปิด")}ใช้งานบัญชี{ThaiLabels.RoleName(user.Role)} {user.LoginName} {user.DisplayName}",
@@ -381,20 +495,97 @@ public static class AdminAccountEndpoints
         Func<Task>? revokeSessions = active ? null : () => db.RevokeUserSessionsAsync(user.Id, now);
         // Spec §3: a deactivated account holds no scope, so its membership is closed on the business date; activating
         // opens the period again once the building/shift anchor shows the slot is free.
+        int? notifyHomeBuildingId = beforeEffective?.HomeBuildingId;
+        var syncedCleaner = false;
         var conflict = await SaveAsync(
             db,
             ClaimOf(user),
-            BusinessDate(clock),
+            businessDate,
             revokeSessions,
-            beforeSave: user.Role == UserRole.Supervisor
-                ? async () => (await membership.ApplyAsync(user, open: active, admin.Id)).Refusal
-                : null);
+            beforeSave: async () =>
+            {
+                if (user.Role == UserRole.Supervisor)
+                {
+                    return (await membership.ApplyAsync(user, open: active, admin.Id)).Refusal;
+                }
+
+                if (user.Role == UserRole.Cleaner)
+                {
+                    var profileNow = await CurrentCleanerProfileAsync(db, user.Id, businessDate, ct);
+                    var kind = profileNow?.Kind ?? CleanerKind.Regular;
+                    var homeBuildingId = profileNow?.HomeBuildingId
+                        ?? (originalAreaId is int areaId
+                            ? await db.Areas.AsNoTracking().Where(a => a.Id == areaId)
+                                .Select(a => (int?)a.BuildingId).FirstOrDefaultAsync(ct)
+                            : null);
+                    notifyHomeBuildingId ??= homeBuildingId;
+                    if (kind == CleanerKind.Relief || homeBuildingId is not null || !active)
+                    {
+                        await ScheduleSync.SyncCleanerAsync(
+                            db, store, user, homeBuildingId, kind, admin.Id, businessDate, now, ct,
+                            preserveExistingShift: true);
+                        syncedCleaner = true;
+                    }
+                }
+
+                return null;
+            });
         if (conflict is not null)
         {
             return conflict;
         }
 
+        if (syncedCleaner)
+        {
+            await NotifyCleanerScopesAsync(notifications, [notifyHomeBuildingId], [beforeEffective?.Shift, user.Shift], user.Id, ct);
+        }
+
         return Results.Ok(await AccountView.LoadOneAsync(db, clock, user.Id));
+    }
+
+    /// <summary>
+    /// Clears stale <c>users.AreaId</c> rows on other active Cleaners once <see cref="RegularBaselineOverlap"/> under lock
+    /// has confirmed no dated baseline overlaps the target slot, avoiding false <c>users.cleaner_slot</c> collisions.
+    /// </summary>
+    private static async Task ClearStaleCleanerProjectionAsync(
+        AppDbContext db, int areaId, Shift shift, int exceptUserId, CancellationToken ct)
+    {
+        var stale = await db.Users
+            .Where(u => u.Id != exceptUserId && u.Role == UserRole.Cleaner && u.IsActive && u.AreaId == areaId && u.Shift == shift)
+            .ToListAsync(ct);
+        if (stale.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var holder in stale)
+        {
+            holder.AreaId = null;
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+
+    private static async Task NotifyCleanerScopesAsync(
+        ScheduleNotifications notifications,
+        IEnumerable<int?> buildingIds,
+        IEnumerable<Shift?> shifts,
+        int cleanerId,
+        CancellationToken ct)
+    {
+        var buildings = buildingIds.OfType<int>().Distinct().ToList();
+        var shiftList = shifts.OfType<Shift>().Distinct().ToList();
+        if (shiftList.Count == 0)
+        {
+            shiftList.Add(Shift.Day);
+            shiftList.Add(Shift.Night);
+        }
+
+        var scopes = buildings
+            .SelectMany(b => shiftList.Select(s => new ScheduleScopeKey(b, s)))
+            .Distinct()
+            .ToList();
+        await notifications.ChangedAsync(Guid.NewGuid(), new ScheduleChangeScope([], scopes, [cleanerId]), ct);
     }
 
     /// <summary>facility-0054 rule 4: the Admin types the Cleaner's or Supervisor's new phone; every device of theirs must log in again.</summary>

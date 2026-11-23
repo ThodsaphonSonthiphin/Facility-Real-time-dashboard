@@ -3,6 +3,7 @@ using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
 using JanitorialManagementDashboard.Api.Scheduling;
 using JanitorialManagementDashboard.Application.Attendance;
+using JanitorialManagementDashboard.Application.Common;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
@@ -35,7 +36,7 @@ public static class MyWorkEndpoints
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
-        var ownSlot = user.Shift is { } shift ? AttendanceCalendar.SlotFor(shift, now, settings) : null;
+        var ownSlot = await CleanerShiftResolver.ResolveSlotAsync(db, user, now, settings, ct);
         var slot = ownSlot ?? ShiftCalendar.SlotAt(now);
 
         // Spec §7 and §9: the Areas this person works are the slot's effective duty Area — a relief assignment, the dated
@@ -61,7 +62,9 @@ public static class MyWorkEndpoints
             })
             .ToList();
 
-        var ownShift = user.Shift is { } regular ? OwnShiftOf(regular, settings) : null;
+        var ownShiftDate = ownSlot?.ShiftDate ?? DateOnly.FromDateTime(ThaiTime.FromUtc(now));
+        var resolvedShift = ownSlot?.Shift ?? await CleanerShiftResolver.ResolveShiftAsync(db, user, ownShiftDate, ct);
+        var ownShift = resolvedShift is { } regular ? OwnShiftOf(regular, settings) : null;
         var attendanceState = await AttendanceEndpoints.StateForDutyAsync(db, user, ownSlot, duty, now, ct);
         return Results.Ok(new MyWorkDto(attendanceState, areas, ownShift));
     }

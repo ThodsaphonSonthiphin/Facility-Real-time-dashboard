@@ -513,4 +513,155 @@ public class SchedulePersistenceTests
         ResultJson = "{}",
         CommittedAt = DateTime.UtcNow,
     };
+
+    [Fact]
+    public async Task Regular_cleaner_profile_period_allows_null_shift_when_unassigned()
+    {
+        using var factory = new JanitorialApiFactory();
+        await factory.WithDbAsync(async db =>
+        {
+            var building = await db.Buildings.SingleAsync(b => b.Code == "A");
+            var cleaner = new User
+            {
+                Role = UserRole.Cleaner,
+                EmployeeId = "E9901",
+                DisplayName = "แม่บ้านรอจัดกะ",
+                SecretHash = "hash",
+                Shift = null,
+                AreaId = null,
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Users.Add(cleaner);
+            await db.SaveChangesAsync();
+
+            db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+            {
+                UserId = cleaner.Id,
+                Kind = CleanerKind.Regular,
+                HomeBuildingId = building.Id,
+                Shift = null,
+                EffectiveFrom = new DateOnly(2026, 11, 21),
+                Revision = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+
+            var stored = await db.CleanerProfilePeriods.SingleAsync(p => p.UserId == cleaner.Id);
+            Assert.Null(stored.Shift);
+            Assert.Equal(building.Id, stored.HomeBuildingId);
+        });
+    }
+
+    [Fact]
+    public async Task ScheduleBackfill_creates_profiles_and_baselines_idempotently_including_unassigned_shift_building_cleaners()
+    {
+        using var factory = new JanitorialApiFactory();
+        await factory.WithDbAsync(async db =>
+        {
+            var building = await db.Buildings.SingleAsync(b => b.Code == "A");
+            var unassigned = new User
+            {
+                Role = UserRole.Cleaner,
+                EmployeeId = "E9902",
+                DisplayName = "แม่บ้านรอจัดกะตึก A",
+                SecretHash = "hash",
+                BuildingId = building.Id,
+                Shift = null,
+                AreaId = null,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Users.Add(unassigned);
+            await db.SaveChangesAsync();
+
+            var historyStart = new DateOnly(2026, 11, 17);
+            await ScheduleBackfill.EnsureAsync(db, historyStart, CancellationToken.None);
+            db.ChangeTracker.Clear();
+
+            // Seeded cleaner 1000001 has Area AR01 and Shift Day -> gets both profile and 7-day baseline
+            var c1 = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
+            var c1Profile = await db.CleanerProfilePeriods.SingleAsync(p => p.UserId == c1.Id);
+            Assert.Equal((CleanerKind.Regular, (int?)building.Id, (Shift?)Shift.Day, historyStart),
+                (c1Profile.Kind, c1Profile.HomeBuildingId, c1Profile.Shift, c1Profile.EffectiveFrom));
+            var c1Baseline = await db.ScheduleBaselines.Include(b => b.Days).SingleAsync(b => b.UserId == c1.Id);
+            Assert.Equal(7, c1Baseline.Days.Count);
+            Assert.All(c1Baseline.Days, d => Assert.Equal(c1.AreaId, d.AreaId));
+
+            // Unassigned shift/area cleaner with BuildingId -> gets profile with null Shift, and no baseline
+            var uProfile = await db.CleanerProfilePeriods.SingleAsync(p => p.UserId == unassigned.Id);
+            Assert.Equal((CleanerKind.Regular, (int?)building.Id, (Shift?)null, historyStart),
+                (uProfile.Kind, uProfile.HomeBuildingId, uProfile.Shift, uProfile.EffectiveFrom));
+            Assert.Empty(await db.ScheduleBaselines.Where(b => b.UserId == unassigned.Id).ToListAsync());
+
+            // Idempotent second run creates no duplicates
+            await ScheduleBackfill.EnsureAsync(db, historyStart, CancellationToken.None);
+            Assert.Equal(1, await db.CleanerProfilePeriods.CountAsync(p => p.UserId == unassigned.Id));
+            Assert.Equal(1, await db.ScheduleBaselines.CountAsync(b => b.UserId == c1.Id));
+        });
+    }
+
+    [Fact]
+    public async Task ScheduleSync_splits_current_profile_without_mutating_future_period()
+    {
+        using var factory = new JanitorialApiFactory();
+        var buildingB = await TestData.AddBuildingAsync(factory, "B");
+        await factory.WithDbAsync(async db =>
+        {
+            var cleaner = await db.Users.SingleAsync(u => u.EmployeeId == "1000001");
+            var buildingA = await db.Buildings.SingleAsync(b => b.Code == "A");
+            var past = new DateOnly(2026, 10, 1);
+            var today = new DateOnly(2026, 11, 17);
+            var future = new DateOnly(2026, 12, 1);
+            var now = DateTime.UtcNow;
+
+            db.CleanerProfilePeriods.AddRange(
+                new CleanerProfilePeriod
+                {
+                    UserId = cleaner.Id,
+                    Kind = CleanerKind.Regular,
+                    HomeBuildingId = buildingA.Id,
+                    Shift = Shift.Day,
+                    EffectiveFrom = past,
+                    EffectiveUntil = future,
+                    Revision = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new CleanerProfilePeriod
+                {
+                    UserId = cleaner.Id,
+                    Kind = CleanerKind.Relief,
+                    HomeBuildingId = buildingA.Id,
+                    Shift = Shift.Day,
+                    EffectiveFrom = future,
+                    EffectiveUntil = null,
+                    Revision = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            await db.SaveChangesAsync();
+
+            var store = new ScheduleStore(db);
+            await using var tx = await db.Database.BeginTransactionAsync();
+            await ScheduleSync.SyncCleanerAsync(
+                db, store, cleaner, buildingB, CleanerKind.Regular, actorId: null, today, now);
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+            db.ChangeTracker.Clear();
+
+            var periods = await db.CleanerProfilePeriods
+                .Where(p => p.UserId == cleaner.Id)
+                .OrderBy(p => p.EffectiveFrom)
+                .ToListAsync();
+            Assert.Equal(3, periods.Count);
+            Assert.Equal((past, (DateOnly?)today, buildingA.Id, CleanerKind.Regular),
+                (periods[0].EffectiveFrom, periods[0].EffectiveUntil, periods[0].HomeBuildingId, periods[0].Kind));
+            Assert.Equal((today, (DateOnly?)future, buildingB, CleanerKind.Regular),
+                (periods[1].EffectiveFrom, periods[1].EffectiveUntil, periods[1].HomeBuildingId, periods[1].Kind));
+            Assert.Equal((future, (DateOnly?)null, buildingA.Id, CleanerKind.Relief, 1L),
+                (periods[2].EffectiveFrom, periods[2].EffectiveUntil, periods[2].HomeBuildingId, periods[2].Kind, periods[2].Revision));
+        });
+    }
 }

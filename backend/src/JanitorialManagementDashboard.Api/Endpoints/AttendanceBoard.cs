@@ -50,29 +50,54 @@ internal static class AttendanceBoard
             .Select(row => new { row.UserId, row.AreaId }).ToListAsync(ct);
         var reliefAreas = relief.GroupBy(row => row.UserId).ToDictionary(group => group.Key, group => group.Last().AreaId);
         var reliefHere = relief.Where(row => areaIds.Contains(row.AreaId)).Select(row => row.UserId).Distinct().ToList();
-        var cleaners = await db.Users.AsNoTracking()
-            .Where(u => u.Role == UserRole.Cleaner && u.IsActive
-                && ((u.Shift == slot.Shift && u.AreaId != null && areaIds.Contains(u.AreaId.Value))
-                    || transferredIds.Contains(u.Id) || reliefHere.Contains(u.Id)))
+        var allActiveCleaners = await db.Users.AsNoTracking()
+            .Where(u => u.Role == UserRole.Cleaner && u.IsActive)
             .ToListAsync(ct);
+        var effectiveByUser = await CleanerEffectiveAssignment.ResolveForDateAsync(
+            db, allActiveCleaners, slot.ShiftDate, useFallbackWeekdayArea: false, includeDatedOverrides: true, ct: ct);
+        var areaIdSet = areaIds.ToHashSet();
+        var transferredSet = transferredIds.ToHashSet();
+        var reliefHereSet = reliefHere.ToHashSet();
+        var cleaners = allActiveCleaners
+            .Where(u => (effectiveByUser.TryGetValue(u.Id, out var state)
+                    && state.Shift == slot.Shift
+                    && state.AreaId is int effAreaId
+                    && areaIdSet.Contains(effAreaId))
+                || transferredSet.Contains(u.Id)
+                || reliefHereSet.Contains(u.Id))
+            .ToList();
         var covers = await db.CoverAssignments.AsNoTracking()
             .Include(c => c.User!).ThenInclude(u => u.Area)
             .Where(c => c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null
                 && c.AreaId != null && areaIds.Contains(c.AreaId.Value))
             .OrderBy(c => c.AssignedAt)
-            .ToListAsync();
+            .ToListAsync(ct);
+        var coverEffectiveAreaIds = covers
+            .Select(c => effectiveByUser.GetValueOrDefault(c.UserId)?.AreaId)
+            .OfType<int>()
+            .Distinct()
+            .ToList();
+        var coverAreaCodes = coverEffectiveAreaIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await db.Areas.AsNoTracking()
+                .Where(a => coverEffectiveAreaIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => a.Code, ct);
         var userIds = cleaners.Select(u => u.Id).Concat(covers.Select(c => c.UserId)).Distinct().ToList();
         var events = await db.ShiftAttendances.AsNoTracking()
             .Where(a => a.ShiftDate == slot.ShiftDate && a.Shift == slot.Shift && userIds.Contains(a.UserId))
             .OrderBy(a => a.OccurredAt)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         // Spec §13 and ADR facility-0216 (Task 11): entry comes from actual facts (initial Shift-In or a confirmed transfer
         // arrival), and current responsibility is a separate answer derived from the same transfer chain Task 10 stores.
         var evidence = await store.ReadEntryEvidenceAsync(slot, ct);
         var enteredAreas = ScheduleEntryEvidence.EnteredAreas(new ScheduleSlot(slot.ShiftDate, slot.Shift), evidence);
         var baseAreas = cleaners.ToDictionary(user => user.Id,
-            user => reliefAreas.TryGetValue(user.Id, out var assigned) ? (int?)assigned : user.AreaId);
+            user => reliefAreas.TryGetValue(user.Id, out var assigned)
+                ? (int?)assigned
+                : effectiveByUser.TryGetValue(user.Id, out var state) && state.Shift == slot.Shift
+                    ? state.AreaId
+                    : null);
         var positions = transfers.ToDictionary(
             pair => pair.Key,
             pair => PositionOf(baseAreas.GetValueOrDefault(pair.Key), pair.Value, nowUtc));
@@ -87,7 +112,7 @@ internal static class AttendanceBoard
                     ? position.AreaId : baseAreas[user.Id]) == area.Id).ToList();
                 var responsible = assignedHere
                     .Where(user => !(positions.TryGetValue(user.Id, out var position) && position.IsPending))
-                    .OrderByDescending(user => user.AreaId == area.Id).ThenBy(user => user.Id)
+                    .OrderByDescending(user => baseAreas.GetValueOrDefault(user.Id) == area.Id).ThenBy(user => user.Id)
                     .ToList();
                 var responsibilities = assignedHere
                     .Where(user => positions.TryGetValue(user.Id, out var position)
@@ -98,7 +123,7 @@ internal static class AttendanceBoard
                     .ToList();
                 var areaCovers = covers.Where(cover => cover.AreaId == area.Id).ToList();
                 return Row(area, responsible, areaCovers, factsByPerson, evidence, enteredAreas,
-                    areaCovers.Count > 0 || assignedHere.Count > 0, responsibilities);
+                    areaCovers.Count > 0 || assignedHere.Count > 0, responsibilities, effectiveByUser, coverAreaCodes);
             })
             .OrderBy(r => r.State == AreaAttendanceState.Empty ? 0 : 1)
             .ThenBy(r => r.AreaCode)
@@ -139,7 +164,9 @@ internal static class AttendanceBoard
     private static BoardRowDto Row(
         Area area, IReadOnlyList<User> cleaners, List<CoverAssignment> covers, ILookup<int, ShiftAttendance> facts,
         IReadOnlyList<AreaEntryEvidence> evidence,
-        IReadOnlySet<int> enteredAreas, bool isAssigned, List<BoardResponsibilityDto> responsibilities)
+        IReadOnlySet<int> enteredAreas, bool isAssigned, List<BoardResponsibilityDto> responsibilities,
+        IReadOnlyDictionary<int, CleanerEffectiveState> effectiveByUser,
+        IReadOnlyDictionary<int, string> coverAreaCodes)
     {
         var primary = cleaners.FirstOrDefault();
         var own = primary is null ? [] : facts[primary.Id].Select(ToDto).ToList();
@@ -166,16 +193,21 @@ internal static class AttendanceBoard
             primary is null ? null : CleanerDto(primary),
             state,
             own,
-            covers.Select(c => new BoardCoverDto(
-                    c.Id,
-                    c.UserId,
-                    c.User!.EmployeeId ?? string.Empty,
-                    c.User.DisplayName,
-                    c.User.Area?.Code,
-                    Utc(c.AssignedAt),
-                    facts[c.UserId].Where(e => e.EventType == AttendanceEvent.ShiftIn)
-                        .Select(e => (DateTime?)Utc(e.OccurredAt))
-                        .FirstOrDefault()))
+            covers.Select(c =>
+                {
+                    var effAreaId = effectiveByUser.GetValueOrDefault(c.UserId)?.AreaId;
+                    var ownAreaCode = effAreaId is int aId ? coverAreaCodes.GetValueOrDefault(aId) ?? c.User!.Area?.Code : c.User!.Area?.Code;
+                    return new BoardCoverDto(
+                        c.Id,
+                        c.UserId,
+                        c.User!.EmployeeId ?? string.Empty,
+                        c.User.DisplayName,
+                        ownAreaCode,
+                        Utc(c.AssignedAt),
+                        facts[c.UserId].Where(e => e.EventType == AttendanceEvent.ShiftIn)
+                            .Select(e => (DateTime?)Utc(e.OccurredAt))
+                            .FirstOrDefault());
+                })
                 .ToList(),
             AreaAttendance.EntryOf(enteredAreas.Contains(area.Id), isAssigned),
             entryEvidence,
