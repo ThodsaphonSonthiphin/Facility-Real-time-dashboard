@@ -2,12 +2,15 @@ import { useGetAllBuildingsQuery } from '../api/adminSetupApi';
 import { freshOnOpen } from '../api/baseApi';
 import { buildingOptionText } from '../api/buildingNames';
 import { Field, Select } from './Field';
+import type { InputSize } from './styles';
 
 interface BuildingSelectProps {
   value?: number;
   onChange: (buildingId: number | undefined) => void;
   /** List the buildings that are off too, marked (D8). Default: active buildings only (D7). */
   includeOff?: boolean;
+  size?: InputSize;
+  selectClassName?: string;
 }
 
 /**
@@ -16,14 +19,20 @@ interface BuildingSelectProps {
  * because their old data can be exported; D7 lists active ones only, because it counts active Supervisors and an off
  * building has none (facility-0090 decision 5, amended). Both read the one list, so the cache is shared.
  */
-export function BuildingSelect({ value, onChange, includeOff = false }: BuildingSelectProps) {
+export function BuildingSelect({
+  value,
+  onChange,
+  includeOff = false,
+  size = 'desk',
+  selectClassName = 'w-full max-w-full sm:w-auto sm:max-w-72',
+}: BuildingSelectProps) {
   const { data } = useGetAllBuildingsQuery(undefined, freshOnOpen);
   const buildings = (data ?? []).filter((building) => includeOff || building.isActive);
   return (
     <Field label="ตึก">
       <Select
-        size="desk"
-        className="w-full max-w-full sm:w-auto sm:max-w-72"
+        size={size}
+        className={selectClassName}
         value={value ?? ''}
         onChange={(event) => onChange(event.target.value === '' ? undefined : Number(event.target.value))}
       >

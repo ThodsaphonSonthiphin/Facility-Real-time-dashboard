@@ -4,7 +4,6 @@ import { buildingOptionText } from '../../shared/api/buildingNames';
 import type { PointCard } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Select, TextInput } from '../../shared/components/Field';
-import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { focusRing, statusIcon, statusText, toggleClass } from '../../shared/components/styles';
 import { pointStatusLabel } from '../../shared/utils/labels';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -60,11 +59,15 @@ export function Filters({ points }: { points: PointCard[] }) {
           );
         })}
       </ul>
-      <FilterToolbar label="ตัวกรองจุด">
+      <section
+        role="region"
+        aria-label="ตัวกรองจุด"
+        className="grid grid-cols-1 items-center gap-3 rounded-lg border border-border bg-surface p-4 sm:flex sm:flex-wrap"
+      >
         <label className="inline-flex w-full min-w-0 items-center gap-2 font-semibold sm:w-auto">
           ตึก
           <Select
-            size="desk"
+            size="adaptive"
             className="min-w-0 flex-1 font-normal text-ellipsis sm:w-56 sm:flex-none"
             value={filters.buildingCode}
             onChange={(event) => dispatch(buildingChosen(event.target.value))}
@@ -80,17 +83,17 @@ export function Filters({ points }: { points: PointCard[] }) {
         <button
           type="button"
           data-tap=""
-          className={toggleClass}
+          className={`${toggleClass} w-full sm:w-auto`}
           aria-pressed={filters.issueOnly}
           onClick={() => dispatch(issueOnlyToggled())}
         >
           <Wrench aria-hidden="true" className="size-4 text-rework" />
           มีปัญหาที่แจ้ง <span className="font-bold tabular-nums">{issues}</span>
         </button>
-        <label className="relative flex min-w-0 flex-1 basis-56 items-center">
+        <label className="relative flex w-full min-w-0 items-center sm:flex-1 sm:basis-56">
           <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 size-4 text-text-2" />
           <TextInput
-            size="desk"
+            size="adaptive"
             type="search"
             className="w-full pl-8.5"
             aria-label="ค้นหา"
@@ -99,7 +102,7 @@ export function Filters({ points }: { points: PointCard[] }) {
             onChange={(event) => dispatch(searchChanged(event.target.value))}
           />
         </label>
-        <label className="inline-flex min-h-9 cursor-pointer items-center gap-2">
+        <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 sm:min-h-9">
           <input
             type="checkbox"
             className={`size-4.5 accent-accent ${focusRing}`}
@@ -109,12 +112,12 @@ export function Filters({ points }: { points: PointCard[] }) {
           เรียงพื้นที่ที่มีปัญหาขึ้นก่อน
         </label>
         {hasActiveFilters && (
-          <Button variant="link" size="desk" onClick={() => dispatch(filtersCleared())}>
+          <Button variant="link" size="adaptive" className="justify-self-start" onClick={() => dispatch(filtersCleared())}>
             <RotateCcw aria-hidden="true" className="size-4" />
             ล้างตัวกรอง
           </Button>
         )}
-      </FilterToolbar>
+      </section>
     </>
   );
 }

@@ -25,11 +25,11 @@ export function RangeFields({ value, onChange, onEnter }: RangeFieldsProps) {
   };
   const today = thaiToday();
   return (
-    <div className="flex flex-wrap items-end gap-2">
+    <div className="grid w-full grid-cols-2 items-end gap-2 sm:flex sm:w-auto sm:flex-wrap">
       <Field label="ตั้งแต่">
         <TextInput
-          size="desk"
-          className="w-38"
+          size="adaptive"
+          className="w-full sm:w-38"
           value={value.fromText}
           placeholder="วว/ดด/ปปปป"
           inputMode="numeric"
@@ -39,8 +39,8 @@ export function RangeFields({ value, onChange, onEnter }: RangeFieldsProps) {
       </Field>
       <Field label="ถึง">
         <TextInput
-          size="desk"
-          className="w-38"
+          size="adaptive"
+          className="w-full sm:w-38"
           value={value.toText}
           placeholder="วว/ดด/ปปปป"
           inputMode="numeric"
@@ -48,7 +48,7 @@ export function RangeFields({ value, onChange, onEnter }: RangeFieldsProps) {
           onKeyDown={enter}
         />
       </Field>
-      <div className="inline-flex gap-2" role="group" aria-label="ปุ่มลัดช่วงวัน">
+      <div className="col-span-2 flex flex-wrap gap-2 sm:inline-flex" role="group" aria-label="ปุ่มลัดช่วงวัน">
         {rangePresets.map((preset) => (
           <button
             key={preset}

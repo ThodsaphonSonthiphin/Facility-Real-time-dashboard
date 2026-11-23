@@ -29,7 +29,7 @@ export function PointTable({ detail, onEdit }: { detail: AreaDetail; onEdit: (ta
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <h3 className="text-base font-bold">{`จุดในพื้นที่ · ${points.length}`}</h3>
         {area.isActive && (
-          <Button size="desk" onClick={() => onEdit({ kind: 'new-point' })}>
+          <Button size="adaptive" onClick={() => onEdit({ kind: 'new-point' })}>
             <Plus aria-hidden="true" className="size-4" />
             เพิ่มจุด
           </Button>

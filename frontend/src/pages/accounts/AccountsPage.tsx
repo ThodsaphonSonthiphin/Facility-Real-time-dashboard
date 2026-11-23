@@ -27,7 +27,7 @@ export function AccountsPage() {
       <AdminPageHeader
         title="บัญชีผู้ใช้"
         actions={
-          <Button variant="primary" size="desk" onClick={openCreate}>
+          <Button variant="primary" size="adaptive" onClick={openCreate}>
             <Plus aria-hidden="true" className="size-4" />
             สร้างบัญชี
           </Button>
@@ -39,40 +39,43 @@ export function AccountsPage() {
         className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface"
         aria-label="รายชื่อบัญชี"
       >
-        <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-4 pt-1">
-          <Tabs
-            label="บทบาทบัญชี"
-            idPrefix="accounts"
-            ruled={false}
-            value={role}
-            onChange={setRole}
-            tabs={accountRoles.map((id) => ({
-              id,
-              label: (
-                <>
-                  {accountRoleLabel[id]}{' '}
-                  <span className={id === role
-                    ? 'inline-flex min-h-5.5 min-w-5.5 items-center justify-center rounded-sm bg-accent-subtle px-1.5 text-xs text-accent'
-                    : 'inline-flex min-h-5.5 min-w-5.5 items-center justify-center rounded-sm bg-idle-bg px-1.5 text-xs text-idle'}>
-                    {counts[id]}
-                  </span>
-                </>
-              ),
-            }))}
-          />
-          <div className="flex w-full flex-wrap gap-3 py-3 sm:w-auto">
+        <div className="flex flex-col border-b border-border lg:flex-row lg:items-end lg:justify-between lg:gap-x-4 lg:px-4 lg:pt-1">
+          <div className="border-b border-border px-3 pt-1 lg:border-b-0 lg:px-0 lg:pt-0">
+            <Tabs
+              label="บทบาทบัญชี"
+              idPrefix="accounts"
+              ruled={false}
+              value={role}
+              onChange={setRole}
+              tabs={accountRoles.map((id) => ({
+                id,
+                label: (
+                  <>
+                    {accountRoleLabel[id]}{' '}
+                    <span className={id === role
+                      ? 'inline-flex min-h-5.5 min-w-5.5 items-center justify-center rounded-sm bg-accent-subtle px-1.5 text-xs text-accent'
+                      : 'inline-flex min-h-5.5 min-w-5.5 items-center justify-center rounded-sm bg-idle-bg px-1.5 text-xs text-idle'}>
+                      {counts[id]}
+                    </span>
+                  </>
+                ),
+              }))}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3 bg-surface-2 p-3 sm:grid-cols-[180px_minmax(0,1fr)] lg:flex lg:w-auto lg:bg-transparent lg:p-0 lg:py-3">
             <Field label="สถานะบัญชี">
-              <Select size="desk" value={active} onChange={changeActive}>
+              <Select size="adaptive" className="w-full" value={active} onChange={changeActive}>
                 <option value="all">ทั้งหมด</option>
                 <option value="active">ใช้งานอยู่</option>
                 <option value="inactive">ปิดใช้งาน</option>
               </Select>
             </Field>
-            <div className="min-w-0 flex-1 sm:w-60">
+            <div className="min-w-0 lg:w-60">
               <Field label="ค้นหา">
                 <TextInput
-                  size="desk"
+                  size="adaptive"
                   type="search"
+                  className="w-full"
                   placeholder="ชื่อ รหัสพนักงาน หรือชื่อผู้ใช้"
                   value={search}
                   onChange={changeSearch}

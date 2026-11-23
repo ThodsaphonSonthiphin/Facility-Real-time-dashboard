@@ -47,10 +47,10 @@ export function AttendanceTable({ rows, shift, onCorrect, footer }: AttendanceTa
     );
   }
   return (
-    <Table label="การเข้างานรายพื้นที่" minWidth="min-w-225" footer={footer}>
+    <Table label="การเข้างานรายพื้นที่" minWidth="min-w-225" leadingOverlayWidth={160} footer={footer}>
       <thead className="[&_th]:font-bold">
         <tr>
-          <th scope="col" className="min-w-40">
+          <th scope="col" className="sticky left-0 z-20 min-w-40 border-r border-border bg-surface-2">
             พื้นที่
           </th>
           <th scope="col" className="min-w-36">
@@ -76,7 +76,7 @@ export function AttendanceTable({ rows, shift, onCorrect, footer }: AttendanceTa
         {rows.map((row) => (
           // An Area with nobody is tinted across the row, as in the old look; [&>*] reaches its th and td cells
           <tr key={row.areaId} className={row.state === 'Empty' ? '[&>*]:bg-overdue-bg' : undefined}>
-            <th scope="row">
+            <th scope="row" className={`sticky left-0 z-10 border-r border-border ${row.state === 'Empty' ? 'bg-overdue-bg' : 'bg-surface'}`}>
               {`${row.areaCode} ${row.areaName}`}
               <span className={subClass}>{`ตึก ${buildingText(row.buildingCode, names)}`}</span>
             </th>

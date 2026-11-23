@@ -2,11 +2,10 @@ import { ChevronLeft, Printer } from 'lucide-react';
 import { Link } from 'react-router';
 import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
-import { Select } from '../../shared/components/Field';
+import { Field, Select } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../shared/components/PageState';
 import { Segmented } from '../../shared/components/Segmented';
-import { FilterToolbar } from '../../shared/components/SurfacePanel';
 import { linkClass } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import type { SignSize } from './printRules';
@@ -27,40 +26,42 @@ export function PrintSignsPage() {
         title="พิมพ์ป้าย"
         subtitle={summary}
         actions={
-          <Button variant="primary" size="desk" disabled={disabled} onClick={() => void printNow()}>
+          <Button variant="primary" size="adaptive" disabled={disabled} onClick={() => void printNow()}>
             <Printer aria-hidden="true" className="size-4" />
             พิมพ์
           </Button>
         }
       />
-      <FilterToolbar
-        label="ตัวเลือก"
-        className="min-w-0 print:hidden"
+      <section
+        role="region"
+        aria-label="ตัวเลือก"
+        className="grid min-w-0 grid-cols-1 items-end gap-3 rounded-lg border border-border bg-surface p-4 sm:flex sm:flex-wrap print:hidden"
       >
-        <label className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-2">
-          พื้นที่
-          <Select
-            size="desk"
-            className="w-60 min-w-0 max-w-full"
-            value={which}
-            disabled={printing || areas.isLoading}
-            onChange={(event) => selectArea(event.target.value)}
-          >
-            <option value="" disabled>เลือกพื้นที่</option>
-            {activeAreas.map((area) => (
-              <option key={area.id} value={String(area.id)}>{`${area.code} ${area.name} · ตึก ${area.buildingCode}`}</option>
-            ))}
-            {groups.map((group) => (
-              <option key={group.id} value={`building:${group.id}`}>{`ทุกพื้นที่ในตึก ${group.code} (${group.count})`}</option>
-            ))}
-            <option value="all">{`ทุกพื้นที่ (${activeAreas.length})`}</option>
-          </Select>
-        </label>
-        <div className="flex flex-wrap items-center gap-2">
-          <span>ขนาดป้าย</span>
-          <Segmented label="ขนาดป้าย" options={sizeOptions} value={size} onChange={setSize} disabled={printing} />
+        <div className="min-w-0 sm:w-64">
+          <Field label="พื้นที่">
+            <Select
+              size="adaptive"
+              className="w-full min-w-0 max-w-full"
+              value={which}
+              disabled={printing || areas.isLoading}
+              onChange={(event) => selectArea(event.target.value)}
+            >
+              <option value="" disabled>เลือกพื้นที่</option>
+              {activeAreas.map((area) => (
+                <option key={area.id} value={String(area.id)}>{`${area.code} ${area.name} · ตึก ${area.buildingCode}`}</option>
+              ))}
+              {groups.map((group) => (
+                <option key={group.id} value={`building:${group.id}`}>{`ทุกพื้นที่ในตึก ${group.code} (${group.count})`}</option>
+              ))}
+              <option value="all">{`ทุกพื้นที่ (${activeAreas.length})`}</option>
+            </Select>
+          </Field>
         </div>
-      </FilterToolbar>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="font-semibold">ขนาดป้าย</span>
+          <Segmented size="adaptive" label="ขนาดป้าย" options={sizeOptions} value={size} onChange={setSize} disabled={printing} />
+        </div>
+      </section>
       {(areas.isLoading || areas.error || areas.data?.length === 0 || print.isFetching || print.error ||
         which === '' || emptyMessage || (signId !== undefined && singleArea)) && (
         <div className="flex min-w-0 flex-col gap-3 print:hidden">

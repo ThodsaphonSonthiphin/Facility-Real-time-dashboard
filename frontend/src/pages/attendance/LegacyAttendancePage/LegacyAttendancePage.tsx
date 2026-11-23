@@ -124,9 +124,17 @@ function Tiles({ summary, onBreak }: { summary: BoardSummary; onBreak: number })
     { label: 'พักเบรก', count: onBreak, Icon: Coffee, tone: 'purple' as const },
   ];
   return (
-    <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-5" aria-label="สรุปกะนี้">
-      {tiles.map(({ label, count, Icon, tone }) => (
-        <KpiCard key={label} as="li" label={label} value={count} icon={Icon} tone={tone} />
+    <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 md:grid-cols-5" aria-label="สรุปกะนี้">
+      {tiles.map(({ label, count, Icon, tone }, index) => (
+        <KpiCard
+          key={label}
+          as="li"
+          label={label}
+          value={count}
+          icon={Icon}
+          tone={tone}
+          className={index === 0 ? 'col-span-2 md:col-span-1' : undefined}
+        />
       ))}
     </ul>
   );

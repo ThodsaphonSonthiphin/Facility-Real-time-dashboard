@@ -208,7 +208,7 @@ describe('MyBuildingPage (M15, facility-0057)', () => {
     const { user } = await renderApp('/my-building');
     await screen.findByRole('region', { name: 'ตึกทดลอง' });
 
-    const nav = screen.getByRole('navigation', { name: 'เมนูหลักหัวหน้างาน' });
+    const nav = screen.getByRole('navigation', { name: 'เมนูหัวหน้างาน' });
     await user.click(within(nav).getByRole('link', { name: 'บัญชี' }));
     await user.click(await screen.findByRole('button', { name: 'ออกจากระบบ' }));
     await user.click(await screen.findByRole('button', { name: 'ยืนยันออกจากระบบ' }));

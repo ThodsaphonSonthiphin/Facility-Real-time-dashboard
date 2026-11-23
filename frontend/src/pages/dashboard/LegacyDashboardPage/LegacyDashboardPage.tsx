@@ -84,10 +84,10 @@ function QuietArea({ group }: AreaSectionProps) {
   const regionId = `dashboard-quiet-${group.areaId}`;
   return (
     <li className="border-b border-border last:border-b-0">
-      <div className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5">
-        <span className="min-w-55 font-semibold">{`${group.areaCode} ${group.areaName}`}</span>
-        <span className="min-w-60 text-text-2">{`ตึก ${buildingText(group.buildingCode, names)} · ${group.points.length} จุด`}</span>
-        <span className="flex-1 text-text-3">{summary}</span>
+      <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2.5">
+        <span className="min-w-0 font-semibold sm:min-w-52">{`${group.areaCode} ${group.areaName}`}</span>
+        <span className="min-w-0 text-text-2 sm:min-w-56">{`ตึก ${buildingText(group.buildingCode, names)} · ${group.points.length} จุด`}</span>
+        <span className="min-w-0 flex-1 text-text-3">{summary}</span>
         <Button
           variant="link"
           size="desk"

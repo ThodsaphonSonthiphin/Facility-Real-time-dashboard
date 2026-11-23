@@ -32,8 +32,8 @@ export const statusText: Record<PointStatus, string> = {
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'dangerSolid' | 'link' | 'add';
 /** phone: 48 px; main: the phone page's one main action, 56 px and full width; desk: the Admin pages, 36 px; adaptive: 48 px mobile / 36 px from sm (640 px). */
 export type ButtonSize = 'phone' | 'main' | 'desk' | 'adaptive';
-/** code: the phone's 56 px field for an employee ID or a phone number, with big digits (the design file's Login). */
-export type InputSize = 'phone' | 'desk' | 'code';
+/** code: the phone's 56 px field for an employee ID or a phone number, with big digits (the design file's Login); adaptive: 48 px mobile / 36 px from sm (640 px). */
+export type InputSize = 'phone' | 'desk' | 'adaptive' | 'code';
 
 /** The keyboard focus ring of every control (MASTER.md: visible focus on every control). */
 export const focusRing = 'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent';
@@ -91,6 +91,7 @@ const inputBase =
 const inputSizes: Record<InputSize, string> = {
   phone: 'min-h-12 px-3 text-base',
   desk: 'min-h-9 px-3 text-sm',
+  adaptive: 'min-h-12 px-3 text-base sm:min-h-9 sm:text-sm',
   code: 'min-h-14 px-4 text-[22px] tabular-nums tracking-wider',
 };
 
@@ -102,6 +103,7 @@ export function inputClass(size: InputSize = 'phone'): string {
 const textAreaSizes: Record<InputSize, string> = {
   phone: 'min-h-24 px-3 py-2.5 text-base',
   desk: 'min-h-20 px-3 py-2 text-sm',
+  adaptive: 'min-h-24 px-3 py-2.5 text-base sm:min-h-20 sm:py-2 sm:text-sm',
   code: 'min-h-24 px-3 py-2.5 text-base',
 };
 
@@ -117,7 +119,7 @@ export function textAreaClass(size: InputSize = 'phone'): string {
  * of a few choices in one frame is `Segmented`, a page's views are `Tabs`.
  */
 export const toggleClass =
-  'inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-border-control bg-surface px-3 text-text ' +
+  'inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md border border-border-control bg-surface px-3 text-text sm:min-h-9 ' +
   'ring-accent ring-inset enabled:hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent-subtle ' +
   `aria-pressed:ring-1 disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`;
 

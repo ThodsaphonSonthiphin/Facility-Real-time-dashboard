@@ -26,7 +26,7 @@ export function AreasPage() {
         title="พื้นที่และป้าย"
         subtitle={areas.data ? areaTotals(areas.data) : '\u00A0'}
         actions={
-          <Link className={buttonClass('primary', 'desk')} data-tap="" to="/admin/areas/new">
+          <Link className={buttonClass('primary', 'adaptive')} data-tap="" to="/admin/areas/new">
             <Plus aria-hidden="true" className="size-4" />
             เพิ่มพื้นที่
           </Link>
@@ -34,8 +34,8 @@ export function AreasPage() {
       />
       {error && <Note tone="error" onRetry={retryError}>{getErrorMessage(error)}</Note>}
       {areaId !== undefined && selectedId === undefined && <Note tone="error">ไม่พบพื้นที่นี้</Note>}
-      {/* the design file's list rail, then the rest; no token describes a two-column track list */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+      {/* Two-column master-detail begins at xl (1280px) so iPad portrait/landscape keeps full width for AreaDetailPanel. */}
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
         <AreaList
           areas={filteredAreas} total={areas.data?.length} selectedId={selectedId} loading={areas.isLoading}
           names={names} buildings={buildings} search={search} onSearch={setSearch}

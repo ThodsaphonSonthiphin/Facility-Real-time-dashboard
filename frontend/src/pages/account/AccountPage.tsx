@@ -1,5 +1,6 @@
 import { LogOut } from 'lucide-react';
 import type { Role } from '../../shared/api/types';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { AvatarBadge } from '../../shared/components/AvatarBadge/AvatarBadge';
 import { Button } from '../../shared/components/Button';
 import { LogoutConfirmDialog } from '../../shared/components/LogoutConfirmDialog/LogoutConfirmDialog';
@@ -14,20 +15,15 @@ const roleLabels: Record<Role, string> = {
 };
 
 /**
- * Dedicated mobile Account tab (`/my-account`) for Cleaners and Supervisors.
+ * Dedicated Account screen (`/my-account`) for Cleaners (mobile PhoneScreen) and Supervisors (unified responsive shell).
  * Houses user identity and confirmed sign-out cleanly separated from active task lists (Heuristics #3, #4, #5).
  */
 export function AccountPage() {
   const { user, confirmOpen, openConfirm, closeConfirm, confirmLogout } = useAccountPage();
+  const isSupervisor = user?.role === 'supervisor';
 
-  return (
-    <PhoneScreen
-      header={
-        <PhoneHeader>
-          <h1 className="text-2xl font-bold text-text">บัญชีของฉัน</h1>
-        </PhoneHeader>
-      }
-    >
+  const content = (
+    <>
       {user && (
         <section
           aria-label="ข้อมูลผู้ใช้งาน"
@@ -43,7 +39,7 @@ export function AccountPage() {
             </div>
           </div>
 
-          <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-border pt-3 text-base">
+          <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-border pt-3 text-base sm:text-sm">
             <dt className="text-text-2">รหัสพนักงาน</dt>
             <dd className="m-0 font-mono font-semibold text-text tabular-nums">{user.username}</dd>
             <dt className="text-text-2">บทบาท</dt>
@@ -55,13 +51,39 @@ export function AccountPage() {
       )}
 
       <div className="mt-2 border-t border-border pt-4">
-        <Button variant="danger" size="phone" className="w-full" onClick={openConfirm}>
-          <LogOut aria-hidden="true" className="size-5" />
+        <Button
+          variant="danger"
+          size={isSupervisor ? 'adaptive' : 'phone'}
+          className={isSupervisor ? 'w-full sm:w-auto' : 'w-full'}
+          onClick={openConfirm}
+        >
+          <LogOut aria-hidden="true" className={isSupervisor ? 'size-5 sm:size-4' : 'size-5'} />
           ออกจากระบบ
         </Button>
       </div>
 
-      {confirmOpen && <LogoutConfirmDialog phone onCancel={closeConfirm} onConfirm={confirmLogout} />}
+      {confirmOpen && <LogoutConfirmDialog phone={!isSupervisor} onCancel={closeConfirm} onConfirm={confirmLogout} />}
+    </>
+  );
+
+  if (isSupervisor) {
+    return (
+      <main className="flex min-w-0 flex-col gap-4 text-base text-text sm:gap-5 sm:text-sm">
+        <AdminPageHeader title="บัญชีของฉัน" />
+        <div className="flex max-w-lg flex-col gap-4">{content}</div>
+      </main>
+    );
+  }
+
+  return (
+    <PhoneScreen
+      header={
+        <PhoneHeader>
+          <h1 className="text-2xl font-bold text-text">บัญชีของฉัน</h1>
+        </PhoneHeader>
+      }
+    >
+      {content}
     </PhoneScreen>
   );
 }

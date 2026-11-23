@@ -1,5 +1,4 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { focusRing } from './styles';
 
 interface TabsProps<T extends string> {
   /** The list's name for a screen reader, such as ส่วนของพื้นที่. */
@@ -47,7 +46,11 @@ export function Tabs<T extends string>({ label, tabs, value, onChange, idPrefix,
       ref={list}
       role="tablist"
       aria-label={label}
-      className={ruled ? 'flex gap-1 border-b border-border' : 'flex flex-wrap gap-1'}
+      className={
+        ruled
+          ? 'flex max-w-full flex-nowrap gap-1 overflow-x-auto border-b border-border'
+          : 'flex max-w-full flex-nowrap gap-1 overflow-x-auto'
+      }
       onKeyDown={onKey}
     >
       {tabs.map((one) => (
@@ -62,9 +65,10 @@ export function Tabs<T extends string>({ label, tabs, value, onChange, idPrefix,
           tabIndex={value === one.id ? 0 : -1}
           onClick={() => onChange(one.id)}
           className={
-            '-mb-px inline-flex min-h-12 cursor-pointer items-center gap-2 border-x-0 border-t-0 border-b-2 ' +
-            'border-transparent bg-transparent px-3 text-sm font-semibold text-text-3 hover:text-accent ' +
-            `aria-selected:border-accent aria-selected:text-accent ${focusRing}`
+            'inline-flex min-h-12 shrink-0 cursor-pointer items-center gap-2 border-x-0 border-t-0 border-b-2 ' +
+            'border-transparent bg-transparent px-3 text-sm font-semibold whitespace-nowrap text-text-3 hover:text-accent ' +
+            'aria-selected:border-accent aria-selected:text-accent ' +
+            'focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-accent'
           }
         >
           {one.label}

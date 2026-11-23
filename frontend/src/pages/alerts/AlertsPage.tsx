@@ -68,11 +68,12 @@ export function AlertsPage() {
       </section>
       {notice && <Toast notice={notice} onClose={() => setNotice(null)} />}
       <section className={panelClass} aria-labelledby="alerts-list">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3.5">
+        <div className="flex flex-col gap-3 border-b border-border px-4 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <h2 id="alerts-list" className="text-base font-bold">
             เตือนจากการสแกน
           </h2>
           <Segmented
+            size="adaptive"
             label="วัน"
             value={day}
             onChange={setDay}
@@ -82,35 +83,38 @@ export function AlertsPage() {
             ]}
           />
         </div>
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-4">
-          <Tabs
-            label="ประเภทเตือน"
-            idPrefix="alerts"
-            ruled={false}
-            value={tab}
-            onChange={setTab}
-            tabs={alertTabs.map((one) => {
-              const Icon = tabIcon[one];
-              const waiting = list.filter((alert) => alertTabOf(alert) === one && !alert.reviewed).length;
-              return {
-                id: one,
-                label: (
-                  <>
-                    <Icon aria-hidden="true" className="size-4" />
-                    {alertTabLabel[one]}
-                    <span
-                      title="ยังไม่ได้คุย"
-                      className={`${countClass} min-h-5.5 min-w-5.5 px-1.5 ${waiting > 0 ? countTones.rework : countTones.idle}`}
-                    >
-                      {waiting}
-                    </span>
-                  </>
-                ),
-              };
-            })}
-          />
-          <div className="mb-2">
+        <div className="flex flex-col border-b border-border lg:flex-row lg:items-end lg:justify-between lg:gap-3 lg:px-4">
+          <div className="border-b border-border px-3 lg:border-b-0 lg:px-0">
+            <Tabs
+              label="ประเภทเตือน"
+              idPrefix="alerts"
+              ruled={false}
+              value={tab}
+              onChange={setTab}
+              tabs={alertTabs.map((one) => {
+                const Icon = tabIcon[one];
+                const waiting = list.filter((alert) => alertTabOf(alert) === one && !alert.reviewed).length;
+                return {
+                  id: one,
+                  label: (
+                    <>
+                      <Icon aria-hidden="true" className="size-4" />
+                      {alertTabLabel[one]}
+                      <span
+                        title="ยังไม่ได้คุย"
+                        className={`${countClass} min-h-5.5 min-w-5.5 px-1.5 ${waiting > 0 ? countTones.rework : countTones.idle}`}
+                      >
+                        {waiting}
+                      </span>
+                    </>
+                  ),
+                };
+              })}
+            />
+          </div>
+          <div className="bg-surface-2 p-3 lg:mb-2 lg:bg-transparent lg:p-0">
             <Segmented
+              size="adaptive"
               label="สถานะการคุย"
               value={review}
               onChange={setReview}

@@ -2,11 +2,11 @@ import { Check, Hourglass, RefreshCw, RotateCcw, type LucideIcon } from 'lucide-
 import { useState } from 'react';
 import { freshOnOpen } from '../../shared/api/baseApi';
 import type { PointStatus } from '../../shared/api/types';
+import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../shared/components/Button';
 import { ConnectionBanner } from '../../shared/components/ConnectionBanner/ConnectionBanner';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
-import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
 import { focusRing } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
@@ -17,8 +17,8 @@ import { useGetMyBuildingQuery, type MyBuilding } from './myBuildingApi';
 type BuildingStatusFilter = 'PendingInspection' | 'Rework' | 'Passed' | null;
 
 /**
- * Supervisor home screen (`/my-building`): interactive status filter summary cards, top-right refresh, top connection
- * banner when needed, and persistent 3-tab bottom navigation (`ตึกของฉัน`, `จัดตารางงาน`, `บัญชี`) via PhoneScreen.
+ * Supervisor home screen (`/my-building`): responsive across mobile, tablet/iPad, and desktop inside the unified
+ * Supervisor wide shell, with interactive status filter cards and multi-column point grid on larger viewports.
  */
 export function MyBuildingPage() {
   const { data, error, isLoading, isFetching, refetch } = useGetMyBuildingQuery(undefined, freshOnOpen);
@@ -28,24 +28,18 @@ export function MyBuildingPage() {
     setStatusFilter((current) => (current === next ? null : next));
   };
 
-  const header = (
-    <PhoneHeader
-      action={
-        <Button variant="secondary" size="phone" disabled={isFetching} onClick={() => void refetch()}>
-          <RefreshCw aria-hidden="true" className="size-5" />
-          {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
-        </Button>
-      }
-    >
-      <h1 className="text-2xl font-bold text-text">ตึกของฉัน</h1>
-      <span className="min-h-5 min-w-0 text-sm wrap-break-word text-text-2 tabular-nums">
-        {data ? `${shiftLabel[data.shift]} · ${countLine(data)}` : ''}
-      </span>
-    </PhoneHeader>
-  );
-
   return (
-    <PhoneScreen header={header}>
+    <main className="flex min-w-0 flex-col gap-4 text-base text-text sm:gap-5 sm:text-sm">
+      <AdminPageHeader
+        title="ตึกของฉัน"
+        subtitle={data ? `${shiftLabel[data.shift]} · ${countLine(data)}` : ''}
+        actions={
+          <Button variant="secondary" size="adaptive" disabled={isFetching} onClick={() => void refetch()}>
+            <RefreshCw aria-hidden="true" className="size-5 sm:size-4" />
+            {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
+          </Button>
+        }
+      />
       <ConnectionBanner refreshing={isFetching} onRetry={() => void refetch()} />
       {isLoading && <PageLoading lines={3}>กำลังโหลดจุด...</PageLoading>}
       {error && (
@@ -57,7 +51,7 @@ export function MyBuildingPage() {
         <Summary building={data} selected={statusFilter} onToggle={toggleFilter} onReset={() => setStatusFilter(null)} />
       )}
       {data && <BuildingList building={data} filter={statusFilter} onReset={() => setStatusFilter(null)} />}
-    </PhoneScreen>
+    </main>
   );
 }
 
@@ -110,7 +104,7 @@ function Summary({
         />
       </ul>
       {selected !== null && (
-        <Button variant="link" size="phone" className="self-start" onClick={onReset}>
+        <Button variant="link" size="adaptive" className="self-start" onClick={onReset}>
           {`แสดงทุกสถานะ (${points.length} จุด)`}
         </Button>
       )}
@@ -174,7 +168,7 @@ function BuildingList({
     return (
       <div className="flex flex-col items-start gap-2 rounded-lg border border-border bg-surface p-4">
         <p className="text-text-2">ไม่มีจุดในสถานะที่เลือกตอนนี้</p>
-        <Button variant="secondary" size="phone" onClick={onReset}>
+        <Button variant="secondary" size="adaptive" onClick={onReset}>
           แสดงทุกสถานะ
         </Button>
       </div>
@@ -197,7 +191,7 @@ function BuildingList({
             {points.length === 0 ? (
               <p className="text-text-2">ตึกนี้ยังไม่มีจุด</p>
             ) : (
-              <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              <ul className="m-0 grid list-none grid-cols-1 gap-2.5 p-0 md:grid-cols-2 xl:grid-cols-3">
                 {inspectionOrder(points).map((point) => (
                   <BuildingCard key={point.id} point={point} canInspect={section.canInspect} />
                 ))}

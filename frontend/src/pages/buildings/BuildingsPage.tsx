@@ -24,7 +24,7 @@ export function BuildingsPage() {
       <AdminPageHeader
         title="ตึก"
         actions={
-          <Button variant="primary" size="desk" onClick={create}>
+          <Button variant="primary" size="adaptive" onClick={create}>
             <Plus aria-hidden="true" className="size-4" />
             เพิ่มตึก
           </Button>
