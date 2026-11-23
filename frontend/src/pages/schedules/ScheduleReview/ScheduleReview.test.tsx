@@ -10,7 +10,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 async function enterDraft(app: Awaited<ReturnType<typeof editorApp>>) {
-  await app.user.click(await screen.findByRole('button', { name: /แก้เฉพาะวันที่.*17\/11/ }));
+  await app.user.click(await screen.findByRole('button', { name: /แก้เฉพาะวันที่.*17 พ\.ย\. 2569/ }));
   const panel = within(await screen.findByRole('dialog', { name: 'แก้ตารางเฉพาะวันที่' }));
   await app.user.selectOptions(panel.getByLabelText('พื้นที่เฉพาะวันนี้'), '5');
   return panel;

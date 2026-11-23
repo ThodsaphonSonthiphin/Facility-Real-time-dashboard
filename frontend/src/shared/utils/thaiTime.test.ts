@@ -5,6 +5,8 @@ import {
   formatMinutes,
   formatRound,
   formatShiftDate,
+  formatThaiDate,
+  formatThaiShortDate,
   formatTime,
   formatWeekday,
   parseShiftDate,
@@ -27,6 +29,12 @@ describe('thaiTime', () => {
 
   it('formatShiftDate writes a shift date from the server (already Thai) as day/month/year', () => {
     expect(formatShiftDate('2026-10-05')).toBe('05/10/2026');
+  });
+
+  it('formatThaiDate and formatThaiShortDate write Thai month abbreviations with Buddhist year', () => {
+    expect(formatThaiDate('2026-11-23')).toBe('23 พ.ย. 2569');
+    expect(formatThaiDate('2027-01-03')).toBe('3 ม.ค. 2570');
+    expect(formatThaiShortDate('2026-11-05')).toBe('5 พ.ย.');
   });
 
   it('parseShiftDate reads a typed day/month/year, and refuses what is not a real date in that form', () => {

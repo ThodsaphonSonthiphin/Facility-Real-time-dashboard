@@ -36,6 +36,9 @@ export interface CheckInPageView {
   confirmable: boolean;
   canShiftOutOrigin: boolean;
   transferPending: boolean;
+  otherActionsOpen: boolean;
+  openOtherActions: () => void;
+  closeOtherActions: () => void;
   press: (eventType: AttendanceEvent) => void;
   confirmGaps: () => void;
   cancelGaps: () => void;

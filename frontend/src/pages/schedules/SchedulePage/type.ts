@@ -22,13 +22,6 @@ export interface SchedulePageView {
   /** Another answer is on its way over an older one already on screen. */
   isFetching: boolean;
   error: unknown;
-  /**
-   * Spec §12: the read on screen may be older than the stored plan. It stays until a read that started after the push
-   * succeeded; a reconnect, a request start or a failed read never clears it.
-   */
-  mayBeStale: boolean;
-  /** What the hub said about this read's connection, for the footnote beside it. */
-  hubStatus: 'connecting' | 'live' | 'reconnecting';
   /** Ask again now: the "อัปเดต" control and a failed read's retry. */
   refetch: () => void;
   reloadEditorWeek: () => Promise<ScheduleWeek>;

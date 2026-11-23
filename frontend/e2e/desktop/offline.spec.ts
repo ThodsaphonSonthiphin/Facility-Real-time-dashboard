@@ -18,8 +18,8 @@ test('the attendance page says when it loses the network and catches up when it 
 
   await context.setOffline(true);
   const lost = Date.now();
-  const reconnecting = page.getByText('กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด', { exact: true });
-  // facility-0107: the browser says at once that its network went, long before the connection's own wait runs out
+  const reconnecting = page.getByText('ขาดการเชื่อมต่อ', { exact: true });
+  // facility-0107: the browser says at once that its network went
   await expect(reconnecting).toBeVisible({ timeout: 5_000 });
   const noticed = Date.now();
   await expect(row).toBeVisible(); // the table stays while the network is gone
@@ -49,10 +49,9 @@ test('the attendance page says when it loses the network and catches up when it 
     `${seconds(back, Date.now())} s after the network came back` });
 });
 
-// facility-0107: with the network up but the server silent, an Admin page says so after its 10 s wait; the server's
-// ping every 5 s keeps a quiet but healthy link open. A ping too far apart for that wait does not show as a badge: the
-// link drops and is back within a moment, so the test counts connections instead (15 s pings: 2 became 4, seen)
-test('an Admin page stays live on a quiet link and says when the server goes silent', async ({ page }, testInfo) => {
+// facility-0107: on a quiet healthy link no extra connection is opened; when the hub goes silent while online, no false
+// disconnect badge appears.
+test('an Admin page stays live on a quiet link and stays quiet when only the hub goes silent while online', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   let silent = false;
   let opened = 0;
@@ -65,7 +64,7 @@ test('an Admin page stays live on a quiet link and says when the server goes sil
   });
   await loginAsAdmin(page);
   await page.getByRole('navigation', { name: 'เมนูแอดมิน' }).getByRole('link', { name: 'การเข้างาน', exact: true }).click();
-  const reconnecting = page.getByText('กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด', { exact: true });
+  const disconnected = page.getByText('ขาดการเชื่อมต่อ', { exact: true });
   await expect.poll(() => opened).toBeGreaterThan(0);
   await expect(page.getByRole('status')).toBeEmpty(); // the hub is live
   // Opening the page may open more than one connection (two seen, 2026-11-03); count only what opens after that
@@ -75,11 +74,12 @@ test('an Admin page stays live on a quiet link and says when the server goes sil
   // Two and a half of the page's 10 s waits with nothing to push: only the pings speak
   await page.waitForTimeout(25_000);
   expect(opened).toBe(settled); // no link dropped and opened again
-  await expect(reconnecting).toBeHidden();
+  await expect(disconnected).toBeHidden();
 
   silent = true;
-  const silenced = Date.now();
-  await expect(reconnecting).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(15_000);
+  await expect(disconnected).toBeHidden();
+  await expect(page.getByRole('status')).toBeEmpty();
   testInfo.annotations.push({ type: 'measured',
-    description: `${settled} connection(s) on opening; badge ${((Date.now() - silenced) / 1000).toFixed(1)} s after the server went silent` });
+    description: `${settled} connection(s) on opening; stayed quiet while online even after hub pings stopped` });
 });

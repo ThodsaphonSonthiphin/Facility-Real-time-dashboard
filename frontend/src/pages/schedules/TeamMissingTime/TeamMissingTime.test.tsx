@@ -28,7 +28,7 @@ const initial: AttendanceState = {
 };
 
 const openMissingTime = async (user: Awaited<ReturnType<typeof editorApp>>['user']) => {
-  await user.click(await screen.findByRole('button', { name: /เพิ่มเวลาที่ขาด.*17\/11/ }));
+  await user.click(await screen.findByRole('button', { name: /เพิ่มเวลาที่ขาด.*17 พ\.ย\./ }));
   const drawer = within(await screen.findByRole('dialog', { name: 'เพิ่มเวลาที่ขาด' }));
   await drawer.findByLabelText('รายการลงเวลา');
   return drawer;
@@ -53,7 +53,7 @@ it('uses server eligibility and the selected slot revision, requires a reason an
   const drawer = await openMissingTime(app.user);
   expect(app.calls.find(({ path }) => path === '/api/team-attendance/7')?.search).toContain('shiftDate=2026-11-17&shift=Day');
   expect(drawer.getByRole('option', { name: 'เข้างาน · ลงเวลาแล้ว 07:03' })).toBeDisabled();
-  expect(drawer.getByRole('option', { name: 'กลับจากพัก 2 · ไม่ต้องลงเวลาเนื่องจากลา' })).toBeDisabled();
+  expect(drawer.getByRole('option', { name: 'กลับจากพักบ่าย · ไม่ต้องลงเวลาเนื่องจากลา' })).toBeDisabled();
 
   await app.user.selectOptions(drawer.getByLabelText('รายการลงเวลา'), 'Break1Out');
   fireEvent.change(drawer.getByLabelText('เวลาที่เกิดขึ้นจริง (เวลาไทย)'), { target: { value: '10:00' } });
@@ -67,7 +67,7 @@ it('uses server eligibility and the selected slot revision, requires a reason an
     userId: 7, shiftDate: '2026-11-17', shift: 'Day', eventType: 'Break1Out',
     time: '10:00', reason: 'ลืมสแกน', expectedRevision: 'attendance-1',
   });
-  expect(await drawer.findByRole('option', { name: 'ออกพัก 1 · ลงเวลาแล้ว 10:00' })).toBeDisabled();
+  expect(await drawer.findByRole('option', { name: 'พักเที่ยง · ลงเวลาแล้ว 10:00' })).toBeDisabled();
 });
 
 it('shows the stored departure and leave mismatch in the scoped slot', async () => {
@@ -106,7 +106,7 @@ it('refreshes on a competing scan and cannot resubmit that action', async () => 
   await app.user.click(drawer.getByRole('button', { name: 'บันทึกเวลาที่ขาด' }));
 
   expect(await drawer.findByText('มีการลงเวลารายการนี้แล้ว')).toBeVisible();
-  await waitFor(() => expect(drawer.getByRole('option', { name: 'ออกพัก 1 · ลงเวลาแล้ว 10:01' })).toBeDisabled());
+  await waitFor(() => expect(drawer.getByRole('option', { name: 'พักเที่ยง · ลงเวลาแล้ว 10:01' })).toBeDisabled());
   expect(drawer.getByRole('button', { name: 'บันทึกเวลาที่ขาด' })).toBeDisabled();
   expect(drawer.getByLabelText('รายการลงเวลา')).toHaveValue('');
 });
@@ -138,7 +138,7 @@ it('keeps a dirty draft on its original revision until the supervisor accepts a 
   await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
 
   expect(await drawer.findByText('ข้อมูลการลงเวลาเปลี่ยนแล้ว')).toBeVisible();
-  expect(drawer.getByRole('option', { name: 'กลับจากพัก 1 · ลงเวลาแล้ว 11:00' })).toBeDisabled();
+  expect(drawer.getByRole('option', { name: 'กลับจากพักเที่ยง · ลงเวลาแล้ว 11:00' })).toBeDisabled();
   expect(selection).toHaveValue('Break1Out');
   expect(time).toHaveValue('10:00');
   expect(reason).toHaveValue('ลืมสแกนก่อนพัก');

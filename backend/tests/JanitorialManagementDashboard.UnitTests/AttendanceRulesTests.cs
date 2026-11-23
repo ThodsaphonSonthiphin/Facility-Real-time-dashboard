@@ -88,6 +88,18 @@ public class AttendanceRulesTests
         Assert.Null(AttendanceRules.CheckTimes( Times()));
 
     [Fact]
+    public void Order_error_uses_shift_aware_break_wording()
+    {
+        var outOfOrder = Times((AttendanceEvent.ShiftIn, 60), (AttendanceEvent.Break1Out, 30));
+
+        var dayError = AttendanceRules.CheckTimes(outOfOrder, Shift.Day);
+        Assert.Contains("พักเที่ยง → กลับจากพักเที่ยง → พักบ่าย → กลับจากพักบ่าย", dayError);
+
+        var nightError = AttendanceRules.CheckTimes(outOfOrder, Shift.Night);
+        Assert.Contains("พักรอบ 1 → กลับจากพักรอบ 1 → พักรอบ 2 → กลับจากพักรอบ 2", nightError);
+    }
+
+    [Fact]
     public void Missing_events_once_the_shift_is_over()
     {
         Assert.Empty(AttendanceRules.MissingAtShiftEnd([]));

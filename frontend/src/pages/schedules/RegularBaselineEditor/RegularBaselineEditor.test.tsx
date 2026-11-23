@@ -41,7 +41,7 @@ it('reviews the authoritative before values for the effective date in another we
   await app.user.selectOptions(drawer.getByLabelText('พื้นที่ประจำ'), '5');
   await app.user.click(drawer.getByRole('button', { name: 'ตรวจสอบ' }));
   expect(drawer.getByText('ก่อน · พื้นที่ 6 · กลุ่มพัก 2')).toBeVisible();
-  expect(drawer.getByText(/เริ่ม 24\/11\/2026/)).toBeVisible();
+  expect(drawer.getByText(/เริ่ม 24 พ\.ย\. 2569/)).toBeVisible();
 });
 
 it('allows Supervisor to assign shift, area, and optional break group starting today for an unassigned cleaner', async () => {

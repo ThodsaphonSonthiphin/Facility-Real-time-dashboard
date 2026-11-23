@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { RowProblem, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
-import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
+import { formatThaiDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { offsetDate, type CommandDraft } from '../commandRules';
 import { useScheduleReview } from '../ScheduleReview/useScheduleReview';
 import { clockSlot } from '../scheduleRules';
@@ -42,7 +42,7 @@ export function copyOffChoices(
 function describeDates(dates: string[] | undefined) {
   return dates === undefined ? 'ยังไม่กำหนด'
     : dates.length === 0 ? 'ไม่มีวันหยุดที่เลือก'
-      : dates.map((day) => `${formatWeekday(day)} ${formatShiftDate(day)}`).join(' · ');
+      : dates.map((day) => `${formatWeekday(day)} ${formatThaiDate(day)}`).join(' · ');
 }
 
 export function useWeeklyOffEditor(props: WeeklyOffEditorProps) {

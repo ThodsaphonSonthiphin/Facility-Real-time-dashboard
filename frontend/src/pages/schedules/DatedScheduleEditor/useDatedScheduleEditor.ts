@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { RowProblem, ScheduleDay } from '../../../shared/api/scheduleTypes';
-import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
+import { formatThaiDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { offsetDate, type CommandDraft } from '../commandRules';
 import { useScheduleReview } from '../ScheduleReview/useScheduleReview';
 import { clockSlot } from '../scheduleRules';
@@ -71,7 +71,7 @@ export function useDatedScheduleEditor(props: DatedScheduleEditorProps) {
     : (id == null ? 'ยังไม่กำหนด' : `กลุ่ม ${id}`);
   const line = (day: ScheduleDay) => ({
     id: key,
-    label: `${props.person.displayName} · ${formatWeekday(date)} ${formatShiftDate(date)} · ${fieldNames[action]}`,
+    label: `${props.person.displayName} · ${formatWeekday(date)} ${formatThaiDate(date)} · ${fieldNames[action]}`,
     before: leave ? leaveLabel(day.edit?.leave) : numberLabel(area ? day.area.value : day.breakGroup.value),
     after: action === 'leave' && utcFromThai(startsAt) && utcFromThai(endsAt)
       ? leaveLabel({ revision: '0', startsAt: utcFromThai(startsAt), endsAt: utcFromThai(endsAt) })
@@ -108,7 +108,7 @@ export function useDatedScheduleEditor(props: DatedScheduleEditorProps) {
     latest: editor.ui !== 'conflict' || changes ? latest : undefined,
     areas: edit?.areas ?? [],
     corrections: current?.corrections ?? [],
-    dateLabel: `${formatWeekday(date)} ${formatShiftDate(date)}`,
+    dateLabel: `${formatWeekday(date)} ${formatThaiDate(date)}`,
     choices: availableActions.map((value) => ({ value, label: fieldNames[value] })),
     setAction: (action: DatedAction) => setDraft(draftFor(base, action)),
     useLatest: () => {

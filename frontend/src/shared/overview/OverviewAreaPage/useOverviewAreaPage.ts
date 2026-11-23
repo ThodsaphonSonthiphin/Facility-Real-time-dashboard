@@ -4,7 +4,7 @@ import { freshOnOpen } from '../../api/baseApi';
 import { getErrorMessage } from '../../utils/getErrorMessage';
 import { shiftShortLabel } from '../../utils/labels';
 import { formatDate, formatShiftDate, formatTime } from '../../utils/thaiTime';
-import { overviewApi, overviewHubKey, useGetOverviewAreaQuery } from '../overviewApi';
+import { overviewApi, useGetOverviewAreaQuery } from '../overviewApi';
 import { overviewHref, readOverviewContext } from '../overviewContext';
 import type { OverviewContext, OverviewView } from '../types';
 import { useOverviewRecovering, useOverviewRefresh } from '../useOverviewRefresh';
@@ -63,7 +63,6 @@ export function useOverviewAreaPage(routeView: OverviewView): OverviewAreaPageMo
     loading: args !== skipToken && result.isFetching && !detail,
     error,
     recovering,
-    hubKey: args !== skipToken && detail && detail.context.phase !== 'closed' ? overviewHubKey(args) : undefined,
     readAtText: detail && formatTime(detail.context.readAtUtc),
     backHref: back.ok ? overviewHref(back.context) : '/admin/overview',
     readOnly,

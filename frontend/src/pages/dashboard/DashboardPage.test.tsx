@@ -228,28 +228,34 @@ describe('DashboardPage (D1, facility-0058, 0061, 0064)', () => {
     }
   });
 
-  it('the badge shows only while pushes do not arrive, and a reconnect asks the server again (facility-0064)', async () => {
+  it('shows the badge only while offline, stays quiet during hub reconnects, and asks the server again on reconnect', async () => {
     const server = serve();
     const { store } = await renderApp('/dashboard');
     await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
-    expect(screen.getByRole('status')).toBeEmptyDOMElement(); // not while the first connection is made (owner, 2026-10-28)
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
     await settled(server, store);
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
 
     act(() => hub.latest().reconnecting());
-    expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด');
-    act(() => hub.latest().reconnected());
-
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
+
+    act(() => window.dispatchEvent(new Event('offline')));
+    expect(screen.getByRole('status')).toHaveTextContent('ขาดการเชื่อมต่อ');
+
+    act(() => window.dispatchEvent(new Event('online')));
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+
+    act(() => hub.latest().reconnected());
     await waitFor(() => expect(pointGets(server)).toHaveLength(3));
   });
 
-  it('a first connection that fails shows the badge (facility-0064)', async () => {
+  it('a first hub connection that fails while online stays quiet', async () => {
     hub.failNextStarts = 1;
     serve();
     await renderApp('/dashboard');
+    await screen.findByRole('region', { name: 'AR01 Area ทดลอง' });
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด'));
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
 
   it("shows the server's message when the list cannot be read", async () => {

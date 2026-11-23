@@ -7,7 +7,7 @@ import type {
   BoardRow,
 } from '../../shared/api/attendanceBoardApi';
 import type { AttendanceEvent, Shift } from '../../shared/api/types';
-import { attendanceEvents, eventLabel } from '../../shared/utils/labels';
+import { attendanceEventLabel, attendanceEvents } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
 
 /** Wireframe D2's status column (facility-0050). */
@@ -162,9 +162,9 @@ export function draftProblems(
     }
     if (before && inShift(time, shift) <= inShift(before.time, shift)) {
       if (changed.has(type)) {
-        problems[type] ??= `ต้องหลังเวลา${eventLabel[before.type]} (${before.time})`;
+        problems[type] ??= `ต้องหลังเวลา${attendanceEventLabel(before.type, shift)} (${before.time})`;
       } else if (changed.has(before.type)) {
-        problems[before.type] ??= `ต้องก่อนเวลา${eventLabel[type]} (${time})`;
+        problems[before.type] ??= `ต้องก่อนเวลา${attendanceEventLabel(type, shift)} (${time})`;
       }
     }
     before = { type, time };

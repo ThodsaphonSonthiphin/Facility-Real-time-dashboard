@@ -89,7 +89,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
     );
     const { user } = await renderApp('/admin/attendance');
 
-    expect(await screen.findByRole('columnheader', { name: 'ออกพัก 2' })).toBeVisible();
+    expect(await screen.findByRole('columnheader', { name: 'พักบ่าย' })).toBeVisible();
     expect(screen.queryByRole('columnheader', { name: /^ออกพัก$/ })).not.toBeInTheDocument();
     expect(screen.getByText('หัวหน้าเติมเวลา')).toBeVisible();
     expect(screen.getByText('ยืนยันเข้าพื้นที่ใหม่ 13:05')).toBeVisible();
@@ -97,14 +97,14 @@ describe('attendance corrections (D2, facility-0051)', () => {
 
     await user.click(screen.getByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = screen.getByRole('dialog', { name: 'แก้เวลา' });
-    expect(time(form, 'กลับจากพัก 2')).toHaveValue('');
-    expect(time(form, 'ออกพัก 2')).toHaveValue('16:00');
-    await user.clear(time(form, 'ออกพัก 2'));
-    await user.type(time(form, 'ออกพัก 2'), '16:05');
+    expect(time(form, 'กลับจากพักบ่าย')).toHaveValue('');
+    expect(time(form, 'พักบ่าย')).toHaveValue('16:00');
+    await user.clear(time(form, 'พักบ่าย'));
+    await user.type(time(form, 'พักบ่าย'), '16:05');
     await user.click(within(form).getByRole('radio', { name: 'ลืมลงเวลา' }));
     await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
 
-    expect(await screen.findByText('บันทึกเวลาออกพัก 2ของ แม่บ้านทดสอบ แล้ว')).toBeVisible();
+    expect(await screen.findByText('บันทึกเวลาพักบ่ายของ แม่บ้านทดสอบ แล้ว')).toBeVisible();
     expect(puts(server).map((call) => call.body)).toEqual([
       expect.objectContaining({ eventType: 'Break2Out', time: '16:05', reason: 'ลืมลงเวลา' }),
     ]);
@@ -126,11 +126,11 @@ describe('attendance corrections (D2, facility-0051)', () => {
     await user.click(screen.getByRole('button', { name: 'แก้เวลา แม่บ้านย้ายเข้า' }));
     const form = screen.getByRole('dialog', { name: 'แก้เวลา' });
     expect(time(form, 'เข้างาน')).toHaveValue('07:10');
-    await user.type(time(form, 'ออกพัก 1'), '10:05');
+    await user.type(time(form, 'พักเที่ยง'), '10:05');
     await user.click(within(form).getByRole('radio', { name: 'ลืมลงเวลา' }));
     await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
 
-    expect(await screen.findByText('บันทึกเวลาออกพัก 1ของ แม่บ้านย้ายเข้า แล้ว')).toBeVisible();
+    expect(await screen.findByText('บันทึกเวลาพักเที่ยงของ แม่บ้านย้ายเข้า แล้ว')).toBeVisible();
     expect(puts(server).map((call) => call.body)).toEqual([
       expect.objectContaining({ userId: transferred.id, eventType: 'Break1Out', time: '10:05' }),
     ]);
@@ -186,7 +186,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
       'ไม่ได้ลง',
     ]);
     expect(time(form, 'เข้างาน')).toHaveValue('06:52');
-    expect(time(form, 'ออกพัก 1')).toHaveValue('');
+    expect(time(form, 'พักเที่ยง')).toHaveValue('');
     expect(rows[1].className).toMatch(/accent-subtle/);
     expect(rows[2].className).not.toMatch(/accent-subtle/);
 
@@ -207,12 +207,12 @@ describe('attendance corrections (D2, facility-0051)', () => {
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = screen.getByRole('dialog', { name: 'แก้เวลา' });
 
-    await user.type(time(form, 'ออกพัก 1'), '09:30');
-    await user.type(time(form, 'กลับจากพัก 1'), '09:45');
+    await user.type(time(form, 'พักเที่ยง'), '09:30');
+    await user.type(time(form, 'กลับจากพักเที่ยง'), '09:45');
     await user.click(within(form).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
     await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (2 ช่อง)' }));
 
-    expect(await screen.findByText('บันทึกเวลาออกพัก 1 และกลับจากพัก 1ของ แม่บ้านทดสอบ แล้ว')).toBeInTheDocument();
+    expect(await screen.findByText('บันทึกเวลาพักเที่ยง และกลับจากพักเที่ยงของ แม่บ้านทดสอบ แล้ว')).toBeInTheDocument();
     expect(puts(server).map((call) => call.body)).toEqual([
       { userId: 21, shiftDate: '2026-10-15', shift: 'Day', eventType: 'Break1Out', time: '09:30', reason: 'ไม่มีอินเทอร์เน็ต' },
       { userId: 21, shiftDate: '2026-10-15', shift: 'Day', eventType: 'Break1In', time: '09:45', reason: 'ไม่มีอินเทอร์เน็ต' },
@@ -235,12 +235,12 @@ describe('attendance corrections (D2, facility-0051)', () => {
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = screen.getByRole('dialog', { name: 'แก้เวลา' });
 
-    await user.type(time(form, 'ออกพัก 1'), '09:30');
-    await user.type(time(form, 'กลับจากพัก 1'), '09:45');
+    await user.type(time(form, 'พักเที่ยง'), '09:30');
+    await user.type(time(form, 'กลับจากพักเที่ยง'), '09:45');
     await user.click(within(form).getByRole('radio', { name: 'ลืมลงเวลา' }));
     await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (2 ช่อง)' }));
 
-    expect(await screen.findByText('บันทึกเวลาออกพัก 1 และกลับจากพัก 1ของ แม่บ้านทดสอบ แล้ว')).toBeInTheDocument();
+    expect(await screen.findByText('บันทึกเวลาพักเที่ยง และกลับจากพักเที่ยงของ แม่บ้านทดสอบ แล้ว')).toBeInTheDocument();
     expect(puts(server).map((call) => (call.body as { eventType: string }).eventType)).toEqual(['Break1Out', 'Break1In', 'Break1Out']);
   });
 
@@ -255,14 +255,14 @@ describe('attendance corrections (D2, facility-0051)', () => {
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = screen.getByRole('dialog', { name: 'แก้เวลา' });
 
-    await user.type(time(form, 'ออกพัก 1'), '09:30');
-    await user.type(time(form, 'กลับจากพัก 1'), '09:45');
+    await user.type(time(form, 'พักเที่ยง'), '09:30');
+    await user.type(time(form, 'กลับจากพักเที่ยง'), '09:45');
     await user.click(within(form).getByRole('radio', { name: 'ลืมลงเวลา' }));
     await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (2 ช่อง)' }));
 
     const failed = await within(form).findByRole('alert');
     expect(failed).toHaveTextContent('บันทึกไม่สำเร็จ');
-    expect(failed).toHaveTextContent('บันทึกแล้ว: ออกพัก 1 · ยังไม่ได้บันทึก: กลับจากพัก 1');
+    expect(failed).toHaveTextContent('บันทึกแล้ว: พักเที่ยง · ยังไม่ได้บันทึก: กลับจากพักเที่ยง');
     // What was saved is no longer a change: pressing again sends only the rest
     expect(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' })).toBeEnabled();
   });
@@ -305,17 +305,17 @@ describe('attendance corrections (D2, facility-0051)', () => {
     expect(within(form).getByRole('alert')).toHaveTextContent('ยังไม่ได้แก้เวลาช่องไหน · เลือกเหตุผลอย่างน้อย 1 ข้อ');
     expect(within(form).getByRole('radiogroup', { name: 'เหตุผล' })).toHaveAccessibleDescription('เลือกเหตุผลอย่างน้อย 1 ข้อ');
 
-    await user.type(time(form, 'ออกพัก 1'), '7.05');
+    await user.type(time(form, 'พักเที่ยง'), '7.05');
     expect(within(form).getByText('เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05')).toBeInTheDocument();
-    expect(time(form, 'ออกพัก 1')).toHaveAttribute('aria-invalid', 'true');
-    expect(time(form, 'ออกพัก 1')).toHaveAccessibleDescription('เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05');
+    expect(time(form, 'พักเที่ยง')).toHaveAttribute('aria-invalid', 'true');
+    expect(time(form, 'พักเที่ยง')).toHaveAccessibleDescription('เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05');
 
-    await user.clear(time(form, 'ออกพัก 1'));
-    await user.type(time(form, 'ออกพัก 1'), '06:30');
+    await user.clear(time(form, 'พักเที่ยง'));
+    await user.type(time(form, 'พักเที่ยง'), '06:30');
     expect(within(form).getByText('ต้องหลังเวลาเข้างาน (06:52)')).toBeInTheDocument();
 
-    await user.clear(time(form, 'ออกพัก 1'));
-    await user.type(time(form, 'ออกพัก 1'), '18:30');
+    await user.clear(time(form, 'พักเที่ยง'));
+    await user.type(time(form, 'พักเที่ยง'), '18:30');
     await user.click(within(form).getByRole('radio', { name: 'อื่น ๆ' }));
     expect(within(form).getByRole('alert')).toHaveTextContent('เลือก "อื่น ๆ" ต้องเขียนรายละเอียด');
     await user.click(save());
@@ -328,7 +328,7 @@ describe('attendance corrections (D2, facility-0051)', () => {
 
     expect(await within(form).findByText('เวลาที่ใส่ยังมาไม่ถึง')).toBeInTheDocument();
     expect(puts(server).map((call) => (call.body as { reason: string }).reason)).toEqual(['อื่น ๆ · ลืมสแกน']);
-    expect(time(form, 'ออกพัก 1')).toHaveValue('18:30');
+    expect(time(form, 'พักเที่ยง')).toHaveValue('18:30');
     expect(detail(form)).toHaveValue('ลืมสแกน');
   });
 
@@ -495,11 +495,11 @@ describe('Overview Attendance actions', () => {
     expect(originTime).toHaveValue('');
     expect(within(form).getByText('ลงไว้ที่พื้นที่อื่น')).toBeVisible();
 
-    await user.clear(time(form, 'ออกพัก 1'));
-    await user.type(time(form, 'ออกพัก 1'), '09:45');
+    await user.clear(time(form, 'พักเที่ยง'));
+    await user.type(time(form, 'พักเที่ยง'), '09:45');
     await user.click(within(form).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
     await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
-    expect(await screen.findByText(/บันทึกเวลาออกพัก 1ของ/)).toBeVisible();
+    expect(await screen.findByText(/บันทึกเวลาพักเที่ยงของ/)).toBeVisible();
     expect(puts(server).map(({ body }) => body)).toEqual([expect.objectContaining({ eventType: 'Break1Out' })]);
   });
 
@@ -512,7 +512,7 @@ describe('Overview Attendance actions', () => {
     const { user } = await renderApp(scopedUrl);
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = await screen.findByRole('dialog', { name: 'แก้เวลา' });
-    await user.type(time(form, 'ออกพัก 1'), '09:45');
+    await user.type(time(form, 'พักเที่ยง'), '09:45');
     await user.click(within(form).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
     row = {
       ...row,
@@ -540,11 +540,11 @@ describe('Overview Attendance actions', () => {
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านย้ายมา' }));
     const form = await screen.findByRole('dialog', { name: 'แก้เวลา' });
     expect(form).toHaveTextContent('แม่บ้านย้ายมา');
-    expect(time(form, 'ออกพัก 1')).toHaveValue('10:30');
-    await user.type(time(form, 'กลับจากพัก 1'), '10:45');
+    expect(time(form, 'พักเที่ยง')).toHaveValue('10:30');
+    await user.type(time(form, 'กลับจากพักเที่ยง'), '10:45');
     await user.click(within(form).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
     await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
-    expect(await screen.findByText(/บันทึกเวลากลับจากพัก 1ของ แม่บ้านย้ายมา/)).toBeVisible();
+    expect(await screen.findByText(/บันทึกเวลากลับจากพักเที่ยงของ แม่บ้านย้ายมา/)).toBeVisible();
     expect(puts(server).map(({ body }) => body)).toEqual([expect.objectContaining({ userId: incoming.id })]);
 
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านย้ายมา' }));
@@ -615,12 +615,12 @@ describe('Overview Attendance actions', () => {
     await waitFor(() => expect(detailCalls()).toHaveLength(2));
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = await screen.findByRole('dialog', { name: 'แก้เวลา' });
-    await user.type(time(form, 'ออกพัก 1'), '09:30');
+    await user.type(time(form, 'พักเที่ยง'), '09:30');
     await user.click(within(form).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
     const boardBefore = boardCalls(server).length;
     await user.click(within(form).getByRole('button', { name: 'บันทึกการแก้ไข (1 ช่อง)' }));
 
-    expect(await screen.findByText(/บันทึกเวลาออกพัก 1ของ แม่บ้านทดสอบ แล้ว/)).toBeVisible();
+    expect(await screen.findByText(/บันทึกเวลาพักเที่ยงของ แม่บ้านทดสอบ แล้ว/)).toBeVisible();
     expect(puts(server).map(({ body }) => body)).toEqual([
       expect.objectContaining({ userId: scopedRow.cleaner?.id, shiftDate: '2026-11-04', shift: 'Day', eventType: 'Break1Out' }),
     ]);
@@ -646,7 +646,7 @@ describe('Overview Attendance actions', () => {
     const { store, user } = await renderApp(scopedUrl);
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const form = await screen.findByRole('dialog', { name: 'แก้เวลา' });
-    await user.type(time(form, 'ออกพัก 1'), '09:30');
+    await user.type(time(form, 'พักเที่ยง'), '09:30');
     await user.click(within(form).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
     if (withPendingRead) {
       holdNextRead = true;
@@ -673,8 +673,8 @@ describe('Overview Attendance actions', () => {
     const { store, router, user } = await renderApp(scopedUrl);
     await user.click(await screen.findByRole('button', { name: 'แก้เวลา แม่บ้านทดสอบ' }));
     const old = await screen.findByRole('dialog', { name: 'แก้เวลา' });
-    await user.type(time(old, 'ออกพัก 1'), '09:30');
-    if (fieldCount === 2) await user.type(time(old, 'กลับจากพัก 1'), '09:45');
+    await user.type(time(old, 'พักเที่ยง'), '09:30');
+    if (fieldCount === 2) await user.type(time(old, 'กลับจากพักเที่ยง'), '09:45');
     await user.click(within(old).getByRole('radio', { name: 'ไม่มีอินเทอร์เน็ต' }));
     await user.click(within(old).getByRole('button', { name: `บันทึกการแก้ไข (${fieldCount} ช่อง)` }));
     await waitFor(() => expect(puts(server)).toHaveLength(1));

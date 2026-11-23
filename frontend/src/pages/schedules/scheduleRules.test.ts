@@ -6,7 +6,6 @@ import {
   initialScheduleSelection,
   initialScheduleWeek,
   parseScheduleWeek,
-  readMayBeStale,
   readScheduleWeek,
   resolveScheduleWeek,
   selectionAfterRead,
@@ -224,35 +223,16 @@ describe('unavailable is not the same as empty (spec §3, §10)', () => {
   });
 });
 
-describe('a pushed change and a read that may still be old (spec §12)', () => {
-  it('has nothing to warn about while no change was pushed this session', () => {
-    expect(readMayBeStale(null, { startedTimeStamp: 10, fulfilledTimeStamp: 20 })).toBe(false);
-  });
-
-  it('stays stale until a read that STARTED after the push succeeds', () => {
-    // The read on screen began before the push: it can land afterwards carrying the state from before it
-    expect(readMayBeStale(100, { startedTimeStamp: 90, fulfilledTimeStamp: 120 })).toBe(true);
-    // A request that has only just begun is not a successful read, whichever timestamp it carries
-    expect(readMayBeStale(100, { startedTimeStamp: 110 })).toBe(true);
-    expect(readMayBeStale(100, undefined)).toBe(true);
-  });
-
-  it('stays stale when the newer read failed, since only a successful read is evidence', () => {
-    // The latest request began after the push and was refused: the answer on screen is still the pre-push one
-    expect(readMayBeStale(100, { startedTimeStamp: 110, fulfilledTimeStamp: 95 })).toBe(true);
-  });
-
-  it('is current once a read that started after the push has succeeded', () => {
-    expect(readMayBeStale(100, { startedTimeStamp: 110, fulfilledTimeStamp: 130 })).toBe(false);
-  });
-});
-
 describe('the week as a person reads it', () => {
-  it('writes the range once, inside one month', () => {
-    expect(weekRangeLabel('2026-11-16')).toBe('16/11–22/11 2026');
+  it('writes the range once in Thai Buddhist-year format inside one month', () => {
+    expect(weekRangeLabel('2026-11-16')).toBe('16 – 22 พ.ย. 2569');
   });
 
   it('writes both months when the week crosses one', () => {
-    expect(weekRangeLabel('2026-11-30')).toBe('30/11–06/12 2026');
+    expect(weekRangeLabel('2026-11-30')).toBe('30 พ.ย. – 6 ธ.ค. 2569');
+  });
+
+  it('writes both years when the week crosses New Year', () => {
+    expect(weekRangeLabel('2026-12-28')).toBe('28 ธ.ค. 2569 – 3 ม.ค. 2570');
   });
 });

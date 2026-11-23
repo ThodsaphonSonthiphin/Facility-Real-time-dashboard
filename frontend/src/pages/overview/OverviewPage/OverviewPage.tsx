@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../../shared/components/Button';
 import { Field, Select, TextInput } from '../../../shared/components/Field';
-import { LiveBadge } from '../../../shared/components/LiveBadge';
+import { LiveBadge } from '../../../shared/components/LiveBadge/LiveBadge';
 import { Note } from '../../../shared/components/Note';
 import { PageLoading } from '../../../shared/components/PageState';
 import { Segmented } from '../../../shared/components/Segmented';
@@ -26,7 +26,7 @@ export function OverviewPage() {
         title="ภาพรวมการดูแลพื้นที่"
         titleSize="prominent"
         subtitle={model.periodText}
-        actions={model.hubKey ? <LiveBadge hubKey={model.hubKey} /> : undefined}
+        actions={<LiveBadge />}
       />
 
       <p role="status" aria-label="สถานะภาพรวม" aria-live="polite" className="sr-only">

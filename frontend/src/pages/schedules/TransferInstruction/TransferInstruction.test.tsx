@@ -21,7 +21,7 @@ const confirmed: AttendanceTransfer = {
 };
 
 const openTransfer = async (user: Awaited<ReturnType<typeof editorApp>>['user']) => {
-  await user.click(await screen.findByRole('button', { name: /ย้ายพื้นที่ระหว่างกะ.*17\/11/ }));
+  await user.click(await screen.findByRole('button', { name: /ย้ายพื้นที่ระหว่างกะ.*17 พ\.ย\./ }));
   return within(await screen.findByRole('dialog', { name: 'ย้ายพื้นที่ระหว่างกะ' }));
 };
 

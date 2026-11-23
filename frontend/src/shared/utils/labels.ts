@@ -7,15 +7,29 @@ export const shiftLabel: Record<Shift, string> = {
   Night: 'กะดึก 19:00–07:00',
 };
 
-/** facility-0031, wireframes M1 and M10; spec §8 adds the two numbered breaks. */
+/** Generic / Night-shift attendance labels (used when no shift context is available). */
 export const eventLabel: Record<AttendanceEvent, string> = {
   ShiftIn: 'เข้างาน',
-  Break1Out: 'ออกพัก 1',
-  Break1In: 'กลับจากพัก 1',
-  Break2Out: 'ออกพัก 2',
-  Break2In: 'กลับจากพัก 2',
+  Break1Out: 'พักรอบ 1',
+  Break1In: 'กลับจากพักรอบ 1',
+  Break2Out: 'พักรอบ 2',
+  Break2In: 'กลับจากพักรอบ 2',
   ShiftOut: 'เลิกงาน',
 };
+
+const dayEventLabel: Record<AttendanceEvent, string> = {
+  ShiftIn: 'เข้างาน',
+  Break1Out: 'พักเที่ยง',
+  Break1In: 'กลับจากพักเที่ยง',
+  Break2Out: 'พักบ่าย',
+  Break2In: 'กลับจากพักบ่าย',
+  ShiftOut: 'เลิกงาน',
+};
+
+/** Shift-aware attendance event label: Day shift uses พักเที่ยง / พักบ่าย, Night shift uses พักรอบ 1 / พักรอบ 2. */
+export function attendanceEventLabel(event: AttendanceEvent, shift?: Shift): string {
+  return shift === 'Day' ? dayEventLabel[event] : eventLabel[event];
+}
 
 export const attendanceEvents: readonly AttendanceEvent[] = [
   'ShiftIn', 'Break1Out', 'Break1In', 'Break2Out', 'Break2In', 'ShiftOut',

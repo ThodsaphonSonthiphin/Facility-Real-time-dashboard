@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { RowProblem, ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
 import type { Shift } from '../../../shared/api/types';
 import { shiftShortLabel } from '../../../shared/utils/labels';
-import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
+import { formatThaiDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { offsetDate, weekdayOf, weekdays, type CommandDraft } from '../commandRules';
 import { useScheduleReview } from '../ScheduleReview/useScheduleReview';
 import { clockSlot } from '../scheduleRules';
@@ -86,7 +86,7 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
     const breakText = breakGroup ? `กลุ่มพัก ${breakGroup}` : 'ยังไม่กำหนดกลุ่มพัก';
     return {
       id: key,
-      label: `${person.displayName} · เริ่ม ${effectiveFrom ? formatShiftDate(effectiveFrom) : 'ยังไม่เลือกวัน'}`,
+      label: `${person.displayName} · เริ่ม ${effectiveFrom ? formatThaiDate(effectiveFrom) : 'ยังไม่เลือกวัน'}`,
       before: knownDay?.edit?.baselineAreaId == null
         ? 'ยังไม่พบพื้นที่ในตารางประจำของวันที่เลือก'
         : `พื้นที่ ${knownDay.edit.baselineAreaId} · กลุ่มพัก ${knownDay.edit.baselineBreakGroup ?? 'ยังไม่กำหนด'}`,
@@ -111,7 +111,7 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
     ...(following.currentData?.rows.find((row) => row.userId === props.person.userId)?.days ?? []),
   ].filter((day) => effectiveFrom && day.date >= effectiveFrom && day.date < offsetDate(effectiveFrom, 7))
     .flatMap((day) => day.problems.map((entry) => ({
-      ...entry, label: `${formatWeekday(day.date)} ${formatShiftDate(day.date)} · ${entry.message}`,
+      ...entry, label: `${formatWeekday(day.date)} ${formatThaiDate(day.date)} · ${entry.message}`,
     })));
   return {
     ...editor, draft, areas, today, hasBaseline, affected,

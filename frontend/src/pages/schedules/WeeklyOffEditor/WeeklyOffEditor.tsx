@@ -3,7 +3,7 @@ import { Button } from '../../../shared/components/Button';
 import { Field, FieldGroup, TextArea } from '../../../shared/components/Field';
 import { Note } from '../../../shared/components/Note';
 import { focusRing } from '../../../shared/components/styles';
-import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
+import { formatThaiShortDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { ScheduleReview } from '../ScheduleReview/ScheduleReview';
 import { weekRangeLabel } from '../scheduleRules';
 import type { WeeklyOffEditorProps } from './type';
@@ -40,7 +40,7 @@ export function WeeklyOffEditor(props: WeeklyOffEditorProps) {
                 <input type="checkbox" checked={row.current?.includes(day.date) ?? false}
                   className={focusRing} disabled={!row.editable || !day.edit?.canChange}
                   onChange={(event) => row.setChoice(day.date, event.currentTarget.checked)} />
-                {formatWeekday(day.date)} {formatShiftDate(day.date).slice(0, 5)}
+                {formatWeekday(day.date)} {formatThaiShortDate(day.date)}
               </label>
             ))}
           </div>

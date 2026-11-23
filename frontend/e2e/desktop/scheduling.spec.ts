@@ -4,7 +4,8 @@ import { clockSlot } from '../../src/pages/schedules/scheduleRules.ts';
 import { phone } from '../support/devices.ts';
 import { loginAsAdmin, loginAsEmployee } from '../support/login.ts';
 import {
-  apiAnswer, captureSchedule, openSchedule, saveReviewedSchedule, scheduleCommandPath, weekDayLabel, type CommandResult, type ScheduleWeek,
+  apiAnswer, captureSchedule, fullDayLabel, openSchedule, saveReviewedSchedule, scheduleCommandPath, weekDayLabel,
+  type CommandResult, type ScheduleWeek,
 } from '../support/scheduling.ts';
 import { schedulingFixture } from '../support/seed.ts';
 import { expect, observeAdditionalContext, test } from '../support/test.ts';
@@ -114,8 +115,8 @@ test.describe('scheduling', () => {
       expect(rejected.problems).toEqual([expect.objectContaining({ code: 'stale-revision' })]);
       await expect(other.getByText('ตารางเปลี่ยนระหว่างแก้ไข', { exact: true })).toBeVisible();
       await other.getByRole('button', { name: 'โหลดเพื่อเปรียบเทียบ' }).click();
-      await expect(other.getByText(`ล่าสุด · ${weekDayLabel(winnerDate)}/${winnerDate.slice(0, 4)}`)).toBeVisible();
-      await expect(other.getByText(`ร่าง · ${weekDayLabel(loserDate)}/${loserDate.slice(0, 4)}`)).toBeVisible();
+      await expect(other.getByText(`ล่าสุด · ${fullDayLabel(winnerDate)}`)).toBeVisible();
+      await expect(other.getByText(`ร่าง · ${fullDayLabel(loserDate)}`)).toBeVisible();
       await captureManagement(other, info, 'conflict', other.getByText('ตารางเปลี่ยนระหว่างแก้ไข', { exact: true }));
       await other.getByRole('button', { name: 'ใช้ข้อมูลล่าสุดและเก็บร่าง' }).click();
       await expect(other.getByRole('group', { name: fixture.competing.name })

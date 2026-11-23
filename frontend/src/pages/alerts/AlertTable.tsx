@@ -10,11 +10,11 @@ import { linkClass } from '../../shared/components/styles';
 import { useAssignCoverMutation } from '../../shared/cover/coverApi';
 import { coverNotice } from '../../shared/cover/coverText';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { eventLabel } from '../../shared/utils/labels';
+import { attendanceEventLabel } from '../../shared/utils/labels';
 import { addDays } from '../../shared/utils/dateRange';
 import { formatDayTime, formatTime, thaiToday } from '../../shared/utils/thaiTime';
 import { useBuildingNames } from '../../shared/api/buildingNames';
-import { alertDetail, alertResult, alertRole, alertTitle, fillLink, type ReviewTab } from './alertRules';
+import { alertDetail, alertResult, alertRole, alertTitle, fillLink, slotOfShiftEnd, type ReviewTab } from './alertRules';
 import { useReviewAlertMutation } from './alertsApi';
 
 const MAX_NOTE = 500;
@@ -102,6 +102,7 @@ function AlertRow({ alert, today, noting, onNoting, onNotice }: AlertRowProps) {
   const title = alertTitle(alert);
   const result = alertResult(alert);
   const missing = alert.kind === 'MissingAttendance';
+  const missingShift = missing ? slotOfShiftEnd(alert.at).shift : undefined;
   const open = !alert.reviewed && !missing;
   const name = alert.person.displayName;
 
@@ -175,7 +176,7 @@ function AlertRow({ alert, today, noting, onNoting, onNotice }: AlertRowProps) {
                 className={`${linkClass} inline-flex min-h-8 items-center gap-1.5 font-semibold no-underline`}
                 to={fillLink(alert)}
               >
-                {`เติมเวลา${eventLabel[alert.missingEvents[0] ?? 'ShiftOut']}`}
+                {`เติมเวลา${attendanceEventLabel(alert.missingEvents[0] ?? 'ShiftOut', missingShift)}`}
                 <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
               <span className="text-xs text-text-2">เตือนปิดเองเมื่อเติมเวลาแล้ว</span>

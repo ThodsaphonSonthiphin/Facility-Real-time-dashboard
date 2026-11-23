@@ -1,7 +1,7 @@
 import type { Alert, AlertKind } from '../../shared/api/alertListApi';
 import type { BoardRow } from '../../shared/api/attendanceBoardApi';
 import type { Shift } from '../../shared/api/types';
-import { eventLabel, shiftShortLabel } from '../../shared/utils/labels';
+import { attendanceEventLabel, shiftShortLabel } from '../../shared/utils/labels';
 import { addDays } from '../../shared/utils/dateRange';
 import { formatDate, formatShiftDate, formatTime, thaiToday } from '../../shared/utils/thaiTime';
 
@@ -104,7 +104,7 @@ export function alertDetail(alert: Alert): string {
   }
   if (alert.kind === 'MissingAttendance') {
     const slot = slotOfShiftEnd(alert.at);
-    const missing = `ไม่ได้ลงเวลา${alert.missingEvents.map((event) => eventLabel[event]).join(' และ')}`;
+    const missing = `ไม่ได้ลงเวลา${alert.missingEvents.map((event) => attendanceEventLabel(event, slot.shift)).join(' และ')}`;
     return `${missing} · ${shiftShortLabel[slot.shift]} ${formatShiftDate(slot.shiftDate)} · ${place}`;
   }
   const distance =

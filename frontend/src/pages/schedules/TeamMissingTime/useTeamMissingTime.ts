@@ -2,8 +2,8 @@ import { useRef, useState, type FormEvent } from 'react';
 import { livePoll } from '../../../shared/api/baseApi';
 import type { AttendanceActionState, AttendanceEvent } from '../../../shared/api/types';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
-import { eventLabel } from '../../../shared/utils/labels';
-import { formatShiftDate, formatTime } from '../../../shared/utils/thaiTime';
+import { attendanceEventLabel } from '../../../shared/utils/labels';
+import { formatThaiDate, formatTime } from '../../../shared/utils/thaiTime';
 import { useScheduleNavigation } from '../ScheduleReview/useScheduleReview';
 import { useAddMissingTimeMutation, useGetTeamSlotQuery } from '../schedulesApi';
 import type { TeamMissingTimeProps } from './type';
@@ -34,7 +34,7 @@ export function useTeamMissingTime({ slot, onClose }: TeamMissingTimeProps) {
       eventType: action.eventType,
       eligible: !at && action.state !== 'recorded' && action.state !== 'not-applicable'
         && (state?.fillableActions?.includes(action.eventType) ?? action.state === 'missing'),
-      label: `${eventLabel[action.eventType]} · ${at ? `${stateLabels.recorded} ${formatTime(at)}` : stateLabels[action.state]}`,
+      label: `${attendanceEventLabel(action.eventType, slot.shift)} · ${at ? `${stateLabels.recorded} ${formatTime(at)}` : stateLabels[action.state]}`,
     };
   });
   const selected = choices.some((choice) => choice.eventType === eventType && choice.eligible) ? eventType : '';
@@ -81,7 +81,7 @@ export function useTeamMissingTime({ slot, onClose }: TeamMissingTimeProps) {
   }
 
   return {
-    dateLabel: formatShiftDate(slot.shiftDate), busy, canSave, choices, hasMissing: choices.some((choice) => choice.eligible),
+    dateLabel: formatThaiDate(slot.shiftDate), busy, canSave, choices, hasMissing: choices.some((choice) => choice.eligible),
     loading: read.isLoading, readError: read.isError ? getErrorMessage(read.error) : undefined,
     error, saved, selected, chooseAction, canSelect, revisionChanged, acknowledgeRevision,
     departureLeaveMismatch: state?.departureLeaveMismatch,

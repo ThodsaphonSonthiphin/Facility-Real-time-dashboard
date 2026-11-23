@@ -21,7 +21,7 @@ import { FilterToolbar } from '../../../shared/components/SurfacePanel';
 import { Toast } from '../../../shared/components/Toast';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { shiftShortLabel, transferStateLabel } from '../../../shared/utils/labels';
-import { formatDayTime, formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
+import { formatDayTime, formatThaiDate, formatThaiShortDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { availabilityLabel, cellLabel, cleanerKindLabel, sourceLabel, weekIsUnavailable, weekRangeLabel, type ScheduleRole } from '../scheduleRules';
 import type { TeamSlotArgs } from '../schedulesApi';
 import { DesktopScheduleActions, MobileScheduleActionSheet } from './ScheduleActionsMenu';
@@ -69,7 +69,7 @@ export function OwnSchedulePage() {
         </PhoneHeader>
       }
     >
-      <ConnectionBanner status={view.hubStatus} stale={view.mayBeStale} refreshing={view.isFetching} onRetry={view.refetch} />
+      <ConnectionBanner refreshing={view.isFetching} onRetry={view.refetch} />
       <MobileWeekStrip view={view} />
       <WeekBody view={view} />
     </PhoneScreen>
@@ -110,7 +110,7 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
         }
       />
 
-      <ConnectionBanner status={view.hubStatus} stale={view.mayBeStale} refreshing={view.isFetching} onRetry={view.refetch} />
+      <ConnectionBanner refreshing={view.isFetching} onRetry={view.refetch} />
 
       {/* Render only the active viewport's controls so screen readers and DOM never carry duplicate week/filter controls. */}
       {view.phone ? (
@@ -279,7 +279,7 @@ function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typ
       <ul className="space-y-2">
         {week.relief.map((duty) => (
           <li key={duty.id} className="space-y-1 rounded-lg border border-border bg-surface-2/40 p-3">
-            <p className="font-semibold">{duty.displayName} · {formatShiftDate(duty.shiftDate)} · {shiftShortLabel[duty.shift]}</p>
+            <p className="font-semibold">{duty.displayName} · {formatThaiDate(duty.shiftDate)} · {shiftShortLabel[duty.shift]}</p>
             <p>ตึก {duty.destinationBuildingCode} · {duty.areaCode} · กลุ่มพัก {duty.breakGroup ?? 'ยังไม่กำหนด'}</p>
             <p className="text-text-2">ตึกต้นทาง {duty.sourceBuildingCode}{duty.sourceSupervisorName && ` · ${duty.sourceSupervisorName}`}</p>
             {duty.replacedDisplayName && <p>แทน {duty.replacedDisplayName}</p>}
@@ -324,18 +324,40 @@ function AdminFilters({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   );
 }
 
-/** Desktop week control: previous/next week plus `สัปดาห์นี้` quick reset. */
+const weekStepButtonClass =
+  'relative inline-flex min-h-9 cursor-pointer items-center justify-center bg-surface px-2.5 text-text ' +
+  'transition-[color,background-color] duration-150 hover:bg-surface-2 focus-visible:z-10 ' +
+  `motion-reduce:transition-none ${focusRing}`;
+
+/** Desktop week control: joined prev/date/next control with calendar icon plus `สัปดาห์นี้` quick reset. */
 function WeekControls({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   return (
     <section className="flex flex-wrap items-center gap-2" aria-label="เลือกสัปดาห์">
-      <div className="flex items-center gap-2">
-        <Button variant="secondary" size="desk" aria-label="สัปดาห์ก่อนหน้า" onClick={() => view.goWeek(-1)}>
+      <div className="inline-flex items-center rounded-md border border-border-control bg-surface">
+        <button
+          type="button"
+          data-tap=""
+          className={`${weekStepButtonClass} rounded-l-md border-r border-border`}
+          aria-label="สัปดาห์ก่อนหน้า"
+          onClick={() => view.goWeek(-1)}
+        >
           <ChevronLeft aria-hidden="true" className="size-4" />
-        </Button>
-        <strong className="text-sm font-semibold tabular-nums">{weekRangeLabel(view.selection.weekStart)}</strong>
-        <Button variant="secondary" size="desk" aria-label="สัปดาห์ถัดไป" onClick={() => view.goWeek(1)}>
+        </button>
+        <span className="inline-flex items-center gap-2 px-3.5 py-1.5">
+          <CalendarDays aria-hidden="true" className="size-4 shrink-0 text-text-2" />
+          <strong className="text-sm font-bold whitespace-nowrap tabular-nums">
+            {weekRangeLabel(view.selection.weekStart)}
+          </strong>
+        </span>
+        <button
+          type="button"
+          data-tap=""
+          className={`${weekStepButtonClass} rounded-r-md border-l border-border`}
+          aria-label="สัปดาห์ถัดไป"
+          onClick={() => view.goWeek(1)}
+        >
           <ChevronRight aria-hidden="true" className="size-4" />
-        </Button>
+        </button>
       </div>
       {!view.isCurrentWeek && (
         <Button variant="secondary" size="desk" onClick={view.goToday}>
@@ -397,7 +419,7 @@ function OwnWeek({ week, businessDate }: { week: ScheduleWeek; businessDate: str
           >
             <header className="flex flex-wrap items-center justify-between gap-2">
               <strong className={`min-w-0 text-sm font-extrabold tabular-nums ${isToday ? 'text-accent' : 'text-text'}`}>
-                {`${formatWeekday(day.date)} ${formatShiftDate(day.date)}${isToday ? ' (วันนี้)' : ''}`}
+                {`${formatWeekday(day.date)} ${formatThaiDate(day.date)}${isToday ? ' (วันนี้)' : ''}`}
               </strong>
               <span
                 className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${cellPillClass[day.availability]}`}
@@ -446,7 +468,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                       className={`px-2 py-2.5 text-center ${isToday ? 'bg-accent-subtle text-accent' : 'bg-surface-2 text-text-2'}`}
                     >
                       <span className="block">{formatWeekday(date)}</span>
-                      <span className="block tabular-nums">{formatShiftDate(date).slice(0, 5)}</span>
+                      <span className="block tabular-nums">{formatThaiShortDate(date)}</span>
                     </th>
                   );
                 })}
@@ -500,7 +522,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                             }`}
                           >
                             <span className="sr-only">
-                              {`เลือกช่อง ${person.displayName} ${formatWeekday(day.date)} ${formatShiftDate(day.date)} `}
+                              {`เลือกช่อง ${person.displayName} ${formatWeekday(day.date)} ${formatThaiDate(day.date)} `}
                             </span>
                             <Cell day={day} />
                           </button>
@@ -533,7 +555,7 @@ function RelatedTransfers({ view }: { view: ReturnType<typeof useSchedulePage> }
       <ul className="space-y-2">
         {slots.map((slot) => (
           <li key={slot.id} className="space-y-1 rounded-lg border border-border bg-surface-2/40 p-3">
-            <p className="font-semibold">{slot.displayName} · {formatShiftDate(slot.shiftDate)} · {shiftShortLabel[slot.shift]}</p>
+            <p className="font-semibold">{slot.displayName} · {formatThaiDate(slot.shiftDate)} · {shiftShortLabel[slot.shift]}</p>
             <p>{slot.fromAreaCode} → {slot.toAreaCode}</p>
             <p className="text-text-2">
               {slot.confirmedAt
@@ -558,7 +580,7 @@ function TeamSlotActions({ view, displayName, slot, canOpenMissingTime = true }:
 }) {
   if (view.role !== 'supervisor' || !view.latest) return null;
   const size = view.phone ? 'phone' : 'desk';
-  const context = `${displayName} ${formatShiftDate(slot.shiftDate)}`;
+  const context = `${displayName} ${formatThaiDate(slot.shiftDate)}`;
   return (
     <div className="flex flex-col items-start">
       {canOpenMissingTime && (

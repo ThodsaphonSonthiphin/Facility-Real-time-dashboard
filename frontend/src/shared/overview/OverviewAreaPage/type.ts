@@ -9,7 +9,6 @@ export interface OverviewAreaPageProps {
 export interface OverviewAreaPageModel {
   detail?: OverviewAreaDetail;
   loading: boolean;
-  hubKey?: string;
   readAtText?: string;
   error?: string;
   recovering: boolean;

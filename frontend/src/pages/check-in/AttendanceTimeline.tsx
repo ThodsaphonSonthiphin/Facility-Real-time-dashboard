@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 import type { AttendanceAction, AttendanceEvent, AttendanceState } from '../../shared/api/types';
-import { actionStateLabel, eventLabel, attendanceEvents } from '../../shared/utils/labels';
+import { actionStateLabel, attendanceEventLabel, attendanceEvents } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
 
 /** One drawn action: what it is, and the actual time only when the server says there is one. */
@@ -71,7 +71,9 @@ export function AttendanceTimeline({ attendance, next }: { attendance: Attendanc
               {recorded && <Check className="size-4" />}
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className={`text-sm font-bold ${isNext ? 'text-accent' : ''}`}>{eventLabel[row.eventType]}</span>
+              <span className={`text-sm font-bold ${isNext ? 'text-accent' : ''}`}>
+                {attendanceEventLabel(row.eventType, attendance.shift ?? undefined)}
+              </span>
               {recorded && row.source === 'SupervisorAdd' && <span className="text-xs text-text-2">หัวหน้าเติมเวลา</span>}
               {recorded && (row.source === 'AdminAdd' || row.source === 'AdminEdit') && (
                 <span className="text-xs text-text-2">แอดมินแก้เวลา</span>

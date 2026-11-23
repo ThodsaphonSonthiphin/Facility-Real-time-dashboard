@@ -3,7 +3,7 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigation, useSearchParams } from 'react-router';
 import { freshOnOpen } from '../../../shared/api/baseApi';
 import type { Shift } from '../../../shared/api/types';
-import { overviewApi, overviewHubKey, useGetOverviewAreasQuery } from '../../../shared/overview/overviewApi';
+import { overviewApi, useGetOverviewAreasQuery } from '../../../shared/overview/overviewApi';
 import { areaHref, overviewParams, readOverviewContext } from '../../../shared/overview/overviewContext';
 import type {
   Availability,
@@ -833,9 +833,6 @@ export function useOverviewPage(): OverviewPageModel {
     loading,
     refreshing,
     recovering,
-    hubKey: queryArgs !== skipToken && response && response.summary.context.phase !== 'closed'
-      ? overviewHubKey(queryArgs)
-      : undefined,
     error,
     changed,
     onDate,

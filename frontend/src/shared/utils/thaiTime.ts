@@ -30,6 +30,23 @@ export function formatShiftDate(date: string): string {
   return `${day}/${month}/${year}`;
 }
 
+export const THAI_MONTHS = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+] as const;
+
+/** A shift date ("2026-11-23") as a readable Thai Buddhist-year date, "23 พ.ย. 2569". */
+export function formatThaiDate(date: string): string {
+  const [year, month, day] = date.split('-').map(Number);
+  return `${day} ${THAI_MONTHS[month - 1]} ${year + 543}`;
+}
+
+/** A shift date ("2026-11-23") as short day + Thai month, "23 พ.ย.". */
+export function formatThaiShortDate(date: string): string {
+  const [, month, day] = date.split('-').map(Number);
+  return `${day} ${THAI_MONTHS[month - 1]}`;
+}
+
 const weekdays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
 
 /** A shift date ("2026-10-16", already a Thai calendar date) as its short Thai weekday, "ศ." (D3's shift picker). */

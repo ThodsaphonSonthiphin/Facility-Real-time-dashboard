@@ -99,7 +99,7 @@ describe('alert rules (wireframe D3)', () => {
     );
     expect(alertDetail(missingAlert)).toBe('ไม่ได้ลงเวลาเลิกงาน · กะดึก 14/10/2026 · AR01 Area ทดลอง');
     expect(alertDetail({ ...missingAlert, missingEvents: ['Break1In', 'ShiftOut'] })).toBe(
-      'ไม่ได้ลงเวลากลับจากพัก 1 และเลิกงาน · กะดึก 14/10/2026 · AR01 Area ทดลอง',
+      'ไม่ได้ลงเวลากลับจากพักรอบ 1 และเลิกงาน · กะดึก 14/10/2026 · AR01 Area ทดลอง',
     );
   });
 

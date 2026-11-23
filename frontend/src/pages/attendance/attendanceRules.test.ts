@@ -60,10 +60,13 @@ describe('attendance rules (wireframe D2)', () => {
     expect(draftProblems(times({ Break1Out: ['', '7:05'] }), 'Day')).toEqual({ Break1Out: 'เวลาต้องเป็นแบบ ชม.:นาที เช่น 07:05' });
     expect(draftProblems(times({ ShiftIn: ['06:58', ''] }), 'Day')).toEqual({ ShiftIn: 'ลบเวลาไม่ได้ ใส่เวลาใหม่ หรือกดคืนค่า' });
     expect(draftProblems(times({ Break1Out: ['09:30'], Break1In: ['', '09:20'] }), 'Day')).toEqual({
-      Break1In: 'ต้องหลังเวลาออกพัก 1 (09:30)',
+      Break1In: 'ต้องหลังเวลาพักเที่ยง (09:30)',
     });
     expect(draftProblems(times({ Break1Out: ['', '10:30'], Break1In: ['10:00'] }), 'Day')).toEqual({
-      Break1Out: 'ต้องก่อนเวลากลับจากพัก 1 (10:00)',
+      Break1Out: 'ต้องก่อนเวลากลับจากพักเที่ยง (10:00)',
+    });
+    expect(draftProblems(times({ Break1Out: ['21:30'], Break1In: ['', '21:20'] }), 'Night')).toEqual({
+      Break1In: 'ต้องหลังเวลาพักรอบ 1 (21:30)',
     });
     // A Night shift runs past midnight: 06:55 comes after 18:55
     expect(draftProblems(times({ ShiftIn: ['18:55'], ShiftOut: ['', '06:55'] }), 'Night')).toEqual({});

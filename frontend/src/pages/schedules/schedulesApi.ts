@@ -12,7 +12,6 @@ import type {
   TransferResult,
 } from '../../shared/api/scheduleTypes';
 import type { AttendanceEvent, AttendanceState, Shift } from '../../shared/api/types';
-import { scheduleChanged } from './scheduleViewSlice';
 
 /**
  * The scheduling reads and writes of spec §11, as RTK Query endpoints (facility-0022): a page never calls fetch itself,
@@ -45,7 +44,7 @@ export function scheduleTag(args: WeekArgs & { buildingId?: number; shift?: Shif
   return { type: 'Schedules' as const, id: `${args.weekStart}:${args.buildingId ?? 'all'}:${args.shift ?? 'own'}` };
 }
 
-/** One hub connection per read on screen (plan 11 decision 4); the page's stale notice reads the same slice. */
+/** One hub connection key per schedule read on screen (plan 11 decision 4). */
 export function scheduleHubKey(args: WeekArgs & { buildingId?: number; shift?: Shift }): string {
   return `schedule:${args.weekStart}:${args.buildingId ?? 'all'}:${args.shift ?? 'own'}`;
 }
@@ -102,10 +101,7 @@ const schedulesApi = baseApi.injectEndpoints({
           cacheEntryRemoved,
           dispatch,
           accessToken: () => getValidAccessToken(() => getState() as RootState, dispatch),
-          // The push names only the command, so the page notes that what it shows may be old and asks again. The notice
-          // stays until a read that STARTED after the push succeeds (spec §12); a request in flight is not evidence.
           onSchedule: () => {
-            dispatch(scheduleChanged({ at: Date.now() }));
             dispatch(baseApi.util.invalidateTags(['Schedules']));
           },
           onMissed: () => dispatch(baseApi.util.invalidateTags(['Schedules'])),
@@ -133,7 +129,6 @@ const schedulesApi = baseApi.injectEndpoints({
           dispatch,
           accessToken: () => getValidAccessToken(() => getState() as RootState, dispatch),
           onSchedule: () => {
-            dispatch(scheduleChanged({ at: Date.now() }));
             dispatch(baseApi.util.invalidateTags(['Schedules']));
           },
           onMissed: () => dispatch(baseApi.util.invalidateTags(['Schedules'])),
