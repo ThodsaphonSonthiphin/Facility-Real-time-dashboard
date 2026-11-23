@@ -22,7 +22,6 @@ export interface OverviewPageModel {
   loading: boolean;
   refreshing: boolean;
   recovering: boolean;
-  hubKey?: string;
   error?: string;
   changed: boolean;
   onDate: (date: string) => void;

@@ -289,7 +289,7 @@ public static class TeamAttendanceEndpoints
 
         var proposed = state.Events.ToDictionary(fact => fact.EventType, fact => fact.OccurredAt);
         proposed[eventType] = at;
-        if (AttendanceRules.CheckTimes(proposed) is { } orderError)
+        if (AttendanceRules.CheckTimes(proposed, shift) is { } orderError)
         {
             return Bad(orderError);
         }
@@ -308,7 +308,7 @@ public static class TeamAttendanceEndpoints
         }
 
         var areaCode = await db.Areas.Where(area => area.Id == areaId).Select(area => area.Code).FirstOrDefaultAsync(ct);
-        var summary = $"เพิ่มเวลา{ThaiLabels.EventName(eventType)}ของ {person.DisplayName} {areaCode} "
+        var summary = $"เพิ่มเวลา{ThaiLabels.EventName(eventType, shift)}ของ {person.DisplayName} {areaCode} "
             + $"กะ{ThaiLabels.ShiftName(shift)} {ThaiLabels.Date(shiftDate)}: – → {ThaiLabels.Clock(at)}";
 
         var row = new ShiftAttendance

@@ -31,8 +31,8 @@ it('keeps input when returning from review and restores saved choices after disc
   await app.user.click(open);
   const drawer = within(await screen.findByRole('dialog'));
   const first = within(drawer.getByRole('group', { name: 'แม่บ้านทดสอบ' }));
-  const weekDay = first.getByRole('checkbox', { name: /19\/11/ });
-  const savedDay = first.getByRole('checkbox', { name: /21\/11/ });
+  const weekDay = first.getByRole('checkbox', { name: /19 พ\.ย\./ });
+  const savedDay = first.getByRole('checkbox', { name: /21 พ\.ย\./ });
   expect(savedDay).toBeChecked();
   expect(within(drawer.getByRole('group', { name: 'ยังไม่จัดคนที่สอง' })).getByText('ยังจัดไม่ครบ')).toBeVisible();
   await app.user.click(weekDay);
@@ -40,13 +40,13 @@ it('keeps input when returning from review and restores saved choices after disc
   expect(drawer.getByRole('heading', { name: 'ตรวจสอบก่อนบันทึก' })).toBeVisible();
   expect(drawer.queryByText('ยังไม่จัดคนที่สอง')).not.toBeInTheDocument();
   await app.user.click(drawer.getByRole('button', { name: 'กลับไปแก้ไข' }));
-  expect(within(drawer.getByRole('group', { name: 'แม่บ้านทดสอบ' })).getByRole('checkbox', { name: /19\/11/ })).toBeChecked();
+  expect(within(drawer.getByRole('group', { name: 'แม่บ้านทดสอบ' })).getByRole('checkbox', { name: /19 พ\.ย\./ })).toBeChecked();
   await app.user.click(drawer.getByRole('button', { name: 'ยกเลิก' }));
   await app.user.click(drawer.getByRole('button', { name: 'ทิ้งร่าง' }));
   await app.user.click(open);
   const reopened = within(await screen.findByRole('group', { name: 'แม่บ้านทดสอบ' }));
-  expect(reopened.getByRole('checkbox', { name: /19\/11/ })).not.toBeChecked();
-  expect(reopened.getByRole('checkbox', { name: /21\/11/ })).toBeChecked();
+  expect(reopened.getByRole('checkbox', { name: /19 พ\.ย\./ })).not.toBeChecked();
+  expect(reopened.getByRole('checkbox', { name: /21 พ\.ย\./ })).toBeChecked();
   expect(app.calls.filter((call) => call.method === 'POST' && call.path.includes('schedules'))).toHaveLength(0);
 });
 
@@ -64,7 +64,7 @@ it('submits edited rows atomically and shows an invalid row without reporting pa
   await app.user.click(await screen.findByRole('button', { name: 'จัดวันหยุดรายสัปดาห์' }));
   const drawer = within(await screen.findByRole('dialog'));
   for (const name of ['แม่บ้านทดสอบ', 'แม่บ้านคนที่สอง']) {
-    await app.user.click(within(drawer.getByRole('group', { name })).getByRole('checkbox', { name: /19\/11/ }));
+    await app.user.click(within(drawer.getByRole('group', { name })).getByRole('checkbox', { name: /19 พ\.ย\./ }));
   }
   await app.user.click(drawer.getByRole('button', { name: 'ตรวจสอบ' }));
   await app.user.click(drawer.getByRole('button', { name: 'บันทึก' }));
@@ -92,7 +92,7 @@ it('names the submitted people when two rejected rows return the same nameless m
   await app.user.click(await screen.findByRole('button', { name: 'จัดวันหยุดรายสัปดาห์' }));
   const drawer = within(await screen.findByRole('dialog'));
   for (const name of ['แม่บ้านทดสอบ', 'แม่บ้านคนที่สอง']) {
-    await app.user.click(within(drawer.getByRole('group', { name })).getByRole('checkbox', { name: /19\/11/ }));
+    await app.user.click(within(drawer.getByRole('group', { name })).getByRole('checkbox', { name: /19 พ\.ย\./ }));
   }
   await app.user.click(drawer.getByRole('button', { name: 'ตรวจสอบ' }));
   await app.user.click(drawer.getByRole('button', { name: 'บันทึก' }));
@@ -121,5 +121,5 @@ it('disables previous-week copy if an authorised read is followed by a forbidden
   await act(() => { hub.latest().push('ScheduleChanged', { commandId }); });
   await waitFor(() => expect(copy).toBeDisabled());
   expect(await drawer.findByText('ไม่มีตัวเลือกวันหยุดให้อ้างอิง')).toBeVisible();
-  expect(drawer.getByRole('checkbox', { name: /20\/11/ })).not.toBeChecked();
+  expect(drawer.getByRole('checkbox', { name: /20 พ\.ย\./ })).not.toBeChecked();
 });

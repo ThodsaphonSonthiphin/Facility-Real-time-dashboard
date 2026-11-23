@@ -19,7 +19,7 @@ import { byUrgency, laterStatuses, sentStatuses, toDo } from './workRules';
  * account/logout strictly in the 3-tab bottom bar (Heuristics #1, #4, #8).
  */
 export function MyWorkPage() {
-  const { data, errorMessage, isLoading, isFetching, refetch, hubStatus, where } = useMyWorkPage();
+  const { data, errorMessage, isLoading, isFetching, refetch, where } = useMyWorkPage();
 
   const header = (
     <PhoneHeader
@@ -47,7 +47,7 @@ export function MyWorkPage() {
         ) : undefined
       }
     >
-      <ConnectionBanner status={hubStatus} refreshing={isFetching} onRetry={() => void refetch()} />
+      <ConnectionBanner refreshing={isFetching} onRetry={() => void refetch()} />
       {isLoading && <PageLoading lines={3}>กำลังโหลดงาน...</PageLoading>}
       {errorMessage && <Note tone="error">{errorMessage}</Note>}
       {data && (data.attendance.shift ? <WorkList work={data} /> : <OffShift ownShift={data.ownShift} />)}

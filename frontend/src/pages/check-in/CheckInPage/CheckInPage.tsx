@@ -1,14 +1,15 @@
-import { Clock } from 'lucide-react';
-import { useEffect, useRef } from 'react';
-import type { OwnShift } from '../../../shared/api/types';
+import { ChevronUp, Clock } from 'lucide-react';
+import { useEffect, useId, useRef } from 'react';
+import type { AttendanceEvent, OwnShift, Shift } from '../../../shared/api/types';
 import { BlockedScanScreen } from '../../../shared/components/BlockedScanScreen';
 import { Button } from '../../../shared/components/Button';
 import { LocationHelp } from '../../../shared/components/LocationHelp';
+import { DialogHeader, Sheet } from '../../../shared/components/Modal';
 import { Note } from '../../../shared/components/Note';
 import { PageLoading } from '../../../shared/components/PageState';
 import { PhoneHeader, PhoneScreen } from '../../../shared/components/PhoneScreen';
 import { StatusScreen } from '../../../shared/components/StatusScreen';
-import { departureLeaveMismatchLabel, eventLabel, shiftLabel } from '../../../shared/utils/labels';
+import { attendanceEventLabel, departureLeaveMismatchLabel, shiftLabel } from '../../../shared/utils/labels';
 import { formatClock, formatTime } from '../../../shared/utils/thaiTime';
 import { AttendanceTimeline } from '../AttendanceTimeline';
 import { useCheckInPage } from './useCheckInPage';
@@ -16,14 +17,25 @@ import { useCheckInPage } from './useCheckInPage';
 export function CheckInPage() {
   const {
     attendance, ownArea, ownShift, signGone, loadError, loading, choices, gapConfirmation, gapLabel,
-    completionMessage, busy, outcome, transfer, confirmable, canShiftOutOrigin, transferPending, press, confirmGaps, cancelGaps,
+    completionMessage, busy, outcome, transfer, confirmable, canShiftOutOrigin, transferPending,
+    otherActionsOpen, openOtherActions, closeOtherActions, press, confirmGaps, cancelGaps,
     confirmDestination, retryLocation, retryRead, retryingRead, retryReadStatus,
   } = useCheckInPage();
   const heading = useRef<HTMLHeadingElement>(null);
+  const gapNote = useRef<HTMLDivElement>(null);
+  const shift = attendance?.shift ?? undefined;
+  const primaryChoice = choices[0];
+  const secondaryChoices = choices.slice(1);
 
   useEffect(() => {
     if (retryReadStatus === 'complete' && !loadError && !signGone) heading.current?.focus();
   }, [retryReadStatus, loadError, signGone]);
+
+  useEffect(() => {
+    if (!gapConfirmation) return;
+    gapNote.current?.scrollIntoView?.({ block: 'nearest' });
+    gapNote.current?.focus();
+  }, [gapConfirmation]);
 
   if (signGone) {
     return (
@@ -76,21 +88,35 @@ export function CheckInPage() {
             <Button variant="primary" size="main" disabled={busy !== null} onClick={confirmGaps}>ยืนยันและบันทึก</Button>
             <Button variant="secondary" size="phone" className="w-full" onClick={cancelGaps}>ยกเลิก</Button>
           </>
-        ) : (
-          choices.map(({ eventType }, index) => (
+        ) : primaryChoice ? (
+          <>
             <Button
-              key={eventType}
-              variant={index === 0 ? 'primary' : 'secondary'}
-              size={index === 0 ? 'main' : 'phone'}
-              className={index === 0 ? '' : 'w-full'}
+              variant="primary"
+              size="main"
               disabled={busy !== null}
-              onClick={() => press(eventType)}
+              onClick={() => press(primaryChoice.eventType)}
             >
-              {index === 0 && <Clock aria-hidden="true" className="size-6" />}
-              {busy === eventType ? 'กำลังบันทึก...' : eventLabel[eventType]}
+              <Clock aria-hidden="true" className="size-6" />
+              {busy === primaryChoice.eventType
+                ? 'กำลังบันทึก...'
+                : attendanceEventLabel(primaryChoice.eventType, shift)}
             </Button>
-          ))
-        )
+            {secondaryChoices.length > 0 && (
+              <Button
+                variant="secondary"
+                size="phone"
+                className="w-full"
+                disabled={busy !== null}
+                aria-haspopup="dialog"
+                aria-expanded={otherActionsOpen}
+                onClick={openOtherActions}
+              >
+                <span>{`ลงเวลาขั้นตอนอื่น (${secondaryChoices.length})`}</span>
+                <ChevronUp aria-hidden="true" className="size-5" />
+              </Button>
+            )}
+          </>
+        ) : undefined
       }
     >
       <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
@@ -108,17 +134,23 @@ export function CheckInPage() {
       {attendance?.isLeave && <Note tone="warn">มีการลาที่บันทึกไว้ในกะนี้</Note>}
       {attendance?.departureLeaveMismatch && <Note tone="warn">{departureLeaveMismatchLabel}</Note>}
       {gapConfirmation && (
-        <Note
-          tone="warn"
-          status
-          title={gapConfirmation.confirmPendingTransfer ? 'ยืนยันเลิกงานโดยไม่ย้ายพื้นที่' : 'ยืนยันขั้นตอนที่ข้าม'}
+        <div
+          ref={gapNote}
+          tabIndex={-1}
+          className="rounded-md focus:outline-2 focus:outline-offset-2 focus:outline-accent"
         >
-          {gapConfirmation.confirmPendingTransfer
-            ? gapLabel
-              ? `มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน หากเลิกงานตอนนี้จะปิดกะโดยไม่ย้ายพื้นที่ และต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`
-              : 'มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน หากเลิกงานตอนนี้จะปิดกะโดยไม่ย้ายพื้นที่'
-            : `ต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`}
-        </Note>
+          <Note
+            tone="warn"
+            status
+            title={gapConfirmation.confirmPendingTransfer ? 'ยืนยันเลิกงานโดยไม่ย้ายพื้นที่' : 'ยืนยันขั้นตอนที่ข้าม'}
+          >
+            {gapConfirmation.confirmPendingTransfer
+              ? gapLabel
+                ? `มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน หากเลิกงานตอนนี้จะปิดกะโดยไม่ย้ายพื้นที่ และต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`
+                : 'มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน หากเลิกงานตอนนี้จะปิดกะโดยไม่ย้ายพื้นที่'
+              : `ต้องยืนยันรายการที่ข้ามก่อน: ${gapLabel}`}
+          </Note>
+        </div>
       )}
       {transferPending && !gapConfirmation?.confirmPendingTransfer && (
         <Note tone="warn" title="มีคำสั่งย้ายพื้นที่ที่ยังไม่ได้ยืนยัน">
@@ -147,6 +179,15 @@ export function CheckInPage() {
       )}
       {outcome?.kind === 'failed' && <Note tone="error">{outcome.message}</Note>}
       {completionMessage && <Note tone="success">{completionMessage}</Note>}
+      {otherActionsOpen && (
+        <OtherActionsSheet
+          choices={secondaryChoices}
+          shift={shift}
+          busy={busy}
+          onSelect={press}
+          onClose={closeOtherActions}
+        />
+      )}
     </PhoneScreen>
   );
 }
@@ -156,6 +197,46 @@ function TransferConfirmedNote({ confirmedAt, status }: { confirmedAt?: string |
     <Note tone="success" status={status} title="ยืนยันถึงพื้นที่ใหม่แล้ว">
       {confirmedAt && formatTime(confirmedAt)}
     </Note>
+  );
+}
+
+function OtherActionsSheet({
+  choices,
+  shift,
+  busy,
+  onSelect,
+  onClose,
+}: {
+  choices: { eventType: AttendanceEvent }[];
+  shift?: Shift;
+  busy: AttendanceEvent | 'transfer' | null;
+  onSelect: (eventType: AttendanceEvent) => void;
+  onClose: () => void;
+}) {
+  const titleId = useId();
+  return (
+    <Sheet labelledBy={titleId} onClose={onClose}>
+      <DialogHeader
+        id={titleId}
+        title="เลือกขั้นตอนอื่น"
+        detail="ใช้เมื่อลืมลงเวลารอบก่อนหน้า ระบบจะให้ยืนยันขั้นตอนที่ข้าม"
+        onClose={onClose}
+      />
+      <div className="flex flex-col gap-2">
+        {choices.map(({ eventType }) => (
+          <Button
+            key={eventType}
+            variant={eventType === 'ShiftOut' ? 'danger' : 'secondary'}
+            size="phone"
+            className="w-full"
+            disabled={busy !== null}
+            onClick={() => onSelect(eventType)}
+          >
+            {attendanceEventLabel(eventType, shift)}
+          </Button>
+        ))}
+      </div>
+    </Sheet>
   );
 }
 

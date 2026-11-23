@@ -1,12 +1,11 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
-import { LiveBadge } from '../../../shared/components/LiveBadge';
+import { LiveBadge } from '../../../shared/components/LiveBadge/LiveBadge';
 import { Note } from '../../../shared/components/Note';
 import { PageEmpty, PageLoading } from '../../../shared/components/PageState';
 import { Button } from '../../../shared/components/Button';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { useBuildingNames, buildingText } from '../../../shared/api/buildingNames';
-import { DASHBOARD_HUB } from '../dashboardApi';
 import { Filters } from '../Filters';
 import { PointTile } from '../PointTile';
 import { QUIET_ROWS, type AreaSectionProps } from './type';
@@ -26,7 +25,7 @@ export function LegacyDashboardPage() {
       <AdminPageHeader
         title="สถานะจุดทำความสะอาด"
         subtitle={data ? `${new Set(data.map((point) => point.areaId)).size} พื้นที่ · ${data.length} จุด` : ''}
-        actions={<LiveBadge hubKey={DASHBOARD_HUB} />}
+        actions={<LiveBadge />}
       />
       {data && <Filters points={data} />}
       {isLoading && <PageLoading lines={3}>กำลังโหลดจุด...</PageLoading>}

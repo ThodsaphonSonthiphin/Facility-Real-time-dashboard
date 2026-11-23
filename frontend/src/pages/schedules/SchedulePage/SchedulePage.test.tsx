@@ -101,7 +101,7 @@ describe('opening a schedule for the first time (facility-0180, 0182, 0183)', ()
 
     await screen.findByRole('heading', { name: 'ตารางของฉัน' });
     expect(reads()[0].search).toContain('weekStart=2026-11-16');
-    expect(await screen.findByText('16/11–22/11 2026')).toBeInTheDocument();
+    expect(await screen.findByText('16 – 22 พ.ย. 2569')).toBeInTheDocument();
   });
 
   it('keeps the week an ongoing Sunday-start night shift began in, once Monday has begun (facility-0183)', async () => {
@@ -134,7 +134,7 @@ describe('returning to a schedule during the same ongoing use (facility-0181, 01
     await act(() => router.navigate('/admin/schedules'));
 
     await waitFor(() => expect(reads().at(-1)?.search).toContain('weekStart=2026-11-23'));
-    expect(await screen.findByText('23/11–29/11 2026')).toBeInTheDocument();
+    expect(await screen.findByText('23 – 29 พ.ย. 2569')).toBeInTheDocument();
   });
 
   it('a fresh page load starts from this week again: nothing is saved anywhere (facility-0218)', async () => {
@@ -228,15 +228,13 @@ describe('the three week states, which are never the same screen (spec §3, §10
     await user.click(screen.getByRole('button', { name: 'สัปดาห์ก่อนหน้า' }));
 
     await waitFor(() => expect(reads().at(-1)?.search).toContain('weekStart=2026-11-09'));
-    expect(await screen.findByText('09/11–15/11 2026')).toBeInTheDocument();
+    expect(await screen.findByText('9 – 15 พ.ย. 2569')).toBeInTheDocument();
   });
 });
 
-describe('a changed plan and a read that may be old (spec §12)', () => {
-  it('warns that the page may be old until a read that started after the change succeeds', async () => {
+describe('a changed plan and offline connection banner', () => {
+  it('refetches silently on ScheduleChanged without showing a stale banner while online', async () => {
     pinClock();
-    // The first answer lands at once; every read after the push stays pending until this test releases it, so the state
-    // between "the plan moved" and "a newer read succeeded" is the one on screen for a while, as it would be on a slow link
     let release: ((answer: { status: number; body: ScheduleWeek }) => void) | undefined;
     let reads = 0;
     fakeServer({
@@ -252,41 +250,19 @@ describe('a changed plan and a read that may be old (spec §12)', () => {
     });
     await renderApp('/my-schedule');
     await screen.findByRole('heading', { level: 1, name: 'ตารางของฉัน' });
-    await screen.findByText('16/11–22/11 2026');
+    await screen.findByText('16 – 22 พ.ย. 2569');
 
     act(() => hub.latest().push('ScheduleChanged', { commandId: '7f1c2f22-6a44-4c11-9a1e-0f4c8a1b2c33' }));
 
-    // The push arrived and the newer read has not succeeded: the page says so rather than presenting old data as current
     await waitFor(() => expect(reads).toBeGreaterThan(1));
-    expect(screen.getByRole('status')).toHaveTextContent('ข้อมูลอาจยังไม่ล่าสุด');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
 
     await act(async () => release?.({ status: 200, body: week({ revision: 'digest-2' }) }));
-
-    // Only a successful read that started after the push clears it
-    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('keeps its warning when the newer read fails, since a request that failed is not evidence', async () => {
-    pinClock();
-    let reads = 0;
-    fakeServer({
-      ...session('cleaner'),
-      'GET /api/schedules/me': () => {
-        reads += 1;
-        return reads === 1 ? { status: 200, body: week() } : { status: 500, body: { message: 'ระบบขัดข้อง' } };
-      },
-    });
-    await renderApp('/my-schedule');
-    await screen.findByRole('heading', { level: 1, name: 'ตารางของฉัน' });
-    const before = reads;
-
-    act(() => hub.latest().push('ScheduleChanged', { commandId: '7f1c2f22-6a44-4c11-9a1e-0f4c8a1b2c33' }));
-
-    await waitFor(() => expect(reads).toBeGreaterThan(before));
-    expect(await screen.findByRole('status')).toHaveTextContent('ข้อมูลอาจยังไม่ล่าสุด');
-  });
-
-  it('keeps its warning while the connection is down, and asks again when it comes back', async () => {
+  it('stays quiet when the hub reconnects while online, and shows the disconnect banner only when offline', async () => {
     pinClock();
     const { reads } = serveWeeks('cleaner', () => week());
     await renderApp('/my-schedule');
@@ -294,10 +270,17 @@ describe('a changed plan and a read that may be old (spec §12)', () => {
     const before = reads().length;
 
     act(() => hub.latest().reconnecting());
-    expect(screen.getByRole('status')).toHaveTextContent('ข้อมูลอาจยังไม่ล่าสุด');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
 
     act(() => hub.latest().reconnected());
     await waitFor(() => expect(reads().length).toBeGreaterThan(before));
+
+    act(() => window.dispatchEvent(new Event('offline')));
+    expect(screen.getByRole('status')).toHaveTextContent('ขาดการเชื่อมต่อ');
+
+    act(() => window.dispatchEvent(new Event('online')));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
 
@@ -411,20 +394,20 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     const table = await screen.findByRole('table', { name: 'ตารางงานรายสัปดาห์' });
     expect(within(table).queryByRole('button', { name: /แก้เฉพาะวันที่|แก้ไขแผนย้อนหลัง|แก้ตารางประจำ/ })).not.toBeInTheDocument();
 
-    const todayCell = within(table).getByRole('button', { name: /เลือกช่อง แม่บ้านทดสอบ .* 17\/11\/2026/ });
-    const pastCell = within(table).getByRole('button', { name: /เลือกช่อง แม่บ้านทดสอบ .* 16\/11\/2026/ });
+    const todayCell = within(table).getByRole('button', { name: /เลือกช่อง แม่บ้านทดสอบ .* 17 พ\.ย\. 2569/ });
+    const pastCell = within(table).getByRole('button', { name: /เลือกช่อง แม่บ้านทดสอบ .* 16 พ\.ย\. 2569/ });
     expect(todayCell).toHaveAttribute('aria-pressed', 'true');
     expect(pastCell).toHaveAttribute('aria-pressed', 'false');
 
     const contextBar = screen.getByRole('region', { name: 'จัดการวันที่เลือก' });
     expect(within(contextBar).getByText('แม่บ้านทดสอบ')).toBeInTheDocument();
-    expect(within(contextBar).getByRole('button', { name: /แก้เฉพาะวันที่.*17\/11\/2026/ })).toBeInTheDocument();
+    expect(within(contextBar).getByRole('button', { name: /แก้เฉพาะวันที่.*17 พ\.ย\. 2569/ })).toBeInTheDocument();
     expect(within(contextBar).getByRole('button', { name: 'แก้ตารางประจำ' })).toBeInTheDocument();
 
     await user.click(pastCell);
     expect(pastCell).toHaveAttribute('aria-pressed', 'true');
     expect(todayCell).toHaveAttribute('aria-pressed', 'false');
-    expect(within(contextBar).getByRole('button', { name: /แก้ไขแผนย้อนหลัง.*16\/11\/2026/ })).toBeInTheDocument();
+    expect(within(contextBar).getByRole('button', { name: /แก้ไขแผนย้อนหลัง.*16 พ\.ย\. 2569/ })).toBeInTheDocument();
     expect(within(contextBar).queryByRole('button', { name: /แก้เฉพาะวันที่/ })).not.toBeInTheDocument();
 
     // Closing the context bar deselects cleanly (Heuristic #3)
@@ -460,8 +443,8 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     const { user } = await renderApp('/schedule-management');
 
     const contextBar = await screen.findByRole('region', { name: 'จัดการวันที่เลือก' });
-    expect(within(contextBar).getByRole('button', { name: /เพิ่มเวลาที่ขาด แม่บ้านทดสอบ 17\/11\/2026/ })).toBeInTheDocument();
-    expect(within(contextBar).getByRole('button', { name: /ย้ายพื้นที่ระหว่างกะ แม่บ้านทดสอบ 17\/11\/2026/ })).toBeInTheDocument();
+    expect(within(contextBar).getByRole('button', { name: /เพิ่มเวลาที่ขาด แม่บ้านทดสอบ 17 พ\.ย\. 2569/ })).toBeInTheDocument();
+    expect(within(contextBar).getByRole('button', { name: /ย้ายพื้นที่ระหว่างกะ แม่บ้านทดสอบ 17 พ\.ย\. 2569/ })).toBeInTheDocument();
 
     const historySummary = within(contextBar).getByText('ประวัติการแก้ไขแผน', { selector: 'summary span' });
     await user.click(historySummary);
@@ -474,7 +457,7 @@ describe('clean roster, KPI summary cards, and contextual action bar', () => {
     await renderApp('/my-schedule');
 
     await screen.findByRole('heading', { level: 1, name: 'ตารางของฉัน' });
-    const todayCard = (await screen.findByText(/17\/11\/2026 \(วันนี้\)/)).closest('article');
+    const todayCard = (await screen.findByText(/17 พ\.ย\. 2569 \(วันนี้\)/)).closest('article');
     expect(todayCard).not.toBeNull();
     expect(within(todayCard!).getByText('มีแผนทำงาน')).toBeInTheDocument();
     expect(screen.getByText('วันหยุด')).toBeInTheDocument();

@@ -21,7 +21,7 @@ import { coverNotice } from '../../shared/cover/coverText';
 import { useCoverCancellation } from '../../shared/cover/useCoverCancellation';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftShortLabel } from '../../shared/utils/labels';
-import { formatShiftDate, formatWeekday } from '../../shared/utils/thaiTime';
+import { formatThaiDate, formatWeekday } from '../../shared/utils/thaiTime';
 
 const tagClass =
   'inline-flex min-h-6 shrink-0 items-center rounded-sm border px-2 text-xs font-semibold whitespace-nowrap';
@@ -73,7 +73,7 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
   const userId = chosen ?? list[0]?.id; // the server lists the best first
   const person = list.find((candidate) => candidate.id === userId);
   const covers = rows.flatMap((row) => row.covers.map((cover) => ({ row, cover })));
-  const slotWords = `${shiftShortLabel[slot.shift]} ${formatWeekday(slot.shiftDate)} ${formatShiftDate(slot.shiftDate)}`;
+  const slotWords = `${shiftShortLabel[slot.shift]} ${formatWeekday(slot.shiftDate)} ${formatThaiDate(slot.shiftDate)}`;
   const headingId = 'schedule-cover';
 
   const pickSlot = (next: CoverSlot) => {
@@ -122,11 +122,11 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
               >
                 {dates.map((date) => (
                   <option key={date} value={date}>
-                    {`${formatWeekday(date)} ${formatShiftDate(date)}${date === current.shiftDate ? ' (วันนี้)' : ''}`}
+                    {`${formatWeekday(date)} ${formatThaiDate(date)}${date === current.shiftDate ? ' (วันนี้)' : ''}`}
                   </option>
                 ))}
               </Select>
-              <span className="text-xs text-text-2">{`ล่วงหน้าได้ถึง ${formatShiftDate(dates[dates.length - 1])}`}</span>
+              <span className="text-xs text-text-2">{`ล่วงหน้าได้ถึง ${formatThaiDate(dates[dates.length - 1])}`}</span>
             </label>
             <div className="flex flex-col gap-1">
               <span className="font-semibold">กะ</span>

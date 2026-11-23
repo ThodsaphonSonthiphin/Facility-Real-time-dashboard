@@ -2,7 +2,7 @@ import { ArrowRightLeft, CalendarDays, Check, Clock3, History, RotateCcw, Slider
 import { lazy, Suspense } from 'react';
 import { Button } from '../../../shared/components/Button';
 import { focusRing } from '../../../shared/components/styles';
-import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
+import { formatThaiDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { cellLabel, cleanerKindLabel } from '../scheduleRules';
 import type { SchedulePageView } from './type';
 
@@ -25,7 +25,7 @@ export function ScheduleContextBar({ view }: ScheduleContextBarProps) {
   const day = person?.days.find((one) => one.date === selectedCell.date);
   if (!person || !day) return null;
 
-  const dateText = formatShiftDate(day.date);
+  const dateText = formatThaiDate(day.date);
   const datedActionLabel = view.dateAction(day);
   const isPastDate = day.date < businessDate;
   const canEditDated = Boolean(latest && day.edit?.canChange && day.shift);

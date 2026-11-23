@@ -224,7 +224,8 @@ it.each(recoveryViews)('keeps the $label snapshot marked stale until a read star
   act(() => connection.push('OverviewChanged', { revisionId: 13 }));
   await waitFor(() => expect(requests()).toHaveLength(3));
   act(() => connection.reconnecting());
-  expect(screen.getByText(/กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด/)).toBeVisible();
+  expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
+  expect(screen.queryByText('ขาดการเชื่อมต่อ')).not.toBeInTheDocument();
   act(() => connection.reconnected());
   expect(screen.getByText(checking)).toHaveTextContent('10:00');
   expect(requests()).toHaveLength(3);
@@ -257,7 +258,8 @@ it.each(recoveryViews)('keeps the $label snapshot marked stale through a failed 
   expect(retained()).toBeVisible();
 
   act(() => connection.reconnecting());
-  expect(screen.getByText(/กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด/)).toBeVisible();
+  expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
+  expect(screen.queryByText('ขาดการเชื่อมต่อ')).not.toBeInTheDocument();
   act(() => connection.reconnected());
   await waitFor(() => expect(requests()).toHaveLength(3));
   expect(screen.getByText(checking)).toHaveTextContent('10:00');
@@ -267,7 +269,7 @@ it.each(recoveryViews)('keeps the $label snapshot marked stale through a failed 
   const warning = await screen.findByText(outdated);
   expect(warning).toHaveTextContent('10:00');
   expect(retained()).toBeVisible();
-  expect(screen.queryByText(/กำลังเชื่อมต่อใหม่/)).not.toBeInTheDocument();
+  expect(screen.queryByText('ขาดการเชื่อมต่อ')).not.toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
   await waitFor(() => expect(requests()).toHaveLength(4));
@@ -353,7 +355,7 @@ it('keeps closed Area detail fresh on reopen and attendance corrections without 
     await waitFor(() => expect(requests()).toHaveLength(2));
     expect(screen.getByText('ปิดรับข้อมูลของกะนี้แล้ว')).toBeVisible();
     act(() => hub.latest().reconnecting());
-    expect(screen.queryByText(/กำลังเชื่อมต่อใหม่/)).not.toBeInTheDocument();
+    expect(screen.queryByText('ขาดการเชื่อมต่อ')).not.toBeInTheDocument();
     await advance(30_001);
     await act(async () => { window.dispatchEvent(new Event('focus')); });
     expect(requests()).toHaveLength(2);

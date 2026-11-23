@@ -2,19 +2,21 @@ import { ArrowRightLeft, Check, Coffee, MapPin, Minus, Pencil, UserX, type Lucid
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { AreaAttendanceState, BoardEvent, BoardRow } from '../../shared/api/attendanceBoardApi';
+import type { Shift } from '../../shared/api/types';
 import { AvatarBadge } from '../../shared/components/AvatarBadge/AvatarBadge';
 import { Table } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
 import { Badge, EditedMark } from '../../shared/components/Badge';
 import { PageEmpty } from '../../shared/components/PageState';
 import { buttonClass, tableCell } from '../../shared/components/styles';
-import { entryLabel, eventLabel, attendanceEvents, transferStateLabel } from '../../shared/utils/labels';
+import { attendanceEventLabel, attendanceEvents, entryLabel, transferStateLabel } from '../../shared/utils/labels';
 import { formatTime } from '../../shared/utils/thaiTime';
 import { useBuildingNames, buildingText } from '../../shared/api/buildingNames';
 import { areaStateLabel, attendanceTargets, coverDetail, eventOf } from './attendanceRules';
 
 interface AttendanceTableProps {
   rows: BoardRow[];
+  shift?: Shift;
   /** "เพิ่มเวลา" / "แก้เวลา" on a row with a regular Cleaner (facility-0051). */
   onCorrect?: (row: BoardRow, userId: number) => void;
   /** The bar under the table, inside its box: the count, the [แก้] legend and the pages. */
@@ -34,7 +36,7 @@ const stateChip: Record<AreaAttendanceState, { tone: string; Icon: LucideIcon }>
 const subClass = 'block text-xs font-normal text-text-2';
 
 /** Wireframe D2's table, in the server's order: Areas with nobody first (facility-0050). Names are React text only. */
-export function AttendanceTable({ rows, onCorrect, footer }: AttendanceTableProps) {
+export function AttendanceTable({ rows, shift, onCorrect, footer }: AttendanceTableProps) {
   const names = useBuildingNames();
   const actions = attendanceEvents;
   const showActionColumn = Boolean(onCorrect || rows.some((row) => row.state === 'Empty'));
@@ -60,7 +62,7 @@ export function AttendanceTable({ rows, onCorrect, footer }: AttendanceTableProp
           </th>
           {actions.map((type) => (
             <th key={type} scope="col" className={`${tableCell.num} whitespace-nowrap`}>
-              {eventLabel[type]}
+              {attendanceEventLabel(type, shift)}
             </th>
           ))}
           {showActionColumn && (

@@ -106,7 +106,7 @@ export function boardTag(shiftDate: string, shift: Shift) {
   return { type: 'AttendanceBoard' as const, id: `${shiftDate}:${shift}` };
 }
 
-/** One hub connection per board on screen (plan 11 decision 4); the page's LiveBadge reads the same key. */
+/** One hub connection key per board on screen (plan 11 decision 4). */
 export function attendanceHubKey({ shiftDate, shift, buildingId }: BoardArgs): string {
   return `attendance-board:${shiftDate ?? 'now'}:${shift ?? ''}:${buildingId ?? 'all'}`;
 }

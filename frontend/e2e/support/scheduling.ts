@@ -1,6 +1,6 @@
 import { expect, type APIRequestContext, type Locator, type Page, type Response, type TestInfo } from '@playwright/test';
 import { sidewaysOverflow } from './pageWatch.ts';
-import { formatShiftDate, formatWeekday } from '../../src/shared/utils/thaiTime.ts';
+import { formatThaiDate, formatThaiShortDate, formatWeekday } from '../../src/shared/utils/thaiTime.ts';
 
 const scheduleLinks = {
   '/my-schedule': 'ตารางของฉัน',
@@ -68,7 +68,11 @@ export async function saveReviewedSchedule(page: Page): Promise<CommandResult> {
 }
 
 export function weekDayLabel(date: string): string {
-  return `${formatWeekday(date)} ${formatShiftDate(date).slice(0, 5)}`;
+  return `${formatWeekday(date)} ${formatThaiShortDate(date)}`;
+}
+
+export function fullDayLabel(date: string): string {
+  return `${formatWeekday(date)} ${formatThaiDate(date)}`;
 }
 
 export async function captureSchedule(page: Page, info: TestInfo, name: string, state?: Locator): Promise<void> {

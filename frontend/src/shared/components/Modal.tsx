@@ -106,6 +106,27 @@ export function Modal({
 }
 
 /**
+ * A bottom-anchored sheet for phone actions (e.g. CheckInPage's secondary actions): docked to the viewport bottom
+ * with rounded top corners, a handle indicator, and safe-area bottom padding.
+ */
+export function Sheet({ labelledBy, describedBy, role, onClose, children }: DialogProps) {
+  return (
+    <DialogFrame
+      labelledBy={labelledBy}
+      describedBy={describedBy}
+      role={role}
+      onClose={onClose}
+      className="motion-sheet mx-auto mt-auto mb-0 max-h-[85dvh] w-full max-w-mobile overflow-y-auto rounded-t-xl px-6 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+    >
+      <div aria-hidden="true" className="-mx-6 -mt-5 mb-5 flex justify-center pt-2.5">
+        <span className="h-1 w-10 rounded-sm bg-border" />
+      </div>
+      {children}
+    </DialogFrame>
+  );
+}
+
+/**
  * A panel sliding in from the right edge, full height, scrolling on its own (owner, 2026-10-23): the Area's table
  * stays visible on the left while a point or the Area itself is edited on the right. `w-120` is 480 px, half a 1280 px
  * screen's content beside the 300 px Area list, and the design file's Drawer; `width="lg"` is D2's 520 px cover form.

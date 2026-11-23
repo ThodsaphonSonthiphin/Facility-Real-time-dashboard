@@ -3,10 +3,10 @@ import { useParams } from 'react-router';
 import { freshOnOpen } from '../../../shared/api/baseApi';
 import { useGetMyWorkQuery } from '../../../shared/api/myWorkApi';
 import { blockedScanOf, isNotSent, statusOf } from '../../../shared/api/scanAnswers';
-import type { AttendanceEvent, AttendanceState } from '../../../shared/api/types';
+import type { AttendanceEvent, AttendanceState, Shift } from '../../../shared/api/types';
 import { readLocation } from '../../../shared/geo/readLocation';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
-import { eventLabel } from '../../../shared/utils/labels';
+import { attendanceEventLabel } from '../../../shared/utils/labels';
 import { formatTime } from '../../../shared/utils/thaiTime';
 import { useCheckSignQuery, useConfirmTransferArrivalMutation, useRecordAttendanceMutation } from '../checkInApi';
 import type { CheckInOutcome, CheckInPageView, CheckInRetry } from './type';
@@ -26,6 +26,7 @@ export function useCheckInPage(): CheckInPageView {
   const retryingRead = useRef(false);
   const [outcome, setOutcome] = useState<CheckInOutcome | null>(null);
   const [proposed, setProposed] = useState<Extract<CheckInRetry, { kind: 'action' }> | null>(null);
+  const [otherSheetRevision, setOtherSheetRevision] = useState<string | null>(null);
   const [retryReadStatus, setRetryReadStatus] = useState<CheckInPageView['retryReadStatus']>('idle');
 
   const signGone = statusOf(signQuery.error) === 404;
@@ -55,6 +56,7 @@ export function useCheckInPage(): CheckInPageView {
 
   const retryRead = async () => {
     if (retryingRead.current) return;
+    setOtherSheetRevision(null);
     retryingRead.current = true;
     setRetryReadStatus('pending');
     try {
@@ -107,7 +109,7 @@ export function useCheckInPage(): CheckInPageView {
         ...(confirmPendingTransfer ? { confirmPendingTransfer: true } : {}),
       });
       if (answer.data) {
-        setOutcome(attendanceAnswer(eventType, answer.data, reading.fix.accuracyM));
+        setOutcome(attendanceAnswer(eventType, answer.data, reading.fix.accuracyM, attendance?.shift ?? undefined));
         return;
       }
       const blocked = blockedScanOf(answer.error);
@@ -131,6 +133,7 @@ export function useCheckInPage(): CheckInPageView {
   const press = (eventType: AttendanceEvent) => {
     const choice = choices.find((item) => item.eventType === eventType);
     if (!choice) return;
+    setOtherSheetRevision(null);
     const confirmPendingTransfer = transferPending && canShiftOutOrigin && eventType === 'ShiftOut';
     const request = {
       kind: 'action' as const,
@@ -153,6 +156,7 @@ export function useCheckInPage(): CheckInPageView {
 
   const confirmDestination = () => {
     if (!confirmable || !transfer) return;
+    setOtherSheetRevision(null);
     void submit({ kind: 'transfer', transferId: transfer.id, revision: transfer.revision });
   };
 
@@ -174,6 +178,13 @@ export function useCheckInPage(): CheckInPageView {
 
   const finished = !!live?.shift && (hasShiftOut || (!transferPending && (live.nextActions ?? []).length === 0));
   const incompleteActions = live?.actions?.some((action) => action.state === 'skipped' || action.state === 'missing');
+  const otherActionsOpen = otherSheetRevision !== null
+    && otherSheetRevision === revision
+    && choices.length > 1
+    && !gapConfirmation
+    && !confirmable
+    && !loadError
+    && busy === null;
 
   return {
     attendance,
@@ -184,7 +195,7 @@ export function useCheckInPage(): CheckInPageView {
     loading: workQuery.isLoading || signQuery.isLoading,
     choices,
     gapConfirmation,
-    gapLabel: gapConfirmation?.gaps.map((eventType) => eventLabel[eventType]).join(' และ '),
+    gapLabel: gapConfirmation?.gaps.map((eventType) => attendanceEventLabel(eventType, attendance?.shift ?? undefined)).join(' และ '),
     completionMessage: finished ? (incompleteActions ? 'สิ้นสุดกะแล้ว' : 'ลงเวลาครบแล้วสำหรับกะนี้') : undefined,
     busy,
     outcome,
@@ -192,6 +203,9 @@ export function useCheckInPage(): CheckInPageView {
     confirmable,
     canShiftOutOrigin,
     transferPending: transferPending && !arrivalJustConfirmed && !hasShiftOut,
+    otherActionsOpen,
+    openOtherActions: () => setOtherSheetRevision(revision ?? null),
+    closeOtherActions: () => setOtherSheetRevision(null),
     press,
     confirmGaps,
     cancelGaps: () => setProposed(null),
@@ -204,9 +218,9 @@ export function useCheckInPage(): CheckInPageView {
 }
 
 function attendanceAnswer(
-  eventType: AttendanceEvent, state: AttendanceState, accuracyM: number,
+  eventType: AttendanceEvent, state: AttendanceState, accuracyM: number, shift?: Shift,
 ): Extract<CheckInOutcome, { kind: 'answered' }> {
-  const label = eventLabel[eventType];
+  const label = attendanceEventLabel(eventType, shift);
   const recorded = state.events.find((event) => event.eventType === eventType);
   const time = recorded ? formatTime(recorded.occurredAt) : '';
 

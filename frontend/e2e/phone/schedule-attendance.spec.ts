@@ -1,5 +1,6 @@
+import { attendanceEventLabel } from '../../src/shared/utils/labels.ts';
 import type { AttendanceState } from '../../src/shared/api/types.ts';
-import { formatShiftDate } from '../../src/shared/utils/thaiTime.ts';
+import { formatThaiDate } from '../../src/shared/utils/thaiTime.ts';
 import { recordTransferArrival } from '../support/attendance.ts';
 import { desktop } from '../support/devices.ts';
 import { loginAsAdmin, loginAsEmployee } from '../support/login.ts';
@@ -18,8 +19,6 @@ interface AttendanceBoard {
   }[];
 }
 
-const breakLabels = { Break1Out: 'ออกพัก 1', Break1In: 'กลับจากพัก 1', Break2Out: 'ออกพัก 2', Break2In: 'กลับจากพัก 2' };
-
 const attendancePath = '/api/attendance';
 
 test.describe('scheduling attendance', () => {
@@ -34,7 +33,7 @@ test.describe('scheduling attendance', () => {
       await loginAsEmployee(manager, fixture.supervisorAB);
       await expect(manager).toHaveURL(/\/my-building$/);
       await openSchedule(manager, '/schedule-management', fixture.weekStart);
-      const date = formatShiftDate(fixture.shiftDate);
+      const date = formatThaiDate(fixture.shiftDate);
       await manager.getByRole('button', { name: new RegExp(`^เลือกช่อง ${fixture.leave.name} .* ${date} `) }).click();
       await manager.getByRole('button', { name: new RegExp(`^(แก้เฉพาะวันที่|แก้ไขแผนย้อนหลัง) ${fixture.leave.name} ${date}$`) }).click();
       const dialog = manager.getByRole('dialog');
@@ -57,7 +56,13 @@ test.describe('scheduling attendance', () => {
     expect(before.events.map(({ eventType }) => eventType)).toEqual(['ShiftIn']);
     await expect(page.getByRole('list', { name: 'วันนี้' }).getByRole('listitem')).toHaveCount(6);
 
-    await page.getByRole('button', { name: 'เลิกงาน', exact: true }).click();
+    const otherTrigger = page.getByRole('button', { name: /^ลงเวลาขั้นตอนอื่น \(\d+\)$/ });
+    if (await otherTrigger.count()) {
+      await otherTrigger.click();
+      await page.getByRole('dialog', { name: 'เลือกขั้นตอนอื่น' }).getByRole('button', { name: 'เลิกงาน', exact: true }).click();
+    } else {
+      await page.getByRole('button', { name: 'เลิกงาน', exact: true }).click();
+    }
     await expect(page.getByText(/ต้องยืนยันรายการที่ข้ามก่อน/)).toBeVisible();
     const finalOut = page.waitForResponse((response) => apiAnswer(response, attendancePath, 'POST'));
     const pressedAt = Date.now();
@@ -80,7 +85,7 @@ test.describe('scheduling attendance', () => {
       const due = Date.parse(action.expectedAt!);
       const covered = due >= departure && due >= Date.parse(fixture.leaveStartsAt) && due < Date.parse(fixture.leaveEndsAt);
       expect(action.state).toBe(covered ? 'not-applicable' : 'skipped');
-      await expect(page.getByRole('listitem').filter({ has: page.getByText(breakLabels[action.eventType as keyof typeof breakLabels], { exact: true }) }))
+      await expect(page.getByRole('listitem').filter({ has: page.getByText(attendanceEventLabel(action.eventType, fixture.shift), { exact: true }) }))
         .toContainText(covered ? 'ไม่ต้องลงเวลาเนื่องจากลา' : 'ข้ามการสแกน');
     }
     const completed = page.getByText(/^(สิ้นสุดกะแล้ว|ลงเวลาครบแล้วสำหรับกะนี้)$/);
@@ -132,7 +137,7 @@ test.describe('scheduling attendance', () => {
       const result = await recordTransferArrival(page, `/check-in/${fixture.destinationArea.checkInToken}`);
       expect(result).toMatchObject({ id: before.transfer?.id, state: 'confirmed' });
       expect(Date.parse(result.confirmedAt!)).toBeGreaterThan(Date.parse(fixture.transferEffectiveAt));
-      await expect(page.getByRole('button', { name: 'กลับจากพัก 1', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: attendanceEventLabel('Break1In', fixture.shift), exact: true })).toBeVisible();
       const confirmation = page.getByText('ยืนยันถึงพื้นที่ใหม่แล้ว', { exact: true });
       await captureSchedule(page, info, 'transfer', confirmation);
       await page.setViewportSize({ width: 320, height: 720 });

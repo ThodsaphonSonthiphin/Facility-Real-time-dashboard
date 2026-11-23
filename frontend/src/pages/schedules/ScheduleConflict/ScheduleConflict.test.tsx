@@ -28,7 +28,7 @@ it('compares the preserved draft with a fresh scoped read after a stale command'
       },
     },
   });
-  await app.user.click(await screen.findByRole('button', { name: /แก้เฉพาะวันที่.*17\/11/ }));
+  await app.user.click(await screen.findByRole('button', { name: /แก้เฉพาะวันที่.*17 พ\.ย\. 2569/ }));
   const panel = within(await screen.findByRole('dialog'));
   await app.user.selectOptions(panel.getByLabelText('พื้นที่เฉพาะวันนี้'), '5');
   await app.user.click(panel.getByRole('button', { name: 'ตรวจสอบ' }));

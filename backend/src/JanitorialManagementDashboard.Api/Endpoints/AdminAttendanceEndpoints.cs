@@ -130,7 +130,7 @@ public static class AdminAttendanceEndpoints
 
         var proposed = events.ToDictionary(a => a.EventType, a => a.OccurredAt);
         proposed[eventType] = at;
-        if (AttendanceRules.CheckTimes(proposed) is { } orderError)
+        if (AttendanceRules.CheckTimes(proposed, shift) is { } orderError)
         {
             return Bad(orderError);
         }
@@ -146,7 +146,7 @@ public static class AdminAttendanceEndpoints
         var areaCode = duty.AreaId is int dutyAreaId
             ? await db.Areas.Where(area => area.Id == dutyAreaId).Select(area => area.Code).FirstOrDefaultAsync(ct)
             : null;
-        var summary = $"{(existing is null ? "เพิ่ม" : "แก้")}เวลา{ThaiLabels.EventName(eventType)}ของ {cleaner.DisplayName} "
+        var summary = $"{(existing is null ? "เพิ่ม" : "แก้")}เวลา{ThaiLabels.EventName(eventType, shift)}ของ {cleaner.DisplayName} "
             + $"{areaCode ?? cleaner.Area?.Code} กะ{ThaiLabels.ShiftName(shift)} {ThaiLabels.Date(shiftDate)}: "
             + $"{(existing is null ? "–" : ThaiLabels.Clock(existing.OccurredAt))} → {ThaiLabels.Clock(at)}";
         ShiftAttendance row;

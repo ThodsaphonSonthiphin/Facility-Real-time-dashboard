@@ -10,11 +10,9 @@ import { PhoneHeader, PhoneScreen } from '../../shared/components/PhoneScreen';
 import { focusRing } from '../../shared/components/styles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { shiftLabel } from '../../shared/utils/labels';
-import { useAppSelector } from '../../store/hooks';
-import { selectHubStatus } from '../../store/slices/hubSlice';
 import { BuildingCard } from './BuildingCard';
 import { inspectionOrder } from './buildingRules';
-import { MY_BUILDING_HUB, useGetMyBuildingQuery, type MyBuilding } from './myBuildingApi';
+import { useGetMyBuildingQuery, type MyBuilding } from './myBuildingApi';
 
 type BuildingStatusFilter = 'PendingInspection' | 'Rework' | 'Passed' | null;
 
@@ -24,7 +22,6 @@ type BuildingStatusFilter = 'PendingInspection' | 'Rework' | 'Passed' | null;
  */
 export function MyBuildingPage() {
   const { data, error, isLoading, isFetching, refetch } = useGetMyBuildingQuery(undefined, freshOnOpen);
-  const hubStatus = useAppSelector(selectHubStatus(MY_BUILDING_HUB));
   const [statusFilter, setStatusFilter] = useState<BuildingStatusFilter>(null);
 
   const toggleFilter = (next: Exclude<BuildingStatusFilter, null>) => {
@@ -49,7 +46,7 @@ export function MyBuildingPage() {
 
   return (
     <PhoneScreen header={header}>
-      <ConnectionBanner status={hubStatus} refreshing={isFetching} onRetry={() => void refetch()} />
+      <ConnectionBanner refreshing={isFetching} onRetry={() => void refetch()} />
       {isLoading && <PageLoading lines={3}>กำลังโหลดจุด...</PageLoading>}
       {error && (
         <Note tone="error" retrySize="phone" onRetry={() => void refetch()}>

@@ -1,11 +1,11 @@
 import { ArrowRightLeft, Check, Coffee, MapPin, UserX } from 'lucide-react';
 import { Link } from 'react-router';
-import { attendanceHubKey, type BoardSummary } from '../../../shared/api/attendanceBoardApi';
+import { type BoardSummary } from '../../../shared/api/attendanceBoardApi';
 import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../../shared/components/Button';
 import { EditedMark } from '../../../shared/components/Badge';
 import { KpiCard } from '../../../shared/components/KpiCard/KpiCard';
-import { LiveBadge } from '../../../shared/components/LiveBadge';
+import { LiveBadge } from '../../../shared/components/LiveBadge/LiveBadge';
 import { linkClass } from '../../../shared/components/styles';
 import { Note } from '../../../shared/components/Note';
 import { PageLoading } from '../../../shared/components/PageState';
@@ -34,7 +34,7 @@ export function LegacyAttendancePage() {
     <main className="flex min-w-0 flex-col gap-5 text-sm text-text">
       <AdminPageHeader
         title="การเข้างาน"
-        actions={<LiveBadge hubKey={attendanceHubKey(args)} />}
+        actions={<LiveBadge />}
       />
       <BoardControls
         board={board}
@@ -72,6 +72,7 @@ export function LegacyAttendancePage() {
           )}
           <AttendanceTable
             rows={shown.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)}
+            shift={board.shift}
             footer={shown.length > 0 && <TableFooter page={page} total={shown.length} onPage={setPage} />}
             onCorrect={openCorrection}
           />

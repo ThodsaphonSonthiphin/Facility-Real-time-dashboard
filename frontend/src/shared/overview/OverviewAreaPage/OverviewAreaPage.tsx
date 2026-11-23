@@ -2,7 +2,7 @@ import { ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router';
 import { AdminPageHeader } from '../../components/AdminPageHeader/AdminPageHeader';
 import { Button } from '../../components/Button';
-import { LiveBadge } from '../../components/LiveBadge';
+import { LiveBadge } from '../../components/LiveBadge/LiveBadge';
 import { Note } from '../../components/Note';
 import { PageLoading } from '../../components/PageState';
 import { linkClass } from '../../components/styles';
@@ -36,7 +36,7 @@ export function OverviewAreaPage({ view, actions }: OverviewAreaPageProps) {
             </>
           ) : undefined
         }
-        actions={model.hubKey ? <LiveBadge hubKey={model.hubKey} /> : undefined}
+        actions={<LiveBadge />}
       />
       {model.loading && <PageLoading lines={3}>กำลังโหลดพื้นที่...</PageLoading>}
       {model.error && (

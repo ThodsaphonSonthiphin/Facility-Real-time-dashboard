@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act as reactAct, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SEND_TIMEOUT_MS } from '../../shared/api/baseApi';
 import type { AttendanceAction, AttendanceActionState, AttendanceEvent, AttendanceState } from '../../shared/api/types';
@@ -17,6 +17,7 @@ import {
 import { browserPage } from '../../shared/utils/reloadPage';
 import { fakeGps, farFromSign, nearSign, permissionsSay } from '../../test/fakeGps';
 import { fakeServer, type FakeResponse, type FakeRoutes } from '../../test/fakeServer';
+import { hub } from '../../test/fakeSignalR';
 import { renderApp } from '../../test/renderApp';
 
 const SIGN = '/check-in/token-checkin-ar01';
@@ -135,7 +136,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     expect(screen.getByRole('heading', { name: 'ลงเวลา' })).toBeInTheDocument();
     expect(screen.getByText('กะเช้า 07:00–19:00')).toBeInTheDocument();
     expect(screen.getByText('พื้นที่ของคุณ: Area ทดลอง · 1 จุด')).toBeInTheDocument();
-    expect(steps()).toEqual(['เข้างาน –', 'ออกพัก 1 –', 'กลับจากพัก 1 –', 'ออกพัก 2 –', 'กลับจากพัก 2 –', 'เลิกงาน –']);
+    expect(steps()).toEqual(['เข้างาน –', 'พักเที่ยง –', 'กลับจากพักเที่ยง –', 'พักบ่าย –', 'กลับจากพักบ่าย –', 'เลิกงาน –']);
   });
 
   it('เข้างาน sends the sign token, the event and the GPS, shows the time and offers the next events (M10)', async () => {
@@ -158,11 +159,12 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
       accuracyM: 12,
       stateRevision: 'test-revision',
     });
-    // facility-0078: two events may come next, and only the buttons say so
-    expect(steps()).toEqual(['เข้างาน 06:52', 'ออกพัก 1 –', 'กลับจากพัก 1 –', 'ออกพัก 2 –', 'กลับจากพัก 2 –', 'เลิกงาน –']);
+    // facility-0078: only the primary next action sits in the bottom bar; remaining actions collapse into the sheet trigger
+    expect(steps()).toEqual(['เข้างาน 06:52', 'พักเที่ยง –', 'กลับจากพักเที่ยง –', 'พักบ่าย –', 'กลับจากพักบ่าย –', 'เลิกงาน –']);
     expect(screen.queryByText('ถัดไป')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ออกพัก 1' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'เลิกงาน' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'พักเที่ยง' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'เลิกงาน' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ลงเวลาขั้นตอนอื่น (1)' })).toBeInTheDocument();
     // the answer updated My Work's cached copy; nothing was asked again after the hub's catch-up
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(2);
   });
@@ -205,7 +207,7 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     await user.click(await screen.findByRole('button', { name: 'เลิกงาน' }));
 
     expect(await screen.findByText('บันทึกเวลาเลิกงานแล้ว 18:55')).toBeInTheDocument();
-    expect(steps()).toEqual(['เข้างาน 06:52', 'ออกพัก 1 12:01', 'กลับจากพัก 1 12:58', 'ออกพัก 2 16:00', 'กลับจากพัก 2 17:00', 'เลิกงาน 18:55']);
+    expect(steps()).toEqual(['เข้างาน 06:52', 'พักเที่ยง 12:01', 'กลับจากพักเที่ยง 12:58', 'พักบ่าย 16:00', 'กลับจากพักบ่าย 17:00', 'เลิกงาน 18:55']);
     expect(screen.getByText('ลงเวลาครบแล้วสำหรับกะนี้')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'เลิกงาน' })).not.toBeInTheDocument();
   });
@@ -218,10 +220,10 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     );
     const { user } = await renderApp(SIGN);
 
-    await user.click(await screen.findByRole('button', { name: 'ออกพัก 1' }));
+    await user.click(await screen.findByRole('button', { name: 'พักเที่ยง' }));
 
     expect(
-      await screen.findByText('ยังไม่ได้ลงเวลาออกพัก 1 รอให้ครบ 5 นาทีจากครั้งก่อน แล้วกด “ออกพัก 1” อีกครั้ง'),
+      await screen.findByText('ยังไม่ได้ลงเวลาพักเที่ยง รอให้ครบ 5 นาทีจากครั้งก่อน แล้วกด “พักเที่ยง” อีกครั้ง'),
     ).toBeInTheDocument();
   });
 
@@ -335,13 +337,13 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
       myWork(onDuty),
     );
     const { user } = await renderApp(SIGN);
-    await screen.findByRole('button', { name: 'ออกพัก 1' });
+    await screen.findByRole('button', { name: 'พักเที่ยง' });
     await hubCatchUp(server);
 
-    await user.click(screen.getByRole('button', { name: 'ออกพัก 1' }));
+    await user.click(screen.getByRole('button', { name: 'พักเที่ยง' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('ลงเวลาไม่ตรงลำดับ');
-    await screen.findByRole('button', { name: 'ออกพัก 1' });
+    await screen.findByRole('button', { name: 'พักเที่ยง' });
     // the first answer, the hub's catch-up, and the ask after the refused press
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3);
   });
@@ -416,10 +418,10 @@ describe('CheckInPage (M1, M2, M3, M8, M10)', () => {
     const server = serve({}, myWork(onDuty));
     const { user } = await renderApp(SIGN);
 
-    await user.click(await screen.findByRole('button', { name: 'ออกพัก 1' }));
+    await user.click(await screen.findByRole('button', { name: 'พักเที่ยง' }));
 
     expect(await screen.findByRole('button', { name: 'กำลังบันทึก...' })).toBeDisabled();
-    const other = screen.getByRole('button', { name: 'เลิกงาน' });
+    const other = screen.getByRole('button', { name: 'ลงเวลาขั้นตอนอื่น (1)' });
     expect(other).toBeDisabled();
     await user.click(other);
 
@@ -559,10 +561,10 @@ describe('the six-action lifecycle (spec §8)', () => {
 
     expect(steps()).toEqual([
       'เข้างาน –',
-      'ออกพัก 1 –',
-      'กลับจากพัก 1 –',
-      'ออกพัก 2 –',
-      'กลับจากพัก 2 –',
+      'พักเที่ยง –',
+      'กลับจากพักเที่ยง –',
+      'พักบ่าย –',
+      'กลับจากพักบ่าย –',
       'เลิกงาน –',
     ]);
 
@@ -580,24 +582,26 @@ describe('the six-action lifecycle (spec §8)', () => {
     });
     expect(steps()).toEqual([
       'เข้างาน 06:52',
-      'ออกพัก 1 –',
-      'กลับจากพัก 1 –',
-      'ออกพัก 2 –',
-      'กลับจากพัก 2 –',
+      'พักเที่ยง –',
+      'กลับจากพักเที่ยง –',
+      'พักบ่าย –',
+      'กลับจากพักบ่าย –',
       'เลิกงาน –',
     ]);
-    expect(screen.getByRole('button', { name: 'ออกพัก 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'พักเที่ยง' })).toBeInTheDocument();
   });
 
-  it('a press that steps over earlier breaks asks first, then sends exactly those skip markers and invents no time', async () => {
+  it('collapses remaining steps into OtherActionsSheet, allows closing without sending, and asks skip confirmation on choice', async () => {
     fakeGps(nearSign);
     const before = slot(
       [act('ShiftIn', 'recorded', '2026-10-14T23:52:00Z'), ...sixPending.slice(1)],
       {
         events: [shiftIn0652],
-
         nextActions: [
+          { action: 'Break1Out', requiredGaps: [] },
+          { action: 'Break1In', requiredGaps: ['Break1Out'] },
           { action: 'Break2Out', requiredGaps: ['Break1Out', 'Break1In'] },
+          { action: 'Break2In', requiredGaps: ['Break1Out', 'Break1In', 'Break2Out'] },
           { action: 'ShiftOut', requiredGaps: ['Break1Out', 'Break1In', 'Break2Out', 'Break2In'] },
         ],
       },
@@ -613,7 +617,6 @@ describe('the six-action lifecycle (spec §8)', () => {
       ],
       {
         events: [shiftIn0652, entry('Break2Out', '2026-10-15T07:00:00Z')],
-
         nextActions: [
           { action: 'Break2In', requiredGaps: [] },
           { action: 'ShiftOut', requiredGaps: ['Break2In'] },
@@ -627,28 +630,112 @@ describe('the six-action lifecycle (spec §8)', () => {
     const server = serve({ 'POST /api/attendance': () => ({ status: 200, body: { ...after, outcome: 'Recorded' } }) }, myWork(before));
     const { user } = await renderApp(SIGN);
 
-    await user.click(await screen.findByRole('button', { name: 'ออกพัก 2' }));
+    expect(await screen.findByRole('button', { name: 'พักเที่ยง' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'พักบ่าย' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'เลิกงาน' })).not.toBeInTheDocument();
 
-    expect(await screen.findByText(/ต้องยืนยันรายการที่ข้ามก่อน: ออกพัก 1 และ กลับจากพัก 1/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ลงเวลาขั้นตอนอื่น (4)' }));
+    const sheet = await screen.findByRole('dialog', { name: 'เลือกขั้นตอนอื่น' });
+    expect(within(sheet).getByRole('button', { name: 'กลับจากพักเที่ยง' })).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: 'พักบ่าย' })).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: 'กลับจากพักบ่าย' })).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: 'เลิกงาน' })).toBeInTheDocument();
+
+    await user.click(within(sheet).getByRole('button', { name: 'ปิด' }));
+    expect(screen.queryByRole('dialog', { name: 'เลือกขั้นตอนอื่น' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'ลงเวลาขั้นตอนอื่น (4)' }));
+    const reopened = await screen.findByRole('dialog', { name: 'เลือกขั้นตอนอื่น' });
+    await user.click(within(reopened).getByRole('button', { name: 'พักบ่าย' }));
+    expect(screen.queryByRole('dialog', { name: 'เลือกขั้นตอนอื่น' })).not.toBeInTheDocument();
+
+    expect(await screen.findByText(/ต้องยืนยันรายการที่ข้ามก่อน: พักเที่ยง และ กลับจากพักเที่ยง/)).toBeInTheDocument();
+    expect(document.activeElement).toHaveTextContent('ยืนยันขั้นตอนที่ข้าม');
     expect(server.calls.some((call) => call.path === '/api/attendance')).toBe(false);
 
     await user.click(screen.getByRole('button', { name: 'ยืนยันและบันทึก' }));
 
-    expect(await screen.findByText('บันทึกเวลาออกพัก 2แล้ว 14:00')).toBeInTheDocument();
+    expect(await screen.findByText('บันทึกเวลาพักบ่ายแล้ว 14:00')).toBeInTheDocument();
     expect(server.calls.find((call) => call.path === '/api/attendance')?.body).toMatchObject({
       eventType: 'Break2Out',
       confirmGaps: ['Break1Out', 'Break1In'],
-
       stateRevision: '5',
     });
     expect(steps()).toEqual([
       'เข้างาน 06:52',
-      'ออกพัก 1 ข้ามการสแกน',
-      'กลับจากพัก 1 ข้ามการสแกน',
-      'ออกพัก 2 14:00',
-      'กลับจากพัก 2 –',
+      'พักเที่ยง ข้ามการสแกน',
+      'กลับจากพักเที่ยง ข้ามการสแกน',
+      'พักบ่าย 14:00',
+      'กลับจากพักบ่าย –',
       'เลิกงาน –',
     ]);
+  });
+
+  it('uses Night shift break wording (พักรอบ 1 / พักรอบ 2) on a Night shift', async () => {
+    const night = {
+      ...slot(sixPending, { shift: 'Night', nextActions: [{ action: 'Break1Out', requiredGaps: [] }] }),
+    };
+    serve({}, myWork(night));
+    await renderApp(SIGN);
+
+    expect(await screen.findByRole('button', { name: 'พักรอบ 1' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ลงเวลาขั้นตอนอื่น/ })).not.toBeInTheDocument();
+    expect(steps()).toEqual([
+      'เข้างาน –',
+      'พักรอบ 1 –',
+      'กลับจากพักรอบ 1 –',
+      'พักรอบ 2 –',
+      'กลับจากพักรอบ 2 –',
+      'เลิกงาน –',
+    ]);
+  });
+
+  it('closes OtherActionsSheet permanently if stateRevision advances on a background refresh', async () => {
+    const rev5 = slot(
+      [act('ShiftIn', 'recorded', '2026-10-14T23:52:00Z'), ...sixPending.slice(1)],
+      {
+        stateRevision: '5',
+        events: [shiftIn0652],
+        nextActions: [
+          { action: 'Break1Out', requiredGaps: [] },
+          { action: 'ShiftOut', requiredGaps: ['Break1Out', 'Break1In', 'Break2Out', 'Break2In'] },
+        ],
+      },
+    );
+    const rev6 = slot(
+      [
+        act('ShiftIn', 'recorded', '2026-10-14T23:52:00Z'),
+        act('Break1Out', 'recorded', '2026-10-15T05:00:00Z'),
+        ...sixPending.slice(2),
+      ],
+      {
+        stateRevision: '6',
+        events: [shiftIn0652, entry('Break1Out', '2026-10-15T05:00:00Z')],
+        nextActions: [
+          { action: 'Break1In', requiredGaps: [] },
+          { action: 'ShiftOut', requiredGaps: ['Break1In', 'Break2Out', 'Break2In'] },
+        ],
+      },
+    );
+    let current = rev5;
+    const server = serve({
+      'GET /api/my-work': () => ({ status: 200, body: myWork(current) }),
+    });
+
+    const { user } = await renderApp(SIGN);
+    await screen.findByRole('button', { name: 'ลงเวลาขั้นตอนอื่น (1)' });
+    await hubCatchUp(server);
+
+    await user.click(screen.getByRole('button', { name: 'ลงเวลาขั้นตอนอื่น (1)' }));
+    expect(await screen.findByRole('dialog', { name: 'เลือกขั้นตอนอื่น' })).toBeInTheDocument();
+
+    current = rev6;
+    reactAct(() => {
+      hub.latest().push('ScheduleChanged', {});
+    });
+
+    expect(await screen.findByRole('button', { name: 'กลับจากพักเที่ยง' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'เลือกขั้นตอนอื่น' })).not.toBeInTheDocument();
   });
 
   it('a recorded 13:00 departure and leave excuse later breaks while an earlier break stays missing', async () => {
@@ -674,8 +761,8 @@ describe('the six-action lifecycle (spec §8)', () => {
     expect(rows[5]).toBe('เลิกงาน 13:00');
     expect(screen.queryByText('เวลาเลิกงานก่อนจบกะไม่ตรงกับช่วงลาที่บันทึกไว้')).not.toBeInTheDocument();
     expect(screen.getByText('สิ้นสุดกะแล้ว')).toBeVisible();
-    expect(rows[1]).toBe('ออกพัก 1 ไม่ได้สแกน');
-    expect(rows.join(' ')).not.toContain('กลับจากพัก 2: 17:00');
+    expect(rows[1]).toBe('พักเที่ยง ไม่ได้สแกน');
+    expect(rows.join(' ')).not.toContain('กลับจากพักบ่าย: 17:00');
   });
 
   it('shows the actual early departure and the leave mismatch together', async () => {
@@ -812,8 +899,8 @@ describe('the transfer arrival (spec §9)', () => {
     });
     expect(screen.queryByText(/เข้างานใหม่/)).not.toBeInTheDocument();
     expect(server.calls.filter((call) => call.path === '/api/attendance')).toHaveLength(0);
-    expect(await screen.findByRole('button', { name: 'กลับจากพัก 1' })).toBeEnabled();
-    expect(steps().slice(0, 3)).toEqual(['เข้างาน 06:52', 'ออกพัก 1 10:00', 'กลับจากพัก 1 –']);
+    expect(await screen.findByRole('button', { name: 'กลับจากพักเที่ยง' })).toBeEnabled();
+    expect(steps().slice(0, 3)).toEqual(['เข้างาน 06:52', 'พักเที่ยง 10:00', 'กลับจากพักเที่ยง –']);
     await waitFor(() => expect(server.calls.filter((call) => call.path === '/api/my-work')).toHaveLength(3));
   });
 
@@ -877,7 +964,7 @@ describe('the transfer arrival (spec §9)', () => {
     const { user } = await renderApp(SIGN);
 
     expect(await screen.findByRole('button', { name: 'เลิกงาน' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'กลับจากพัก 1' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'กลับจากพักเที่ยง' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ยืนยันเข้าพื้นที่ใหม่' })).not.toBeInTheDocument();
 
     // First tap opens the 2-step pending-transfer warning confirmation without sending yet.
@@ -885,7 +972,7 @@ describe('the transfer arrival (spec §9)', () => {
     expect(server.calls.filter((call) => call.path === '/api/attendance')).toHaveLength(0);
     expect(await screen.findByText('ยืนยันเลิกงานโดยไม่ย้ายพื้นที่')).toBeVisible();
     expect(screen.getByText(/ปิดกะโดยไม่ย้ายพื้นที่/)).toBeVisible();
-    expect(screen.getByText(/กลับจากพัก 1 และ ออกพัก 2 และ กลับจากพัก 2/)).toBeVisible();
+    expect(screen.getByText(/กลับจากพักเที่ยง และ พักบ่าย และ กลับจากพักบ่าย/)).toBeVisible();
 
     // Second tap sends confirmPendingTransfer + confirmGaps.
     await user.click(screen.getByRole('button', { name: 'ยืนยันและบันทึก' }));

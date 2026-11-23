@@ -36,7 +36,7 @@ internal static class ExportSheets
                 var byEvent = group.ToDictionary(e => e.EventType);
                 var edited = Events.Where(t => byEvent.TryGetValue(t, out var e) && e.Source != AttendanceSource.Scan)
                     .GroupBy(t => byEvent[t].Source == AttendanceSource.SupervisorAdd ? "เพิ่มโดยหัวหน้างาน" : "แก้โดยแอดมิน")
-                    .Select(source => $"{source.Key}: {string.Join(", ", source.Select(ThaiLabels.EventName))}")
+                    .Select(source => $"{source.Key}: {string.Join(", ", source.Select(t => ThaiLabels.EventName(t, group.Key.Shift)))}")
                     .ToList();
                 var outside = Events.Where(t => byEvent.TryGetValue(t, out var e) && e.WithinRadius == false).ToList();
                 IReadOnlyList<string> cells =
@@ -50,7 +50,7 @@ internal static class ExportSheets
                     .. Events.Select(t => byEvent.TryGetValue(t, out var e) ? ThaiLabels.Clock(e.OccurredAtUtc) : string.Empty),
                     edited.Count == 0 ? "สแกนเอง" : string.Join(" · ", edited),
                     outside.Count > 0
-                        ? "นอกรัศมี: " + string.Join(", ", outside.Select(t => $"{ThaiLabels.EventName(t)} {byEvent[t].DistanceM} ม."))
+                        ? "นอกรัศมี: " + string.Join(", ", outside.Select(t => $"{ThaiLabels.EventName(t, group.Key.Shift)} {byEvent[t].DistanceM} ม."))
                         : group.Any(e => e.WithinRadius == true) ? "ในรัศมี" : "-",
                 ];
                 return new SortedRow(group.Key.ShiftDate, group.Key.Shift, first.OccurredAtUtc, first.AreaCode + "|" + first.EmployeeId, cells);
@@ -58,7 +58,7 @@ internal static class ExportSheets
 
         return new ExcelSheet(
             AttendanceName,
-            ["วันที่กะ", "กะ", "ตึก", "พื้นที่", "รหัสพนักงาน", "ชื่อ", .. Events.Select(ThaiLabels.EventName), "ที่มา", "ตำแหน่ง"],
+            ["วันที่กะ", "กะ", "ตึก", "พื้นที่", "รหัสพนักงาน", "ชื่อ", .. Events.Select(t => ThaiLabels.EventName(t)), "ที่มา", "ตำแหน่ง"],
             Sort(rows));
     }
 

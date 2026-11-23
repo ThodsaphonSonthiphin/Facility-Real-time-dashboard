@@ -1,7 +1,7 @@
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { useState } from 'react';
 import type { ReliefCandidate, RowProblem, ScheduleWeek } from '../../../shared/api/scheduleTypes';
-import { formatShiftDate } from '../../../shared/utils/thaiTime';
+import { formatThaiDate } from '../../../shared/utils/thaiTime';
 import type { CommandDraft } from '../commandRules';
 import { useReliefLoanEditor } from '../ReliefLoanEditor/useReliefLoanEditor';
 import type { ScheduleChangeLine } from '../ScheduleReview/type';
@@ -104,7 +104,7 @@ export function useReliefAssignmentEditor(props: ReliefAssignmentEditorProps, mo
   }
   const beforeAfter = areaOption ? [{
     id: key,
-    label: `${candidate?.displayName ?? person?.displayName ?? 'แม่บ้านสแปร์'} · ${formatShiftDate(date)} · ${shift === 'Day' ? 'กะเช้า' : 'กะดึก'}`,
+    label: `${candidate?.displayName ?? person?.displayName ?? 'แม่บ้านสแปร์'} · ${formatThaiDate(date)} · ${shift === 'Day' ? 'กะเช้า' : 'กะดึก'}`,
     before: facts(candidate, inherited),
     after: [
       `ตึก ${destination?.buildingCode} · ${areaOption.label}`,

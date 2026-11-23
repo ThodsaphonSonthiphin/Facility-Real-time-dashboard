@@ -289,6 +289,7 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
 
     await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
     expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
+    expect(screen.queryByText('ขาดการเชื่อมต่อ')).not.toBeInTheDocument();
     expect(hub.latest().tokens).toEqual(['token-cleaner']);
     expect(hub.latest().serverTimeoutInMilliseconds).toBe(30_000);
   });
@@ -315,19 +316,26 @@ describe('MyWorkPage (M9, M14, facility-0052)', () => {
     expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3);
   });
 
-  it('a dropped hub shows the top connection banner, and coming back hides it and refetches (facility-0064)', async () => {
+  it('stays quiet when the hub reconnects online, shows the connection banner only while offline, and refetches on retry or reconnect', async () => {
     const server = serveMyWork(myWork(undefined, [area(fourPoints)]));
-    await renderApp('/my-work');
+    const { user } = await renderApp('/my-work');
     await screen.findByRole('region', { name: 'ทำอันนี้ก่อน' });
     await settled(server);
 
     act(() => hub.latest().reconnecting());
-    expect(screen.getByText('ข้อมูลอาจยังไม่ล่าสุด การเชื่อมต่อกำลังลองใหม่')).toBeInTheDocument();
+    expect(screen.queryByText(/ข้อมูลอาจยังไม่ล่าสุด/)).not.toBeInTheDocument();
+    expect(screen.queryByText('ขาดการเชื่อมต่อ')).not.toBeInTheDocument();
 
     act(() => hub.latest().reconnected());
-
     await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(3));
-    expect(screen.queryByText('ข้อมูลอาจยังไม่ล่าสุด การเชื่อมต่อกำลังลองใหม่')).not.toBeInTheDocument();
+
+    act(() => window.dispatchEvent(new Event('offline')));
+    expect(screen.getByText('ขาดการเชื่อมต่อ')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ลองใหม่' }));
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work')).toHaveLength(4));
+
+    act(() => window.dispatchEvent(new Event('online')));
+    expect(screen.queryByText('ขาดการเชื่อมต่อ')).not.toBeInTheDocument();
   });
 
   it('shows a single consolidated shift + progress summary card without adding h2/h3 headings', async () => {

@@ -5,12 +5,10 @@ import { livePoll } from '../../../shared/api/baseApi';
 import type { Notice } from '../../../shared/components/Toast';
 import type { RootState } from '../../../store';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectHubStatus } from '../../../store/slices/hubSlice';
-import { scheduleHubKey, schedulePoll, useGetManagedScheduleQuery, useGetMyScheduleQuery } from '../schedulesApi';
+import { schedulePoll, useGetManagedScheduleQuery, useGetMyScheduleQuery } from '../schedulesApi';
 import {
   clockSlot,
   initialScheduleSelection,
-  readMayBeStale,
   selectionAfterRead,
   type ScheduleRole,
   type ScheduleSelection,
@@ -40,7 +38,6 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
   const coverSlot = nowBoard.data ? { shiftDate: nowBoard.data.shiftDate, shift: nowBoard.data.shift } : undefined;
   const phone = useSyncExternalStore(subscribeToPhoneWidth, isPhoneWidth);
   const restored = useAppSelector((state: RootState) => state.scheduleView.views[role]);
-  const changedAt = useAppSelector((state: RootState) => state.scheduleView.changedAt);
   // A Supervisor's and an Admin's initial filters follow the shift on the clock; a Cleaner has none
   const currentDefault = initialScheduleSelection(role, clockSlot(new Date()));
   const requested = restored ?? currentDefault;
@@ -163,8 +160,6 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     isLoading: read.isLoading,
     isFetching: read.isFetching,
     error: read.error,
-    mayBeStale: readMayBeStale(changedAt, read),
-    hubStatus: useAppSelector(selectHubStatus(scheduleHubKey(selection))),
     refetch: () => void read.refetch(),
     reloadEditorWeek: () => read.refetch().unwrap(),
     chooseWeek: (weekStart) => remember({ ...requested, weekStart }),

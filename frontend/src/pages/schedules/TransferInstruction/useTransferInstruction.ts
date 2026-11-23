@@ -4,7 +4,7 @@ import { livePoll } from '../../../shared/api/baseApi';
 import type { AttendanceState, AttendanceTransfer } from '../../../shared/api/types';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { transferStateLabel } from '../../../shared/utils/labels';
-import { formatDayTime, formatShiftDate } from '../../../shared/utils/thaiTime';
+import { formatDayTime, formatThaiDate } from '../../../shared/utils/thaiTime';
 import type { CommandDraft } from '../commandRules';
 import { useScheduleReview } from '../ScheduleReview/useScheduleReview';
 import { useGetTeamSlotQuery, type TeamSlotArgs } from '../schedulesApi';
@@ -69,7 +69,7 @@ export function useTransferInstruction(props: TransferInstructionProps) {
       ? { transferId: transfer.id, reason: reason.trim() }
       : { userId, shiftDate, shift, fromAreaId: origin, toAreaId: Number(destination), effectiveAt, reason: reason.trim() },
   };
-  const trimDate = formatShiftDate(shiftDate);
+  const trimDate = formatThaiDate(shiftDate);
   const line = [{
     id: key, label: `${displayName} · ${trimDate}`,
     before: cancelling ? `${areaLabel(transfer.fromAreaId)} → ${areaLabel(transfer.toAreaId)} · ${transferStateLabel.instructed}` : areaLabel(origin),

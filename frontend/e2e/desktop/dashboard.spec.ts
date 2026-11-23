@@ -4,7 +4,7 @@ import { loginAsAdmin } from '../support/login.ts';
 import { expectAreaShown } from '../support/dashboard.ts';
 import { holdBack, layoutShiftTotal, recordLayoutShifts, sidewaysOverflow, textEverShown, watchForText } from '../support/pageWatch.ts';
 
-const badge = 'กำลังเชื่อมต่อใหม่ ข้อมูลอาจยังไม่ล่าสุด';
+const badge = 'ขาดการเชื่อมต่อ';
 
 test('Admin navigation keeps its geometry while alert counts load at phone, narrow and desktop widths', async ({ page }, testInfo) => {
   await loginAsAdmin(page);

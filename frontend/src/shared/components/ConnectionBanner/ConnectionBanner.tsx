@@ -1,13 +1,15 @@
 import { RefreshCw, WifiOff } from 'lucide-react';
 import { Button } from '../Button';
 import type { ConnectionBannerProps } from './type';
+import { useConnectionBanner } from './useConnectionBanner';
 
 /**
- * Compact top-of-page alert shown ONLY when real-time updates drop or lag behind (Heuristics #1 & #9).
- * Stays invisible while connected so normal screens remain uncluttered.
+ * Compact top-of-page alert shown ONLY when the browser connection is lost (offline).
+ * Stays invisible while online so normal screens remain uncluttered.
  */
-export function ConnectionBanner({ status, stale = false, refreshing = false, onRetry }: ConnectionBannerProps) {
-  if (status !== 'reconnecting' && !stale) {
+export function ConnectionBanner({ refreshing = false, onRetry }: ConnectionBannerProps) {
+  const { isDisconnected } = useConnectionBanner();
+  if (!isDisconnected) {
     return null;
   }
 
@@ -19,7 +21,7 @@ export function ConnectionBanner({ status, stale = false, refreshing = false, on
     >
       <span className="flex min-w-0 flex-1 items-center gap-2 font-semibold text-overdue">
         <WifiOff aria-hidden="true" className="size-4 shrink-0" />
-        <span>ข้อมูลอาจยังไม่ล่าสุด การเชื่อมต่อกำลังลองใหม่</span>
+        <span>ขาดการเชื่อมต่อ</span>
       </span>
       <Button variant="secondary" size="desk" disabled={refreshing} onClick={onRetry}>
         <RefreshCw aria-hidden="true" className="size-4" />

@@ -166,7 +166,7 @@ public static class AttendanceEndpoints
         if (!confirmed.ToHashSet().SetEquals(choice.RequiredGaps))
         {
             return Refused(GapsNotConfirmed,
-                $"ต้องยืนยันรายการที่ข้ามก่อน: {string.Join(", ", choice.RequiredGaps.Select(ThaiLabels.EventName))}",
+                $"ต้องยืนยันรายการที่ข้ามก่อน: {string.Join(", ", choice.RequiredGaps.Select(e => ThaiLabels.EventName(e, slot.Shift)))}",
                 choice.RequiredGaps);
         }
 

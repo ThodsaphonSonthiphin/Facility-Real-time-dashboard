@@ -19,16 +19,16 @@ internal static class ThaiLabels
     };
 
     /// <summary>
-    /// The six actions of spec §8: the four legacy names keep exactly their old wording, and the numbered breaks are named
-    /// by their cycle so an audit row or a gap message can tell them apart.
+    /// The six actions of spec §8: Day shift names breaks พักเที่ยง / พักบ่าย, while Night shift and cross-shift
+    /// headers use พักรอบ 1 / พักรอบ 2.
     /// </summary>
-    public static string EventName(AttendanceEvent eventType) => eventType switch
+    public static string EventName(AttendanceEvent eventType, Shift? shift = null) => eventType switch
     {
         AttendanceEvent.ShiftIn => "เข้างาน",
-        AttendanceEvent.Break1Out => "ออกพัก 1",
-        AttendanceEvent.Break1In => "กลับจากพัก 1",
-        AttendanceEvent.Break2Out => "ออกพัก 2",
-        AttendanceEvent.Break2In => "กลับจากพัก 2",
+        AttendanceEvent.Break1Out => shift == Shift.Day ? "พักเที่ยง" : "พักรอบ 1",
+        AttendanceEvent.Break1In => shift == Shift.Day ? "กลับจากพักเที่ยง" : "กลับจากพักรอบ 1",
+        AttendanceEvent.Break2Out => shift == Shift.Day ? "พักบ่าย" : "พักรอบ 2",
+        AttendanceEvent.Break2In => shift == Shift.Day ? "กลับจากพักบ่าย" : "กลับจากพักรอบ 2",
         _ => "เลิกงาน",
     };
 

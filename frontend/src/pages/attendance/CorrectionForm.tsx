@@ -2,7 +2,7 @@ import { ArrowRight, Check, Info, TriangleAlert, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import type { AssignedCleaner } from '../../shared/api/adminSetupApi';
 import type { AttendanceBoard, BoardRow } from '../../shared/api/attendanceBoardApi';
-import type { AttendanceEvent } from '../../shared/api/types';
+import type { AttendanceEvent, Shift } from '../../shared/api/types';
 import { EditedMark } from '../../shared/components/Badge';
 import { Button } from '../../shared/components/Button';
 import { TextArea, TextInput } from '../../shared/components/Field';
@@ -10,7 +10,7 @@ import { DialogFooter, DialogHeader, Modal } from '../../shared/components/Modal
 import { Note } from '../../shared/components/Note';
 import { Spinner } from '../../shared/components/PageState';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
-import { eventLabel, attendanceEvents, shiftLabel } from '../../shared/utils/labels';
+import { attendanceEventLabel, attendanceEvents, shiftLabel } from '../../shared/utils/labels';
 import { formatShiftDate, formatTime } from '../../shared/utils/thaiTime';
 import { useCorrectAttendanceMutation } from './attendanceApi';
 import {
@@ -43,7 +43,8 @@ interface CorrectionFormProps {
 /** A send that failed: what the server said, and which times were already saved before it. */
 type Failure = { message: string; saved: AttendanceEvent[]; left: AttendanceEvent[] };
 
-const labels = (types: readonly AttendanceEvent[]) => types.map((type) => eventLabel[type]).join(' และ');
+const labels = (types: readonly AttendanceEvent[], shift: Shift) =>
+  types.map((type) => attendanceEventLabel(type, shift)).join(' และ');
 
 /**
  * facility-0051, the design file's ฟอร์มแก้เวลา (600 px): the Admin changes any of the slot’s times at once, always with a
@@ -139,7 +140,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableE
     setBusy(false);
     if (pending.length === 0) {
       onDone(
-        `บันทึกเวลา${labels(order.filter((type) => done.includes(type)))}ของ ${cleaner.displayName} แล้ว`,
+        `บันทึกเวลา${labels(order.filter((type) => done.includes(type)), board.shift)}ของ ${cleaner.displayName} แล้ว`,
       );
       return;
     }
@@ -165,7 +166,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableE
           <Note tone="error" title="บันทึกไม่สำเร็จ">
             <span>{failure.message}</span>
             {failure.saved.length > 0 && (
-              <span>{`บันทึกแล้ว: ${labels(failure.saved)} · ยังไม่ได้บันทึก: ${labels(failure.left)}`}</span>
+              <span>{`บันทึกแล้ว: ${labels(failure.saved, board.shift)} · ยังไม่ได้บันทึก: ${labels(failure.left, board.shift)}`}</span>
             )}
             <span>เวลาที่กรอกยังอยู่ แก้แล้วกด "บันทึกการแก้ไข" อีกครั้ง</span>
           </Note>
@@ -206,7 +207,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableE
                   const problem = tried ? problems[type] : undefined;
                   return (
                     <tr key={type} className={isChanged || type === asked ? '[&>td]:bg-accent-subtle/50' : undefined}>
-                      <td className="font-semibold">{eventLabel[type]}</td>
+                      <td className="font-semibold">{attendanceEventLabel(type, board.shift)}</td>
                       <td className="text-right whitespace-nowrap tabular-nums">
                         <span className="flex items-center justify-end gap-1.5">
                           {event?.source === 'SupervisorAdd' && <span className="text-xs text-text-2">หัวหน้าเติมเวลา</span>}
@@ -223,7 +224,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableE
                         <span className="flex items-center gap-2">
                           <TextInput
                             size="desk"
-                            aria-label={`เวลาใหม่ ${eventLabel[type]}`}
+                            aria-label={`เวลาใหม่ ${attendanceEventLabel(type, board.shift)}`}
                             className="w-32 tabular-nums data-changed:border-2 data-changed:border-accent"
                             data-changed={isChanged && !problem ? '' : undefined}
                             aria-invalid={problem ? true : undefined}
@@ -239,7 +240,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableE
                             <Button
                               variant="link"
                               size="desk"
-                              aria-label={`คืนค่า${eventLabel[type]}`}
+                              aria-label={`คืนค่า${attendanceEventLabel(type, board.shift)}`}
                               onClick={() => setValues((before) => ({ ...before, [type]: old }))}
                             >
                               <Undo2 aria-hidden="true" className="size-4" />
@@ -336,7 +337,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableE
             {changed.length === 0
               ? 'ยังไม่ได้แก้เวลาช่องไหน'
               : `จะแก้ ${changed.length} ช่อง: ${changed
-                  .map((type) => `${eventLabel[type]} ${oldTime(type) || 'ไม่ได้ลง'} → ${draftTime(type).trim()}`)
+                  .map((type) => `${attendanceEventLabel(type, board.shift)} ${oldTime(type) || 'ไม่ได้ลง'} → ${draftTime(type).trim()}`)
                   .join(' · ')}`}
           </span>
           <span className="text-xs text-text-3">

@@ -1,5 +1,5 @@
 import { addDays } from '../../shared/utils/dateRange';
-import { formatShiftDate } from '../../shared/utils/thaiTime';
+import { THAI_MONTHS } from '../../shared/utils/thaiTime';
 import type { Shift } from '../../shared/api/types';
 import type { ScheduleAvailability, SchedulePerson, ScheduleSourceKind, ScheduleWeekAvailability } from '../../shared/api/scheduleTypes';
 
@@ -205,39 +205,24 @@ interface ScheduleWeekLike {
   rows: readonly { days: readonly { availability: ScheduleAvailability }[] }[];
 }
 
-/** What RTK Query tells us about the read on screen: when the latest one started and when the last one succeeded. */
-export interface ReadTimes {
-  /** Milliseconds since the epoch; undefined while nothing has been asked or on a refusal. */
-  startedTimeStamp?: number;
-  fulfilledTimeStamp?: number;
-}
-
 /**
- * Spec §12: whether what the page shows may be older than the stored plan. A pushed change marks the moment it arrived
- * (`changedAt`); the notice stays until a read that STARTED after that mark SUCCEEDS. A request beginning, a reconnect or
- * a failed read is never evidence that the screen is current, and a request that started before the push can land after it
- * carrying the old database state — which is why both times must be after the mark: the latest request began after it and
- * the answer on screen was received after it. A failed latest read leaves an older `fulfilledTimeStamp` and stays stale.
- */
-export function readMayBeStale(changedAt: number | null, read: ReadTimes | undefined): boolean {
-  if (changedAt == null) {
-    return false;
-  }
-  return (
-    read?.fulfilledTimeStamp == null ||
-    (read.startedTimeStamp ?? 0) < changedAt ||
-    read.fulfilledTimeStamp < changedAt
-  );
-}
-
-/**
- * A week as a person reads it: "16–22 พ.ย. 2026" (or "30 พ.ย. – 6 ธ.ค. 2026" across a month). The server answers dates,
- * not names, so this is the only place the range is worded.
+ * A week as a person reads it in Thai Buddhist-year format:
+ * "23 – 29 พ.ย. 2569", "30 พ.ย. – 6 ธ.ค. 2569" across months, or "28 ธ.ค. 2569 – 3 ม.ค. 2570" across years.
  */
 export function weekRangeLabel(weekStart: string): string {
   const end = addDays(weekStart, 6);
-  const startText = formatShiftDate(weekStart);
-  const endText = formatShiftDate(end);
-  // The year is written once, after the range: both ends always share it because a week never spans a year boundary
-  return `${startText.slice(0, 5)}–${endText.slice(0, 5)} ${endText.slice(6)}`;
+  const [sy, sm, sd] = weekStart.split('-').map(Number);
+  const [ey, em, ed] = end.split('-').map(Number);
+  const startMonth = THAI_MONTHS[sm - 1];
+  const endMonth = THAI_MONTHS[em - 1];
+  const startYear = sy + 543;
+  const endYear = ey + 543;
+
+  if (sy !== ey) {
+    return `${sd} ${startMonth} ${startYear} – ${ed} ${endMonth} ${endYear}`;
+  }
+  if (sm !== em) {
+    return `${sd} ${startMonth} – ${ed} ${endMonth} ${endYear}`;
+  }
+  return `${sd} – ${ed} ${endMonth} ${endYear}`;
 }

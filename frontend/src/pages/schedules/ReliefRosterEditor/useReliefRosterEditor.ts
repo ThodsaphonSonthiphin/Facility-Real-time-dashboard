@@ -1,7 +1,7 @@
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { useState } from 'react';
 import type { RowProblem, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
-import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
+import { formatThaiDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { offsetDate, weekdayOf, weekdays, type CommandDraft } from '../commandRules';
 import { useScheduleReview } from '../ScheduleReview/useScheduleReview';
 import { clockSlot } from '../scheduleRules';
@@ -89,7 +89,7 @@ export function useReliefRosterEditor(props: ReliefRosterEditorProps) {
     }).join(' / ');
   const beforeAfter = list.map((entry) => ({
     id: baselineKey(entry.row.userId),
-    label: `${entry.row.displayName} · เริ่ม ${effectiveFrom ? formatShiftDate(effectiveFrom) : 'ยังไม่เลือกวัน'}`,
+    label: `${entry.row.displayName} · เริ่ม ${effectiveFrom ? formatThaiDate(effectiveFrom) : 'ยังไม่เลือกวัน'}`,
     before: line(entry, 'before'), after: line(entry, 'value'),
   }));
   const canCompare = changing && !!current && !loading && list.every(({ row, cells }) => effectiveRow(row, current)

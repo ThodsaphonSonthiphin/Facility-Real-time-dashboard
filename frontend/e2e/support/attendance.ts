@@ -2,11 +2,11 @@ import { expect, type Page } from '@playwright/test';
 import type { AttendanceState } from '../../src/shared/api/types.ts';
 import { checkInToken } from './seed.ts';
 
-export const attendanceButton = /^(เข้างาน|ออกพัก(?: [12])?|กลับจากพัก(?: [12])?|เลิกงาน)$/;
+export const attendanceButton = /^(เข้างาน|พักเที่ยง|กลับจากพักเที่ยง|พักบ่าย|กลับจากพักบ่าย|พักรอบ [12]|กลับจากพักรอบ [12]|เลิกงาน)$/;
 
 /**
  * Opens a check-in page (AR01's unless another is given) and presses "เข้างาน" when it is offered. An earlier test in
- * the same run may already have shifted in; then the page offers "ออกพัก" or "เลิกงาน" instead and nothing is pressed.
+ * the same run may already have shifted in; then the page offers the next break or "เลิกงาน" instead and nothing is pressed.
  */
 export async function shiftInIfOffered(page: Page, sign = `/check-in/${checkInToken}`): Promise<void> {
   await page.goto(sign);

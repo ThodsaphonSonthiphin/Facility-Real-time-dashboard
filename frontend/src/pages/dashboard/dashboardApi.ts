@@ -5,7 +5,7 @@ import { getValidAccessToken } from '../../shared/auth/session';
 import type { RootState } from '../../store';
 import { replacePoint } from './boardRules';
 
-/** The Dashboard's hub connection in hubSlice (plan 11 decision 4); its LiveBadge reads the same key. */
+/** The Dashboard's hub connection key in hubSlice (plan 11 decision 4). */
 export const DASHBOARD_HUB = 'service-points';
 
 const dashboardApi = baseApi.injectEndpoints({

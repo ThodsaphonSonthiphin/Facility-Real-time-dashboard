@@ -1,6 +1,6 @@
 import { EditedMark } from '../../components/Badge';
 import { Note } from '../../components/Note';
-import { actionStateLabel, eventLabel, transferStateLabel } from '../../utils/labels';
+import { actionStateLabel, attendanceEventLabel, transferStateLabel } from '../../utils/labels';
 import { formatDayTime } from '../../utils/thaiTime';
 import type { OverviewAttendance } from '../types';
 import type { AreaAttendanceProps } from './type';
@@ -92,7 +92,7 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
           <ul className="list-disc space-y-2 ps-5">
             {events.map((fact) => (
               <li key={fact.id}>
-                <span>{person(fact.userId)} · {eventLabel[fact.event]} · </span>
+                <span>{person(fact.userId)} · {attendanceEventLabel(fact.event, context.shift)} · </span>
                 <time dateTime={fact.occurredAt}>{formatDayTime(fact.occurredAt)}</time>
                 <span className="text-text-2"> · พื้นที่ #{fact.areaId}</span>
                 {fact.edited && <CorrectionProvenance fact={fact} />}
@@ -100,7 +100,7 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
             ))}
             {gaps.map((fact) => (
               <li key={`gap:${fact.id}`}>
-                {person(fact.userId)} · {eventLabel[fact.event]} · — ({actionStateLabel.skipped}) · พื้นที่ #{fact.areaId}
+                {person(fact.userId)} · {attendanceEventLabel(fact.event, context.shift)} · — ({actionStateLabel.skipped}) · พื้นที่ #{fact.areaId}
                 {fact.reason && <p className="wrap-break-word text-text-2">{fact.reason}</p>}
                 {fact.recordedAt && <p className="text-text-2">บันทึกการข้าม <time dateTime={fact.recordedAt}>{formatDayTime(fact.recordedAt)}</time></p>}
               </li>
@@ -121,7 +121,7 @@ export function AreaAttendance({ detail }: AreaAttendanceProps) {
             ))}
             {leaveEffects.map((effect) => (
               <li key={`${effect.userId}:${effect.event}:${effect.kind}`}>
-                {person(effect.userId)} · {eventLabel[effect.event]} ·{' '}
+                {person(effect.userId)} · {attendanceEventLabel(effect.event, context.shift)} ·{' '}
                 {effect.kind === 'exempt' ? actionStateLabel['not-applicable'] : 'ลงเวลาในช่วงลาที่บันทึก'}
               </li>
             ))}

@@ -60,7 +60,7 @@ describe('Schedules emergency cover consolidation (facility-0225)', () => {
     await user.click(await within(areas).findByRole('radio', { name: /^AR12 Area สิบสอง/ }));
     await within(form).findByRole('radiogroup', { name: 'แม่บ้านที่จะทำแทน' });
     await user.click(within(form).getByRole('radio', { name: /^แม่บ้านทดสอบ/ }));
-    expect(within(form).getByText(/จะดูแล 2 พื้นที่ในกะเช้า พฤ\. 15\/10\/2026/)).toBeInTheDocument();
+    expect(within(form).getByText(/จะดูแล 2 พื้นที่ในกะเช้า พฤ\. 15 ต\.ค\. 2569/)).toBeInTheDocument();
 
     await user.click(within(form).getByRole('button', { name: 'มอบหมาย' }));
     expect(await screen.findByText('มอบหมาย แม่บ้านทดสอบ ทำแทน AR12 แล้ว')).toBeInTheDocument();

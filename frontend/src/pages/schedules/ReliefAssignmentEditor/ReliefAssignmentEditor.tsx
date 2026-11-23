@@ -1,7 +1,7 @@
 import { Button } from '../../../shared/components/Button';
 import { Field, Select, TextInput } from '../../../shared/components/Field';
 import { Note } from '../../../shared/components/Note';
-import { formatShiftDate, formatWeekday } from '../../../shared/utils/thaiTime';
+import { formatThaiDate, formatWeekday } from '../../../shared/utils/thaiTime';
 import { shiftShortLabel } from '../../../shared/utils/labels';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { ScheduleReview } from '../ScheduleReview/ScheduleReview';
@@ -19,7 +19,7 @@ export function ReliefAssignmentEditor(props: ReliefAssignmentEditorProps & { mo
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <Field label="วันที่ทำงาน">
           <Select size={size} value={form.date} onChange={(event) => form.chooseDate(event.currentTarget.value)}>
-            {form.dates.map((date) => <option key={date} value={date}>{formatWeekday(date)} {formatShiftDate(date)}</option>)}
+            {form.dates.map((date) => <option key={date} value={date}>{formatWeekday(date)} {formatThaiDate(date)}</option>)}
           </Select>
         </Field>
         <Field label="กะปลายทาง">
