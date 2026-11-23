@@ -19,3 +19,4 @@ backend/src/JanitorialManagementDashboard.Api/wwwroot/
 *.env
 .env*
 !.env.example
+.vercel

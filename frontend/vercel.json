@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://facility-real-time-dashboard.onrender.com/api/:path*"
+    },
+    {
+      "source": "/((?!api/|hubs/|assets/|.*\\.).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

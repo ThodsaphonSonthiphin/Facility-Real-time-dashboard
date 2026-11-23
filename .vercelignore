@@ -1,0 +1,52 @@
+# AI agents and development instructions
+.agents/
+.claude/
+.commandcode/
+.superpowers/
+AGENTS.md
+CONTEXT.md
+skills-lock.json
+
+# IDE and local tools
+.idea/
+.vscode/
+.run/
+.config/
+
+# Git and OS files
+.git/
+**/.DS_Store
+
+# Backend (deployed separately)
+backend/
+
+# Documentation and design files
+docs/
+Manual/
+design-system/
+
+# Local scripts
+scripts/
+
+# Dependencies and build caches
+node_modules/
+**/node_modules/
+**/.vite/
+**/coverage/
+**/test-results/
+**/playwright-report/
+
+# Frontend tests
+frontend/.husky/
+
+# Logs and temporary files
+**/*.log
+**/*.tmp
+**/__pycache__/
+
+# Sensitive configuration
+.env
+.env.*
+!.env.example
+**/.env.local
+**/.env.*.local
