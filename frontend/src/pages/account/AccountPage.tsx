@@ -24,26 +24,26 @@ export function AccountPage() {
     <PhoneScreen
       header={
         <PhoneHeader>
-          <h1 className="text-xl font-extrabold text-text">บัญชีของฉัน</h1>
+          <h1 className="text-2xl font-bold text-text">บัญชีของฉัน</h1>
         </PhoneHeader>
       }
     >
       {user && (
         <section
           aria-label="ข้อมูลผู้ใช้งาน"
-          className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4"
+          className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4"
         >
           <div className="flex items-center gap-3">
-            <AvatarBadge name={user.fullName} size="md" tone={user.role === 'supervisor' ? 'teal' : 'blue'} />
+            <AvatarBadge name={user.fullName} size="md" tone="neutral" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <strong className="text-lg font-extrabold wrap-break-word text-text">{user.fullName}</strong>
+              <strong className="text-lg font-bold wrap-break-word text-text">{user.fullName}</strong>
               <span className="inline-flex w-fit items-center rounded-md border border-idle-border bg-idle-bg px-2 py-0.5 text-xs font-semibold text-idle">
                 {roleLabels[user.role]}
               </span>
             </div>
           </div>
 
-          <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-border pt-3 text-sm">
+          <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-border pt-3 text-base">
             <dt className="text-text-2">รหัสพนักงาน</dt>
             <dd className="m-0 font-mono font-semibold text-text tabular-nums">{user.username}</dd>
             <dt className="text-text-2">บทบาท</dt>
@@ -61,7 +61,7 @@ export function AccountPage() {
         </Button>
       </div>
 
-      {confirmOpen && <LogoutConfirmDialog onCancel={closeConfirm} onConfirm={confirmLogout} />}
+      {confirmOpen && <LogoutConfirmDialog phone onCancel={closeConfirm} onConfirm={confirmLogout} />}
     </PhoneScreen>
   );
 }

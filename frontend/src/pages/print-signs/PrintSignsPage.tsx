@@ -56,7 +56,7 @@ export function PrintSignsPage() {
             <option value="all">{`ทุกพื้นที่ (${activeAreas.length})`}</option>
           </Select>
         </label>
-        <div className="flex flex-wrap items-center gap-2 [&_button]:min-h-9">
+        <div className="flex flex-wrap items-center gap-2">
           <span>ขนาดป้าย</span>
           <Segmented label="ขนาดป้าย" options={sizeOptions} value={size} onChange={setSize} disabled={printing} />
         </div>
@@ -116,7 +116,7 @@ const sizeOptions: { value: SignSize; label: string }[] = [
 
 // One A4 sheet: 210 × 297 mm with an 8 mm margin, signs cut along the dashed lines. The sheet is measured in
 // millimetres as printed before the move (facility-0087 rule 8); no token is in mm. On screen it floats on the page
-const sheetClass = 'mx-auto grid h-[297mm] w-[210mm] bg-sign-paper p-[8mm] shadow-sm print:m-0 print:shadow-none';
+const sheetClass = 'mx-auto grid h-[297mm] w-[210mm] border border-border bg-sign-paper p-[8mm] print:m-0 print:border-0';
 
 const sheetGrid: Record<SignSize, string> = {
   small: 'grid-cols-2 grid-rows-3',

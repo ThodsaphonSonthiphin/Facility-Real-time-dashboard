@@ -116,7 +116,7 @@ export function Sheet({ labelledBy, describedBy, role, onClose, children }: Dial
       describedBy={describedBy}
       role={role}
       onClose={onClose}
-      className="motion-sheet mx-auto mt-auto mb-0 max-h-[85dvh] w-full max-w-mobile overflow-y-auto rounded-t-xl px-6 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+      className="motion-sheet mx-auto mt-auto mb-0 max-h-[85dvh] w-full max-w-mobile overflow-y-auto rounded-t-lg px-6 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
     >
       <div aria-hidden="true" className="-mx-6 -mt-5 mb-5 flex justify-center pt-2.5">
         <span className="h-1 w-10 rounded-sm bg-border" />

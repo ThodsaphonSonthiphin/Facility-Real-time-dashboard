@@ -139,7 +139,7 @@ export function ExportPage() {
           </section>
         </SurfacePanel>
         <aside
-          className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:p-5 lg:sticky lg:top-5"
+          className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:p-6 lg:sticky lg:top-5"
           aria-labelledby="export-summary"
         >
           <h2 id="export-summary" className="flex items-center gap-2 text-base font-bold">

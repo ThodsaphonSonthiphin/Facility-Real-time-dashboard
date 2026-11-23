@@ -34,10 +34,10 @@ export function ScheduleSummaryCards({ week, businessDate }: ScheduleSummaryCard
 
   return (
     <ul aria-label="สรุปตารางงาน" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <KpiCard as="li" label="พนักงานทั้งหมด" value={week.rows.length} icon={Users} tone="blue" />
+      <KpiCard as="li" label="พนักงานทั้งหมด" value={week.rows.length} icon={Users} tone="neutral" />
       <KpiCard as="li" label="กำลังทำงาน" value={working} icon={CircleCheck} tone="green" />
       <KpiCard as="li" label="ลา / หยุด" value={leaveOrOff} icon={UserX} tone="amber" />
-      <KpiCard as="li" label="มีปัญหา / รอจัดคนแทน" value={needsAttention} icon={ArrowRightLeft} tone="purple" />
+      <KpiCard as="li" label="มีปัญหา / รอจัดคนแทน" value={needsAttention} icon={ArrowRightLeft} tone="red" />
     </ul>
   );
 }

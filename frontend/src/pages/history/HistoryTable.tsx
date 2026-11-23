@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Table } from '../../shared/components/Boxes';
-import { Note } from '../../shared/components/Note';
+import { PageEmpty } from '../../shared/components/PageState';
 import { SurfacePanel } from '../../shared/components/SurfacePanel';
 import { formatDayTime } from '../../shared/utils/thaiTime';
 import type { AuditEntry } from './historyApi';
@@ -18,7 +18,12 @@ interface HistoryTableProps {
 /** Wireframe D18's table, newest first. Summaries, names and reasons are React text only (facility-0066). */
 export function HistoryTable({ entries, emptyText, footer }: HistoryTableProps) {
   if (entries.length === 0) {
-    return <SurfacePanel><Note tone="info">{emptyText}</Note>{footer}</SurfacePanel>;
+    return (
+      <SurfacePanel>
+        <PageEmpty title={emptyText} />
+        {footer && <div className="border-t border-border">{footer}</div>}
+      </SurfacePanel>
+    );
   }
   return (
     <Table label="ประวัติการแก้ไขของแอดมิน" minWidth="min-w-240" footer={footer}>

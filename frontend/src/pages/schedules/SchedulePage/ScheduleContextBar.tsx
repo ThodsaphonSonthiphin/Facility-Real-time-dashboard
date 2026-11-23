@@ -40,7 +40,7 @@ export function ScheduleContextBar({ view }: ScheduleContextBarProps) {
     <section
       role="region"
       aria-label="จัดการวันที่เลือก"
-      className="flex flex-col gap-2.5 rounded-xl border border-border bg-surface px-4 py-3"
+      className="flex flex-col gap-2.5 rounded-lg border border-border bg-surface px-4 py-3"
     >
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -53,7 +53,7 @@ export function ScheduleContextBar({ view }: ScheduleContextBarProps) {
           <span aria-hidden="true" className="text-text-2">·</span>
           <strong className="font-semibold text-text tabular-nums">{`${formatWeekday(day.date)} ${dateText}`}</strong>
           <span aria-hidden="true" className="text-text-2">·</span>
-          <span className="font-semibold text-accent">
+          <span className="font-semibold text-text-3">
             {cellLabel[day.availability]}
             {day.area.value != null ? ` (พื้นที่ ${day.area.value})` : ''}
           </span>

@@ -23,7 +23,7 @@ export function AreaDetailPanel({ detail }: { detail: AreaDetail }) {
   } = useAreaDetailPanel(detail);
   return (
     <section className="flex flex-col gap-4" aria-labelledby="areas-detail-title">
-      <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface px-6 py-5">
+      <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2">

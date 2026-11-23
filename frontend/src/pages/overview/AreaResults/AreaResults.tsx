@@ -41,7 +41,7 @@ export function AreaResults({
       className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-4"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="overview-results-heading" className="text-lg font-semibold">
+        <h2 id="overview-results-heading" className="text-lg font-bold">
           {title}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-xs text-text-2">
@@ -136,7 +136,7 @@ export function AreaResults({
                         <span
                           className={`inline-flex min-h-6 items-center gap-1 rounded-md border px-2 text-xs font-semibold whitespace-nowrap ${badgeTones[row.entryBadge.tone]}`}
                         >
-                          <EntryIcon aria-hidden="true" className="size-3.5 shrink-0" />
+                          <EntryIcon aria-hidden="true" className="size-4 shrink-0" />
                           {row.entryBadge.label}
                         </span>
                         {row.reasonBadges.map((reason, idx) => (

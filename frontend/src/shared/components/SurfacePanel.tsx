@@ -15,7 +15,7 @@ export interface SurfacePanelProps {
 export function SurfacePanel({ title, actions, children, className, bodyClassName }: SurfacePanelProps) {
   return (
     <section
-      className={`overflow-hidden rounded-xl border border-border bg-surface${className ? ` ${className}` : ''}`}
+      className={`overflow-hidden rounded-lg border border-border bg-surface${className ? ` ${className}` : ''}`}
     >
       {(title || actions) && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3.5">

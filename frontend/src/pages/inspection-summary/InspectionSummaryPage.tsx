@@ -2,7 +2,7 @@ import { ClipboardCheck, Clock, MapPin, RotateCcw } from 'lucide-react';
 import { AdminPageHeader } from '../../shared/components/AdminPageHeader/AdminPageHeader';
 import { BuildingSelect } from '../../shared/components/BuildingSelect';
 import { Button } from '../../shared/components/Button';
-import { Select } from '../../shared/components/Field';
+import { Field, Select } from '../../shared/components/Field';
 import { KpiCard } from '../../shared/components/KpiCard/KpiCard';
 import { Note } from '../../shared/components/Note';
 import { PageLoading } from '../../shared/components/PageState';
@@ -33,23 +33,21 @@ export function InspectionSummaryPage() {
       <AdminPageHeader title="สรุปการตรวจ" />
       <div className="flex flex-col gap-3">
         <FilterToolbar label="ตัวกรองการตรวจ" align="end">
-          <label className="inline-flex max-w-full items-center gap-2">
-            <span className="shrink-0">ช่วงวัน</span>
+          <Field label="ช่วงวัน">
             <Select size="desk" className="min-w-0 max-w-full" value={page.preset} onChange={(event) => page.selectPreset(event.target.value)}>
               <option value="today">วันนี้</option>
               <option value="week">{page.weekLabel}</option>
               <option value="month">เดือนนี้</option>
               <option value="custom">{page.customLabel}</option>
             </Select>
-          </label>
-          <label className="inline-flex items-center gap-2">
-            กะ
+          </Field>
+          <Field label="กะ">
             <Select size="desk" value={page.shift} onChange={(event) => page.setShift(event.target.value as typeof page.shift)}>
               <option value="">ทั้งสองกะ</option>
               <option value="Day">กะเช้า</option>
               <option value="Night">กะดึก</option>
             </Select>
-          </label>
+          </Field>
           <BuildingSelect value={page.buildingId} onChange={page.selectBuilding} />
           {page.preset === 'custom' && (
             <div className="flex w-full flex-wrap items-end gap-2 border-t border-border pt-3">
@@ -62,7 +60,7 @@ export function InspectionSummaryPage() {
       </div>
       {page.summary && (
         <section aria-label="สรุปตัวเลขการตรวจ" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard label="ตรวจแล้วทั้งหมด" value={totals.inspections} unit="ครั้ง" icon={ClipboardCheck} tone="blue" />
+          <KpiCard label="ตรวจแล้วทั้งหมด" value={totals.inspections} unit="ครั้ง" icon={ClipboardCheck} tone="neutral" />
           <KpiCard label="ส่งแล้วไม่ได้ตรวจ" value={totals.notInspected} unit="รอบ" icon={Clock} tone="amber" />
           <KpiCard label="ตรวจไกลป้าย" value={totals.gpsFlagged} unit="ครั้ง" icon={MapPin} tone="amber" />
           <KpiCard label="ให้แก้ไข" value={totals.reworks} unit="ครั้ง" icon={RotateCcw} tone="red" />

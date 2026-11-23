@@ -216,9 +216,9 @@ export function CoverDrawer({ current, start, onDone, onCancel }: CoverDrawerPro
           </Note>
         )}
         {area && person && (
-          <div className="flex flex-col gap-2 rounded-xl border border-pending-border bg-accent-subtle px-4 py-3.5">
+          <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 p-4">
             <strong className="flex items-center gap-1.5">
-              <ArrowRightLeft aria-hidden="true" className="size-4 text-break" />
+              <ArrowRightLeft aria-hidden="true" className="size-4 text-text-2" />
               สรุป
             </strong>
             <Summary

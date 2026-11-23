@@ -117,10 +117,10 @@ function TableFooter({ page, total, onPage }: { page: number; total: number; onP
  */
 function Tiles({ summary, onBreak }: { summary: BoardSummary; onBreak: number }) {
   const tiles = [
-    { label: 'พื้นที่ที่ต้องมีคน', count: summary.required, Icon: MapPin, tone: 'blue' as const },
+    { label: 'พื้นที่ที่ต้องมีคน', count: summary.required, Icon: MapPin, tone: 'neutral' as const },
     { label: 'มีคนแล้ว', count: summary.present, Icon: Check, tone: 'green' as const },
     { label: 'ยังไม่มีคน', count: summary.empty, Icon: UserX, tone: 'amber' as const },
-    { label: 'มีคนทำแทน', count: summary.covered, Icon: ArrowRightLeft, tone: 'purple' as const },
+    { label: 'มีคนทำแทน', count: summary.covered, Icon: ArrowRightLeft, tone: 'teal' as const },
     { label: 'พักเบรก', count: onBreak, Icon: Coffee, tone: 'purple' as const },
   ];
   return (

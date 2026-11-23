@@ -29,9 +29,9 @@ export const statusText: Record<PointStatus, string> = {
   OffHours: 'text-idle',
 };
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'link' | 'add';
-/** phone: 48 px; main: the phone page's one main action, 56 px and full width; desk: the Admin pages, 36 px. */
-export type ButtonSize = 'phone' | 'main' | 'desk';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'dangerSolid' | 'link' | 'add';
+/** phone: 48 px; main: the phone page's one main action, 56 px and full width; desk: the Admin pages, 36 px; adaptive: 48 px mobile / 36 px from sm (640 px). */
+export type ButtonSize = 'phone' | 'main' | 'desk' | 'adaptive';
 /** code: the phone's 56 px field for an employee ID or a phone number, with big digits (the design file's Login). */
 export type InputSize = 'phone' | 'desk' | 'code';
 
@@ -53,6 +53,7 @@ const buttonVariants: Record<ButtonVariant, string> = {
   secondary: `border-border-control bg-surface text-text no-underline not-disabled:hover:border-accent ${greyWhenDisabled}`,
   add: `border-dashed border-border-control bg-surface text-accent no-underline not-disabled:hover:border-accent ${greyWhenDisabled}`,
   danger: `border-rework bg-surface text-rework no-underline not-disabled:hover:bg-rework-bg ${greyWhenDisabled}`,
+  dangerSolid: `border-transparent bg-rework text-on-accent no-underline not-disabled:hover:bg-rework-strong ${greyWhenDisabled}`,
   link: 'border-transparent bg-transparent text-accent no-underline not-disabled:hover:text-accent-hover disabled:text-text-2',
 };
 
@@ -61,12 +62,14 @@ const buttonSizes: Record<ButtonSize, string> = {
   phone: 'min-h-12 gap-2 text-base font-semibold',
   main: 'min-h-14 w-full gap-3 text-lg font-bold',
   desk: 'min-h-9 gap-2 text-sm font-semibold',
+  adaptive: 'min-h-12 gap-2 text-base font-semibold sm:min-h-9 sm:text-sm',
 };
 
 const buttonPadding: Record<ButtonSize, string> = {
   phone: 'px-4',
   main: 'px-5',
   desk: 'px-4',
+  adaptive: 'px-4',
 };
 
 /**

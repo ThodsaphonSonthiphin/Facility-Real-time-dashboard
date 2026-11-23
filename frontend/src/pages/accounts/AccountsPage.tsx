@@ -36,7 +36,7 @@ export function AccountsPage() {
       {error && <Note tone="error">{getErrorMessage(error)}</Note>}
       {notice && <Toast notice={notice} onClose={clearNotice} />}
       <section
-        className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface"
+        className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface"
         aria-label="รายชื่อบัญชี"
       >
         <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-4 pt-1">

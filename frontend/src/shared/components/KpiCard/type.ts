@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 
 /** Semantic color tone for a KPI summary card. */
-export type KpiCardTone = 'blue' | 'green' | 'amber' | 'red' | 'purple' | 'neutral';
+export type KpiCardTone = 'teal' | 'green' | 'amber' | 'red' | 'purple' | 'neutral';
 
 /** Props for the reusable KPI summary card component. */
 export interface KpiCardProps {

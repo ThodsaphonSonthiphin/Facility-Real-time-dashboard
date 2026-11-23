@@ -37,7 +37,7 @@ export function NextJob({ item }: { item: WorkItem }) {
             <MapPin aria-hidden="true" className="size-5" />
           </span>
           <div className="flex min-w-0 flex-col">
-            <h3 className="text-lg font-extrabold wrap-break-word">{point.name}</h3>
+            <h3 className="text-lg font-bold wrap-break-word">{point.name}</h3>
             <span className="text-sm wrap-break-word text-text-2 tabular-nums">{whereText(item)}</span>
           </div>
         </div>

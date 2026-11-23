@@ -24,13 +24,13 @@ export function MyWorkPage() {
   const header = (
     <PhoneHeader
       action={
-        <Button variant="secondary" size="desk" className="min-h-12" disabled={isFetching} onClick={() => void refetch()}>
-          <RefreshCw aria-hidden="true" className="size-4" />
+        <Button variant="secondary" size="phone" disabled={isFetching} onClick={() => void refetch()}>
+          <RefreshCw aria-hidden="true" className="size-5" />
           {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
         </Button>
       }
     >
-      <h1 className="text-2xl font-extrabold text-text">งานของฉัน</h1>
+      <h1 className="text-2xl font-bold text-text">งานของฉัน</h1>
       <span className="min-h-5 min-w-0 text-sm wrap-break-word text-text-2">{where}</span>
     </PhoneHeader>
   );
@@ -179,7 +179,7 @@ function ShiftSummaryCard({
             {shiftOut ? ` · เลิกงาน ${formatTime(shiftOut.occurredAt)}` : ''}
           </span>
         </div>
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusLook.pill}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold ${statusLook.pill}`}>
           <statusLook.Icon aria-hidden="true" className="size-4 shrink-0" />
           <span>{statusLook.label}</span>
         </span>

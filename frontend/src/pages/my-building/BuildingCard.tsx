@@ -15,7 +15,7 @@ interface BuildingCardProps {
 export function BuildingCard({ point, canInspect }: BuildingCardProps) {
   const issue = issueText(point);
   return (
-    <li className={`flex min-w-0 flex-col gap-1.5 rounded-xl bg-surface px-3.5 py-3 shadow-xs ${statusFrame[point.status] ?? 'border border-border'}`}>
+    <li className={`flex min-w-0 flex-col gap-1.5 rounded-lg bg-surface px-4 py-3 ${statusFrame[point.status] ?? 'border border-border'}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h3 className="min-w-0 text-base font-bold wrap-break-word">{point.name}</h3>
         <StatusChip status={point.status} />

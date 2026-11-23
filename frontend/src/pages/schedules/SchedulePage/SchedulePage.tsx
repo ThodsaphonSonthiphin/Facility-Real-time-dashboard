@@ -5,7 +5,6 @@ import { buildingOptionText } from '../../../shared/api/buildingNames';
 import type { ScheduleAvailability, ScheduleDay, SchedulePerson, ScheduleWeek } from '../../../shared/api/scheduleTypes';
 import type { Shift } from '../../../shared/api/types';
 import { AdminPageHeader } from '../../../shared/components/AdminPageHeader/AdminPageHeader';
-import { AvatarBadge } from '../../../shared/components/AvatarBadge/AvatarBadge';
 import { Badge } from '../../../shared/components/Badge';
 import { BuildingSelect } from '../../../shared/components/BuildingSelect';
 import { Button } from '../../../shared/components/Button';
@@ -59,13 +58,13 @@ export function OwnSchedulePage() {
       header={
         <PhoneHeader
           action={
-            <Button variant="secondary" size="desk" className="min-h-12" disabled={view.isFetching} onClick={view.refetch}>
-              <RefreshCw aria-hidden="true" className="size-4" />
+            <Button variant="secondary" size="phone" disabled={view.isFetching} onClick={view.refetch}>
+              <RefreshCw aria-hidden="true" className="size-5" />
               {view.isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
             </Button>
           }
         >
-          <h1 className="text-xl font-extrabold text-text">ตารางของฉัน</h1>
+          <h1 className="text-2xl font-bold text-text">ตารางของฉัน</h1>
         </PhoneHeader>
       }
     >
@@ -103,7 +102,7 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
       <AdminPageHeader
         title={role === 'admin' ? 'ตารางงาน' : 'จัดตารางงาน'}
         actions={
-          <Button variant="secondary" size="desk" className="min-h-10 sm:min-h-9" disabled={view.isFetching} onClick={view.refetch}>
+          <Button variant="secondary" size="adaptive" disabled={view.isFetching} onClick={view.refetch}>
             <RefreshCw aria-hidden="true" className="size-4" />
             {view.isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
           </Button>
@@ -157,15 +156,15 @@ function ManagementWeekPage({ role }: { role: ScheduleRole }) {
 function MobileWeekStrip({ view }: { view: ReturnType<typeof useSchedulePage> }) {
   return (
     <section
-      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 rounded-xl border border-border bg-surface p-1.5"
+      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 rounded-lg border border-border bg-surface p-2"
       aria-label="เลือกสัปดาห์"
     >
-      <Button variant="link" size="phone" className="min-w-12 px-1.5 text-sm" aria-label="สัปดาห์ก่อนหน้า" onClick={() => view.goWeek(-1)}>
-        <ChevronLeft aria-hidden="true" className="size-4 shrink-0" />
+      <Button variant="link" size="phone" className="min-w-12" aria-label="สัปดาห์ก่อนหน้า" onClick={() => view.goWeek(-1)}>
+        <ChevronLeft aria-hidden="true" className="size-5 shrink-0" />
         ก่อนหน้า
       </Button>
       <div className="flex min-w-0 flex-col items-center text-center">
-        <strong className="min-w-0 text-sm font-extrabold wrap-break-word tabular-nums">
+        <strong className="min-w-0 text-base font-bold wrap-break-word tabular-nums">
           {weekRangeLabel(view.selection.weekStart)}
         </strong>
         {!view.isCurrentWeek && (
@@ -173,15 +172,15 @@ function MobileWeekStrip({ view }: { view: ReturnType<typeof useSchedulePage> })
             type="button"
             data-tap=""
             onClick={view.goToday}
-            className={`cursor-pointer border-0 bg-transparent text-xs font-semibold text-accent underline ${focusRing}`}
+            className={`inline-flex min-h-12 cursor-pointer items-center border-0 bg-transparent px-2 text-sm font-semibold text-accent underline ${focusRing}`}
           >
             กลับสัปดาห์นี้
           </button>
         )}
       </div>
-      <Button variant="link" size="phone" className="min-w-12 px-1.5 text-sm" aria-label="สัปดาห์ถัดไป" onClick={() => view.goWeek(1)}>
+      <Button variant="link" size="phone" className="min-w-12" aria-label="สัปดาห์ถัดไป" onClick={() => view.goWeek(1)}>
         ถัดไป
-        <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+        <ChevronRight aria-hidden="true" className="size-5 shrink-0" />
       </Button>
     </section>
   );
@@ -193,7 +192,7 @@ function MobileSupervisorShiftFilter({ view }: { view: ReturnType<typeof useSche
     <Select
       size="phone"
       aria-label="กะ"
-      className="w-full min-w-0 text-sm"
+      className="w-full min-w-0"
       value={view.selection.shift ?? ''}
       onChange={(event) => view.chooseShift((event.target.value || undefined) as Shift | undefined)}
     >
@@ -212,7 +211,7 @@ function MobileAdminFilters({ view }: { view: ReturnType<typeof useSchedulePage>
       <Select
         size="phone"
         aria-label="ตึก"
-        className="w-full min-w-0 text-sm"
+        className="w-full min-w-0"
         value={view.selection.buildingId ?? ''}
         onChange={(event) => view.chooseBuilding(event.target.value === '' ? undefined : Number(event.target.value))}
       >
@@ -226,7 +225,7 @@ function MobileAdminFilters({ view }: { view: ReturnType<typeof useSchedulePage>
       <Select
         size="phone"
         aria-label="กะ"
-        className="w-full min-w-0 text-sm"
+        className="w-full min-w-0"
         value={view.selection.shift ?? ''}
         onChange={(event) => view.chooseShift((event.target.value || undefined) as Shift | undefined)}
       >
@@ -271,14 +270,14 @@ function OpenEditor({ view }: { view: ReturnType<typeof useSchedulePage> }) {
 function ReliefDuties({ week, view }: { week: ScheduleWeek; view: ReturnType<typeof useSchedulePage> }) {
   if (!week.relief.length) return null;
   return (
-    <section className="space-y-3 rounded-xl border border-border bg-surface p-4">
+    <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
       <div className="flex items-center gap-2">
-        <UserCheck aria-hidden="true" className="size-4 text-accent" />
-        <h2 className="text-lg font-semibold">งานสแปร์ที่บันทึก</h2>
+        <UserCheck aria-hidden="true" className="size-4 text-text-2" />
+        <h2 className="text-lg font-bold">งานสแปร์ที่บันทึก</h2>
       </div>
       <ul className="space-y-2">
         {week.relief.map((duty) => (
-          <li key={duty.id} className="space-y-1 rounded-lg border border-border bg-surface-2/40 p-3">
+          <li key={duty.id} className="space-y-1 rounded-lg border border-border bg-surface-2 p-3">
             <p className="font-semibold">{duty.displayName} · {formatThaiDate(duty.shiftDate)} · {shiftShortLabel[duty.shift]}</p>
             <p>ตึก {duty.destinationBuildingCode} · {duty.areaCode} · กลุ่มพัก {duty.breakGroup ?? 'ยังไม่กำหนด'}</p>
             <p className="text-text-2">ตึกต้นทาง {duty.sourceBuildingCode}{duty.sourceSupervisorName && ` · ${duty.sourceSupervisorName}`}</p>
@@ -413,12 +412,12 @@ function OwnWeek({ week, businessDate }: { week: ScheduleWeek; businessDate: str
         return (
           <article
             key={day.date}
-            className={`flex min-w-0 flex-col gap-1.5 rounded-xl border px-3.5 py-3 shadow-xs ${
-              isToday ? 'border-accent bg-accent-subtle' : 'border-border bg-surface'
+            className={`flex min-w-0 flex-col gap-1.5 rounded-lg border px-4 py-3 ${
+              isToday ? 'border-pending-border bg-pending-bg' : 'border-border bg-surface'
             }`}
           >
             <header className="flex flex-wrap items-center justify-between gap-2">
-              <strong className={`min-w-0 text-sm font-extrabold tabular-nums ${isToday ? 'text-accent' : 'text-text'}`}>
+              <strong className={`min-w-0 text-base font-bold tabular-nums ${isToday ? 'text-pending' : 'text-text'}`}>
                 {`${formatWeekday(day.date)} ${formatThaiDate(day.date)}${isToday ? ' (วันนี้)' : ''}`}
               </strong>
               <span
@@ -447,7 +446,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
   const dateColumnMinWidth = 86;
   return (
     <div className="flex flex-col gap-3">
-      <section className="overflow-hidden rounded-xl border border-border bg-surface">
+      <section className="overflow-hidden rounded-lg border border-border bg-surface">
         <HorizontalScrollArea label="ตารางงานรายสัปดาห์" leadingOverlayWidth={nameColumnWidth}>
           <table
             aria-label="ตารางงานรายสัปดาห์"
@@ -465,7 +464,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                   return (
                     <th
                       key={date}
-                      className={`px-2 py-2.5 text-center ${isToday ? 'bg-accent-subtle text-accent' : 'bg-surface-2 text-text-2'}`}
+                      className={`px-2 py-2.5 text-center ${isToday ? 'bg-pending-bg text-pending' : 'bg-surface-2 text-text-2'}`}
                     >
                       <span className="block">{formatWeekday(date)}</span>
                       <span className="block tabular-nums">{formatThaiShortDate(date)}</span>
@@ -478,27 +477,20 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
               {week.rows.map((person) => (
                 <tr key={person.userId}>
                   <th scope="row" className="sticky left-0 z-10 border-t border-r border-border bg-surface px-2 py-2.5 text-left align-top font-semibold sm:px-3">
-                    <div className="flex items-start gap-1.5 sm:gap-2.5">
-                      <AvatarBadge
-                        name={person.displayName}
-                        tone={person.cleanerKind === 'Relief' ? 'teal' : 'blue'}
-                        size="sm"
-                      />
-                      <div className="min-w-0 flex-1 wrap-anywhere">
-                        <span className="block whitespace-normal font-semibold text-text">{person.displayName}</span>
-                        <span className="block text-xs font-normal text-text-2">{cleanerKindLabel[person.cleanerKind]}</span>
-                        {person.cleanerKind === 'Relief' && person.homeBuildingCode && (
-                          <span className="block text-xs font-normal text-text-2">ตึกประจำ: {person.homeBuildingCode}</span>
-                        )}
-                        {(() => {
-                          const badge = regularSetupBadge(person);
-                          return badge && (
-                            <div className="mt-1 [&>span]:whitespace-normal">
-                              <Badge kind="edited">{badge}</Badge>
-                            </div>
-                          );
-                        })()}
-                      </div>
+                    <div className="min-w-0 wrap-anywhere">
+                      <span className="block whitespace-normal font-semibold text-text">{person.displayName}</span>
+                      <span className="block text-xs font-normal text-text-2">{cleanerKindLabel[person.cleanerKind]}</span>
+                      {person.cleanerKind === 'Relief' && person.homeBuildingCode && (
+                        <span className="block text-xs font-normal text-text-2">ตึกประจำ: {person.homeBuildingCode}</span>
+                      )}
+                      {(() => {
+                        const badge = regularSetupBadge(person);
+                        return badge && (
+                          <div className="mt-1 [&>span]:whitespace-normal">
+                            <Badge kind="edited">{badge}</Badge>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </th>
                   {dates.map((date) => {
@@ -508,7 +500,7 @@ function ManagementWeek({ view }: { view: ReturnType<typeof useSchedulePage> }) 
                     return (
                       <td
                         key={date}
-                        className={`border-t border-border p-1.5 align-top ${isToday ? 'bg-accent-subtle/30' : ''}`}
+                        className={`border-t border-border p-1.5 align-top ${isToday ? 'bg-surface-2' : ''}`}
                       >
                         {day ? (
                           <button
@@ -547,14 +539,14 @@ function RelatedTransfers({ view }: { view: ReturnType<typeof useSchedulePage> }
   const slots = view.standaloneTransfers;
   if (!slots.length) return null;
   return (
-    <section aria-labelledby="related-transfers" className="space-y-3 rounded-xl border border-border bg-surface p-4">
+    <section aria-labelledby="related-transfers" className="space-y-3 rounded-lg border border-border bg-surface p-4">
       <div className="flex items-center gap-2">
-        <ArrowRightLeft aria-hidden="true" className="size-4 text-accent" />
-        <h2 id="related-transfers" className="text-lg font-semibold">การย้ายพื้นที่ที่เกี่ยวข้อง</h2>
+        <ArrowRightLeft aria-hidden="true" className="size-4 text-text-2" />
+        <h2 id="related-transfers" className="text-lg font-bold">การย้ายพื้นที่ที่เกี่ยวข้อง</h2>
       </div>
       <ul className="space-y-2">
         {slots.map((slot) => (
-          <li key={slot.id} className="space-y-1 rounded-lg border border-border bg-surface-2/40 p-3">
+          <li key={slot.id} className="space-y-1 rounded-lg border border-border bg-surface-2 p-3">
             <p className="font-semibold">{slot.displayName} · {formatThaiDate(slot.shiftDate)} · {shiftShortLabel[slot.shift]}</p>
             <p>{slot.fromAreaCode} → {slot.toAreaCode}</p>
             <p className="text-text-2">
@@ -622,7 +614,7 @@ function Cell({ day }: { day: ScheduleDay }) {
 
 function DayFacts({ day }: { day: ScheduleDay }) {
   return (
-    <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+    <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-base">
       <dt className="text-text-2">พื้นที่</dt>
       <dd className="m-0 font-semibold">
         {day.area.value != null ? day.area.value : '—'}

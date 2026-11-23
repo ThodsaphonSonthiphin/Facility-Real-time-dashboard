@@ -158,11 +158,9 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
       'AR07 Area เจ็ดตึก A · ตึกทดลอง',
     ]);
     expect(cells('AR09')[0]).toBe('ไม่มีแม่บ้านประจำ');
-    expect(cells('AR12')).toEqual(['มแม่บ้านลายังไม่ลงเวลา', 'ยังไม่มีคน', '–', '–', '–', '–']);
+    expect(cells('AR12')).toEqual(['แม่บ้านลายังไม่ลงเวลา', 'ยังไม่มีคน', '–', '–', '–', '–']);
     // A scan outside its sign's radius carries the distance beside its time (facility-0035)
-    expect(cells('AR01')).toEqual(['มแม่บ้านทดสอบ', 'ทำงานอยู่', '06:5285 ม.', '–', '–', '–']);
-    const ar01Avatar = within(rowOf('AR01')).getByText('ม', { selector: 'span[aria-hidden="true"]' });
-    expect(ar01Avatar).toHaveAttribute('aria-hidden', 'true');
+    expect(cells('AR01')).toEqual(['แม่บ้านทดสอบ', 'ทำงานอยู่', '06:5285 ม.', '–', '–', '–']);
     expect(within(rowOf('AR01')).getByRole('img', { name: 'ไกลป้าย 85 ม.' })).toBeInTheDocument();
     expect(within(rowOf('AR02')).getByText('ทำแทน')).toBeInTheDocument();
     expect(within(rowOf('AR02')).getByText('พื้นที่ของตัวเอง AR03 · แอดมินมอบหมาย 07:10 · เข้างาน 06:50')).toBeInTheDocument();
@@ -174,7 +172,7 @@ describe('AttendancePage (D2, facility-0027, 0050)', () => {
     // the [แก้] mark comes before the time (DESIGN_SPEC §5 Table); its name is แก้โดยแอดมิน
     expect(cells('AR05')[2]).toBe('แก้07:02');
     expect(within(rowOf('AR05')).getByRole('img', { name: 'แก้โดยแอดมิน' })).toBeInTheDocument();
-    expect(cells('AR07')).toEqual(['มแม่บ้านพัก', 'พักเบรก', '06:55', '09:30', '–', '–']);
+    expect(cells('AR07')).toEqual(['แม่บ้านพัก', 'พักเบรก', '06:55', '09:30', '–', '–']);
     // facility-0059: no link to a sign page; empty rows only link to /admin/schedules (facility-0225)
     expect(
       within(screen.getByRole('table'))
