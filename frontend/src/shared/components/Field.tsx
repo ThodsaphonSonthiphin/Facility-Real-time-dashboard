@@ -148,8 +148,8 @@ export function ChoiceTile({ children, ...input }: ChoiceProps) {
   return (
     <label
       className={
-        'm-0.5 flex min-h-28 min-w-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-border-control ' +
-        'bg-surface px-2.5 py-4 text-center text-base font-extrabold wrap-break-word text-text has-checked:m-0 has-checked:border-3 ' +
+        'group m-0.5 flex min-h-28 min-w-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-border-control ' +
+        'bg-surface px-2.5 py-4 text-center text-base font-bold wrap-break-word text-text has-checked:m-0 has-checked:border-3 ' +
         'has-checked:border-accent has-checked:bg-accent-subtle has-checked:text-accent-hover ' +
         'has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ' +
         'has-disabled:cursor-not-allowed has-disabled:opacity-50'

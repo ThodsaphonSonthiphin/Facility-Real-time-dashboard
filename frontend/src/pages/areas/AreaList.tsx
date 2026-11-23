@@ -35,7 +35,7 @@ export function AreaList({ areas, total, selectedId, loading, names, buildings, 
   const selectedArea = areas?.find((area) => area.id === selectedId);
 
   return (
-    <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface"
+    <section className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface"
       aria-labelledby="areas-list-title">
       <h2 id="areas-list-title" className="sr-only">{`พื้นที่ทั้งหมด (${total ?? 0})`}</h2>
       {selectedArea && (

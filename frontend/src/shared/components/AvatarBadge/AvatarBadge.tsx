@@ -1,7 +1,6 @@
 import type { AvatarBadgeProps, AvatarBadgeSize, AvatarBadgeTone } from './type';
 
 const toneClasses: Record<AvatarBadgeTone, string> = {
-  blue: 'bg-accent-subtle text-accent',
   teal: 'bg-pending-bg text-pending',
   amber: 'bg-overdue-bg text-overdue',
   purple: 'bg-break-bg text-break',
@@ -28,13 +27,13 @@ function extractInitial(name: string): string {
 }
 
 /**
- * Decorative circular initial badge hidden from assistive technology (`aria-hidden="true"`).
+ * Decorative rounded-square initial badge hidden from assistive technology (`aria-hidden="true"`).
  */
-export function AvatarBadge({ name, tone = 'blue', size = 'md', className }: AvatarBadgeProps) {
+export function AvatarBadge({ name, tone = 'neutral', size = 'md', className }: AvatarBadgeProps) {
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-bold ${toneClasses[tone]} ${sizeClasses[size]}${className ? ` ${className}` : ''}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-md border border-border font-bold ${toneClasses[tone]} ${sizeClasses[size]}${className ? ` ${className}` : ''}`}
     >
       {extractInitial(name)}
     </span>

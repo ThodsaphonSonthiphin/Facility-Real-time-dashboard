@@ -2,21 +2,21 @@ import type { ReactNode } from 'react';
 import { focusRing } from './styles';
 
 /**
- * desk: the Admin's 34 px row of choices, the chosen one filled blue (the design file's กะ, วัน, ขนาดป้าย). phone: full
- * width and 44 px, the chosen one pale blue with a 3 px line under it, for a phone page that already has a blue main
+ * desk: the Admin's 36 px row of choices, the chosen one filled blue (the design file's กะ, วัน, ขนาดป้าย). phone: full
+ * width and 48 px, the chosen one pale blue with a 3 px line under it, for a phone page that already has a blue main
  * button (DESIGN_SPEC §5). The inset shadow draws that line inside the button; no token describes it.
  */
 const sizes = {
   desk: {
     group: 'inline-flex',
     button:
-      'min-h-8.5 px-3.5 text-sm first:rounded-l-md last:rounded-r-md aria-pressed:border-accent aria-pressed:bg-accent ' +
+      'min-h-9 px-3.5 text-sm first:rounded-l-md last:rounded-r-md aria-pressed:border-accent aria-pressed:bg-accent ' +
       'aria-pressed:text-on-accent',
   },
   phone: {
     group: 'flex w-full',
     button:
-      'min-h-11 flex-1 px-2 text-base first:rounded-l-md last:rounded-r-md aria-pressed:bg-accent-subtle ' +
+      'min-h-12 flex-1 px-2 text-base first:rounded-l-md last:rounded-r-md aria-pressed:bg-accent-subtle ' +
       'aria-pressed:text-accent-hover aria-pressed:shadow-[inset_0_-3px_0_var(--color-accent)]',
   },
 } as const;

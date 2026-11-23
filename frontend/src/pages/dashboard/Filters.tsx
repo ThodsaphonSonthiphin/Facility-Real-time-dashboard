@@ -1,7 +1,7 @@
 import { RotateCcw, Search, Wrench } from 'lucide-react';
 import { useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
 import { buildingOptionText } from '../../shared/api/buildingNames';
-import type { PointCard, PointStatus } from '../../shared/api/types';
+import type { PointCard } from '../../shared/api/types';
 import { Button } from '../../shared/components/Button';
 import { Select, TextInput } from '../../shared/components/Field';
 import { FilterToolbar } from '../../shared/components/SurfacePanel';
@@ -18,20 +18,10 @@ import {
 } from '../../store/slices/dashboardSlice';
 import { inBuilding, legendOrder, statusCounts } from './boardRules';
 
-const statusIconCircle: Record<PointStatus, string> = {
-  Rework: 'bg-rework-bg text-rework',
-  Overdue: 'bg-overdue-bg text-overdue',
-  PendingInspection: 'bg-pending-bg text-pending',
-  Passed: 'bg-passed-bg text-passed',
-  NotYetDone: 'bg-idle-bg text-idle',
-  BeforeFirstRound: 'bg-idle-bg text-idle',
-  OffHours: 'bg-idle-bg text-idle',
-};
-
 // The inset ring adds the second pressed stroke without changing the card's size.
 const cardClass =
-  'flex h-full w-full cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-2 py-3 text-left shadow-xs ' +
-  'sm:max-xl:gap-2.5 sm:max-xl:px-3 enabled:hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent-subtle ' +
+  'flex h-full w-full cursor-pointer flex-col items-start justify-between gap-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-left ' +
+  'enabled:hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent-subtle ' +
   'aria-pressed:inset-ring-1 aria-pressed:inset-ring-accent ' +
   focusRing;
 
@@ -60,13 +50,11 @@ export function Filters({ points }: { points: PointCard[] }) {
                 aria-pressed={filters.status === status}
                 onClick={() => dispatch(statusToggled(status))}
               >
-                <span className={`flex size-8 shrink-0 items-center justify-center rounded-full sm:size-9 ${statusIconCircle[status]}`}>
-                  <Icon aria-hidden="true" className="size-4 sm:size-5" strokeWidth={2} />
-                </span>
-                <span className="min-w-0">
-                  <span className={`block text-xs font-semibold ${statusText[status]}`}>{pointStatusLabel[status]}</span>{' '}
-                  <span className="block text-2xl/tight font-extrabold text-text tabular-nums">{counts[status]}</span>
-                </span>
+                <span className={`flex items-center gap-1.5 text-xs font-semibold ${statusText[status]}`}>
+                  <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
+                  <span>{pointStatusLabel[status]}</span>
+                </span>{' '}
+                <span className="block text-2xl/tight font-bold text-text tabular-nums">{counts[status]}</span>
               </button>
             </li>
           );

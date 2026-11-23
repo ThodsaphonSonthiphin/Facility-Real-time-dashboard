@@ -206,7 +206,7 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableE
                   const isChanged = changed.includes(type);
                   const problem = tried ? problems[type] : undefined;
                   return (
-                    <tr key={type} className={isChanged || type === asked ? '[&>td]:bg-accent-subtle/50' : undefined}>
+                    <tr key={type} className={isChanged || type === asked ? '[&>td]:bg-accent-subtle' : undefined}>
                       <td className="font-semibold">{attendanceEventLabel(type, board.shift)}</td>
                       <td className="text-right whitespace-nowrap tabular-nums">
                         <span className="flex items-center justify-end gap-1.5">
@@ -328,9 +328,9 @@ export function CorrectionForm({ board, row, cleaner, initialEvent, unavailableE
             </span>
           )}
         </fieldset>
-        <div className="flex flex-col gap-1.5 rounded-xl border border-pending-border bg-accent-subtle px-4 py-3.5">
+        <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-2 p-4">
           <strong className="flex items-center gap-1.5">
-            <Check aria-hidden="true" className="size-4 text-accent" />
+            <Check aria-hidden="true" className="size-4 text-passed" />
             สรุปก่อนบันทึก
           </strong>
           <span>

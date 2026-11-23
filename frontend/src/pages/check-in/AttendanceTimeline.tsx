@@ -42,7 +42,7 @@ function timelineRows(attendance: AttendanceState): TimelineRow[] {
 export function AttendanceTimeline({ attendance, next }: { attendance: AttendanceState; next?: AttendanceEvent }) {
   return (
     <ol
-      className="m-0 flex list-none flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface p-0"
+      className="m-0 flex list-none flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface p-0"
       aria-label="วันนี้"
     >
       {timelineRows(attendance).map((row, index) => {
@@ -71,7 +71,7 @@ export function AttendanceTimeline({ attendance, next }: { attendance: Attendanc
               {recorded && <Check className="size-4" />}
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className={`text-sm font-bold ${isNext ? 'text-accent' : ''}`}>
+              <span className={`text-base font-bold ${isNext ? 'text-accent' : ''}`}>
                 {attendanceEventLabel(row.eventType, attendance.shift ?? undefined)}
               </span>
               {recorded && row.source === 'SupervisorAdd' && <span className="text-xs text-text-2">หัวหน้าเติมเวลา</span>}
@@ -85,8 +85,8 @@ export function AttendanceTimeline({ attendance, next }: { attendance: Attendanc
             </span>{' '}
             {!onLeave && (
               <span
-                className={`max-w-24 text-right text-sm tabular-nums ${
-                  recorded ? 'font-extrabold text-passed' : isNext ? 'font-semibold text-accent' : 'text-text-2'
+                className={`max-w-24 text-right text-base tabular-nums ${
+                  recorded ? 'font-bold text-passed' : isNext ? 'font-semibold text-accent' : 'text-text-2'
                 }`}
               >
                 {recorded ? formatTime(actualAt) : actionStateLabel[row.state]}

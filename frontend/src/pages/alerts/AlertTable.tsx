@@ -6,7 +6,7 @@ import { Table } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
 import { TextArea } from '../../shared/components/Field';
 import type { Notice } from '../../shared/components/Toast';
-import { linkClass } from '../../shared/components/styles';
+import { buttonClass } from '../../shared/components/styles';
 import { useAssignCoverMutation } from '../../shared/cover/coverApi';
 import { coverNotice } from '../../shared/cover/coverText';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
@@ -122,7 +122,7 @@ function AlertRow({ alert, today, noting, onNoting, onNotice }: AlertRowProps) {
 
   return (
     <>
-      <tr className={noting ? '[&>*]:bg-accent-subtle/50' : alert.reviewed ? '[&>*]:bg-surface-2' : undefined}>
+      <tr className={noting ? '[&>*]:bg-accent-subtle' : alert.reviewed ? '[&>*]:bg-surface-2' : undefined}>
         <td className="align-top whitespace-nowrap tabular-nums">{missing ? '–' : formatTime(alert.at)}</td>
         <td className="align-top">
           <span className="flex flex-col">
@@ -150,7 +150,7 @@ function AlertRow({ alert, today, noting, onNoting, onNotice }: AlertRowProps) {
         <td>
           {open && (
             // The design file's fixed grid: each button keeps its place on every row, with or without a cover
-            <div className="grid grid-cols-[172px_140px] items-center justify-end gap-2">
+            <div className="grid grid-cols-[184px_148px] items-center justify-end gap-2">
               {alert.cover ? (
                 <CoverButton alert={alert} cover={alert.cover} onNotice={onNotice} />
               ) : (
@@ -173,7 +173,8 @@ function AlertRow({ alert, today, noting, onNoting, onNotice }: AlertRowProps) {
             // facility-0051: it closes once the time is filled, on the attendance page
             <div className="flex flex-col items-end gap-0.5">
               <Link
-                className={`${linkClass} inline-flex min-h-8 items-center gap-1.5 font-semibold no-underline`}
+                data-tap=""
+                className={buttonClass('link', 'desk')}
                 to={fillLink(alert)}
               >
                 {`เติมเวลา${attendanceEventLabel(alert.missingEvents[0] ?? 'ShiftOut', missingShift)}`}
@@ -191,7 +192,7 @@ function AlertRow({ alert, today, noting, onNoting, onNotice }: AlertRowProps) {
         </td>
       </tr>
       {noting && (
-        <tr className="[&>*]:bg-accent-subtle/50">
+        <tr className="[&>*]:bg-accent-subtle">
           <td colSpan={5} className="px-4 py-3">
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-[1_1_420px] flex-col gap-1">
@@ -271,7 +272,7 @@ function CoverButton({ alert, cover, onNotice }: CoverButtonProps) {
     <Button
       variant="primary"
       size="desk"
-      className="px-2.5 whitespace-nowrap"
+      className="whitespace-nowrap"
       disabled={isLoading}
       onClick={() => void give()}
     >

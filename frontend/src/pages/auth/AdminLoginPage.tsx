@@ -1,11 +1,12 @@
-import { Eye, EyeOff, LoaderCircle, LogIn } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { Link, Navigate } from 'react-router';
 import { buildCommit } from '../../shared/version/buildInfo';
 import { Button } from '../../shared/components/Button';
 import { Field, TextInput } from '../../shared/components/Field';
 import { Note } from '../../shared/components/Note';
+import { Spinner } from '../../shared/components/PageState';
 import { ProjectLogo } from '../../shared/components/ProjectLogo';
-import { inlineLinkClass } from '../../shared/components/styles';
+import { linkClass } from '../../shared/components/styles';
 import { useAdminLoginPage } from './useAdminLoginPage';
 
 /** D0: Enterprise Light layout, with the existing authentication and navigation contract. */
@@ -33,7 +34,6 @@ export function AdminLoginPage() {
           <Field label="ชื่อผู้ใช้">
             <TextInput
               size="desk"
-              className="h-10"
               type="text"
               autoComplete="username"
               required
@@ -48,7 +48,7 @@ export function AdminLoginPage() {
               <TextInput
                 id={page.passwordId}
                 size="desk"
-                className="h-10 min-w-0 flex-1"
+                className="min-w-0 flex-1"
                 type={page.passwordVisible ? 'text' : 'password'}
                 autoComplete="current-password"
                 required
@@ -58,7 +58,7 @@ export function AdminLoginPage() {
                 value={page.password}
                 onChange={(event) => page.setPassword(event.target.value)}
               />
-              <Button size="desk" className="h-10 shrink-0" onClick={page.togglePassword} disabled={page.isLoading}>
+              <Button size="desk" className="shrink-0" onClick={page.togglePassword} disabled={page.isLoading}>
                 {page.passwordVisible
                   ? <EyeOff aria-hidden="true" className="size-4" />
                   : <Eye aria-hidden="true" className="size-4" />}
@@ -66,16 +66,16 @@ export function AdminLoginPage() {
               </Button>
             </div>
           </div>
-          <Button type="submit" variant="primary" size="desk" className="h-10 w-full" disabled={page.isLoading}>
+          <Button type="submit" variant="primary" size="desk" className="w-full" disabled={page.isLoading}>
             {page.isLoading
-              ? <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
+              ? <Spinner />
               : <LogIn aria-hidden="true" className="size-4" />}
             {page.isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
           </Button>
         </form>
         <footer className="flex flex-col gap-2 text-center text-xs text-text-2">
           <span>ลืมรหัสผ่าน ติดต่อแอดมินคนอื่นเพื่อตั้งใหม่</span>
-          <Link className={inlineLinkClass} to="/login" state={page.linkState}>
+          <Link className={`${linkClass} self-center`} to="/login" state={page.linkState}>
             หน้าเข้าสู่ระบบของพนักงาน
           </Link>
           <span>เวอร์ชัน {buildCommit}</span>

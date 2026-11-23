@@ -67,7 +67,7 @@ export function CheckInPage() {
       header={
         <PhoneHeader back={{ to: '/my-work', label: 'งานของฉัน' }}>
           <span className="text-sm font-semibold text-text-2">ป้ายลงเวลา</span>
-          <h1 ref={heading} tabIndex={-1} className="text-xl font-extrabold focus:outline-2 focus:outline-offset-2 focus:outline-accent">ลงเวลา</h1>
+          <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold focus:outline-2 focus:outline-offset-2 focus:outline-accent">ลงเวลา</h1>
           {attendance?.shift && <p className="text-sm font-semibold tabular-nums">{shiftLabel[attendance.shift]}</p>}
           {ownArea && (
             <p className="text-sm text-text-2">{`พื้นที่ของคุณ: ${ownArea.areaName} · ${ownArea.points.length} จุด`}</p>

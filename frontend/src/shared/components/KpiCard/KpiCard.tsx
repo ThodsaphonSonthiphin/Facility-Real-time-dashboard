@@ -1,16 +1,16 @@
 import type { KpiCardProps, KpiCardTone } from './type';
 
-const iconCircleClass: Record<KpiCardTone, string> = {
-  blue: 'bg-accent-subtle text-accent',
-  green: 'bg-passed-bg text-passed',
-  amber: 'bg-overdue-bg text-overdue',
-  red: 'bg-rework-bg text-rework',
-  purple: 'bg-break-bg text-break',
-  neutral: 'bg-surface-2 text-text-3',
+const iconToneClass: Record<KpiCardTone, string> = {
+  teal: 'text-pending',
+  green: 'text-passed',
+  amber: 'text-overdue',
+  red: 'text-rework',
+  purple: 'text-break',
+  neutral: 'text-text-2',
 };
 
 const progressFillClass: Record<KpiCardTone, string> = {
-  blue: 'bg-accent',
+  teal: 'bg-pending',
   green: 'bg-passed',
   amber: 'bg-overdue',
   red: 'bg-rework',
@@ -19,7 +19,7 @@ const progressFillClass: Record<KpiCardTone, string> = {
 };
 
 const progressTextClass: Record<KpiCardTone, string> = {
-  blue: 'text-accent',
+  teal: 'text-pending',
   green: 'text-passed',
   amber: 'text-overdue',
   red: 'text-rework',
@@ -28,14 +28,14 @@ const progressTextClass: Record<KpiCardTone, string> = {
 };
 
 /**
- * Enterprise Light KPI summary card with semantic icon badge and optional accessible progressbar.
+ * Enterprise Light KPI summary card with semantic icon and optional accessible progressbar.
  */
 export function KpiCard({
   label,
   value,
   unit,
   icon: Icon,
-  tone = 'blue',
+  tone = 'neutral',
   progress,
   progressLabel,
   as = 'div',
@@ -47,15 +47,12 @@ export function KpiCard({
 
   return (
     <Tag
-      className={`flex flex-col gap-2.5 rounded-xl border border-border bg-surface p-3.5 ${className ?? ''}`}
+      className={`flex flex-col gap-2 rounded-lg border border-border bg-surface p-4 ${className ?? ''}`}
     >
-      <div className="flex items-center gap-3">
-        <div className={`flex size-10 shrink-0 items-center justify-center rounded-full ${iconCircleClass[tone]}`}>
-          <Icon aria-hidden="true" className="size-6" strokeWidth={2} />
-        </div>
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-xs font-semibold text-text-2">{label}</div>
-          <div className="text-2xl/tight font-bold text-text tabular-nums">
+          <div className="mt-1 text-2xl/tight font-bold text-text tabular-nums">
             {formattedValue}
             {unit ? (
               <>
@@ -65,6 +62,7 @@ export function KpiCard({
             ) : null}
           </div>
         </div>
+        <Icon aria-hidden="true" className={`mt-0.5 size-4 shrink-0 ${iconToneClass[tone]}`} strokeWidth={2} />
       </div>
       {clampedProgress !== undefined && (
         <div className="flex items-center gap-2">
@@ -74,9 +72,9 @@ export function KpiCard({
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={clampedProgress}
-            className="h-2 flex-1 overflow-hidden rounded-full bg-skeleton"
+            className="h-2 flex-1 overflow-hidden rounded-sm bg-skeleton"
           >
-            <div className={`h-full rounded-full ${progressFillClass[tone]}`} style={{ width: `${clampedProgress}%` }} />
+            <div className={`h-full rounded-sm ${progressFillClass[tone]}`} style={{ width: `${clampedProgress}%` }} />
           </div>
           <span aria-hidden="true" className={`text-xs font-bold tabular-nums ${progressTextClass[tone]}`}>
             {clampedProgress}%

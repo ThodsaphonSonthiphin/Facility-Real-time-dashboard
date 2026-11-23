@@ -107,9 +107,9 @@
   --radius-sm: 4px; /* small badges */
   --radius-md: 6px; /* buttons, inputs, chips */
   --radius-lg: 8px; /* cards, tables, dialogs */
-  --radius-xl: 12px;
 
-  /* Dialogs and drawers only */
+  /* Dialogs, drawers, and floating overlays only */
+  --shadow-*: initial;
   --shadow-overlay: 0 12px 32px rgb(16 24 40 / 0.18);
 
   --container-mobile: 480px;

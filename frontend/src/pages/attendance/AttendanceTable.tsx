@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { AreaAttendanceState, BoardEvent, BoardRow } from '../../shared/api/attendanceBoardApi';
 import type { Shift } from '../../shared/api/types';
-import { AvatarBadge } from '../../shared/components/AvatarBadge/AvatarBadge';
 import { Table } from '../../shared/components/Boxes';
 import { Button } from '../../shared/components/Button';
 import { Badge, EditedMark } from '../../shared/components/Badge';
@@ -76,7 +75,7 @@ export function AttendanceTable({ rows, shift, onCorrect, footer }: AttendanceTa
       <tbody>
         {rows.map((row) => (
           // An Area with nobody is tinted across the row, as in the old look; [&>*] reaches its th and td cells
-          <tr key={row.areaId} className={row.state === 'Empty' ? '[&>*]:bg-overdue-bg/50' : undefined}>
+          <tr key={row.areaId} className={row.state === 'Empty' ? '[&>*]:bg-overdue-bg' : undefined}>
             <th scope="row">
               {`${row.areaCode} ${row.areaName}`}
               <span className={subClass}>{`ตึก ${buildingText(row.buildingCode, names)}`}</span>
@@ -159,25 +158,20 @@ function Who({ row }: { row: BoardRow }) {
   return (
     <div className="flex flex-col">
       {row.cleaner ? (
-        <span className="flex items-center gap-2">
-          <AvatarBadge name={row.cleaner.displayName} size="sm" tone={row.state === 'Empty' ? 'amber' : 'blue'} />
-          <span>{row.cleaner.displayName}</span>
-        </span>
+        <span className="font-medium text-text">{row.cleaner.displayName}</span>
       ) : (
         <span>ไม่มีแม่บ้านประจำ</span>
       )}
       {row.cleaner && !eventOf(row, 'ShiftIn') && <span className={subClass}>ยังไม่ลงเวลา</span>}
       {row.additionalCleaners?.map(({ cleaner }) => (
-        <span key={cleaner.id} className="mt-1 flex items-center gap-2">
-          <AvatarBadge name={cleaner.displayName} size="sm" tone="teal" />
-          <span>{cleaner.displayName}</span>
+        <span key={cleaner.id} className="mt-1 text-text">
+          {cleaner.displayName}
         </span>
       ))}
       {row.covers.map((cover) => (
         <span key={cover.id} className="mt-1 flex flex-col">
           <span className="flex flex-wrap items-center gap-1.5">
-            <AvatarBadge name={cover.displayName} size="sm" tone="purple" />
-            {cover.displayName}
+            <span>{cover.displayName}</span>
             <Badge kind="cover">ทำแทน</Badge>
           </span>
           <span className={subClass}>{coverDetail(cover)}</span>

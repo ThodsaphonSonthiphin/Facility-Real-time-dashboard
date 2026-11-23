@@ -64,7 +64,7 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
       )}
       <form id="scan-form" className="flex min-w-0 flex-col gap-4" onSubmit={onSubmit}>
         <fieldset className="m-0 min-w-0 border-0 p-0">
-          <legend className="mb-2.5 p-0 text-base font-extrabold">ผลการทำความสะอาด</legend>
+          <legend className="mb-2.5 p-0 text-base font-bold">ผลการทำความสะอาด</legend>
           <div className="grid grid-cols-2 gap-2.5">
             <ChoiceTile
               name="scan-status"
@@ -72,9 +72,7 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
               checked={draft.status === 'Normal'}
               onChange={() => onChange({ ...draft, status: 'Normal' })}
             >
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-accent">
-                <CircleCheck aria-hidden="true" className="size-7" />
-              </span>
+              <CircleCheck aria-hidden="true" className="size-7 text-text-2 group-has-checked:text-accent" />
               เรียบร้อย
             </ChoiceTile>
             <ChoiceTile
@@ -83,9 +81,7 @@ export function SubmitForm({ point, draft, onChange, sending, errorText, onSend 
               checked={draft.status === 'Issue'}
               onChange={() => onChange({ ...draft, status: 'Issue' })}
             >
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-overdue-bg text-overdue">
-                <Wrench aria-hidden="true" className="size-7" />
-              </span>
+              <Wrench aria-hidden="true" className="size-7 text-text-2 group-has-checked:text-accent" />
               พบปัญหา
             </ChoiceTile>
           </div>

@@ -33,7 +33,7 @@ export function BuildingsPage() {
       {accounts.error && <Note tone="error" onRetry={() => void accounts.refetch()}>โหลดรายชื่อหัวหน้าไม่ได้</Note>}
       {buildings.error && <Note tone="error" onRetry={() => void buildings.refetch()}>{getErrorMessage(buildings.error)}</Note>}
       <section
-        className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface"
+        className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface"
         aria-labelledby="buildings-list-title"
       >
         <div className="sr-only">

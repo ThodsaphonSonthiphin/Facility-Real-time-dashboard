@@ -31,7 +31,7 @@ describe('KpiCard', () => {
         value={168}
         unit="/ 170 คน"
         icon={Users}
-        tone="blue"
+        tone="teal"
         progress={99}
         progressLabel="อัตราการเข้างาน"
       />,
@@ -54,7 +54,7 @@ describe('KpiCard', () => {
 
 describe('AvatarBadge', () => {
   it('extracts Thai consonant initial and hides badge from assistive tech', () => {
-    const { container } = render(<AvatarBadge name="สมชาย ใจดี" tone="blue" />);
+    const { container } = render(<AvatarBadge name="สมชาย ใจดี" tone="neutral" />);
 
     const badge = container.firstElementChild;
     expect(badge).toHaveAttribute('aria-hidden', 'true');

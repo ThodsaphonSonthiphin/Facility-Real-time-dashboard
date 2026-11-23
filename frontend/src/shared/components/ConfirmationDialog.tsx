@@ -29,12 +29,12 @@ export function ConfirmationDialog({
   const destructive = kind !== 'cover';
   const tone = kind === 'qr'
     ? 'bg-overdue-bg text-overdue'
-    : destructive ? 'bg-rework-bg text-rework' : 'bg-accent-subtle text-accent';
+    : destructive ? 'bg-rework-bg text-rework' : 'bg-surface-2 text-text-2';
   return (
     <Modal labelledBy={state.id} describedBy={`${state.id}-body`} role="alertdialog" onClose={state.cancel}>
       <div className="flex flex-col gap-5 text-sm">
         <div className="flex items-start gap-4">
-          <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${tone}`}>
+          <span className={`flex size-10 shrink-0 items-center justify-center rounded-md ${tone}`}>
             <Icon aria-hidden="true" className="size-5" />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -77,15 +77,14 @@ export function ConfirmationDialog({
         <div className="flex flex-wrap justify-end gap-2">
           <Button size="desk" disabled={state.pending} onClick={state.cancel}>ยกเลิก</Button>
           {destructive ? (
-            <button
-              type="button"
-              data-tap=""
-              className="inline-flex min-h-9 items-center justify-center rounded-md border border-transparent bg-rework px-4 text-sm font-semibold text-on-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:bg-border disabled:text-text-2 not-disabled:hover:bg-rework-strong"
+            <Button
+              variant="dangerSolid"
+              size="desk"
               disabled={state.disabled}
               onClick={() => void state.confirm()}
             >
               {state.pending ? 'กำลังดำเนินการ...' : confirmLabel}
-            </button>
+            </Button>
           ) : (
             <Button variant="primary" size="desk" disabled={state.disabled} onClick={() => void state.confirm()}>
               {state.pending ? 'กำลังดำเนินการ...' : confirmLabel}

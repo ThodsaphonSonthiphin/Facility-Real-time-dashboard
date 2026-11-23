@@ -31,13 +31,13 @@ export function MyBuildingPage() {
   const header = (
     <PhoneHeader
       action={
-        <Button variant="secondary" size="desk" className="min-h-12" disabled={isFetching} onClick={() => void refetch()}>
-          <RefreshCw aria-hidden="true" className="size-4" />
+        <Button variant="secondary" size="phone" disabled={isFetching} onClick={() => void refetch()}>
+          <RefreshCw aria-hidden="true" className="size-5" />
           {isFetching ? 'กำลังอัปเดต...' : 'อัปเดต'}
         </Button>
       }
     >
-      <h1 className="text-xl font-extrabold text-text">ตึกของฉัน</h1>
+      <h1 className="text-2xl font-bold text-text">ตึกของฉัน</h1>
       <span className="min-h-5 min-w-0 text-sm wrap-break-word text-text-2 tabular-nums">
         {data ? `${shiftLabel[data.shift]} · ${countLine(data)}` : ''}
       </span>
@@ -110,7 +110,7 @@ function Summary({
         />
       </ul>
       {selected !== null && (
-        <Button variant="link" size="desk" className="self-start" onClick={onReset}>
+        <Button variant="link" size="phone" className="self-start" onClick={onReset}>
           {`แสดงทุกสถานะ (${points.length} จุด)`}
         </Button>
       )}
@@ -140,11 +140,11 @@ function FilterTile({
         data-tap=""
         aria-pressed={pressed}
         onClick={onClick}
-        className={`flex h-full min-h-16 w-full cursor-pointer flex-col-reverse items-start justify-between gap-1 rounded-xl border px-2.5 py-2 text-left transition-colors ${look} ${
+        className={`flex h-full min-h-16 w-full cursor-pointer flex-col-reverse items-start justify-between gap-1 rounded-lg border px-2.5 py-2 text-left transition-colors ${look} ${
           pressed ? 'ring-2 ring-accent ring-inset' : 'hover:border-accent'
         } ${focusRing}`}
       >
-        <strong className="text-xl/tight font-extrabold text-text tabular-nums">{count}</strong>{' '}
+        <strong className="text-xl/tight font-bold text-text tabular-nums">{count}</strong>{' '}
         <span className="flex items-center gap-1 text-xs/snug font-semibold">
           <Icon aria-hidden="true" className="size-4 shrink-0" />
           <span className="min-w-0">{label}</span>
@@ -172,9 +172,9 @@ function BuildingList({
   );
   if (filter && matchingTotal === 0) {
     return (
-      <div className="flex flex-col items-start gap-2 rounded-xl border border-border bg-surface p-4">
-        <p className="text-sm text-text-2">ไม่มีจุดในสถานะที่เลือกตอนนี้</p>
-        <Button variant="secondary" size="desk" onClick={onReset}>
+      <div className="flex flex-col items-start gap-2 rounded-lg border border-border bg-surface p-4">
+        <p className="text-text-2">ไม่มีจุดในสถานะที่เลือกตอนนี้</p>
+        <Button variant="secondary" size="phone" onClick={onReset}>
           แสดงทุกสถานะ
         </Button>
       </div>
@@ -195,7 +195,7 @@ function BuildingList({
             </h2>
             {!section.canInspect && <Note tone="warn">ตอนนี้ไม่ใช่กะของคุณ ดูได้ แต่สแกนตรวจไม่ได้</Note>}
             {points.length === 0 ? (
-              <p className="text-sm text-text-2">ตึกนี้ยังไม่มีจุด</p>
+              <p className="text-text-2">ตึกนี้ยังไม่มีจุด</p>
             ) : (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {inspectionOrder(points).map((point) => (

@@ -116,7 +116,7 @@ Build pages from these (in `frontend/src/shared/components`) instead of repeatin
 
 | Component | For |
 |---|---|
-| `Button` (`variant` primary / secondary / danger / link / add, `size` phone / main / desk) | Every button. A `link` button has no side padding, so its words line up with the text above it (owner, #78). `main` is the phone page's one 56 px full-width action; `danger` is red text and border on white; contextual stopping-use/QR confirmations use the solid red action in `ConfirmationDialog` (0101), and `add` is dashed accent for adding a round |
+| `Button` (`variant` primary / secondary / danger / dangerSolid / link / add, `size` phone / main / desk / adaptive) | Every button. A `link` button has no side padding, so its words line up with the text above it (owner, #78). `main` is the phone page's one 56 px full-width action; `adaptive` is 48 px on mobile and 36 px from `sm` (640 px); `danger` is red text and border on white; `dangerSolid` is solid red for destructive confirmation modals (`ConfirmationDialog`, `LogoutConfirmDialog`, 0101), and `add` is dashed accent for adding a round |
 | `buttonClass(variant, size)` + `data-tap` | A react-router `Link` that looks like a button |
 | `Note` (`tone` info / success / warn / error, `title`, `icon`, `alert`, `status`) | A message in a box, in the status colours (see Notes); an error is `role="alert"` unless `alert={false}` (a red box that is part of the page from the start, such as the Supervisor's defect); `status` makes it `role="status"`, for the answer to a press (the recorded time on the check-in page). `noteClass(tone)` for a box that must be a `<section>` with its own heading |
 | `StatusChip` (`size` md / lg, `fixed`) | A Point Status, always with its words |

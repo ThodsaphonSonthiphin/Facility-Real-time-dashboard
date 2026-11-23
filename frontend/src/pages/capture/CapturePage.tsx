@@ -67,7 +67,7 @@ export function CapturePage() {
           {detail && (
             <span className="text-sm text-text-2">{`แอดมิน · เก็บพิกัดป้าย · ${detail.area.code} ${detail.area.name}`}</span>
           )}
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+          <h1 className="flex items-center gap-2 text-2xl font-bold">
             <MapPin aria-hidden="true" className="size-5 shrink-0 text-text-2" />
             เก็บพิกัดป้าย
           </h1>

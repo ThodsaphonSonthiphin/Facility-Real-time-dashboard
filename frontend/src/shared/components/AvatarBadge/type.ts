@@ -1,5 +1,5 @@
 /** Semantic color tone for an employee or user initial badge. */
-export type AvatarBadgeTone = 'blue' | 'teal' | 'amber' | 'purple' | 'neutral';
+export type AvatarBadgeTone = 'teal' | 'amber' | 'purple' | 'neutral';
 
 /** Size variant for an AvatarBadge. */
 export type AvatarBadgeSize = 'sm' | 'md';
