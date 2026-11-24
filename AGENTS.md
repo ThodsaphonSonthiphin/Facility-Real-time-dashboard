@@ -1,3 +1,52 @@
+### Frontend standards
+
+Tailwind, visual design, and accessibility rules that `code-review` checks.
+
+Sources of truth:
+
+- `docs/agents/frontend-standards.md` — frontend implementation and accessibility standards.
+- `design-system/janitorial/MASTER.md` — authoritative visual design system.
+- `design-system/janitorial/pages/` — page-specific design decisions.
+- `frontend/src/index.css` — implemented semantic design tokens.
+
+### AI-generated UI quality
+
+Use `.agents/skills/unslop-ui/SKILL.md` when designing, redesigning, or auditing frontend UI.
+
+Treat `unslop-ui` as an additional quality guardrail, not as a replacement for the established design system.
+
+Rules:
+
+- Avoid generic AI-generated aesthetics and unmodified framework defaults.
+- Never choose colors, typography, gradients, shadows, or layouts merely because they are common AI defaults.
+- Do not replace one generic AI aesthetic with another.
+- Base visual decisions on user workflows, information hierarchy, accessibility, and the established design system.
+- Preserve intentional brand colors and existing design decisions unless the task explicitly requires changing them.
+- Use semantic design tokens and reusable components instead of arbitrary page-level styling.
+- Do not introduce decorative gradients, glow effects, animations, or unnecessary cards without a functional or design-system justification.
+- Do not ban Tailwind, shadcn, rounded corners, gradients, or specific colors solely because they appear in AI-generated interfaces.
+- Prioritize clarity, consistency, data density, and efficient task completion over decoration.
+
+### UI audit and verification
+
+For UI redesigns or visual quality audits:
+
+1. Inspect the existing design system, relevant components, and rendered pages before editing.
+2. Review the applicable `unslop-ui` guidelines.
+3. Run the `unslop-ui` scanner when applicable.
+4. Treat scanner findings as review signals, not automatic defects.
+5. Inspect actual rendered UI at desktop (1280px) and mobile (375px) widths.
+6. Verify visual consistency, readable typography, contrast, spacing, responsive behavior, and accessibility.
+7. Resolve justified issues without changing unrelated business logic.
+8. Report the visual changes, rationale, and verification results.
+
+When intentionally changing the visual direction:
+
+- Update `design-system/janitorial/MASTER.md` first.
+- Update relevant page-specific design documentation.
+- Apply the approved direction consistently through shared tokens and components.
+- Do not independently invent a new visual style for each page.
+
 ## Stage: development
 
 Nothing here is released and nobody depends on any of it: every part is an experiment. Every decision, on every topic, follows from that:
@@ -30,10 +79,6 @@ The five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready
 ### Domain docs
 
 Single-context: the glossary is `CONTEXT.md`, and ADRs are `docs/adr/facility-NNNN-<slug>.md`. See `docs/agents/domain.md`.
-
-### Frontend standards
-
-Tailwind, look and accessibility rules that `code-review` checks. See `docs/agents/frontend-standards.md`; the look is in `design-system/janitorial/MASTER.md` (page overrides in `design-system/janitorial/pages/`).
 
 ## UI Iconography Standards
 
