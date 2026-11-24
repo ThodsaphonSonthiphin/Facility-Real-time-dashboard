@@ -1,6 +1,6 @@
 # Architecture — how the Janitorial Management Dashboard is connected
 
-Describes the application code including the 2026-11-03 retention implementation and the documented deployment topology; current checkout/publication status is in [handoff](handoff.md), and a production installation and field pilot are not yet confirmed. See [handoff](handoff.md) for status, [code map](code-map.md) for files and [ADRs](adr/README.md) for decisions.
+Describes the application code as of 2026-11-23 (`master`, including Overview Target History, Dated Scheduling & 6-stage shift-aware attendance, TiDB-compatible `READ COMMITTED` retention, and the multi-viewport responsive UI) and the documented deployment topology; current checkout/publication status is in [handoff](handoff.md). See [code map](code-map.md) for files and [ADRs](adr/README.md) for decisions.
 
 ## 1. Deployment and network
 
@@ -33,7 +33,7 @@ flowchart LR
 | Browser security | App middleware sets CSP, frame denial, nosniff, no-referrer and Permissions-Policy; HSTS on HTTPS outside Development, excluding localhost; `/api` gets `no-store` (0106) |
 | Browser → signs | Printed QR URLs use the origin of the print page, so permanent signs need the fixed HTTPS domain |
 
-The app migrates its selected database on startup. Development alone adds synthetic fixtures and exposes Swagger; Production has no seed or Swagger and creates the first Admin from private settings (0092, 0093). It refuses a missing connection string or JWT signing key. Never publish Development fixtures with real data.
+The app migrates its selected database on startup, bootstraps `OverviewHistoryBootstrap` and `ScheduleBackfill`, and validates `Scheduling:CommandSigningKey` (>= 32 UTF-8 bytes, logging an error if missing or too short so reads still work while schedule command saves refuse until configured). Development alone adds synthetic fixtures and exposes Swagger; Production has no seed or Swagger and creates the first Admin from private settings (0092, 0093). It refuses a missing connection string or JWT signing key. Never publish Development fixtures with real data.
 
 ### Local development and phone trials
 
@@ -56,39 +56,39 @@ The frontend follows [Frontend Target Tree (0025)](adr/facility-0025-frontend-ta
 
 ```mermaid
 flowchart TB
-    subgraph FE["Frontend — frontend/src (React 19 + TypeScript)"]
+    subgraph FE["Frontend — frontend/src (React 19 + TypeScript 6)"]
         AppF["main.tsx · App.tsx · router.tsx<br/>store, page-load refresh, createBrowserRouter"]
-        Pages["pages/*<br/>auth (M0, D0) · my-work (M9, M14) · check-in (M1–M3, M10) · scan (M4, M5, M8, M11–M13) · inspect (M6, M7, M16) · my-building (M15) · dashboard (D1) · attendance (D2) · alerts (D3) · areas (D4, D10) · capture (M17) · print-signs (D5) · accounts (D6) · inspection-summary (D7) · export (D8) · history (D9)<br/>feature UI + hooks/rules/API where needed<br/>Tailwind 4; index.css is the only CSS file<br/>Admin pages are lazy routes (own files)"]
-        Store["store/<br/>authSlice: user + access token in memory<br/>hubSlice: each hub connection live or not<br/>dashboardSlice: Dashboard filters"]
+        Pages["pages/* (20 feature folders)<br/>auth · account · my-work · check-in · scan · inspect · my-building · schedules<br/>overview · dashboard · attendance · alerts · areas · buildings · capture<br/>print-signs · accounts · inspection-summary · export · history<br/>Tailwind 4; index.css is the only CSS file; Admin routes are lazy-loaded"]
+        Store["store/<br/>authSlice: user + access token in memory<br/>hubSlice: SignalR connection state<br/>dashboardSlice: D1 filters<br/>scheduleView: ongoing week/filter memory"]
         BaseApi["shared/api/baseApi.ts<br/>RTK Query, Bearer header,<br/>401 → one shared refresh → retry"]
         Session["shared/auth<br/>session.ts (refresh, single-flight)<br/>endSession.ts (logout)"]
-        Guard["shared/components<br/>ProtectedRoute (role), AppLayout + AdminNav,<br/>StatusScreen, CrashScreen"]
-        HubF["shared/api/scanHub.ts<br/>followScanHub: one SignalR connection per cache entry<br/>token from getValidAccessToken"]
+        Guard["shared/components<br/>ProtectedRoute, AppLayout, AdminNav (3 groups),<br/>CleanerBottomNav, SupervisorNav, Sheet/Modal/Drawer,<br/>LiveBadge & ConnectionBanner (offline-only)"]
+        HubF["shared/api/scanHub.ts<br/>followScanHub: SignalR connections per cache entry<br/>token from getValidAccessToken"]
     end
 
     subgraph BE["Backend — backend/src (.NET 10, Clean Architecture)"]
         subgraph ApiP["JanitorialManagementDashboard.Api"]
-            Ep["Endpoints/*<br/>/api/service-points (Admin) | /api/scan-records | /api/attendance (+ /signs/{token}) | /api/my-work | /api/me<br/>/api/admin/cover-assignments | /api/admin/areas | points | signs | buildings | cleaners<br/>/api/admin/attendance | alerts | audit-log<br/>/api/inspections/scan | /api/inspections | /api/my-building<br/>AdminAccountEndpoints: /api/admin/accounts<br/>AdminExportEndpoints: /api/admin/export (.xlsx)<br/>AdminInspectionSummaryEndpoints: /api/admin/inspection-summary"]
+            Ep["Endpoints/* (65 HTTP routes)<br/>/api/service-points | /api/scan-records | /api/attendance | /api/area-transfers<br/>/api/my-work | /api/my-building | /api/inspections | /api/me | /api/health<br/>/api/schedules/* | /api/team-attendance/*<br/>/api/admin/overview | attendance | alerts | cover-assignments<br/>/api/admin/areas | points | signs | buildings | cleaners | accounts<br/>/api/admin/audit-log | export | inspection-summary"]
             AuthEp["Endpoints/AuthEndpoints.cs<br/>/api/auth/login | refresh | logout"]
-            Hub["Hubs/ScanHub.cs<br/>/hubs/scan  [Authorize]<br/>ScanRecorded, InspectionRecorded → active Admins + building Supervisors + Area Cleaners and covers; AttendanceRecorded → active Admins"]
-            Jwt["Auth/AuthSetup.cs<br/>JWT bearer + CurrentUser database check for API<br/>LoginPlace and LoginThrottle; SecurityLog"]
+            Hub["Hubs/ScanHub.cs<br/>/hubs/scan [Authorize]<br/>ScanRecorded, InspectionRecorded, AttendanceRecorded,<br/>OverviewChanged, ScheduleChanged"]
+            Jwt["Auth/AuthSetup.cs<br/>JWT bearer + CurrentUser database check for API<br/>AdminOnly & ScheduleManager policies; LoginThrottle; SecurityLog"]
         end
         subgraph AppP["JanitorialManagementDashboard.Application"]
-            Status["Shifts/ShiftCalendar<br/>Rounds/RoundPlacer, PointStatusCalculator<br/>Attendance/AttendanceCalendar, AttendanceRules<br/>Geo/Geofence, GpsStamping"]
-            Rules["RefreshTokenRules<br/>IAccessTokenIssuer, IPasswordHasher"]
+            Status["Shifts/ShiftCalendar · Rounds/RoundPlacer, PointStatusCalculator<br/>Attendance/AttendanceCalendar, AttendanceRules · Geo/Geofence<br/>Overview/OverviewAvailability, OverviewCalculator<br/>Scheduling/ScheduleAuthority, ScheduleResolver, SchedulingSettings"]
+            Rules["RefreshTokenRules · RetentionSettings<br/>IAccessTokenIssuer, IPasswordHasher"]
         end
         subgraph InfP["JanitorialManagementDashboard.Infrastructure"]
-            Ctx["AppDbContext (EF Core)<br/>Migrations, DbInitializer"]
+            Ctx["AppDbContext (EF Core, 33 DbSets, 12 migrations)<br/>DbInitializer, OverviewHistoryBootstrap, ScheduleBackfill, ScheduleSync"]
             Hash["Pbkdf2PasswordHasher"]
-            Reads["Persistence/*Query<br/>AlertQuery, AuditLogQuery, ExportQuery"]
+            Reads["Persistence/*Query & Scheduling/* & Overview/* & Retention/<br/>AlertQuery, AuditLogQuery, ExportQuery, OverviewReadQuery,<br/>ScheduleStore, CleanerEffectiveAssignment, RetentionRunner"]
             Xlsx["Export/ExcelWorkbook<br/>(ClosedXML 0.104.2)"]
         end
         subgraph DomP["JanitorialManagementDashboard.Domain"]
-            Ent["Entities: User, ServicePoint,<br/>ScanRecord, RefreshToken,<br/>ShiftAttendance, BlockedScan,<br/>CoverAssignment, AuditEntry, AlertReview"]
+            Ent["33 Entities: 15 core operational +<br/>16 dated scheduling/attendance/transfer +<br/>2 overview target history"]
         end
     end
 
-    DB[("MySQL<br/>facility_dashboard")]
+    DB[("MySQL / TiDB<br/>33 tables")]
 
     AppF --> Pages & Guard & Store
     Pages --> BaseApi
@@ -98,17 +98,16 @@ flowchart TB
     Session --> Store
     Session -->|"POST /api/auth/refresh | logout<br/>(cookie facility_refresh)"| AuthEp
     BaseApi -->|"/api/auth/login and /api/*<br/>Authorization: Bearer"| Ep
-    Pages -->|"my-building, dashboard, attendance board: onCacheEntryAdded"| HubF
+    Pages -->|"my-work, my-building, dashboard, attendance, overview, schedules"| HubF
     HubF --> Session
-    HubF -->|"/hubs/scan?access_token=<br/>ScanRecorded, InspectionRecorded<br/>AttendanceRecorded (Admins)"| Hub
+    HubF -->|"/hubs/scan?access_token=<br/>5 server→client events"| Hub
 
     Ep --> Status
     Ep --> Ctx
     Ep --> Reads
     Ep -->|"export sheets"| Xlsx
     Reads --> Ctx
-    Ep -->|"Clients.Users(active Admin ids from DB)"| Hub
-    Ep -->|"Clients.Users(scoped active Supervisors / Cleaners / covers)"| Hub
+    Ep -->|"Clients.Users(active recipient ids from DB)"| Hub
     AuthEp --> Rules
     AuthEp --> Ctx
     Jwt -.->|validates| Ep & Hub
@@ -133,22 +132,24 @@ Project references follow Clean Architecture: `Api → Application, Infrastructu
 
 ## Live updates, sessions and operational limits
 
-- Four cache followers use `followScanHub`: My Work, My Building, Dashboard and attendance. My Work refetches on a point event; the two point boards patch cards. Admin boards also poll every 30 s and refetch on focus. Push failures after saving are logged; they do not turn the saved record into an HTTP failure.
-- All followers listen for browser offline/online. Offline shows reconnecting immediately; online refetches after 1 s. Admin followers time out after 10 s of server silence; phones keep 30 s. The server pings every 5 s (0107).
+- Six cache-entry modules use `followScanHub`: My Work (`myWorkApi`), My Building (`myBuildingApi`), Dashboard (`dashboardApi`), Attendance (`attendanceBoardApi`), Overview (`overviewApi`), and Schedules (`schedulesApi`). My Work, Attendance, Overview, and Schedules refetch on scoped invalidation events; Dashboard and My Building patch point cards. Admin boards also poll every 30 s and refetch on focus. Push failures after saving are logged; they do not turn the saved record into an HTTP failure.
+- All followers listen for browser offline/online so SignalR reconnects and refetches after 1 s on reconnect (`ADMIN_HUB_SERVER_TIMEOUT_MS` 10 s for Admin, 30 s for phones; server pings every 5 s per facility-0107). In the UI, `LiveBadge` and `ConnectionBanner` read `useOnlineStatus` (`navigator.onLine` + `online`/`offline`) and show `"ขาดการเชื่อมต่อ"` only when the browser is actually offline — transient SignalR reconnects recover silently in the background.
 - Every push looks up active recipients in the database at send time. There is no `admins` connection group. Deactivation blocks the next protected API read and stops subsequent pushes, although an already open socket may remain connected (0105). Phone/password changes revoke refresh tokens; existing access tokens can last up to 5 minutes.
 - Login Lock combines a login-name/IP pair (5 attempts per 15 minutes, cleared by success) and an IP-wide failure cap of 20. IPv6 is normalized to /64. The counters are in memory on one server (0104).
 - `ILogger` writes through Serilog, Console only. Linux's journal is the retained Server Log; no request logging or external sink is configured (0103).
-- The retention runner (0055) clears raw GPS at 90 days, deletes annual attendance/blocked scans and transactionally archives old point/months into anonymous summaries. RetentionWorker starts after ApplicationStarted, catches up and runs nightly at 02:00 Bangkok; failures retry after 15 minutes. Whole-month archive semantics and configuration are in [data-retention.md](data-retention.md). PDPA notice/HR-before-production work was removed by the owner on 2026-11-03. Excel import is shelved. See [handoff](handoff.md) for the remaining work.
+- The retention runner (0055, 0236) clears raw GPS at 90 days, deletes annual attendance/blocked scans and transactionally archives old point/months into anonymous summaries using `READ COMMITTED` + `SELECT ... FOR UPDATE` on `service_points` for MySQL/TiDB compatibility (`SERIALIZABLE` stays on SQLite). RetentionWorker starts after ApplicationStarted, catches up and runs nightly at 02:00 Bangkok; failures retry after 15 minutes. Whole-month archive semantics and configuration are in [data-retention.md](data-retention.md). PDPA notice/HR-before-production work was removed by the owner on 2026-11-03. Excel import is shelved. See [handoff](handoff.md) for the remaining work.
 
 ---
 
-## Dated scheduling and attendance
+## Dated scheduling, attendance, and overview
 
-The scoped week read goes through `ScheduleStore` and the pure `ScheduleResolver`. It loads dated identities, Supervisor building periods, baselines and overrides with the selected week's days. Cleaner reads are scoped to their own account. Supervisor reads use their dated building and shift coverage. The Admin view can select any building and shift.
+The scoped week read goes through `ScheduleStore` and the pure `ScheduleResolver`. It loads dated identities (`CleanerProfilePeriod`, with nullable `Shift` for newly onboarded Regular Cleaners per facility-0239), Supervisor building periods (`SupervisorScopePeriod`), baselines and overrides with the selected week's days. Startup runs `ScheduleBackfill.EnsureAsync` and account/area writes call `ScheduleSync` so dated scheduling authority stays synchronized with setup tables (facility-0238). Cleaner reads are scoped to their own account; Supervisor reads cover both Day and Night shifts within their dated assigned buildings (facility-0240), while `/my-building` and QR inspections stay scoped to the Supervisor's own shift; Admin can select any building and shift.
 
-`ScheduleCommandService` validates a server-issued command identity and locks the relevant anchors in a consistent order. The handler applies its business changes and stores audit facts and the receipt in the same transaction. After commit the server sends scoped invalidation so affected screens can refetch an authorised read. The UI preserves a draft when a revision changes or a result remains uncertain.
+`ScheduleCommandService` validates a server-issued command identity (signed with `Scheduling:CommandSigningKey`, >= 32 UTF-8 bytes) and locks the relevant anchors in a consistent global order (`ScheduleBaselineAnchor` before `ScheduleScopeAnchor`). Regular baseline setup allows `EffectiveFrom >= businessDate` (same-day onboarding) with explicit `Shift` and optional `BreakGroup` (facility-0241). The handler applies its business changes and stores audit facts and the receipt in the same transaction. After commit the server sends `ScheduleChanged` scoped invalidation so affected screens can refetch an authorised read. The UI preserves a draft when a revision changes or a result remains uncertain.
 
-Attendance reads the stored lifecycle for the slot and keeps actual timestamps in UTC. The scan, correction and transfer-confirmation paths take the same person-slot lock while checking current facts. `EffectiveDutyReader` resolves the Cleaner's dated assignment, relief or transfer status. The attendance board includes accepted relief assignments and projects historical entry evidence separately from current responsibility. It counts a destination Area as entered only from accepted arrival evidence or an initial check-in. [Code paths](code-map.md#dated-scheduling-and-actual-attendance) · [Cutover and rollback](handover.md#210-เตรียมเปิดใช้ตารางงานและการลงเวลาแบบใหม่)
+Attendance uses a 6-stage lifecycle per shift (Day: เข้างาน, พักเที่ยง, กลับจากพักเที่ยง, พักบ่าย, กลับจากพักบ่าย, เลิกงาน; Night and cross-shift headers: พักรอบ 1 / พักรอบ 2) and keeps actual timestamps in UTC. The scan, correction and transfer-confirmation paths take the same person-slot lock while checking current facts. `CleanerEffectiveAssignment` and `EffectiveDutyReader` resolve the Cleaner's dated assignment, relief or transfer status. The attendance board includes accepted relief assignments and projects historical entry evidence separately from current responsibility. It counts a destination Area as entered only from accepted arrival evidence or an initial check-in.
+
+Combined Overview (`/admin/overview`) reads immutable `overview_target_revisions` + `overview_target_state` (bootstrapped at startup by `OverviewHistoryBootstrap`) alongside `scan_records.round_origin_id`. `OverviewAvailability.Calculate` decouples `Entry` availability from pre-shift opening policy so mid-shift first deployments report complete Entry coverage while keeping History partial until a full shift is captured (facility-0237). [Code paths](code-map.md#dated-scheduling-and-actual-attendance) · [Cutover and rollback](handover.md#210-เตรียมตารางงานและการลงเวลา-6-ขั้น)
 
 ## 3. Sequence diagram — a scan reaches the dashboard in real time
 
@@ -474,7 +475,7 @@ classDiagram
     User "1" <-- "0..*" AlertReview : reviewed by
 ```
 
-The full target schema, covering the implemented tables, is `docs/design/database.html`. Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`). A Cover Assignment lets one Cleaner work another Area in their own regular shift; it lapses when that Cleaner's attendance window for the shift closes ([facility-0069](adr/facility-0069-attendance-scan-window-60-minutes-around-the-shift.md)). A Supervisor's Cover Assignment names a building instead of an Area, for one shift by the clock (facility-0048); a CHECK keeps exactly one of the two. An Inspection Record keeps the GPS of the inspection; outside the sign's radius it is the `INSPECTION_GPS` alert. Blocked Scans and Audit Log rows are history the Admin reads on the alert and history pages and that no one edits (facility-0041, facility-0051). An Alert Review records that the Admin closed one alert ("คุยแล้ว ปิดเตือน") on a Blocked Scan or a scan outside its sign's radius, one per alert; a missing Shift-Out is never reviewed, it closes when the Admin fills the time (facility-0051).
+The diagram above shows the 15 core operational tables (the original pilot schema is also illustrated in `docs/design/database.html`). The full EF Core model (`AppDbContext.cs`, 12 migrations) currently contains **33 tables**: those 15 core tables, **16 dated scheduling/attendance/transfer tables** (`supervisor_scope_periods`, `cleaner_profile_periods`, `schedule_baselines`, `schedule_baseline_days`, `weekly_day_offs`, `weekly_day_off_choices`, `schedule_exceptions`, `relief_assignments`, `area_transfers`, `area_transfer_confirmations`, `attendance_gaps`, `schedule_anchors`, `schedule_baseline_anchors`, `schedule_scope_anchors`, `schedule_command_receipts`, `schedule_changes`), and **2 overview target history tables** (`overview_target_revisions`, `overview_target_state`). Point Status is not stored: the API computes it on every read from the point's current Round Window, that shift's Scan Records and their Inspection Records (`Application/Rounds/PointStatusCalculator`, [facility-0047](adr/facility-0047-cleaning-rounds-are-time-windows.md)). A Scan Record's round is decided once, when it is saved (`Application/Rounds/RoundPlacer`). A Cover Assignment lets one Cleaner work another Area in their own regular shift; it lapses when that Cleaner's attendance window for the shift closes ([facility-0069](adr/facility-0069-attendance-scan-window-60-minutes-around-the-shift.md)). A Supervisor's Cover Assignment names a building instead of an Area, for one shift by the clock (facility-0048); a CHECK keeps exactly one of the two. An Inspection Record keeps the GPS of the inspection; outside the sign's radius it is the `INSPECTION_GPS` alert. Blocked Scans and Audit Log rows are history the Admin reads on the alert and history pages and that no one edits (facility-0041, facility-0051). An Alert Review records that the Admin closed one alert ("คุยแล้ว ปิดเตือน") on a Blocked Scan or a scan outside its sign's radius, one per alert; a missing Shift-Out is never reviewed, it closes when the Admin fills the time (facility-0051).
 
 ---
 

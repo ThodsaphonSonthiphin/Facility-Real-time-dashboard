@@ -1,14 +1,15 @@
 # Admin Pages: Overrides
 
-Applies to the Admin computer pages (D1–D10, M17: Dashboard, attendance, alerts, Area setup, accounts, reports, Excel export, history). The printed signs (D5) keep their current layout (facility-0087 rule 8). Rules here override `../MASTER.md`; everything else follows it.
+Applies to all 12 Admin pages (Overview `/admin/overview` as Admin home, Dashboard `/dashboard`, Attendance, Alerts, Schedules, Inspection Summary, Export, Areas, Buildings, Print Signs, Accounts, History) plus Capture `/admin/areas/:areaId/capture`. The printed signs (D5) keep their current layout (facility-0087 rule 8). Rules here override `../MASTER.md`; everything else follows it.
 
 ## Context
 
-An Admin at a desk with a mouse and keyboard, on a computer screen, watching many Areas at once (70–72 Areas, about 170 Cleaners at full rollout).
+An Admin at a desk with a mouse and keyboard, or reviewing on a tablet/phone when away from the desk, watching many Areas at once (70–72 Areas, about 170 Cleaners at full rollout).
 
 ## Layout
 
-- The menu is a 240 px sidebar from 1024 px, above the page when narrower (`../MASTER.md` Layout). Content width up to `--container-content` (1216 px) with 24 px around it; must still work at 1280 px wide without horizontal page scroll (wide tables scroll inside their own box).
+- From `1024 px` (`lg`), the menu is a persistent 240 px sidebar with 3 mental-model groups (**หน้างานวันนี้**, **ตารางและรายงาน**, **ตั้งค่าระบบ**). Below `1024 px`, a sticky `z-30` top header bar holds the `เมนูแอดมิน` Drawer trigger. Content width up to `--container-content` (1216 px) with 24 px padding on desktop; works across 375 px, 768–1024 px, and 1280 px+ without horizontal page scroll (wide tables scroll inside their own box, and two-column layouts in `AreasPage` and `ExportPage` start at `xl` / 1280 px).
+- Filter toolbars use responsive grids with `size="adaptive"` controls (48 px / 16 px on mobile, 36 px / 14 px from `sm`).
 - Same light theme as the phone; no dark theme.
 
 ## Type and density
@@ -18,10 +19,10 @@ An Admin at a desk with a mouse and keyboard, on a computer screen, watching man
 
 ## Interaction
 
-- Targets at least 36 px high.
+- Targets at least 36 px high on desktop (`sm`+) and 48 px on mobile (`size="adaptive"`).
 - Hover states allowed (mouse), but never the only way to reach an action.
-- Keyboard: every action reachable with Tab, visible focus ring.
-- Live data (Dashboard and attendance) shows `LiveBadge` only while reconnecting; live and initial connecting show no badge. Browser offline is immediate, Admin server silence times out after 10 s, and data is refetched on reconnect (0064, 0107).
+- Keyboard: every action reachable with Tab, visible focus ring, with `scroll-padding-top: 72px` so sticky headers never obscure focused elements.
+- Live pages (Overview, Dashboard, Attendance, Schedules) keep SignalR + 30 s polling active silently in the background. `LiveBadge` and `ConnectionBanner` read `useOnlineStatus` and show `"ขาดการเชื่อมต่อ"` only while the browser is actually offline (`!isOnline`).
 
 ## Layout chosen from the mockups (owner, 2026-10-22)
 

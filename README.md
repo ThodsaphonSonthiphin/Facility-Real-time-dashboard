@@ -2,28 +2,28 @@
 
 เว็บติดตามงานทำความสะอาดในโรงงาน แม่บ้านสแกน QR ลงเวลาก่อนเริ่มงาน แล้วสแกน QR ที่ห้องเมื่อทำความสะอาดเสร็จ หัวหน้าใช้ QR ที่ห้องเดียวกันเพื่อตรวจและแจ้งสิ่งที่ต้องแก้ แอดมินดูได้ว่าพื้นที่ไหนยังไม่มีคน งานไหนเลยเวลา และงานไหนรอตรวจ
 
-**สถานะ ณ 10 พ.ย. 2026** พัฒนาตามขอบเขตที่ตกลงเสร็จแล้ว รวมถึงงานลบและสรุปข้อมูลเก่าอัตโนมัติที่รวมเข้าโครงการแล้วใน PR #147 ขั้นต่อไปคือให้ทีมรับช่วงติดตั้งบนเครื่องจริงและทดลองใช้ในพื้นที่เดียว การนำเข้าจาก Excel เป็นงานเสริม ตอนนี้เพิ่มข้อมูลผ่านหน้าแอดมินได้
+**สถานะ ณ 23 พ.ย. 2026** พัฒนาครบตามขอบเขตหลักและฟีเจอร์เพิ่มเติมบน `master` แล้ว ได้แก่ ระบบลบและสรุปข้อมูลเก่าอัตโนมัติ (PR #147, รองรับ TiDB `READ COMMITTED` ตาม facility-0236), หน้าภาพรวมแอดมิน (PR #158, facility-0237), ระบบจัดตารางงานแม่บ้านและหัวหน้างานจัดได้ทั้งสองกะพร้อมลงเวลา 6 ขั้นแยกชื่อพักตามกะ (PR #159–160, facility-0238–0241), ปรับความสม่ำเสมอตาม Enterprise Light (PR #161), ค่าตั้ง deploy บน Vercel (PR #162) และการปรับ Responsive สำหรับหน้าหัวหน้างานและแอดมินทั้งมือถือ แท็บเล็ต และเดสก์ท็อป (PR #163) ขั้นต่อไปคือการตรวจรับและทดลองใช้บนอุปกรณ์/สถานที่จริง การนำเข้าจาก Excel เป็นงานเสริม ปัจจุบันเพิ่มข้อมูลผ่านหน้าแอดมินได้
 
 ## เริ่มอ่านตามหน้าที่
 
 | ถ้าคุณต้องการ | เปิดเอกสาร |
 |---|---|
 | พี่เลี้ยงหรือผู้ประสานงานต้องการทราบว่าระบบช่วยอะไรและงานถึงไหนแล้ว | [ภาพรวมระบบ](docs/business-overview.md) และ [สถานะส่งมอบ](docs/handoff.md) |
-| แม่บ้าน หัวหน้า หรือแอดมินต้องการดูว่าต้องทำอะไรในแต่ละขั้น | [คู่มือผู้ใช้ภาษาไทย Word v1.4](Manual/Janitorial_Management_Dashboard_User_Manual_TH_v1.4.docx) และ [Flowchart การทำงานทั้งสามบทบาท](docs/role-workflows.md) |
+| แม่บ้าน หัวหน้า หรือแอดมินต้องการดูว่าต้องทำอะไรในแต่ละขั้น | [Flowchart การทำงานทั้งสามบทบาท](docs/role-workflows.md) และ [คู่มือผู้ใช้ภาษาไทย PDF v2.0](Manual/Janitorial_Management_Dashboard_User_Manual_TH_v2.0.pdf) (ฉบับ 24 พ.ย. 2026 ครอบคลุมภาพรวม ตารางงาน ลงเวลา 6 จังหวะ และ UI ล่าสุด) |
 | ทีม IT ต้องติดตั้ง ดูแล หรือกู้บัญชีแอดมิน | [คู่มือส่งมอบและติดตั้ง](docs/handover.md) |
-| ทีมพัฒนาต้องการดูโครงสร้างหรือเหตุผลเบื้องหลังกติกา | [สถาปัตยกรรม](docs/architecture.md) และ [บันทึกการตัดสินใจ (ADR)](docs/adr/README.md) |
+| ทีมพัฒนาต้องการดูโครงสร้างหรือเหตุผลเบื้องหลังกติกา | [สถาปัตยกรรม](docs/architecture.md), [แผนที่โค้ด](docs/code-map.md) และ [บันทึกการตัดสินใจ (ADR)](docs/adr/README.md) |
 
-## 🏗️ สถาปัตยกรรมระบบ (Architecture)
+## สถาปัตยกรรมระบบ (Architecture)
 
 - **Backend**: .NET 10 Minimal APIs + SignalR Hub (`JanitorialManagementDashboard.Api`)
-- **Database**: MySQL 8.0.16 ขึ้นไป (ต้องเป็นเวอร์ชันที่บังคับใช้ CHECK constraint) (EF Core `MySql.EntityFrameworkCore 10.x`) — API apply migration เองตอนเริ่ม
-- **Frontend**: Vite + React 19 + TypeScript, Redux Toolkit + RTK Query, React Router 7, Tailwind CSS 4 + Enterprise Light (`frontend/`, โครงตาม [Frontend Target Tree (0025)](docs/adr/facility-0025-frontend-target-tree.md), สไตล์ตาม facility-0086, 0087, 0100, 0101) ระบบจริง API เสิร์ฟหน้าเว็บเองจาก origin เดียว (facility-0067)
-- **Real-time Pipeline**: เมื่อแม่บ้านสแกนและบันทึกข้อมูล -> Backend บันทึกลง MySQL -> ส่งผ่าน SignalR Hub (`/hubs/scan`) -> หน้า Dashboard อัปเดตการ์ดและ KPI ทันทีโดยไม่ต้องรีเฟรช
+- **Database**: MySQL 8.0.16 ขึ้นไป (หรือ TiDB v8.5+ ที่รองรับ foreign keys และ `READ COMMITTED`, ต้องบังคับใช้ CHECK constraint) ผ่าน EF Core `MySql.EntityFrameworkCore 10.x` (33 ตาราง, 12 migrations) — API apply migration, `OverviewHistoryBootstrap` และ `ScheduleBackfill` เองตอนเริ่ม
+- **Frontend**: Vite 8 + React 19 + TypeScript 6, Redux Toolkit + RTK Query, React Router 7, Tailwind CSS 4 + Enterprise Light (`frontend/`, โครงตาม [Frontend Target Tree (0025)](docs/adr/facility-0025-frontend-target-tree.md), สไตล์ตาม facility-0086, 0087, 0100, 0101, 0223–0230) ระบบจริง API เสิร์ฟหน้าเว็บเองจาก origin เดียว (facility-0067) หรือโฮสต์ผ่าน Vercel (`frontend/vercel.json`)
+- **Real-time Pipeline**: เมื่อมีการส่งงาน ตรวจงาน ลงเวลา หรือแก้ตารางงาน -> Backend บันทึกลงฐานข้อมูล -> ส่งผ่าน SignalR Hub (`/hubs/scan`: `ScanRecorded`, `InspectionRecorded`, `AttendanceRecorded`, `OverviewChanged`, `ScheduleChanged`) -> หน้าจอที่เกี่ยวข้องอัปเดตทันทีโดยไม่ต้องรีเฟรช
 - **Authentication**: login ได้ access token (JWT อายุ 5 นาที) ที่หน้าเว็บเก็บไว้ในหน่วยความจำ และ refresh token ใน HttpOnly cookie ที่หมุนใบใหม่ทุกครั้ง (ADR facility-0011 ถึง facility-0016) หน้า Dashboard, หน้าสแกน และ SignalR hub ต้อง login ก่อน (facility-0017, facility-0018)
 
 ---
 
-## 🚀 วิธีการรันระบบ (How to Run)
+## วิธีการรันระบบ (How to Run)
 
 ### 1. ฐานข้อมูล (MySQL)
 ตรวจสอบให้แน่ใจว่า MySQL กำลังทำงาน (ต้องเป็น MySQL 8.0.16 or later — CHECK constraints are enforced):
@@ -33,12 +33,13 @@ brew services start mysql
 
 **กรณีฐานข้อมูลทดสอบเก่าก่อนสคีมา Pilot (เฟส 1 ที่สร้างตารางด้วย `EnsureCreated` หรือเฟส 2 ที่มี migration เรื่อง auth/refresh token):** สคีมา Pilot เป็น migration ชุดใหม่ชุดเดียว (`PilotSchema`) ที่แทนที่ของเดิม ถ้าไม่ล้างฐานข้อมูลเดิม API จะเริ่มไม่ขึ้นและแจ้ง "table already exists" และอาจทิ้งฐานข้อมูลไว้ในสภาพ migrate ค้างครึ่งทาง ให้ใช้ฐานข้อมูลทดสอบใหม่ ตั้ง `ConnectionStrings:DefaultConnection` ใน user-secrets ให้ชี้ไปฐานข้อมูลนั้น แล้วให้ API migrate เอง อย่าล้าง `facility_dashboard` เพื่อเริ่มระบบตามปกติ เพราะอาจมีข้อมูลพัฒนาที่เจ้าของต้องการเก็บ
 
-### 2. ตั้ง connection string และ JWT signing key (ครั้งเดียวต่อเครื่อง)
+### 2. ตั้ง connection string และ signing keys (ครั้งเดียวต่อเครื่อง)
 ตั้ง `ConnectionStrings:DefaultConnection` ใน private user-secrets ของโปรเจกต์ API ด้วยฐานข้อมูลและบัญชี MySQL ของเครื่อง เก็บรหัสผ่านนอก repo และตรวจชื่อฐานข้อมูลก่อนเริ่ม เพราะ API migrate อัตโนมัติ private user-secrets มีผลเหนือ `appsettings.Development.json`
 
-repo นี้เป็น public จึงไม่มี key อยู่ในไฟล์ config และ API จะไม่ยอมเริ่มถ้ายังไม่ได้ตั้ง:
+repo นี้เป็น public จึงไม่มี key อยู่ในไฟล์ config ต้องตั้งทั้ง `Jwt:SigningKey` (API ไม่เริ่มถ้าไม่มี) และ `Scheduling:CommandSigningKey` (อย่างน้อย 32 UTF-8 bytes เพื่อบันทึกคำสั่งตารางงานได้):
 ```bash
 dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)" --project backend/src/JanitorialManagementDashboard.Api
+dotnet user-secrets set "Scheduling:CommandSigningKey" "$(openssl rand -base64 48)" --project backend/src/JanitorialManagementDashboard.Api
 ```
 
 ### 3. รัน Backend API (.NET 10)
@@ -72,15 +73,20 @@ npm --prefix frontend test
 
 ---
 
-## 📱 การเข้าใช้งานระบบบนอุปกรณ์จริง
+## การเข้าใช้งานระบบบนอุปกรณ์จริง
 
-- **หน้าจอ Dashboard (สำหรับ Admin บนคอมพิวเตอร์)**:
-  - `http://localhost:5173/dashboard` — เฉพาะบัญชี Admin เท่านั้นที่เข้าได้ (facility-0058) แล้วเปิดค้างไว้ได้
-- **มือถือของแม่บ้านและหัวหน้า (ระบบจริงเปิดผ่าน HTTPS จากอินเทอร์เน็ต, facility-0049)**:
-  - `https://<โดเมนระบบ>/login` (ทดลองบนมือถือด้วย HTTPS tunnel ตาม [handover §2.9](docs/handover.md#29-ทดลองบนเครื่องตัวเองก่อน-ไม่มี-server)) เข้าด้วยรหัสพนักงาน + เบอร์โทร แม่บ้านไปหน้า "งานของฉัน" (`/my-work`) หัวหน้าไปหน้า "ตึกของฉัน" (`/my-building`) หน้าตึกของฉันอัปเดตเองเมื่อแม่บ้านส่งงานหรือหัวหน้าตรวจ
-  - Admin เข้าที่ `/login/admin` ด้วยชื่อผู้ใช้ + รหัสผ่าน แล้วไปหน้า Dashboard (`/dashboard`: สถานะทุกจุดตาม Area อัปเดตสด กรองตามตึก สถานะ และมีปัญหาที่แจ้ง) เมนู Admin มี "การเข้างาน" (`/admin/attendance`: แต่ละ Area มีคนหรือยัง เพิ่ม/แก้เวลาพร้อมเหตุผล), "รายการที่ขึ้นเตือน" (`/admin/alerts`: ปิดเตือน มอบหมายและยกเลิกคนทำแทน ตัวเลขในเมนูคือเตือนที่ยังไม่ได้คุย), "พื้นที่และป้าย" (`/admin/areas`: Area จุด เวลารอบ รัศมี พิกัดป้าย ออก QR ใหม่ และพิมพ์ป้ายที่ `/admin/print`), "บัญชีผู้ใช้" (`/admin/accounts`), "สรุปการตรวจ" (`/admin/inspection-summary`: การตรวจของหัวหน้าแต่ละคนตามช่วงวัน), "ส่งออก Excel" (`/admin/export`: ดาวน์โหลด .xlsx การลงเวลา การส่งงาน การตรวจงาน) และ "ประวัติการแก้ไข" (`/admin/history`: ทุกการแก้ของ Admin พร้อมก่อน → หลังและเหตุผล อ่านอย่างเดียว) หน้า Admin โหลดแยกจากหน้ามือถือ มือถือจึงไม่ต้องโหลดโค้ดของ Admin
+- **หน้าจอ Admin (รองรับ Desktop 1280px+, Tablet และ Mobile ผ่าน Drawer)**:
+  - `http://localhost:5173/login/admin` — เฉพาะบัญชี Admin เท่านั้นที่เข้าได้ (facility-0058) หลัง login ไปหน้า **ภาพรวม** (`/admin/overview`) เมนูแบ่ง 3 กลุ่ม (12 หน้า, facility-0230):
+    - **หน้างานวันนี้**: ภาพรวม (`/admin/overview`), สถานะจุด (`/dashboard`), การเข้างาน (`/admin/attendance`), รายการที่ขึ้นเตือน (`/admin/alerts`)
+    - **ตารางและรายงาน**: ตารางงาน (`/admin/schedules`, รวมการจัดคนทำแทนฉุกเฉิน), สรุปการตรวจ (`/admin/inspection-summary`), ส่งออก Excel (`/admin/export`)
+    - **ตั้งค่าระบบ**: พื้นที่และป้าย (`/admin/areas`), ตึก (`/admin/buildings`), พิมพ์ป้าย (`/admin/print`), บัญชีผู้ใช้ (`/admin/accounts`), ประวัติการแก้ไข (`/admin/history`)
+  - หน้า Admin โหลดแยก (lazy-loaded) จากหน้ามือถือ มือถือจึงไม่ต้องโหลดโค้ดของ Admin
+- **มือถือและแท็บเล็ตของแม่บ้านและหัวหน้างาน (ระบบจริงเปิดผ่าน HTTPS จากอินเทอร์เน็ต, facility-0049)**:
+  - `https://<โดเมนระบบ>/login` (ทดลองบนมือถือด้วย HTTPS tunnel ตาม [handover §2.9](docs/handover.md#29-ทดลองบนเครื่องตัวเองก่อน-ไม่มี-server)) เข้าด้วยรหัสพนักงาน + เบอร์โทร
+  - **แม่บ้าน**: ไปหน้า **งานของฉัน** (`/my-work`) พร้อมแถบเมนูล่าง 3 แท็บ (`งานของฉัน`, `ตารางของฉัน` `/my-schedule`, `บัญชี` `/my-account`)
+  - **หัวหน้างาน**: ไปหน้า **ตึกของฉัน** (`/my-building`) พร้อมหน้า **จัดตารางงาน** (`/schedule-management`, จัดได้ทั้งกะเช้าและกะดึกในตึกที่รับผิดชอบ) และ **บัญชี** (`/my-account`) บนมือถือใช้แถบเมนูล่าง 3 แท็บ และบนแท็บเล็ต/เดสก์ท็อปสลับเป็นแถบเมนูด้านบน
   - เก็บพิกัดป้ายบนมือถือที่ `/admin/areas/<id>/capture` ยืนที่ป้ายแล้วกด "ใช้ตำแหน่งตรงนี้" (30 วินาที ต้องเป็น https หรือ `localhost`) พิมพ์ป้ายจากที่อยู่ https ของเซิร์ฟเวอร์ เพราะที่อยู่บนป้ายคือที่อยู่ของหน้าที่สั่งพิมพ์
-  - ป้ายลงเวลาของ Area เปิด `/check-in/<token>` และป้ายจุดเปิด `/scan/<token>` (แม่บ้านเห็นหน้าส่งงาน หัวหน้าเห็นหน้าตรวจงาน) ป้ายของ seed เช่น `/check-in/token-checkin-ar01` และ `/scan/token-restroom-m1`
+  - ป้ายลงเวลาของ Area เปิด `/check-in/<token>` (ลงเวลา 6 ขั้นแยกชื่อพักตามกะ และปุ่ม "ลงเวลาขั้นตอนอื่น" แบบ Bottom Sheet) และป้ายจุดเปิด `/scan/<token>` (แม่บ้านเห็นหน้าส่งงาน หัวหน้าเห็นหน้าตรวจงาน) ป้ายของ seed เช่น `/check-in/token-checkin-ar01` และ `/scan/token-restroom-m1`
   - ลงเวลาและส่งงานต้องอ่าน GPS ได้ browser ให้อ่านเฉพาะหน้า https หรือ `localhost` มือถือที่เปิด `http://<IP>` จะขึ้น "อ่านตำแหน่งไม่ได้" จนกว่าจะมี HTTPS (facility-0049) ระหว่างนี้ทดสอบบน Mac ที่ `http://localhost:5173` หรือ `:5001` แล้วตั้งตำแหน่งใน Chrome DevTools › More tools › Sensors › Location
   - login ครั้งแรกแล้วระบบจำไว้ จนกด "ออกจากระบบ" หรือไม่ได้ใช้เลย 30 วัน
 

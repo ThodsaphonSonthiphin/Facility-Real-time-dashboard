@@ -1,6 +1,6 @@
 # Code Map — which file does what
 
-Includes the 2026-11-03 retention implementation. Current checkout/publication status is in [handoff](handoff.md); the tables below describe code, not a confirmed production deployment.
+Current as of 2026-11-23 (`master`, including Overview Target History, Dated Scheduling & 6-stage shift-aware attendance, TiDB-compatible retention, and the responsive Supervisor/Admin overhaul). Current checkout/publication status is in [handoff](handoff.md); the tables below describe code, not a confirmed production deployment.
 
 > **Read this when you open the repo and do not know where anything is.**
 > `docs/architecture.md` explains how the parts *connect* (deployment, network, MySQL schema).
@@ -10,22 +10,22 @@ Includes the 2026-11-03 retention implementation. Current checkout/publication s
 ```mermaid
 graph TD
     QR["QR sign on the wall<br/>/scan/token or /check-in/token"] --> Pages
-    subgraph FE["frontend/src — React 19 + TypeScript"]
-        Pages["pages/ — 17 feature folders"]
-        Shared["shared/ — api, auth, geo, components, utils"]
+    subgraph FE["frontend/src — React 19 + TypeScript 6"]
+        Pages["pages/ — 20 feature folders"]
+        Shared["shared/ — api, auth, geo, hooks, cover, overview, components, utils"]
         Router["main.tsx, App.tsx, router.tsx"]
-        Store["store/ — auth, hub, dashboard"]
+        Store["store/ — auth, hub, dashboard, scheduleView"]
     end
     subgraph BE["backend/src — ASP.NET Core 10"]
-        Endpoints["Endpoints/ — 53 HTTP routes"]
+        Endpoints["Endpoints/ — 65 HTTP routes"]
         Rules["Application/ — pure rules, no I/O"]
         Persist["Infrastructure/ — EF Core, PBKDF2, Excel"]
         Hub["Hubs/ScanHub — /hubs/scan"]
     end
-    DB[("MySQL — 15 tables")]
+    DB[("MySQL / TiDB — 33 tables")]
     Shared -->|"HTTP JSON /api/*"| Endpoints
     Shared -.->|"WebSocket"| Hub
-    Hub -.->|"push: ScanRecorded"| Shared
+    Hub -.->|"push: 5 events"| Shared
     Endpoints --> Rules
     Endpoints --> Persist
     Persist --> DB
@@ -62,10 +62,10 @@ A factory cleaning-inspection system: cleaners scan a printed QR sign at each se
 
 | Layer | What |
 |---|---|
-| Frontend | React 19.2.8, TypeScript, Vite 8, react-router 7, Redux Toolkit + RTK Query, Tailwind 4, Vitest |
-| Real-time | `@microsoft/signalr` — one hub at `/hubs/scan`, server → client only |
+| Frontend | React 19.2.8, TypeScript 6.0, Vite 8.3, react-router 7, Redux Toolkit + RTK Query, Tailwind CSS 4.3, Vitest 5.0 |
+| Real-time | `@microsoft/signalr` — one hub at `/hubs/scan`, server → client only (5 events) |
 | Backend | ASP.NET Core 10 Minimal API (no controllers), four projects: Api references Application + Infrastructure; Infrastructure references Application + Domain; Application references Domain |
-| Persistence | EF Core 10 + `MySql.EntityFrameworkCore`, snake_case tables, 6 migrations |
+| Persistence | EF Core 10 + `MySql.EntityFrameworkCore`, snake_case tables, 33 `DbSet`s, 12 migrations |
 | Auth | JWT access token 5 minutes (HS256) + rotating refresh token in an `HttpOnly` cookie scoped to `/api/auth` |
 | Passwords | PBKDF2-HMAC-SHA256, 600 000 iterations |
 | Tests | xUnit API/unit tests, Vitest frontend tests, Playwright real-API browser workflows; latest recorded results in handoff |
@@ -121,12 +121,14 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 | | `endSession.ts` | Logout: forget locally → await in-flight refresh → `POST /api/auth/logout`. |
 | | `roles.ts` | `homeOf(role)`: cleaner → `/my-work`, supervisor → `/my-building`, admin → `/admin/overview` (`facility-0224`). |
 | `shared/geo/` | `readLocation.ts` | Fresh scan reads and permission-retry detection; setup capture separately uses watchPosition. See [Part 8](#part-8--scan-gps-and-real-time-flow). |
-| `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `Drawer`, `Modal`, `ConfirmationDialog`, `LogoutConfirmDialog`, `AdminPageHeader`, `ConnectionBanner`, `LocationHelp`, `CleanerBottomNav`, `SupervisorNav` | Shared Tailwind UI, CSS motion classes (`facility-0229`), confirmed logout, mobile/admin shell (`facility-0230`). |
+| `shared/hooks/` | `useOnlineStatus.ts` | Browser `navigator.onLine` + `online`/`offline` subscription (`useSyncExternalStore`) powering offline-only `LiveBadge` and `ConnectionBanner`. |
+| `shared/components/` | `Button`, `Field`, `Note`, `StatusChip`, `KpiCard`, `AvatarBadge`, `Tabs`, `Segmented`, `SearchBox`, `BuildingSelect`, `RangeFields`, `Drawer`, `Modal`, `Sheet`, `ConfirmationDialog`, `LogoutConfirmDialog`, `AdminPageHeader`, `ConnectionBanner`, `LiveBadge`, `LocationHelp`, `CleanerBottomNav`, `SupervisorNav` / `SupervisorBottomNav` | Shared Tailwind UI, `adaptive` responsive controls, CSS motion classes (`facility-0229`), confirmed logout, mobile/tablet/desktop shell (`facility-0230`). |
 | `shared/cover/` | `coverApi.ts`, `CandidateChoices.tsx`, `CoverCancellationDialog.tsx`, `useCoverCancellation.ts`, `coverCandidates.ts`, `coverSlots.ts`, `coverText.ts` | Emergency cover assignment endpoints, UI and helpers consumed by `pages/schedules/CoverDrawer.tsx` (`facility-0225`). |
-| `shared/utils/` | `thaiTime.ts`, `getErrorMessage.ts` (31), `labels.ts` (26), `dateRange.ts` (11), `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock — every time you see a strange time, look here first. |
+| `shared/overview/` | `overviewApi.ts`, `OverviewAreaPage/`, `AreaAttendance/` | Shared combined-overview queries, hub follow (`OverviewChanged`), and read-only Area detail view. |
+| `shared/utils/` | `thaiTime.ts`, `getErrorMessage.ts`, `labels.ts`, `dateRange.ts`, `pointText.ts`, `tapFeedback.ts` | Pure helpers. `thaiTime.ts` is the Asia/Bangkok clock plus Thai Buddhist-year date formatters (`formatThaiDate`, `formatThaiShortDate`); `labels.ts` provides shift-aware `attendanceEventLabel`. |
 | `shared/version/` | `buildInfo.ts` | The build commit shown on the login pages. |
 
-### pages — 18 feature folders
+### pages — 20 feature folders
 
 | Folder | Purpose | Key files |
 |---|---|---|
@@ -153,7 +155,7 @@ Root: `frontend/src/`; UI and related hooks/rules are grouped by feature.
 
 ### store
 
-Three slices plus RTK Query — see [Part 5](#part-5--state-management).
+Four slices plus RTK Query — see [Part 5](#part-5--state-management).
 
 ### test
 
@@ -178,14 +180,15 @@ From `frontend/src/router.tsx`. Guards come from `shared/components/ProtectedRou
 | `/login/admin` | `pages/auth/AdminLoginPage.tsx` | public |
 | `/my-work` | `pages/my-work/MyWorkPage.tsx` | cleaner |
 | `/my-schedule` | `pages/schedules/SchedulePage/SchedulePage.tsx` (`OwnSchedulePage`) | cleaner |
-| `/my-account` | `pages/account/AccountPage.tsx` | cleaner, supervisor |
+| `/my-account` | `pages/account/AccountPage.tsx` (`AppLayout wideForSupervisor`) | cleaner, supervisor |
 | `/check-in/:token` | `pages/check-in/CheckInPage.tsx` | cleaner |
 | `/scan/:token` | `shared/components/ByRole.tsx` → cleaner: `pages/scan/ScanPage.tsx`, supervisor: `pages/inspect/InspectPage.tsx` | cleaner, supervisor |
-| `/my-building` | `pages/my-building/MyBuildingPage.tsx` | supervisor |
-| `/schedule-management` | `pages/schedules/SchedulePage/SchedulePage.tsx` (`ScheduleManagementPage`) | supervisor |
+| `/my-building` | `pages/my-building/MyBuildingPage.tsx` (`AppLayout wide`) | supervisor |
+| `/schedule-management` | `pages/schedules/SchedulePage/SchedulePage.tsx` (`ScheduleManagementPage`, `AppLayout wide`) | supervisor |
 | `/dashboard` | `pages/dashboard/DashboardPage.tsx` (lazy) | admin |
 | `/admin/overview` | `pages/overview/OverviewPage.tsx` (lazy) | admin |
 | `/admin/attendance` | `pages/attendance/AttendancePage.tsx` (lazy) | admin |
+| `/admin/schedules` | `pages/schedules/AdminSchedulesPage.tsx` (lazy) | admin |
 | `/admin/alerts` | `pages/alerts/AlertsPage.tsx` (lazy) | admin |
 | `/admin/inspection-summary` | `pages/inspection-summary/InspectionSummaryPage.tsx` (lazy) | admin |
 | `/admin/export` | `pages/export/ExportPage.tsx` (lazy) | admin |
@@ -211,31 +214,34 @@ Admin routes are lazy-loaded so phones never download them ([facility-0062](adr/
 graph TD
     subgraph Redux["Redux store — frontend/src/store/index.ts"]
         Auth["auth slice<br/>currentUser, accessToken, expiresAt<br/>MEMORY ONLY — never localStorage"]
-        Hub["hub slice<br/>connection status per follow key"]
+        Hub["hub slice<br/>SignalR connection status per follow key"]
         Dash["dashboard slice<br/>D1 filters"]
+        Sched["scheduleView slice<br/>ongoing week and filter memory"]
         Api["api slice<br/>the whole RTK Query cache"]
     end
+    Online["shared/hooks/useOnlineStatus.ts<br/>navigator.onLine + online/offline"]
     Local["Everything else<br/>useState drafts inside the page"]
     Auth -->|"Bearer header"| Base["shared/api/baseApi.ts"]
     Base -->|"401 → refresh → retry"| Session["shared/auth/session.ts"]
-    Hub -->|"LiveBadge: orange only when down"| Badge["shared/components/LiveBadge.tsx"]
+    Online -->|"offline only: ขาดการเชื่อมต่อ"| Badge["LiveBadge & ConnectionBanner"]
     Reset["listener middleware<br/>on sessionExpired or signedOut"] -->|"resetApiState()"| Api
 ```
 
 | Slice | File | Holds |
 |---|---|---|
 | `auth` | `store/slices/authSlice.ts` | `currentUser`, `accessToken`, `expiresAt`, `isBootstrapping`, `signedOutByUser`. **Memory only — nothing is ever written to localStorage** (facility-0013). Refreshing the tab forgets the token on purpose; the cookie brings it back. |
-| `hub` | `store/slices/hubSlice.ts` | `connections: Record<key, 'connecting'｜'live'｜'reconnecting'>` — one key per SignalR follow. |
+| `hub` | `store/slices/hubSlice.ts` | `connections: Record<key, 'connecting'｜'live'｜'reconnecting'>` — SignalR connection state per follow key. |
 | `dashboard` | `store/slices/dashboardSlice.ts` | D1 building, status, issue-only, search and problem-first sorting; session end resets them. |
+| `scheduleView` | `pages/schedules/scheduleViewSlice.ts` | Last viewed week and building/shift filters for ongoing session return memory (facility-0218); never persisted to storage. |
 | `api` | `baseApi.reducerPath` | The RTK Query cache — all server state. |
 
 **Rules of thumb**
 
 - **Server data → RTK Query.** There is no axios and no plain `fetch` for data. The only two raw `fetch` calls in `src` are `shared/auth/session.ts` and `shared/auth/endSession.ts`.
-- **Form drafts → local `useState`.** Heaviest users: `pages/areas/SignPanel.tsx` (8), `pages/export/ExportPage.tsx` (6), `pages/areas/PointEditor.tsx` (6).
+- **Form drafts → local `useState`.** Heaviest users: `pages/areas/SignPanel.tsx`, `pages/export/ExportPage.tsx`, `pages/areas/PointEditor.tsx`.
 - **No React Context anywhere** — grep for `createContext` returns 0 hits.
 - **Refetch policy** is one of three constants: `freshOnOpen` (phone and setup pages ask again every open) or `livePoll` (admin live pages, 30 s + on focus), both from `baseApi.ts`, or `namesFreshness` from `shared/api/buildingNames.ts` (30 s, building names only).
-- **SignalR push** is wired in four cache entries via `onCacheEntryAdded → followScanHub`: `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts` and `shared/api/myWorkApi.ts`.
+- **SignalR push** is wired in six API modules via `onCacheEntryAdded → followScanHub`: `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts`, `shared/api/myWorkApi.ts`, `shared/overview/overviewApi.ts`, and `pages/schedules/schedulesApi.ts`.
 
 ---
 
@@ -256,6 +262,7 @@ Solution `backend/JanitorialManagementDashboard.slnx` — four projects, no cont
 | `Auth/SecurityLog.cs` | Redacted security events, including normalized login IP, through `ILogger` → Serilog Console (0103, 0104). |
 | `Commands/ResetAdminCommand.cs` | Console account recovery; `FirstAdmin` / `ServerAdminAccounts` create the first Admin from settings (0092). |
 | `Retention/RetentionWorker.cs` | Startup catch-up and nightly Bangkok schedule, fresh DI scope per attempt, cancellation and error retry. Testing does not auto-start it. |
+| `Scheduling/` | `ScheduleCommandService`, `ScheduleCommandHandlers`, `ScheduleCommandTokenService`, `TransferCommandService`, `CleanerShiftResolver`, `ScheduleNotifications`. |
 | `PrecompressedFiles.cs` | Sends a frontend file's build-time `.br`/`.gz` copy when the browser accepts it (facility-0067 amendment). |
 | `wwwroot/` | The built frontend, copied in by `npm run build:api`; `frontend/precompress.ts` writes a `.br` and a `.gz` beside each text file. |
 
@@ -271,25 +278,28 @@ Business rules without database or HTTP dependencies, mostly static; LoginThrott
 | `Rounds/` | **`RoundPlacer.cs`** (OnTime / Late / Rework / OffRound), `PointStatusCalculator`, `RoundWindow`, `RoundRules` |
 | `Attendance/` | `AttendanceRules`, `AttendanceCalendar`, `AreaAttendance`, `AttendanceSettings` |
 | `Inspections/` | `InspectionRules` (what may be judged), `SupervisorScope`, `InspectionSummary` |
+| `Overview/` | `OverviewAvailability` (decouples Entry from pre-shift opening policy, facility-0237), `OverviewCalculator` |
+| `Scheduling/` | `ScheduleAuthority` (Supervisor both-shift scheduling in assigned buildings, facility-0240), `ScheduleResolver`, `SchedulingSettings` (`MinimumCommandSigningKeyBytes = 32`) |
 | `Common/` | `ThaiTime` — Asia/Bangkok ↔ UTC. Every wall-clock conversion goes through here. |
-| Others | `Accounts/AccountRules`, `Accounts/CommonPasswords` (the embedded `common-passwords.txt` list of common passwords, read once; facility-0089), `Alerts/AlertKind`, `Signs/SignCodes`, `Export/ExportRules`, `Shifts/ShiftCalendar` |
+| Others | `Accounts/AccountRules`, `Accounts/CommonPasswords` (the embedded `common-passwords.txt` list of common passwords, read once; facility-0089), `Alerts/AlertKind`, `Signs/SignCodes`, `Export/ExportRules`, `Shifts/ShiftCalendar`, `Retention/RetentionSettings` |
 
 ### `JanitorialManagementDashboard.Infrastructure`
 
 | Path | Purpose |
 |---|---|
-| `Persistence/AppDbContext.cs` | All EF mapping: 15 `DbSet`s, snake_case columns, unique indexes, computed columns, check constraints. |
-| `Persistence/Retention/` | Scoped RetentionRunner: GPS SQL batches, source/dependent cleanup and atomic PointMonthlySummary archives. |
-| `Persisted / Queries` | `Persistence/*Query.cs`: `PointBoardQuery`, `RoundFactsQuery`, `AlertQuery`, `AuditLogQuery`, `ExportQuery`, `InspectionHistoryQuery`, `OverviewReadQuery`. |
-| `Overview History` | `Persistence/Overview/`: `OverviewMutation`, `OverviewTargetRecorder`, `OverviewHistoryBootstrap`, `OverviewFactLoader` — immutable `overview_target_revisions` + singleton `overview_target_state` lock, `round_origin_id` provenance. |
+| `Persistence/AppDbContext.cs` | All EF mapping: 33 `DbSet`s, snake_case columns, unique indexes, computed columns, check constraints. |
+| `Persistence/Retention/` | Scoped `RetentionRunner`: GPS SQL batches, source/dependent cleanup, and `READ COMMITTED` + `SELECT ... FOR UPDATE` atomic `PointMonthlySummary` archives (facility-0236). |
+| `Persistence/*Query.cs` | `PointBoardQuery`, `RoundFactsQuery`, `AlertQuery`, `AuditLogQuery`, `ExportQuery`, `InspectionHistoryQuery`, `OverviewReadQuery`. |
+| `Persistence/Overview/` | `OverviewMutation`, `OverviewTargetRecorder`, `OverviewHistoryBootstrap`, `OverviewFactLoader` — immutable `overview_target_revisions` + singleton `overview_target_state` lock, `round_origin_id` provenance. |
+| `Persistence/Scheduling/` | `ScheduleStore`, `ScheduleBackfill`, `ScheduleSync`, `CleanerEffectiveAssignment`, `RegularBaselineOverlap`, `EffectiveDutyReader`, `SupervisorMembership`. |
 | `Auth/Pbkdf2PasswordHasher.cs` | PBKDF2-HMAC-SHA256, 600 000 iterations, `pbkdf2-sha256$…` format. Also used for the phone number-as-secret. |
 | `Export/ExcelWorkbook.cs` | ClosedXML `.xlsx` writer. |
-| `Migrations/` | 6 migrations + model snapshot, applied at startup with `MigrateAsync()`. |
+| `Migrations/` | 12 migrations + model snapshot, applied at startup with `MigrateAsync()`. |
 | `Persistence/DbInitializer.cs` | Dev-only seed (`admin` / `admin1234`). Never runs outside Development. |
 
 ### `JanitorialManagementDashboard.Domain`
 
-`Entities/` models the 15 application tables and the `IGpsStamped` interface; `Enums/` holds shared domain values. Entities include small domain helpers such as Area.HasShift.
+`Entities/` models the 33 application tables (15 core operational, 16 dated scheduling/attendance/transfer, and 2 overview target history) and the `IGpsStamped` interface; `Enums/` holds shared domain values. Entities include small domain helpers such as `Area.HasShift`.
 
 **Design shape to internalise:** endpoints inject `AppDbContext` directly. There is no repository layer and no service layer for business logic. If you go looking for `IOrderService`, it does not exist here — the rule is a static class in `Application`, the endpoint calls it.
 
@@ -527,13 +537,13 @@ graph LR
     H["SignalR push fails"] --> I["logged and swallowed<br/>30 s livePoll + onMissed refetch recovers"]
 ```
 
-- **Hub:** `Hubs/ScanHub.cs` at `/hubs/scan`. Zero methods — strictly server → client. Recipients are read from the database at send time, including Admins (0105); sockets do not join an Admin group. Since 2026-10-26 the **Cleaners of the point's Area (both shifts) and anyone covering it** get the point events too; their My Work page asks the server again when one arrives, on open and on "อัปเดต".
-- **Three events:** `ScanRecorded`, `InspectionRecorded` (both → admins + the building's supervisors + the Area's Cleaners and covers), `AttendanceRecorded` (→ admins only).
+- **Hub:** `Hubs/ScanHub.cs` at `/hubs/scan`. Zero methods — strictly server → client. Recipients are read from the database at send time, including Admins (0105); sockets do not join an Admin group. The **Cleaners of the point's Area and anyone covering it** get point events too; their My Work page refetches on arrival, on open, and on "อัปเดต".
+- **Five events:** `ScanRecorded`, `InspectionRecorded` (admins + building supervisors + Area Cleaners and covers), `AttendanceRecorded` (admins), `OverviewChanged` (admins), and `ScheduleChanged` (affected Cleaners + authorised Supervisors + admins).
 - **Auth on the socket:** the access token goes in the query string, accepted **only** for `/hubs` paths (facility-0011) — browsers cannot set headers on a WebSocket.
-- **Four subscribers:** `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts` — one connection per cache entry.
+- **Six subscriber modules:** `pages/dashboard/dashboardApi.ts`, `pages/my-building/myBuildingApi.ts`, `shared/api/attendanceBoardApi.ts`, `shared/api/myWorkApi.ts`, `shared/overview/overviewApi.ts`, and `pages/schedules/schedulesApi.ts`.
 - **The safety net:** `livePoll` = 30 s poll + refetch on focus. Pushes are best effort; a failure is logged and swallowed because the record is already committed.
-- **Connection timing (0107):** browser offline sets reconnecting immediately, online refetches after 1 s; Dashboard/attendance wait 10 s for server silence, phones 30 s; server ping 5 s.
-- **Badge:** `shared/components/LiveBadge.tsx` reads `hubSlice` — orange `กำลังเชื่อมต่อ… (อัปเดตทุก 30 วินาที)` only while `reconnecting` (browser offline, server timeout, reconnecting or a first start failed); nothing while live or during the first connect (owner, 2026-10-28).
+- **Connection timing (0107):** `followScanHub` listens for browser `offline`/`online` and refetches after 1 s on reconnect; Dashboard/attendance/overview/schedules use `ADMIN_HUB_SERVER_TIMEOUT_MS` (10 s), phones keep 30 s; server pings every 5 s.
+- **Offline-only UI indicators:** `LiveBadge` (Admin boards) and `ConnectionBanner` (My Work, My Building, Schedule) read `useOnlineStatus` (`navigator.onLine` + `online`/`offline`) and show orange `"ขาดการเชื่อมต่อ"` only while the browser is actually offline; transient SignalR reconnects stay silent while recovering in the background.
 
 ### Scan failure table
 
@@ -658,7 +668,7 @@ graph LR
 | GET | `/api/admin/audit-log/actors` | `AdminAuditLogEndpoints.cs` | Actor filter options. |
 | POST | `/api/admin/export` | `AdminExportEndpoints.cs` → `ExportAsync` | **POST not GET** precisely because downloading personnel data is itself an audited action. The file omits coordinates, phones, QR tokens and passwords. It accepts `buildingId` or multiple `buildingIds` (never both), including inactive buildings (0100). |
 | GET | `/api/admin/inspection-summary` | `AdminInspectionSummaryEndpoints.cs` → `GetAsync` | How much of the beat was actually checked — supervisor coverage evidence, including expandable uninspected points (0100). |
-| GET | `/api/admin/overview/summary` | `AdminOverviewEndpoints.cs` | Combined overview snapshot counts, per-building summaries and section availability for one `(date, shift)`. |
+| GET | `/api/admin/overview` | `AdminOverviewEndpoints.cs` | Combined overview snapshot counts, per-building summaries and section availability for one `(date, shift)`. |
 | GET | `/api/admin/overview/areas` | `AdminOverviewEndpoints.cs` | Paged overview Area list (max 50) filtered by group and building, with drill-through keys. |
 | GET | `/api/admin/overview/areas/{areaId}` | `AdminOverviewEndpoints.cs` | Read-only historical/live detail for one Area in the selected `(date, shift)` and optional `roundKey`. |
 
@@ -675,9 +685,10 @@ graph LR
 |---|---|---|
 | `ScanRecorded`, `InspectionRecorded` (whole PointCard) | Admins, the building's Supervisors, the Area's Cleaners, current scoped covers | Dashboard/My Building patch the point; My Work refetches; attendance follower ignores point messages |
 | `AttendanceRecorded` (Area/date/shift) | Admins | Attendance refetches the affected board; other followers ignore it |
+| `OverviewChanged` (RevisionId) | Active Admins | Overview refetches the selected `(date, shift)` summary/list/detail without unmounting the page (facility-0233) |
 | `ScheduleChanged` (invalidation ID) | Active affected Cleaners, authorised Supervisors for affected building/shift/date, active Admins | Schedule and My Work refetch scoped reads after a schedule command, transfer arrival or attendance correction. Open schedule editors keep their drafts. |
 
-`PointNotifications.SendAsync` and `AttendanceBoard.NotifyAsync` send after the record is saved and catch/log push failures. `ScheduleNotifications` resolves recipients after commit, and a failed push leaves the command result intact. `ActiveAdmins.IdsAsync` reads Admin recipients; no group membership cache decides access.
+`PointNotifications.SendAsync`, `AttendanceBoard.NotifyAsync`, and `OverviewNotifications.SendAsync` send after the record is saved and catch/log push failures. `ScheduleNotifications` resolves recipients after commit, and a failed push leaves the command result intact. `ActiveAdmins.IdsAsync` reads Admin recipients; no group membership cache decides access.
 
 ---
 
@@ -706,7 +717,7 @@ erDiagram
     BUILDING |o--o{ COVER_ASSIGNMENT : receives
 ```
 
-15 tables, defined in `Infrastructure/Persistence/AppDbContext.cs`, snake_case. Accounts, buildings, Areas and points are deactivated through Admin actions. Automatic retention (0055) clears raw GPS, deletes expired records and stores anonymous point/month summaries transactionally; it is distinct from master-data deactivation. See [the retention guide](data-retention.md).
+33 tables total, defined in `Infrastructure/Persistence/AppDbContext.cs` (snake_case, 12 migrations): the 15 core operational tables shown above, plus 16 dated scheduling/attendance/transfer tables (`supervisor_scope_periods`, `cleaner_profile_periods`, `schedule_baselines`, `schedule_baseline_days`, `weekly_day_offs`, `weekly_day_off_choices`, `schedule_exceptions`, `relief_assignments`, `area_transfers`, `area_transfer_confirmations`, `attendance_gaps`, `schedule_anchors`, `schedule_baseline_anchors`, `schedule_scope_anchors`, `schedule_command_receipts`, `schedule_changes`) and 2 overview target history tables (`overview_target_revisions`, `overview_target_state`). Accounts, buildings, Areas and points are deactivated through Admin actions. Automatic retention (0055, 0236) clears raw GPS, deletes expired records and stores anonymous point/month summaries transactionally (`READ COMMITTED` + `FOR UPDATE` on MySQL/TiDB); it is distinct from master-data deactivation. See [the retention guide](data-retention.md).
 
 **Invariants the schema itself enforces** (you cannot code around them):
 

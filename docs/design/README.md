@@ -6,7 +6,7 @@
 |---|---|---|
 | [wireframe/](wireframe/) | Wireframe 30 หน้า: มือถือ M0–M17 (แม่บ้าน หัวหน้า และ Admin เก็บพิกัด) และคอมพิวเตอร์ D0–D11 (Dashboard ของ Admin) | [Artifact](https://claude.ai/artifact/FACV3wuV2aN19YduyhxVnW) |
 | [prototype.html](prototype.html) | Prototype ที่กดได้จริง: มือถือด้านซ้าย Dashboard ของ Admin ด้านขวา นาฬิกาจำลองด้านบน กฎของ ADR 0041, 0047, 0048, 0050 ทำงานจริง | เปิดไฟล์ในเบราว์เซอร์ได้เลย หรือ [Artifact](https://claude.ai/artifact/2GFyPGKAhEf8x2EbG9G69G) |
-| [database.html](database.html) | แบบฐานข้อมูลเดิม 15 ตาราง (โค้ดปัจจุบันมี 14 ตาราง; งาน retention ยังไม่สร้าง): แผนภาพ ER, การจัดงานเข้ารอบ, กติกาที่ฐานข้อมูลกันหรือแอปกัน, งานลบข้อมูล และตารางเดิมเปลี่ยนเป็นอะไร | เปิดไฟล์ในเบราว์เซอร์ได้เลย หรือ [Artifact](https://claude.ai/artifact/BJsETTv17ZgPVhM1dn3KwM) |
+| [database.html](database.html) | แบบฐานข้อมูลเดิม 15 ตาราง (โค้ดปัจจุบันพัฒนาต่อเป็น **33 ตาราง** ใน 12 migrations รวม `point_monthly_summaries` สำหรับ retention, 16 ตารางระบบตารางงาน/การลงเวลา 6 ขั้น และ 2 ตารางประวัติเป้าหมายภาพรวม ดู [architecture.md](../architecture.md#5-class-diagram--data-stored-in-mysql)): แผนภาพ ER, การจัดงานเข้ารอบ, กติกาที่ฐานข้อมูลกันหรือแอปกัน และงานลบข้อมูล | เปิดไฟล์ในเบราว์เซอร์ได้เลย หรือ [Artifact](https://claude.ai/artifact/BJsETTv17ZgPVhM1dn3KwM) |
 
 ## หมายเหตุ
 

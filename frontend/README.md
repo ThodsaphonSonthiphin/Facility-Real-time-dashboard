@@ -1,17 +1,19 @@
 # Janitorial Management Dashboard — Frontend
 
-React 19 + TypeScript on Vite 8. Current as of 2026-11-03. ADRs facility-0022–0024, 0061–0068, 0086–0088 and 0100–0107 apply with their amendments, along with [Frontend Target Tree (0025)](../docs/adr/facility-0025-frontend-target-tree.md) and [Frontend Router Shape (0026)](../docs/adr/facility-0026-frontend-router-shape.md).
+React 19 + TypeScript 6 on Vite 8. Current as of 2026-11-23. ADRs facility-0022–0024, 0061–0068, 0086–0088, 0100–0107, and 0223–0241 apply with their amendments, along with [Frontend Target Tree (0025)](../docs/adr/facility-0025-frontend-target-tree.md) and [Frontend Router Shape (0026)](../docs/adr/facility-0026-frontend-router-shape.md).
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Vite on :5173, proxying `/api` and `/hubs` to the API on :5001 |
-| `npm test` | Vitest on jsdom |
+| `npm test` | Vitest 5 on jsdom |
 | `npm run lint` | eslint 9, folder boundaries, no raw HTML |
-| `npm run build` | typecheck, then build into `dist/` |
+| `npm run build` | typecheck (`tsc -b`), then build into `dist/` |
 | `npm run build:api` | build into the API's `wwwroot`, so the API serves the app (facility-0067) |
 | `npm run e2e -- --dataset large` | headed browser workflows against a real isolated API/MySQL; see [E2E guide](../docs/testing/e2e.md) |
+| `npm run test:load` | headless Playwright performance/load check on `large` dataset |
+| `npm run e2e:compat` | cross-browser compatibility E2E runner |
 
 The pre-commit hook (husky) runs lint, `tsc -b` and the tests.
 
@@ -19,14 +21,18 @@ The pre-commit hook (husky) runs lint, `tsc -b` and the tests.
 
 ```
 src/main.tsx · App.tsx · router.tsx     app: store, page-load refresh, route table
-src/store/                               the store, authSlice, hubSlice (each hub connection live or not), dashboardSlice (Dashboard filters), typed hooks
+src/store/                               the store, authSlice, hubSlice, dashboardSlice, plus scheduleViewSlice (ongoing schedule filters), typed hooks
 src/shared/api/                          baseApi (RTK Query, livePoll), server types, myWorkApi, scanHub (SignalR into the cache), adminSetupApi (Admin reads),
                                          attendanceBoardApi (D2 and D3), alertListApi (alerts and the menu count)
-src/shared/auth/                         session refresh, logout, role homes
+src/shared/auth/                         session refresh, logout, role homes (Admin -> /admin/overview)
 src/shared/geo/                          readLocation: one fresh GPS reading per press
-src/shared/components/                   guard, layout, Admin menu, status and crash screens, RangeFields, BuildingSelect, Drawers and confirmations
-src/shared/utils/                        Thai time, labels, error wording, dateRange (the report pages' date ranges)
-src/pages/<feature>/                     page UI, hooks, rules and feature API where needed; related routes may share a folder
+src/shared/hooks/                        useOnlineStatus: browser online/offline hook for LiveBadge & ConnectionBanner
+src/shared/cover/                        shared emergency cover assignment API & UI (used in /admin/schedules)
+src/shared/overview/                     shared overview queries, hub follow (OverviewChanged), and Area detail views
+src/shared/components/                   guard, responsive shells (AppLayout, AdminNav, CleanerBottomNav, SupervisorNav/SupervisorBottomNav),
+                                         Sheet/Modal/Drawer, KpiCard, AvatarBadge, Tabs, Segmented, RangeFields, BuildingSelect, SearchBox, LiveBadge, ConnectionBanner
+src/shared/utils/                        Thai time & Buddhist-year dates, shift-aware labels, error wording, dateRange
+src/pages/<feature>/                     20 feature folders: UI, hooks, rules and feature API where needed; related routes may share a folder
 src/test/                                fakeServer (fake fetch), fakeGps, fakeSignalR, fixtures, renderApp
 ```
 
@@ -42,9 +48,9 @@ src/test/                                fakeServer (fake fetch), fakeGps, fakeS
 
 The access token lives only in the Redux store. The refresh token is an HttpOnly cookie the page never sees. On page load one refresh restores the session; on a 401 every request shares one refresh and retries once. A refresh answered with 401 or 403 ends the session; any other failure (no network, a server fault, a non-JSON body) keeps it, and page-load bootstrapping always finishes. "ออกจากระบบ" logs out on the server and empties the cache.
 
-SignalR gets its token from `getValidAccessToken`, which refreshes first when 30 s or less is left, on every connect and reconnect. A page that wants live updates opens the hub with `followScanHub` inside its query's `onCacheEntryAdded`. There is one connection per cache entry, and each has its own key in `hubSlice`. The four followers are `shared/api/myWorkApi.ts`, `pages/my-building/myBuildingApi.ts`, `pages/dashboard/dashboardApi.ts` and `shared/api/attendanceBoardApi.ts`. My Work refetches on point events; Dashboard and My Building patch their point cards. The Admin's live pages also use `livePoll` (every open, every 30 s, on focus; facility-0061) and show `LiveBadge` with the connection's key.
+SignalR gets its token from `getValidAccessToken`, which refreshes first when 30 s or less is left, on every connect and reconnect. A page that wants live updates opens the hub with `followScanHub` inside its query's `onCacheEntryAdded`. There is one connection per cache entry, and each has its own key in `hubSlice`. The six follower modules are `shared/api/myWorkApi.ts`, `pages/my-building/myBuildingApi.ts`, `pages/dashboard/dashboardApi.ts`, `shared/api/attendanceBoardApi.ts`, `shared/overview/overviewApi.ts`, and `pages/schedules/schedulesApi.ts`. My Work, Attendance, Overview, and Schedules refetch on invalidation events; Dashboard and My Building patch their point cards. The Admin's live pages also use `livePoll` (every open, every 30 s, on focus; facility-0061).
 
-`followScanHub` listens for browser `offline`/`online` events on all followers. Offline sets reconnecting immediately; online asks for fresh data after 1 s. Dashboard and attendance use `ADMIN_HUB_SERVER_TIMEOUT_MS` (10 s); phone followers keep SignalR's 30 s. The server pings every 5 s (facility-0107). Account deactivation is checked by the API and by recipient lookup at push time (facility-0105).
+`followScanHub` listens for browser `offline`/`online` events on all followers and asks for fresh data 1 s after reconnecting. Admin live followers use `ADMIN_HUB_SERVER_TIMEOUT_MS` (10 s); phone followers keep SignalR's 30 s; the server pings every 5 s (facility-0107). In the UI, `LiveBadge` and `ConnectionBanner` read `useOnlineStatus` (`shared/hooks/useOnlineStatus.ts`) and display `"ขาดการเชื่อมต่อ"` only while the browser is actually offline — SignalR reconnects recover silently in the background. Account deactivation is checked by the API and by recipient lookup at push time (facility-0105).
 
 Location retry first checks whether the browser still refuses. If permission is enabled but the page keeps a refusal, `LocationHelp` reloads (WebKit); otherwise it repeats the action. See `refusalNeedsReload` and `shared/utils/reloadPage.ts`.
 

@@ -1,12 +1,12 @@
 # ADR reading guide — current decisions
 
-ทบทวน 3 พ.ย. 2026 เทียบ `master` `aa1963d` และ [handoff](../handoff.md) เลขล่าสุดคือ **facility-0107** เอกสารนี้เป็นทางเข้าอ่าน ADR ไม่ใช่การตัดสินใจใหม่ และไม่ใช่หลักฐานว่าขึ้น production หรือทำ pilot แล้ว
+ทบทวน 23 พ.ย. 2026 เทียบ `master` (`d4d3e08`, PR #163) และ [handoff](../handoff.md) เลข ADR ล่าสุดคือ **facility-0241** เอกสารนี้เป็นทางเข้าอ่าน ADR ไม่ใช่การตัดสินใจใหม่
 
 อ่าน amendment ที่ใหม่กว่าด้วยเสมอ ADR เก่าเก็บทางเลือกและเหตุผลในวันนั้นไว้ ข้อความเดิมที่ถูกแทนที่ไม่ใช่ backlog ปัจจุบัน หากขัดกับ wireframe/แผนเก่า ให้ยึด ADR และ amendment ที่ยังมีผล
 
-## UX/UI — 19–20 พ.ย. 2026
+## UX/UI, Overview, Retention & Supervisor Scheduling — 19–23 พ.ย. 2026
 
-ปรับหน้าตาของฟังก์ชันเดิมตาม Mockup ตาม [facility-0223](facility-0223-match-the-mockup-for-existing-features.md) และชุดปรับปรุง UX/UI และ Motion ล่าสุด (**facility-0224** ถึง **facility-0230**) รวมถึงข้อตกลงเพิ่มเติม (**facility-0231** ถึง **facility-0241**):
+พัฒนาและรวมเข้า `master` แล้ว (PR #158–#163) ครอบคลุมการปรับหน้าตาตาม Mockup ([facility-0223](facility-0223-match-the-mockup-for-existing-features.md)), UX/UI และ Motion (**facility-0224** ถึง **facility-0230**), ตารางงานและการลงเวลา (**facility-0231** ถึง **facility-0232**, **facility-0238** ถึง **facility-0241**), หน้าภาพรวมและชุดทดสอบ (**facility-0233** ถึง **facility-0235**, **facility-0237**), และ Retention บน TiDB (**facility-0236**):
 
 | เรื่อง | ข้อตกลงและจุดเข้าอ่าน |
 |---|---|
@@ -14,19 +14,24 @@
 | แม่บ้านประจำระบุตึกประจำ (`HomeBuildingId`) โดยปล่อยกะและพื้นที่ว่างไว้ให้หัวหน้างานจัดเองได้ | [0239](facility-0239-regular-cleaner-home-building-with-optional-shift-and-area.md) |
 | หัวหน้างานจัดตารางงานได้ทั้งกะเช้าและกะดึกในตึกที่รับผิดชอบ (หน้าตึกของฉัน/สแกนตรวจงานยังยึดกะตัวเอง) | [0240](facility-0240-supervisor-schedules-both-shifts-within-assigned-buildings.md) |
 | ตั้งตารางประจำเริ่มวันนี้ได้ กำหนดกะและพื้นที่โดยกลุ่มพักไม่บังคับ และจัดวันหยุดในหน้าจัดวันหยุดรายสัปดาห์ | [0241](facility-0241-regular-baseline-allows-today-start-shift-and-optional-break-group.md) |
+| แยกสถานะความครบถ้วนของ Entry ในหน้าภาพรวมออกจากการเปิดรับข้อมูลก่อนกะ (แก้กรณีเริ่มระบบกลางกะ) | [0237](facility-0237-overview-entry-decoupled-from-preshift-opening-policy.md) |
+| Retention ใช้ `READ COMMITTED` + `SELECT ... FOR UPDATE` บน `service_points` เพื่อรองรับ TiDB พร้อมกัน race | [0236](facility-0236-retention-archive-locks-service-point-under-tidb.md) |
+| เกณฑ์อัตโนมัติเข้มงวดสำหรับ visual regression และ load test | [0235](facility-0235-strict-automated-gates-for-visual-and-load-tests.md) |
+| ชุดตรวจรับ 12 หมวดสำหรับระบบ | [0234](facility-0234-twelve-category-verification-suite.md) |
+| หน้าภาพรวมเปลี่ยนวัน/กะอย่างลื่นไหลโดยไม่ unmount หน้าและคงข้อมูลเดิมระหว่างโหลด | [0233](facility-0233-overview-smooth-transition-without-page-unmount.md) |
 | อนุญาต `ShiftOut` ที่ป้ายต้นทางพร้อมยืนยัน 2 จังหวะเมื่อมีย้ายพื้นที่ค้าง (ไม่ยกเลิกคำสั่งย้ายอัตโนมัติ) | [0231](facility-0231-pending-transfer-allows-confirmed-origin-shift-out.md) |
 | ตัด `Scheduling:Enabled` feature flag ออก ให้ระบบตารางงานเปิดใช้งานเป็นฟีเจอร์หลักเสมอ | [0232](facility-0232-remove-scheduling-enabled-feature-flag.md) |
-| ปรับ UX/UI ทั้งระบบตามกฎ 10 ข้อ (มือถือ 3 แท็บ + บัญชี, เมนูแอดมิน 3 กลุ่ม + Drawer, Toolbar ตารางงาน M2/Option A, หน้าแอดมิน 12 หน้า) | [0230](facility-0230-ux-heuristics-overhaul-and-navigation-redesign.md) |
+| ปรับ UX/UI ทั้งระบบตามกฎ 10 ข้อ (มือถือ 3 แท็บ + บัญชี, เมนูแอดมิน 3 กลุ่ม + Drawer, Toolbar ตารางงาน Option A, หน้าแอดมิน 12 หน้า; ขยายเป็น Responsive Supervisor/Admin shell ใน PR #163) | [0230](facility-0230-ux-heuristics-overhaul-and-navigation-redesign.md) |
 | Admin Home เป็นหน้าภาพรวมและกระชับหน้าสถานะจุด | [0224](facility-0224-admin-overview-home-and-slim-live-point-board.md) |
 | รวมการมอบหมายทำแทนฉุกเฉินไว้ที่หน้าตารางงาน และให้หน้าเตือน/เข้างานทำหน้าที่เดียว | [0225](facility-0225-consolidate-cover-assignment-under-schedules.md) |
 | คงเมนูตั้งค่า 5 เมนูและรายงาน 2 เมนูแยกชัดเจน | [0226](facility-0226-keep-admin-setup-and-report-menus-distinct.md) |
-| ลดแถบเมนูด้านล่างของแม่บ้านเหลือ 2 แท็บจริง (`งานของฉัน`, `ตารางของฉัน`) | [0227](facility-0227-simplify-cleaner-bottom-nav-to-two-real-tabs.md) |
-| เพิ่มตัวสลับ 2 หน้าแบบเดียวกันให้หัวหน้างาน (`ตึกของฉัน`, `จัดตารางงาน`) | [0228](facility-0228-supervisor-consistent-two-page-switcher.md) |
-| ระบบ Subtle & Snappy CSS Motion (150–200ms, CLS = 0, รองรับ reduced-motion) | [0229](facility-0229-subtle-snappy-motion-system.md) |
+| ลดแถบเมนูด้านล่างของแม่บ้านเหลือ 2 แท็บจริง (`งานของฉัน`, `ตารางของฉัน`) — ต่อมาขยายเป็น 3 แท็บพร้อม `บัญชี` ใน 0230 | [0227](facility-0227-simplify-cleaner-bottom-nav-to-two-real-tabs.md) |
+| เพิ่มตัวสลับ 2 หน้าให้หัวหน้างาน (`ตึกของฉัน`, `จัดตารางงาน`) — ต่อมาขยายเป็น 3 หน้าพร้อม `บัญชี` และ Responsive shell ใน 0230 / PR #163 | [0228](facility-0228-supervisor-consistent-two-page-switcher.md) |
+| ระบบ Subtle & Snappy CSS Motion (150–200ms, CLS = 0, รองรับ reduced-motion; เพิ่ม `motion-sheet` ใน PR #160) | [0229](facility-0229-subtle-snappy-motion-system.md) |
 
-## ตารางงานแม่บ้านตาม Requirement ใหม่ — 16–17 พ.ย. 2026
+## ตารางงานแม่บ้านและการลงเวลา 6 ขั้น — 16–17 พ.ย. 2026 (พัฒนาและรวมเข้า `master` แล้ว)
 
-เลขล่าสุดคือ **facility-0222** ข้อตกลงในส่วนนี้เป็นแบบที่ยืนยันระหว่าง `grill-then-plan` **ยังไม่ได้พัฒนา** ดู [ข้อมูลจาก Supervisor และคำถามที่ยังเปิด](../requirements-gathering/2026-11-16-supervisor-scheduling-requirements.md) ผลกระทบต่อแผนหน้าภาพรวมทบทวนแล้วใน [delta review](../superpowers/reviews/2026-11-17-overview-plan-assumption-delta.md)
+ชุดข้อตกลง **facility-0131** ถึง **facility-0222** พัฒนาและรวมเข้า `master` แล้ว (PR #159–#160 พร้อมส่วนขยาย 0231–0232 และ 0238–0241 ด้านบน; ดูผลตรวจรับใน [docs/testing/scheduling.md](../testing/scheduling.md)) ข้อสังเกตสำคัญที่มีการปรับหลังออกแบบ: 0240 ขยายสิทธิ์หัวหน้างานให้จัดตารางได้ทั้งสองกะในตึกที่รับผิดชอบ (แก้ข้อจำกัดกะเดียวใน 0132), 0232 ถอด feature flag ออก, และ PR #160 เปลี่ยนแถบสถานะการเชื่อมต่อให้แสดงเฉพาะเมื่อออฟไลน์ (`ขาดการเชื่อมต่อ`) และแสดงชื่อพักตามกะ (พักเที่ยง/พักบ่าย vs พักรอบ 1/พักรอบ 2):
 
 | เรื่อง | ข้อตกลงและจุดเข้าอ่าน |
 |---|---|
@@ -86,13 +91,9 @@
 | รอบงานกับเวลาพัก | ใช้เวลารอบเดิม ไม่เพิ่มการเลื่อนอัตโนมัติ เพราะตารางจริงไม่ชนเวลาพัก [0163](facility-0163-keep-configured-rounds-without-automatic-break-rescheduling.md) แทนข้อเสนอสมมติ [0162](facility-0162-cleaning-rounds-move-automatically-when-breaks-conflict.md) |
 | ประวัติลงเวลาเก่า | เก็บ 4 จังหวะเดิม ไม่สร้างหรือเตือนว่าขาดพักรอบที่ 2 ของกะเก่า เริ่ม 6 จังหวะกับกะที่ใช้แบบใหม่ [0164](facility-0164-preserve-legacy-four-action-attendance-history.md) |
 
-**Mockup ตารางงานฉบับแรกยอมรับแล้ว:** เจ้าของให้ใช้รูปแบบหน้าหัวหน้าจัดตารางและหน้าแม่บ้าน/สแปร์ดูตารางของตนเองเป็นฐานคุยรายละเอียดต่อ ตาม [0160](facility-0160-scheduling-mockup-layout-accepted.md) ดูขอบเขตและแหล่งไฟล์ใน [บันทึก Requirement](../requirements-gathering/2026-11-16-supervisor-scheduling-requirements.md) ยังไม่ได้ยืนยันรายละเอียดที่ค้างหรือเขียน spec/แผนใหม่
+## หน้าภาพรวมแอดมิน (Combined Overview) — 16 พ.ย. 2026 (พัฒนาและรวมเข้า `master` แล้ว)
 
-**รอหัวหน้ายืนยัน Workflow เป็นชุด 5 ข้อ:** ทีมสแปร์/การยืมคน, การทำแทนเมื่อลาบางช่วง, การสแกนเมื่อออกไปลา/กลับมา, มาทำงานในวันที่หยุด/ลา, และเปลี่ยนคนหรือพื้นที่หลังเริ่มงาน ดู [สรุปและแบบถามหัวหน้า](../requirements-gathering/2026-11-16-supervisor-workflow-confirmation.md) เจ้าของขอให้ถามเรื่องหน้างานกับหัวหน้าก่อน ส่วน UI/เทคนิคให้ทีมตัดสินใจและรวมตรวจเป็นชุด ยังไม่มีคำตอบแทนหน้างาน
-
-## แบบหน้าภาพรวมใหม่ — 16 พ.ย. 2026
-
-ส่วนนี้เพิ่มจากฐานทบทวน 3 พ.ย. ด้านบน ชุดข้อตกลงหน้าภาพรวมถึง **facility-0130**: 0114–0127 เป็นข้อตกลงออกแบบที่เจ้าของยืนยันแล้ว ส่วน 0128–0130 ยอมรับเป็นฐานวางแผนแล้วหลังเจ้าของเรียก `sp-writing-plans` โดยมี [เอกสารออกแบบ](../superpowers/specs/2026-11-16-combined-overview-dashboard-design.md) และ [แผนงาน](../superpowers/plans/2026-11-16-combined-overview-dashboard.md) **ยังไม่ได้ implement** และเจ้าของสั่งให้พัก implementation ไว้
+ชุดข้อตกลง **facility-0114** ถึง **facility-0130** พัฒนาและรวมเข้า `master` แล้วใน PR #158 (พร้อมการปรับปรุงการเปลี่ยนวัน/กะใน [0233](facility-0233-overview-smooth-transition-without-page-unmount.md) และการแยก Entry ออกจาก pre-shift opening policy ใน [0237](facility-0237-overview-entry-decoupled-from-preshift-opening-policy.md)):
 
 | เรื่อง | จุดเข้าอ่าน |
 |---|---|
@@ -108,13 +109,13 @@
 | โครงสร้างและ data model | [0004](facility-0004-app-architecture.md), [0025 Frontend Target Tree](facility-0025-frontend-target-tree.md), [0040](facility-0040-area-is-the-unit-of-assignment.md), [0045](facility-0045-admin-manages-areas-and-captures-sign-location.md) | 4 backend projects; endpoint + rules + EF; frontend pages/shared/store ดู implementation note ของ 0004 |
 | เส้นทางหน้าเว็บ | [0026 Frontend Router Shape](facility-0026-frontend-router-shape.md), [0067](facility-0067-api-serves-frontend-from-one-origin.md) | เส้นทางตามบทบาทและการกลับหน้าเดิมหลังเข้าสู่ระบบ ป้าย QR ใช้ URL ของหน้าที่เกี่ยวข้อง |
 | สถานะจุดและการตรวจ | [0046](facility-0046-issue-is-a-tag-not-a-card-status.md), [0047](facility-0047-cleaning-rounds-are-time-windows.md), [0048](facility-0048-supervisor-assigned-to-building.md) | Issue เป็นป้ายแยก; รอบเป็นช่วงเวลา; ส่ง → ตรวจ → แก้ → ตรวจซ้ำ |
-| การลงเวลาและทำแทน | [0026 Shift Check-In](facility-0026-shift-check-in-two-shifts-strict-presence.md), [0031](facility-0031-four-stage-shift-attendance-lifecycle.md), [0041](facility-0041-scan-only-own-area-with-cover-assignment.md), [0050](facility-0050-check-in-confirms-area-presence-not-time-attendance.md), [0051](facility-0051-admin-corrections-and-audit-log.md), [0069](facility-0069-attendance-scan-window-60-minutes-around-the-shift.md), [0075](facility-0075-covers-assigned-up-to-7-days-ahead.md) | 4 จังหวะ ยืนยันคนดูแล Area; ไม่คิดค่าจ้าง; มีเหตุผลเมื่อ Admin แก้เวลา |
+| การลงเวลาและทำแทน | [0026 Shift Check-In](facility-0026-shift-check-in-two-shifts-strict-presence.md), [0031](facility-0031-four-stage-shift-attendance-lifecycle.md), [0041](facility-0041-scan-only-own-area-with-cover-assignment.md), [0050](facility-0050-check-in-confirms-area-presence-not-time-attendance.md), [0051](facility-0051-admin-corrections-and-audit-log.md), [0069](facility-0069-attendance-scan-window-60-minutes-around-the-shift.md), [0075](facility-0075-covers-assigned-up-to-7-days-ahead.md) | ขยายจาก 4 จังหวะเป็น 6 จังหวะ (0146, 0222) แยกชื่อพักตามกะ ยืนยันคนดูแล Area ไม่คิดค่าจ้าง มีเหตุผลเมื่อ Admin/หัวหน้าเติมหรือแก้เวลา; มอบหมายทำแทนรวมไว้ที่หน้าตารางงาน (0225) |
 | การเข้าระบบและ session | [0012](facility-0012-short-access-token-with-refresh.md), [0013](facility-0013-refresh-token-httponly-cookie.md), [0014](facility-0014-refresh-tokens-stored-server-side.md), [0015](facility-0015-refresh-token-reuse-detection.md), [0016](facility-0016-refresh-token-sliding-30-days.md), [0054](facility-0054-login-with-employee-id-and-phone.md), [0089](facility-0089-admin-password-15-characters-and-blocklist.md), [0104](facility-0104-login-lock-per-login-name-and-ip.md) | JWT 5 นาที + refresh cookie 30 วัน; Login Lock ตามชื่อ + IP และเพดานต่อ IP |
 | ปิดบัญชีและข่าวสด | [0052](facility-0052-cleaner-my-work-page-and-resend.md), [0057](facility-0057-supervisor-building-page-and-audit-log-page.md), [0058](facility-0058-dashboard-is-admin-only.md), [0105](facility-0105-deactivation-takes-effect-at-once-on-hub-and-api.md) | Dashboard Admin-only; มือถือได้เฉพาะขอบเขตตน; อ่าน active recipients ตอนส่ง ไม่มี admins group |
-| การเชื่อมต่อหลุด | [0061](facility-0061-dashboard-keeps-30s-poll-beside-push.md), [0064](facility-0064-dashboard-hub-offline-keeps-todays-behaviour.md), [0107](facility-0107-admin-pages-notice-a-lost-link-sooner.md) | Admin poll 30 s; browser offline ทันที; server timeout Admin 10 s / phone 30 s; ping 5 s |
+| การเชื่อมต่อหลุด | [0061](facility-0061-dashboard-keeps-30s-poll-beside-push.md), [0064](facility-0064-dashboard-hub-offline-keeps-todays-behaviour.md), [0107](facility-0107-admin-pages-notice-a-lost-link-sooner.md) | Admin poll 30 s + SignalR ping 5 s (timeout Admin 10 s / phone 30 s) ทำงานเบื้องหลัง; แถบ UI (`LiveBadge` / `ConnectionBanner`) แสดง `ขาดการเชื่อมต่อ` เฉพาะตอนเบราว์เซอร์ออฟไลน์ (PR #160) |
 | GPS และป้าย | [0007](facility-0007-scan-flow-native-camera.md), [0035](facility-0035-per-building-check-in-gps-flag-not-block.md), [0036](facility-0036-check-in-requires-location-permission.md), [0037](facility-0037-gps-for-every-scan-replaces-nfc.md), [0038](facility-0038-default-radius-50m-per-sign.md), [0059](facility-0059-qr-token-only-from-the-sign.md), [0060](facility-0060-admin-gets-qr-token-from-points-page-only.md) | อ่าน GPS ทุกการสแกน; ไกลป้ายติดธง ไม่บล็อก; เปิดหน้าจากป้าย; QR ไม่อยู่บน Dashboard |
-| Pilot / deploy / กู้ Admin | [0043](facility-0043-pilot-scope-one-area.md), [0049](facility-0049-server-reachable-from-internet-over-https.md), [0067](facility-0067-api-serves-frontend-from-one-origin.md), [0092](facility-0092-first-admin-from-server-settings.md), [0093](facility-0093-safe-start-and-deploy-guide.md), [0106](facility-0106-security-headers-set-by-the-app.md) | 1 Area; fixed public HTTPS; API เสิร์ฟ frontend; server/domain/OS ยังรอ |
-| ข้อมูลและ Excel | [0053](facility-0053-excel-export-instead-of-report-pages.md), [0055](facility-0055-data-retention-and-pdpa-before-production.md), [0056](facility-0056-accounts-created-one-by-one-excel-import-before-rollout.md), [0100](facility-0100-admin-pages-follow-approved-design.md) | export ทำแล้วและเลือกหลายตึกได้; import พักไว้; retention มี implementation ใน branch นี้ (ดู handoff สำหรับผลตรวจ/สถานะเผยแพร่); PDPA notice ถอนแล้ว |
+| Pilot / deploy / กู้ Admin | [0043](facility-0043-pilot-scope-one-area.md), [0049](facility-0049-server-reachable-from-internet-over-https.md), [0067](facility-0067-api-serves-frontend-from-one-origin.md), [0092](facility-0092-first-admin-from-server-settings.md), [0093](facility-0093-safe-start-and-deploy-guide.md), [0106](facility-0106-security-headers-set-by-the-app.md) | 1 Area; fixed public HTTPS; API เสิร์ฟ frontend หรือแยก Vercel (`frontend/vercel.json`) |
+| ข้อมูลและ Excel | [0053](facility-0053-excel-export-instead-of-report-pages.md), [0055](facility-0055-data-retention-and-pdpa-before-production.md), [0056](facility-0056-accounts-created-one-by-one-excel-import-before-rollout.md), [0100](facility-0100-admin-pages-follow-approved-design.md) | export ทำแล้วและเลือกหลายตึกได้; import พักไว้; retention รวมเข้า `master` แล้วพร้อมล็อกรองรับ TiDB (0236); PDPA notice ถอนแล้ว |
 | หน้าตาและฟอร์ม | [0063](facility-0063-frontend-css-global-tokens-per-page-files.md), [0086](facility-0086-frontend-styling-with-tailwind.md), [0087](facility-0087-new-look-readable-at-the-sign.md), [0088](facility-0088-icons-from-lucide-react-beside-text.md), [0100](facility-0100-admin-pages-follow-approved-design.md), [0101](facility-0101-admin-forms-and-confirmations-follow-approved-design.md) | 0086 แทน CSS ต่อหน้า; Tailwind 4 / Enterprise Light; nested forms/confirmations ตามแบบที่อนุมัติ |
 | Server Log | [0095](facility-0095-logging-scope-security-events-and-errors.md), [0096](facility-0096-server-log-read-from-journal-only.md), [0097](facility-0097-server-log-names-account-by-employee-id-never-typed-text.md), [0098](facility-0098-server-log-kept-90-days.md), [0099](facility-0099-server-log-in-its-own-journal-namespace.md), [0103](facility-0103-server-log-written-through-serilog.md), [0104](facility-0104-login-lock-per-login-name-and-ip.md) | ILogger ผ่าน Serilog Console → journal namespace facility; 90 วัน; เพิ่ม normalized IP ใน login logs |
 | E2E | [0094](facility-0094-playwright-end-to-end.md), [0102](facility-0102-headed-e2e-datasets.md), [0107](facility-0107-admin-pages-notice-a-lost-link-sooner.md) | unique owned DB/user ต่อรอบ; private publish; Chromium/WebKit/Firefox ตามคู่มือ E2E |
