@@ -83,4 +83,44 @@ public class DeactivatedAdminLiveTests
         await Task.Delay(500);
         Assert.False(deactivatedGot.Task.IsCompleted);
     }
+
+    [Fact]
+    public async Task Deactivation_logout_and_secret_change_abort_live_hub_connections_and_reject_reconnects()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        // 1. Deactivating a second Admin disconnects their live hub immediately and rejects reconnects.
+        var second = await AccountApi.ReadAsync(await AccountApi.CreateAdminAsync(admin, "admin2", SecondAdminPassword));
+        var secondLogin = await AuthApi.AdminLoginAsync(factory.CreateApiClient(), "admin2", SecondAdminPassword);
+        var secondAuth = await AuthApi.ReadAuthAsync(secondLogin);
+        var secondClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var secondHub = await HubClient.ConnectAsync(factory, secondAuth.AccessToken);
+        secondHub.Closed += _ => { secondClosed.TrySetResult(); return Task.CompletedTask; };
+
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"{AccountApi.Path}/{second.Id}/deactivate", null)).StatusCode);
+        await secondClosed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Assert.ThrowsAsync<HttpRequestException>(() => HubClient.ConnectAsync(factory, secondAuth.AccessToken));
+
+        // 2. Logging out a Cleaner disconnects their live hub immediately and rejects reconnects with that access token.
+        var (cleanerClient, cleanerAuth, cleanerRefresh) = await AuthApi.LoggedInAsync(factory);
+        var cleanerClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var cleanerHub = await HubClient.ConnectAsync(factory, cleanerAuth.AccessToken);
+        cleanerHub.Closed += _ => { cleanerClosed.TrySetResult(); return Task.CompletedTask; };
+
+        Assert.Equal(HttpStatusCode.NoContent, (await AuthApi.LogoutAsync(cleanerClient, cleanerRefresh)).StatusCode);
+        await cleanerClosed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Assert.ThrowsAsync<HttpRequestException>(() => HubClient.ConnectAsync(factory, cleanerAuth.AccessToken));
+
+        // 3. Changing a Cleaner's phone disconnects their live hub immediately and rejects reconnects.
+        var (_, cleanerAuth2, _) = await AuthApi.LoggedInAsync(factory);
+        var phoneClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var phoneHub = await HubClient.ConnectAsync(factory, cleanerAuth2.AccessToken);
+        phoneHub.Closed += _ => { phoneClosed.TrySetResult(); return Task.CompletedTask; };
+
+        var phoneChange = await admin.PutAsJsonAsync($"{AccountApi.Path}/{cleanerAuth2.User.Id}/phone", new { phone = "0899999991" });
+        Assert.Equal(HttpStatusCode.NoContent, phoneChange.StatusCode);
+        await phoneClosed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Assert.ThrowsAsync<HttpRequestException>(() => HubClient.ConnectAsync(factory, cleanerAuth2.AccessToken));
+    }
 }

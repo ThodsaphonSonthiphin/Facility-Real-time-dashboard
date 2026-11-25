@@ -79,8 +79,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
     public async Task<ScheduleScopeAnchor> LockRegularScopeAsync(
         int buildingId, Shift shift, DateTime nowUtc, CancellationToken ct = default)
     {
-        var anchor = await db.ScheduleScopeAnchors.FirstOrDefaultAsync(
-            a => a.BuildingId == buildingId && a.Shift == shift, ct);
+        var anchor = await FindAnchorUnderLockAsync(buildingId, shift, ct);
         if (anchor is null)
         {
             var created = new ScheduleScopeAnchor { BuildingId = buildingId, Shift = shift, Revision = 1, UpdatedAt = nowUtc };
@@ -546,6 +545,7 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
 
         var profiles = await db.CleanerProfilePeriods.AsNoTracking()
             .Where(profile => profile.UserId == userId)
+            .OrderBy(profile => profile.EffectiveFrom).ThenBy(profile => profile.Id)
             .ToListAsync(ct);
         var baselines = await db.ScheduleBaselines.AsNoTracking().Include(baseline => baseline.Days)
             .Where(baseline => baseline.UserId == userId
@@ -874,6 +874,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                     : ScheduleAuthority.CanManageSchedule(actor.Role, actor.Id, building, date, managementScope);
             }
 
+            var latestRevisionBySlot = transfers
+                .GroupBy(row => (row.PersonId, row.ShiftDate, row.Shift))
+                .ToDictionary(group => group.Key, group => Revision(group.MaxBy(row => row.Id)!.Revision));
             transferSlots = transfers
                 .Where(row => !row.IsCancelled && (CanRead(row.FromAreaId, row.Shift, row.ShiftDate)
                     || CanRead(row.ToAreaId, row.Shift, row.ShiftDate)))
@@ -881,7 +884,8 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
                 .Select(group => group.MaxBy(row => row.Id)!)
                 .OrderBy(row => row.ShiftDate).ThenBy(row => row.Shift).ThenBy(row => people[row.PersonId]).ThenBy(row => row.Id)
                 .Select(row => new ScheduleTransferSlot(row.Id, row.PersonId, people[row.PersonId], row.ShiftDate, row.Shift,
-                    areaCodes[row.FromAreaId], areaCodes[row.ToAreaId], Revision(row.Revision),
+                    areaCodes[row.FromAreaId], areaCodes[row.ToAreaId],
+                    latestRevisionBySlot[(row.PersonId, row.ShiftDate, row.Shift)],
                     arrivals.TryGetValue(row.Id, out var arrival) ? Utc(arrival.OccurredAt) : null))
                 .ToList();
         }
@@ -946,13 +950,9 @@ public sealed class ScheduleStore(AppDbContext db, TimeProvider? clock = null)
             var input = new ScheduleInput(
                 person.Id,
                 historyStartsAt,
-                personBaselines
-                    .Where(baseline => baseline.EffectiveFrom < weekEnd
-                        && (baseline.EffectiveUntil is null || baseline.EffectiveUntil.Value > monday))
-                    .SelectMany(baseline => baseline.Days.Select(day => new BaselineFact(day.Id,
-                        baseline.EffectiveFrom, baseline.EffectiveUntil, day.Weekday, day.AreaId, day.BreakGroup,
-                        Revision(baseline.Revision), day.IsDayOff)))
-                    .ToList(),
+                personBaselines.SelectMany(baseline => baseline.Days.Select(day => new BaselineFact(day.Id,
+                    baseline.EffectiveFrom, baseline.EffectiveUntil, day.Weekday, day.AreaId, day.BreakGroup,
+                    Revision(baseline.Revision), day.IsDayOff))).ToList(),
                 header?.Choices.Select(choice => choice.OffDate).ToHashSet(),
                 exceptions
                     .Where(row => row.UserId == person.Id && !row.IsCancelled

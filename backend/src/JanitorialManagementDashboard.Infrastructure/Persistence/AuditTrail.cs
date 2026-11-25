@@ -6,6 +6,9 @@ namespace JanitorialManagementDashboard.Infrastructure.Persistence;
 /// <summary>facility-0051: every Admin change is logged — who, when, what, before and after; who is null when the server did it (facility-0092). Save it with the change itself.</summary>
 public static class AuditTrail
 {
+    /// <summary>Matches <c>audit_log.summary</c> max length in <see cref="AppDbContext"/> so long entity names never fail DB writes.</summary>
+    public const int MaxSummaryLength = 300;
+
     public static void Add(
         AppDbContext db,
         int? actorId,
@@ -24,7 +27,7 @@ public static class AuditTrail
             Action = action,
             EntityType = entityType,
             EntityId = entityId,
-            Summary = summary,
+            Summary = summary.Length <= MaxSummaryLength ? summary : summary[..(MaxSummaryLength - 1)] + "…",
             BeforeJson = Serialize(before, nameof(before)),
             AfterJson = Serialize(after, nameof(after)),
             Reason = reason,

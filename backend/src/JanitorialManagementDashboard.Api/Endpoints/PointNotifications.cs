@@ -45,6 +45,7 @@ internal static class PointNotifications
             var allActiveCleaners = await db.Users.AsNoTracking()
                 .Where(u => u.Role == UserRole.Cleaner && u.IsActive)
                 .ToListAsync();
+            var activeCleanerIds = allActiveCleaners.Select(u => u.Id).ToHashSet();
             var effective = await CleanerEffectiveAssignment.ResolveForDateAsync(
                 db, allActiveCleaners, slot.ShiftDate, useFallbackWeekdayArea: true, includeDatedOverrides: true);
             var cleaners = effective
@@ -56,7 +57,21 @@ internal static class PointNotifications
                 .Where(c => db.Users.Any(u => u.Id == c.UserId && u.IsActive && u.Role == UserRole.Cleaner))
                 .Select(c => c.UserId)
                 .ToListAsync();
-            var userIds = own.Concat(covering).Concat(cleaners).Concat(coveringCleaners).Distinct()
+            var reliefCleaners = (await db.ReliefAssignments.AsNoTracking()
+                .Where(r => r.AreaId == areaId && r.ShiftDate == slot.ShiftDate && r.Shift == slot.Shift && !r.IsCancelled)
+                .Select(r => r.UserId)
+                .ToListAsync())
+                .Where(activeCleanerIds.Contains)
+                .ToList();
+            var transfers = await new ScheduleStore(db).ReadSlotTransfersAsync(slot);
+            var transferredCleaners = transfers
+                .Where(pair => activeCleanerIds.Contains(pair.Key)
+                    && ((!pair.Value.Instruction.IsCancelled && pair.Value.Confirmation is not null && pair.Value.Instruction.ToAreaId == areaId)
+                        || (pair.Value.Confirmation is null && pair.Value.LastConfirmedAreaId == areaId)))
+                .Select(pair => pair.Key)
+                .ToList();
+            var userIds = own.Concat(covering).Concat(cleaners).Concat(coveringCleaners)
+                .Concat(reliefCleaners).Concat(transferredCleaners).Distinct()
                 .Select(id => id.ToString(CultureInfo.InvariantCulture)).ToList();
             if (userIds.Count > 0)
             {

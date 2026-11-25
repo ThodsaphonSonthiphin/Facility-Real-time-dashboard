@@ -350,6 +350,43 @@ public class ScheduleResolverTests
         Assert.Equal("dated-area-on-day-off", problem.Code);
     }
 
+    [Fact]
+    public void Chained_confirmed_transfers_validate_origin_sequentially_without_false_mismatch()
+    {
+        var input = new ScheduleInput(7, Monday,
+            Version(from: Monday, until: null, areaId: 11, breakGroup: 1, revision: 1, firstCellId: 100),
+            new HashSet<DateOnly>(), [], [],
+            [
+                new TransferFact(1, Wednesday, Shift.Day, FromAreaId: 11, ToAreaId: 12,
+                    EffectiveAt: new DateTimeOffset(2026, 11, 18, 2, 0, 0, TimeSpan.Zero),
+                    ConfirmedAt: new DateTimeOffset(2026, 11, 18, 2, 5, 0, TimeSpan.Zero),
+                    Cancelled: false, Revision: "2"),
+                new TransferFact(2, Wednesday, Shift.Day, FromAreaId: 12, ToAreaId: 13,
+                    EffectiveAt: new DateTimeOffset(2026, 11, 18, 5, 0, 0, TimeSpan.Zero),
+                    ConfirmedAt: null,
+                    Cancelled: false, Revision: "1"),
+            ]);
+
+        var day = ScheduleResolver.Resolve(input, Wednesday);
+
+        Assert.Empty(day.Problems);
+
+        // A broken chain whose second transfer does not start from the prior confirmed destination IS flagged.
+        var broken = input with
+        {
+            Transfers =
+            [
+                input.Transfers[0],
+                new TransferFact(2, Wednesday, Shift.Day, FromAreaId: 99, ToAreaId: 13,
+                    EffectiveAt: new DateTimeOffset(2026, 11, 18, 5, 0, 0, TimeSpan.Zero),
+                    ConfirmedAt: null,
+                    Cancelled: false, Revision: "1"),
+            ],
+        };
+        var brokenDay = ScheduleResolver.Resolve(broken, Wednesday);
+        Assert.Equal(ScheduleResolver.ProblemTransferOriginMismatch, Assert.Single(brokenDay.Problems).Code);
+    }
+
     /// <summary>One baseline version: the same Area and group on every weekday, with its own cell ids and revision.</summary>
     private static List<BaselineFact> Version(
         DateOnly from, DateOnly? until, int? areaId, int? breakGroup, long revision, int firstCellId)

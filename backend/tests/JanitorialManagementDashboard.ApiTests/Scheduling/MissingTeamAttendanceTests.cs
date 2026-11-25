@@ -318,6 +318,45 @@ public class MissingTeamAttendanceTests
         Assert.Equal(HttpStatusCode.Forbidden, outside.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await TeamAttendanceApi.StateAsync(cleaner, person)).StatusCode);
     }
+
+    [Fact]
+    public async Task Break1_without_break_group_becomes_missing_after_later_event_or_shift_end_and_is_fillable()
+    {
+        using var factory = new JanitorialApiFactory();
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, new DateOnly(2026, 10, 1));
+        var starts = new DateOnly(2026, 10, 1);
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, starts);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", starts, "AR01", breakGroup: null);
+        await TestData.AddAttendanceAsync(factory, "1000001", Day8, Shift.Day, AttendanceEvent.ShiftIn,
+            EffectiveAttendanceApi.Thai(8, 7, 0));
+        var person = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+
+        // Before shift end and with no later event, Break1 without a break group stays pending.
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 12, 0));
+        var midday = (await (await TeamAttendanceApi.StateAsync(supervisor, person)).Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
+        Assert.Equal("pending", midday.Action("Break1Out").State);
+
+        // Once shift ends (or a later event is recorded), Break1Out and Break1In become missing and fillable.
+        factory.Clock.SetUtcNow(EffectiveAttendanceApi.Thai(8, 19, 5));
+        var ended = (await (await TeamAttendanceApi.StateAsync(supervisor, person)).Content.ReadFromJsonAsync<AttendanceStateAnswer>())!;
+        Assert.Equal("missing", ended.Action("Break1Out").State);
+        Assert.Equal("missing", ended.Action("Break1In").State);
+        Assert.Contains("Break1Out", ended.FillableActions!);
+        Assert.Contains("Break1In", ended.FillableActions!);
+
+        var fillBySupervisor = await TeamAttendanceApi.AddAsync(supervisor, person, "Break1Out", "10:10", expectedRevision: ended.StateRevision!);
+        Assert.Equal(HttpStatusCode.OK, fillBySupervisor.StatusCode);
+
+        var revAfter = await TeamAttendanceApi.RevisionAsync(factory, person);
+        var fillByAdmin = await TeamAttendanceApi.AddAsync(admin, person, "Break1In", "11:10", expectedRevision: revAfter);
+        Assert.Equal(HttpStatusCode.OK, fillByAdmin.StatusCode);
+
+        var facts = await EffectiveAttendanceApi.FactsAsync(factory);
+        Assert.Equal(AttendanceSource.SupervisorAdd, facts.Single(f => f.EventType == AttendanceEvent.Break1Out).Source);
+        Assert.Equal(AttendanceSource.AdminAdd, facts.Single(f => f.EventType == AttendanceEvent.Break1In).Source);
+    }
 }
 
 /// <summary>The scoped missing-time calls and the revision a screen sends back.</summary>

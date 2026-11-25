@@ -13,7 +13,7 @@ export interface EditAccountFormProps {
   account: Account;
   accounts: Account[];
   areas: AreaSummary[];
-  buildings: Building[];
+  buildings: Array<Building & { isActive?: boolean }>;
   onDone: (text: string) => void;
   onCancel: () => void;
 }

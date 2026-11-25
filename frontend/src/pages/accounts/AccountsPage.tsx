@@ -103,7 +103,7 @@ export function AccountsPage() {
           <CreateAccountForm
             accounts={list}
             areas={areas.data ?? []}
-            buildings={buildings.data ?? []}
+            buildings={(buildings.data ?? []).filter((building) => building.isActive)}
             onCancel={closePanel}
           />
         </Drawer>

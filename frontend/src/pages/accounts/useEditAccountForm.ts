@@ -17,7 +17,7 @@ import { useUpdateAccountMutation } from './accountsApi';
 
 import type { EditAccountFormProps } from './accountFormTypes';
 
-export function useEditAccountForm({ account, accounts, areas, onDone }: EditAccountFormProps) {
+export function useEditAccountForm({ account, accounts, areas, buildings, onDone }: EditAccountFormProps) {
   const names = useBuildingNames();
   const [draft, setDraft] = useState<EditDraft>(() => editDraftOf(account, areas));
   const [problem, setProblem] = useState<string | null>(null);
@@ -30,8 +30,11 @@ export function useEditAccountForm({ account, accounts, areas, onDone }: EditAcc
     ),
   );
   const set = (patch: Partial<EditDraft>) => setDraft((current) => ({ ...current, ...patch }));
-  // The current Area stays on offer even if it was deactivated since (plan 5 final-review F3)
+  // The current Area and Building stay on offer even if deactivated since (plan 5 final-review F3)
   const areaChoices = areas.filter((area) => area.isActive || area.id === account.areaId);
+  const buildingChoices = buildings.filter(
+    (building) => building.isActive !== false || building.id === account.buildingId || building.id === account.homeBuildingId,
+  );
   const visibleAreaChoices = account.role === 'Cleaner'
     ? areasForCleaner(areaChoices, draft.cleanerKind, draft.homeBuildingId)
     : areaChoices;
@@ -89,6 +92,6 @@ export function useEditAccountForm({ account, accounts, areas, onDone }: EditAcc
 
   return {
     names, draft, set, problem, notice, setNotice, me, profileLoading, isLoading,
-    visibleAreaChoices, blockOf, titleId, chooseCleanerKind, chooseHomeBuilding, chooseArea, chooseBuilding, submit,
+    buildingChoices, visibleAreaChoices, blockOf, titleId, chooseCleanerKind, chooseHomeBuilding, chooseArea, chooseBuilding, submit,
   };
 }

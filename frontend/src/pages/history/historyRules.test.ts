@@ -80,6 +80,13 @@ describe('historyRules (D9)', () => {
   it('changeLines leaves out fields that did not change, and shows round windows and Area shifts in Thai', () => {
     expect(
       changeLines({
+        action: 'ATTENDANCE_ADD',
+        before: null,
+        after: { EventType: 'Break1In', OccurredAt: '2026-10-15T04:00:00Z', Source: 'SupervisorAdd' },
+      }),
+    ).toEqual(['รายการ: – → กลับจากพักรอบ 1', 'เวลา: – → 15/10 11:00', 'ที่มา: – → หัวหน้าเติมเวลา']);
+    expect(
+      changeLines({
         action: 'ATTENDANCE_EDIT',
         before: { EventType: 'ShiftOut', OccurredAt: '2026-10-15T11:58:00Z', Source: 'Scan' },
         after: { EventType: 'ShiftOut', OccurredAt: '2026-10-15T11:30:00Z', Source: 'AdminEdit' },

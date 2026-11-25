@@ -1,6 +1,7 @@
 import type { Location } from 'react-router';
 import { useLocation } from 'react-router';
 import type { LoginRequest } from '../../shared/api/types';
+import { cancelPendingLogout } from '../../shared/auth/endSession';
 import { homeOf } from '../../shared/auth/roles';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -24,6 +25,7 @@ export function useLogin(wrongSecretText: string) {
   const from = (location.state as LoginState | null)?.from;
 
   const submit = async (body: LoginRequest) => {
+    cancelPendingLogout();
     try {
       dispatch(setCredentials(await login(body).unwrap()));
     } catch {

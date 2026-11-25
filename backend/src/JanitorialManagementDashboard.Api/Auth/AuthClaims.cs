@@ -9,6 +9,7 @@ public static class AuthClaims
     public const string Username = "preferred_username";
     public const string Name = "name";
     public const string Role = "role";
+    public const string SessionId = "sid";
 
     /// <summary>The role claim, and the "role" the frontend reads: "cleaner", "supervisor" or "admin".</summary>
     public static string ToClaimValue(this UserRole role) => role.ToString().ToLowerInvariant();

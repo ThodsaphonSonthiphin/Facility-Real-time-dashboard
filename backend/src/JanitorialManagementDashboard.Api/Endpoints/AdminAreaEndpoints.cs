@@ -41,11 +41,11 @@ public static class AdminAreaEndpoints
         admin.MapPost("/areas", CreateAsync);
         admin.MapPut("/areas/{id:int}", UpdateAsync);
         admin.MapPost("/areas/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-            OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct) =>
-            SetActiveAsync(id, false, principal, db, clock, mutation, overview, ct));
+            OverviewMutation mutation, OverviewNotifications overview, ScheduleStore store, CancellationToken ct) =>
+            SetActiveAsync(id, false, principal, db, clock, mutation, overview, store, ct));
         admin.MapPost("/areas/{id:int}/activate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-            OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct) =>
-            SetActiveAsync(id, true, principal, db, clock, mutation, overview, ct));
+            OverviewMutation mutation, OverviewNotifications overview, ScheduleStore store, CancellationToken ct) =>
+            SetActiveAsync(id, true, principal, db, clock, mutation, overview, store, ct));
         return app;
     }
 
@@ -221,11 +221,30 @@ public static class AdminAreaEndpoints
             current.FirstOrDefault(u => effectiveByUser[u.Id].Shift == Shift.Day),
             current.FirstOrDefault(u => effectiveByUser[u.Id].Shift == Shift.Night));
         var beforeBuildingId = area.BuildingId;
+        var switchingToDayOnly = area.ShiftPattern == ShiftPattern.DayAndNight && form.Pattern == ShiftPattern.DayOnly;
+        var cleanersChanged = before.DayCleanerId != form.DayCleaner?.Id
+            || before.NightCleanerId != form.NightCleaner?.Id
+            || beforeBuildingId != form.Building.Id
+            || before.ShiftPattern != form.Pattern.ToString();
+
+        // Guard switching DayAndNight -> DayOnly against live/future Night-shift schedules on this Area.
+        if (switchingToDayOnly)
+        {
+            await store.LockRegularScopeAsync(area.BuildingId, Shift.Night, now, ct);
+            var outgoingNightIds = current
+                .Where(u => effectiveByUser[u.Id].Shift == Shift.Night)
+                .Select(u => u.Id)
+                .ToHashSet();
+            if (await HasActiveOrFutureScheduleAsync(db, area.Id, businessDate, Shift.Night, outgoingNightIds, ct))
+            {
+                return Conflict($"พื้นที่ {area.Code} ยังมีตารางงาน/ทำแทน/ย้ายพื้นที่กะดึกตั้งแต่วันนี้เป็นต้นไป ยกเลิกรายการเหล่านั้นก่อนเปลี่ยนเป็นเฉพาะกะเช้า");
+            }
+        }
 
         area.Name = form.Name;
         area.BuildingId = form.Building.Id;
         area.ShiftPattern = form.Pattern;
-        IReadOnlyList<int> affectedCleaners;
+        IReadOnlyList<int> affectedCleaners = [];
         try
         {
             List<PointRoundWindow> nightWindows = form.Pattern == ShiftPattern.DayOnly
@@ -233,14 +252,18 @@ public static class AdminAreaEndpoints
                 : [];
             // Wireframe D10: a day-only Area has no night rounds
             await RoundWindowRemoval.RemoveAsync(db, nightWindows);
-            var apply = await AreaCleaners.ApplyAsync(
-                db, store, area.Id, area.BuildingId, form.DayCleaner, form.NightCleaner, admin.Id, businessDate, now, ct);
-            if (apply.Conflict is { } overlap)
+            if (cleanersChanged)
             {
-                return Conflict($"กะ{ThaiLabels.ShiftName(overlap.Shift)}ของ {overlap.AreaCode} มีแม่บ้านประจำแล้ว ({overlap.HolderName})");
+                var apply = await AreaCleaners.ApplyAsync(
+                    db, store, area.Id, area.BuildingId, form.DayCleaner, form.NightCleaner, admin.Id, businessDate, now, ct);
+                if (apply.Conflict is { } overlap)
+                {
+                    return Conflict($"กะ{ThaiLabels.ShiftName(overlap.Shift)}ของ {overlap.AreaCode} มีแม่บ้านประจำแล้ว ({overlap.HolderName})");
+                }
+
+                affectedCleaners = apply.AffectedCleaners;
             }
 
-            affectedCleaners = apply.AffectedCleaners;
             var after = Snapshot(area, form.DayCleaner, form.NightCleaner);
             if (after != before || nightWindows.Count > 0)
             {
@@ -271,7 +294,7 @@ public static class AdminAreaEndpoints
 
     /// <summary>Wireframe D10: a deactivated Area and its signs leave the Dashboard and cannot be scanned; history stays.</summary>
     private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
-        OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
+        OverviewMutation mutation, OverviewNotifications overview, ScheduleStore store, CancellationToken ct)
     {
         var admin = await CurrentUser.LoadAsync(principal, db);
         if (admin is null)
@@ -295,13 +318,21 @@ public static class AdminAreaEndpoints
             return Conflict(BuildingRules.OffForArea(offCode));
         }
 
-        // facility-0091 decision 2: an Area is turned off only once no active Cleaner holds it (including dated/future baselines)
+        // facility-0091 decision 2: an Area is turned off only once no active Cleaner or live/future schedule holds it.
+        // Lock both shift scope anchors so concurrent schedule writes cannot assign this Area while deactivating.
         if (!active && area.IsActive)
         {
+            await store.LockRegularScopeAsync(area.BuildingId, Shift.Day, now, ct);
+            await store.LockRegularScopeAsync(area.BuildingId, Shift.Night, now, ct);
             var holders = await RegularBaselineOverlap.ActiveAreaHoldersAsync(db, area.Id, businessDate, ct);
             if (AreaRules.DeactivateProblem(area.Code, holders) is { } problem)
             {
                 return Conflict(problem);
+            }
+
+            if (await HasActiveOrFutureScheduleAsync(db, area.Id, businessDate, shiftFilter: null, excludedBaselineUsers: null, ct))
+            {
+                return Conflict($"พื้นที่ {area.Code} ยังมีตารางงาน/ทำแทน/ย้ายพื้นที่ที่ใช้งานอยู่ตั้งแต่วันนี้เป็นต้นไป ยกเลิกรายการเหล่านั้นก่อนปิดใช้งาน");
             }
         }
 
@@ -317,6 +348,89 @@ public static class AdminAreaEndpoints
 
         await overview.CommitAsync(change, ct);
         return Results.Ok(await AdminSetupView.LoadAreaAsync(db, area.Id, businessDate));
+    }
+
+    private static async Task<bool> HasActiveOrFutureScheduleAsync(
+        AppDbContext db,
+        int areaId,
+        DateOnly businessDate,
+        Shift? shiftFilter,
+        HashSet<int>? excludedBaselineUsers,
+        CancellationToken ct)
+    {
+        if (await db.ReliefAssignments.AsNoTracking().AnyAsync(r =>
+            !r.IsCancelled && r.AreaId == areaId && r.ShiftDate >= businessDate
+            && (shiftFilter == null || r.Shift == shiftFilter.Value), ct))
+        {
+            return true;
+        }
+
+        if (await db.ScheduleExceptions.AsNoTracking().AnyAsync(e =>
+            !e.IsCancelled && e.Kind == ScheduleExceptionKind.Area && e.AreaId == areaId && e.ShiftDate >= businessDate
+            && (shiftFilter == null || e.Shift == shiftFilter.Value), ct))
+        {
+            return true;
+        }
+
+        if (await db.CoverAssignments.AsNoTracking().AnyAsync(c =>
+            c.CancelledAt == null && c.AreaId == areaId && c.ShiftDate >= businessDate
+            && (shiftFilter == null || c.Shift == shiftFilter.Value), ct))
+        {
+            return true;
+        }
+
+        if (await db.AreaTransfers.AsNoTracking().AnyAsync(t =>
+            !t.IsCancelled && (t.FromAreaId == areaId || t.ToAreaId == areaId) && t.ShiftDate >= businessDate
+            && (shiftFilter == null || t.Shift == shiftFilter.Value), ct))
+        {
+            return true;
+        }
+
+        if (shiftFilter is Shift targetShift)
+        {
+            var futureBaselineUsers = await db.ScheduleBaselines.AsNoTracking()
+                .Where(b => b.Kind == BaselineKind.Regular
+                    && (b.EffectiveUntil == null || b.EffectiveUntil.Value > businessDate)
+                    && b.Days.Any(d => !d.IsDayOff && d.AreaId == areaId))
+                .Select(b => new { b.UserId, b.EffectiveFrom, b.EffectiveUntil })
+                .ToListAsync(ct);
+            if (futureBaselineUsers.Count > 0)
+            {
+                var candidateIds = futureBaselineUsers.Select(x => x.UserId).Distinct().ToList();
+                var activeUsers = await db.Users.AsNoTracking()
+                    .Where(u => candidateIds.Contains(u.Id) && u.IsActive && u.Role == UserRole.Cleaner)
+                    .ToDictionaryAsync(u => u.Id, ct);
+                var periods = (await db.CleanerProfilePeriods.AsNoTracking()
+                    .Where(p => candidateIds.Contains(p.UserId))
+                    .ToListAsync(ct))
+                    .GroupBy(p => p.UserId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+                foreach (var b in futureBaselineUsers)
+                {
+                    if (!activeUsers.TryGetValue(b.UserId, out var u))
+                    {
+                        continue;
+                    }
+                    if (excludedBaselineUsers is not null && excludedBaselineUsers.Contains(b.UserId) && b.EffectiveFrom <= businessDate)
+                    {
+                        continue;
+                    }
+
+                    var start = b.EffectiveFrom > businessDate ? b.EffectiveFrom : businessDate;
+                    var end = b.EffectiveUntil ?? DateOnly.MaxValue;
+                    var matchesShift = periods.TryGetValue(b.UserId, out var userPeriods) && userPeriods.Count > 0
+                        ? userPeriods.Any(p => p.Kind == CleanerKind.Regular && p.Shift == targetShift
+                            && p.EffectiveFrom < end && (p.EffectiveUntil == null || p.EffectiveUntil.Value > start))
+                        : u.Shift == targetShift;
+                    if (matchesShift)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>The fields Create and Update share; returns the form, or the answer to give instead.</summary>

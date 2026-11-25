@@ -188,4 +188,22 @@ public class LoginThrottleTests
 
         Assert.All(inFlight, gate => Assert.Equal(LoginGate.Allowed, gate));
     }
+
+    [Fact]
+    public void Flooding_with_distinct_keys_stays_bounded_and_preserves_active_locks()
+    {
+        // Lock one attacker pair before flooding.
+        Attempt(5, "user:locked", "203.0.113.99");
+        Assert.Equal(LoginGate.NameLocked, _throttle.TryBeginAttempt("user:locked", "203.0.113.99"));
+
+        // Flood well past MaxEntries within the same window (no keys expired yet).
+        for (var i = 0; i < LoginThrottle.MaxEntries / 2 + 5_000; i++)
+        {
+            _throttle.TryBeginAttempt($"flood:{i}", $"198.51.100.{i}");
+        }
+
+        Assert.True(_throttle.TrackedKeys <= LoginThrottle.MaxEntries + 2);
+        // Actively locked attacker entry must survive eviction of unlocked noise.
+        Assert.Equal(LoginGate.NameLocked, _throttle.TryBeginAttempt("user:locked", "203.0.113.99"));
+    }
 }

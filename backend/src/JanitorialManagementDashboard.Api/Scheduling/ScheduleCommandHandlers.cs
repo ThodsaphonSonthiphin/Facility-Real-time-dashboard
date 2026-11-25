@@ -1133,6 +1133,12 @@ internal static class ScheduleBaselineWrite
                 return ScheduleCommandHandler.Refused(revisions, key,
                     $"ไม่มีสิทธิ์จัดตาราง Area {areaId} ในตึกนั้น");
             }
+
+            if (kind == BaselineKind.Relief && effectiveShift is Shift reliefShift && !area.HasShift(reliefShift))
+            {
+                return ScheduleCommandHandler.Refused(revisions, key,
+                    $"พื้นที่ {area.Code} ทำไม่ได้ในกะ{ThaiLabels.ShiftName(reliefShift)}");
+            }
         }
 
         var versions = await db.ScheduleBaselines.Include(baseline => baseline.Days)
@@ -1168,7 +1174,7 @@ internal static class ScheduleBaselineWrite
             if (kind == BaselineKind.Regular)
             {
                 if (await ValidateRegularDaysAsync(db, payload, target.Shift, effectiveShift!.Value, nextAfterExisting?.EffectiveFrom,
-                    actor.BusinessDate, loadedAreas, updatedDays, revisions, key, ct) is { } regularRefusal)
+                    versions, actor.BusinessDate, loadedAreas, updatedDays, revisions, key, ct) is { } regularRefusal)
                 {
                     return regularRefusal;
                 }
@@ -1234,7 +1240,7 @@ internal static class ScheduleBaselineWrite
         if (kind == BaselineKind.Regular)
         {
             if (await ValidateRegularDaysAsync(db, payload, target.Shift, effectiveShift!.Value, next?.EffectiveFrom,
-                actor.BusinessDate, loadedAreas, created.Days, revisions, key, ct) is { } regularRefusal)
+                versions, actor.BusinessDate, loadedAreas, created.Days, revisions, key, ct) is { } regularRefusal)
             {
                 return regularRefusal;
             }
@@ -1314,10 +1320,28 @@ internal static class ScheduleBaselineWrite
 
     private static async Task<ScheduleCommandApplication?> ValidateRegularDaysAsync(
         AppDbContext db, SchedulePayload.BaselineRequest payload, Shift? priorShift, Shift effectiveShift, DateOnly? nextFrom,
-        DateOnly businessDate, Dictionary<int, Area> loadedAreas, IReadOnlyCollection<ScheduleBaselineDay> days,
-        IReadOnlyDictionary<string, string> revisions, string key, CancellationToken ct)
+        IReadOnlyList<ScheduleBaseline> versions, DateOnly businessDate, Dictionary<int, Area> loadedAreas,
+        IReadOnlyCollection<ScheduleBaselineDay> days, IReadOnlyDictionary<string, string> revisions, string key, CancellationToken ct)
     {
+        var shiftChanged = priorShift != effectiveShift;
+        DateOnly? profileNextFrom = null;
+        List<ScheduleBaseline> laterVersionsInShiftWindow = [];
+        if (shiftChanged)
+        {
+            profileNextFrom = await db.CleanerProfilePeriods.AsNoTracking()
+                .Where(p => p.UserId == payload.UserId && p.EffectiveFrom > payload.EffectiveFrom)
+                .OrderBy(p => p.EffectiveFrom).ThenBy(p => p.Id)
+                .Select(p => (DateOnly?)p.EffectiveFrom)
+                .FirstOrDefaultAsync(ct);
+
+            laterVersionsInShiftWindow = versions
+                .Where(v => v.EffectiveFrom > payload.EffectiveFrom
+                    && (profileNextFrom == null || v.EffectiveFrom < profileNextFrom.Value))
+                .ToList();
+        }
+
         var missingAreaIds = days
+            .Concat(laterVersionsInShiftWindow.SelectMany(v => v.Days))
             .Where(d => !d.IsDayOff && d.AreaId is int aId && !loadedAreas.ContainsKey(aId))
             .Select(d => d.AreaId!.Value)
             .Distinct()
@@ -1344,12 +1368,44 @@ internal static class ScheduleBaselineWrite
             }
         }
 
-        if (priorShift != effectiveShift)
+        if (shiftChanged)
         {
-            if (await CheckShiftChangeConflictsAsync(db, payload.UserId, payload.EffectiveFrom, nextFrom, effectiveShift, ct)
+            // UpdateProfileShiftAsync writes a CleanerProfilePeriod spanning [EffectiveFrom, profileNextFrom), so every
+            // dated record and subsequent baseline version inside that full profile window must be valid for effectiveShift,
+            // while future conflicting profiles are checked across the baseline's own range [EffectiveFrom, nextFrom).
+            if (await CheckShiftChangeConflictsAsync(db, payload.UserId, payload.EffectiveFrom, profileNextFrom, nextFrom, effectiveShift, ct)
                 is { } shiftProblem)
             {
                 return ScheduleCommandHandler.Refused(revisions, key, shiftProblem);
+            }
+
+            foreach (var later in laterVersionsInShiftWindow)
+            {
+                foreach (var cell in later.Days)
+                {
+                    if (!cell.IsDayOff && cell.AreaId is int areaId
+                        && loadedAreas.TryGetValue(areaId, out var area)
+                        && !area.HasShift(effectiveShift))
+                    {
+                        return ScheduleCommandHandler.Refused(revisions, key,
+                            $"พื้นที่ {area.Code} ในตารางตั้งแต่วันที่ {ScheduleCommandHandler.Iso(later.EffectiveFrom)} ทำไม่ได้ในกะ{ThaiLabels.ShiftName(effectiveShift)}");
+                    }
+                }
+
+                var clampedUntil = later.EffectiveUntil is DateOnly lu && profileNextFrom is DateOnly pu
+                    ? (lu < pu ? lu : pu)
+                    : later.EffectiveUntil ?? profileNextFrom;
+                var laterWorkingDays = later.Days
+                    .Where(d => !d.IsDayOff && d.AreaId is not null)
+                    .Select(d => (d.Weekday, d.AreaId!.Value))
+                    .ToList();
+                if (await RegularBaselineOverlap.FindConflictAsync(
+                    db, payload.UserId, later.EffectiveFrom, clampedUntil, effectiveShift, businessDate, laterWorkingDays, loadedAreas, ct)
+                    is { } laterConflict)
+                {
+                    return ScheduleCommandHandler.Refused(revisions, key,
+                        $"พื้นที่ {laterConflict.AreaCode} กะ{ThaiLabels.ShiftName(effectiveShift)} มีแม่บ้านประจำอยู่แล้ว ({laterConflict.HolderName})");
+                }
             }
         }
 
@@ -1369,13 +1425,14 @@ internal static class ScheduleBaselineWrite
     }
 
     private static async Task<string?> CheckShiftChangeConflictsAsync(
-        AppDbContext db, int userId, DateOnly effectiveFrom, DateOnly? nextFrom, Shift effectiveShift, CancellationToken ct)
+        AppDbContext db, int userId, DateOnly effectiveFrom, DateOnly? profileNextFrom, DateOnly? baselineNextFrom,
+        Shift effectiveShift, CancellationToken ct)
     {
         var conflictingException = await db.ScheduleExceptions.AsNoTracking()
             .Where(row => row.UserId == userId
                 && !row.IsCancelled
                 && row.ShiftDate >= effectiveFrom
-                && (nextFrom == null || row.ShiftDate < nextFrom.Value)
+                && (profileNextFrom == null || row.ShiftDate < profileNextFrom.Value)
                 && row.Shift != effectiveShift)
             .OrderBy(row => row.ShiftDate).ThenBy(row => row.Id)
             .FirstOrDefaultAsync(ct);
@@ -1391,7 +1448,7 @@ internal static class ScheduleBaselineWrite
             .Where(row => row.PersonId == userId
                 && !row.IsCancelled
                 && row.ShiftDate >= effectiveFrom
-                && (nextFrom == null || row.ShiftDate < nextFrom.Value)
+                && (profileNextFrom == null || row.ShiftDate < profileNextFrom.Value)
                 && row.Shift != effectiveShift)
             .OrderBy(row => row.ShiftDate).ThenBy(row => row.Id)
             .FirstOrDefaultAsync(ct);
@@ -1403,7 +1460,7 @@ internal static class ScheduleBaselineWrite
         var conflictingAttendance = await db.ShiftAttendances.AsNoTracking()
             .Where(row => row.UserId == userId
                 && row.ShiftDate >= effectiveFrom
-                && (nextFrom == null || row.ShiftDate < nextFrom.Value)
+                && (profileNextFrom == null || row.ShiftDate < profileNextFrom.Value)
                 && row.Shift != effectiveShift)
             .OrderBy(row => row.ShiftDate).ThenBy(row => row.Id)
             .FirstOrDefaultAsync(ct);
@@ -1416,7 +1473,7 @@ internal static class ScheduleBaselineWrite
             .Where(row => row.UserId == userId
                 && row.CancelledAt == null
                 && row.ShiftDate >= effectiveFrom
-                && (nextFrom == null || row.ShiftDate < nextFrom.Value)
+                && (profileNextFrom == null || row.ShiftDate < profileNextFrom.Value)
                 && row.Shift != effectiveShift)
             .OrderBy(row => row.ShiftDate).ThenBy(row => row.Id)
             .FirstOrDefaultAsync(ct);
@@ -1428,7 +1485,7 @@ internal static class ScheduleBaselineWrite
         var futureConflictingProfile = await db.CleanerProfilePeriods.AsNoTracking()
             .Where(p => p.UserId == userId
                 && p.EffectiveFrom > effectiveFrom
-                && (nextFrom == null || p.EffectiveFrom < nextFrom.Value)
+                && (baselineNextFrom == null || p.EffectiveFrom < baselineNextFrom.Value)
                 && (p.Shift != effectiveShift || p.Kind != CleanerKind.Regular))
             .OrderBy(p => p.EffectiveFrom).ThenBy(p => p.Id)
             .FirstOrDefaultAsync(ct);
@@ -1641,19 +1698,35 @@ internal static class ScheduleDatedWrite
         }
 
         var scopes = new List<ScheduleScopeKey>();
-        var person = await db.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Id == slot.UserId, ct);
-        if (person?.BuildingId is int projected)
+        var profiles = await db.CleanerProfilePeriods.AsNoTracking()
+            .Where(profile => profile.UserId == slot.UserId)
+            .OrderBy(profile => profile.EffectiveFrom).ThenBy(profile => profile.Id)
+            .ToListAsync(ct);
+        if (profiles.Count > 0)
         {
-            scopes.Add(new ScheduleScopeKey(projected, slot.Shift));
-        }
-
-        if (person?.AreaId is int areaId)
-        {
-            var building = await db.Areas.AsNoTracking().Where(area => area.Id == areaId)
-                .Select(area => (int?)area.BuildingId).FirstOrDefaultAsync(ct);
-            if (building is int fromArea)
+            var active = profiles.LastOrDefault(profile =>
+                ScheduleResolver.Applies(profile.EffectiveFrom, profile.EffectiveUntil, slot.Date));
+            if (active?.HomeBuildingId is int datedBuilding)
             {
-                scopes.Add(new ScheduleScopeKey(fromArea, slot.Shift));
+                scopes.Add(new ScheduleScopeKey(datedBuilding, slot.Shift));
+            }
+        }
+        else
+        {
+            var person = await db.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Id == slot.UserId, ct);
+            if (person?.BuildingId is int projected)
+            {
+                scopes.Add(new ScheduleScopeKey(projected, slot.Shift));
+            }
+
+            if (person?.AreaId is int areaId)
+            {
+                var building = await db.Areas.AsNoTracking().Where(area => area.Id == areaId)
+                    .Select(area => (int?)area.BuildingId).FirstOrDefaultAsync(ct);
+                if (building is int fromArea)
+                {
+                    scopes.Add(new ScheduleScopeKey(fromArea, slot.Shift));
+                }
             }
         }
 
@@ -1848,7 +1921,7 @@ internal static class ScheduleDatedWrite
             revisions[kindKey] = ScheduleCommandHandler.Revision(live.Revision);
         }
 
-        return new ScheduleCommandApplication(revisions, []);
+        return new ScheduleCommandApplication(revisions, [], [new ScheduleScopeKey(buildingId, slot.Shift)]);
     }
 
     /// <summary>

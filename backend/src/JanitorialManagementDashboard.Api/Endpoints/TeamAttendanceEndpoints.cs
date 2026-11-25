@@ -319,7 +319,7 @@ public static class TeamAttendanceEndpoints
             Shift = slot.Shift,
             EventType = eventType,
             OccurredAt = at,
-            Source = AttendanceSource.SupervisorAdd,
+            Source = actor.Role == UserRole.Admin ? AttendanceSource.AdminAdd : AttendanceSource.SupervisorAdd,
             SignId = null,
             CreatedAt = now,
         };

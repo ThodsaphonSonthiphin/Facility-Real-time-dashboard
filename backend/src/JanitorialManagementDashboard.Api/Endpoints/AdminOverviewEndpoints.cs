@@ -4,6 +4,7 @@ using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
 using JanitorialManagementDashboard.Application.Common;
 using JanitorialManagementDashboard.Application.Overview;
+using JanitorialManagementDashboard.Application.Rounds;
 using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Enums;
@@ -517,7 +518,7 @@ public static class AdminOverviewEndpoints
 
             foreach (var window in image.Windows
                 .Where(w => w.Shift == slot.Shift && w.CreatedAt <= evaluationUtc && activePoints.Contains(w.PointId))
-                .OrderBy(w => w.Start).ThenBy(w => w.Id))
+                .OrderBy(w => RoundWindowRules.MinutesIntoShift(slot.Shift, w.Start)).ThenBy(w => w.Id))
             {
                 if (ShiftCalendar.ToUtc(slot, window.Start) > evaluationUtc)
                 {
@@ -572,7 +573,7 @@ public static class AdminOverviewEndpoints
 
         return details
             .OrderBy(d => d.SortOrder)
-            .ThenBy(d => d.Start)
+            .ThenBy(d => d.Start is { } s ? RoundWindowRules.MinutesIntoShift(slot.Shift, s) : int.MaxValue)
             .ThenBy(d => d.Work.PointId)
             .ToArray();
     }

@@ -49,6 +49,8 @@ public static class ScheduleSync
         if (kind == CleanerKind.Regular)
         {
             await SyncRegularBaselineAsync(db, anchor, cleaner, actorId, effectiveFrom, nowUtc, clearFutureAreaId, ct);
+            // Switching a Cleaner from Relief to Regular (or deactivating) must also close/clear active/future relief baselines.
+            await ClearReliefBaselinesAsync(db, anchor, cleaner.Id, effectiveFrom, nowUtc, ct);
         }
         else if (kind == CleanerKind.Relief)
         {
@@ -56,7 +58,48 @@ public static class ScheduleSync
             // they cannot keep blocking Area deactivation or resurrect an Area if switched back to Regular later.
             await ClearRegularBaselinesAsync(db, anchor, cleaner, actorId, effectiveFrom, nowUtc,
                 clearAllFuture: true, clearFutureAreaId: null, ct: ct);
+            if (!cleaner.IsActive)
+            {
+                await ClearReliefBaselinesAsync(db, anchor, cleaner.Id, effectiveFrom, nowUtc, ct);
+            }
         }
+    }
+
+    private static async Task ClearReliefBaselinesAsync(
+        AppDbContext db,
+        ScheduleBaselineAnchor anchor,
+        int userId,
+        DateOnly effectiveFrom,
+        DateTime nowUtc,
+        CancellationToken ct)
+    {
+        var reliefBaselines = await db.ScheduleBaselines
+            .Include(b => b.Days)
+            .Where(b => b.UserId == userId
+                && b.Kind == BaselineKind.Relief
+                && (b.EffectiveUntil == null || b.EffectiveUntil.Value > effectiveFrom))
+            .ToListAsync(ct);
+        if (reliefBaselines.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var baseline in reliefBaselines)
+        {
+            if (baseline.EffectiveFrom >= effectiveFrom)
+            {
+                db.ScheduleBaselines.Remove(baseline);
+            }
+            else
+            {
+                baseline.EffectiveUntil = effectiveFrom;
+                baseline.Revision += 1;
+                baseline.UpdatedAt = nowUtc;
+            }
+        }
+
+        anchor.Revision += 1;
+        anchor.UpdatedAt = nowUtc;
     }
 
     private static void SyncProfile(
@@ -246,11 +289,15 @@ public static class ScheduleSync
             ScheduleResolver.Applies(b.EffectiveFrom, b.EffectiveUntil, effectiveFrom));
         sameDayBaseline ??= baselines.FirstOrDefault(b => b.EffectiveFrom == effectiveFrom);
 
+        var scopedAreaId = !clearAllFuture ? clearFutureAreaId : null;
         var anchorDirty = false;
         if (sameDayBaseline is not null)
         {
             var changed = false;
-            foreach (var day in sameDayBaseline.Days.Where(d => !d.IsDayOff && (d.AreaId != null || d.BreakGroup != null)))
+            foreach (var day in sameDayBaseline.Days.Where(d => !d.IsDayOff
+                && (scopedAreaId is int onlyArea
+                    ? d.AreaId == onlyArea
+                    : (d.AreaId != null || d.BreakGroup != null))))
             {
                 day.AreaId = null;
                 day.BreakGroup = null;
@@ -264,7 +311,8 @@ public static class ScheduleSync
                 anchorDirty = true;
             }
         }
-        else if (currentBaseline is not null && currentBaseline.Days.Any(d => !d.IsDayOff && d.AreaId != null))
+        else if (currentBaseline is not null && currentBaseline.Days.Any(d => !d.IsDayOff
+            && (scopedAreaId is int onlyArea ? d.AreaId == onlyArea : d.AreaId != null)))
         {
             if (currentBaseline.EffectiveUntil is null || currentBaseline.EffectiveUntil > effectiveFrom)
             {
@@ -290,11 +338,12 @@ public static class ScheduleSync
             foreach (var weekday in Enum.GetValues<DayOfWeek>())
             {
                 var prior = currentBaseline.Days.FirstOrDefault(d => d.Weekday == weekday);
+                var keepOtherArea = scopedAreaId is int onlyArea && prior is { IsDayOff: false, AreaId: int priorArea } && priorArea != onlyArea;
                 cleared.Days.Add(new ScheduleBaselineDay
                 {
                     Weekday = weekday,
-                    AreaId = null,
-                    BreakGroup = null,
+                    AreaId = keepOtherArea ? prior!.AreaId : null,
+                    BreakGroup = keepOtherArea ? prior!.BreakGroup : null,
                     IsDayOff = prior?.IsDayOff ?? false,
                 });
             }

@@ -617,4 +617,57 @@ public class OverviewProjectionTests
         Assert.DoesNotContain(OverviewGroupKeys.Unassigned, historical.Groups);
         Assert.DoesNotContain(OverviewGroupKeys.NoRounds, historical.Groups);
     }
+
+    [Fact]
+    public void Upcoming_and_no_round_active_points_still_surface_issue_group()
+    {
+        var image = Image(
+            areas: [A(10), A(12)],
+            points: [P(100, 10), P(102, 12)],
+            windows: [W(1000, 100, 15)]);
+        var priorUpcomingIssue = Scan(1, 100, 900, 10, At(10).AddDays(-1), Placement.OnTime,
+            CleaningStatus.Issue, Day.ShiftDate.AddDays(-1));
+        var priorNoRoundsIssue = Scan(2, 102, null, 10, At(9).AddDays(-1), Placement.OffRound,
+            CleaningStatus.Issue, Day.ShiftDate.AddDays(-1));
+
+        var snapshot = Build(Timeline(image), Facts([priorUpcomingIssue, priorNoRoundsIssue]), Running(12));
+
+        var upcoming = Assert.Single(OverviewProjection.Members(snapshot, OverviewGroupKeys.Upcoming));
+        var noRounds = Assert.Single(OverviewProjection.Members(snapshot, OverviewGroupKeys.NoRounds));
+        var issues = OverviewProjection.Members(snapshot, OverviewGroupKeys.Issue);
+
+        Assert.Equal(10, upcoming.Id);
+        Assert.True(upcoming.Work.Issue);
+        Assert.Equal(0, upcoming.Work.DuePoints);
+        Assert.True(Assert.Single(upcoming.Points).IsIssue);
+
+        Assert.Equal(12, noRounds.Id);
+        Assert.True(noRounds.Work.Issue);
+        Assert.Equal(0, noRounds.Work.DuePoints);
+        Assert.True(Assert.Single(noRounds.Points).IsIssue);
+
+        Assert.Equal(new[] { 10, 12 }, issues.Select(a => a.Id));
+    }
+
+    [Fact]
+    public void Night_shift_points_sort_by_minutes_into_shift_not_raw_time()
+    {
+        var nightSlot = new ShiftSlot(new(2026, 11, 16), Shift.Night);
+        var nightEval = ShiftCalendar.ToUtc(nightSlot, new(20, 0));
+        var nightMoment = new OverviewMoment("running", nightEval, ShiftCalendar.EndUtc(nightSlot), true);
+        var image = Image(
+            areas: [A(10, pattern: ShiftPattern.DayAndNight)],
+            points: [P(100, 10), P(101, 10)],
+            windows:
+            [
+                new(2001, 101, Shift.Night, new(1, 0), new(3, 0), Baseline),
+                new(2000, 100, Shift.Night, new(21, 0), new(23, 0), Baseline),
+            ]);
+
+        var snapshot = OverviewProjection.Build(nightSlot, nightMoment, Timeline(image), Facts(), Sections, null);
+        var area = Assert.Single(snapshot.Areas);
+
+        // 21:00 (point 100) happens earlier in the Night shift than 01:00 (point 101).
+        Assert.Equal(new[] { 100, 101 }, area.Points.Select(p => p.PointId));
+    }
 }

@@ -144,12 +144,34 @@ public static class ScheduleResolver
         }
 
         // A22: a transfer is a plan for later in the same shift, so it never rewrites the day's Area; an instruction whose
-        // source Area no longer matches the plan is shown for correction instead.
-        var transfers = input.Transfers.Where(x => !x.Cancelled && x.ShiftDate == date).ToList();
-        if (area.Value is int plannedArea && transfers.Exists(x => x.FromAreaId != plannedArea))
+        // source Area no longer matches the plan (or the destination of a prior confirmed move in a chain) is shown for correction.
+        var transfers = input.Transfers
+            .Where(x => !x.Cancelled && x.ShiftDate == date)
+            .OrderBy(x => x.Id)
+            .ToList();
+        if (area.Value is int plannedArea)
         {
-            problems.Add(new ScheduleProblem(ProblemTransferOriginMismatch,
-                "คำสั่งย้ายมี Area ต้นทางไม่ตรงกับ Area ของแผนในวันนี้ ต้องแก้ไขก่อนยืนยันการย้าย", date));
+            var expectedOrigin = plannedArea;
+            var originMismatch = false;
+            foreach (var transfer in transfers)
+            {
+                if (transfer.FromAreaId != expectedOrigin)
+                {
+                    originMismatch = true;
+                    break;
+                }
+
+                if (transfer.ConfirmedAt is not null)
+                {
+                    expectedOrigin = transfer.ToAreaId;
+                }
+            }
+
+            if (originMismatch)
+            {
+                problems.Add(new ScheduleProblem(ProblemTransferOriginMismatch,
+                    "คำสั่งย้ายมี Area ต้นทางไม่ตรงกับ Area ของแผนในวันนี้ ต้องแก้ไขก่อนยืนยันการย้าย", date));
+            }
         }
 
         var availability =

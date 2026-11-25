@@ -238,4 +238,68 @@ public class AttendanceBoardEndpointTests
         await Task.Delay(500);
         Assert.False(cleanerGot.Task.IsCompleted); // facility-0058
     }
+
+    [Fact]
+    public async Task Weekly_day_off_or_whole_shift_leave_regular_cleaner_does_not_displace_relief_or_mark_area_covered()
+    {
+        using var factory = ReliefApi.NewFactory();
+        var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var date = DateOnly.FromDateTime(factory.Clock.GetUtcNow().ToOffset(TimeSpan.FromHours(7)).DateTime).AddDays(1);
+        var weekStart = date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
+        var dateString = ReliefApi.Iso(date);
+        var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, date.AddDays(-7));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", date.AddDays(-7), "AR01", breakGroup: 1);
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000003", CleanerKind.Regular, Shift.Day, date.AddDays(-7));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000003", date.AddDays(-7), "AR02", breakGroup: 1);
+
+        // 1000001 takes WeeklyDayOff on date; 1000003 takes whole-shift Leave on date.
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        var e1003 = await AdminSetupApi.UserIdAsync(factory, "1000003");
+        var adminId = adminAuth.User.Id;
+        var shiftStart = new DateTimeOffset(date.ToDateTime(new TimeOnly(7, 0)), TimeSpan.FromHours(7)).UtcDateTime;
+        var shiftEnd = new DateTimeOffset(date.ToDateTime(new TimeOnly(19, 0)), TimeSpan.FromHours(7)).UtcDateTime;
+        await factory.WithDbAsync(async db =>
+        {
+            var off = new WeeklyDayOff
+            {
+                UserId = e1001, WeekStart = weekStart, CreatedById = adminId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            off.Choices.Add(new WeeklyDayOffChoice { OffDate = date });
+            db.WeeklyDayOffs.Add(off);
+            db.ScheduleExceptions.Add(new ScheduleException
+            {
+                UserId = e1003, Kind = ScheduleExceptionKind.Leave, ShiftDate = date, Shift = Shift.Day,
+                StartsAt = shiftStart, EndsAt = shiftEnd, CreatedById = adminId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        // Assign Relief E3001 to AR01 and have them check in; leave AR02 without a replacement.
+        var relief = await ReliefApi.AddReliefAsync(factory, admin, "E3001", "A", Shift.Day);
+        var (reliefClient, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "E3001", ReliefApi.Phone("E3001"));
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, date.AddDays(-7));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var assigned = await ReliefApi.AssignAsync(supervisor, ReliefApi.Assignment(relief, ar01, date, buildingA, breakGroup: 1));
+        Assert.Equal(ReliefApi.Committed, assigned.Answer!.Outcome);
+
+        factory.Clock.SetUtcNow(new DateTimeOffset(date.ToDateTime(new TimeOnly(7, 5)), TimeSpan.FromHours(7)));
+        Assert.Equal(HttpStatusCode.OK, (await EffectiveAttendanceApi.RecordAsync(reliefClient, "ShiftIn", "token-checkin-ar01")).StatusCode);
+
+        var board = await AdminAttendanceApi.BoardAsync(admin, $"?shiftDate={dateString}&shift=Day");
+        var rowAr01 = board.Rows.Single(r => r.AreaId == ar01);
+        var rowAr02 = board.Rows.Single(r => r.AreaId == ar02);
+
+        // AR01 must show the working Relief Cleaner as primary with their Shift-In, not the off-duty 1000001.
+        Assert.Equal("E3001", rowAr01.Cleaner!.EmployeeId);
+        Assert.Equal("Working", rowAr01.State);
+        Assert.Single(rowAr01.Events);
+
+        // AR02 has only an on-leave Regular Cleaner and no replacement, so it must be unassigned and empty.
+        Assert.Null(rowAr02.Cleaner);
+        Assert.Equal("Empty", rowAr02.State);
+        Assert.Equal("unassigned", rowAr02.Entry);
+    }
 }

@@ -95,7 +95,7 @@ public sealed class ScheduleCommandService(
             return Refused(command.CommandId, ScheduleCommandOutcome.Expired);
         }
 
-        if (!_handlers.TryGetValue(command.Kind, out var handler))
+        if (string.IsNullOrEmpty(command.Kind) || !_handlers.TryGetValue(command.Kind, out var handler))
         {
             return Refused(command.CommandId, ScheduleCommandOutcome.UnknownKind);
         }

@@ -191,7 +191,7 @@ public static class AdminPointEndpoints
 
         foreach (var window in request.RoundWindows)
         {
-            if (window.Shift is not { } shift || !Enum.IsDefined(shift))
+            if (window is null || window.Shift is not { } shift || !Enum.IsDefined(shift))
             {
                 error = "ต้องระบุกะของทุกช่วงรอบ";
                 return false;

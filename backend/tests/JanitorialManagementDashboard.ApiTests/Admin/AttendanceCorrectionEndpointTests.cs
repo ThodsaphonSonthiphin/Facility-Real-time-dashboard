@@ -386,4 +386,90 @@ public class AttendanceCorrectionEndpointTests
         Assert.Empty(await AdminSetupApi.ReadAsync(factory, db => db.CleanerProfilePeriods
             .Where(profile => profile.UserId == e1003).ToListAsync()));
     }
+
+    [Fact]
+    public async Task Admin_closes_missing_attendance_when_transfer_was_left_pending_and_logs_origin_area()
+    {
+        using var factory = TransferApi.NewFactory();
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var destination = await TestData.AddAreaAsync(factory, "AR03", "A");
+        var origin = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var (cleaner, auth, _) = await AuthApi.LoggedInAsync(factory);
+        await TransferApi.CheckInAsync(factory, cleaner, TransferApi.Thai(7, 5));
+        await TransferApi.InstructForIdAsync(factory, admin, auth.User.Id, origin, destination, TransferApi.Thai(13, 0));
+
+        // Shift ends without the Cleaner ever confirming arrival or scanning Shift-Out: MissingAttendance alert opens.
+        factory.Clock.SetUtcNow(TransferApi.Thai(19, 30));
+        Assert.Contains(await AdminAttendanceApi.AlertsAsync(admin), a => a.Kind == "MissingAttendance");
+
+        var fill = await AdminAttendanceApi.CorrectAsync(admin, auth.User.Id, Oct8, "Day", "ShiftOut", "18:55", "ไม่ยืนยันย้ายพื้นที่และลืมสแกนออก");
+
+        Assert.Equal(HttpStatusCode.OK, fill.StatusCode);
+        var shiftOut = (await EventsAsync(factory, "1000001")).Single(e => e.EventType == AttendanceEvent.ShiftOut);
+        Assert.Equal(origin, shiftOut.AreaId);
+        Assert.DoesNotContain(await AdminAttendanceApi.AlertsAsync(admin), a => a.Kind == "MissingAttendance");
+        var audit = (await AdminSetupApi.AuditAsync(factory)).Single(a => a.Action == "ATTENDANCE_ADD");
+        Assert.Contains("AR01", audit.Summary);
+    }
+
+    [Fact]
+    public async Task Admin_closes_missing_attendance_for_deactivated_cleaner_with_existing_check_in()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (cleaner, _, _) = await AuthApi.LoggedInAsync(factory);
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        await AttendanceApi.CheckInAsync(factory, cleaner, ThaiClock.At(8, 6, 50));
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.SingleAsync(u => u.Id == e1001)).IsActive = false;
+            await db.SaveChangesAsync();
+        });
+        factory.Clock.SetUtcNow(ThaiClock.At(9, 8, 0));
+        Assert.Contains(await AdminAttendanceApi.AlertsAsync(admin), a => a.Kind == "MissingAttendance" && a.Person.Id == e1001);
+
+        var fill = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Day", "ShiftOut", "18:58", "ลาออกแล้วแต่ลืมสแกนออกวันสุดท้าย");
+
+        Assert.Equal(HttpStatusCode.OK, fill.StatusCode);
+        Assert.DoesNotContain(await AdminAttendanceApi.AlertsAsync(admin), a => a.Kind == "MissingAttendance" && a.Person.Id == e1001);
+    }
+
+    [Fact]
+    public async Task Admin_edit_audit_summary_uses_existing_event_area_not_stale_account_area()
+    {
+        using var factory = new JanitorialApiFactory();
+        await TestData.AddAreaAsync(factory, "AR03", "A");
+        await ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, new DateOnly(2026, 10, 1));
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", new DateOnly(2026, 10, 1), "AR03");
+        var (admin, _, _) = await AuthApi.LoggedInAdminAsync(factory);
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 10, 0));
+        var e1001 = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        Assert.Equal(HttpStatusCode.OK, (await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Day", "ShiftIn", "06:58", "ลืมสแกน")).StatusCode);
+
+        // Even if the baseline no longer resolves an Area for that day (e.g., pending transfer), editing logs the event's AR03, not stale User.AreaId (AR01).
+        await factory.WithDbAsync(async db =>
+        {
+            var transfer = new AreaTransfer
+            {
+                PersonId = e1001,
+                ShiftDate = Oct8,
+                Shift = Shift.Day,
+                FromAreaId = await db.Areas.Where(a => a.Code == "AR03").Select(a => a.Id).SingleAsync(),
+                ToAreaId = await db.Areas.Where(a => a.Code == "AR02").Select(a => a.Id).SingleAsync(),
+                EffectiveAt = ThaiClock.At(8, 9, 0).UtcDateTime,
+                CreatedById = e1001,
+                CreatedAt = ThaiClock.At(8, 8, 0).UtcDateTime,
+                UpdatedAt = ThaiClock.At(8, 8, 0).UtcDateTime,
+            };
+            db.AreaTransfers.Add(transfer);
+            await db.SaveChangesAsync();
+        });
+
+        var edit = await AdminAttendanceApi.CorrectAsync(admin, e1001, Oct8, "Day", "ShiftIn", "06:55", "ปรับเวลาเข้า");
+
+        Assert.Equal(HttpStatusCode.OK, edit.StatusCode);
+        var audit = (await AdminSetupApi.AuditAsync(factory)).Single(a => a.Action == "ATTENDANCE_EDIT");
+        Assert.Contains("AR03", audit.Summary);
+        Assert.DoesNotContain("AR01", audit.Summary);
+    }
 }

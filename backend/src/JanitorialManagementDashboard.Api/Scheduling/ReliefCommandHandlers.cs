@@ -163,6 +163,12 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
                 return Refused(revisions, key, "คนที่ถูกแทนต้องเป็นแม่บ้านประจำ ไม่ใช่สแปร์");
             }
 
+            var replacedShift = replacedProfile is not null ? replacedProfile.Shift : replaced.Shift;
+            if (replacedShift is Shift rShift && rShift != relief.Shift)
+            {
+                return Refused(revisions, key, "คนที่ถูกแทนอยู่คนละกะกับงานสแปร์นี้ จึงแทนกันไม่ได้");
+            }
+
             var day = await store.ReadPersonDayAsync(replacedUserId, relief.ShiftDate, relief.Shift, ct);
             if (day is null || day.Area.Value != relief.AreaId)
             {
@@ -283,7 +289,10 @@ public sealed class AssignReliefHandler(TimeProvider clock, ScheduleStore store)
                 attestationOf = created.AgreementReported ? request.ActorId : (int?)null,
             }), reason));
         revisions[key] = Revision(created.Revision);
-        return new ScheduleCommandApplication(revisions, []);
+        // The receipt belongs to the destination authority that committed this loan; recording the source building here
+        // would deny a destination Supervisor from reading back or retrying their own receipt when they do not manage
+        // the source building (spec §11).
+        return new ScheduleCommandApplication(revisions, [], [new ScheduleScopeKey(area.BuildingId, relief.Shift)]);
     }
 
     /// <summary>

@@ -17,12 +17,21 @@ let sessionEpoch = 0;
 /** A stalled connection must not keep the page-load splash up forever (ADR 0068). */
 const REFRESH_TIMEOUT_MS = 15_000;
 
+export function currentSessionEpoch(): number {
+  return sessionEpoch;
+}
+
+export function advanceSessionEpoch(): number {
+  sessionEpoch += 1;
+  return sessionEpoch;
+}
+
 /**
  * Called by endSession so a refresh already running cannot log the tab back in (its result is ignored), and so the
  * logout request can wait for that refresh's cookie. Resolves when no refresh is in flight.
  */
 export function abandonSession(): Promise<unknown> {
-  sessionEpoch += 1;
+  advanceSessionEpoch();
   return inflight ?? Promise.resolve();
 }
 

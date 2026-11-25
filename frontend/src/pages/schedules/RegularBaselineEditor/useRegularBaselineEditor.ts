@@ -97,7 +97,8 @@ export function useRegularBaselineEditor(props: RegularBaselineEditorProps) {
     ?? (effectiveRow?.regularBaselineRevision === version && effectiveRow ? effectiveRow : base))];
   const liveLines = incoming && live ? [line(incoming)] : undefined;
   const editor = useScheduleReview({
-    command, dirty: edited, problems, beforeAfter, phone: props.phone, onClose: props.onClose, changing: changes || !current?.edit?.canChange,
+    command, dirty: edited, problems, beforeAfter, phone: props.phone, onClose: props.onClose,
+    changing: changes || Boolean(effectiveFrom && !target.isFetching && !current?.edit?.canChange),
     verifyRetryScope: async () => {
       const week = !needsTargetFetch
         ? await props.reloadEditorWeek() : await target.refetch().unwrap();

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Domain.Entities;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -313,5 +314,69 @@ public class CoverFromAlertTests
         var response = await cleaner.GetAsync($"{CandidatesPath}?areaId=1&shiftDate=2026-10-08&shift=Day");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Candidates_include_working_relief_and_exclude_weekly_off_or_confirmed_transfer_destination()
+    {
+        using var factory = Scheduling.ReliefApi.NewFactory();
+        var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var date = DateOnly.FromDateTime(factory.Clock.GetUtcNow().ToOffset(TimeSpan.FromHours(7)).DateTime).AddDays(1);
+        var weekStart = date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
+        var dateString = Scheduling.ReliefApi.Iso(date);
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
+        var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        var ar03 = await TestData.AddAreaAsync(factory, "AR03", "A");
+        await TestData.AddCleanerAsync(factory, "E1009", Shift.Day, "AR03");
+        await Scheduling.ScheduleWriteApi.AddProfileAsync(factory, "1000001", CleanerKind.Regular, Shift.Day, date.AddDays(-7));
+        await Scheduling.ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "1000001", date.AddDays(-7), "AR01", breakGroup: 1);
+        await Scheduling.ScheduleWriteApi.AddProfileAsync(factory, "E1009", CleanerKind.Regular, Shift.Day, date.AddDays(-7));
+        await Scheduling.ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "E1009", date.AddDays(-7), "AR03", breakGroup: 1);
+
+        // E1009 takes WeeklyDayOff on date and does not check in -> excluded from candidates.
+        var e1009Id = await AdminSetupApi.UserIdAsync(factory, "E1009");
+        var e1001Id = await AdminSetupApi.UserIdAsync(factory, "1000001");
+        var adminId = adminAuth.User.Id;
+        await factory.WithDbAsync(async db =>
+        {
+            var off = new JanitorialManagementDashboard.Domain.Entities.Scheduling.WeeklyDayOff
+            {
+                UserId = e1009Id, WeekStart = weekStart, CreatedById = adminId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            off.Choices.Add(new JanitorialManagementDashboard.Domain.Entities.Scheduling.WeeklyDayOffChoice { OffDate = date });
+            db.WeeklyDayOffs.Add(off);
+
+            // 1000001 has a confirmed transfer AR01 -> AR02 -> already working in AR02, so excluded from AR02 candidates.
+            var transfer = new JanitorialManagementDashboard.Domain.Entities.Scheduling.AreaTransfer
+            {
+                PersonId = e1001Id, ShiftDate = date, Shift = Shift.Day, FromAreaId = ar01, ToAreaId = ar02,
+                EffectiveAt = new DateTimeOffset(date.ToDateTime(new TimeOnly(9, 0)), TimeSpan.FromHours(7)).UtcDateTime,
+                CreatedById = adminId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            db.AreaTransfers.Add(transfer);
+            await db.SaveChangesAsync();
+            var ar02SignId = await db.Signs.Where(s => s.Code == "AR02-IN").Select(s => s.Id).SingleAsync();
+            db.AreaTransferConfirmations.Add(new AreaTransferConfirmation
+            {
+                TransferId = transfer.Id, ConfirmedById = e1001Id, AreaId = ar02, SignId = ar02SignId,
+                OccurredAt = new DateTimeOffset(date.ToDateTime(new TimeOnly(9, 5)), TimeSpan.FromHours(7)).UtcDateTime,
+                Source = AttendanceSource.Scan,
+                CreatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        // Relief E3001 is assigned to AR03 -> working today in AR03, so included as a candidate to cover AR02!
+        var relief = await Scheduling.ReliefApi.AddReliefAsync(factory, admin, "E3001", "A", Shift.Day);
+        await TestData.AddSupervisorScopeAsync(factory, "2000001", "A", Shift.Day, date.AddDays(-7));
+        var (supervisor, _, _) = await AuthApi.LoggedInAsEmployeeAsync(factory, "2000001", "0820000001");
+        var assigned = await Scheduling.ReliefApi.AssignAsync(supervisor, Scheduling.ReliefApi.Assignment(relief, ar03, date, buildingA, breakGroup: 1));
+        Assert.Equal(Scheduling.ReliefApi.Committed, assigned.Answer!.Outcome);
+
+        var candidates = await CandidatesAsync(admin, $"?areaId={ar02}&shiftDate={dateString}&shift=Day");
+        var candidate = Assert.Single(candidates);
+        Assert.Equal("E3001", candidate.EmployeeId);
+        Assert.Equal("AR03", candidate.AreaCode);
     }
 }

@@ -312,7 +312,8 @@ public static class CoverAssignmentEndpoints
     /// not already covering this Area. Whoever scanned this Area's signs in the shift comes first, then who checked in.
     /// </summary>
     private static async Task<IResult> ListCandidatesAsync(
-        int? areaId, string? shiftDate, string? shift, ClaimsPrincipal principal, AppDbContext db, AttendanceSettings settings)
+        int? areaId, string? shiftDate, string? shift, ClaimsPrincipal principal, AppDbContext db,
+        ScheduleStore store, AttendanceSettings settings, CancellationToken ct)
     {
         if (await CurrentUser.LoadAsync(principal, db) is null)
         {
@@ -324,7 +325,7 @@ public static class CoverAssignmentEndpoints
             return ApiResults.Message(StatusCodes.Status400BadRequest, "เลือกพื้นที่ วันที่ และกะเช้าหรือกะดึกให้ครบ");
         }
 
-        var area = await db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive);
+        var area = await db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive, ct);
         if (area is null)
         {
             return ApiResults.Message(StatusCodes.Status404NotFound, "ไม่พบพื้นที่นี้ หรือปิดใช้งานแล้ว");
@@ -339,35 +340,78 @@ public static class CoverAssignmentEndpoints
         var allCleaners = await db.Users.AsNoTracking()
             .Include(u => u.Area)
             .Where(u => u.Role == UserRole.Cleaner && u.IsActive)
-            .ToListAsync();
+            .ToListAsync(ct);
         var effectiveByUser = await CleanerEffectiveAssignment.ResolveForDateAsync(
-            db, allCleaners, slot.ShiftDate, useFallbackWeekdayArea: false, includeDatedOverrides: true);
-        var cleaners = allCleaners
-            .Where(u => effectiveByUser.TryGetValue(u.Id, out var state)
-                && state.Shift == slot.Shift
-                && state.AreaId is int ownAreaId
-                && ownAreaId != area.Id)
-            .ToList();
-        var ownAreaIds = cleaners.Select(u => effectiveByUser[u.Id].AreaId!.Value).Distinct().ToList();
+            db, allCleaners, slot.ShiftDate, useFallbackWeekdayArea: false, includeDatedOverrides: true, ct: ct);
+        var reliefAreas = (await db.ReliefAssignments.AsNoTracking()
+            .Where(r => r.ShiftDate == slot.ShiftDate && r.Shift == slot.Shift && !r.IsCancelled)
+            .OrderBy(r => r.Id)
+            .Select(r => new { r.UserId, r.AreaId })
+            .ToListAsync(ct))
+            .GroupBy(r => r.UserId)
+            .ToDictionary(g => g.Key, g => g.Last().AreaId);
+        var transfers = await store.ReadSlotTransfersAsync(slot, ct);
+        var allShiftIns = await db.ShiftAttendances.AsNoTracking()
+            .Where(a => a.ShiftDate == slot.ShiftDate && a.Shift == slot.Shift && a.EventType == AttendanceEvent.ShiftIn)
+            .ToListAsync(ct);
+        var shiftInByUser = allShiftIns
+            .GroupBy(a => a.UserId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var ownAreaByUser = new Dictionary<int, int>();
+        var cleaners = new List<User>();
+        foreach (var u in allCleaners)
+        {
+            effectiveByUser.TryGetValue(u.Id, out var state);
+            if (state?.Shift != slot.Shift)
+            {
+                continue;
+            }
+
+            // Mirrors AssignAreaAsync: cannot assign someone to cover their own regular Area or their current duty Area.
+            if (state.AreaId == area.Id)
+            {
+                continue;
+            }
+
+            int? baseAreaId = reliefAreas.TryGetValue(u.Id, out var reliefAreaId)
+                ? reliefAreaId
+                : state.AreaId is int effAreaId && (!(state.IsDayOff || state.IsWholeShiftLeave) || shiftInByUser.ContainsKey(u.Id))
+                    ? effAreaId
+                    : shiftInByUser.TryGetValue(u.Id, out var shiftIn)
+                        ? shiftIn.AreaId
+                        : null;
+
+            var currentAreaId = transfers.TryGetValue(u.Id, out var transfer)
+                ? !transfer.Instruction.IsCancelled && transfer.Confirmation is not null
+                    ? transfer.Instruction.ToAreaId
+                    : transfer.LastConfirmedAreaId ?? baseAreaId
+                : baseAreaId;
+
+            if (currentAreaId is int ownAreaId && ownAreaId != area.Id)
+            {
+                ownAreaByUser[u.Id] = ownAreaId;
+                cleaners.Add(u);
+            }
+        }
+
+        var ownAreaIds = ownAreaByUser.Values.Distinct().ToList();
         var areaCodes = ownAreaIds.Count == 0
             ? new Dictionary<int, string>()
             : await db.Areas.AsNoTracking()
                 .Where(a => ownAreaIds.Contains(a.Id))
-                .ToDictionaryAsync(a => a.Id, a => a.Code);
+                .ToDictionaryAsync(a => a.Id, a => a.Code, ct);
         var ids = cleaners.Select(u => u.Id).ToList();
         var covering = await db.CoverAssignments.AsNoTracking()
             .Where(c => c.AreaId == area.Id && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift && c.CancelledAt == null)
             .Select(c => c.UserId)
-            .ToListAsync();
-        var shiftIns = await db.ShiftAttendances.AsNoTracking()
-            .Where(a => a.ShiftDate == slot.ShiftDate && a.Shift == slot.Shift && a.EventType == AttendanceEvent.ShiftIn && ids.Contains(a.UserId))
-            .ToListAsync();
+            .ToListAsync(ct);
         var opens = ShiftCalendar.StartUtc(slot).AddMinutes(-settings.OpensMinutesBeforeShift);
         var closes = ShiftCalendar.EndUtc(slot).AddMinutes(settings.ClosesMinutesAfterShift);
-        var areaSignIds = await db.Signs.Where(s => s.AreaId == area.Id).Select(s => s.Id).ToListAsync();
+        var areaSignIds = await db.Signs.Where(s => s.AreaId == area.Id).Select(s => s.Id).ToListAsync(ct);
         var scans = await db.BlockedScans.AsNoTracking()
             .Where(b => ids.Contains(b.UserId) && areaSignIds.Contains(b.SignId) && b.ScannedAt >= opens && b.ScannedAt <= closes)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         var candidates = cleaners
             .Where(u => !covering.Contains(u.Id))
@@ -375,8 +419,8 @@ public static class CoverAssignmentEndpoints
                 u.Id,
                 u.EmployeeId ?? string.Empty,
                 u.DisplayName,
-                areaCodes.GetValueOrDefault(effectiveByUser[u.Id].AreaId!.Value, u.Area?.Code ?? string.Empty),
-                shiftIns.Where(a => a.UserId == u.Id).Select(a => (DateTime?)Utc(a.OccurredAt)).FirstOrDefault(),
+                areaCodes.GetValueOrDefault(ownAreaByUser[u.Id], u.Area?.Code ?? string.Empty),
+                shiftInByUser.TryGetValue(u.Id, out var shiftIn) ? (DateTime?)Utc(shiftIn.OccurredAt) : null,
                 scans.Where(b => b.UserId == u.Id).Select(b => (DateTime?)Utc(b.ScannedAt)).Max()))
             .OrderBy(c => c.ScannedThisAreaAt is null ? 1 : 0)
             .ThenByDescending(c => c.ScannedThisAreaAt)

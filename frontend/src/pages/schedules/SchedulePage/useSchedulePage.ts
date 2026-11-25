@@ -162,12 +162,12 @@ export function useSchedulePage(role: ScheduleRole): SchedulePageView {
     error: read.error,
     refetch: () => void read.refetch(),
     reloadEditorWeek: () => read.refetch().unwrap(),
-    chooseWeek: (weekStart) => remember({ ...requested, weekStart }),
-    chooseBuilding: (buildingId) => remember({ ...requested, buildingId }),
-    chooseShift: (shift) => remember({ ...requested, shift }),
-    goWeek: (weeks) => remember({ ...requested, weekStart: moveWeek(requested.weekStart, weeks) }),
+    chooseWeek: (weekStart) => remember({ ...selection, weekStart }),
+    chooseBuilding: (buildingId) => remember({ ...selection, buildingId }),
+    chooseShift: (shift) => remember({ ...selection, shift }),
+    goWeek: (weeks) => remember({ ...selection, weekStart: moveWeek(selection.weekStart, weeks) }),
     isCurrentWeek: selection.weekStart === currentDefault.weekStart,
-    goToday: () => remember({ ...requested, weekStart: currentDefault.weekStart }),
+    goToday: () => remember({ ...selection, weekStart: currentDefault.weekStart }),
   };
 }
 

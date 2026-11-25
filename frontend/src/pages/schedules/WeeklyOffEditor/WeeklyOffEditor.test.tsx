@@ -123,3 +123,38 @@ it('disables previous-week copy if an authorised read is followed by a forbidden
   expect(await drawer.findByText('ไม่มีตัวเลือกวันหยุดให้อ้างอิง')).toBeVisible();
   expect(drawer.getByRole('checkbox', { name: /20 พ\.ย\./ })).not.toBeChecked();
 });
+
+it('restores an unset cleaner back to undefined when a checked day is unchecked instead of submitting no days off', async () => {
+  const partialUnset = fixturePerson(7, 'แม่บ้านยังไม่จัด');
+  partialUnset.days[0].edit!.canChange = false;
+  const fullUnset = fixturePerson(8, 'แม่บ้านครบสัปดาห์');
+  const app = await editorApp({ week: () => fixtureWeek([partialUnset, fullUnset]) });
+  await app.user.click(await screen.findByRole('button', { name: 'จัดวันหยุดรายสัปดาห์' }));
+  const drawer = within(await screen.findByRole('dialog'));
+
+  const partialGroup = within(drawer.getByRole('group', { name: 'แม่บ้านยังไม่จัด' }));
+  const partialDay = partialGroup.getByRole('checkbox', { name: /19 พ\.ย\./ });
+  await app.user.click(partialDay);
+  await app.user.click(partialDay);
+
+  const fullGroup = within(drawer.getByRole('group', { name: 'แม่บ้านครบสัปดาห์' }));
+  const fullDay = fullGroup.getByRole('checkbox', { name: /19 พ\.ย\./ });
+  await app.user.click(fullDay);
+  expect(fullGroup.queryByRole('button', { name: 'ยืนยันว่าไม่มีวันหยุด' })).not.toBeInTheDocument();
+  await app.user.click(fullDay);
+  expect(fullGroup.getByRole('button', { name: 'ยืนยันว่าไม่มีวันหยุด' })).toBeVisible();
+
+  await app.user.click(fullGroup.getByRole('button', { name: 'ยืนยันว่าไม่มีวันหยุด' }));
+  await app.user.click(drawer.getByRole('button', { name: 'ตรวจสอบ' }));
+  expect(drawer.getByRole('heading', { name: 'ตรวจสอบก่อนบันทึก' })).toBeVisible();
+  expect(drawer.queryByText(/ตรวจวันหยุดของ แม่บ้านยังไม่จัด/)).not.toBeInTheDocument();
+  await app.user.click(drawer.getByRole('button', { name: 'บันทึก' }));
+  expect(await drawer.findByText('บันทึกการเปลี่ยนแปลงแล้ว')).toBeVisible();
+  expect(app.calls.find((call) => call.path === '/api/schedules/commands')?.body).toMatchObject({
+    kind: 'set-weekly-days-off',
+    payload: {
+      weekStart: fixtureMonday,
+      rows: [{ userId: 8, offDates: [] }],
+    },
+  });
+});

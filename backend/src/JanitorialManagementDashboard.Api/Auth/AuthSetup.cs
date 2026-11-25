@@ -1,6 +1,9 @@
+using System.Security.Claims;
 using System.Text;
 using JanitorialManagementDashboard.Application.Auth;
+using JanitorialManagementDashboard.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -64,6 +67,38 @@ public static class AuthSetup
                         }
 
                         return Task.CompletedTask;
+                    },
+                    OnTokenValidated = async context =>
+                    {
+                        // Validate active account and session on hub negotiation / initial connection (skipping
+                        // already-negotiated LongPolling poll ticks carrying ?id=..., since active connections are
+                        // aborted immediately via ScanHubConnections on logout, deactivation, or secret change).
+                        if (!context.HttpContext.Request.Path.StartsWithSegments("/hubs")
+                            || context.HttpContext.Request.Query.ContainsKey("id"))
+                        {
+                            return;
+                        }
+
+                        var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                        var user = context.Principal is not null
+                            ? await CurrentUser.LoadAsync(context.Principal, db)
+                            : null;
+                        if (user is null)
+                        {
+                            context.Fail("Account is inactive or missing.");
+                            return;
+                        }
+
+                        if (Guid.TryParse(context.Principal!.FindFirstValue(AuthClaims.SessionId), out var sid))
+                        {
+                            var activeSession = await db.RefreshTokens.AsNoTracking()
+                                .AnyAsync(t => t.SessionId == sid && t.UserId == user.Id && t.RevokedAt == null,
+                                    context.HttpContext.RequestAborted);
+                            if (!activeSession)
+                            {
+                                context.Fail("Session has been revoked.");
+                            }
+                        }
                     },
                 };
             });

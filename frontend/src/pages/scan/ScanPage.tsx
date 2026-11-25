@@ -38,6 +38,7 @@ export function ScanPage() {
   const [draft, setDraft] = useState<ScanDraft>(emptyDraft);
   const [sending, setSending] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [readyToken, setReadyToken] = useState<string | null>(null);
 
   const send = async () => {
     setSending(true);
@@ -67,10 +68,16 @@ export function ScanPage() {
   if (workQuery.error && !workQuery.data) {
     return <StatusScreen title="เปิดหน้านี้ไม่ได้" detail={getErrorMessage(workQuery.error)} linkTo="/my-work" linkText="ดูงานของฉัน" />;
   }
-  const point = pointQuery.data;
+  const point = pointQuery.currentData;
   const work = workQuery.data;
-  // Decide only on fresh answers: the cache may hold My Work from before the Cleaner checked in
-  if (!point || !work || pointQuery.isFetching || workQuery.isFetching) {
+  // Decide only on fresh initial answers (the cache may hold My Work from before Check-In),
+  // then keep the form/result mounted across background SignalR refetches for the same sign.
+  const freshReady = Boolean(point && work && !pointQuery.isFetching && !workQuery.isFetching);
+  if (freshReady && readyToken !== token) {
+    setReadyToken(token);
+  }
+  const hasLoadedOnce = freshReady || readyToken === token;
+  if (!point || !work || !hasLoadedOnce) {
     return <Splash>กำลังเปิดป้าย...</Splash>;
   }
 

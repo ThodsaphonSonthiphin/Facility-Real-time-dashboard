@@ -73,9 +73,10 @@ public static class AdminAuditLogEndpoints
             return Bad($"คำค้นยาวได้ไม่เกิน {MaxSearchLength} ตัวอักษร");
         }
 
-        var rows = await AuditLogQuery.LoadAsync(db, new AuditLogFilter(fromUtc, toUtc, actorId, actions, beforeId, take, search));
-        var entries = rows.Select(ToDto).ToList();
-        return Results.Ok(new AuditLogPageDto(entries, entries.Count == take ? entries[^1].Id : (long?)null));
+        var rows = await AuditLogQuery.LoadAsync(db, new AuditLogFilter(fromUtc, toUtc, actorId, actions, beforeId, take + 1, search));
+        var hasMore = rows.Count > take;
+        var entries = rows.Take(take).Select(ToDto).ToList();
+        return Results.Ok(new AuditLogPageDto(entries, hasMore ? entries[^1].Id : (long?)null));
     }
 
     private static AuditLogEntryDto ToDto(AuditLogRow row) => new(

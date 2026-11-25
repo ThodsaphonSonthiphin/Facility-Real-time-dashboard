@@ -83,8 +83,9 @@ internal static class AttendanceStateView
         var now = UtcOffset(nowUtc);
 
         var actions = new List<AttendanceActionDto>(order.Count);
-        foreach (var action in order)
+        for (var i = 0; i < order.Count; i++)
         {
+            var action = order[i];
             var expectedAt = expected.TryGetValue(action, out var instant) ? Utc(instant) : (DateTime?)null;
             if (byAction.TryGetValue(action, out var fact))
             {
@@ -94,7 +95,7 @@ internal static class AttendanceStateView
 
             var state = expectedAt is { } due
                 ? Word(AttendanceApplicability.Classify(UtcOffset(due), now, departure, duty.LeaveStart, duty.LeaveEnd))
-                : Pending;
+                : ClassifyUnscheduledAction(slot, action, i, order, byAction, now, departure, duty.LeaveStart, duty.LeaveEnd);
             if (state != NotApplicable && skipped.Contains(action))
             {
                 state = Skipped;
@@ -104,6 +105,45 @@ internal static class AttendanceStateView
         }
 
         return actions;
+    }
+
+    private static string ClassifyUnscheduledAction(
+        ShiftSlot slot,
+        AttendanceEvent action,
+        int index,
+        IReadOnlyList<AttendanceEvent> order,
+        Dictionary<AttendanceEvent, ShiftAttendance> byAction,
+        DateTimeOffset now,
+        DateTimeOffset? departure,
+        DateTimeOffset? leaveStart,
+        DateTimeOffset? leaveEnd)
+    {
+        if (departure is { } actualOut && leaveStart is { } start && leaveEnd is { } end)
+        {
+            var g1 = AttendanceExpectations.ForSlot(slot, 1);
+            var g2 = AttendanceExpectations.ForSlot(slot, 2);
+            if (g1.TryGetValue(action, out var d1) && g2.TryGetValue(action, out var d2)
+                && AttendanceApplicability.NotApplicable(UtcOffset(d1), actualOut, start, end)
+                && AttendanceApplicability.NotApplicable(UtcOffset(d2), actualOut, start, end))
+            {
+                return NotApplicable;
+            }
+        }
+
+        if (now >= UtcOffset(ShiftCalendar.EndUtc(slot)))
+        {
+            return Missing;
+        }
+
+        for (var j = index + 1; j < order.Count; j++)
+        {
+            if (byAction.ContainsKey(order[j]))
+            {
+                return Missing;
+            }
+        }
+
+        return Pending;
     }
 
     private static string Word(AttendanceApplicabilityStatus status) => status switch

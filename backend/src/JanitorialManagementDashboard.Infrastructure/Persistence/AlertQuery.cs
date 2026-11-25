@@ -29,7 +29,8 @@ public sealed record AlertRow(
     IReadOnlyList<AttendanceEvent> MissingEvents,
     AlertReview? Review,
     ShiftSlot? CoverSlot,
-    BlockReason? BlockReason = null);
+    BlockReason? BlockReason = null,
+    string? PersonAreaCode = null);
 
 public static class AlertQuery
 {
@@ -155,17 +156,141 @@ public static class AlertQuery
         var businessDate = ScheduleAuthority.BusinessDate(nowUtc);
         var supervisorPeriods = await SupervisorScopes.ReadManyAsync(
             db, blockedSupervisors, businessDate);
-        var blockedCleaners = blockedUserIds
-            .Select(id => users[id])
-            .Where(user => user.Role == UserRole.Cleaner && user.IsActive)
+
+        var allAlertCleaners = users.Values
+            .Where(user => user.Role == UserRole.Cleaner)
             .ToList();
-        var cleanerStates = await CleanerEffectiveAssignment.ResolveForDateAsync(
-            db, blockedCleaners, businessDate, useFallbackWeekdayArea: false, includeDatedOverrides: true);
+
+        // Collect every ShiftSlot that could still be open for a blocked Cleaner scan (including 06:00-06:59 Thai
+        // pre-shift scans whose ShiftDate is ahead of businessDate), plus every alert date for effective PersonAreaCode.
+        var openBlockedSlots = new HashSet<ShiftSlot>();
+        var alertDates = new HashSet<DateOnly>();
+        foreach (var a in attendanceFlags) alertDates.Add(a.ShiftDate);
+        foreach (var s in submissionFlags) alertDates.Add(s.ShiftDate);
+        foreach (var m in missing) alertDates.Add(m.Slot.ShiftDate);
+        foreach (var b in blocked)
+        {
+            alertDates.Add(ScheduleAuthority.BusinessDate(b.ScannedAt));
+            if (users[b.UserId] is { Role: UserRole.Cleaner, IsActive: true })
+            {
+                foreach (var candidateShift in new[] { Shift.Day, Shift.Night })
+                {
+                    if (AttendanceCalendar.SlotFor(candidateShift, b.ScannedAt, settings) is { } candidate
+                        && ShiftCalendar.EndUtc(candidate) > nowUtc)
+                    {
+                        openBlockedSlots.Add(candidate);
+                        alertDates.Add(candidate.ShiftDate);
+                    }
+                }
+            }
+        }
+
+        var cleanerStatesByDate = new Dictionary<DateOnly, Dictionary<int, CleanerEffectiveState>>(alertDates.Count);
+        if (allAlertCleaners.Count > 0)
+        {
+            foreach (var date in alertDates)
+            {
+                cleanerStatesByDate[date] = await CleanerEffectiveAssignment.ResolveForDateAsync(
+                    db, allAlertCleaners, date, useFallbackWeekdayArea: false, includeDatedOverrides: true);
+            }
+        }
+
+        var cleanerIds = allAlertCleaners.Select(u => u.Id).ToList();
+        var reliefBySlot = new Dictionary<(int UserId, DateOnly ShiftDate, Shift Shift), int>();
+        if (cleanerIds.Count > 0 && alertDates.Count > 0)
+        {
+            var minDate = alertDates.Min();
+            var maxDate = alertDates.Max();
+            var reliefRows = await db.ReliefAssignments.AsNoTracking()
+                .Where(r => cleanerIds.Contains(r.UserId) && r.ShiftDate >= minDate && r.ShiftDate <= maxDate && !r.IsCancelled)
+                .OrderBy(r => r.Id)
+                .Select(r => new { r.UserId, r.ShiftDate, r.Shift, r.AreaId })
+                .ToListAsync();
+            foreach (var row in reliefRows)
+            {
+                reliefBySlot[(row.UserId, row.ShiftDate, row.Shift)] = row.AreaId;
+            }
+        }
+
+        var transfersBySlot = new Dictionary<ShiftSlot, IReadOnlyDictionary<int, SlotTransfer>>();
+        if (openBlockedSlots.Count > 0)
+        {
+            var scheduleStore = new ScheduleStore(db);
+            foreach (var openSlot in openBlockedSlots)
+            {
+                transfersBySlot[openSlot] = await scheduleStore.ReadSlotTransfersAsync(openSlot);
+            }
+        }
+
+        var effectiveAreaIds = cleanerStatesByDate.Values
+            .SelectMany(map => map.Values)
+            .Select(state => state.AreaId)
+            .OfType<int>()
+            .Concat(reliefBySlot.Values)
+            .Concat(transfersBySlot.Values.SelectMany(map => map.Values)
+                .SelectMany(t => new int?[] { t.Instruction.ToAreaId, t.LastConfirmedAreaId })
+                .OfType<int>())
+            .Distinct()
+            .ToList();
+        var effectiveAreaCodes = effectiveAreaIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await db.Areas.AsNoTracking()
+                .Where(a => effectiveAreaIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => a.Code);
+
         var activeCovers = await db.CoverAssignments.AsNoTracking()
             .Where(c => c.CancelledAt == null && c.ShiftDate >= firstDate && blockedUserIds.Contains(c.UserId))
             .ToListAsync();
 
         AlertReview? ReviewOf(AlertType type, long id) => reviews.FirstOrDefault(r => r.AlertType == type && r.RecordId == id);
+
+        int? ConfirmedTransferAreaOf(int userId, ShiftSlot slot)
+        {
+            if (!transfersBySlot.TryGetValue(slot, out var map) || !map.TryGetValue(userId, out var transfer))
+            {
+                return null;
+            }
+
+            return !transfer.Instruction.IsCancelled && transfer.Confirmation is not null
+                ? transfer.Instruction.ToAreaId
+                : transfer.LastConfirmedAreaId;
+        }
+
+        string? PersonAreaCodeOf(User user, DateOnly date, Shift? shift)
+        {
+            if (user.Role != UserRole.Cleaner)
+            {
+                return null;
+            }
+
+            if (shift is { } s)
+            {
+                var slot = new ShiftSlot(date, s);
+                if (ConfirmedTransferAreaOf(user.Id, slot) is int transferredAreaId
+                    && effectiveAreaCodes.TryGetValue(transferredAreaId, out var transferredCode))
+                {
+                    return transferredCode;
+                }
+
+                if (reliefBySlot.TryGetValue((user.Id, date, s), out var reliefAreaId)
+                    && effectiveAreaCodes.TryGetValue(reliefAreaId, out var reliefCode))
+                {
+                    return reliefCode;
+                }
+            }
+
+            if (cleanerStatesByDate.TryGetValue(date, out var states) && states.TryGetValue(user.Id, out var state))
+            {
+                if (state.AreaId is int effAreaId && effectiveAreaCodes.TryGetValue(effAreaId, out var effCode))
+                {
+                    return effCode;
+                }
+
+                return state.HasDatedIdentity ? null : user.Area?.Code;
+            }
+
+            return user.Area?.Code;
+        }
 
         // facility-0041 rule 4, 0048 rule 2: offer a cover for the scan's own shift while that shift has not ended and none exists yet
         ShiftSlot? CoverSlotFor(BlockedScan scan)
@@ -183,19 +308,49 @@ public static class AlertQuery
                 return null;
             }
 
-            var resolvedShift = cleanerStates.TryGetValue(user.Id, out var state) ? state.Shift : user.Shift;
-            var resolvedAreaId = state is not null ? state.AreaId : user.AreaId;
-            if (resolvedShift is not { } shift || resolvedAreaId is not int ownAreaId || ownAreaId == area.Id || !area.HasShift(shift))
+            var matching = new List<ShiftSlot>(2);
+            foreach (var candidateShift in new[] { Shift.Day, Shift.Night })
             {
-                return null;
+                var slot = AttendanceCalendar.SlotFor(candidateShift, scan.ScannedAt, settings);
+                if (slot is null || ShiftCalendar.EndUtc(slot) <= nowUtc)
+                {
+                    continue;
+                }
+
+                if (!cleanerStatesByDate.TryGetValue(slot.ShiftDate, out var states)
+                    || !states.TryGetValue(user.Id, out var state)
+                    || state.Shift != slot.Shift)
+                {
+                    continue;
+                }
+
+                if (!area.HasShift(slot.Shift))
+                {
+                    continue;
+                }
+
+                int? reliefAreaId = reliefBySlot.TryGetValue((user.Id, slot.ShiftDate, slot.Shift), out var rId) ? rId : null;
+                var effectiveAreaId = ConfirmedTransferAreaOf(user.Id, slot) ?? reliefAreaId ?? state.AreaId;
+                if (effectiveAreaId is not int ownAreaId || ownAreaId == area.Id || state.AreaId == area.Id)
+                {
+                    continue;
+                }
+
+                if (!activeCovers.Any(c => c.UserId == user.Id && c.AreaId == area.Id && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift))
+                {
+                    matching.Add(slot);
+                }
             }
 
-            var slot = AttendanceCalendar.SlotFor(shift, scan.ScannedAt, settings);
-            return slot is not null
-                && ShiftCalendar.EndUtc(slot) > nowUtc
-                && !activeCovers.Any(c => c.UserId == user.Id && c.AreaId == area.Id && c.ShiftDate == slot.ShiftDate && c.Shift == slot.Shift)
-                    ? slot
-                    : null;
+            if (matching.Count <= 1)
+            {
+                return matching.Count == 1 ? matching[0] : null;
+            }
+
+            var scannedAtUtc = DateTime.SpecifyKind(scan.ScannedAt, DateTimeKind.Utc);
+            return matching.FirstOrDefault(s =>
+                scannedAtUtc >= ShiftCalendar.StartUtc(s) && scannedAtUtc < ShiftCalendar.EndUtc(s))
+                ?? matching[^1];
         }
 
         // A Supervisor's shift is the clock's at the scan; the cover is for the sign's building (plan 6 decision 7)
@@ -217,19 +372,29 @@ public static class AlertQuery
         var rows = new List<AlertRow>();
         rows.AddRange(attendanceFlags.Select(a => new AlertRow(
             AlertKind.AttendanceGps, a.Id, a.OccurredAt, users[a.UserId], signs[a.SignId!.Value].Area!, signs[a.SignId!.Value],
-            a.DistanceM, a.AccuracyM, [], ReviewOf(AlertType.AttendanceGps, a.Id), null)));
+            a.DistanceM, a.AccuracyM, [], ReviewOf(AlertType.AttendanceGps, a.Id), null,
+            PersonAreaCode: PersonAreaCodeOf(users[a.UserId], a.ShiftDate, a.Shift))));
         rows.AddRange(submissionFlags.Select(s => new AlertRow(
             AlertKind.SubmissionGps, s.Id, s.SubmittedAt, users[s.UserId], signs[s.SignId].Area!, signs[s.SignId],
-            s.DistanceM, s.AccuracyM, [], ReviewOf(AlertType.SubmissionGps, s.Id), null)));
+            s.DistanceM, s.AccuracyM, [], ReviewOf(AlertType.SubmissionGps, s.Id), null,
+            PersonAreaCode: PersonAreaCodeOf(users[s.UserId], s.ShiftDate, s.Shift))));
         rows.AddRange(inspectionFlags.Select(i => new AlertRow(
             AlertKind.InspectionGps, i.Id, i.InspectedAt, users[i.SupervisorId], signOfPoint[i.ServicePointId].Area!, signOfPoint[i.ServicePointId],
             i.DistanceM, i.AccuracyM, [], ReviewOf(AlertType.InspectionGps, i.Id), null)));
-        rows.AddRange(blocked.Select(b => new AlertRow(
-            AlertKind.BlockedScan, b.Id, b.ScannedAt, users[b.UserId], signs[b.SignId].Area!, signs[b.SignId],
-            b.DistanceM, b.AccuracyM, [], ReviewOf(AlertType.BlockedScan, b.Id), CoverSlotFor(b), b.Reason)));
+        rows.AddRange(blocked.Select(b =>
+        {
+            var coverSlot = CoverSlotFor(b);
+            var personDate = coverSlot?.ShiftDate ?? ScheduleAuthority.BusinessDate(b.ScannedAt);
+            var personShift = coverSlot?.Shift ?? (cleanerStatesByDate.TryGetValue(personDate, out var st) && st.TryGetValue(b.UserId, out var cs) ? cs.Shift : users[b.UserId].Shift);
+            return new AlertRow(
+                AlertKind.BlockedScan, b.Id, b.ScannedAt, users[b.UserId], signs[b.SignId].Area!, signs[b.SignId],
+                b.DistanceM, b.AccuracyM, [], ReviewOf(AlertType.BlockedScan, b.Id), coverSlot, b.Reason,
+                PersonAreaCode: PersonAreaCodeOf(users[b.UserId], personDate, personShift));
+        }));
         rows.AddRange(missing.Select(m => new AlertRow(
             AlertKind.MissingAttendance, m.ShiftIn!.Id, m.End, users[m.UserId], areas[m.ShiftIn.AreaId], null,
-            null, null, m.Missing, null, null)));
+            null, null, m.Missing, null, null,
+            PersonAreaCode: PersonAreaCodeOf(users[m.UserId], m.Slot.ShiftDate, m.Slot.Shift))));
 
         return rows.OrderByDescending(r => r.At).ThenByDescending(r => r.RecordId).ToList();
     }

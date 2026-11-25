@@ -35,7 +35,9 @@ public sealed class SupervisorMembership(AppDbContext db, ScheduleStore store, T
     /// carried before the edit (<c>null</c> on create and on activation), so only that pair ends.
     /// </summary>
     public async Task<MembershipOutcome> ApplyAsync(
-        User supervisor, bool open, int actorId, (int BuildingId, Shift Shift)? replaced = null, CancellationToken ct = default)
+        User supervisor, bool open, int actorId, (int BuildingId, Shift Shift)? replaced = null,
+        (int? BuildingId, Shift? Shift)? targetOverride = null, Func<Task>? persistUserAsync = null,
+        CancellationToken ct = default)
     {
         if (supervisor.Role != UserRole.Supervisor)
         {
@@ -44,11 +46,17 @@ public sealed class SupervisorMembership(AppDbContext db, ScheduleStore store, T
 
         var now = clock.GetUtcNow().UtcDateTime;
         var businessDate = ScheduleAuthority.BusinessDate(now);
-        var held = await db.SupervisorScopePeriods
-            .Where(p => p.SupervisorId == supervisor.Id && p.EffectiveUntil == null)
-            .ToListAsync(ct);
+        // Include finite future periods when deactivating so no active or future Supervisor scope survives deactivation.
+        var held = supervisor.Id > 0
+            ? await db.SupervisorScopePeriods
+                .Where(p => p.SupervisorId == supervisor.Id
+                    && (p.EffectiveUntil == null || (!open && p.EffectiveUntil.Value > businessDate)))
+                .ToListAsync(ct)
+            : [];
 
-        var target = open && supervisor.BuildingId is int buildingId && supervisor.Shift is Shift shift
+        var targetBuildingId = targetOverride is not null ? targetOverride.Value.BuildingId : supervisor.BuildingId;
+        var targetShift = targetOverride is not null ? targetOverride.Value.Shift : supervisor.Shift;
+        var target = open && targetBuildingId is int buildingId && targetShift is Shift shift
             ? (BuildingId: buildingId, Shift: shift)
             : ((int BuildingId, Shift Shift)?)null;
 
@@ -64,6 +72,11 @@ public sealed class SupervisorMembership(AppDbContext db, ScheduleStore store, T
             if ((pair.BuildingId, pair.Shift) == (target.Value.BuildingId, target.Value.Shift))
             {
                 // The pair replaced is the pair asked for: the membership already says exactly this
+                if (persistUserAsync is not null)
+                {
+                    await persistUserAsync();
+                }
+
                 return new MembershipOutcome(null, []);
             }
 
@@ -75,39 +88,64 @@ public sealed class SupervisorMembership(AppDbContext db, ScheduleStore store, T
         }
 
         var ended = new List<EndedScope>(ends.Count);
+        var alreadyOpen = target is { } t
+            && held.Any(p => !ends.Contains(p) && p.BuildingId == t.BuildingId && p.Shift == t.Shift);
+
+        // Acquire the scope lock and verify availability BEFORE mutating/adding User or closing prior periods,
+        // so LockRegularScopeAsync's SaveChangesAsync never flushes an unvalidated User row early.
+        if (target is { } wanted && !alreadyOpen)
+        {
+            await store.LockRegularScopeAsync(wanted.BuildingId, wanted.Shift, now, ct);
+            try
+            {
+                await store.EnsureRegularScopeAvailableUnderLockAsync(wanted.BuildingId, wanted.Shift, businessDate, null, ct);
+            }
+            catch (ScheduleConflictException)
+            {
+                return new MembershipOutcome(
+                    AccountChecks.Conflict(await TakenMessageAsync(wanted.BuildingId, wanted.Shift, ct)), ended);
+            }
+
+            // Clear stale users.BuildingId projection on any other active Supervisor whose dated scope already ended,
+            // preventing false users.supervisor_slot collisions once the dated lock has confirmed the slot is free.
+            // Never touch a pre-backfill Supervisor who has no dated periods at all (spec §14: they still hold the slot).
+            var staleHolders = await db.Users
+                .Where(u => u.Id != supervisor.Id && u.Role == UserRole.Supervisor && u.IsActive
+                    && u.BuildingId == wanted.BuildingId && u.Shift == wanted.Shift
+                    && db.SupervisorScopePeriods.Any(p => p.SupervisorId == u.Id))
+                .ToListAsync(ct);
+            if (staleHolders.Count > 0)
+            {
+                foreach (var stale in staleHolders)
+                {
+                    stale.BuildingId = null;
+                }
+
+                await db.SaveChangesAsync(ct);
+            }
+        }
+
+        if (persistUserAsync is not null)
+        {
+            await persistUserAsync();
+        }
+
         foreach (var period in ends)
         {
             ended.Add(new EndedScope(period.BuildingId, period.Shift));
             Close(period, businessDate, now);
         }
 
-        if (target is not { } wanted)
+        if (target is not { } openTarget || alreadyOpen)
         {
             return new MembershipOutcome(null, ended);
-        }
-
-        if (held.Any(p => !ends.Contains(p) && p.BuildingId == wanted.BuildingId && p.Shift == wanted.Shift))
-        {
-            // The period for this building and shift is already open: nothing changed for the members it names
-            return new MembershipOutcome(null, ended);
-        }
-
-        await store.LockRegularScopeAsync(wanted.BuildingId, wanted.Shift, now, ct);
-        try
-        {
-            await store.EnsureRegularScopeAvailableUnderLockAsync(wanted.BuildingId, wanted.Shift, businessDate, null, ct);
-        }
-        catch (ScheduleConflictException)
-        {
-            return new MembershipOutcome(
-                AccountChecks.Conflict(await TakenMessageAsync(wanted.BuildingId, wanted.Shift, ct)), ended);
         }
 
         db.SupervisorScopePeriods.Add(new SupervisorScopePeriod
         {
             SupervisorId = supervisor.Id,
-            BuildingId = wanted.BuildingId,
-            Shift = wanted.Shift,
+            BuildingId = openTarget.BuildingId,
+            Shift = openTarget.Shift,
             EffectiveFrom = businessDate,
             Revision = 1,
             CreatedById = actorId,

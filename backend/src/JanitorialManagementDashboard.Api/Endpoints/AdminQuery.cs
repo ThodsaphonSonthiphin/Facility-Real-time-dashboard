@@ -67,6 +67,11 @@ internal static class AdminQuery
             return $"เลือกได้ไม่เกิน {maxDays} วัน";
         }
 
+        if (last == DateOnly.MaxValue)
+        {
+            return "ใส่วันเริ่มและวันสุดท้ายให้ครบและตรวจว่าทั้งสองวันที่ถูกต้อง";
+        }
+
         fromUtc = ThaiTime.ToUtc(first.ToDateTime(TimeOnly.MinValue));
         toUtc = ThaiTime.ToUtc(last.AddDays(1).ToDateTime(TimeOnly.MinValue));
         return null;

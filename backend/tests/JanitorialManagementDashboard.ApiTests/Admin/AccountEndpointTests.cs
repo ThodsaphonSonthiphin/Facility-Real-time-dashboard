@@ -372,4 +372,28 @@ public class AccountEndpointTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         await factory.WithDbAsync(async db => Assert.Empty(await db.CleanerProfilePeriods.ToListAsync()));
     }
+
+    [Fact]
+    public async Task Deactivating_the_second_to_last_admin_prevents_the_deactivated_admin_from_deactivating_the_last_one()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin1, admin1Auth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var admin2Account = await AccountApi.ReadAsync(await AccountApi.CreateAdminAsync(admin1, "admin2", "temporary-pass-2"));
+        var admin2Client = factory.CreateApiClient();
+        var admin2Login = await AuthApi.AdminLoginAsync(admin2Client, "admin2", "temporary-pass-2");
+        admin2Login.EnsureSuccessStatusCode();
+        var admin2Auth = await AuthApi.ReadAuthAsync(admin2Login);
+        admin2Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", admin2Auth.AccessToken);
+
+        // Admin 1 deactivates Admin 2; Admin 2's still-unexpired JWT cannot then deactivate Admin 1.
+        var first = await admin1.PostAsync($"{AccountApi.Path}/{admin2Account.Id}/deactivate", null);
+        var second = await admin2Client.PostAsync($"{AccountApi.Path}/{admin1Auth.User.Id}/deactivate", null);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, second.StatusCode);
+        var activeAdmins = await AdminSetupApi.ReadAsync(factory, db =>
+            db.Users.CountAsync(u => u.Role == UserRole.Admin && u.IsActive));
+        Assert.Equal(1, activeAdmins);
+    }
 }

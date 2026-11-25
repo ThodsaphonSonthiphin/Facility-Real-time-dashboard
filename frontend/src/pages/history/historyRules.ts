@@ -151,7 +151,7 @@ const fieldLabel: Record<string, string> = {
 /** Enum values in Thai, by field. */
 const valueLabel: Record<string, Record<string, string>> = {
   EventType: eventLabel,
-  Source: { Scan: 'สแกนเอง', AdminAdd: 'แอดมินเพิ่ม', AdminEdit: 'แก้โดยแอดมิน' },
+  Source: { Scan: 'สแกนเอง', AdminAdd: 'แอดมินเพิ่ม', AdminEdit: 'แก้โดยแอดมิน', SupervisorAdd: 'หัวหน้าเติมเวลา' },
   Shift: shiftShortLabel,
   Role: { Cleaner: 'แม่บ้าน', Supervisor: 'หัวหน้า', Admin: 'แอดมิน' },
   LocationSource: { Site: 'วัดที่ป้ายจริง', Map: 'ปักจากแผนที่' },

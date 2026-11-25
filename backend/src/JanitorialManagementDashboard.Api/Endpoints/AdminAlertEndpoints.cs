@@ -141,7 +141,7 @@ public static class AdminAlertEndpoints
         row.Kind,
         row.RecordId,
         Utc(row.At),
-        new AlertPersonDto(row.Person.Id, row.Person.LoginName, row.Person.DisplayName, row.Person.Role, row.Person.Area?.Code),
+        new AlertPersonDto(row.Person.Id, row.Person.LoginName, row.Person.DisplayName, row.Person.Role, row.PersonAreaCode),
         row.Area.Code,
         row.Area.Name,
         row.Sign?.Code,

@@ -11,11 +11,23 @@ public sealed class JwtAccessTokenIssuer(IOptions<JwtSettings> options, TimeProv
 {
     private readonly JsonWebTokenHandler _handler = new();
 
-    public AccessToken Issue(User user)
+    public AccessToken Issue(User user, Guid? sessionId = null)
     {
         var settings = options.Value;
         var now = clock.GetUtcNow().UtcDateTime;
         var expires = now.AddMinutes(settings.AccessTokenMinutes);
+
+        var claims = new List<Claim>(5)
+        {
+            new(AuthClaims.UserId, user.Id.ToString()),
+            new(AuthClaims.Username, user.LoginName),
+            new(AuthClaims.Name, user.DisplayName),
+            new(AuthClaims.Role, user.Role.ToClaimValue()),
+        };
+        if (sessionId is { } sid)
+        {
+            claims.Add(new Claim(AuthClaims.SessionId, sid.ToString("N")));
+        }
 
         var token = _handler.CreateToken(new SecurityTokenDescriptor
         {
@@ -24,13 +36,7 @@ public sealed class JwtAccessTokenIssuer(IOptions<JwtSettings> options, TimeProv
             IssuedAt = now,
             NotBefore = now,
             Expires = expires,
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(AuthClaims.UserId, user.Id.ToString()),
-                new Claim(AuthClaims.Username, user.LoginName),
-                new Claim(AuthClaims.Name, user.DisplayName),
-                new Claim(AuthClaims.Role, user.Role.ToClaimValue()),
-            }),
+            Subject = new ClaimsIdentity(claims),
             SigningCredentials = new SigningCredentials(JwtKeys.SigningKey(settings), SecurityAlgorithms.HmacSha256),
         });
 

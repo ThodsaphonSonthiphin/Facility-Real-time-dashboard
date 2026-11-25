@@ -340,3 +340,35 @@ it('edits a Regular Cleaner to clear Area and leave shift unassigned while keepi
     homeBuildingId: 1,
   });
 });
+
+it('keeps an inactive building selectable when editing an account assigned to it while hiding inactive buildings on create', async () => {
+  const inactiveBuilding = { id: 9, code: 'Z', name: 'ตึกปิดแล้ว', isActive: false, activeAreaCount: 0, activeSupervisorCount: 0 };
+  const inactiveCleaner = account({
+    id: 29,
+    loginName: '650009',
+    displayName: 'แม่บ้านตึกเก่า',
+    isActive: false,
+    areaId: undefined,
+    areaCode: undefined,
+    cleanerKind: 'Relief',
+    homeBuildingId: 9,
+    homeBuildingCode: 'Z',
+    shift: 'Day',
+  });
+  serve({
+    'GET /api/admin/accounts': () => ({ status: 200, body: [...accounts, inactiveCleaner] }),
+    'GET /api/admin/buildings/all': () => ({ status: 200, body: [...managedBuildings, inactiveBuilding] }),
+  });
+
+  const { user } = await openAndPress('แก้ไข แม่บ้านตึกเก่า', 'Cleaner');
+  const editDialog = within(screen.getByRole('dialog'));
+  const editBuildingSelect = editDialog.getByLabelText('ตึกประจำ');
+  expect(await within(editBuildingSelect).findByRole('option', { name: 'Z · ตึกปิดแล้ว' })).toBeInTheDocument();
+  expect(editBuildingSelect).toHaveValue('9');
+  await user.click(editDialog.getByRole('button', { name: 'ยกเลิก' }));
+
+  await user.click(screen.getByRole('button', { name: 'สร้างบัญชี' }));
+  const createDialog = within(screen.getByRole('dialog'));
+  const createBuildingSelect = createDialog.getByLabelText('ตึกประจำ');
+  expect(within(createBuildingSelect).queryByRole('option', { name: 'Z · ตึกปิดแล้ว' })).not.toBeInTheDocument();
+});

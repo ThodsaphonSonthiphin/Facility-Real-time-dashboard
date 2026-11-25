@@ -86,17 +86,10 @@ public static class AdminAttendanceEndpoints
         }
 
         var cleaner = await db.Users.Include(u => u.Area)
-            .FirstOrDefaultAsync(u => u.Id == request.UserId && u.Role == UserRole.Cleaner && u.IsActive);
+            .FirstOrDefaultAsync(u => u.Id == request.UserId && u.Role == UserRole.Cleaner, ct);
         if (cleaner is null)
         {
             return Bad("ต้องเลือกแม่บ้านที่ใช้งานอยู่");
-        }
-
-        // facility-0069: attendance counts for the Cleaner's own regular shift on that date
-        var effectiveShift = await CleanerShiftResolver.ResolveShiftAsync(db, cleaner, shiftDate);
-        if (effectiveShift != shift)
-        {
-            return Bad("แก้ได้เฉพาะกะประจำของแม่บ้านคนนี้");
         }
 
         var slot = new ShiftSlot(shiftDate, shift);
@@ -116,6 +109,11 @@ public static class AdminAttendanceEndpoints
         var events = await db.ShiftAttendances
             .Where(a => a.UserId == cleaner.Id && a.ShiftDate == slot.ShiftDate && a.Shift == slot.Shift)
             .ToListAsync(ct);
+        if (!cleaner.IsActive && events.Count == 0)
+        {
+            return Bad("ต้องเลือกแม่บ้านที่ใช้งานอยู่");
+        }
+
         var existing = events.FirstOrDefault(a => a.EventType == eventType);
 
         // Spec §7, §8 and ruling H: the added row's Area is the slot's effective duty Area for that date — a relief
@@ -123,7 +121,22 @@ public static class AdminAttendanceEndpoints
         // never the historical Area of a day the plan knows about.
         var duty = await EffectiveDutyReader.ReadAsync(db, store, cleaner, slot,
             new DateTimeOffset(now, TimeSpan.Zero), ct);
-        if (existing is null && duty.AreaId is null)
+
+        // facility-0069: attendance counts for the Cleaner's effective shift on that date (or a live relief assignment
+        // or a slot that already has recorded attendance facts, e.g. closing MissingAttendance after deactivation).
+        var effectiveShift = await CleanerShiftResolver.ResolveShiftAsync(db, cleaner, shiftDate, ct);
+        if (effectiveShift != shift && duty.Source != EffectiveDuty.ReliefSource && events.Count == 0)
+        {
+            return Bad("แก้ได้เฉพาะกะประจำของแม่บ้านคนนี้");
+        }
+
+        // If a pending midshift transfer was never confirmed (or relief/profile changed after Shift-In), fall back to the
+        // transfer's origin Area or the slot's recorded Shift-In Area so Admin can still fill missing events and close alerts.
+        var resolvedAreaId = duty.AreaId
+            ?? (duty.IsTransferPending ? duty.Transfer!.FromAreaId
+                : events.FirstOrDefault(e => e.EventType == AttendanceEvent.ShiftIn)?.AreaId
+                    ?? events.FirstOrDefault()?.AreaId);
+        if (existing is null && resolvedAreaId is null)
         {
             return Bad("แม่บ้านคนนี้ยังไม่มีพื้นที่");
         }
@@ -143,8 +156,9 @@ public static class AdminAttendanceEndpoints
             return Results.Ok(AttendanceBoard.ToDto(existing));
         }
 
-        var areaCode = duty.AreaId is int dutyAreaId
-            ? await db.Areas.Where(area => area.Id == dutyAreaId).Select(area => area.Code).FirstOrDefaultAsync(ct)
+        var summaryAreaId = existing?.AreaId ?? resolvedAreaId;
+        var areaCode = summaryAreaId is int targetAreaId
+            ? await db.Areas.Where(area => area.Id == targetAreaId).Select(area => area.Code).FirstOrDefaultAsync(ct)
             : null;
         var summary = $"{(existing is null ? "เพิ่ม" : "แก้")}เวลา{ThaiLabels.EventName(eventType, shift)}ของ {cleaner.DisplayName} "
             + $"{areaCode ?? cleaner.Area?.Code} กะ{ThaiLabels.ShiftName(shift)} {ThaiLabels.Date(shiftDate)}: "
@@ -155,7 +169,7 @@ public static class AdminAttendanceEndpoints
             row = new ShiftAttendance
             {
                 UserId = cleaner.Id,
-                AreaId = duty.AreaId!.Value,
+                AreaId = resolvedAreaId!.Value,
                 ShiftDate = slot.ShiftDate,
                 Shift = slot.Shift,
                 EventType = eventType,

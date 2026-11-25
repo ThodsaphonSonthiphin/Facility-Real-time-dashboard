@@ -19,7 +19,7 @@ import { useEditAccountForm } from './useEditAccountForm';
 export function EditAccountForm({ account, accounts, areas, buildings, onDone, onCancel }: EditAccountFormProps) {
   const {
     names, draft, set, problem, notice, setNotice, me, profileLoading, isLoading,
-    visibleAreaChoices, blockOf, titleId, chooseCleanerKind, chooseHomeBuilding, chooseArea, chooseBuilding, submit,
+    buildingChoices, visibleAreaChoices, blockOf, titleId, chooseCleanerKind, chooseHomeBuilding, chooseArea, chooseBuilding, submit,
   } = useEditAccountForm({ account, accounts, areas, buildings, onDone, onCancel });
   const profileId = `${titleId}-profile`;
 
@@ -64,7 +64,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
                     onChange={(event) => chooseHomeBuilding(event.target.value)}
                   >
                     <option value="">เลือกตึกประจำ</option>
-                    {buildings.map((building) => (
+                    {buildingChoices.map((building) => (
                       <option key={building.id} value={String(building.id)}>{buildingOptionText(building)}</option>
                     ))}
                   </Select>
@@ -97,7 +97,7 @@ export function EditAccountForm({ account, accounts, areas, buildings, onDone, o
                   onChange={(event) => chooseBuilding(event.target.value)}
                 >
                   <option value="">เลือกตึก</option>
-                  {buildings.map((building) => (
+                  {buildingChoices.map((building) => (
                     <option key={building.id} value={String(building.id)}>
                       {buildingOptionText(building)}
                     </option>

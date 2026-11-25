@@ -1,4 +1,5 @@
 using System.Net;
+using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -164,6 +165,27 @@ public class RefreshTests
         var response = await AuthApi.LogoutAsync(factory.CreateApiClient(), null);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Revoking_a_session_blocks_both_current_and_grace_window_tokens_and_issues_no_new_token()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (client, auth, first) = await AuthApi.LoggedInAsync(factory);
+        var second = AuthApi.RefreshCookieValue(await AuthApi.RefreshAsync(client, first))!;
+
+        // Logout with the first (grace-window) token revokes the entire session, including the rotated second token.
+        var logout = await AuthApi.LogoutAsync(client, first);
+        Assert.Equal(HttpStatusCode.NoContent, logout.StatusCode);
+
+        var replayFirst = await AuthApi.RefreshAsync(factory.CreateApiClient(), first);
+        var replaySecond = await AuthApi.RefreshAsync(factory.CreateApiClient(), second);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, replayFirst.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, replaySecond.StatusCode);
+        var liveTokens = await AdminSetupApi.ReadAsync(factory, db =>
+            db.RefreshTokens.CountAsync(t => t.UserId == auth.User.Id && t.RevokedAt == null));
+        Assert.Equal(0, liveTokens);
     }
 
     private static Task SetActiveAsync(JanitorialApiFactory factory, int userId, bool isActive) =>

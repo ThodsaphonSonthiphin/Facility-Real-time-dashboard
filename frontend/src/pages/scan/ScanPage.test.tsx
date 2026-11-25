@@ -1,9 +1,10 @@
-import { screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SEND_TIMEOUT_MS } from '../../shared/api/baseApi';
 import { checkedOut, cleanerSession, myWork, notCheckedIn, onDuty, otherAreaBlocked, outsideShift, point } from '../../test/cleanerFixtures';
 import { fakeGps, nearSign } from '../../test/fakeGps';
-import { authAnswer, fakeServer, type FakeRoutes } from '../../test/fakeServer';
+import { authAnswer, fakeServer, type FakeResponse, type FakeRoutes } from '../../test/fakeServer';
+import { hub } from '../../test/fakeSignalR';
 import { renderApp } from '../../test/renderApp';
 import type { ScanRecordCreated } from './scanApi';
 
@@ -428,5 +429,53 @@ describe('ScanPage when the send does not go through (M8, M12)', () => {
 
     await screen.findByRole('heading', { name: 'ห้องน้ำชาย' });
     expect(screen.queryByText('เกี่ยวกับการส่งงาน')).not.toBeInTheDocument();
+  });
+
+  it('keeps SubmitForm and SubmitResult mounted across background SignalR MyWork refetches', async () => {
+    fakeGps(nearSign);
+    let holdMyWork = false;
+    let releaseMyWork: ((answer: FakeResponse) => void) | null = null;
+    const server = serve({
+      'GET /api/my-work': () =>
+        holdMyWork
+          ? new Promise<FakeResponse>((resolve) => {
+              releaseMyWork = resolve;
+            })
+          : { status: 200, body: myWork(onDuty) },
+      'POST /api/scan-records': () => ({ status: 201, body: saved() }),
+    });
+    const { user } = await renderApp(SIGN);
+
+    await user.click(await screen.findByRole('radio', { name: 'พบปัญหา' }));
+    await user.type(screen.getByLabelText('หมายเหตุ'), 'ก๊อกน้ำหยด');
+
+    const beforePush = server.calls.filter((c) => c.path === '/api/my-work').length;
+    holdMyWork = true;
+    act(() => hub.latest().push('InspectionRecorded', point({ status: 'Passed' })));
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work').length).toBeGreaterThan(beforePush));
+
+    expect(screen.queryByText('กำลังเปิดป้าย...')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('หมายเหตุ')).toHaveValue('ก๊อกน้ำหยด');
+
+    await act(async () => {
+      holdMyWork = false;
+      releaseMyWork?.({ status: 200, body: myWork(onDuty) });
+    });
+
+    await user.click(screen.getByRole('button', { name: 'ส่งงาน' }));
+    expect(await screen.findByRole('heading', { name: 'ส่งงานแล้ว 10:05' })).toBeInTheDocument();
+
+    const beforeResultPush = server.calls.filter((c) => c.path === '/api/my-work').length;
+    holdMyWork = true;
+    act(() => hub.latest().push('ScanRecorded', point({ status: 'PendingInspection' })));
+    await waitFor(() => expect(server.calls.filter((c) => c.path === '/api/my-work').length).toBeGreaterThan(beforeResultPush));
+
+    expect(screen.queryByText('กำลังเปิดป้าย...')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ส่งงานแล้ว 10:05' })).toBeInTheDocument();
+
+    await act(async () => {
+      holdMyWork = false;
+      releaseMyWork?.({ status: 200, body: myWork(onDuty) });
+    });
   });
 });

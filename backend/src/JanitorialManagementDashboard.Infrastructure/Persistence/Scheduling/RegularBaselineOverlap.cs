@@ -118,6 +118,11 @@ public static class RegularBaselineOverlap
 
                     foreach (var cell in workingDays)
                     {
+                        if (!WeekdayOccursInRange(cell.Weekday, overlapStart, overlapEnd))
+                        {
+                            continue;
+                        }
+
                         if (b.Days.FirstOrDefault(d => d.Weekday == cell.Weekday) is { IsDayOff: false, AreaId: int otherAreaId }
                             && otherAreaId == cell.AreaId
                             && areaCodes.TryGetValue(otherAreaId, out var areaCode))
@@ -220,5 +225,22 @@ public static class RegularBaselineOverlap
                 || (!periodsByUser.ContainsKey(u.Id) && u.AreaId == areaId))
             .Select(u => u.DisplayName)
             .ToList();
+    }
+
+    private static bool WeekdayOccursInRange(DayOfWeek weekday, DateOnly start, DateOnly? end)
+    {
+        if (end is not DateOnly until)
+        {
+            return true;
+        }
+
+        var span = until.DayNumber - start.DayNumber;
+        if (span >= 7)
+        {
+            return true;
+        }
+
+        var offset = ((int)weekday - (int)start.DayOfWeek + 7) % 7;
+        return offset < span;
     }
 }

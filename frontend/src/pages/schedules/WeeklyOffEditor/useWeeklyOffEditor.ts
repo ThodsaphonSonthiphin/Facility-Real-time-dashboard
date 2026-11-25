@@ -88,7 +88,13 @@ export function useWeeklyOffEditor(props: WeeklyOffEditorProps) {
         const choices = new Set(current ?? []);
         if (checked) choices.add(date);
         else choices.delete(date);
-        setDraft({ ...draft, choices: { ...draft.choices, [person.userId]: [...choices].sort() } });
+        const nextChoices = { ...draft.choices };
+        if (choices.size === 0 && !person.hasWeeklyChoice) {
+          delete nextChoices[person.userId];
+        } else {
+          nextChoices[person.userId] = [...choices].sort();
+        }
+        setDraft({ ...draft, choices: nextChoices });
       },
       confirmNoOff: () => setDraft({ ...draft, choices: { ...draft.choices, [person.userId]: [] } }),
     };

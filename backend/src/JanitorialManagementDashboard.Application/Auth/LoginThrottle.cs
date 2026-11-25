@@ -41,6 +41,12 @@ public sealed class LoginThrottle(TimeProvider clock, LoginThrottleSettings sett
     /// <summary>Above this many tracked keys, expired entries are swept before counting.</summary>
     internal const int SweepThreshold = 10_000;
 
+    /// <summary>Hard cap on in-memory entries to bound memory under distributed flooding.</summary>
+    internal const int MaxEntries = 50_000;
+
+    private const int EvictBatchSize = MaxEntries / 10;
+    private static readonly TimeSpan SweepCooldown = TimeSpan.FromSeconds(30);
+
     private sealed class Entry
     {
         public int Attempts;
@@ -50,6 +56,7 @@ public sealed class LoginThrottle(TimeProvider clock, LoginThrottleSettings sett
 
     private readonly Dictionary<string, Entry> _entries = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _sync = new();
+    private DateTime _lastSweepUtc = DateTime.MinValue;
 
     private TimeSpan Window => TimeSpan.FromMinutes(settings.LockMinutes);
 
@@ -65,7 +72,15 @@ public sealed class LoginThrottle(TimeProvider clock, LoginThrottleSettings sett
         var now = clock.GetUtcNow().UtcDateTime;
         lock (_sync)
         {
-            if (_entries.Count >= SweepThreshold)
+            if (_entries.Count >= MaxEntries)
+            {
+                Sweep(now);
+                if (_entries.Count >= MaxEntries)
+                {
+                    EvictOldest(now);
+                }
+            }
+            else if (_entries.Count >= SweepThreshold && now - _lastSweepUtc >= SweepCooldown)
             {
                 Sweep(now);
             }
@@ -146,7 +161,26 @@ public sealed class LoginThrottle(TimeProvider clock, LoginThrottleSettings sett
 
     private void Sweep(DateTime now)
     {
+        _lastSweepUtc = now;
         foreach (var key in _entries.Where(pair => IsExpired(pair.Value, now)).Select(pair => pair.Key).ToList())
+        {
+            _entries.Remove(key);
+        }
+    }
+
+    /// <summary>
+    /// Evicts a batch of the oldest live entries when memory hits <see cref="MaxEntries"/>, preferring unlocked
+    /// noise ahead of actively locked accounts or places so flooding cannot clear an active lock.
+    /// </summary>
+    private void EvictOldest(DateTime now)
+    {
+        var toRemove = _entries
+            .OrderBy(pair => pair.Value.LockedUntilUtc > now ? 1 : 0)
+            .ThenBy(pair => pair.Value.FirstAttemptUtc)
+            .Take(EvictBatchSize)
+            .Select(pair => pair.Key)
+            .ToList();
+        foreach (var key in toRemove)
         {
             _entries.Remove(key);
         }

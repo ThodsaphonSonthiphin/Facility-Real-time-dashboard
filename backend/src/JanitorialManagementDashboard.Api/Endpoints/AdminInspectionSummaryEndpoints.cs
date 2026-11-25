@@ -59,9 +59,48 @@ public static class AdminInspectionSummaryEndpoints
 
         var supervisors = await db.Users.AsNoTracking()
             .Include(u => u.Building)
-            .Where(u => u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId != null && u.Shift != null
-                && (buildingId == null || u.BuildingId == buildingId))
+            .Where(u => u.Role == UserRole.Supervisor && u.IsActive)
             .ToListAsync();
+        var supervisorIds = supervisors.Select(u => u.Id).ToList();
+        var datedPeriods = supervisorIds.Count == 0
+            ? []
+            : await db.SupervisorScopePeriods.AsNoTracking()
+                .Where(p => supervisorIds.Contains(p.SupervisorId))
+                .ToListAsync();
+        var periodsBySupervisor = datedPeriods.ToLookup(p => p.SupervisorId);
+
+        // Spec §3 and §14: read beats from dated SupervisorScopePeriods overlapping [first, last], falling back to
+        // legacy User.BuildingId/Shift only for pre-backfill Supervisors with no dated period rows at all.
+        var summaryBeats = new List<SummarySupervisor>();
+        foreach (var supervisor in supervisors)
+        {
+            var ownPeriods = periodsBySupervisor[supervisor.Id].ToList();
+            if (ownPeriods.Count > 0)
+            {
+                foreach (var beat in ownPeriods
+                    .Where(p => p.EffectiveFrom <= last
+                        && (p.EffectiveUntil == null || p.EffectiveUntil.Value > first)
+                        && (buildingId == null || p.BuildingId == buildingId.Value))
+                    .Select(p => (p.BuildingId, p.Shift))
+                    .Distinct())
+                {
+                    summaryBeats.Add(new SummarySupervisor(supervisor.Id, beat.BuildingId, beat.Shift));
+                }
+            }
+            else if (supervisor.BuildingId is int bId && supervisor.Shift is Shift s
+                && (buildingId == null || bId == buildingId.Value))
+            {
+                summaryBeats.Add(new SummarySupervisor(supervisor.Id, bId, s));
+            }
+        }
+
+        var beatBuildingIds = summaryBeats.Select(b => b.BuildingId).Distinct().ToList();
+        var buildingCodes = beatBuildingIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await db.Buildings.AsNoTracking()
+                .Where(b => beatBuildingIds.Contains(b.Id))
+                .ToDictionaryAsync(b => b.Id, b => b.Code);
+
         var places = await InspectionHistoryQuery.LoadPointPlacesAsync(db, buildingId);
         var submissions = await InspectionHistoryQuery.LoadRoundSubmissionsAsync(db, first, last, buildingId);
         // A Supervisor's own inspections count wherever they were, covers included, so these are not filtered by building
@@ -73,7 +112,7 @@ public static class AdminInspectionSummaryEndpoints
             settings.ClosesMinutesAfterShift);
 
         var tallies = InspectionSummary.Tally(
-            supervisors.Select(u => new SummarySupervisor(u.Id, u.BuildingId!.Value, u.Shift!.Value)).ToList(),
+            summaryBeats,
             places.Select(p => new SummaryPoint(p.Id, p.BuildingId, p.Counted, p.WorksNight)).ToList(),
             submissions,
             inspections.Select(i => new SummaryInspection(i.ScanRecordId, i.PointId, i.SupervisorId, new ShiftSlot(i.ShiftDate, i.Shift), i.Result, i.WithinRadius)).ToList(),
@@ -81,16 +120,16 @@ public static class AdminInspectionSummaryEndpoints
 
         var byId = supervisors.ToDictionary(u => u.Id);
         var pointById = places.ToDictionary(p => p.Id);
-        var rows = tallies
-            .Select(t =>
+        var rows = summaryBeats.Zip(tallies, (beat, t) =>
             {
-                var supervisor = byId[t.SupervisorId];
+                var supervisor = byId[beat.Id];
+                var buildingCode = buildingCodes.GetValueOrDefault(beat.BuildingId, supervisor.Building?.Code ?? string.Empty);
                 return new InspectionSummaryRowDto(
                     supervisor.Id,
                     supervisor.EmployeeId ?? string.Empty,
                     supervisor.DisplayName,
-                    supervisor.Building!.Code,
-                    supervisor.Shift!.Value,
+                    buildingCode,
+                    beat.Shift,
                     t.PointsInspected,
                     t.PointsTotal,
                     t.Submitted,

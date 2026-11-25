@@ -113,11 +113,41 @@ export function useReliefRosterEditor(props: ReliefRosterEditorProps) {
       });
     },
   });
+  const changeEffectiveFrom = (nextDate: string) => {
+    setEffectiveFrom(nextDate);
+    setChanged({});
+    setVersions({});
+  };
   return {
-    ...editor, effectiveFrom, tomorrow, setEffectiveFrom, rows, loading, error: first.error ?? next.error,
+    ...editor, effectiveFrom, tomorrow, setEffectiveFrom: changeEffectiveFrom, rows, loading, error: first.error ?? next.error,
     setCell: (person: SchedulePerson, weekday: ReliefWeekday, value: string) => {
       const cell = rows.find(({ row }) => row.userId === person.userId)?.cells.find((entry) => entry.weekday === weekday);
       if (!cell) return;
+      if (value === cell.before) {
+        let emptied = false;
+        setChanged((currentDraft) => {
+          const personDraft = currentDraft[person.userId];
+          if (!personDraft || !(weekday in personDraft)) return currentDraft;
+          const restDays = { ...personDraft };
+          delete restDays[weekday];
+          const nextDraft = { ...currentDraft };
+          if (Object.keys(restDays).length === 0) {
+            delete nextDraft[person.userId];
+            emptied = true;
+          } else {
+            nextDraft[person.userId] = restDays;
+          }
+          return nextDraft;
+        });
+        if (emptied) {
+          setVersions((currentVersions) => {
+            const nextVersions = { ...currentVersions };
+            delete nextVersions[person.userId];
+            return nextVersions;
+          });
+        }
+        return;
+      }
       setVersions((currentVersions) => ({ ...currentVersions, [person.userId]: currentVersions[person.userId] ?? person.reliefBaselineRevision }));
       setChanged((currentDraft) => ({
         ...currentDraft,

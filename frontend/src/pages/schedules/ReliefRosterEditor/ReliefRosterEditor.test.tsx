@@ -76,3 +76,26 @@ it('keeps the first-edit, refreshed and draft weekday values distinct until the 
     payload: { rows: [{ userId: 7, days: [{ weekday: 'Tuesday', isDayOff: true }] }] },
   });
 });
+
+it('clears dirty state when a cell is reverted back to its original value and resets edits when effectiveFrom changes', async () => {
+  const { user } = await editorApp({ week: reliefWeek, source: reliefWeek('2026-11-23') });
+  await user.click(await screen.findByRole('button', { name: 'จัดการเพิ่มเติม' }));
+  await user.click(await screen.findByRole('menuitem', { name: 'จัดตารางประจำสแปร์' }));
+  const drawer = within(await screen.findByRole('dialog', { name: 'จัดตารางประจำสแปร์' }));
+  const first = within(drawer.getByRole('group', { name: 'สแปร์หนึ่ง' }));
+  await first.findByText('จัดแล้ว 0 วัน · เป้าหมาย 6 วัน');
+
+  // Edit Tuesday then revert it back to empty: review button returns to disabled and closing needs no discard prompt.
+  await user.selectOptions(first.getByLabelText('อ.'), '5');
+  expect(drawer.getByRole('button', { name: 'ตรวจทาน' })).toBeEnabled();
+  await user.selectOptions(first.getByLabelText('อ.'), '');
+  expect(drawer.getByRole('button', { name: 'ตรวจทาน' })).toBeDisabled();
+
+  // Edit again, then change effectiveFrom: pending edits from the old date are cleared.
+  await user.selectOptions(first.getByLabelText('อ.'), '5');
+  expect(drawer.getByRole('button', { name: 'ตรวจทาน' })).toBeEnabled();
+  const dateInput = drawer.getByLabelText('วันเริ่มใช้');
+  await user.clear(dateInput);
+  await user.type(dateInput, '2026-11-18');
+  expect(drawer.getByRole('button', { name: 'ตรวจทาน' })).toBeDisabled();
+});

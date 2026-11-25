@@ -805,7 +805,7 @@ export function useOverviewPage(): OverviewPageModel {
     : [];
   const buildingOptions = cachedOptions.length >= currentBuildingOptions.length ? cachedOptions : currentBuildingOptions;
 
-  const readAtText = response ? formatTime(response.summary.context.readAtUtc) : undefined;
+  const readAtText = displayResponse ? formatTime(displayResponse.summary.context.readAtUtc) : undefined;
   const activeGroup = switching ? selection.group : displayResponse?.group;
   const results = displayResponse
     ? buildResults(displayResponse, href, switching, onPage, switching || refreshing)

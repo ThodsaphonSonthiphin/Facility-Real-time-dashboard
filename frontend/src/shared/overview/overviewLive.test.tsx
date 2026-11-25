@@ -279,6 +279,43 @@ it.each(recoveryViews)('keeps the $label snapshot marked stale through a failed 
   await waitFor(() => expect(screen.queryByText(outdated)).not.toBeInTheDocument());
 });
 
+it('shows the retained snapshot timestamp instead of undefined when switching groups during reconnect recovery', async () => {
+  const heldReturn = holdRead();
+  let holdNotEntered = false;
+  const { calls } = serve({
+    [`GET ${LIST}`]: ({ search }) => {
+      const group = new URLSearchParams(search).get('group');
+      if (group === 'notEntered' && holdNotEntered) {
+        return heldReturn.response;
+      }
+      return recoveryFixture(LIST, 0);
+    },
+  });
+  const { user } = await renderApp(listUrl);
+  await waitFor(() => expect(calls.filter((call) => call.path === LIST)).toHaveLength(2));
+  const notEnteredHub = hub.latest();
+
+  await user.click(screen.getByRole('button', { name: 'ลงเวลาแล้ว 90 พื้นที่' }));
+  await waitFor(() => expect(calls.filter((call) => call.path === LIST)).toHaveLength(4));
+
+  holdNotEntered = true;
+  await user.click(screen.getByRole('button', { name: 'ยังไม่ลงเวลา 10 พื้นที่' }));
+  await waitFor(() => expect(calls.filter((call) => call.path === LIST)).toHaveLength(5));
+  act(() => {
+    notEnteredHub.reconnecting();
+    notEnteredHub.reconnected();
+  });
+
+  const banner = screen.getByText(checking);
+  expect(banner).toHaveTextContent('10:00 น.');
+  expect(banner).not.toHaveTextContent('undefined');
+
+  await act(async () => {
+    holdNotEntered = false;
+    heldReturn.release(recoveryFixture(LIST, 1));
+  });
+});
+
 it('polls before the slot, on a server-defined receiving window and through the inclusive close boundary', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   let body = listResponse({ phase: 'notStarted' });

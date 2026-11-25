@@ -1,7 +1,7 @@
 import { useStore } from 'react-redux';
 import type { RootState } from '../../store';
 import { useState, type ChangeEvent } from 'react';
-import { useGetAreasQuery, useGetBuildingsQuery } from '../../shared/api/adminSetupApi';
+import { useGetAllBuildingsQuery, useGetAreasQuery } from '../../shared/api/adminSetupApi';
 import { baseApi, freshOnOpen } from '../../shared/api/baseApi';
 import { getErrorMessage } from '../../shared/utils/getErrorMessage';
 import { useAppSelector } from '../../store/hooks';
@@ -13,7 +13,7 @@ import type { AccountAction, AccountNotice, AccountPanel } from './type';
 export function useAccountsPage() {
   const accounts = useGetAccountsQuery(undefined, freshOnOpen);
   const areas = useGetAreasQuery(undefined, freshOnOpen);
-  const buildings = useGetBuildingsQuery(undefined, freshOnOpen);
+  const buildings = useGetAllBuildingsQuery(undefined, freshOnOpen);
   const me = useAppSelector((state) => state.auth.currentUser?.id);
   const [role, setRole] = useState<AccountRole>('Cleaner');
   const [active, setActive] = useState<AccountActiveFilter>('all');

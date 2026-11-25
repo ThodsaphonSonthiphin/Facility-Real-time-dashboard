@@ -2,6 +2,7 @@ using System.Security.Claims;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
 using JanitorialManagementDashboard.Application.Buildings;
+using JanitorialManagementDashboard.Application.Scheduling;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
 using JanitorialManagementDashboard.Infrastructure.Persistence;
@@ -20,10 +21,11 @@ public static class AdminBuildingEndpoints
     public static IEndpointRouteBuilder MapAdminBuildingEndpoints(this IEndpointRouteBuilder app)
     {
         var admin = app.MapGroup("/api/admin").RequireAuthorization(AuthSetup.AdminOnly);
-        admin.MapGet("/buildings/all", async (ClaimsPrincipal principal, AppDbContext db) =>
+        admin.MapGet("/buildings/all", async (ClaimsPrincipal principal, AppDbContext db, TimeProvider clock) =>
             await CurrentUser.LoadAsync(principal, db) is null
                 ? Results.Unauthorized()
-                : Results.Ok(await Rows(db, db.Buildings.AsNoTracking().OrderBy(b => b.Code)).ToListAsync()));
+                : Results.Ok(await Rows(db, db.Buildings.AsNoTracking().OrderBy(b => b.Code),
+                    ScheduleAuthority.BusinessDate(clock.GetUtcNow().UtcDateTime)).ToListAsync()));
         admin.MapPost("/buildings", CreateAsync);
         admin.MapPut("/buildings/{id:int}", RenameAsync);
         admin.MapPost("/buildings/{id:int}/deactivate", (int id, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
@@ -89,7 +91,7 @@ public static class AdminBuildingEndpoints
             throw;
         }
 
-        return Results.Created("/api/admin/buildings/all", await LoadOneAsync(db, building.Id));
+        return Results.Created("/api/admin/buildings/all", await LoadOneAsync(db, building.Id, ScheduleAuthority.BusinessDate(now)));
     }
 
     private static async Task<IResult> RenameAsync(int id, UpdateBuildingRequest request, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
@@ -113,21 +115,22 @@ public static class AdminBuildingEndpoints
             return Bad(BuildingRules.NameProblem);
         }
 
+        var now = clock.GetUtcNow().UtcDateTime;
         if (building.Name != name)
         {
             var before = new BuildingSnapshot(building.Code, building.Name);
             building.Name = name;
             AuditTrail.Add(
-                db, admin.Id, clock.GetUtcNow().UtcDateTime, "BUILDING_UPDATE", "buildings", building.Id,
+                db, admin.Id, now, "BUILDING_UPDATE", "buildings", building.Id,
                 $"แก้ตึก {building.Code} {name}", before, after: new BuildingSnapshot(building.Code, name));
             await db.SaveChangesAsync(ct);
         }
 
         await overview.CommitAsync(change, ct);
-        return Results.Ok(await LoadOneAsync(db, building.Id));
+        return Results.Ok(await LoadOneAsync(db, building.Id, ScheduleAuthority.BusinessDate(now)));
     }
 
-    /// <summary>Decision 4: off only with no active Area and no active Supervisor in it; on with no condition.</summary>
+    /// <summary>Decision 4: off only with no active Area, no active Supervisor scope, and no active Cleaner home building in it; on with no condition.</summary>
     private static async Task<IResult> SetActiveAsync(int id, bool active, ClaimsPrincipal principal, AppDbContext db, TimeProvider clock,
         OverviewMutation mutation, OverviewNotifications overview, CancellationToken ct)
     {
@@ -137,8 +140,10 @@ public static class AdminBuildingEndpoints
             return Results.Unauthorized();
         }
 
+        var now = clock.GetUtcNow().UtcDateTime;
+        var businessDate = ScheduleAuthority.BusinessDate(now);
         await using var change = await mutation.BeginAsync(ct);
-        var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == id);
+        var building = await db.Buildings.FirstOrDefaultAsync(b => b.Id == id, ct);
         if (building is null)
         {
             return BuildingNotFound();
@@ -147,43 +152,65 @@ public static class AdminBuildingEndpoints
         if (building.IsActive == active)
         {
             await overview.CommitAsync(change, ct);
-            return Results.Ok(await LoadOneAsync(db, building.Id));
+            return Results.Ok(await LoadOneAsync(db, building.Id, businessDate));
         }
 
         if (!active)
         {
-            var activeAreas = await db.Areas.CountAsync(a => a.BuildingId == building.Id && a.IsActive);
-            var activeSupervisors = await db.Users.CountAsync(
-                u => u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == building.Id);
+            var activeAreas = await db.Areas.CountAsync(a => a.BuildingId == building.Id && a.IsActive, ct);
+            var activeSupervisors = await CountActiveSupervisorsAsync(db, building.Id, businessDate, ct);
             if (BuildingRules.DeactivateProblem(building.Code, activeAreas, activeSupervisors) is { } problem)
             {
                 return Conflict(problem);
+            }
+
+            var activeHomeCleaners = await db.Users.AsNoTracking()
+                .Where(u => u.Role == UserRole.Cleaner && u.IsActive
+                    && db.CleanerProfilePeriods.Any(p => p.UserId == u.Id
+                        && p.HomeBuildingId == building.Id
+                        && (p.EffectiveUntil == null || p.EffectiveUntil.Value > businessDate)))
+                .CountAsync(ct);
+            if (activeHomeCleaners > 0)
+            {
+                return Conflict($"ตึก {building.Code} ยังมีแม่บ้านสังกัดอยู่ {activeHomeCleaners} คน ย้ายตึกต้นทางหรือปิดบัญชีแม่บ้านก่อน");
             }
         }
 
         building.IsActive = active;
         AuditTrail.Add(
-            db, admin.Id, clock.GetUtcNow().UtcDateTime, active ? "BUILDING_ACTIVATE" : "BUILDING_DEACTIVATE", "buildings",
+            db, admin.Id, now, active ? "BUILDING_ACTIVATE" : "BUILDING_DEACTIVATE", "buildings",
             building.Id, $"{(active ? "เปิด" : "ปิด")}ใช้งานตึก {building.Code}",
             before: new { IsActive = !active }, after: new { IsActive = active });
         await db.SaveChangesAsync(ct);
 
         await overview.CommitAsync(change, ct);
-        return Results.Ok(await LoadOneAsync(db, building.Id));
+        return Results.Ok(await LoadOneAsync(db, building.Id, businessDate));
     }
 
+    private static Task<int> CountActiveSupervisorsAsync(AppDbContext db, int buildingId, DateOnly businessDate, CancellationToken ct) =>
+        db.Users.AsNoTracking().CountAsync(u =>
+            u.Role == UserRole.Supervisor && u.IsActive
+            && (db.SupervisorScopePeriods.Any(p => p.SupervisorId == u.Id)
+                ? db.SupervisorScopePeriods.Any(p => p.SupervisorId == u.Id && p.BuildingId == buildingId
+                    && (p.EffectiveUntil == null || p.EffectiveUntil.Value > businessDate))
+                : u.BuildingId == buildingId), ct);
+
     /// <summary>Filter and order <paramref name="buildings"/> before this: EF cannot order by the record it builds.</summary>
-    private static IQueryable<ManagedBuildingDto> Rows(AppDbContext db, IQueryable<Building> buildings) =>
+    private static IQueryable<ManagedBuildingDto> Rows(AppDbContext db, IQueryable<Building> buildings, DateOnly businessDate) =>
         buildings.Select(b => new ManagedBuildingDto(
             b.Id,
             b.Code,
             b.Name,
             b.IsActive,
             db.Areas.Count(a => a.BuildingId == b.Id && a.IsActive),
-            db.Users.Count(u => u.Role == UserRole.Supervisor && u.IsActive && u.BuildingId == b.Id)));
+            db.Users.Count(u => u.Role == UserRole.Supervisor && u.IsActive
+                && (db.SupervisorScopePeriods.Any(p => p.SupervisorId == u.Id)
+                    ? db.SupervisorScopePeriods.Any(p => p.SupervisorId == u.Id && p.BuildingId == b.Id
+                        && (p.EffectiveUntil == null || p.EffectiveUntil.Value > businessDate))
+                    : u.BuildingId == b.Id))));
 
-    private static Task<ManagedBuildingDto> LoadOneAsync(AppDbContext db, int id) =>
-        Rows(db, db.Buildings.AsNoTracking().Where(b => b.Id == id)).SingleAsync();
+    private static Task<ManagedBuildingDto> LoadOneAsync(AppDbContext db, int id, DateOnly businessDate) =>
+        Rows(db, db.Buildings.AsNoTracking().Where(b => b.Id == id), businessDate).SingleAsync();
 
     private static IResult Bad(string message) => ApiResults.Message(StatusCodes.Status400BadRequest, message);
 

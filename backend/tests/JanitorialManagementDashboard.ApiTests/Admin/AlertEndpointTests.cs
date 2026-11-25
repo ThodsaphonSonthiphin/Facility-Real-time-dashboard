@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
 using JanitorialManagementDashboard.ApiTests.Scheduling;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -366,5 +367,62 @@ public class AlertEndpointTests
 
         Assert.Equal(HttpStatusCode.Forbidden, (await cleaner.GetAsync(AdminAttendanceApi.AlertsPath)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await AdminAttendanceApi.ReviewAsync(cleaner, "BlockedScan", 1)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Pre_shift_blocked_scan_uses_scans_shift_date_and_supports_relief_and_effective_area_code()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (admin, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var oct9 = new DateOnly(2026, 10, 9);
+        var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        var ar03 = await TestData.AddAreaAsync(factory, "AR03", "A");
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
+        var adminId = adminAuth.User.Id;
+
+        // Regular Cleaner whose dated plan begins on Oct 9 at AR03 (while legacy User.AreaId is null).
+        var preShiftCleaner = await TestData.AddCleanerAsync(factory, "E1091", Shift.Day);
+        await ScheduleWriteApi.AddProfileAsync(factory, "E1091", CleanerKind.Regular, Shift.Day, oct9);
+        await ScheduleWriteApi.AddWeekdayBaselineAsync(factory, "E1091", oct9, "AR03", breakGroup: 1);
+
+        // Relief Cleaner assigned to AR01 on Oct 9.
+        var reliefCleaner = await TestData.AddCleanerAsync(factory, "E1092", Shift.Day);
+        await ScheduleWriteApi.AddProfileAsync(factory, "E1092", CleanerKind.Relief, Shift.Day, oct9);
+
+        await factory.WithDbAsync(async db =>
+        {
+            db.ReliefAssignments.Add(new ReliefAssignment
+            {
+                UserId = reliefCleaner, ShiftDate = oct9, Shift = Shift.Day, AreaId = ar01,
+                SourceBuildingId = buildingA, BreakGroup = 1,
+                CreatedById = adminId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            });
+            var ar02Sign = await db.Signs.SingleAsync(s => s.Code == "AR02-IN");
+            db.BlockedScans.AddRange(
+                new JanitorialManagementDashboard.Domain.Entities.BlockedScan
+                {
+                    UserId = preShiftCleaner, SignId = ar02Sign.Id, Reason = BlockReason.OtherArea,
+                    ScannedAt = ThaiClock.At(9, 6, 30).UtcDateTime,
+                },
+                new JanitorialManagementDashboard.Domain.Entities.BlockedScan
+                {
+                    UserId = reliefCleaner, SignId = ar02Sign.Id, Reason = BlockReason.OtherArea,
+                    ScannedAt = ThaiClock.At(9, 6, 35).UtcDateTime,
+                });
+            await db.SaveChangesAsync();
+        });
+
+        // At 06:40 Thai on Oct 9, ScheduleAuthority.BusinessDate(nowUtc) is still Oct 8, while both scans belong to (Oct 9, Day).
+        factory.Clock.SetUtcNow(ThaiClock.At(9, 6, 40));
+        var alerts = await AdminAttendanceApi.AlertsAsync(admin);
+
+        var regularAlert = alerts.Single(a => a.Person.EmployeeId == "E1091");
+        Assert.Equal("AR03", regularAlert.Person.AreaCode);
+        Assert.Equal(new CoverSuggestionModel(preShiftCleaner, ar02, null, oct9, "Day"), regularAlert.Cover);
+
+        var reliefAlert = alerts.Single(a => a.Person.EmployeeId == "E1092");
+        Assert.Equal("AR01", reliefAlert.Person.AreaCode);
+        Assert.Equal(new CoverSuggestionModel(reliefCleaner, ar02, null, oct9, "Day"), reliefAlert.Cover);
     }
 }

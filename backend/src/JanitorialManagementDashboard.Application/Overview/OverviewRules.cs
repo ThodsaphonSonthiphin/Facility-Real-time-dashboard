@@ -59,6 +59,22 @@ public static class OverviewRules
             at);
     }
 
+    internal static bool IsIssueAt(IEnumerable<OverviewSubmission> pointScans, DateTime at)
+    {
+        OverviewSubmission? latest = null;
+        foreach (var scan in pointScans)
+        {
+            if (scan.SubmittedAt > at) continue;
+            if (latest is null || scan.SubmittedAt > latest.SubmittedAt
+                || (scan.SubmittedAt == latest.SubmittedAt && scan.Id > latest.Id))
+            {
+                latest = scan;
+            }
+        }
+
+        return latest?.Status == CleaningStatus.Issue;
+    }
+
     internal static OverviewPoint LatestForPoint(
         ShiftSlot slot,
         RoundObligation round,

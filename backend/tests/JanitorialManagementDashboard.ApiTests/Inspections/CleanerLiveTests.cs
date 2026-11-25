@@ -1,5 +1,7 @@
 using System.Text.Json;
+using JanitorialManagementDashboard.ApiTests.Admin;
 using JanitorialManagementDashboard.ApiTests.Infrastructure;
+using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
@@ -87,5 +89,65 @@ public class CleanerLiveTests
         await Task.Delay(500);
         Assert.False(cancelledGot.Task.IsCompleted, "a cancelled cover must receive nothing");
         Assert.False(deactivatedGot.Task.IsCompleted, "a deactivated Cleaner must receive nothing");
+    }
+
+    [Fact]
+    public async Task An_inspection_reaches_active_relief_and_confirmed_transferred_cleaners_of_the_area()
+    {
+        using var factory = new JanitorialApiFactory();
+        var (_, adminAuth, _) = await AuthApi.LoggedInAdminAsync(factory);
+        var shiftDate = new DateOnly(2026, 10, 8);
+        var ar01 = await AdminSetupApi.AreaIdAsync(factory, "AR01");
+        var ar02 = await AdminSetupApi.AreaIdAsync(factory, "AR02");
+        var buildingA = await AdminSetupApi.BuildingIdAsync(factory);
+        var adminId = adminAuth.User.Id;
+        var reliefId = await TestData.AddCleanerAsync(factory, "E3010", Shift.Day, phone: "0830000010");
+        var transferredId = await AdminSetupApi.UserIdAsync(factory, "1000003"); // regular AR02
+
+        await factory.WithDbAsync(async db =>
+        {
+            var ar01SignId = await db.Signs.Where(s => s.Code == "AR01-IN").Select(s => s.Id).SingleAsync();
+            db.CleanerProfilePeriods.Add(new CleanerProfilePeriod
+            {
+                UserId = reliefId, Kind = CleanerKind.Relief, HomeBuildingId = buildingA, Shift = Shift.Day,
+                EffectiveFrom = shiftDate.AddDays(-1), Revision = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            });
+            db.ReliefAssignments.Add(new ReliefAssignment
+            {
+                UserId = reliefId, ShiftDate = shiftDate, Shift = Shift.Day, AreaId = ar01,
+                SourceBuildingId = buildingA, BreakGroup = 1,
+                CreatedById = adminId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            });
+            var transfer = new AreaTransfer
+            {
+                PersonId = transferredId, ShiftDate = shiftDate, Shift = Shift.Day,
+                FromAreaId = ar02, ToAreaId = ar01, EffectiveAt = ThaiClock.At(8, 8, 0).UtcDateTime,
+                CreatedById = adminId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            db.AreaTransfers.Add(transfer);
+            await db.SaveChangesAsync();
+            db.AreaTransferConfirmations.Add(new AreaTransferConfirmation
+            {
+                TransferId = transfer.Id, ConfirmedById = transferredId, AreaId = ar01, SignId = ar01SignId,
+                OccurredAt = ThaiClock.At(8, 8, 5).UtcDateTime, Source = AttendanceSource.Scan, CreatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var supervisor = await InspectionApi.SupervisorAsync(factory);
+        var reliefAuth = (await AuthApi.LoggedInAsEmployeeAsync(factory, "E3010", "0830000010")).Auth;
+        var transferredAuth = (await AuthApi.LoggedInAsEmployeeAsync(factory, "1000003", "0810000003")).Auth;
+        await using var reliefHub = await HubClient.ConnectAsync(factory, reliefAuth.AccessToken);
+        await using var transferredHub = await HubClient.ConnectAsync(factory, transferredAuth.AccessToken);
+        var reliefGot = Listen(reliefHub, "InspectionRecorded");
+        var transferredGot = Listen(transferredHub, "InspectionRecorded");
+        await Task.Delay(200);
+
+        var scanId = await TestData.AddScanAsync(factory, InspectionApi.MenRestroom, ThaiClock.At(8, 8, 10));
+        factory.Clock.SetUtcNow(ThaiClock.At(8, 8, 30));
+        await InspectionApi.InspectedAsync(supervisor, scanId, "Passed");
+
+        Assert.Equal("Passed", (await reliefGot.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("status").GetString());
+        Assert.Equal("Passed", (await transferredGot.Task.WaitAsync(TimeSpan.FromSeconds(5))).GetProperty("status").GetString());
     }
 }

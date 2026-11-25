@@ -92,19 +92,27 @@ public sealed class SchedulingRetention(AppDbContext db)
     /// </summary>
     private async Task<int> PruneDatedDetailAsync(DateOnly earliestRetained, CancellationToken ct)
     {
+        // An overnight slot can begin before the boundary and still have an actual time inside it, so keep any dated
+        // schedule/relief/transfer/gap/anchor rows whose slot still has retained ShiftAttendances.
         var deleted = await db.ScheduleExceptions
-            .Where(exception => exception.ShiftDate < earliestRetained)
+            .Where(exception => exception.ShiftDate < earliestRetained
+                && !db.ShiftAttendances.Any(fact => fact.UserId == exception.UserId
+                    && fact.ShiftDate == exception.ShiftDate && fact.Shift == exception.Shift))
             .ExecuteDeleteAsync(ct);
         deleted += await db.ReliefAssignments
-            .Where(assignment => assignment.ShiftDate < earliestRetained)
+            .Where(assignment => assignment.ShiftDate < earliestRetained
+                && !db.ShiftAttendances.Any(fact => fact.UserId == assignment.UserId
+                    && fact.ShiftDate == assignment.ShiftDate && fact.Shift == assignment.Shift))
             .ExecuteDeleteAsync(ct);
 
-        var obsoleteTransfers = db.AreaTransfers.Where(transfer => transfer.ShiftDate < earliestRetained);
+        var obsoleteTransfers = db.AreaTransfers
+            .Where(transfer => transfer.ShiftDate < earliestRetained
+                && !db.ShiftAttendances.Any(fact => fact.UserId == transfer.PersonId
+                    && fact.ShiftDate == transfer.ShiftDate && fact.Shift == transfer.Shift));
         await db.AreaTransferConfirmations
             .Where(confirmation => obsoleteTransfers.Any(transfer => transfer.Id == confirmation.TransferId))
             .ExecuteDeleteAsync(ct);
         deleted += await obsoleteTransfers.ExecuteDeleteAsync(ct);
-        // An overnight slot can begin before the boundary and still have an actual time inside it.
         deleted += await db.AttendanceGaps.Where(gap => gap.ShiftDate < earliestRetained
             && !db.ShiftAttendances.Any(fact => fact.UserId == gap.UserId
                 && fact.ShiftDate == gap.ShiftDate && fact.Shift == gap.Shift)).ExecuteDeleteAsync(ct);

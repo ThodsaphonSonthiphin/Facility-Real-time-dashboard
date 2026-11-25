@@ -109,10 +109,11 @@ public class AuditLogEndpointTests
 
         var first = await PageAsync(admin, "?q=SIGN_R&limit=1");
         var second = await PageAsync(admin, $"?q=SIGN_R&limit=1&beforeId={first.NextBeforeId}");
-        var third = await PageAsync(admin, $"?q=SIGN_R&limit=1&beforeId={second.NextBeforeId}");
+        var third = await PageAsync(admin, $"?q=SIGN_R&limit=1&beforeId={second.Entries[0].Id}");
 
         Assert.Equal(ThaiClock.At(8, 9, 3).UtcDateTime, Assert.Single(first.Entries).OccurredAt);
         Assert.Equal(ThaiClock.At(8, 9, 0).UtcDateTime, Assert.Single(second.Entries).OccurredAt);
+        Assert.Null(second.NextBeforeId);
         Assert.Empty(third.Entries);
     }
 

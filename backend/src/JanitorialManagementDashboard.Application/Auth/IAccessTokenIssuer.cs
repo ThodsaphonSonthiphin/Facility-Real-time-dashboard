@@ -6,5 +6,5 @@ public sealed record AccessToken(string Token, DateTime ExpiresAtUtc);
 
 public interface IAccessTokenIssuer
 {
-    AccessToken Issue(User user);
+    AccessToken Issue(User user, Guid? sessionId = null);
 }

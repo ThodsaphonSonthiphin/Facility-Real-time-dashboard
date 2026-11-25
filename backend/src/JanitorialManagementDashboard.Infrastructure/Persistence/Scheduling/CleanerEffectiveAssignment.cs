@@ -1,4 +1,5 @@
 using JanitorialManagementDashboard.Application.Scheduling;
+using JanitorialManagementDashboard.Application.Shifts;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Entities.Scheduling;
 using JanitorialManagementDashboard.Domain.Enums;
@@ -17,7 +18,9 @@ public sealed record CleanerEffectiveState(
     int? HomeBuildingId,
     Shift? Shift,
     int? AreaId,
-    bool HasDatedIdentity);
+    bool HasDatedIdentity,
+    bool IsDayOff = false,
+    bool IsWholeShiftLeave = false);
 
 /// <summary>
 /// Single shared read helper for resolving active Cleaners' effective shift, kind, home building, and Area on a date,
@@ -82,6 +85,39 @@ public static class CleanerEffectiveAssignment
                 .ToDictionary(g => g.Key, g => g.Last().AreaId);
         }
 
+        var chosenOffUsers = (await db.WeeklyDayOffChoices.AsNoTracking()
+            .Where(c => c.OffDate == date && ids.Contains(c.WeeklyDayOff!.UserId))
+            .Select(c => c.WeeklyDayOff!.UserId)
+            .Distinct()
+            .ToListAsync(ct))
+            .ToHashSet();
+
+        var leavesByUser = (await db.ScheduleExceptions.AsNoTracking()
+            .Where(e => ids.Contains(e.UserId)
+                && e.ShiftDate == date
+                && e.Kind == ScheduleExceptionKind.Leave
+                && !e.IsCancelled
+                && e.StartsAt != null
+                && e.EndsAt != null)
+            .Select(e => new { e.UserId, e.Shift, StartsAt = e.StartsAt!.Value, EndsAt = e.EndsAt!.Value })
+            .ToListAsync(ct))
+            .ToLookup(e => (e.UserId, e.Shift));
+
+        bool HasWholeShiftLeave(int userId, Shift? shift)
+        {
+            if (shift is not { } s)
+            {
+                return false;
+            }
+
+            var slot = new ShiftSlot(date, s);
+            var startUtc = ShiftCalendar.StartUtc(slot);
+            var endUtc = ShiftCalendar.EndUtc(slot);
+            return leavesByUser[(userId, s)].Any(l =>
+                DateTime.SpecifyKind(l.StartsAt, DateTimeKind.Utc) <= startUtc
+                && DateTime.SpecifyKind(l.EndsAt, DateTimeKind.Utc) >= endUtc);
+        }
+
         var fallbackAreaIds = cleanerList
             .Where(u => u.AreaId is not null && u.Area is null)
             .Select(u => u.AreaId!.Value)
@@ -97,6 +133,7 @@ public static class CleanerEffectiveAssignment
         {
             profilesByUser.TryGetValue(user.Id, out var userProfiles);
             var hasDatedIdentity = userProfiles is { Count: > 0 };
+            var chosenOff = chosenOffUsers.Contains(user.Id);
 
             if (!hasDatedIdentity)
             {
@@ -107,7 +144,9 @@ public static class CleanerEffectiveAssignment
                     compatHome,
                     user.Shift,
                     user.AreaId,
-                    HasDatedIdentity: false);
+                    HasDatedIdentity: false,
+                    IsDayOff: chosenOff,
+                    IsWholeShiftLeave: HasWholeShiftLeave(user.Id, user.Shift));
                 continue;
             }
 
@@ -118,35 +157,48 @@ public static class CleanerEffectiveAssignment
             var homeBuildingId = activeProfile?.HomeBuildingId;
 
             int? areaId = null;
+            var hasDatedAreaOverride = false;
+            var baselineOff = false;
             if (kind == CleanerKind.Regular)
             {
                 if (datedAreas is not null && shift is Shift s && datedAreas.TryGetValue((user.Id, s), out var datedArea) && datedArea is int overrideAreaId)
                 {
                     areaId = overrideAreaId;
+                    hasDatedAreaOverride = true;
                 }
-                else if (baselinesByUser.TryGetValue(user.Id, out var userBaselines) && userBaselines.Count > 0)
+
+                if (baselinesByUser.TryGetValue(user.Id, out var userBaselines) && userBaselines.Count > 0)
                 {
                     var activeBaseline = userBaselines[^1];
                     var todayCell = activeBaseline.Days.FirstOrDefault(d => d.Weekday == date.DayOfWeek);
-                    if (todayCell is { IsDayOff: false, AreaId: int todayArea })
+                    baselineOff = todayCell?.IsDayOff == true;
+                    if (!hasDatedAreaOverride)
                     {
-                        areaId = todayArea;
-                    }
-                    else if (useFallbackWeekdayArea)
-                    {
-                        areaId = activeBaseline.Days
-                            .OrderBy(d => d.Weekday)
-                            .FirstOrDefault(d => !d.IsDayOff && d.AreaId != null)?.AreaId;
+                        if (todayCell is { IsDayOff: false, AreaId: int todayArea })
+                        {
+                            areaId = todayArea;
+                        }
+                        else if (useFallbackWeekdayArea)
+                        {
+                            areaId = activeBaseline.Days
+                                .OrderBy(d => d.Weekday)
+                                .FirstOrDefault(d => !d.IsDayOff && d.AreaId != null)?.AreaId;
+                        }
                     }
                 }
             }
+
+            var isDayOff = chosenOff || (baselineOff && !hasDatedAreaOverride);
+            var isWholeShiftLeave = HasWholeShiftLeave(user.Id, shift);
 
             result[user.Id] = new CleanerEffectiveState(
                 kind,
                 homeBuildingId,
                 shift,
                 areaId,
-                HasDatedIdentity: true);
+                HasDatedIdentity: true,
+                IsDayOff: isDayOff,
+                IsWholeShiftLeave: isWholeShiftLeave);
         }
 
         return result;

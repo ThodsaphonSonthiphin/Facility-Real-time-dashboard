@@ -65,6 +65,7 @@ try
     builder.Services.AddSingleton(
         builder.Configuration.GetSection(LoginThrottleSettings.SectionName).Get<LoginThrottleSettings>() ?? new LoginThrottleSettings());
     builder.Services.AddSingleton<LoginThrottle>();
+    builder.Services.AddSingleton<ScanHubConnections>();
     var attendance = builder.Configuration.GetSection(AttendanceSettings.SectionName).Get<AttendanceSettings>() ?? new AttendanceSettings();
     if (attendance.OpensMinutesBeforeShift is < 0 or > AttendanceSettings.MaxReceivingOffsetMinutes
         || attendance.ClosesMinutesAfterShift is < 0 or > AttendanceSettings.MaxReceivingOffsetMinutes

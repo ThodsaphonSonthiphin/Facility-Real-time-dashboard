@@ -148,3 +148,32 @@ it('leaves Area options empty on Night when the building only has Day destinatio
   expect(drawer.queryByRole('option', { name: /AR01/ })).not.toBeInTheDocument();
   expect(within(drawer.getByLabelText('พื้นที่ประจำ')).getAllByRole('option')).toHaveLength(1);
 });
+
+it('does not flash the conflict banner while loading a target week in another week', async () => {
+  const monday = '2026-11-23';
+  const person = fixturePerson(7, 'แม่บ้านทดสอบ', monday);
+  let releaseTarget!: () => void;
+  const targetGate = new Promise<void>((resolve) => {
+    releaseTarget = resolve;
+  });
+  const app = await editorApp({
+    routes: {
+      'GET /api/schedules': async ({ search }) => {
+        if (new URLSearchParams(search).get('weekStart') === monday) {
+          await targetGate;
+          return { status: 200, body: fixtureWeek([person], 'next-week', monday) };
+        }
+        return { status: 200, body: fixtureWeek() };
+      },
+    },
+  });
+  await app.user.click(await screen.findByRole('button', { name: 'แก้ตารางประจำ' }));
+  const drawer = within(await screen.findByRole('dialog', { name: 'แก้ตารางประจำ' }));
+
+  fireEvent.change(drawer.getByLabelText('วันเริ่มใช้'), { target: { value: '2026-11-24' } });
+  expect(drawer.queryByText('ตารางเปลี่ยนระหว่างแก้ไข')).not.toBeInTheDocument();
+
+  releaseTarget();
+  await drawer.findByRole('option', { name: /AR05/ });
+  expect(drawer.queryByText('ตารางเปลี่ยนระหว่างแก้ไข')).not.toBeInTheDocument();
+});

@@ -3,7 +3,7 @@ import { makeStore } from '../../store';
 import { setCredentials } from '../../store/slices/authSlice';
 import { authAnswer, fakeServer } from '../../test/fakeServer';
 import { baseApi } from '../api/baseApi';
-import { endSession } from './endSession';
+import { cancelPendingLogout, endSession } from './endSession';
 import { getValidAccessToken, refreshSession, startSession } from './session';
 
 const probeApi = baseApi.injectEndpoints({
@@ -183,6 +183,53 @@ describe('endSession', () => {
     await endSession(store.dispatch);
 
     expect(store.getState().auth.currentUser).toBeNull();
+  });
+
+  it('skips POST /api/auth/logout if a new login starts while waiting for an in-flight refresh', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const server = fakeServer({
+      'POST /api/auth/refresh': async () => {
+        await held;
+        return authAnswer('cleaner', 'token-stale');
+      },
+      'POST /api/auth/logout': () => ({ status: 204 }),
+    });
+    const store = makeStore();
+    store.dispatch(setCredentials(authAnswer('cleaner').body));
+
+    const refreshing = refreshSession(store.dispatch);
+    const ending = endSession(store.dispatch);
+    cancelPendingLogout();
+    release();
+    await Promise.all([refreshing, ending]);
+
+    expect(server.calls.some((c) => c.path === '/api/auth/logout')).toBe(false);
+  });
+
+  it('aborts an in-flight POST /api/auth/logout when a new login starts', async () => {
+    let logoutSignal: AbortSignal | undefined;
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          logoutSignal = init?.signal ?? undefined;
+          logoutSignal?.addEventListener('abort', () => reject(logoutSignal?.reason), { once: true });
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const store = makeStore();
+    store.dispatch(setCredentials(authAnswer('cleaner').body));
+
+    const ending = endSession(store.dispatch);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', expect.any(Object)));
+    expect(logoutSignal?.aborted).toBe(false);
+
+    cancelPendingLogout();
+    await ending;
+
+    expect(logoutSignal?.aborted).toBe(true);
   });
 });
 

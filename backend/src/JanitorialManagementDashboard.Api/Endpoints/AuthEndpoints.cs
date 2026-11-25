@@ -1,5 +1,7 @@
+using System.Data;
 using JanitorialManagementDashboard.Api.Auth;
 using JanitorialManagementDashboard.Api.DTOs;
+using JanitorialManagementDashboard.Api.Hubs;
 using JanitorialManagementDashboard.Application.Auth;
 using JanitorialManagementDashboard.Domain.Entities;
 using JanitorialManagementDashboard.Domain.Enums;
@@ -102,11 +104,12 @@ public static class AuthEndpoints
         throttle.Succeeded(throttleKey, place);
 
         var now = clock.GetUtcNow().UtcDateTime;
-        var refresh = AddRefreshToken(db, user.Id, sessionId: Guid.NewGuid(), now);
+        var sessionId = Guid.NewGuid();
+        var refresh = AddRefreshToken(db, user.Id, sessionId, now);
         await db.SaveChangesAsync();
 
         WriteRefreshCookie(http, refresh.Token, refresh.ExpiresAt, jwt.Value);
-        return Results.Ok(ToResponse(user, issuer.Issue(user)));
+        return Results.Ok(ToResponse(user, issuer.Issue(user, sessionId)));
     }
 
     private static async Task<IResult> RefreshAsync(
@@ -115,7 +118,9 @@ public static class AuthEndpoints
         IAccessTokenIssuer issuer,
         TimeProvider clock,
         IOptions<JwtSettings> jwt,
-        SecurityLog securityLog)
+        SecurityLog securityLog,
+        ScanHubConnections hubConnections,
+        CancellationToken ct)
     {
         var presented = http.Request.Cookies[RefreshCookieName];
         if (string.IsNullOrEmpty(presented))
@@ -125,59 +130,122 @@ public static class AuthEndpoints
 
         var now = clock.GetUtcNow().UtcDateTime;
         var hash = RefreshTokenRules.Hash(presented);
-        var stored = await db.RefreshTokens.Include(t => t.User).FirstOrDefaultAsync(t => t.TokenHash == hash);
-        if (stored?.User is null)
+        var target = await db.RefreshTokens.AsNoTracking()
+            .Where(t => t.TokenHash == hash)
+            .Select(t => new { t.Id, t.UserId, t.SessionId })
+            .FirstOrDefaultAsync(ct);
+        if (target is null)
         {
+            return Unauthorized(http, jwt.Value);
+        }
+
+        var isSqlite = db.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite";
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            isSqlite ? IsolationLevel.Serializable : IsolationLevel.ReadCommitted, ct);
+
+        // Lock users first, then refresh_tokens — matching SetActiveAsync, ReplaceSecretAsync, and LogoutAsync so
+        // concurrent revocation can never deadlock or interleave with token rotation.
+        User? user;
+        RefreshToken? stored;
+        if (isSqlite)
+        {
+            user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == target.UserId, ct);
+            stored = await db.RefreshTokens.AsNoTracking().FirstOrDefaultAsync(t => t.Id == target.Id, ct);
+        }
+        else
+        {
+            user = (await db.Users
+                .FromSqlInterpolated($"SELECT * FROM users WHERE id = {target.UserId} FOR UPDATE")
+                .AsNoTracking()
+                .ToListAsync(ct)).FirstOrDefault();
+            stored = (await db.RefreshTokens
+                .FromSqlInterpolated($"SELECT * FROM refresh_tokens WHERE id = {target.Id} FOR UPDATE")
+                .AsNoTracking()
+                .ToListAsync(ct)).FirstOrDefault();
+        }
+
+        if (user is null || stored is null)
+        {
+            await transaction.RollbackAsync(ct);
             return Unauthorized(http, jwt.Value);
         }
 
         switch (RefreshTokenRules.Decide(stored, now))
         {
             case RefreshDecision.Reject:
+                await transaction.RollbackAsync(ct);
                 return Unauthorized(http, jwt.Value);
 
             case RefreshDecision.ReuseDetected:
                 // ADR facility-0015: two parties hold this token and the server cannot tell which is the owner
                 // written first, so the event is on record even if ending the session fails
-                securityLog.RefreshTokenReused(stored.User);
+                securityLog.RefreshTokenReused(user);
                 await db.RevokeSessionAsync(stored.SessionId, now);
+                await transaction.CommitAsync(ct);
+                hubConnections.DisconnectSession(stored.SessionId);
                 return Unauthorized(http, jwt.Value);
         }
 
         // ADR facility-0012: the account is re-read on every refresh, so deactivation and role changes land within 5 minutes
-        if (!stored.User.IsActive)
+        if (!user.IsActive)
         {
             await db.RevokeUserSessionsAsync(stored.UserId, now);
+            await transaction.CommitAsync(ct);
+            hubConnections.DisconnectUser(stored.UserId);
             return Unauthorized(http, jwt.Value);
         }
 
-        // Rotate (facility-0014). Within the grace window the first rotation time is kept, so the window never extends itself.
-        stored.RotatedAt ??= now;
+        // Rotate (facility-0014) only while the token is still unrevoked. Within the grace window the first rotation time
+        // is kept, so the window never extends itself.
+        var rotatedAt = stored.RotatedAt ?? now;
+        var updated = await db.RefreshTokens
+            .Where(t => t.Id == stored.Id && t.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RotatedAt, (DateTime?)rotatedAt), ct);
+        if (updated == 0)
+        {
+            await transaction.RollbackAsync(ct);
+            return Unauthorized(http, jwt.Value);
+        }
+
         var next = AddRefreshToken(db, stored.UserId, stored.SessionId, now);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         WriteRefreshCookie(http, next.Token, next.ExpiresAt, jwt.Value);
-        return Results.Ok(ToResponse(stored.User, issuer.Issue(stored.User)));
+        return Results.Ok(ToResponse(user, issuer.Issue(user, stored.SessionId)));
     }
 
     private static async Task<IResult> LogoutAsync(
         HttpContext http,
         AppDbContext db,
         TimeProvider clock,
-        IOptions<JwtSettings> jwt)
+        IOptions<JwtSettings> jwt,
+        ScanHubConnections hubConnections,
+        CancellationToken ct)
     {
         var presented = http.Request.Cookies[RefreshCookieName];
         if (!string.IsNullOrEmpty(presented))
         {
             var hash = RefreshTokenRules.Hash(presented);
-            var sessionId = await db.RefreshTokens
+            var tokenInfo = await db.RefreshTokens.AsNoTracking()
                 .Where(t => t.TokenHash == hash)
-                .Select(t => (Guid?)t.SessionId)
-                .FirstOrDefaultAsync();
+                .Select(t => new { t.UserId, t.SessionId })
+                .FirstOrDefaultAsync(ct);
 
-            if (sessionId is not null)
+            if (tokenInfo is not null)
             {
-                await db.RevokeSessionAsync(sessionId.Value, clock.GetUtcNow().UtcDateTime);
+                var isSqlite = db.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite";
+                await using var transaction = await db.Database.BeginTransactionAsync(
+                    isSqlite ? IsolationLevel.Serializable : IsolationLevel.ReadCommitted, ct);
+                if (!isSqlite)
+                {
+                    await db.Database.SqlQuery<int>(
+                        $"SELECT id AS Value FROM users WHERE id = {tokenInfo.UserId} FOR UPDATE").ToListAsync(ct);
+                }
+
+                await db.RevokeSessionAsync(tokenInfo.SessionId, clock.GetUtcNow().UtcDateTime);
+                await transaction.CommitAsync(ct);
+                hubConnections.DisconnectSession(tokenInfo.SessionId);
             }
         }
 
