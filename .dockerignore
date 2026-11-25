@@ -1,0 +1,53 @@
+# Repo-root Docker ignore (prevents uploading docs, manuals, AI skills,
+# local run logs, and tests when building Docker from the repository root)
+
+# Git, AI tools, IDE, and local runtime logs
+.git/
+.gitignore
+.agents/
+.claude/
+.commandcode/
+.config/
+.superpowers/
+.idea/
+.vscode/
+.vercel/
+.run/
+AGENTS.md
+CONTEXT.md
+README.md
+skills-lock.json
+
+# Documentation, user manuals, design system, and local helper scripts
+docs/
+Manual/
+design-system/
+scripts/
+
+# Frontend caches, test outputs, and local hooks
+node_modules/
+**/node_modules/
+frontend/dist/
+frontend/.husky/
+frontend/README.md
+frontend/e2e/**/*.png
+**/.vite/
+**/coverage/
+**/test-results/
+**/playwright-report/
+
+# Backend build caches, tests, and synthetic E2E seed tool
+**/bin/
+**/obj/
+**/TestResults/
+backend/tests/
+backend/tools/
+
+# Secrets, OS files, and logs
+.env
+.env.*
+*.env
+**/.DS_Store
+**/*.log
+**/*.tmp
+**/__pycache__/

@@ -1,11 +1,25 @@
+# Build artifacts and caches
 **/bin/
 **/obj/
-**/.idea/
-**/.vs/
 **/TestResults/
 **/coverage/
+
+# Test and synthetic E2E seed projects (not needed in Production API)
 tests/
+tools/
+JanitorialManagementDashboard.slnx
+
+# IDE, Git, OS, and docs
+**/.idea/
+**/.vs/
+**/.DS_Store
+**/*.user
+**/*.suo
+**/*.md
 .git/
+
+# Secrets and logs
 .env
 .env.*
+*.env
 **/*.log

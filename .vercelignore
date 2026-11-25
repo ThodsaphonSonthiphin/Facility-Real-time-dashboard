@@ -5,11 +5,13 @@
 .superpowers/
 AGENTS.md
 CONTEXT.md
+README.md
 skills-lock.json
 
 # IDE and local tools
 .idea/
 .vscode/
+.vercel/
 .run/
 .config/
 
@@ -24,20 +26,25 @@ backend/
 docs/
 Manual/
 design-system/
+frontend/README.md
 
 # Local scripts
 scripts/
 
-# Dependencies and build caches
+# Dependencies, build outputs, and caches
 node_modules/
 **/node_modules/
+frontend/dist/
 **/.vite/
 **/coverage/
 **/test-results/
 **/playwright-report/
 
-# Frontend tests
+# Frontend dev hooks and visual test snapshots
+# Note: keep frontend/e2e/*.ts and playwright.config.ts because `npm run build`
+# runs `tsc -b` across tsconfig.json references (including tsconfig.e2e.json).
 frontend/.husky/
+frontend/e2e/**/*.png
 
 # Logs and temporary files
 **/*.log
